@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public bool Disabled;
         public string MentorNode;
         public bool PinToMentorNode;
-        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ExcludeArchived;
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior;
 
         // for serialization
         protected PutSubscriptionCommand() { }

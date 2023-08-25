@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = subscriptionId,
                 PinToMentorNode = options.PinToMentorNode,
                 Disabled = disabled ?? false,
-                ArchivedDataProcessingBehavior = options.ArchivedDataProcessingBehavior
+                ArchivedDataProcessingBehavior = options.ArchivedDataProcessingBehavior ?? ArchivedDataProcessingBehavior.ExcludeArchived
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
