@@ -6,7 +6,7 @@ using Voron;
 
 namespace Raven.Server.Documents.DataArchival;
 
-internal class ArchiveDocumentsCommand: MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+internal class ArchiveDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
 {
     private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _toArchive;
     private readonly DocumentDatabase _database;
