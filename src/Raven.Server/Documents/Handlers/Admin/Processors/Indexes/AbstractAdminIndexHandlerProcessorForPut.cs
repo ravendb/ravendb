@@ -81,7 +81,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
 
                 if (indexDefinition.SourceType != IndexSourceType.Documents)
                 {
-                    if(indexDefinition.ArchivedDataProcessingBehavior != null && indexDefinition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.IncludeArchived)
+                    if (indexDefinition.ArchivedDataProcessingBehavior != null && indexDefinition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.IncludeArchived)
                     {
                         throw new ArgumentException(
                             $"{nameof(ArchivedDataProcessingBehavior)} other than '{ArchivedDataProcessingBehavior.IncludeArchived}' can be set only for document indexes,  not for indexes with {nameof(IndexSourceType)} '{indexDefinition.SourceType}' .");
