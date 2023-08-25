@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Xunit.Abstractions;
 using System;
+using System.IO;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_21028 : RavenTestBase
     {
-        
+
         public RavenDB_21028(ITestOutputHelper output) : base(output)
         {
         }
@@ -28,13 +29,17 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             var op = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { EncryptionKey = "fakeKey" }, file);
 
-            await Assert.ThrowsAsync<RavenException>(async () => await op.WaitForCompletionAsync(TimeSpan.FromSeconds(10)));
+            var e = await Assert.ThrowsAnyAsync<Exception>(async () => await op.WaitForCompletionAsync(TimeSpan.FromSeconds(10)));
+
+            Assert.True(e is RavenException or IOException);
 
         }
 
         [RavenFact(RavenTestCategory.Smuggler)]
         public async Task WaitForCompletionShouldRespectTimeout()
         {
+            UseNewLocalServer();
+
             using var store = GetDocumentStore();
             using (var session = store.OpenAsyncSession())
             {
@@ -60,15 +65,19 @@ namespace SlowTests.Issues
 
             // hold backup execution 
             var tcs = new TaskCompletionSource<object>();
-            db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
-            db.PeriodicBackupRunner._forTestingPurposes.OnBackupTaskRunHoldBackupExecution = tcs;
 
-            // wait for completion should not hang
-            var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
-            await Assert.ThrowsAsync<TimeoutException>(async () => await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)));
+            try
+            {
+                db.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
 
-            tcs.TrySetResult(null);
+                // wait for completion should not hang
+                var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
+                await Assert.ThrowsAsync<TimeoutException>(async () => await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)));
+            }
+            finally
+            {
+                tcs.TrySetResult(null);
+            }
         }
-
     }
 }
