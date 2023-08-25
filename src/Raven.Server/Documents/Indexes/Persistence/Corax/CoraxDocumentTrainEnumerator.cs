@@ -207,10 +207,22 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                             analyzer.Execute(value.ToSpan(), ref wordsSpan, ref tokenSpan);
                             items = tokenSpan.Length;
                         }
-                    
-                        for (int j = 0; j < items; j++)
+
+                        // We want to have a good sample but at the same time not overburden the training process.
+                        // Therefore, we will start advancing faster the more tokens there are. This is specially
+                        // relevant in cases where we have to deal with full text search of big documents.
+                        int advance = items / 16 + 1;
+                        for (int j = 0; j < items; j += advance)
                         {
-                            yield return new ArraySegment<byte>(wordsBuffer, tokenBuffer[j].Offset, (int)tokenBuffer[j].Length);
+                            int length = (int)tokenBuffer[j].Length;
+                            int offset = tokenBuffer[j].Offset;
+                            if (length > 128)
+                            {
+                                // Very unlikely case of indexes without analyzers that are extremely large.
+                                offset += Random.Shared.Next(length - 128);
+                                length = 128;
+                            }
+                            yield return new ArraySegment<byte>(wordsBuffer, offset, length);
                         }
                     }
                 }
