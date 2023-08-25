@@ -19,9 +19,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
         protected override IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
             foreach (var counter in GetCountersEnumerator(queryContext, collection, lastEtag, pageSize))
-            {
                 yield return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
-            }
             
         }
 
