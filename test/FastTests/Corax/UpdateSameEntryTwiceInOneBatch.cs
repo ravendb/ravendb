@@ -20,7 +20,7 @@ namespace FastTests.Corax
 {
     public class UpdateSameEntryTwiceInOneBatch : StorageTest
     {
-        private const int IndexId = 0, ContentId = 1;
+        private const int IndexId = 0, ContentId = 1, NumId = 2;
         private readonly IndexFieldsMapping _analyzers;
         private readonly ByteStringContext _bsc;
 
@@ -148,9 +148,78 @@ namespace FastTests.Corax
         {
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+            Slice.From(ctx, "NumField", ByteStringType.Immutable, out Slice numFieldSlice);
 
-            using (var builder = IndexFieldsMappingBuilder.CreateForWriter(false).AddBinding(IndexId, idSlice).AddBinding(ContentId, contentSlice))
+            using (var builder = IndexFieldsMappingBuilder.CreateForWriter(false).AddBinding(IndexId, idSlice).AddBinding(ContentId, contentSlice).AddBinding(NumId, numFieldSlice))
                 return builder.Build();
+        }
+        
+        [Fact]
+        public void InsertNewDocumentIntoTermWhileUpdatingAnotherDocumentWithTheSameTerm()
+        {
+            var fields = CreateKnownFields(_bsc);
+            using (var writer = new IndexWriter(Env, fields))
+            {
+                using (var builder = writer.Index("users/1"u8))
+                {
+                    builder.Write(0, "users/1"u8);
+                    builder.Write(1, "maciej"u8);
+                    builder.Write(2, "1"u8);
+
+                }
+
+                writer.Commit();
+            }
+
+            using (var writer = new IndexWriter(Env, fields))
+            {
+               
+                using (var builder = writer.Update("users/1"u8))
+                {
+                    builder.Write(0, "users/1"u8);
+                    builder.Write(1, "maciej"u8);
+                    builder.Write(2, "2"u8);
+                }
+                using (var builder = writer.Update("users/2"u8))
+                {
+                    builder.Write(0, "users/2"u8);
+                    builder.Write(1, "maciej"u8);
+                    builder.Write(2, "0"u8);
+                }
+
+                writer.Commit();
+            }
+
+            using (var searcher = new IndexSearcher(Env, fields))
+            {
+                var match = searcher.TermQuery(fields.GetByFieldId(1).Metadata, "maciej");
+                Span<long> ids = stackalloc long[4];
+                var read = match.Fill(ids);
+                Assert.Equal(2, read);
+
+                Page p = default;
+
+                var reader = searcher.GetEntryTermsReader(ids[0], ref p);
+                var output = reader.Debug(searcher);
+                Assert.Contains("Content", output);
+                Assert.Contains("maciej", output);
+            }
+
+            using (var writer = new IndexWriter(Env, fields))
+            {
+                Assert.True(writer.TryDeleteEntry("users/1"u8));
+                Assert.True(writer.TryDeleteEntry("users/2"u8));
+                writer.Commit();
+            }
+
+            using (var searcher = new IndexSearcher(Env, fields))
+            {
+                var match = searcher.TermQuery(fields.GetByFieldId(1).Metadata, "maciej");
+                Span<long> ids = stackalloc long[4];
+                var read = match.Fill(ids);
+                Assert.Equal(0, read);
+            }
+
         }
 
         public override void Dispose()

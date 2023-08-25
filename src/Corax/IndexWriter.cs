@@ -1912,19 +1912,8 @@ namespace Corax
         private void UpdateEntriesForTerm(ref NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries)
         {
             entriesForTerm.ResetAndEnsureCapacity(_entriesAllocator, entries.Additions.Count + entries.Updates.Count);
-
-            int i = 0;
-            var additions = entries.Additions.RawItems;
-            for (; i < entries.Additions.Count; i++)
-            {
-                entriesForTerm.PushUnsafe(additions[i]);
-            }
-
-            var updates = entries.Updates.RawItems;
-            for (; i < entries.Updates.Count; i++)
-            {
-                entriesForTerm.PushUnsafe(updates[i]);
-            }
+            entriesForTerm.AddRangeUnsafe(entries.Additions.RawItems, entries.Additions.Count);
+            entriesForTerm.AddRangeUnsafe(entries.Updates.RawItems, entries.Updates.Count);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
