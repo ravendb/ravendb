@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         protected AutoIndexDefinitionBaseServerSide(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode,
             IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(indexName, new[] {collection}, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion,
-                deploymentMode, clusterState, Client.Documents.Indexes.ArchivedDataProcessingBehavior.ExcludeArchived)
+                deploymentMode, clusterState, Client.Documents.Operations.DataArchival.ArchivedDataProcessingBehavior.ExcludeArchived)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));

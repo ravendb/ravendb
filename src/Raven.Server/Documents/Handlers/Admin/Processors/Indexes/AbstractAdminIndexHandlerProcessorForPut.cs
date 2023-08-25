@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
