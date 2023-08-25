@@ -134,6 +134,7 @@ export default function IndexFilter(props: IndexFilterProps) {
                 setSelectedItems={onSearchTypesChange}
                 selectAllCount={indexesCount}
             />
+            {/* TODO: filtering does not work :( */}
 
             {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
             <Switch

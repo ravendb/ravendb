@@ -6,7 +6,7 @@ import { InputItem } from "components/models/common";
 import "./Toggles.scss";
 import { Icon } from "./Icon";
 import { Button, UncontrolledTooltip } from "reactstrap";
-import { calculateThreshold } from "components/utils/licenseLimitsUtils";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
 interface MultiCheckboxToggleProps<T extends string | number = string> {
     inputItems: InputItem<T>[];
@@ -103,9 +103,29 @@ export function MultiCheckboxToggle<T extends string | number = string>({
                                     {inputItem.label}
                                     {inputItem.count >= 0 && (
                                         <>
-                                            {inputItem.count > calculateThreshold(inputItem.limit) ? (
+                                            {getLicenseLimitReachStatus(inputItem.count, inputItem.limit) !==
+                                            "notReached" ? (
                                                 <>
-                                                    <span className="multi-toggle-item-count bg-warning text-dark">
+                                                    <span
+                                                        className={classNames(
+                                                            "multi-toggle-item-count",
+                                                            "text-dark",
+                                                            {
+                                                                "bg-warning":
+                                                                    getLicenseLimitReachStatus(
+                                                                        inputItem.count,
+                                                                        inputItem.limit
+                                                                    ) === "closeToLimit",
+                                                            },
+                                                            {
+                                                                "bg-danger":
+                                                                    getLicenseLimitReachStatus(
+                                                                        inputItem.count,
+                                                                        inputItem.limit
+                                                                    ) === "limitReached",
+                                                            }
+                                                        )}
+                                                    >
                                                         {inputItem.count} / {inputItem.limit}
                                                     </span>
                                                     <UncontrolledTooltip
