@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
         {
             foreach (var counter in GetCountersEnumerator(queryContext, collection, lastEtag, pageSize))
             {
-                yield return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter, null);
+                yield return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
             }
             
         }

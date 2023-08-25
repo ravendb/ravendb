@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             if (counter == null)
                 return default;
 
-            return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter, null);
+            return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
         }
 
         protected override bool ShouldReplace()
