@@ -62,7 +62,6 @@ where TInner : IQueryMatch
     {
         if (FetchNulls(matches, out int read))
         {
-            EntryIdEncodings.DecodeAndDiscardFrequency(matches, read);
             return read;
         }
 
@@ -75,6 +74,7 @@ where TInner : IQueryMatch
         {
             if (_postingListIterator.Fill(matches, out var read))
             {
+                EntryIdEncodings.DecodeAndDiscardFrequency(matches, read);
                 matchesCount = read;
                 return true;
             }
