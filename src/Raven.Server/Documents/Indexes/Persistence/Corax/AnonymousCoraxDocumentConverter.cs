@@ -204,9 +204,15 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                     AppendLong(l);
                     break;
                 case ValueType.Char:
-                    EnsureHasSpace(sizeof(char));
-                    BitConverter.TryWriteBytes(_compoundFieldsBuffer.AsSpan()[index..], (char)v);
-                    index += sizeof(char);
+                    unsafe
+                    {
+                        char value = (char)v;
+                        var span = new ReadOnlySpan<byte>((byte*)&value, sizeof(char));
+                        span = span[1] == 0 ? span : span.Slice(0, 1);
+                        EnsureHasSpace(span.Length);
+                        span.CopyTo(_compoundFieldsBuffer.AsSpan(index));
+                        index += span.Length;
+                    }
                     break;
                 case ValueType.Double:
                     var d = v switch

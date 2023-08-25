@@ -213,7 +213,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 unsafe
                 {
                     char item = (char)value;
-                    builder.Write(fieldId, path, new ReadOnlySpan<byte>(&item, sizeof(char)));
+                    var span = new ReadOnlySpan<byte>(&item, sizeof(char));
+                    builder.Write(fieldId, path, span.Slice(0, span[1] == 0 ? 1 : 2));
                 }
 
                 break;
