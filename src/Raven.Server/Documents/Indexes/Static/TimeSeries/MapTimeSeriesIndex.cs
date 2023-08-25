@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (timeSeries == null)
                 return default;
 
-            return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, timeSeries.Start, timeSeries.Name, timeSeries.SegmentSize, timeSeries, null);
+            return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, timeSeries.Start, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
         protected override bool ShouldReplace()

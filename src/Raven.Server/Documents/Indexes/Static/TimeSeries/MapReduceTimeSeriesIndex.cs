@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(queryContext.Documents, etag, TimeSeriesSegmentEntryFields.ForIndexing);
             if (timeSeries == null)
                 return default;
-            return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, timeSeries.Start, timeSeries.Name, timeSeries.SegmentSize, timeSeries, null);
+            return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, timeSeries.Start, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
