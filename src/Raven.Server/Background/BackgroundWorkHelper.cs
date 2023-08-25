@@ -11,7 +11,7 @@ namespace Raven.Server.Background;
 
 public static class BackgroundWorkHelper
 {
-    public static bool CheckIfNodeIsFirstInTopology(DatabaseTopology topology, string nodeTag)
+    public static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag)
     {
         var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), nodeTag, StringComparison.OrdinalIgnoreCase);
         if (isFirstInTopology == false)
