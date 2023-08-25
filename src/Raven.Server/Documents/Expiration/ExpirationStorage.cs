@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Expiration
                                             continue;
                                         }
 
-                                        if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options.DatabaseTopology, options.NodeTag) == false)
+                                        if (BackgroundWorkHelper.ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
                                             break;
                                         
                                         expiredDocs.Add((clonedId, document.Id));
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Expiration
                                 }
                                 catch (DocumentConflictException)
                                 {
-                                    if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options.DatabaseTopology, options.NodeTag) == false)
+                                    if (BackgroundWorkHelper.ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
                                         break;
 
                                     var (allExpired, id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);

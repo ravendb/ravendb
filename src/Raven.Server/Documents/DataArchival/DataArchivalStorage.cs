@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.DataArchival
                                         continue;
                                     }
 
-                                    if (BackgroundWorkHelper.CheckIfNodeIsFirstInTopology(options.DatabaseTopology, options.NodeTag) == false)
+                                    if (BackgroundWorkHelper.ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
                                         break;
                                     
                                     docsToArchive.Add((clonedId, document.Id));
