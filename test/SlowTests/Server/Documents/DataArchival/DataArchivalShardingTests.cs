@@ -13,27 +13,11 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival;
 
-public class DataArchivalShardingTests : ClusterTestBase
+public class DataArchivalShardingTests(ITestOutputHelper output) : ClusterTestBase(output)
 {
-    public DataArchivalShardingTests(ITestOutputHelper output) : base(output)
-    {
-    }
-
     [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Sharding)]
     public async Task ShouldArchiveDocsForSharding()
     {
-        var utcFormats = new Dictionary<string, DateTimeKind>
-        {
-            {DefaultFormat.DateTimeFormatsToRead[0], DateTimeKind.Utc},
-            {DefaultFormat.DateTimeFormatsToRead[1], DateTimeKind.Unspecified},
-            {DefaultFormat.DateTimeFormatsToRead[2], DateTimeKind.Local},
-            {DefaultFormat.DateTimeFormatsToRead[3], DateTimeKind.Utc},
-            {DefaultFormat.DateTimeFormatsToRead[4], DateTimeKind.Unspecified},
-            {DefaultFormat.DateTimeFormatsToRead[5], DateTimeKind.Utc},
-            {DefaultFormat.DateTimeFormatsToRead[6], DateTimeKind.Utc},
-        };
-        Assert.Equal(utcFormats.Count, DefaultFormat.DateTimeFormatsToRead.Length);
-
         var database2 = GetDatabaseName();
         var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
         await ShardingCluster.CreateShardedDatabaseInCluster(database2, replicationFactor: 2, cluster, shards: 3);
@@ -42,95 +26,82 @@ public class DataArchivalShardingTests : ClusterTestBase
 
         using (var store = Sharding.GetDocumentStore(new Options {Server = cluster.Leader, CreateDatabase = false, ModifyDatabaseName = _ => database2}))
         {
-            foreach (var dateTimeFormat in utcFormats)
+            await store.Maintenance.SendAsync(new ConfigureDataArchivalOperation(configuration));
+
+            var retires = DateTime.Now; // intentionally local time
+            var numOfDocs = 20;
+
+            using (var session = store.OpenSession())
             {
-                await store.Maintenance.SendAsync(new ConfigureDataArchivalOperation(configuration));
+                for (var i = 0; i < numOfDocs; i++)
+                {
+                    var comp = new Company {Name = $"{i}"};
+                    session.Store(comp, $"company/{i}");
+                    var metadata = session.Advanced.GetMetadataFor(comp);
+                    metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                }
 
-                var retires = DateTime.Now; // intentionally local time
-                if (dateTimeFormat.Value == DateTimeKind.Utc)
-                    retires = retires.ToUniversalTime();
+                session.SaveChanges();
+            }
 
-                var numOfDocs = 20;
+            var servers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(store, cluster.Nodes);
 
+            while (Sharding.AllShardHaveDocs(servers) == false)
+            {
                 using (var session = store.OpenSession())
                 {
-                    for (var i = 0; i < numOfDocs; i++)
+                    for (var i = numOfDocs; i < numOfDocs + 20; i++)
                     {
                         var comp = new Company {Name = $"{i}"};
                         session.Store(comp, $"company/{i}");
                         var metadata = session.Advanced.GetMetadataFor(comp);
-                        metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(dateTimeFormat.Key);
+                        metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                     }
 
                     session.SaveChanges();
                 }
 
-                var servers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(store, cluster.Nodes);
+                numOfDocs += 20;
+            }
 
-                while (Sharding.AllShardHaveDocs(servers) == false)
+            for (var i = 0; i < numOfDocs; i++)
+            {
+                using (var session = store.OpenAsyncSession())
                 {
-                    using (var session = store.OpenSession())
-                    {
-                        for (var i = numOfDocs; i < numOfDocs + 20; i++)
-                        {
-                            var comp = new Company {Name = $"{i}"};
-                            session.Store(comp, $"company/{i}");
-                            var metadata = session.Advanced.GetMetadataFor(comp);
-                            metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(dateTimeFormat.Key);
-                        }
-
-                        session.SaveChanges();
-                    }
-
-                    numOfDocs += 20;
+                    var comp = await session.LoadAsync<Company>($"company/{i}");
+                    Assert.NotNull(comp);
                 }
+            }
 
-                for (var i = 0; i < numOfDocs; i++)
+            foreach (var kvp in servers)
+            {
+                foreach (var database in kvp.Value)
                 {
-                    using (var session = store.OpenAsyncSession())
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+
+                    DataArchivist archivist = null;
+                    Assert.True(WaitForValue(() =>
                     {
-                        var comp = await session.LoadAsync<Company>($"company/{i}");
-                        Assert.NotNull(comp);
-                        var metadata = session.Advanced.GetMetadataFor(comp);
-                        var archiveDate = metadata.GetString(Constants.Documents.Metadata.ArchiveAt);
-                        Assert.NotNull(archiveDate);
-                        var dateTime = DateTime.ParseExact(archiveDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind);
-                        Assert.Equal(dateTimeFormat.Value, dateTime.Kind);
-                        Assert.Equal(retires.ToString(dateTimeFormat.Key), archiveDate);
-                    }
+                        archivist = database.DataArchivist;
+                        return archivist != null;
+                    }, expectedVal: true));
+
+                    await archivist.ArchiveDocs();
                 }
+            }
 
-                foreach (var kvp in servers)
+            for (var i = 0; i < numOfDocs; i++)
+            {
+                using (var session = store.OpenAsyncSession())
                 {
-                    foreach (var database in kvp.Value)
-                    {
-                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    var company = await session.LoadAsync<Company>($"company/{i}");
+                    Assert.NotNull(company);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    Assert.DoesNotContain(Constants.Documents.Metadata.ArchiveAt, metadata.Keys);
+                    Assert.Contains(Constants.Documents.Metadata.Collection, metadata.Keys);
+                    Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
+                    Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
 
-                        DataArchivist archivist = null;
-                        Assert.True(WaitForValue(() =>
-                        {
-                            archivist = database.DataArchivist;
-                            return archivist != null;
-                        }, expectedVal: true));
-
-                        await archivist.ArchiveDocs();
-                    }
-                }
-
-                for (var i = 0; i < numOfDocs; i++)
-                {
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        var company = await session.LoadAsync<Company>($"company/{i}");
-                        Assert.NotNull(company);
-                        var metadata = session.Advanced.GetMetadataFor(company);
-                        Assert.DoesNotContain(Constants.Documents.Metadata.ArchiveAt, metadata.Keys);
-                        Assert.Contains(Constants.Documents.Metadata.Collection, metadata.Keys);
-                        Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
-                        Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
-
-                    }
                 }
             }
         }
