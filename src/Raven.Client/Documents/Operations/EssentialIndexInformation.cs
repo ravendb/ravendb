@@ -1,4 +1,5 @@
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.DataArchival;
 
 namespace Raven.Client.Documents.Operations;
 

@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
