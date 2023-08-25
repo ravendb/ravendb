@@ -17,18 +17,12 @@ import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemLicensing,
-    AccordionItemWrapper,
-} from "components/common/AboutView";
+import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionCommunityLicenseNotIncluded from "components/common/AccordionCommunityLicenseNotIncluded";
 
-interface ClientDatabaseConfigurationProps {
-    licenseType?: string;
-}
-
-export default function ClientGlobalConfiguration({ licenseType }: ClientDatabaseConfigurationProps) {
+export default function ClientGlobalConfiguration() {
     const { manageServerService } = useServices();
     const asyncGetGlobalClientConfiguration = useAsyncCallback(manageServerService.getGlobalClientConfiguration);
 
@@ -49,6 +43,8 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
     }, [formState.isSubmitSuccessful, reset, formValues]);
 
     useDirtyFlag(formState.isDirty);
+
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -76,14 +72,13 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                         <AboutViewHeading
                             icon="database-client-configuration"
                             title="Client Configuration"
-                            badge={licenseType === "community"}
-                            badgeText={licenseType === "community" ? "Professional +" : undefined}
+                            badgeText={licenseType === "Community" ? "Professional +" : undefined}
                         />
                         <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
                             {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <Icon icon="save" />}
                             Save
                         </Button>
-                        <div className={licenseType === "community" ? "item-disabled pe-none" : ""}>
+                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
                             <Card className="card flex-column p-3 my-3">
                                 <div className="d-flex flex-grow-1">
                                     <div className="md-label">
@@ -132,8 +127,8 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                     <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="right">
                                         <div className="flex-horizontal p-3">
                                             <div>
-                                                Set this number to restrict the number of requests<br /> 
-                                                (<code>Reads</code> &{" "} <code>Writes</code>) per session in the client API.
+                                                Set this number to restrict the number of requests (<code>Reads</code> &{" "}
+                                                <code>Writes</code>) per session in the client API.
                                             </div>
                                         </div>
                                     </PopoverWithHover>
@@ -174,22 +169,23 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                                     Set the Load balance method for <strong>Read</strong> &{" "}
                                                     <strong>Write</strong> requests
                                                     <br />
-                                                    <br />
                                                     <ul>
                                                         <li>
                                                             <code>None</code>
                                                             <br />
-                                                            <strong>Read</strong> requests - the node the client will target will be
-                                                            based on Read balance behavior configuration.
+                                                            <strong>Read</strong> requests - the node the client will
+                                                            target will be based on Read balance behavior configuration.
                                                             <br />
-                                                            <strong>Write</strong> requests - will be sent to the preferred node.
+                                                            <strong>Write</strong> requests - will be sent to the
+                                                            preferred node.
                                                         </li>
                                                         <br />
                                                         <li>
                                                             <code>Use session context</code>
                                                             <br />
                                                             Sessions that are assigned the same context will have all
-                                                            their <strong>Read & Write</strong> requests routed to the same node.
+                                                            their <strong>Read & Write</strong> requests routed to the
+                                                            same node.
                                                             <br />
                                                             The session context is hashed from a context string (given
                                                             by the client) and an optional seed.
@@ -266,7 +262,7 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                             <div className="flex-horizontal p-3">
                                                 <div>
                                                     Set the Read balance method the client will use when accessing a
-                                                    node with <strong> Read</strong> requests.
+                                                    node with <strong>Read</strong> requests.
                                                     <br />
                                                     <strong>Write</strong> requests are sent to the preferred node.
                                                 </div>
@@ -304,11 +300,14 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                 <p>
                                     <ul>
                                         <li className="margin-bottom-xs">
-                                            This is the <strong>Server-wide Client-Configuration</strong> view.<br />
-                                            The available client-configuration options will apply serve-wide to all databases.
+                                            This is the <strong>Server-wide Client-Configuration</strong> view.
+                                            <br />
+                                            The available client-configuration options will apply server-wide to all
+                                            databases.
                                         </li>
                                         <li>
-                                            These values can be customized per database in the Database Client-Configuration view.
+                                            These values can be customized per database in the Database
+                                            Client-Configuration view.
                                         </li>
                                     </ul>
                                 </p>
@@ -318,37 +317,12 @@ export default function ClientGlobalConfiguration({ licenseType }: ClientDatabas
                                     <Icon icon="newtab" /> Docs - Client Configuration
                                 </a>
                             </AccordionItemWrapper>
-                            {licenseType === "community" && (
-                                <AccordionItemWrapper
-                                    icon="license"
-                                    color="warning"
-                                    heading="Licensing"
-                                    description="See which plans offer this and more exciting features"
+                            {licenseType === "Community" && (
+                                <AccordionCommunityLicenseNotIncluded
                                     targetId="licensing"
-                                    pill
-                                    pillText="Upgrade available"
-                                    pillIcon="star-filled"
-                                >
-                                    <AccordionItemLicensing
-                                        description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
-                                        featureName="Client Configuration"
-                                        featureIcon="database-client-configuration"
-                                        checkedLicenses={["Professional", "Enterprise"]}
-                                    >
-                                        <p className="lead fs-4">Get your license expanded</p>
-                                        <div className="mb-3">
-                                            <Button color="primary" className="rounded-pill">
-                                                <Icon icon="notifications" />
-                                                Contact us
-                                            </Button>
-                                        </div>
-                                        <small>
-                                            <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
-                                                See pricing plans
-                                            </a>
-                                        </small>
-                                    </AccordionItemLicensing>
-                                </AccordionItemWrapper>
+                                    featureName="Client Configuration"
+                                    featureIcon="database-client-configuration"
+                                />
                             )}
                         </AboutViewAnchored>
                     </Col>

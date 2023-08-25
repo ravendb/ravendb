@@ -139,7 +139,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                                                 <ul className="mb-0">
                                                     <li className="margin-bottom-xs">
                                                         Toggle on to disable creating new Auto-Indexes when making a
-                                                        <strong> dynamic query</strong>.
+                                                        <strong>dynamic query</strong>.
                                                     </li>
                                                     <li>
                                                         Query results will be returned only when a matching Auto-Index
