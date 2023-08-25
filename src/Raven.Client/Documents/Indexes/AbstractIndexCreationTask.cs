@@ -228,8 +228,9 @@ namespace Raven.Client.Documents.Indexes
 
                 if (State.HasValue)
                     indexDefinition.State = State.Value;
-
-                indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
+                
+                if (ArchivedDataProcessingBehavior.HasValue)
+                    indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
                 
                 if (DeploymentMode.HasValue)
                     indexDefinition.DeploymentMode = DeploymentMode.Value;
