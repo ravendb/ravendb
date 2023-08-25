@@ -1,6 +1,9 @@
 using System;
+using System.Diagnostics;
+using System.Text;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Voron.Impl;
 using Voron.Util;
 
 namespace Corax.Utils;
@@ -17,7 +20,7 @@ public unsafe struct EntryTermsWriter : IDisposable
         _bsc = bsc;
         _scope = _bsc.Allocate(512, out _bs);
     }
-
+    
     public int Encode(in NativeList<IndexWriter.RecordedTerm> terms)
     {
         const int maxItemSize = 32; // that should be more than enough to fit everything 
@@ -76,6 +79,26 @@ public unsafe struct EntryTermsWriter : IDisposable
         _offset = offset;
         return offset;
     }
+    
+#if DEBUG
+    public string Debug(LowLevelTransaction llt, in NativeList<IndexWriter.RecordedTerm> terms, IndexWriter r)
+    {
+        var fields = r.GetIndexedFieldNamesByRootPage();
+        var sb = new StringBuilder();
+        foreach (var term in terms.ToSpan())
+        {
+            if (term.TermContainerId < 0)
+            {
+                sb.Append($"NULL VAL");
+                continue;
+            }
+
+            sb.Append($"+ {term.TermContainerId}");
+        }
+
+        return sb.ToString();
+    }
+#endif
 
     public void Dispose()
     {

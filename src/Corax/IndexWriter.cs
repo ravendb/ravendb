@@ -403,6 +403,28 @@ namespace Corax
 #endif
             }
 
+#if DEBUG
+
+            public string DebugViewer()
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine($"{nameof(_preparationFinished)}: {_preparationFinished}");
+                sb.AppendLine($"{nameof(HasDouble)}: {HasDouble}");
+                sb.AppendLine($"{nameof(HasChanges)}: {HasChanges}");
+                sb.AppendLine($"{nameof(HasLong)}: {HasLong}");
+                sb.AppendLine($"{nameof(_hasChangesCallCount)}: {_hasChangesCallCount}");
+                sb.AppendLine($"Addition Count: {Additions.Count}");
+                foreach (var add in Additions.ToSpan())
+                    sb.AppendLine($"+{add.EntryId}|{add.Frequency}");
+                sb.AppendLine($"_____________________________");
+                sb.AppendLine($"Removals Count: {Removals.Count}");
+                foreach (var add in Removals.ToSpan())
+                    sb.AppendLine($"+{add.EntryId}|{add.Frequency}");
+
+                return sb.ToString();
+            }
+#endif
+
             public void Dispose([NotNull] ByteStringContext context)
             {
                 Additions.Dispose(context);
