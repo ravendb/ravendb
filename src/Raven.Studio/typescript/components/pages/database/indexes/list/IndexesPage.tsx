@@ -7,7 +7,7 @@ import IndexUtils from "../../../../utils/IndexUtils";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import "./IndexesPage.scss";
-import { Alert, Button, Card, Col, Row } from "reactstrap";
+import { Alert, Button, Card, Col, Row, UncontrolledPopover } from "reactstrap";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
@@ -20,7 +20,7 @@ import { ConfirmSwapSideBySideIndex } from "./ConfirmSwapSideBySideIndex";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import AboutViewFloating, { AccordionItemLicensing, AccordionItemWrapper } from "components/common/AboutView";
-import { LicenseLimitThreshold } from "components/common/LicenseLimitThreshold";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
 interface IndexesPageProps {
     db: database;
@@ -33,8 +33,12 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const staticIndexServerLimit = 12 * 5; //TODO
     const autoIndexServerLimit = 24 * 5; //TODO
-    const staticIndexServerCount = 12 * 5; //TODO
+
+    const staticIndexServerCount = 52; //TODO
     const autoIndexServerCount = 24 * 5; //TODO
+
+    const staticIndexesServerLimitStatus = getLicenseLimitReachStatus(staticIndexServerCount, staticIndexServerLimit);
+    const autoIndexesServerLimitStatus = getLicenseLimitReachStatus(autoIndexServerCount, autoIndexServerLimit);
 
     const { canReadWriteDatabase } = useAccessManager();
     const { reportEvent } = useEventsCollector();
@@ -96,43 +100,77 @@ export function IndexesPage(props: IndexesPageProps) {
 
     return (
         <>
-            <LicenseLimitThreshold count={staticIndexServerCount} limit={staticIndexServerLimit}>
-                <Alert color="warning" className="text-center">
-                    Your server is reaching the <strong>maximum number of static indexes</strong> allowed by your
-                    license{" "}
+            {staticIndexesServerLimitStatus !== "notReached" && (
+                <Alert
+                    color={staticIndexesServerLimitStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center"
+                >
+                    Your server {staticIndexesServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                    <strong>maximum number of static indexes</strong> allowed by your license{" "}
                     <strong>
                         ({staticIndexServerCount}/{staticIndexServerLimit})
                     </strong>
                     <br /> Delete unused indexes or{" "}
                     <strong>
-                        <a href="https://ravendb.net/buy" target="_blank">
+                        <a href="https://ravendb.net/l/FLDLO4" target="_blank">
                             upgrade your license
                         </a>
                     </strong>
                 </Alert>
-            </LicenseLimitThreshold>
-            <LicenseLimitThreshold count={autoIndexServerCount} limit={autoIndexServerLimit}>
-                <Alert color="warning" className="text-center">
-                    Your server is reaching the <strong>maximum number of auto indexes</strong> allowed by your license{" "}
+            )}
+
+            {autoIndexesServerLimitStatus !== "notReached" && (
+                <Alert
+                    color={autoIndexesServerLimitStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center"
+                >
+                    Your server {autoIndexesServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                    <strong>maximum number of auto indexes</strong> allowed by your license{" "}
                     <strong>
                         ({autoIndexServerCount}/{autoIndexServerLimit})
                     </strong>
                     <br /> Delete unused indexes or{" "}
                     <strong>
-                        <a href="https://ravendb.net/buy" target="_blank">
+                        <a href="https://ravendb.net/l/FLDLO4" target="_blank">
                             upgrade your license
                         </a>
                     </strong>
                 </Alert>
-            </LicenseLimitThreshold>
+            )}
             {stats.indexes.length > 0 && (
                 <StickyHeader>
                     <Row>
-                        <Col>
-                            <Button color="primary" href={newIndexUrl} className="rounded-pill px-3">
+                        <Col className="hstack">
+                            <Button
+                                color="primary"
+                                id="NewIndexButton"
+                                href={newIndexUrl}
+                                disabled={staticIndexesServerLimitStatus === "limitReached"} //TODO Add block for local database indexes
+                                className="rounded-pill px-3 pe-auto"
+                            >
                                 <Icon icon="index" addon="plus" />
                                 <span>New index</span>
                             </Button>
+
+                            {staticIndexesServerLimitStatus === "limitReached" && (
+                                //TODO update message server/database
+                                <UncontrolledPopover
+                                    trigger="hover"
+                                    target="NewIndexButton"
+                                    placement="top"
+                                    className="bs5"
+                                >
+                                    <div className="p-3 text-center">
+                                        Static index server/database license limit reached.
+                                        <br /> Delete unused indexes or{" "}
+                                        <strong>
+                                            <a href="https://ravendb.net/l/FLDLO4" target="_blank">
+                                                upgrade your license
+                                            </a>
+                                        </strong>
+                                    </div>
+                                </UncontrolledPopover>
+                            )}
                         </Col>
                         <Col xs="auto">
                             <AboutViewFloating>
