@@ -161,7 +161,9 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
 
     protected abstract void WriteResult(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, TResult document, PreviewState state);
 
-    protected static void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, PreviewState state)
+    protected abstract void WriteMetadata(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, BlittableJsonReaderObject metadata);
+
+    protected void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, PreviewState state)
     {
         using (document.Data)
         {
@@ -249,7 +251,8 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
                 metadata = context.ReadObject(extraMetadataProperties, document.Id);
             }
 
-            writer.WriteMetadata(document, metadata);
+            WriteMetadata(writer, context, document, metadata);
+
             writer.WriteEndObject();
         }
     }

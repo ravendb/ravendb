@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -104,8 +105,9 @@ public sealed class StudioCollectionsHandlerProcessorForPreviewCollection : Abst
         return ValueTask.FromResult(ExtractColumnNames(_documents, _context));
     }
 
-    protected override void WriteResult(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, PreviewState state) 
-        => WriteDocument(writer, context, document, state);
+    protected override void WriteResult(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, PreviewState state) => WriteDocument(writer, context, document, state);
+
+    protected override void WriteMetadata(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, BlittableJsonReaderObject metadata) => writer.WriteMetadata(document, metadata);
 
     public override void Dispose()
     {
