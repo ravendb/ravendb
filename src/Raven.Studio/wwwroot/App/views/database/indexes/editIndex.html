@@ -410,11 +410,6 @@
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li>
-                                            <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ArchivedOnly')">
-                                                <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ArchivedOnly')"></span>
-                                            </a>
-                                        </li>
-                                        <li>
                                             <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ExcludeArchived')">
                                                 <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ExcludeArchived')"></span>
                                             </a>
@@ -422,6 +417,11 @@
                                         <li>
                                             <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'IncludeArchived')">
                                                 <span data-bind="text: $root.formatArchivedDataProcessingBehavior('IncludeArchived')"></span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ArchivedOnly')">
+                                                <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ArchivedOnly')"></span>
                                             </a>
                                         </li>
                                     </ul>
