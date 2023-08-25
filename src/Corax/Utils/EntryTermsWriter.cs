@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow.Compression;
 using Sparrow.Server;
@@ -10,6 +11,8 @@ namespace Corax.Utils;
 
 public unsafe struct EntryTermsWriter : IDisposable
 {
+    public const long NullMarker = ~long.MaxValue;
+    
     private readonly ByteStringContext _bsc;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
     private ByteString _bs;
@@ -20,6 +23,21 @@ public unsafe struct EntryTermsWriter : IDisposable
         _bsc = bsc;
         _scope = _bsc.Allocate(512, out _bs);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SetNullMarkerInTermContainerId(ref long termContainer)
+    {
+        termContainer |= NullMarker;
+    }
+
+    // We've essentially run out of free bits (we ensure that the three lowest bits are empty during encoding) to store field options (all used for other purposes).
+    // However, since containers will never be negative, we can utilize the sign bit to store information about null values.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static long GetTermContainerForNullFromRootPage(in long rootPage)
+    {
+        return (rootPage << 3) | NullMarker;
+    }
+
     
     public int Encode(in NativeList<IndexWriter.RecordedTerm> terms)
     {

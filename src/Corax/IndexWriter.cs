@@ -1962,13 +1962,14 @@ namespace Corax
 
             long TryGetNullTermPostingList(CompactTree tree, out long termContainerId, out CompactTree.CompactKeyLookup keyLookup, out bool termExists, ref EntriesModifications entries, out bool alreadyIndexed)
             {
+                //In the case where the field does not have any null values, we will create a posting list and store all documents immediately.
+                //However, when we do encounter null values, we will update this in the standard manner, just like any other term.
                 keyLookup = default;
-                termContainerId = ~long.MaxValue | (tree.RootPage << 3); // sign bit means its null, rootpage identificates field
+                termContainerId = EntryTermsWriter.GetTermContainerForNullFromRootPage(tree.RootPage);
                 termExists = true;
                 alreadyIndexed = false;
-                //We want to obtain posting lists for NULL value from different tree than CompactTree to make rest code as valid ;-)
-                //We will
                 var postingList = _nullEntriesPostingLists.ReadInt64(indexedField.Name);
+                
                 if (postingList == null)
                 {
                     long setId = Container.Allocate(_transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
@@ -1979,13 +1980,11 @@ namespace Corax
                     _largePostingListSet.Add(setId);
 
                     ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
-                    {            entries.GetEncodedAdditions(_entriesAllocator, out var additions);
-
-                        _pForEncoder.Encode(additions, entries.Additions.Count);
-                        PostingList.Create(_transaction.LowLevelTransaction, ref postingListState, _pForEncoder);
-                        postingList = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
-                        _nullEntriesPostingLists.Add(indexedField.Name, postingList.Value);
-                    }
+                    entries.GetEncodedAdditions(_entriesAllocator, out var additions);
+                    _pForEncoder.Encode(additions, entries.Additions.Count);
+                    PostingList.Create(_transaction.LowLevelTransaction, ref postingListState, _pForEncoder);
+                    postingList = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
+                    _nullEntriesPostingLists.Add(indexedField.Name, postingList.Value);
                     alreadyIndexed = true;
                 }
 
@@ -2046,7 +2045,7 @@ namespace Corax
                 ref var recordedTerm = ref recordedTermList.AddByRefUnsafe();
 
                 Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
-
+                
                 long recordedTermContainerId = entry.Frequency switch
                 {
                     > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
@@ -2054,6 +2053,9 @@ namespace Corax
                            0b100, // marker indicating that we have a term frequency here
                     _ => termContainerId
                 };
+
+                if ((termContainerId & EntryTermsWriter.NullMarker) != 0 && entry.Frequency > 1) //After shifting we will lose the sign bit (NULL handler) so we will have to set it again.
+                    EntryTermsWriter.SetNullMarkerInTermContainerId(ref recordedTermContainerId);
 
                 if (entries.Long != null)
                 {

@@ -211,7 +211,11 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         reader.Reset();
         while (reader.FindNext(fieldRootPage))
         {
-            InsertTerm(reader.Current.Decoded(), ref cloned);
+            var key = reader.IsNull 
+                ? global::Corax.Constants.NullValueAsStringSlice 
+                : reader.Current.Decoded();
+            
+            InsertTerm(key, ref cloned);
         } 
 
         void InsertTerm(ReadOnlySpan<byte> term, ref EntryTermsReader reader)
