@@ -90,59 +90,30 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             private static JsArray CreateValue(Engine engine, DynamicTimeSeriesSegment segment)
             {
-                var items = new PropertyDescriptor[segment._segmentEntry.Segment.NumberOfLiveEntries];
+                var items = new JsValue[segment._segmentEntry.Segment.NumberOfLiveEntries];
                 var i = 0;
                 foreach (DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry in segment.Entries)
                 {
-                    items[i] = new TimeSeriesSegmentEntryPropertyDescriptor(engine, entry);
+                    var value = new JsObject(engine);
+
+                    value.FastSetDataProperty(nameof(entry.Tag), entry._entry.Tag is not null ? new LazyJsString(entry._entry.Tag) : DynamicJsNull.ExplicitNull);
+                    value.FastSetDataProperty(nameof(entry.Timestamp), new JsDate(engine, entry._entry.Timestamp));
+
+                    var values = new JsValue[entry._entry.Values.Length];
+                    for (var j = 0; j < values.Length; j++)
+                        values[j] = entry._entry.Values.Span[j];
+
+                    var array = new JsArray(engine, values);
+
+                    value.FastSetDataProperty(nameof(entry.Value), values[0]);
+                    value.FastSetDataProperty(nameof(entry.Values), array);
+
+                    items[i] = value;
                     i++;
                 }
 
                 var jsArray = new JsArray(engine, items);
                 return jsArray;
-            }
-        }
-
-        private sealed class TimeSeriesSegmentEntryPropertyDescriptor : PropertyDescriptor
-        {
-            private readonly ObjectInstance _value;
-
-            public TimeSeriesSegmentEntryPropertyDescriptor(Engine engine, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry)
-                : base(PropertyFlag.CustomJsValue | PropertyFlag.Writable | PropertyFlag.WritableSet | PropertyFlag.Enumerable | PropertyFlag.EnumerableSet)
-            {
-                _value = CreateValue(engine, entry);
-            }
-
-            public override JsValue Get => CustomValue;
-
-            public override JsValue Set => throw new NotSupportedException();
-
-            protected override JsValue CustomValue
-            {
-                get => _value;
-                set
-                {
-                    throw new NotSupportedException();
-                }
-            }
-
-            private static ObjectInstance CreateValue(Engine engine, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry)
-            {
-                var value = new JsObject(engine);
-
-                value.FastSetDataProperty(nameof(entry.Tag), entry._entry.Tag is not null ? new LazyJsString(entry._entry.Tag) : DynamicJsNull.ExplicitNull);
-                value.FastSetDataProperty(nameof(entry.Timestamp), new JsDate(engine, entry._entry.Timestamp));
-
-                var values = new JsValue[entry._entry.Values.Length];
-                for (var i = 0; i < values.Length; i++)
-                    values[i] = entry._entry.Values.Span[i];
-
-                var array = new JsArray(engine, values);
-
-                value.FastSetDataProperty(nameof(entry.Value), values[0]);
-                value.FastSetDataProperty(nameof(entry.Values), array);
-
-                return value;
             }
         }
     }
