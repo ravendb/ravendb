@@ -1279,8 +1279,8 @@ namespace Voron
                 var (allPages, freePages) = Container.GetPagesFor(tx.LowLevelTransaction, container);
                 RegisterPages(allPages.AllPages(), name + "/AllPagesSet");
                 RegisterPages(freePages.AllPages(), name + "/FreePagesSet");
-                var iterator = Container.GetAllPagesSet(tx.LowLevelTransaction, container);
-                while (iterator.TryMoveNext(out var page))
+                var iterator = Container.GetAllPagesIterator(tx.LowLevelTransaction, container);
+                while (iterator.MoveNext(out var page))
                 {
                     var pageObject = tx.LowLevelTransaction.GetPage(page);
                     r.Add(page, name);

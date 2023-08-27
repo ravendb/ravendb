@@ -33,6 +33,8 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
+        private Dictionary<long, Container.TransactionState> _containers;
+        
         private Dictionary<Slice, PostingList> _postingLists;
         
         private Dictionary<Slice, Table> _tables;
@@ -282,6 +284,14 @@ namespace Voron.Impl
                         ref var savedState = ref MemoryMarshal.AsRef<PostingListState>(span);
                         savedState = set.State;
                     }
+                }
+            }
+
+            if (_containers != null)
+            {
+                foreach (var (containerId, containerState) in _containers)
+                {
+                    containerState.PrepareForCommit(this);
                 }
             }
 
@@ -728,6 +738,16 @@ namespace Voron.Impl
         public void Forget(Slice name)
         {
             LowLevelTransaction.RootObjects.Forget(name);
+        }
+
+        public Container.TransactionState GetContainerState(long containerId)
+        {
+            _containers ??= new Dictionary<long, Container.TransactionState>();
+            if (_containers.TryGetValue(containerId, out var state))
+                return state;
+            state = new Container.TransactionState(containerId);
+            _containers[containerId] = state;
+            return state;
         }
     }
 }
