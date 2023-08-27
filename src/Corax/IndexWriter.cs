@@ -429,6 +429,7 @@ namespace Corax
             public readonly bool HasSuggestions;
             public readonly bool ShouldStore;
             public bool HasMultipleTermsPerField;
+            public long FieldRootPage;
 
             public override string ToString()
             {
@@ -505,7 +506,9 @@ namespace Corax
             var bufferSize = fieldsMapping!.Count;
             _knownFieldsTerms = new IndexedField[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
-                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i));
+            {
+                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i)) { FieldRootPage = -1 };
+            }
 
             _entriesAlreadyAdded = new HashSet<long>();
             _additionsForTerm = new List<long>();
@@ -613,7 +616,7 @@ namespace Corax
                 var field = GetField(fieldId, path);
                 if (field.ShouldStore)
                 {
-                    RegisterEmptyOrNull(field.Name, StoredFieldType.Null);    
+                    RegisterEmptyOrNull(field, StoredFieldType.Null);    
                 }
                 ExactInsert(field, Constants.NullValueSlice);
                 
@@ -769,7 +772,7 @@ namespace Corax
                 {
                     if (field.ShouldStore)
                     {
-                        RegisterTerm(field.Name, value, StoredFieldType.Term);
+                        RegisterTerm(field, value, StoredFieldType.Term);
                     }
                     Insert(field, value);
                 }
@@ -777,7 +780,7 @@ namespace Corax
                 {
                     if (field.ShouldStore)
                     {
-                        RegisterEmptyOrNull(field.Name, StoredFieldType.Empty);
+                        RegisterEmptyOrNull(field, StoredFieldType.Empty);
                     }
                     ExactInsert(field, Constants.EmptyStringSlice);
                 }
@@ -802,7 +805,7 @@ namespace Corax
 
                 if (field.ShouldStore)
                 {
-                    RegisterTerm(field.Name, value, StoredFieldType.Tuple | StoredFieldType.Term);
+                    RegisterTerm(field, value, StoredFieldType.Tuple | StoredFieldType.Term);
                 }
                 
                 ref var term = ref ExactInsert(field, value);
@@ -833,7 +836,7 @@ namespace Corax
                 {
                     storedValue = storedValue.CloneOnTheSameContext();
                 }
-                RegisterTerm(field.Name, storedValue.AsSpan(), StoredFieldType.Raw);
+                RegisterTerm(field, storedValue.AsSpan(), StoredFieldType.Raw);
             }
 
             public void Store(int fieldId, string name, BlittableJsonReaderObject storedValue)
@@ -843,11 +846,11 @@ namespace Corax
                 {
                     storedValue = storedValue.CloneOnTheSameContext();
                 }
-                RegisterTerm(field.Name, storedValue.AsSpan(), StoredFieldType.Raw);
+                RegisterTerm(field, storedValue.AsSpan(), StoredFieldType.Raw);
             }
 
 
-            void RegisterTerm(Slice fieldName, ReadOnlySpan<byte> term, StoredFieldType type)
+            void RegisterTerm(IndexedField field, ReadOnlySpan<byte> term, StoredFieldType type)
             {
                 if (_buildingList > 0)
                 {
@@ -855,13 +858,16 @@ namespace Corax
                 }
                 ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
 
-                _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-                long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, _fieldsTree);
+                if (field.FieldRootPage == -1)
+                {
+                    _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                    field.FieldRootPage = _parent._fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
+                }
 
                 var termId = Container.Allocate(
                                     _parent._transaction.LowLevelTransaction, 
                                     _parent._storedFieldsContainerId,
-                                    term.Length, fieldRootPage, 
+                                    term.Length, field.FieldRootPage, 
                                     out Span<byte> space);
                 term.CopyTo(space);
 
@@ -885,15 +891,14 @@ namespace Corax
             public void RegisterEmptyOrNull(int fieldId, string fieldName, StoredFieldType type)
             {
                 var field = GetField(fieldId, fieldName);
-                RegisterEmptyOrNull(field.Name, type);
+                RegisterEmptyOrNull(field, type);
             }
             
-            void RegisterEmptyOrNull(Slice fieldName,StoredFieldType type)
+            void RegisterEmptyOrNull(IndexedField field ,StoredFieldType type)
             {
                 ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
 
                 _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-                long fieldRootPage = _parent._fieldsCache.GetFieldRootPage(fieldName, _fieldsTree);
 
                 var recordedTerm = new RecordedTerm
                 (
@@ -902,7 +907,7 @@ namespace Corax
                     // this ensure that stored values are then read using the same order we have for writing them
                     // which is important for storing arrays
                     termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
-                    @long: fieldRootPage
+                    @long: field.FieldRootPage
                 );
 
                 if (entryTerms.TryPush(recordedTerm) == false)
@@ -1037,7 +1042,8 @@ namespace Corax
 
             if (_dynamicFieldsMapping is null || _persistedDynamicFieldsAnalyzers is null)
             {
-                CreateDynamicField(null, FieldIndexingMode.Normal);
+                indexedField = CreateDynamicField(null, FieldIndexingMode.Normal);
+                indexedField.FieldRootPage = _fieldsCache.GetFieldRootPage(indexedField.Name, _fieldsTree);
                 return indexedField;
             }
 
@@ -1083,18 +1089,19 @@ namespace Corax
                     _ => _dynamicFieldsMapping!.DefaultAnalyzer
                 };
 
-                CreateDynamicField(analyzer, mode);
+                indexedField = CreateDynamicField(analyzer, mode);
             }
-
+            indexedField.FieldRootPage = _fieldsCache.GetFieldRootPage(indexedField.Name, _fieldsTree);
             return indexedField;
 
-            void CreateDynamicField(Analyzer analyzer, FieldIndexingMode mode)
+            IndexedField CreateDynamicField(Analyzer analyzer, FieldIndexingMode mode)
             {
                 IndexFieldsMappingBuilder.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
                 IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 IndexFieldsMappingBuilder.GetFieldForTotalSum(context, clonedFieldName, out var nameSum);
-                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, false, false);
-                _dynamicFieldsTerms[clonedFieldName] = indexedField;
+                var field = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, false, false);
+                _dynamicFieldsTerms[clonedFieldName] = field;
+                return field;
             }
         }
 
