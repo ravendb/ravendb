@@ -37,7 +37,6 @@ public struct FieldsCache
         return fieldRootPage;
     }
 
-    
     public long GetLookupRootPage(string name)
     {
         using var _ = Slice.From(_allocator, name, out var slice);
