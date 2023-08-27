@@ -9,7 +9,7 @@ public class ServerLimitsDetails : INotificationDetails
 {
     public const int MaxNumberOfLimits = 128;
 
-    public List<ServerLimitInfo> Limits { get; set; } = new();
+    public LinkedList<ServerLimitInfo> Limits { get; set; } = new();
 
     public DynamicJsonValue ToJson()
     {

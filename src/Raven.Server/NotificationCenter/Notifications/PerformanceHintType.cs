@@ -11,7 +11,6 @@
         SlowIO,
         SqlEtl_SlowSql,
         HugeDocuments,
-        Indexing_References,
-        ServerLimits
+        Indexing_References
     }
 }
