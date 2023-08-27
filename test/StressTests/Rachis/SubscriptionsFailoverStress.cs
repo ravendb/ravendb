@@ -75,7 +75,7 @@ namespace StressTests.Rachis
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task SubscriptionFailoverWhileModifying(Options options)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;

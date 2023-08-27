@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         protected override SubscriptionBatchItem ShouldSend(Document item, out string reason)
         {
             reason = null;
-            var id = item.Id;
+            string id = item.Id; // we convert the Id to string since item might get disposed
             var result = new SubscriptionBatchItem
             {
                 Document = item,
