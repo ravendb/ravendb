@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using System.Text;
 using Sparrow;
 using Sparrow.Server;
@@ -43,6 +45,9 @@ namespace Voron.Data.Containers
             
             public HashSet<long> Removals = new();
             public HashSet<long> Additions = new();
+
+            public Dictionary<long, long> LastFreePageByPageLevelMetadata = new();
+
             public long ContainerId;
 
             public TransactionState(long containerId)
@@ -180,7 +185,7 @@ namespace Voron.Data.Containers
             public bool IsFree
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => (_compactBackingStore & 0x1F) == 0;
+                get => _compactBackingStore == 0;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -557,47 +562,20 @@ namespace Voron.Data.Containers
                 AddToFreeList(llt, rootContainer, container._page.PageNumber, container.Header.PageLevelMetadata);
             }
             
-            // We wont work as hard if we know that the entry is too big.
-            bool isBigEntry = size >= (Constants.Storage.PageSize / 6);
-            int tries = isBigEntry ? 4 : 128;
-
-            // PERF: Even if this condition never happens, we need the code to ensure that we have a bounded time to find a free page.
-            // This is the case where at some point we need to just give up or end up wasting more time to find a page than the time
-            // we will use to create and store in disk a new one.
-            int i = 0;
-            var it = new FreeListIterator(llt, containerId, pageLevelMetadata);
-            for (; i < tries; i++)  
-            {                
-                if (it.MoveNext(out var pageNum) == false)
-                    break;
-
-                var page = llt.ModifyPage(pageNum);
+        
+            var txState = llt.Transaction.GetContainerState(containerId);
+            if(txState.LastFreePageByPageLevelMetadata.TryGetValue(pageLevelMetadata, out var lastFreePage))
+            {
+                var page = llt.ModifyPage(lastFreePage);
                 var maybe = new Container(page);
-                
-                // During indexing, we are going to very quickly shift between different pages 
-                // with multiple page-level-metadata, we can't remove it from the free list too soon 
-                if(PageMetadataMatch(maybe, pageLevelMetadata) == false)
-                    continue;
+                if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider))
+                    return maybe;
+            }
 
-                // we want to ensure that the free list doesnt get too big...
-                // if we don't have space here, we should discard it from the free list
-                // however we need to be sure you are not going to do so when the entries
-                // are abnormally big. In those cases, the reasonable thing to do is just
-                // skip it and create a new page for it but without discarding pages that
-                // would be reasonably used by following requests. 
-                if (!isBigEntry)
-                {
-                    RemoveFromFreeList(llt,rootContainer, maybe._page.PageNumber);
-                }
-
-                if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
-                    continue;
-                
-                // we register it as the next free page
-                rootContainer.UpdateNextFreePage(page.PageNumber);
-                
-                Debug.Assert(maybe.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1);
-                return  maybe;
+            if (SearchForFreeListPage(llt, rootContainer, txState, pageLevelMetadata, size, out Container nextPage))
+            {
+                txState.LastFreePageByPageLevelMetadata[pageLevelMetadata] = nextPage._page.PageNumber;
+                return nextPage;
             }
 
             // no existing pages remaining, allocate new one
@@ -610,23 +588,76 @@ namespace Voron.Data.Containers
             AddToAllPagesList(llt, rootContainer, newPage.PageNumber);
             AddToFreeList(llt, rootContainer, newPage.PageNumber, pageLevelMetadata);
 
+            txState.LastFreePageByPageLevelMetadata[pageLevelMetadata] = newPage.PageNumber;
             return container;
+        }
+
+        private static bool SearchForFreeListPage(LowLevelTransaction llt, Container rootContainer, TransactionState txState, long pageLevelMetadata, int size,
+            out Container maybe)
+        {
+            // PERF: Even if this condition never happens, we need the code to ensure that we have a bounded time to find a free page.
+            // This is the case where at some point we need to just give up or end up wasting more time to find a page than the time
+            // we will use to create and store in disk a new one.
+            
+            // We wont work as hard if we know that the entry is too big.
+            bool isBigEntry = size >= (Constants.Storage.PageSize / 6);
+            int tries = isBigEntry ? 4 : 128;
+
+            var it = new FreeListIterator(llt, txState, pageLevelMetadata);
+            for (int i =0; i < tries; i++)
+            {
+                if (it.MoveNext(out var pageNum) == false)
+                    break;
+
+                var page = llt.ModifyPage(pageNum);
+                maybe = new Container(page);
+
+                // During indexing, we are going to very quickly shift between different pages 
+                // with multiple page-level-metadata, we can't remove it from the free list too soon 
+                if (PageMetadataMatch(maybe, pageLevelMetadata) == false)
+                    continue;
+
+                // we want to ensure that the free list doesnt get too big...
+                // if we don't have space here, we should discard it from the free list
+                // however we need to be sure you are not going to do so when the entries
+                // are abnormally big. In those cases, the reasonable thing to do is just
+                // skip it and create a new page for it but without discarding pages that
+                // would be reasonably used by following requests. 
+                if (!isBigEntry)
+                {
+                    RemoveFromFreeList(llt, rootContainer, maybe._page.PageNumber);
+                }
+
+                if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
+                    continue;
+
+                // we register it as the next free page
+                rootContainer.UpdateNextFreePage(page.PageNumber);
+
+                Debug.Assert(maybe.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1);
+                return true;
+            }
+
+            maybe = default;
+            return false;
         }
 
         private struct FreeListIterator
         {
+            private readonly LowLevelTransaction _llt;
             private readonly long _pageLevelMetadata;
             private readonly TransactionState _txState;
             private Dictionary<long, long>.Enumerator _inMemEnum;
             private Lookup<Int64LookupKey>.ForwardIterator _persistentEnum;
+            private bool _hasPersistentIt;
 
-
-            public FreeListIterator(LowLevelTransaction llt, long containerId, long pageLevelMetadata)
+            public FreeListIterator(LowLevelTransaction llt, TransactionState txState, long pageLevelMetadata)
             {
-                _txState = llt.Transaction.GetContainerState(containerId);
+                _llt = llt;
+                _txState = txState;
                 _pageLevelMetadata = pageLevelMetadata;
                 _inMemEnum = _txState.FreeListAdditions.GetEnumerator();
-                _persistentEnum = _txState.GetFreePages(llt).Iterate();
+                _persistentEnum = default;
             }
 
             public bool MoveNext(out long pageNum)
@@ -639,6 +670,12 @@ namespace Voron.Data.Containers
                     
                     pageNum = _inMemEnum.Current.Key;
                     return true;
+                }
+
+                if (_hasPersistentIt == false)
+                {
+                    _hasPersistentIt = true;
+                    _persistentEnum = _txState.GetFreePages(_llt).Iterate();
                 }
 
                 while (_persistentEnum.MoveNext(out Int64LookupKey key, out var pageLevelMetadata, out _))
@@ -801,21 +838,48 @@ namespace Voron.Data.Containers
         {
             // we have to take into account 4 bytes alignment
             int nextCeiling = (Header.CeilingOfOffsets + reqSize + 3) & 0xFFFC;
-            return nextCeiling < Header.FloorOfData;
+            return nextCeiling < Header.FloorOfData &&
+                   // we have a max of 1K items per page, so we ensure we have at least one offset
+                   Header.NumberOfOffsets < 1023;
         }
 
         private (int Size, int Position) GetRequiredSizeAndPosition(int size)
         {
-            var pos = 0;
             int reqSize = ComputeRequiredSize(size);
 
-            ref var metadataPtr = ref MetadataFor();
-
+            ushort* metadataPtr = (ushort*)_page.DataPointer;
+            var pos = 0;
             ushort numberOfOffsets = Header.NumberOfOffsets;
+            if (Vector256.IsHardwareAccelerated)
+            {
+                for (; pos + Vector256<ushort>.Count <= numberOfOffsets; pos += Vector256<ushort>.Count)
+                {
+                    var vec = Vector256.Load(metadataPtr + pos);
+                    var cmp = Vector256.Equals(vec, Vector256<ushort>.Zero);
+                    uint bits = cmp.ExtractMostSignificantBits();
+                    var first = BitOperations.TrailingZeroCount(bits);
+                    if(first < 32)
+                        return (reqSize, pos + first);
+                }
+            }
+            if (Vector128.IsHardwareAccelerated)
+            {
+                for (; pos + Vector128<ushort>.Count <= numberOfOffsets; pos += Vector128<ushort>.Count)
+                {
+                    var vec = Vector128.Load(metadataPtr + pos);
+                    var cmp = Vector128.Equals(vec, Vector128<ushort>.Zero);
+                    uint bits = cmp.ExtractMostSignificantBits();
+                    var first = BitOperations.TrailingZeroCount(bits);
+                    if(first < 32)
+                        return (reqSize, pos + first);
+                }
+            }
+
+            ref var metadataRef = ref MetadataFor();
             for (; pos < numberOfOffsets; pos++)
             {
                 // There is a delete record here, we can reuse this position.
-                if (Unsafe.Add(ref metadataPtr, pos).IsFree)
+                if (Unsafe.Add(ref metadataRef, pos).IsFree)
                     return (reqSize, pos);
             }
             
