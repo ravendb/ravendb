@@ -50,8 +50,7 @@ namespace Raven.Server.Platform.Posix
             if (PlatformDetails.RunningOnPosix == false)
                 throw new InvalidOperationException("Cannot read Current Limits because it requires POSIX");
 
-            if (_lock.Wait(0) == false)
-                return LimitsInfo.Current;
+            _lock.Wait();
 
             try
             {
@@ -116,44 +115,7 @@ namespace Raven.Server.Platform.Posix
 
         private static async Task<long> GetEolCountAsync(Stream stream)
         {
-            var pipe = new Pipe();
-            var writing = FillPipeAsync(stream, pipe.Writer);
-            var reading = ReadPipeAsync(pipe.Reader);
-            await Task.WhenAll(reading, writing);
-
-            return await reading;
-        }
-
-        private static async Task FillPipeAsync(Stream socket, PipeWriter writer)
-        {
-            while (true)
-            {
-                // Allocate at least 256 bytes from the PipeWriter.
-                var memory = writer.GetMemory(256);
-
-                int bytesRead = await socket.ReadAsync(memory);
-                if (bytesRead == 0)
-                {
-                    break;
-                }
-
-                // Tell the PipeWriter how much was read from the Socket.
-                writer.Advance(bytesRead);
-
-                // Make the data available to the PipeReader.
-                var result = await writer.FlushAsync();
-
-                if (result.IsCompleted)
-                {
-                    break;
-                }
-            }
-
-            await writer.CompleteAsync();
-        }
-
-        private static async Task<long> ReadPipeAsync(PipeReader reader)
-        {
+            var reader = PipeReader.Create(stream);
             long eolCount = 0L;
             while (true)
             {
@@ -175,9 +137,6 @@ namespace Raven.Server.Platform.Posix
                     break;
                 }
             }
-
-            // Mark the PipeReader as complete.
-            await reader.CompleteAsync();
 
             return eolCount;
         }

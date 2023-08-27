@@ -75,8 +75,8 @@ namespace Raven.Server.Monitoring
                 if (_alerts.Count > 0)
                 {
                     ServerLimitsDetails details;
-                    PerformanceHint hint;
-                    var id = PerformanceHint.GetKey(PerformanceHintType.ServerLimits, _source);
+                    AlertRaised hint;
+                    var id = AlertRaised.GetKey(AlertType.ServerLimits, _source);
 
                     using (_notificationsStorage.Read(id, out var ntv))
                     {
@@ -91,34 +91,31 @@ namespace Raven.Server.Monitoring
                             details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ServerLimitsDetails>(detailsJson);
                         }
 
-                        hint = PerformanceHint.Create(
+                        hint = AlertRaised.Create(
                             null,
                             "Running close to OS limits",
                             "We have detected server is running close to OS limits",
-                            PerformanceHintType.ServerLimits,
-                            NotificationSeverity.Info,
+                            AlertType.ServerLimits,
+                            NotificationSeverity.Warning,
                             _source,
                             details
                         );
                     }
 
-                    for (int i = _alerts.Count - 1; i >= 0; i--)
+                    foreach (var limitInfo in _alerts)
                     {
-                        details.Limits.Add(_alerts[i]);
-                    }
-
-                    if (details.Limits.Count > ServerLimitsDetails.MaxNumberOfLimits)
-                    {
-                        details.Limits = details.Limits.Take(ServerLimitsDetails.MaxNumberOfLimits).ToList();
+                        details.Limits.AddFirst(limitInfo);
+                        if (details.Limits.Count > ServerLimitsDetails.MaxNumberOfLimits)
+                        {
+                            details.Limits.RemoveLast();
+                        }
                     }
 
                     _notificationCenter.Add(hint);
 
                     if (_logger.IsOperationsEnabled)
                     {
-                        _logger.Operations($"Running close to OS limits detected:{Environment.NewLine}" + string.Join(Environment.NewLine,
-                            _alerts.Select(x =>
-                                $"{x.Name} is '{x.Current}' which is close to the OS limit '{x.Max}', please increase the limit. The parameter is defined in '{x.Limit}' file.")));
+                        _logger.Operations($"Running close to OS limits detected:{Environment.NewLine}{GetAlertsString()}");
                     }
                 }
             }
@@ -129,11 +126,9 @@ namespace Raven.Server.Monitoring
                     var addition = string.Empty;
                     if (_alerts.Count > 0)
                     {
-                        addition = $"Last Alerts: {Environment.NewLine}{string.Join(Environment.NewLine,
-                            _alerts.Select(x =>
-                                $"{x.Name} is '{x.Current}' which is close to the OS limit '{x.Max}', please increase the limit. The parameter is defined in '{x.Limit}' file."))}";
+                        addition = $" Last Alerts:{Environment.NewLine}{GetAlertsString()}";
                     }
-                    _logger.Operations($"Failed to run {nameof(ServerLimitsMonitor)}" + addition, e);
+                    _logger.Operations($"Failed to run '{nameof(ServerLimitsMonitor)}'{addition}", e);
                 }
             }
             finally
@@ -141,6 +136,13 @@ namespace Raven.Server.Monitoring
                 _alerts.Clear();
                 Monitor.Exit(_runLock);
             }
+        }
+
+        private string GetAlertsString()
+        {
+            return string.Join(Environment.NewLine,
+                _alerts.Select(x =>
+                    $"{x.Name} current value is '{x.Current}' which is close to the OS limit '{x.Max}', please increase the limit. The parameter is defined in '{x.Limit}' file."));
         }
 
         private void AddAlertIfNeeded(long current, long max, float percentThreshold, int numberThreshold, string limit, string name)
