@@ -512,8 +512,8 @@ namespace Voron.Debugging
             if (includeDetails)
             {
                 pageDensities = new();
-                var it = Container.GetAllPagesSet(_tx, page);
-                while (it.TryMoveNext(out var pageNum))
+                var it = Container.GetAllPagesIterator(_tx, page);
+                while (it.MoveNext(out var pageNum))
                 {
                     // cannot use GetPageHeaderForDebug since we are reading not just from the header
                     Page cur = _tx.GetPage(pageNum);

@@ -217,7 +217,7 @@ namespace Voron.Data.Lookups
                 }
             }
 
-            private bool HasPreviousValue()
+            private readonly bool HasPreviousValue()
             {
                 ref var state = ref _cursor._stk[_cursor._pos];
                 if (state.LastSearchPosition > 1)

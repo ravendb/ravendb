@@ -20,11 +20,8 @@ namespace Voron.Data.Containers
         [FieldOffset(13)]
         public ExtendedPageType ContainerFlags;
 
-        [FieldOffset(14)] 
-        public bool OnFreeList;
-
-        [FieldOffset(15)]
-        private readonly byte Reserved;
+        [FieldOffset(14)]
+        private fixed byte Reserved[2];
 
         [FieldOffset(16)]
         public long PageLevelMetadata;
