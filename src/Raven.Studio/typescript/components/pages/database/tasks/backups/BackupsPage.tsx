@@ -15,7 +15,7 @@ import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.Periodic
 import { loadableData } from "components/models/common";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Button, Spinner } from "reactstrap";
+import { Badge, Button, Spinner } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "components/common/RichPanel";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -23,6 +23,9 @@ import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -262,6 +265,8 @@ export function BackupsPage(props: BackupsPageProps) {
 
     const backups = tasks.tasks.filter((x) => x.shared.taskType === "Backup") as OngoingTaskPeriodicBackupInfo[];
 
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
+
     return (
         <div className="flex-grow-1 flex-stretch-items">
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
@@ -337,7 +342,10 @@ export function BackupsPage(props: BackupsPageProps) {
                         }
                     >
                         <Icon icon="manage-ongoing-tasks" />
-                        <span>Periodic Backup ({backups.length})</span>
+                        <span>
+                            Periodic Backup ({backups.length}){" "}
+                            {licenseType === "Community" && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                        </span>
                     </HrHeader>
                     {canReadWriteDatabase(database) && (
                         <div className="mb-1">

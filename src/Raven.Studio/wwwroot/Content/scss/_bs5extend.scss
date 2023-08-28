@@ -341,3 +341,11 @@ select {
 .modal-footer {
     padding-top: 0;
 }
+
+// badge visible whenever view is license restricted
+.license-restricted-badge {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0;
+    text-transform: capitalize;
+}
