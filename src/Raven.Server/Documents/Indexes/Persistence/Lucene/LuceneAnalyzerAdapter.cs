@@ -1,17 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using Corax;
 using Corax.Pipeline;
+using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Raven.Server.Indexing;
 using Raven.Server.Json;
+using Analyzer = Corax.Analyzer;
 using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
+using Token = Corax.Pipeline.Token;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
@@ -21,6 +24,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private LazyStringReader _lazyStringReader;
 
         private readonly LuceneAnalyzer _analyzer;
+        private TokenStream _stream;
+        private IOffsetAttribute _offset;
+        private ITermAttribute _term;
 
         private LuceneAnalyzerAdapter(LuceneAnalyzer analyzer,
             delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
@@ -34,6 +40,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             var self = (LuceneAnalyzerAdapter)adapter;
             var analyzer = self._analyzer;
+            var term = self._term;
+            var offset = self._offset;
 
             fixed (byte* pText = source)
             {
@@ -41,17 +49,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 int currentOutputIdx = 0;
                 var currentTokenIdx = 0;
-
                 var stream = analyzer.ReusableTokenStream(null, reader);
+                if (ReferenceEquals(stream, self._stream) == false)
+                {
+                    self._stream = stream;
+                    self._offset = offset = stream.GetAttribute<IOffsetAttribute>();
+                    self._term = term = stream.GetAttribute<ITermAttribute>();
+                }
                 do
                 {
-                    var offset = stream.GetAttribute<IOffsetAttribute>();
                     int start = offset.StartOffset;
                     int length = offset.EndOffset - start;
                     if (length == 0)
                         continue; // We skip any empty token. 
 
-                    var term = stream.GetAttribute<ITermAttribute>();
                     ReadOnlySpan<char> termChars = term.TermBuffer();
                     int outputLength = Encoding.UTF8.GetBytes(termChars[..term.TermLength()], output[currentOutputIdx..]);
 
@@ -65,8 +76,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     currentTokenIdx++;
                 } while (stream.IncrementToken());
 
-                output = output.Slice(0, currentOutputIdx);
-                tokens = tokens.Slice(0, currentTokenIdx);
+                output = output[..currentOutputIdx];
+                tokens = tokens[..currentTokenIdx];
             }
         }
 
