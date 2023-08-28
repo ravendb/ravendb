@@ -17,7 +17,7 @@ public unsafe struct NativeList<T>
     public int Capacity => _storage.Length / sizeof(T);
     public int Count;
 
-    public readonly Span<T> ToSpan() => new(_storage.Ptr, Count);
+    public readonly Span<T> ToSpan() => Count == 0 ? Span<T>.Empty : new Span<T>(_storage.Ptr, Count);
     
     public bool IsValid => RawItems != null;
 
@@ -113,6 +113,13 @@ public unsafe struct NativeList<T>
         }
     }
 
+    public void EnsureCapacityFor(ByteStringContext allocator,int additionalItems)
+    {
+        if (HasCapacityFor(additionalItems))
+            return;
+        Grow(allocator, additionalItems);
+    }
+
     public bool HasCapacityFor(int itemsToAdd)
     {
         return Count + itemsToAdd < Capacity;
@@ -129,7 +136,8 @@ public unsafe struct NativeList<T>
 
     public void Dispose(ByteStringContext ctx)
     {
-        ctx.Release(ref _storage);
+        if(_storage.HasValue)
+            ctx.Release(ref _storage);
     }
 
     public void Clear()

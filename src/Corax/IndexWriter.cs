@@ -77,6 +77,7 @@ namespace Corax
         internal struct TermInEntryModification : IEquatable<TermInEntryModification>, IComparable<TermInEntryModification>
         {
             public long EntryId;
+            public int TermsPerEntryIndex; 
             public short Frequency;
 
             public override string ToString() => EntryId + ", " + Frequency;
@@ -223,23 +224,23 @@ namespace Corax
                 Updates.Initialize(context);
             }
 
-            public void Addition([NotNull] ByteStringContext context, long entryId, short freq = 1)
+            public void Addition([NotNull] ByteStringContext context, long entryId, int termsPerEntry, short freq = 1)
             {
                 if (Additions.HasCapacityFor(1) == false)
                     Additions.Grow(context, 1);
 
-                AddToList(ref Additions, entryId, freq);
+                AddToList(ref Additions, entryId,termsPerEntry, freq);
             }
             
-            public void Removal([NotNull] ByteStringContext context, long entryId, short freq = 1)
+            public void Removal([NotNull] ByteStringContext context, long entryId, int termsPerEntry,short freq = 1)
             {
                 if (Removals.HasCapacityFor(1) == false)
                     Removals.Grow(context, 1);
 
-                AddToList(ref Removals, entryId, freq);
+                AddToList(ref Removals, entryId, termsPerEntry, freq);
             }
 
-            private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, short freq )
+            private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, int termsPerEntry, short freq )
             {
                 AssertPreparationIsNotFinished();
                 NeedToUpdate = true;
@@ -265,7 +266,7 @@ namespace Corax
                     }
                 }
 
-                var term = new TermInEntryModification { EntryId = entryId, Frequency = freq };
+                var term = new TermInEntryModification { EntryId = entryId, TermsPerEntryIndex = termsPerEntry, Frequency = freq };
                 list.PushUnsafe(term);
             }
 
@@ -412,7 +413,13 @@ namespace Corax
 
         private sealed class IndexedField
         {
-            public Dictionary<long, List<(double, double)>> Spatial;
+            public struct SpatialEntry
+            {
+                public List<(double, double)> Locations;
+                public int TermsPerEntryIndex;
+            }
+            
+            public Dictionary<long, SpatialEntry> Spatial;
             public readonly FastList<EntriesModifications> Storage;
             public readonly Dictionary<Slice, int> Textual;
             public readonly Dictionary<long, int> Longs;
@@ -584,6 +591,7 @@ namespace Corax
         {
             private readonly IndexWriter _parent;
             private long _entryId;
+            private int _termPerEntryIndex;
             public bool Active;
             private int _buildingList;
             private Tree _fieldsTree;
@@ -600,10 +608,11 @@ namespace Corax
                 _parent.BoostEntry(_entryId, boost);
             }
 
-            public void Init(long entryId)
+            public void Init(long entryId, int termsPerEntryIndex)
             {
                 Active = true;
                 _entryId = entryId;
+                _termPerEntryIndex = termsPerEntryIndex;
             }
 
             public void Dispose()
@@ -712,7 +721,7 @@ namespace Corax
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Addition(_parent._entriesAllocator, _entryId);
+                term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex);
 
                 if (field.HasSuggestions)
                     _parent.AddSuggestions(field, slice);
@@ -741,10 +750,10 @@ namespace Corax
                 }
 
                 ref var doublesTerm = ref field.Storage.GetAsRef(doublesTermsLocation);
-                doublesTerm.Addition(_parent._entriesAllocator, _entryId);
+                doublesTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex);
 
                 ref var longsTerm = ref field.Storage.GetAsRef(longsTermsLocation);
-                longsTerm.Addition(_parent._entriesAllocator, _entryId);
+                longsTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex);
             }
 
             private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
@@ -753,10 +762,14 @@ namespace Corax
                 ref var terms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Spatial, _entryId, out var exists);
                 if (exists == false)
                 {
-                    terms = new List<(double, double)>();
+                    terms = new IndexedField.SpatialEntry
+                    {
+                        Locations = new List<(double, double)>(),
+                        TermsPerEntryIndex =  _termPerEntryIndex
+                    };
                 }
 
-                terms.Add(coords);
+                terms.Locations.Add(coords);
             }
 
             internal void Clean()
@@ -856,7 +869,9 @@ namespace Corax
                 {
                     type |= StoredFieldType.List;
                 }
-                ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
+
+                var termsPerEntrySpan = _parent._termsPerEntryId.ToSpan();
+                ref var entryTerms = ref termsPerEntrySpan[_termPerEntryIndex];
 
                 if (field.FieldRootPage == -1)
                 {
@@ -896,7 +911,7 @@ namespace Corax
             
             void RegisterEmptyOrNull(IndexedField field ,StoredFieldType type)
             {
-                ref var entryTerms = ref _parent.GetEntryTerms(_entryId);
+                ref var entryTerms = ref _parent.GetEntryTerms(_termPerEntryIndex);
 
                 _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
 
@@ -956,10 +971,20 @@ namespace Corax
                 entryId = InitBuilder();
             }
 
-            _indexedEntries.Add(keySlice); // Register entry by key. 
-
-            _builder.Init(entryId);
+            _indexedEntries.Add(keySlice); // Register entry by key.
+            int index = InsertTermsPerEntry(entryId);
+            _builder.Init(entryId, index);
             return _builder;
+        }
+
+        private int InsertTermsPerEntry(long entryId)
+        {
+            int index = _termsPerEntryId.Count;
+            _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, 1);
+            _termsPerEntryIds.EnsureCapacityFor(_entriesAllocator, 1);
+            _termsPerEntryId.AddByRefUnsafe() = new NativeList<RecordedTerm>();
+            _termsPerEntryIds.PushUnsafe(entryId);
+            return index;
         }
 
         public IndexEntryBuilder Index(string key) => Index(Encoding.UTF8.GetBytes(key));
@@ -971,8 +996,8 @@ namespace Corax
             // We do not dispose because we will be storing the slice in the hash set.
             Slice.From(_transaction.Allocator, key, ByteStringType.Immutable, out var keySlice);
             _indexedEntries.Add(keySlice);  // Register entry by key. 
-
-            _builder.Init(entryId);
+            int index = InsertTermsPerEntry(entryId);
+            _builder.Init(entryId, index);
 
             return _builder;
         }
@@ -1113,7 +1138,9 @@ namespace Corax
         private long _lastEntryId;
         private NativeIntegersList _tempListBuffer;
         private FastPForEncoder _pForEncoder;
-        private readonly Dictionary<long, NativeList<RecordedTerm>> _termsPerEntryId = new();
+
+        private NativeList<long> _termsPerEntryIds;
+        private NativeList<NativeList<RecordedTerm>> _termsPerEntryId;
         private ByteStringContext _entriesAllocator;
         private Tree _fieldsTree;
         private CompactTree _primaryKeyTree;
@@ -1246,7 +1273,8 @@ namespace Corax
             var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree);
             
             long dicId = CompactTree.GetDictionaryId(llt);
-            var compactKey = llt.AcquireCompactKey();
+
+            _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, _deletedEntries.Count);
             
             foreach (long entryToDelete in _deletedEntries)
             {
@@ -1255,13 +1283,16 @@ namespace Corax
 
                 RemoveDocumentBoost(entryToDelete);
                 var entryTerms = Container.MaybeGetFromSamePage(llt, ref lastVisitedPage, entryTermsId);
-                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, compactKey, dicId, entryToDelete);
+
+                var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
+                
+                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, dicId, entryToDelete, termsPerEntryIndex);
                 Container.Delete(llt, _entriesTermsContainerId, entryTermsId);
             }
         }
 
-        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, CompactKey compactKey, long dicId,
-            long entryToDelete)
+        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, long dicId,
+            long entryToDelete, int termsPerEntryIndex)
         {
             var reader = new EntryTermsReader(llt, entryTerms.Address, entryTerms.Length, dicId);
             reader.Reset();
@@ -1295,7 +1326,7 @@ namespace Corax
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, reader.Frequency);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
                 scope.Dispose();
                 
                 if(reader.HasNumeric == false)
@@ -1309,7 +1340,7 @@ namespace Corax
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex);
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
@@ -1319,7 +1350,7 @@ namespace Corax
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex);
             }
         }
 
@@ -1439,10 +1470,12 @@ namespace Corax
             _pforDecoder.Dispose();
             _indexedEntries.Clear();
 
-            foreach (var entryTerms in _termsPerEntryId.Values)
-                entryTerms.Dispose(_entriesAllocator);
-            _termsPerEntryId.Clear();
-            
+            for (int i = 0; i < _termsPerEntryId.Count; i++)
+            {
+                _termsPerEntryId.RawItems[i].Dispose(_entriesAllocator);
+            }
+            _termsPerEntryId.Dispose(_entriesAllocator);
+            _termsPerEntryIds.Dispose(_entriesAllocator);
             _deletedEntries.Clear();
             _entriesAlreadyAdded.Clear();
             _additionsForTerm.Clear();
@@ -1466,6 +1499,8 @@ namespace Corax
             _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
             _entriesForTermsRemovalsBuffer = new NativeIntegersList(_entriesAllocator);
             _tempListBuffer = new NativeIntegersList(_entriesAllocator);
+            _termsPerEntryId = new NativeList<NativeList<RecordedTerm>>();
+            _termsPerEntryIds = new NativeList<long>();
 
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
@@ -1687,11 +1722,15 @@ namespace Corax
         private void WriteIndexEntries()
         {
             using var writer = new EntryTermsWriter(_entriesAllocator);
-            foreach (var (entry, termsRef) in _termsPerEntryId)
+            for (int i = 0; i < _termsPerEntryId.Count; i++)
             {
+                ref var termsRef = ref _termsPerEntryId.RawItems[i];
+                if (termsRef.Count == 0)
+                    continue;
                 int size = writer.Encode(termsRef);
                 long entryTermsId = Container.Allocate(_transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
                 writer.Write(space);
+                var entry = _termsPerEntryIds.RawItems[i];
                 _entryIdToLocation.Add(entry, entryTermsId);
             }
         }
@@ -1706,12 +1745,13 @@ namespace Corax
             var termContainerId = fieldRootPage << 3 | 0b010;
             Debug.Assert(termContainerId >>> 3 == fieldRootPage, "field root too high?");
             var entriesToTerms = entriesToSpatialTree.FixedTreeFor(indexedField.Name, sizeof(double)+sizeof(double));
-            foreach (var (entry, list)  in indexedField.Spatial)
+            foreach (var (entry, spatialEntry)  in indexedField.Spatial)
             {
-                list.Sort();
+                spatialEntry.Locations.Sort();
 
-                ref var entryTerms = ref GetEntryTerms(entry);
-                foreach (var item in CollectionsMarshal.AsSpan(list))
+                ref var entryTerms = ref GetEntryTerms(spatialEntry.TermsPerEntryIndex);
+                var locations = CollectionsMarshal.AsSpan(spatialEntry.Locations);
+                foreach (var item in locations)
                 {
                     var (lat,lng) = item;
                     var recordedTerm = new RecordedTerm
@@ -1729,7 +1769,7 @@ namespace Corax
                 }
 
                 {
-                    var (lat, lng) = list[0];
+                    var (lat, lng) = locations[0];
                     using (entriesToTerms.DirectAdd(entry, out _, out var ptr))
                     {
                         Unsafe.WriteUnaligned(ptr, lat);
@@ -1905,7 +1945,7 @@ namespace Corax
             {
                 var entry = rawItems[i];
 
-                ref var recordedTermList = ref GetEntryTerms(entry.EntryId);
+                ref var recordedTermList = ref GetEntryTerms(entry.TermsPerEntryIndex);
 
                 if ( recordedTermList.HasCapacityFor(1) == false)
                     recordedTermList.Grow(_entriesAllocator, 1);
@@ -1947,15 +1987,9 @@ namespace Corax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ref NativeList<RecordedTerm> GetEntryTerms(long entry)
+        private ref NativeList<RecordedTerm> GetEntryTerms(int termsPerEntry)
         {
-            ref var entryTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_termsPerEntryId, entry, out var exists);
-            if (exists == false)
-            {
-                entryTerms = new NativeList<RecordedTerm>();
-                entryTerms.Initialize(_entriesAllocator);
-            }
-            return ref entryTerms;
+            return ref _termsPerEntryId.ToSpan()[termsPerEntry];
         }
 
         private void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
@@ -2398,12 +2432,15 @@ namespace Corax
         public void Dispose()
         {
             _compactKeyScope.Dispose();
+            _termsPerEntryId.Dispose(_entriesAllocator);
+            _termsPerEntryIds.Dispose(_entriesAllocator);
             _pforDecoder.Dispose();
             _entriesAllocator.Dispose();
             _jsonOperationContext?.Dispose();
             if (_ownsTransaction)
                 _transaction?.Dispose();
-            
+
+       
             if (_encodingBufferHandler != null)
             {
                 Analyzer.BufferPool.Return(_encodingBufferHandler);
