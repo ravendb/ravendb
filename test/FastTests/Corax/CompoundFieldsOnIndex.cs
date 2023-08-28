@@ -42,6 +42,12 @@ public class CompoundFieldsOnIndex : RavenTestBase
             s.Store(new User("Lucene", "Hadera", new DateTime(2009, 4, 1)));
 
             s.Store(new User("Corax", "Torun", new DateTime(2021, 4, 1)));
+            
+            s.Store(new User("A", "IL", new DateTime(2014, 4, 1)));
+            s.Store(new User("B", "IL", new DateTime(2014, 4, 1)));
+            s.Store(new User("A", "IL", new DateTime(2009, 4, 1)));
+
+            
             s.SaveChanges();
         }
         Indexes.WaitForIndexing(store);
@@ -54,6 +60,22 @@ public class CompoundFieldsOnIndex : RavenTestBase
             Assert.Equal(2, users.Count);
             Assert.Equal(2014, users[0].Birthday.Year);
             Assert.Equal(2021, users[1].Birthday.Year);
+        }
+        
+        using (var s = store.OpenSession())
+        {
+            var users = s.Query<User, Users_Idx>()
+                .Where(x => x.Location == "IL")
+                .OrderBy(x => x.Name)
+                .ThenBy(x=>x.Birthday)
+                .ToList();
+            Assert.Equal(3, users.Count);
+            Assert.Equal(2009, users[0].Birthday.Year);
+            Assert.Equal(2014, users[1].Birthday.Year);
+            Assert.Equal(2014, users[2].Birthday.Year);
+            
+            Assert.Equal("A", users[1].Name);
+            Assert.Equal("B", users[2].Name);
         }
         
         using (var s = store.OpenSession())
@@ -97,6 +119,13 @@ public class CompoundFieldsOnIndex : RavenTestBase
         await TestQueryBuilder<SortingMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
             .WhereEquals(x => x.Name, "Lucene")
             .OrderBy(x => x.Location)
+            .GetIndexQuery()
+        );
+        
+        await TestQueryBuilder<SortingMultiMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+            .WhereEquals(x => x.Location, "Hadera")
+            .OrderBy(nameof(User.Name))
+            .OrderBy(nameof(User.Birthday))
             .GetIndexQuery()
         );
     }

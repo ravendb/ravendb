@@ -239,7 +239,6 @@ public static class CoraxQueryBuilder
                 // We have no where clause and a sort by index, can just scan over the relevant index if there is a single order by clause
                 // if we have multiple clauses, we'll get the first $TAKE+1 terms from the index, then sort just those, leading to the same
                 // behavior, but far faster
-                streamingOptimization.SkipOrderByClause = sortMetadata.Length == 1;
                 var betweenQuery =  sortBy.FieldType switch
                 {
                      MatchCompareFieldType.Integer => indexSearcher.BetweenQuery(sortBy.Field, long.MinValue, long.MaxValue, forward: sortBy.Ascending, streamingEnabled: true, maxNumberOfTerms: maxTermToScan),
@@ -255,9 +254,13 @@ public static class CoraxQueryBuilder
                 coraxQuery = indexSearcher.Memoize(indexSearcher.AllEntries()).Replay();
             }
 
-
-            if (sortMetadata is not null && streamingOptimization.SkipOrderByClause == false)
-                coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
+            if (sortMetadata is not null)
+            {
+                // In the case of ordering by multiple fields, we still want to benefit from the streaming
+                // optimization, but we have to sort again anyway, this ensure that this happens
+                if (streamingOptimization.SkipOrderByClause == false || sortMetadata.Length > 1)
+                    coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
+            } 
 
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
