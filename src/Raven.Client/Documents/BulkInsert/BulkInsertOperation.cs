@@ -310,11 +310,21 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task SendHeartBeatAsync()
         {
+            if (_options.ForTestingPurposes?.Info != null)
+                _options.ForTestingPurposes.Info += $"SendHeartBeatAsync {DateTime.UtcNow}:{DateTime.UtcNow.Millisecond}. ";
             if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
+            {
+                if (_options.ForTestingPurposes?.Info != null)
+                    _options.ForTestingPurposes.Info += $"{DateTime.UtcNow}:{DateTime.UtcNow.Millisecond} return < _heartbeatCheckInterval. ";
                 return;
+            }
 
             if (_streamLock.Wait(0) == false)
-                return; // if locked we are already writing
+            {
+                if (_options.ForTestingPurposes?.Info != null)
+                    _options.ForTestingPurposes.Info += $"{DateTime.UtcNow}:{DateTime.UtcNow.Millisecond} return < lock taken. ";
+                return;
+            }// if locked we are already writing
             try
             {
                 await ExecuteBeforeStore().ConfigureAwait(false);
@@ -325,7 +335,6 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_first == false)
                 {
-
                     WriteComma();
                 }
 

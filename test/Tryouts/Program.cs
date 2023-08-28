@@ -30,9 +30,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new AttachmentsReplication(testOutputHelper))
+                    using (var test = new RavenDB_17745(testOutputHelper))
                     {
-                        await test.ConflictOfAttachmentAndDocument3StoresDifferentLastModifiedOrder_RevisionsDisabled_MissingAttachmentLoop();
+                        await test.StartStoreInTheMiddleOfAnHeartbeat();
                     }
                 }
                 catch (Exception e)
