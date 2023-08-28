@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client.Util;
 using Raven.Server.Platform.Posix;
 using Raven.Server.Utils;
 using Sparrow.LowMemory;
@@ -80,7 +81,7 @@ namespace Raven.Server.ServerWide
             if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
                 return LimitsInfo.Invalid;
 
-            return LimitsReader.ReadCurrentLimitsAsync().GetAwaiter().GetResult();
+            return AsyncHelpers.RunSync(LimitsReader.ReadCurrentLimitsAsync);
         }
     }
 }
