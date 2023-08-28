@@ -165,7 +165,6 @@ public static class CoraxQueryBuilder
             if (cbi.Operation is not UnaryMatchOperation.Equals &&  BinaryMatchInQuery)
                 return false;
             
-            
             // In case of TermMatch `order by` has to have exactly the same type as queried field.
             // Since we store number as tuple of (String, Double, Long) we could write query like this:
             // where Numeric = 1 order by Numeric as double. Where clause will match all documents where Numeric casted to long is equal 1 (e.g. 1.2, 1.3, 1.9) but order by will sort with precision.
@@ -266,7 +265,7 @@ public static class CoraxQueryBuilder
         }
     }
 
-    private static IQueryMatch ToCoraxQuery(Parameters builderParameters, QueryExpression expression, ref StreamingOptimization streamingOptimization, bool exact = false, int? proximity = null)
+    private static IQueryMatch ToCoraxQuery(Parameters builderParameters, QueryExpression expression, ref StreamingOptimization leftOnlyOptimization, bool exact = false, int? proximity = null)
     {
         var indexSearcher = builderParameters.IndexSearcher;
         var metadata = builderParameters.Metadata;
@@ -320,7 +319,7 @@ public static class CoraxQueryBuilder
                             return TranslateBetweenQuery(builderParameters, bq, exact);
                     }
                     
-                    streamingOptimization.BinaryMatchTraversed();
+                    leftOnlyOptimization.BinaryMatchTraversed();
                     switch (@where.Left, @where.Right)
                     {
                         case (NegatedExpression ne1, NegatedExpression ne2):
@@ -368,11 +367,11 @@ public static class CoraxQueryBuilder
 
 
                         default:
-                            left = ToCoraxQuery(builderParameters, @where.Left, ref streamingOptimization, exact);
+                            left = ToCoraxQuery(builderParameters, @where.Left, ref leftOnlyOptimization, exact);
                             right = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
                             // in case of AND we can materialize only TermMatches, we push streamingOptimization there only for changing order for MultiTermMatch;
-                            if (left is CoraxBooleanItem cbi && streamingOptimization.TrySetAsStreamingField(builderParameters, cbi))
-                                left = cbi.Materialize(ref streamingOptimization); 
+                            if (left is CoraxBooleanItem cbi && leftOnlyOptimization.TrySetAsStreamingField(builderParameters, cbi))
+                                left = cbi.Materialize(ref leftOnlyOptimization); 
                             
                             if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
                                 return merged;
@@ -381,7 +380,7 @@ public static class CoraxQueryBuilder
                             // We don't want an unknown size multiterm match to be subject to this optimization. When faced with one that is unknown just execute as
                             // it was written in the query. If we don't have statistics the confidence will be Low, so the optimization wont happen.
                             //This was part of Corax's IndexSearcher optimization (https://github.com/ravendb/ravendb/blob/12b874c06a0003520cd8f188467488cdc526f96b/src/Corax/IndexSearcher/IndexSearcher.BinaryMatches.cs#L16C8-L19)
-                            if (streamingOptimization.OptimizationIsPossible == false && left.Count < right.Count && left.Confidence >= QueryCountConfidence.Normal)
+                            if (leftOnlyOptimization.OptimizationIsPossible == false && left.Count < right.Count && left.Confidence >= QueryCountConfidence.Normal)
                                 return indexSearcher.And(right, left, token: builderParameters.Token);
                             
                             return indexSearcher.And(left, right, token: builderParameters.Token);
@@ -389,7 +388,7 @@ public static class CoraxQueryBuilder
                 }
                 case OperatorType.Or:
                 {
-                    streamingOptimization.BinaryMatchTraversed();
+                    leftOnlyOptimization.BinaryMatchTraversed();
                     var left = ToCoraxQuery(builderParameters, @where.Left, ref builderParameters.StreamingDisabled, exact);
                     var right = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
 
@@ -535,20 +534,20 @@ public static class CoraxQueryBuilder
                 case MethodType.Boost:
                     return HandleBoost(builderParameters, me, exact);
                 case MethodType.StartsWith:
-                    return HandleStartsWith(builderParameters, me, exact, ref streamingOptimization);
+                    return HandleStartsWith(builderParameters, me, exact, ref leftOnlyOptimization);
                 case MethodType.EndsWith:
-                    return HandleEndsWith(builderParameters, me, exact, ref streamingOptimization);
+                    return HandleEndsWith(builderParameters, me, exact, ref leftOnlyOptimization);
                 case MethodType.Exists:
-                    return HandleExists(builderParameters, me, ref streamingOptimization);
+                    return HandleExists(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.Exact:
-                    return HandleExact(builderParameters, me, ref streamingOptimization, proximity);
+                    return HandleExact(builderParameters, me, ref leftOnlyOptimization, proximity);
                 case MethodType.Spatial_Within:
                 case MethodType.Spatial_Contains:
                 case MethodType.Spatial_Disjoint:
                 case MethodType.Spatial_Intersects:
                     return HandleSpatial(builderParameters, me, methodType);
                 case MethodType.Regex:
-                    return HandleRegex(builderParameters, me, ref streamingOptimization);
+                    return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.MoreLikeThis:
                     return builderParameters.AllEntries.Replay();
                 default:

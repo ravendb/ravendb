@@ -115,6 +115,7 @@ public struct CoraxBooleanItem : IQueryMatch
             case UnaryMatchOperation.Equals:
             {
                 Slice startWith = GetStartWithTerm();
+                streamingOptimization.SkipOrderByClause = true;
                 return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, isNegated: false, forward: streamingOptimization.Forward, streamingEnabled: true, validatePostfixLen: true);
             }
             default:
