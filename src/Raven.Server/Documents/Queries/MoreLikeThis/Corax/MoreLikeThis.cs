@@ -209,8 +209,12 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         {
             if(fields.Contains(indexEntry.FieldRootPage) == false)
                 continue;
+
+            var key = indexEntry.IsNull 
+                ? null
+                : indexEntry.Current.Decoded();
             
-            InsertTerm(indexEntry.Current.Decoded(), indexEntry.Frequency);
+            InsertTerm(key, indexEntry.Frequency);
 
         }
         
@@ -219,7 +223,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         
         void InsertTerm(ReadOnlySpan<byte> term, int freq)
         {
-            var termAsString = Encoding.UTF8.GetString(term);
+            var termAsString = term is {Length: 0} ? CoraxProj.Constants.NullValueAsString : Encoding.UTF8.GetString(term);
             if (IsNoiseWord(termAsString)) // TODO optimize
                 return;
 

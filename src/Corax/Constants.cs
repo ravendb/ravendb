@@ -20,14 +20,15 @@ namespace Corax
         public const string IndexMetadata = "@index_metadata";
         public const string IndexTimeFields = "@index_time_fields";
         public const string DocumentBoost = "@document_boost";
-        
+        public const string NullValueAsString = "NULL_VALUE";
+
         public static readonly Slice NullValueSlice, NullValueAsStringSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice, IndexTimeFieldsSlice;
 
         static Constants()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, "NULL_VALUE", ByteStringType.Immutable, out NullValueAsStringSlice);
+                Slice.From(ctx, NullValueAsString, ByteStringType.Immutable, out NullValueAsStringSlice);
                 Slice.From(ctx, NullValue, ByteStringType.Immutable, out NullValueSlice);
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);
                 Slice.From(ctx, IndexMetadata, ByteStringType.Immutable, out IndexMetadataSlice);

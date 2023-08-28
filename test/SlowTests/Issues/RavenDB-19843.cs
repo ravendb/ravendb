@@ -16,7 +16,7 @@ public class RavenDB_19843 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[] {true})]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[] {false})]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, Data = new object[] {false})] // Corax is consistent when sorting strings and numeric values
     public void CheckIfNullDatesAreReturnedLastWithConfigOptionEnabled(Options options, bool configEnabled)
     {
         using (var store = GetDocumentStore(new Options
