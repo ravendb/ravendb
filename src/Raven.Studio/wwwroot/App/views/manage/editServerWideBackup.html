@@ -1,4 +1,9 @@
 <form class="content-margin edit-backup edit-ongoing-task" data-bind="with: editedTask" autocomplete="off">
+    <div class="align-items-center d-flex gap-2 margin-bottom-md">
+        <i class="icon-server-wide-backup"></i>
+        <h2 data-bind="text: $parent.isAddingNewBackupTask() ? `New Server-Wide Backup Task` : `Edit Server-Wide Backup Task`" class="mb-0"></h2>
+        <span class="badge license-restricted-badge">Professional +</span>
+    </div>
     <div class="toolbar" data-bind="with: $root">
         <button type="submit" class="btn btn-primary"
                 data-bind="click: saveBackupSettings, disable: spinners.save() || !dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }">
@@ -10,7 +15,6 @@
     </div>
     <div class="panel">
         <div class="padding">
-            <strong><h3 data-bind="text: $parent.isAddingNewBackupTask() ? `New Server-Wide Backup Task` : `Edit Server-Wide Backup Task`"></h3></strong>
             <div class="row margin-bottom" data-bind="validationElement: name">
                 <label class="control-label col-sm-4 col-lg-2">Task Name</label>
                 <div class="col-sm-4">
