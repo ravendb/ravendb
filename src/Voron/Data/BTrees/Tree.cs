@@ -1331,6 +1331,9 @@ namespace Voron.Data.BTrees
 
             DecompressionsCache?.Dispose();
             _prepareLocator?.Dispose();
+
+            DecompressionsCache = null;
+            _prepareLocator = null;
         }
 
         private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, int len, out byte* pos)
@@ -1407,8 +1410,7 @@ namespace Voron.Data.BTrees
         
         public CompactTree CompactTreeFor(Slice key)
         {
-            if (_prepareLocator == null)
-                _prepareLocator = new SliceSmallSet<IPrepareForCommit>(128);
+            _prepareLocator ??= new SliceSmallSet<IPrepareForCommit>(128);
 
             if (_prepareLocator.TryGetValue(key, out var prep) == false)
             {

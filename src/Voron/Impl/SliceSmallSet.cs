@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -46,10 +46,16 @@ namespace Voron.Impl
 
         private IEnumerable<TValue> ReturnValues()
         { 
-            if (_overflowStorage == null)
+            if (_currentIdx < _length)
             {
-                for (int i = 0; i <= _currentIdx; i++)
-                    yield return _values[i];
+                for (int i = 0; i < _length; i++)
+                {
+                    // RavenDB-20947: This may be the case of the "Cannot add a value in a read only transaction on $Root in Read"
+                    // If we don't check for 'HasValue' or that the key size is bigger than zero, we may be returning a removed
+                    // or a tree belonging to a different transaction if the array has not been properly cleaned. 
+                    if (_keySizes[i] != 0)
+                        yield return _values[i];
+                }
             }
             else
             {
@@ -60,38 +66,36 @@ namespace Voron.Impl
 
         public unsafe void Add(Slice key, TValue value)
         {
-            if (_overflowStorage != null)
-            {
-                goto Overflow;
-            }
-
             int idx = FindKey(key);
-            if (idx == Invalid)
+            if (idx != Invalid)
+                goto Done;
+
+            // side effect, overflow if needed
+            idx = RequestWritableBucket();
+            if (idx == Invalid || _currentIdx >= _length)
             {
-                // side affect, overflow if needed
-                idx = RequestWritableBucket();
-                if (idx == Invalid)
-                    goto Overflow;
+                Debug.Assert(_overflowStorage != null, "By the time this happens, the backing store must have been already created.");
+                _overflowStorage[key] = value;
             }
 
+            Done:
             _keys[idx] = key;
             _keySizes[idx] = key.Size;
             _keyHashes[idx] = Hashing.XXHash64.CalculateInline(key.Content.Ptr, (ulong)key.Size);
             _values[idx] = value;
-            return;
-            
-            Overflow:
-            Debug.Assert(_overflowStorage != null);
-            _overflowStorage[key] = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe int FindKey(Slice key)
         {
+            Debug.Assert(key.HasValue, "The key is invalid.");
+
             if (_currentIdx == Invalid)
                 return Invalid;
 
             int keyLength = key.Size;
+            Debug.Assert(keyLength > 0, "The key requested cannot be zero or negative.");
+
             ulong keyHash = 0;
 
             Slice[] keys = _keys;
@@ -120,6 +124,8 @@ namespace Voron.Impl
                 // is equal to 1 / σ^i. We are using that knowledge to quickly get rid of elements.
                 ref var candidateKey = ref keys[currentIdx];
 
+                Debug.Assert(candidateKey.HasValue, "If there is no way candidate key not have a value since then key size stored would be inconsistent.");
+
                 int midValue = (keyLength - 1) / 2;
                 if (key[0] != candidateKey[0] || key[midValue] != candidateKey[midValue] || key[keyLength - 1] != candidateKey[keyLength - 1])
                     continue;
@@ -134,8 +140,7 @@ namespace Voron.Impl
                     continue;
 
                 // We now know that we have an almost sure hit. We will do a final verification at this time.
-                // TODO: Implement a vectorized version of the Equals operation. 
-                if (AdvMemory.CompareInline(keyPtr, keys[currentIdx].Content.Ptr, keyLength) != 0)
+                if (AdvMemory.CompareInline(keyPtr, candidateKey.Content.Ptr, keyLength) != 0)
                     continue;
 
                 return currentIdx;
@@ -147,24 +152,22 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int RequestWritableBucket()
         {
-            if (_overflowStorage != null)
-                return Invalid;
-            
-            if (_currentIdx >= _length - 1)
+            // This will only happen once. When we reach that point, it will trigger and it's done.             
+            if (_currentIdx == _length - 1)
             {
-                var storage = new Dictionary<Slice, TValue>(SliceComparer.Instance);
+                var storage = _overflowStorage ?? new Dictionary<Slice, TValue>(SliceComparer.Instance);
                 storage.EnsureCapacity(_currentIdx * 2);
 
-                for (int i = 0; i <= _currentIdx; i++)
+                for (int i = 0; i < _length; i++)
                 {
-                    if(_keys[i].HasValue == false)
+                    // If the key size is 0 then there are no keys in there.
+                    if (_keySizes[i] == 0)
                         continue;
+
                     storage[_keys[i]] = _values[i];
                 }
 
                 _overflowStorage = storage;
-                _currentIdx = Invalid;
-                return Invalid;
             }
 
             _currentIdx++;
@@ -173,6 +176,19 @@ namespace Voron.Impl
 
         public bool TryGetValue(Slice key, out TValue value)
         {
+            int idx = FindKey(key);
+            if (idx != Invalid)
+            {
+                value = _values[idx];
+                return true;
+            }
+
+            if (_currentIdx < _length)
+            {
+                Unsafe.SkipInit(out value);
+                return false;
+            }
+
             // PERF: We put this into another method call to shrink the size of TryGetValue in the cases
             // where the inliner would decide to inline the method. Given this method will be rarely executed
             // as if it happens, probably this data structure is not the correct answer; the inliner will 
@@ -183,27 +199,14 @@ namespace Voron.Impl
                 return _overflowStorage.TryGetValue(key, out value);
             }
 
-            int idx = FindKey(key);
-            if (idx == Invalid)
-            {
-                if (_overflowStorage == null)
-                {
-                    Unsafe.SkipInit(out value);
-                    return false;
-                }
-
-                // If we have overflowed, then we will gonna try to find it there. 
-                return TryGetValueFromOverflowUnlikely(out value);
-            }
-
-            value = _values[idx];
-            return true;
+            // If we have overflowed, then we will gonna try to find it there. 
+            return TryGetValueFromOverflowUnlikely(out value);
         }
 
         public void Clear()
         {
-            Array.Fill(_keySizes, default);
-            Array.Fill(_keyHashes, default);
+            Array.Fill(_keySizes, 0);
+            Array.Fill(_keyHashes, 0ul);
             Array.Fill(_keys, default);
             Array.Fill(_values, default);
             _overflowStorage?.Clear();
@@ -220,16 +223,17 @@ namespace Voron.Impl
 
         public void Remove(Slice name)
         {
-            if (_overflowStorage != null)
-            {
-                _overflowStorage.Remove(name);
-                return;
-            }
+            _overflowStorage?.Remove(name);
 
+            // It can happen that the key is not in the LRU cache, therefore if we cannot find it we are done.
             int idx = FindKey(name);
+            if (idx == Invalid)
+                return;
+
+            // If we have found it, we are retiring it from the cache.
             _keys[idx] = default;
-            _keySizes[idx] = default;
-            _keyHashes[idx] = default;
+            _keySizes[idx] = 0;
+            _keyHashes[idx] = 0ul;
             _values[idx] = default;
         }
     }
