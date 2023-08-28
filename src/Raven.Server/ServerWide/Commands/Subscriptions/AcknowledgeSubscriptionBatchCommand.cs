@@ -41,7 +41,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             var subscriptionName = SubscriptionName;
             if (string.IsNullOrEmpty(subscriptionName))
@@ -69,7 +69,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {
-                return context.ReadObject(existingValue, SubscriptionName);
+                return new UpdatedValue
+                {
+                    Action = Action.Noop
+                };
             }
 
             if (IsLegacyCommand())
@@ -82,8 +85,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             
             subscription.NodeTag = NodeTag;
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
-            
-            return context.ReadObject(subscription.ToJson(), subscriptionName);
+
+            return new UpdatedValue
+            {
+                Action = Action.Update,
+                Value = context.ReadObject(subscription.ToJson(), subscriptionName)
+            };
         }
 
         private bool IsLegacyCommand()

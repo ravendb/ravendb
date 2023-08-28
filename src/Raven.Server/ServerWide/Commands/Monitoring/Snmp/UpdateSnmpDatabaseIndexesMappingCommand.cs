@@ -40,7 +40,7 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
             json[nameof(Indexes)] = new DynamicJsonArray(Indexes);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject previousValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject previousValue)
         {
             if (previousValue != null)
             {
@@ -50,15 +50,28 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
                 AddIndexesIfNecessary(previousValue.Modifications, previousValue, Indexes);
 
                 if (previousValue.Modifications.Properties.Count == 0)
-                    return previousValue;
+                {
+                    return new UpdatedValue
+                    {
+                        Action = Action.Noop
+                    };
+                }
 
-                return context.ReadObject(previousValue, GetItemId());
+                return new UpdatedValue
+                {
+                    Action = Action.Update,
+                    Value = context.ReadObject(previousValue, GetItemId())
+                };
             }
 
             var djv = new DynamicJsonValue();
             AddIndexesIfNecessary(djv, null, Indexes);
 
-            return context.ReadObject(djv, GetItemId());
+            return new UpdatedValue
+            {
+                Action = Action.Update,
+                Value = context.ReadObject(djv, GetItemId())
+            };
         }
 
         private static void AddIndexesIfNecessary(DynamicJsonValue djv, BlittableJsonReaderObject previousValue, List<string> indexes)
