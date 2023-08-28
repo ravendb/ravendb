@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
@@ -13,7 +12,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 
@@ -52,28 +50,19 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
-            var topology = record.Topology;
-            var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
-            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
-            if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
-                throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
-
-            if (appropriateNode != NodeTag)
-            {
-                throw new SubscriptionDoesNotBelongToNodeException(
-                    $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
-                    $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.")
-                { AppropriateNode = appropriateNode };
-            }
-
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {
+                var subscriptionTask = new SubscriptionTask(existingValue);
+                AssertSubscriptionState(record, subscriptionTask, subscriptionName);
+
                 return new UpdatedValue
                 {
                     Action = Action.Noop
                 };
             }
+
+            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+            AssertSubscriptionState(record, subscription, subscriptionName);
 
             if (IsLegacyCommand())
             {
@@ -91,6 +80,23 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 Action = Action.Update,
                 Value = context.ReadObject(subscription.ToJson(), subscriptionName)
             };
+        }
+
+        private void AssertSubscriptionState(RawDatabaseRecord record, IDatabaseTask subscription, string subscriptionName)
+        {
+            var topology = record.Topology;
+            var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
+            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
+            if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
+                throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
+
+            if (appropriateNode != NodeTag)
+            {
+                throw new SubscriptionDoesNotBelongToNodeException(
+                        $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
+                        $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.")
+                    { AppropriateNode = appropriateNode };
+            }
         }
 
         private bool IsLegacyCommand()
@@ -200,6 +206,51 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
 
             return msg;
+        }
+
+        private class SubscriptionTask : IDatabaseTask
+        {
+            private readonly BlittableJsonReaderObject _rawSubscription;
+
+            public SubscriptionTask(BlittableJsonReaderObject rawSubscription)
+            {
+                _rawSubscription = rawSubscription;
+            }
+
+            public ulong GetTaskKey()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId);
+                return (ulong)subscriptionId;
+            }
+
+            public string GetMentorNode()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.MentorNode), out string mentorNode);
+                return mentorNode;
+            }
+
+            public string GetDefaultTaskName()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionName), out string subscriptionName);
+                return subscriptionName;
+            }
+
+            public string GetTaskName()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionName), out string subscriptionName);
+                return subscriptionName;
+            }
+
+            public bool IsResourceIntensive()
+            {
+                return false;
+            }
+
+            public bool IsPinnedToMentorNode()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.PinToMentorNode), out bool pinToMentorNode);
+                return pinToMentorNode;
+            }
         }
     }
 }
