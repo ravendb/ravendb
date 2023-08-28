@@ -66,7 +66,7 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Identities)] = new DynamicJsonArray(Identities);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             throw new NotImplementedException();
         }
