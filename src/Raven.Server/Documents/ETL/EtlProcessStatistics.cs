@@ -104,11 +104,13 @@ namespace Raven.Server.Documents.ETL
 
             LoadErrors += count;
 
-            LastLoadErrorTime = SystemTime.UtcNow;
+            var now = SystemTime.UtcNow;
+            
+            LastLoadErrorTime = now;
 
             LastLoadErrorsInCurrentBatch.Add(new EtlErrorInfo
             {
-                Date = SystemTime.UtcNow,
+                Date = now,
                 DocumentId = documentId,
                 Error = error
             });
@@ -129,7 +131,17 @@ namespace Raven.Server.Documents.ETL
 
         public void ThrowLoadError(string error, int count)
         {
-            var message = $"Current ETL batch with '{count}' items was stopped. Error: {error}";
+            var now = SystemTime.UtcNow;
+            
+            LastLoadErrorTime = now;
+
+            LastLoadErrorsInCurrentBatch.Add(new EtlErrorInfo
+            {
+                Date = now,
+                Error = error
+            });
+
+            var message = $"Current ETL batch with '{count}' items was stopped. ";
 
             CreateAlertIfAnyLoadErrors(message);
 
