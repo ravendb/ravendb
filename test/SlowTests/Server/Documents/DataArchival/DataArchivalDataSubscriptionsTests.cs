@@ -6,11 +6,11 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
@@ -58,6 +58,56 @@ namespace SlowTests.Server.Documents.DataArchival;
                     Query = "from Companies",
                     Name = "Created",
                     ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
+                });
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
+                var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
+                
+                WaitForValue(() => companies.Count, 1, 5000);
+                Assert.Equal(0, companies.Count);
+
+                // Activate the archival manually
+                await SetupDataArchival(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                var documentsArchiver = database.DataArchivist;
+                await documentsArchiver.ArchiveDocs();
+
+                await AssertWaitForCountAsync(() => Task.FromResult(companies), 1);
+                Assert.Equal(1, companies.Count());
+            }
+        }
+        
+        [Fact]
+        public async Task DataSubscriptionWillOperateOnlyOnArchivedDocuments_AfterChangingDefaultBehavior()
+        {
+            Options options = new()
+            {
+                ModifyDatabaseRecord = dr =>
+                {
+                    dr.Settings[RavenConfiguration.GetKey(x => x.Subscriptions.DefaultArchivedDataProcessingBehavior)] = "ArchivedOnly";
+                }
+            };
+            
+            using (var store = GetDocumentStore(options))
+            {
+                List<Company> companies = new(); 
+                
+                // Insert document with archive time before activating the archival
+                var company = new Company {Name = "Company Name", Address1 = "Dabrowskiego 6"};
+                var retires = SystemTime.UtcNow.AddMinutes(5);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    await session.SaveChangesAsync();
+                }
+                
+                // Set-up the subscription and run the worker
+                var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+                {
+                    Query = "from Companies",
+                    Name = "Created",
                 });
                 var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
                 var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));

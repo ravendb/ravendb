@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.Config.Attributes;
 
 namespace Raven.Server.Config.Categories
@@ -10,5 +11,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Subscriptions.MaxNumberOfConcurrentConnections", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [Description("Amount of concurrent subscription connections per database")]
         public int MaxNumberOfConcurrentConnections { get; set; }
+        
+        [DefaultValue(ArchivedDataProcessingBehavior.ExcludeArchived)]
+        [ConfigurationEntry("Subscriptions.DefaultArchivedDataProcessingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [Description("The default subscriptions archived data processing behavior per database")]
+        public ArchivedDataProcessingBehavior DefaultArchivedDataProcessingBehavior { get; set; }
     }
 }
