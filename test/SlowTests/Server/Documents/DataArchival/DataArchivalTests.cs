@@ -177,7 +177,7 @@ namespace SlowTests.Server.Documents.DataArchival
                     metadata[Constants.Documents.Metadata.ArchiveAt] = "tomorrow";
 
                     var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
-                    Assert.Contains($"The archive date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
+                    Assert.Contains($"The due date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
                 }
             }
         }

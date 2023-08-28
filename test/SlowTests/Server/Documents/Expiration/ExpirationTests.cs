@@ -286,7 +286,7 @@ namespace SlowTests.Server.Documents.Expiration
                     metadata[Constants.Documents.Metadata.Refresh] = "test";
                     
                     var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
-                    Assert.Contains($"The expiration date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
+                    Assert.Contains($"The due date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -298,7 +298,7 @@ namespace SlowTests.Server.Documents.Expiration
                     metadata[Constants.Documents.Metadata.Refresh] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
                     var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
-                    Assert.Contains($"The expiration date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
+                    Assert.Contains($"The due date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
                 }
             }
         }
