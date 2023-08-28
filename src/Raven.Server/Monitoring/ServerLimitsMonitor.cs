@@ -29,7 +29,7 @@ namespace Raven.Server.Monitoring
         private static readonly int MaxThreadsNumberThreshold = 1024 * 10;
 
         private readonly ServerStore _serverStore;
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private readonly ServerNotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerLimitsMonitor>(nameof(ServerLimitsMonitor));
         private readonly List<ServerLimitsDetails.ServerLimitInfo> _alerts = new List<ServerLimitsDetails.ServerLimitInfo>();
@@ -37,7 +37,7 @@ namespace Raven.Server.Monitoring
 
         private Timer _timer;
 
-        public ServerLimitsMonitor(ServerStore serverStore, NotificationCenter.NotificationCenter notificationCenter, NotificationsStorage notificationsStorage)
+        public ServerLimitsMonitor(ServerStore serverStore, ServerNotificationCenter notificationCenter, NotificationsStorage notificationsStorage)
         {
             _serverStore = serverStore;
             _notificationCenter = notificationCenter;
