@@ -461,7 +461,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_options.IncludeExpired == false)
                     {
                         if (item.Document.Data.TryGetMetadata(out var metadata) &&
-                            BackgroundWorkHelper.CheckIfBackgroundWorkShouldProcessItemAlready(metadata, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
+                            AbstractBackgroundWorkStorage.HasPassed(metadata, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
                         {
                             SkipDocument(item, result.Documents);
                             continue;
