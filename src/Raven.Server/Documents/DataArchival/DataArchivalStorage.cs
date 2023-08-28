@@ -46,24 +46,7 @@ namespace Raven.Server.Documents.DataArchival
         
         public int ArchiveDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> toArchive, DateTime currentTime)
         {
-            int archivedCount = 0;
-            var archiveTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByArchiveAtDateTime);
-
-            foreach (var pair in toArchive)
-            {
-                foreach (var ids in pair.Value)
-                {
-                    if (ids.Id != null)
-                    {
-                        bool timePassed = ArchiveDocument(context, ids.LowerId, ids.Id, currentTime);
-                        archivedCount++;
-                    }
-                    
-                    archiveTree.MultiDelete(pair.Key, ids.LowerId);
-                }
-            }
-            
-            return archivedCount;
+            return ProcessReadyDocuments(context, toArchive, currentTime, DocumentsByArchiveAtDateTime, ArchiveDocument);
         }
 
         private bool ArchiveDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
