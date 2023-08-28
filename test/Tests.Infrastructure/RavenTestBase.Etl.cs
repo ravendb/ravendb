@@ -253,9 +253,11 @@ namespace FastTests
 
                 var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_LoadError);
 
-                if (loadAlert.Errors.Count != 0)
+                var details = (EtlErrorsDetails)loadAlert.Details;
+
+                if (details.Errors.Count != 0)
                 {
-                    error = loadAlert.Errors.First();
+                    error = details.Errors.First();
 
                     return true;
                 }
@@ -285,9 +287,11 @@ namespace FastTests
 
                 var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_TransformationError);
 
-                if (loadAlert.Errors.Count != 0)
+                var details = (EtlErrorsDetails)loadAlert.Details;
+
+                if (details.Errors.Count != 0)
                 {
-                    error = loadAlert.Errors.First();
+                    error = details.Errors.First();
 
                     return true;
                 }

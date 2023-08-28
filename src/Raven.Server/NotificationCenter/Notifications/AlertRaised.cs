@@ -1,11 +1,14 @@
-﻿using Raven.Server.NotificationCenter.Notifications.Details;
+﻿using System;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications
 {
     public sealed class AlertRaised : Notification
     {
-        private AlertRaised(string database) : base(NotificationType.AlertRaised, database)
+        private AlertRaised(string database, DateTime? createdAt = null) 
+            : base(NotificationType.AlertRaised, database, createdAt)
         {
         }
         
@@ -26,6 +29,27 @@ namespace Raven.Server.NotificationCenter.Notifications
             json[nameof(Details)] = Details?.ToJson();
 
             return json;
+        }
+
+        public static AlertRaised FromJson(string key, BlittableJsonReaderObject json, INotificationDetails details = null)
+        {
+            json.TryGet(nameof(Database), out string database);
+            json.TryGet(nameof(AlertType), out AlertType alertType);
+            json.TryGet(nameof(CreatedAt), out DateTime createdAt);
+            json.TryGet(nameof(Message), out string message);
+            json.TryGet(nameof(Severity), out NotificationSeverity notificationSeverity);
+            json.TryGet(nameof(Title), out string title);
+
+            return new AlertRaised(database, createdAt)
+            {
+                IsPersistent = true,
+                Title = title,
+                Message = message,
+                AlertType = alertType,
+                Severity = notificationSeverity,
+                Key = key,
+                Details = details
+            };
         }
 
         public static AlertRaised Create(string database, string title, string msg, AlertType type, NotificationSeverity severity, string key = null, INotificationDetails details = null)

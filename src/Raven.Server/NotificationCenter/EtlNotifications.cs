@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -86,7 +87,8 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public T GetAlert<T>(string processTag, string processName, AlertType etlAlertType) where T : INotificationDetails, new()
+        public AlertRaised GetAlert<T>(string processTag, string processName, AlertType etlAlertType)
+            where T : INotificationDetails, new()
         {
             Debug.Assert(etlAlertType == AlertType.Etl_LoadError || etlAlertType == AlertType.Etl_TransformationError);
 
@@ -96,7 +98,12 @@ namespace Raven.Server.NotificationCenter
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
-                return GetDetails<T>(ntv);
+                if (ntv == null)
+                    return null;
+
+                var details = GetDetails<T>(ntv);
+
+                return AlertRaised.FromJson(key, ntv.Json, details);
             }
         }
 
@@ -123,7 +130,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private T GetDetails<T>(NotificationTableValue ntv) where T : INotificationDetails, new()
+        private static T GetDetails<T>(NotificationTableValue ntv) where T : INotificationDetails, new()
         {
             if (ntv == null || ntv.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                 return new T();

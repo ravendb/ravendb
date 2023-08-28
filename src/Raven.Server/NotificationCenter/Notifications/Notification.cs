@@ -10,9 +10,9 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public const string AllDatabases = "*";
 
-        protected Notification(NotificationType type, string database)
+        protected Notification(NotificationType type, string database, DateTime? createdAt = null)
         {
-            CreatedAt = SystemTime.UtcNow;
+            CreatedAt = createdAt ?? SystemTime.UtcNow;
             Type = type;
             Database = database;
         }
