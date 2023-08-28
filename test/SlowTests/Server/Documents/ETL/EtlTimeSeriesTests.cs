@@ -358,14 +358,16 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}/ETL : {src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}";
             var database = await Databases.GetDocumentDatabaseInstanceFor(src);
 
-            var err = await AssertWaitForNotNullAsync(() =>
+            var alert = await AssertWaitForNotNullAsync(() =>
             {
-                var res = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>("Raven ETL", connectionStringName, AlertType.Etl_LoadError)
-                    .Errors.FirstOrDefault();
-                return Task.FromResult(res);
+                var alert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>("Raven ETL", connectionStringName, AlertType.Etl_LoadError);
+                return Task.FromResult(alert);
             });
 
-            Assert.Contains("System.NotSupportedException: Load isn't support for incremental time series 'INC:HeartRate' at document 'users/1'", err!.Error);
+            var details = (EtlErrorsDetails)alert.Details;
+
+            Assert.Contains("Current ETL batch with '2' items was stopped", alert.Message);
+            Assert.Contains("System.NotSupportedException: Load isn't support for incremental time series 'INC:HeartRate' at document 'users/1'", details.Errors.First().Error);
         }
 
         [RavenFact(RavenTestCategory.Etl)]
