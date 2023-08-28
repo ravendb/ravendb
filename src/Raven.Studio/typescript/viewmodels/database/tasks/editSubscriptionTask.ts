@@ -21,6 +21,7 @@ import rqlLanguageService = require("common/rqlLanguageService");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import licenseModel from "models/auth/licenseModel";
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -47,6 +48,7 @@ class editSubscriptionTask extends shardViewModelBase {
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
+    licenseType = licenseModel.licenseStatus().Type;
     possibleMentors = ko.observableArray<string>([]);
     
     enableTestArea = ko.observable<boolean>(false);

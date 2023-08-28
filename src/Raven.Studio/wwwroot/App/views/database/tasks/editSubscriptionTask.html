@@ -51,13 +51,23 @@
                                     </ul>
                                 </div>
                             </div>
-                            <label class="margin-top">Subscription RQL:</label>
-                            <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></div>
-                            <pre class="form-control margin-top query-source" placeholder="Enter transform script" 
+                            <div class="margin-top d-flex justify-content-between">
+                                <label>Subscription RQL:</label>
+                                <a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
+                            </div>
+                            <pre class="form-control query-source" placeholder="Enter transform script" 
                                  data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.languageService.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
                             </pre>
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
                                 <div class="help-block" data-bind="validationMessage: query"></div>
+                            </div>
+                            <div data-bind="if: $root.licenseType === 'Community'" >
+                                <div class="alert alert-warning alert-dismissible show margin-top-sm" role="alert">
+                                    <button type="button" class="close btn-lg" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    <small><strong class="text-warning"><i class="icon-license"></i> Your current license does not include Subscriptions Revisions</strong>.<br/>Unleash the full potential and <a href="https://ravendb.net/buy" target="_blank">upgrade your plan.</a></small>
+                                </div>
                             </div>
                         </div>
                         <div class="panel padding flex-form">
