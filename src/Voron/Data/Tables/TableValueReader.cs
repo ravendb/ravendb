@@ -12,13 +12,15 @@ using Sparrow.Compression;
 
 namespace Voron.Data.Tables
 {
-    public unsafe struct TableValueReader
+    public readonly unsafe struct TableValueReader
     {
-        private readonly byte* _dataPtr;
-        private readonly int _dataSize;
+        public readonly long Id;
+        public readonly byte* Pointer;
+        public readonly int Size;
+        private readonly int _offset;
+
         private readonly int _elementSize;
 
-        public readonly long Id;
 
         public TableValueReader(byte* ptr, int size) : this(-1, ptr, size)
         {
@@ -38,16 +40,10 @@ namespace Voron.Data.Tables
             else
                 _elementSize = 1;
 
-            Count = VariableSizeEncoding.Read<int>(ptr,  out var offset);
-            _dataPtr = Pointer + offset;
-            _dataSize = Size - offset;
+            VariableSizeEncoding.Read<int>(ptr, out _offset);
         }
 
-        public int Size { get; }
-
-        public int Count { get; }
-
-        public byte* Pointer { get; }
+        public int Count => VariableSizeEncoding.Read<int>(Pointer, out _);
 
         public long ReadLong(int index)
         {
@@ -78,19 +74,20 @@ namespace Voron.Data.Tables
             int position;
             int nextPos;
 
+            var dataPtr = (Pointer + _offset);
             switch (_elementSize)
             {
                 case 1:
-                    position = _dataPtr[index];
-                    nextPos = hasNext ? _dataPtr[index + 1] : _dataSize;
+                    position = dataPtr[index];
+                    nextPos = hasNext ? dataPtr[index + 1] : (Size - _offset);
                     break;
                 case 2:
-                    position = ((ushort*) _dataPtr)[index];
-                    nextPos = hasNext ? ((ushort*) _dataPtr)[index + 1] : _dataSize;
+                    position = ((ushort*)dataPtr)[index];
+                    nextPos = hasNext ? ((ushort*)dataPtr)[index + 1] : (Size - _offset);
                     break;
                 case 4:
-                    position = ((int*) _dataPtr)[index];
-                    nextPos = hasNext ? ((int*) _dataPtr)[index + 1] : _dataSize;
+                    position = ((int*)dataPtr)[index];
+                    nextPos = hasNext ? ((int*)dataPtr)[index + 1] : (Size - _offset);
                     break;
                 default:
                     ThrowInvalidElementSize();
@@ -98,7 +95,7 @@ namespace Voron.Data.Tables
             }
 
             size = nextPos - position;
-            return _dataPtr + position;
+            return dataPtr + position;
         }
 
         [DoesNotReturn]

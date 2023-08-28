@@ -16,7 +16,7 @@ public class CoraxDocumentTrainSourceEnumerator
         _documentsStorage = documentsStorage;
     }
     
-    public IEnumerable<Document> GetUniformlyDistributedDocumentsFrom(DocumentsOperationContext context, string collection, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
+    public IEnumerable<Document> GetDocumentsForDictionaryTraining(DocumentsOperationContext context, string collection, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
     {
         var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
         if (collectionName == null)
@@ -28,7 +28,7 @@ public class CoraxDocumentTrainSourceEnumerator
         
         state.InitializeState(table);
         
-        foreach (var (key, result) in table.IterateUniformly(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.CollectionEtagsSlice], state.DocumentSkip, seek: state.CurrentKey))
+        foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.CollectionEtagsSlice], state.DocumentSkip, seek: state.CurrentKey))
         {
             //Update inner key in order to seek after transaction refresh
             state.CurrentKey = key;
@@ -41,11 +41,11 @@ public class CoraxDocumentTrainSourceEnumerator
         }
     }
 
-    public IEnumerable<Document> GetUniformlyDistributedDocumentsFrom(DocumentsOperationContext context, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
+    public IEnumerable<Document> GetDocumentsForDictionaryTraining(DocumentsOperationContext context, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
     {
         var table = new Table(_documentsStorage.DocsSchema, context.Transaction.InnerTransaction);
         state.InitializeState(table);
-        foreach (var (key, result) in table.IterateUniformly(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice], state.DocumentSkip, state.CurrentKey))
+        foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice], state.DocumentSkip, state.CurrentKey))
         {
             state.CurrentKey = key;
             

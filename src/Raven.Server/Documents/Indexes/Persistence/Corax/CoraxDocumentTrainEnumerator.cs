@@ -225,10 +225,10 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         
         if (collection == Constants.Documents.Collections.AllDocumentsCollection)
             return new PulsedTransactionEnumerator<Document, CoraxDocumentTrainSourceState>(queryContext.Documents,
-                state => coraxDocumentTrainDocumentSource.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, state), new(queryContext.Documents, size, take, token)); 
+                state => coraxDocumentTrainDocumentSource.GetDocumentsForDictionaryTraining(queryContext.Documents, state), new(queryContext.Documents, size, take, token)); 
 
         return new PulsedTransactionEnumerator<Document,CoraxDocumentTrainSourceState>(queryContext.Documents, 
-            state =>  coraxDocumentTrainDocumentSource.GetUniformlyDistributedDocumentsFrom(queryContext.Documents, collection, state)
+            state =>  coraxDocumentTrainDocumentSource.GetDocumentsForDictionaryTraining(queryContext.Documents, collection, state)
             , new CoraxDocumentTrainSourceState(queryContext.Documents, size, take, token));
     }
 
@@ -248,7 +248,24 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     public bool MoveNext(out ReadOnlySpan<byte> output)
     {
         _itemsEnumerable ??= GetItems().GetEnumerator();
-        var result = _itemsEnumerable.MoveNext();
+
+        // RavenDB-21106: Since the training of dictionaries may cause us to trigger (critical) errors prematurely as without training
+        // they would trigger during indexing and we don't want to replicate all the handling necessary for it. We will just ignore any
+        // document where an error may happen during indexing, since it will also happen there and handled appropriately. 
+        bool result;
+        while (true)
+        {
+            try
+            {
+                result = _itemsEnumerable.MoveNext();
+                break;
+            }
+            catch 
+            {
+                // Since there was an error, we will ignore this document and try again.
+            }
+        }
+
         if (result == false)
         {
             output = ReadOnlySpan<byte>.Empty;

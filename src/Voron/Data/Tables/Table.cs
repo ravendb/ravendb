@@ -10,7 +10,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Server.Platform;
+using Sparrow.Server.Utils.VxSort;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -1684,29 +1684,153 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<(long Key, TableValueHolder TableValueHolder)> IterateUniformly(FixedSizeKeyIndexDef index, long skip = 1, long seek = 0)
+        private struct PagePrefetcherIterator : IEnumerator<long>
+        {
+            private readonly ByteString _locations;
+            private readonly int _documents;
+            private int _idx;
+
+            public PagePrefetcherIterator(ByteString locations, int documents)
+            {
+                Debug.Assert(locations.Length >= documents);
+
+                _locations = locations;
+                _documents = documents;
+                _idx = -1;
+            }
+
+            long IEnumerator<long>.Current => ((long*)_locations.Ptr)[_idx] / Constants.Storage.PageSize;
+
+            object IEnumerator.Current => ((long*)_locations.Ptr)[_idx] / Constants.Storage.PageSize;
+
+            void IDisposable.Dispose() { }
+
+            bool IEnumerator.MoveNext()
+            {
+                _idx++;
+                return _idx < _documents;
+            }
+
+            void IEnumerator.Reset()
+            {
+                _idx = -1;
+            }
+        }
+
+        public IEnumerable<(long Key, TableValueHolder TableValueHolder)> IterateForDictionaryTraining(FixedSizeKeyIndexDef index, long skip = 1, long seek = 0)
         {
             if (skip < 1)
                 throw new ArgumentOutOfRangeException(nameof(skip), "The skip must be positive and non zero.");
 
             var fst = GetFixedSizeTree(index);
 
-            long count = -1;
-            using var it = fst.Iterate();
+            // Dictionary training can be extremely IO intensive, therefore as illustrated in RavenDB-21106 we need to have
+            // an heuristic that allows us to get good dictionaries but at the same time minimizing the IO usage specially
+            // in IO deprived setups.
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-21106
+
+            // If we page fault on every page (specially in cold scenarios) we would be wasting a lot. Therefore we should
+            // iterate with prefetching enabled.
+            using var it = fst.Iterate(prefetch: true);
             if (it.Seek(seek) == false)
                 yield break;
 
-            var result = new TableValueHolder();
-            while (it.MoveNext())
+            // Considering that in big collections the max amount of documents has been defined to be in the order of 100K 
+            // If we have to big skips we should get as many documents as possible to obtain as high locality as data allows.
+            int ChunkSize = 1024 * 16;
+
+            int ReadChunked(FixedSizeTree<long>.IFixedSizeIterator it, ByteString chunk, out bool hasMore)
             {
-                count++;
-                if (count % skip == 0)
+                // We will fill the buffer of the chunk expecting to have many documents in the chunk that end up 
+                // being stored in segments that are close to each other.
+                var chunkSpan = new Span<long>(chunk.Ptr, ChunkSize);
+                var keySpan = new Span<long>(chunk.Ptr + ChunkSize * sizeof(long), ChunkSize);
+                Debug.Assert((chunkSpan.Length + keySpan.Length) * sizeof(long) == chunk.Length);
+                Debug.Assert(chunkSpan.Length == ChunkSize);
+                Debug.Assert(keySpan.Length == ChunkSize);
+
+                int readDocuments = 0;
+
+                do
                 {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return (it.CurrentKey, result);
+                    keySpan[readDocuments] = it.CurrentKey;
+                    chunkSpan[readDocuments] = *(long*)it.ValuePtr(out int _);
+
+                    readDocuments++;
+
+                    hasMore = it.MoveNext();
                 }
+                while (readDocuments < chunkSpan.Length && hasMore);
+
+                if (readDocuments == 0)
+                    return 0;
+
+                Debug.Assert(readDocuments <= ChunkSize, "We cannot have more than ChunkSize because that is a buffer overflow.");
+
+                // We will divide the whole set into chunks of at least 128 skips (could be bigger if collection is small).
+                // Less than that and the tradeoff will be bad for IO (which we are trying to limit as much as possible). 
+                int localChunkSize = Math.Max(128, ChunkSize / ((int)skip + 1));
+                if (readDocuments < localChunkSize)
+                    return readDocuments;
+
+                // We will sort the memory locations and try to maximize locality by sampling in chunks. 
+                chunkSpan = chunkSpan.Slice(0, readDocuments);
+                keySpan = keySpan.Slice(0, readDocuments);
+                chunkSpan.Sort(keySpan);
+
+                // We select a random start location to get documents.
+                int selectedLocation = Random.Shared.Next(readDocuments - localChunkSize);
+
+                // PERF: We copy with the costly version with overlapping handling. 
+                // https://learn.microsoft.com/en-us/dotnet/api/system.memoryextensions.copyto?view=net-7.0
+                chunkSpan.Slice(selectedLocation, localChunkSize).CopyTo(chunkSpan);
+                keySpan.Slice(selectedLocation, localChunkSize).CopyTo(keySpan);
+
+                return localChunkSize;
+            }
+
+            long GetTableValueReader(ByteString chunk, long index, out TableValueReader reader)
+            {
+                // We will load from the actual memory location.
+                long location = ((long*)chunk.Ptr)[index];
+                var ptr = DirectRead(location, out int size);
+                reader = new TableValueReader(location, ptr, size);
+                
+                // We will return the document etag.
+                return ((long*)chunk.Ptr)[ChunkSize + index];
+            }
+
+            using (_tx.Allocator.Allocate(2 * ChunkSize * sizeof(long), out ByteString chunk))
+            {
+                // Since we are in an enumerator using yield return, no method with pointers is accepted therefore
+                // all logic that requires the usage of the ByteString pointers will be encapsulated into a 
+                // local function, no matter how simple it is. 
+
+                var pager = _tx.LowLevelTransaction.DataPager;
+                var result = new TableValueHolder();
+
+                bool hasMore;
+                do
+                {
+                    // Read and filter the documents based on locality.
+                    int readDocuments = ReadChunked(it, chunk, out hasMore);
+                    if (readDocuments == 0)
+                        break;
+
+                    // Prefetch the read documents in order to ensure we will be able to read the data immediately.
+                    pager.MaybePrefetchMemory(new PagePrefetcherIterator(chunk, readDocuments));
+
+                    // Do the actual processing to train by yielding the reader.
+                    for (int i = 0; i < readDocuments; i++)
+                    {
+                        long currentKey = GetTableValueReader(chunk, i, out result.Reader);
+                        yield return (currentKey, result);
+                    }
+                }
+                while (hasMore);
             }
         }
+
 
         public IEnumerable<TableValueHolder> SeekForwardFrom(FixedSizeKeyIndexDef index, long key, long skip)
         {
@@ -1803,9 +1927,7 @@ namespace Voron.Data.Tables
 
         private void GetTableValueReader(FixedSizeTree.IFixedSizeIterator it, out TableValueReader reader)
         {
-            long id;
-            using (it.Value(out Slice slice))
-                slice.CopyTo((byte*)&id);
+            long id = *(long*)it.ValuePtr(out int _);
             var ptr = DirectRead(id, out int size);
             reader = new TableValueReader(id, ptr, size);
         }

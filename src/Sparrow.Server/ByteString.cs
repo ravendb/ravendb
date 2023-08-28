@@ -473,6 +473,12 @@ namespace Sparrow.Server
         {
             return new Span<byte>(Ptr, Length);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly Span<T> ToSpan<T>() where T : unmanaged
+        {
+            return new Span<T>(Ptr, Length / Unsafe.SizeOf<T>());
+        }
     }
 
     public sealed unsafe class UnmanagedGlobalSegment : PooledItem

@@ -1579,7 +1579,7 @@ namespace Voron.Data.Fixed
             return Slice.External(_tx.Allocator, ptr, size, out slice);
         }
 
-        public IFixedSizeIterator Iterate()
+        public IFixedSizeIterator Iterate(bool prefetch = false)
         {
             switch (Type)
             {
@@ -1588,7 +1588,7 @@ namespace Voron.Data.Fixed
                 case RootObjectType.EmbeddedFixedSizeTree:
                     return new EmbeddedIterator(this);
                 case RootObjectType.FixedSizeTree:
-                    return new LargeIterator(this);
+                    return new LargeIterator(this, prefetch);
                 default:
                     throw new ArgumentOutOfRangeException(Type?.ToString());
             }

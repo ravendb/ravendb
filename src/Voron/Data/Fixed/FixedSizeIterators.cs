@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using Sparrow.Server;
 
 namespace Voron.Data.Fixed
@@ -16,6 +18,7 @@ namespace Voron.Data.Fixed
             bool SeekToLast();
             bool Seek(TVal key);
             TVal CurrentKey { get; }
+            byte* ValuePtr(out int valueSize);
             ByteStringContext.Scope Value(out Slice slice);
             bool MoveNext();
             bool MovePrev();
@@ -40,10 +43,17 @@ namespace Voron.Data.Fixed
 
             public TVal CurrentKey { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
             public Slice Value { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
+
             ByteStringContext.Scope IFixedSizeIterator.Value(out Slice slice)
             {
                 slice = new Slice();
                 return new ByteStringContext<ByteStringMemoryCache>.Scope();
+            }
+
+            byte* IFixedSizeIterator.ValuePtr(out int valueSize)
+            {
+                valueSize = 0;
+                return null;
             }
 
             public bool MoveNext()
@@ -137,6 +147,15 @@ namespace Voron.Data.Fixed
                 return Slice.External(_allocator, _dataStart + (_pos*_fst._entrySize) + sizeof(long), _fst._valSize, out slice);
             }
 
+            public byte* ValuePtr(out int valueSize)
+            {
+                if (_pos == _header->NumberOfEntries)
+                    throw new InvalidOperationException("Invalid position, cannot read past end of tree");
+
+                valueSize = _fst._valSize;
+                return _dataStart + (_pos * _fst._entrySize) + sizeof(long);
+            }
+
             public bool MovePrev()
             {
                 AssertNoChanges();
@@ -180,14 +199,16 @@ namespace Voron.Data.Fixed
         {
             private readonly FixedSizeTree<TVal> _parent;
             private readonly ByteStringContext _allocator;
+            private readonly bool _prefetch;
             private FixedSizeTreePage<TVal> _currentPage;
             private int _changesAtStart;
 
-            public LargeIterator(FixedSizeTree<TVal> parent)
+            public LargeIterator(FixedSizeTree<TVal> parent, bool prefetch = false)
             {
                 _parent = parent;
                 _allocator = parent._tx.Allocator;               
                 _changesAtStart = _parent._changes;
+                _prefetch = prefetch;
             }
 
             private void AssertNoChanges()
@@ -235,6 +256,47 @@ namespace Voron.Data.Fixed
                     out slice);
             }
 
+            public byte* ValuePtr(out int valueSize)
+            {
+                if (_currentPage == null)
+                    throw new InvalidOperationException("No current page was set");
+
+                valueSize = _parent._valSize;
+                return _currentPage.Pointer + _currentPage.StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long);
+            }
+
+
+            private struct TreePagePrefetcher : IEnumerator<long>
+            {
+                private readonly FixedSizeTreePage<TVal> _page;
+                private int _idx;
+
+                public TreePagePrefetcher(FixedSizeTreePage<TVal> page)
+                {
+                    System.Diagnostics.Debug.Assert(page.IsBranch);
+
+                    _page = page;
+                    _idx = -1;
+                }
+
+                long IEnumerator<long>.Current => _page.GetEntry(_idx)->PageNumber;
+
+                object IEnumerator.Current => _page.GetEntry(_idx)->PageNumber;
+
+                void IDisposable.Dispose() { }
+
+                bool IEnumerator.MoveNext()
+                {
+                    _idx++;
+                    return _idx < _page.NumberOfEntries;
+                }
+
+                void IEnumerator.Reset()
+                {
+                    _idx = -1;
+                }
+            }
+
             public bool MoveNext()
             {
                 AssertNoChanges();
@@ -248,6 +310,13 @@ namespace Voron.Data.Fixed
                         while (_currentPage.IsBranch)
                         {
                             _parent._cursor.Push(_currentPage);
+
+                            if (_prefetch)
+                            {
+                                var pager = _parent._tx.DataPager;
+                                pager.MaybePrefetchMemory(new TreePagePrefetcher(_currentPage));
+                            }
+
                             var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
                             _currentPage = _parent.GetReadOnlyPage(childParentNumber);
 
