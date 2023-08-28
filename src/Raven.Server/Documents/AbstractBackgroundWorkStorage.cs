@@ -182,5 +182,27 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                 
         return currentTime >= date;
     }
+    
+    protected static int ProcessReadyDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DateTime currentTime, string treeName, Func<DocumentsOperationContext, Slice, string, DateTime, bool> processCallback)
+    {
+        var deletionCount = 0;
+        var expirationTree = context.Transaction.InnerTransaction.ReadTree(treeName);
+
+        foreach (var pair in expired)
+        {
+            foreach (var ids in pair.Value)
+            {
+                if (ids.Id != null)
+                {
+                    bool timePassed = processCallback(context, ids.LowerId, ids.Id, currentTime);
+                    deletionCount++;
+                }
+
+                expirationTree.MultiDelete(pair.Key, ids.LowerId);
+            }
+        }
+
+        return deletionCount;
+    }
 }
 

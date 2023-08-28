@@ -61,90 +61,16 @@ namespace Raven.Server.Documents.Expiration
         {
             return GetDocuments(options, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, out duration, cancellationToken);
         }
-
-        protected override void HandleDocumentConflict(BackgroundProcessDocumentsOptions options, Slice clonedId, ref List<(Slice LowerId, string Id)> expiredDocs)
-        {
-            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
-                return;
-
-            (bool allExpired, string id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);
-
-            if (allExpired)
-            {
-                expiredDocs.Add((clonedId, id));
-            }
-        }
-
-        private (bool AllExpired, string Id) GetConflictedExpiration(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
-        {
-            string id = null;
-            var allExpired = true;
-            var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, clonedId);
-            
-            if (conflicts.Count <= 0)
-                return (true, null);
-            
-            foreach (var conflict in conflicts)
-            {
-                using (conflict)
-                {
-                    id = conflict.Id;
-                        
-                    if (conflict.Doc.TryGetMetadata(out var metadata) &&
-                        HasPassed(metadata, currentTime, Constants.Documents.Metadata.Expires))
-                        continue;
-
-                    allExpired = false;
-                    break;
-                }
-            }
-
-            return (allExpired, id);
-        }
-
+        
 
         public int DeleteDocumentsExpiration(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DateTime currentTime)
         {
-            var deletionCount = 0;
-            var expirationTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByExpiration);
-
-            foreach (var pair in expired)
-            {
-                foreach (var ids in pair.Value)
-                {
-                    if (ids.Id != null)
-                    {
-                        bool timePassed = DeleteExpireDocument(context, ids.LowerId, ids.Id, currentTime);
-                        deletionCount++;
-                    }
-
-                    expirationTree.MultiDelete(pair.Key, ids.LowerId);
-                }
-            }
-
-            return deletionCount;
+            return ProcessReadyDocuments(context, expired, currentTime, DocumentsByExpiration, DeleteExpireDocument);
         }
         
         public int RefreshDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DateTime currentTime)
         {
-            var refreshCount = 0;
-            var refreshTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByRefresh);
-
-            foreach (var pair in expired)
-            {
-                foreach (var ids in pair.Value)
-                {
-                    if (ids.Id != null)
-                    {
-                        bool timePassed = RefreshDocument(context, ids.LowerId, ids.Id, currentTime);
-                        refreshCount++;
-                    }
-
-                    refreshTree.MultiDelete(pair.Key, ids.LowerId);
-                }
-            }
-
-            return refreshCount;
+            return ProcessReadyDocuments(context, expired, currentTime, DocumentsByRefresh, RefreshDocument);
         }
 
         private bool DeleteExpireDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
@@ -210,6 +136,46 @@ namespace Raven.Server.Documents.Expiration
             }
 
             return true;
+        }
+        
+        protected override void HandleDocumentConflict(BackgroundProcessDocumentsOptions options, Slice clonedId, ref List<(Slice LowerId, string Id)> expiredDocs)
+        {
+            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
+                return;
+
+            (bool allExpired, string id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);
+
+            if (allExpired)
+            {
+                expiredDocs.Add((clonedId, id));
+            }
+        }
+
+        private (bool AllExpired, string Id) GetConflictedExpiration(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
+        {
+            string id = null;
+            var allExpired = true;
+            var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, clonedId);
+            
+            if (conflicts.Count <= 0)
+                return (true, null);
+            
+            foreach (var conflict in conflicts)
+            {
+                using (conflict)
+                {
+                    id = conflict.Id;
+                        
+                    if (conflict.Doc.TryGetMetadata(out var metadata) &&
+                        HasPassed(metadata, currentTime, Constants.Documents.Metadata.Expires))
+                        continue;
+
+                    allExpired = false;
+                    break;
+                }
+            }
+
+            return (allExpired, id);
         }
     }
 }
