@@ -54,6 +54,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
+using Raven.Server.Monitoring;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -135,6 +136,7 @@ namespace Raven.Server.ServerWide
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
         public readonly StorageSpaceMonitor StorageSpaceMonitor;
+        public readonly ServerLimitsMonitor ServerLimitsMonitor;
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
         public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
@@ -192,6 +194,8 @@ namespace Raven.Server.ServerWide
             FeedbackSender = new FeedbackSender();
 
             StorageSpaceMonitor = new StorageSpaceMonitor(NotificationCenter);
+
+            ServerLimitsMonitor = new ServerLimitsMonitor(this, NotificationCenter, _notificationsStorage);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
@@ -2619,6 +2623,7 @@ namespace Raven.Server.ServerWide
                     var toDispose = new List<IDisposable>
                     {
                         StorageSpaceMonitor,
+                        ServerLimitsMonitor,
                         NotificationCenter,
                         LicenseManager,
                         DatabasesLandlord,
