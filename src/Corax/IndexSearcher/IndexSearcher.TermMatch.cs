@@ -225,7 +225,7 @@ public partial class IndexSearcher
         if (terms == null && term != null)
             return 0;
         
-        if (term is null)
+        if (term is null || ReferenceEquals(term, Constants.NullValueAsString))
         {
             //todo perf
             var termMatch =  TryGetPostingListForNull(binding, out var postingListId) 

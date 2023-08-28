@@ -55,6 +55,7 @@ public abstract class CoraxBooleanQueryBase : IQueryMatch
             (UnaryMatchOperation.NotEquals, long l) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, l), token: _parameters.Token),
             (UnaryMatchOperation.NotEquals, double d) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, d), token: _parameters.Token),
             (UnaryMatchOperation.NotEquals, string s) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, s), token: _parameters.Token),
+            (UnaryMatchOperation.NotEquals, null) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, null), token: _parameters.Token),
             _ => throw new InvalidOperationException($"UnaryMatchOperation {leftmostClause.Operation} is not supported for type {leftmostClause.Term.GetType()}")
         };
     }
