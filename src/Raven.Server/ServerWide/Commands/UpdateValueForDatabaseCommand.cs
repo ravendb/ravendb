@@ -1,4 +1,5 @@
-﻿using Raven.Client;
+﻿using System.Diagnostics;
+using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -15,26 +16,30 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract void FillJson(DynamicJsonValue json);
 
-        protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context,
-            BlittableJsonReaderObject existingValue);
+        protected abstract UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue);
 
         public virtual unsafe void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
         {
-            BlittableJsonReaderObject itemBlittable = null;
             var itemKey = GetItemId();
+            UpdatedValue updatedValue;
 
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
+                BlittableJsonReaderObject itemBlittable = null;
                 if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
                 {
                     var ptr = reader.Read(2, out int size);
                     itemBlittable = new BlittableJsonReaderObject(ptr, size, context);
                 }
 
-                itemBlittable = GetUpdatedValue(index, record, context, itemBlittable);
+                updatedValue = GetUpdatedValue(index, record, context, itemBlittable);
+                if (updatedValue.Action == Action.Noop)
+                {
+                    result = null;
+                    return;
+                }
 
-                // if returned null, means, there is nothing to update and we just wanted to delete the value
-                if (itemBlittable == null)
+                if (updatedValue.Action == Action.Delete)
                 {
                     items.DeleteByKey(valueNameLowered);
                     result = GetResult();
@@ -45,10 +50,12 @@ namespace Raven.Server.ServerWide.Commands
                 itemKey = GetItemId();
             }
 
+            Debug.Assert(updatedValue.Action == Action.Update && updatedValue.Value != null);
+
             using (Slice.From(context.Allocator, itemKey, out Slice valueName))
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
-                ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
+                ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, updatedValue.Value);
                 result = GetResult();
             }
         }
@@ -96,6 +103,21 @@ namespace Raven.Server.ServerWide.Commands
             FillJson(djv);
 
             return djv;
+        }
+    }
+
+        protected enum Action
+        {
+            Noop,
+            Update,
+            Delete
+        }
+
+        protected struct UpdatedValue
+        {
+            public Action Action;
+
+            public BlittableJsonReaderObject Value;
         }
     }
 }
