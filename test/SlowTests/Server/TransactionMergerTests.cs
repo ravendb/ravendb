@@ -24,7 +24,7 @@ namespace SlowTests.Server
         {
         }
 
-        protected override DocumentStore GetDocumentStore(Options options = null, string caller = null)
+        protected internal override DocumentStore GetDocumentStore(Options options = null, string caller = null)
         {
             options ??= new Options();
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;

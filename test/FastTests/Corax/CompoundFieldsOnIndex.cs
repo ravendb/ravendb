@@ -1,7 +1,12 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using Corax.Queries;
+using Corax.Queries.SortingMatches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -63,6 +68,43 @@ public class CompoundFieldsOnIndex : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Querying)]
+    public async Task CanOptimizeToSkipSorting()
+    {
+        await TestQueryBuilder<MultiTermMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+            .WhereEquals(x => x.Location, "Hadera")
+            .OrderBy(x => x.Name)
+            .GetIndexQuery()
+        );
+        await TestQueryBuilder<MultiTermMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+            .WhereEquals(x => x.Name, "Corax")
+            .OrderBy(x => x.Birthday)
+            .GetIndexQuery()
+        );
+    }
+
+    [RavenFact(RavenTestCategory.Querying)]
+    public async Task Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex()
+    {
+        await TestQueryBuilder<SortingMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+            .WhereEquals(x => x.Name, "Lucene")
+            .AndAlso()
+            .WhereEquals(x=>x.Location, "Hadera")
+            .OrderBy(x => x.Birthday)
+            .GetIndexQuery()
+        );
+        
+        await TestQueryBuilder<SortingMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+            .WhereEquals(x => x.Name, "Lucene")
+            .OrderBy(x => x.Location)
+            .GetIndexQuery()
+        );
+    }
+
+    private Task TestQueryBuilder<TExpected>(Func<IAsyncDocumentSession, IndexQuery> query)
+    {
+        return StreamingOptimization_QueryBuilder.TestQueryBuilder<TExpected,Users_Idx>(this, false, query);
+    }
 
 
     private record User(string Name, string Location, DateTime Birthday);
@@ -79,4 +121,6 @@ public class CompoundFieldsOnIndex : RavenTestBase
             CompoundFields.Add(new[] { nameof(User.Location), nameof(User.Name) });
         }
     }
+    
+    
 }

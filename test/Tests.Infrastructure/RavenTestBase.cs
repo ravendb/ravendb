@@ -143,7 +143,7 @@ namespace FastTests
 
         private readonly object _getDocumentStoreSync = new object();
 
-        protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
+        protected internal virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             DocumentStore adminStore = null;
             try
