@@ -5,6 +5,7 @@ using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Analysis;
@@ -89,6 +90,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Auto.DeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexDeploymentMode AutoIndexDeploymentMode { get; protected set; }
+        
+        
+        [Description("The default archived data processing behavior for auto indexes")]
+        [DefaultValue(ArchivedDataProcessingBehavior.ExcludeArchived)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Auto.ArchivedDataProcessingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public ArchivedDataProcessingBehavior AutoIndexArchivedDataProcessingBehavior{ get; protected set; }
 
         [Description("Indicate if indexing performance metrics are gathered")]
         [DefaultValue(true)]
