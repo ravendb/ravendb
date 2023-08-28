@@ -117,53 +117,12 @@ public struct CoraxBooleanItem : IQueryMatch
                 Slice startWith = GetStartWithTerm();
                 return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, isNegated: false, forward: streamingOptimization.Forward, streamingEnabled: true, validatePostfixLen: true);
             }
-            case  UnaryMatchOperation.NotEquals:
-                // match = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(Field), match);
-              //  break;
             default:
-                throw new NotSupportedException();
-        
-                // IQueryMatch baseMatch;
-                // bool streamingEnabled = streamingOptimization.WhereClauseItemMatched;
-                // bool forwardIterator = (streamingOptimization is {WhereClauseItemMatched: true, Forward: false}) == false;
-                //
-                // if (Operation is UnaryMatchOperation.Between)
-                // {
-                //     baseMatch = (Term, Term2) switch
-                //     {
-                //         (long l, long l2) => _indexSearcher.BetweenQuery(Field, l, l2, leftSide: BetweenLeft, rightSide: BetweenRight, false, forwardIterator, streamingEnabled),
-                //         (double d, double d2) => _indexSearcher.BetweenQuery(Field, d, d2, leftSide: BetweenLeft, rightSide: BetweenRight, false, forwardIterator, streamingEnabled),
-                //         (string s, string s2) => _indexSearcher.BetweenQuery(Field, s, s2, leftSide: BetweenLeft, rightSide: BetweenRight, false, forwardIterator, streamingEnabled),
-                //         (long l, double d) => _indexSearcher.BetweenQuery(Field, Convert.ToDouble(l), d, leftSide: BetweenLeft, rightSide: BetweenRight, false,  forwardIterator, streamingEnabled),
-                //         (double d, long l) => _indexSearcher.BetweenQuery(Field, d, Convert.ToDouble(l), leftSide: BetweenLeft, rightSide: BetweenRight, false, forwardIterator, streamingEnabled),
-                //         _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
-                //     };
-                // }
-                // else
-                // {
-                //     baseMatch = (Operation, Term) switch
-                //     {
-                //         (UnaryMatchOperation.LessThan, long term) => _indexSearcher.LessThanQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         (UnaryMatchOperation.LessThan, double term) => _indexSearcher.LessThanQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         (UnaryMatchOperation.LessThan, string term) => _indexSearcher.LessThanQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //
-                //         (UnaryMatchOperation.LessThanOrEqual, long term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         (UnaryMatchOperation.LessThanOrEqual, double term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         (UnaryMatchOperation.LessThanOrEqual, string term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //
-                //         (UnaryMatchOperation.GreaterThan, long term) => _indexSearcher.GreaterThanQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         (UnaryMatchOperation.GreaterThan, double term) => _indexSearcher.GreaterThanQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         (UnaryMatchOperation.GreaterThan, string term) => _indexSearcher.GreaterThanQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //
-                //
-                //         (UnaryMatchOperation.GreaterThanOrEqual, long term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         (UnaryMatchOperation.GreaterThanOrEqual, double term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         (UnaryMatchOperation.GreaterThanOrEqual, string term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, false, forwardIterator, streamingEnabled),
-                //         _ => throw new ArgumentException("This is only Greater*/Less* Query part")
-                //     };
-                // }
-                //
-                // return baseMatch;
+                // TODO: RavenDB-21188
+                // TODO: need to implement support for: (Location, Name) compound field
+                // TODO: from Users where Location = "Poland" and Name > "Maciej" order by Name
+                // TODO: and other range on the _second_ item
+                return this;
         }
     }
     
