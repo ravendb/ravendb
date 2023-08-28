@@ -279,6 +279,7 @@ namespace Raven.Server.Documents.Indexes
         private void HandleChangesForAutoIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
         {
             var mode = _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
+            var archivedDataBehavior = _documentDatabase.Configuration.Indexing.AutoIndexArchivedDataProcessingBehavior;
 
             foreach (var kvp in record.AutoIndexes)
             {
@@ -287,7 +288,7 @@ namespace Raven.Server.Documents.Indexes
                 var name = kvp.Key;
                 try
                 {
-                    var definition = CreateAutoDefinition(kvp.Value, mode);
+                    var definition = CreateAutoDefinition(kvp.Value, mode, archivedDataBehavior);
 
                     var indexToStart = HandleAutoIndexChange(name, definition);
                     if (indexToStart != null)
@@ -367,7 +368,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal static AutoIndexDefinitionBaseServerSide CreateAutoDefinition(AutoIndexDefinition definition, IndexDeploymentMode indexDeployment)
+        internal static AutoIndexDefinitionBaseServerSide CreateAutoDefinition(AutoIndexDefinition definition, IndexDeploymentMode indexDeployment, ArchivedDataProcessingBehavior archivedDataProcessingBehavior)
         {
             int fieldId = 1;
             var mapFields = definition
@@ -385,7 +386,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.Type == IndexType.AutoMap)
             {
-                var result = new AutoMapIndexDefinition(definition.Name, definition.Collection, mapFields, indexDeployment, definition.ClusterState, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                var result = new AutoMapIndexDefinition(definition.Name, definition.Collection, mapFields, indexDeployment, definition.ClusterState,  archivedDataProcessingBehavior, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -409,7 +410,7 @@ namespace Raven.Server.Documents.Indexes
                     })
                     .ToArray();
 
-                var result = new AutoMapReduceIndexDefinition(definition.Name, definition.Collection, mapFields, groupByFields, definition.GroupByFieldNames, indexDeployment, definition.ClusterState, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                var result = new AutoMapReduceIndexDefinition(definition.Name, definition.Collection, mapFields, groupByFields, definition.GroupByFieldNames, indexDeployment, definition.ClusterState, archivedDataProcessingBehavior, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -1717,7 +1718,9 @@ namespace Raven.Server.Documents.Indexes
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
                 var faultyIndex = (indexDefinition is AutoIndexDefinition)
-                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition((AutoIndexDefinition)indexDefinition, IndexDeploymentMode.Parallel), searchEngineType)
+                    ? new FaultyInMemoryIndex(e, name, configuration,
+                        CreateAutoDefinition((AutoIndexDefinition)indexDefinition, IndexDeploymentMode.Parallel, configuration.AutoIndexArchivedDataProcessingBehavior),
+                        searchEngineType)
                     : new FaultyInMemoryIndex(e, name, configuration, (IndexDefinition)indexDefinition, searchEngineType);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {faultyIndex.Name}";

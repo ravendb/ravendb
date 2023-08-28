@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.DataArchival;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Auto
@@ -9,9 +10,9 @@ namespace Raven.Server.Documents.Indexes.Auto
     internal abstract class AutoIndexDefinitionBaseServerSide : IndexDefinitionBaseServerSide<AutoIndexField>
     {
         protected AutoIndexDefinitionBaseServerSide(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode,
-            IndexDefinitionClusterState clusterState, long? indexVersion = null)
+            IndexDefinitionClusterState clusterState, ArchivedDataProcessingBehavior? archivedDataProcessingBehavior, long? indexVersion = null)
             : base(indexName, new[] {collection}, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion,
-                deploymentMode, clusterState, Client.Documents.Operations.DataArchival.ArchivedDataProcessingBehavior.ExcludeArchived)
+                deploymentMode, clusterState, archivedDataProcessingBehavior)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
