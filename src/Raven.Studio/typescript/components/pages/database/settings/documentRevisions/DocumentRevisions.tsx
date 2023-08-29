@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
-import { Button, Col, Row } from "reactstrap";
+import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -108,6 +108,8 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         });
     };
 
+    const isSaveDisabled = !isAnyModified || asyncSaveConfigs.status === "loading";
+
     if (loadStatus === "idle" || loadStatus === "loading") {
         return <LoadingView />;
     }
@@ -143,7 +145,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                         <ButtonWithSpinner
                                             color="primary"
                                             icon="save"
-                                            disabled={!isAnyModified}
+                                            disabled={isSaveDisabled}
                                             onClick={asyncSaveConfigs.execute}
                                             isSpinning={asyncSaveConfigs.status === "loading"}
                                         >
@@ -160,15 +162,22 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                             Revert revisions
                                         </a>
 
-                                        <ButtonWithSpinner
-                                            color="secondary"
-                                            onClick={toggleEnforceConfigurationModal}
-                                            disabled={isAnyModified}
-                                            isSpinning={asyncEnforceRevisionsConfiguration.status === "loading"}
-                                        >
-                                            <Icon icon="rocket" />
-                                            Enforce configuration
-                                        </ButtonWithSpinner>
+                                        <UncontrolledTooltip target="enforceConfiguration">
+                                            {isSaveDisabled
+                                                ? "Enforce the defined revisions configuration on all documents per collection"
+                                                : "Save current configuration before enforcing"}
+                                        </UncontrolledTooltip>
+                                        <div id="enforceConfiguration">
+                                            <ButtonWithSpinner
+                                                color="secondary"
+                                                onClick={toggleEnforceConfigurationModal}
+                                                disabled={isAnyModified}
+                                                isSpinning={asyncEnforceRevisionsConfiguration.status === "loading"}
+                                            >
+                                                <Icon icon="rocket" />
+                                                Enforce configuration
+                                            </ButtonWithSpinner>
+                                        </div>
                                     </div>
                                     <div className="mt-5">
                                         <DocumentRevisionsSelectActions />
@@ -185,6 +194,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                             color="info"
                                             size="sm"
                                             className="rounded-pill"
+                                            title="Create a default revision configuration for all (non-conflicting) documents"
                                             onClick={() =>
                                                 onEditRevision({
                                                     taskType: "new",
@@ -244,6 +254,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                             color="info"
                                             size="sm"
                                             className="rounded-pill"
+                                            title="Create a revision configuration for a specific collection"
                                             onClick={() =>
                                                 onEditRevision({
                                                     taskType: "new",

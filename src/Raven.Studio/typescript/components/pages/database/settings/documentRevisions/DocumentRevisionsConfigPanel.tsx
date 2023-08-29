@@ -89,12 +89,18 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                     <RichPanelActions>
                         {isDatabaseAdmin && (
                             <>
-                                <Button color={config.Disabled ? "success" : "secondary"} onClick={onToggle}>
+                                <Button
+                                    color={config.Disabled ? "success" : "secondary"}
+                                    onClick={onToggle}
+                                    title={`Click to ${
+                                        config.Disabled ? "enable" : "disable"
+                                    } this revision configuration`}
+                                >
                                     <Icon icon={config.Disabled ? "start" : "disable"} />
                                     {config.Disabled ? "Enable" : "Disable"}
                                 </Button>
 
-                                <Button color="secondary" onClick={onOnEdit}>
+                                <Button color="secondary" onClick={onOnEdit} title="Edit this revision configuration">
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                                 {onDelete && (
@@ -104,6 +110,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                             reportEvent("revisions", "create");
                                             onDelete();
                                         }}
+                                        title="Delete this revision configuration"
                                     >
                                         <Icon icon="trash" margin="m-0" />
                                     </Button>
