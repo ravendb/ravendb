@@ -7,8 +7,10 @@ using Corax.Utils.Spatial;
 namespace Corax.Queries.SortingMatches
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe partial struct SortingMatch : IQueryMatch
+    public unsafe struct SortingMatch : IQueryMatch
     {
+        public const int SortBatchSize = 8192;
+
         private readonly FunctionTable _functionTable;
         private IQueryMatch _inner;
 

@@ -188,7 +188,7 @@ namespace Corax.Queries.SortingMatches;
             match._cancellationToken.ThrowIfCancellationRequested();
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
-            var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer());
+            var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer(), descending);
             var indexes = SortByTerms(ref match, batchTermIds, batchTerms, descending, indirectComparer);
             for (int i = 0; i < indexes.Length; i++)
             {
@@ -232,6 +232,7 @@ namespace Corax.Queries.SortingMatches;
             TComparer tieBreaker)
             where TComparer : struct, IComparer<long>
         {
+            Debug.Assert(buffer.Length < (1 << 15), "buffer.Length < (1<<15)");
             for (int i = 0; i < buffer.Length; i++)
             {
                 long l = 0;
@@ -310,11 +311,11 @@ namespace Corax.Queries.SortingMatches;
         {
             if (descending)
             {
-                indexes.Sort(new IndirectComparer<Descending<TCmp>>(batchTerms, new (cmp)));
+                indexes.Sort(new IndirectComparer<Descending<TCmp>>(batchTerms, new (cmp), true));
             }
             else
             {
-                indexes.Sort(new IndirectComparer<TCmp>(batchTerms, cmp));
+                indexes.Sort(new IndirectComparer<TCmp>(batchTerms, cmp, false));
             }
         }
     }
@@ -524,18 +525,26 @@ namespace Corax.Queries.SortingMatches;
     {
         private readonly UnmanagedSpan* _terms;
         private readonly TComparer _inner;
+        private readonly bool _isDescending;
 
-        public IndirectComparer(UnmanagedSpan* terms, TComparer entryComparer)
+        public IndirectComparer(UnmanagedSpan* terms, TComparer entryComparer, bool isDescending)
         {
             _terms = terms;
             _inner = entryComparer;
+            _isDescending = isDescending;
         }
 
         public int Compare(long x, long y)
         {
+            if (_isDescending)
+            {
+                x = -x;
+                y = -y;
+            }
+
             var xIdx = (ushort)x & 0X7FFF;
             var yIdx = (ushort)y & 0X7FFF;
-            Debug.Assert(yIdx < SortBatchSize && xIdx < SortBatchSize);
+            Debug.Assert(yIdx < SortingMatch.SortBatchSize && xIdx < SortingMatch.SortBatchSize);
             return _inner.Compare(_terms[xIdx], _terms[yIdx]);
         }
 

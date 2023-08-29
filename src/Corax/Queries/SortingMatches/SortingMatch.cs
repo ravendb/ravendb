@@ -408,10 +408,10 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         int maxResults = match._take == -1 ? int.MaxValue : match._take;
 
-        var indexesScope = allocator.Allocate(SortBatchSize * sizeof(long), out ByteString bs);
-        Span<long> indexesBuffer = new(bs.Ptr, SortBatchSize);
-        var sortedIdsScope = allocator.Allocate( sizeof(long) * SortBatchSize, out bs);
-        Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize);
+        var indexesScope = allocator.Allocate(SortingMatch.SortBatchSize * sizeof(long), out ByteString bs);
+        Span<long> indexesBuffer = new(bs.Ptr,SortingMatch.SortBatchSize);
+        var sortedIdsScope = allocator.Allocate( sizeof(long) * SortingMatch.SortBatchSize, out bs);
+        Span<long> sortedIdBuffer = new(bs.Ptr, SortingMatch.SortBatchSize);
 
         var totalRead = 0;
         var reader = GetReader(ref match, allMatches[0], allMatches[^1]);
@@ -521,8 +521,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         return l;
     }
-    
-    private const int SortBatchSize = 4096;
+
 
     private static void SortResults<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> batchResults) 
         where TEntryComparer : struct,  IEntryComparer, IComparer<UnmanagedSpan>
