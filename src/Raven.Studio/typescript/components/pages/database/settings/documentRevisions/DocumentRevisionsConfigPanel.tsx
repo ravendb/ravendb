@@ -25,13 +25,14 @@ import generalUtils from "common/generalUtils";
 
 interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
-    onDelete?: () => void;
+    isDatabaseAdmin: boolean;
     onToggle: () => void;
     onOnEdit: () => void;
+    onDelete?: () => void;
 }
 
 export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsConfigPanelProps) {
-    const { config, onDelete, onToggle, onOnEdit } = props;
+    const { config, isDatabaseAdmin, onDelete, onToggle, onOnEdit } = props;
 
     const dispatch = useAppDispatch();
     const { reportEvent } = useEventsCollector();
@@ -70,37 +71,44 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
             <div className="flex-grow-1">
                 <RichPanelHeader className={classNames({ "h-100": !isDetailsVisible })}>
                     <RichPanelInfo>
-                        <RichPanelSelect>
-                            <Checkbox
-                                selected={isSelected}
-                                toggleSelection={() =>
-                                    dispatch(documentRevisionsActions.toggleSelectedConfigName(config.Name))
-                                }
-                            />
-                        </RichPanelSelect>
+                        {isDatabaseAdmin && (
+                            <RichPanelSelect>
+                                <Checkbox
+                                    selected={isSelected}
+                                    toggleSelection={() =>
+                                        dispatch(documentRevisionsActions.toggleSelectedConfigName(config.Name))
+                                    }
+                                />
+                            </RichPanelSelect>
+                        )}
                         <RichPanelName>
                             {config.Name}
                             {isModified && <span className="text-warning ms-1">*</span>}
                         </RichPanelName>
                     </RichPanelInfo>
                     <RichPanelActions>
-                        <Button color={config.Disabled ? "success" : "secondary"} onClick={onToggle}>
-                            <Icon icon={config.Disabled ? "start" : "disable"} />
-                            {config.Disabled ? "Enable" : "Disable"}
-                        </Button>
-                        <Button color="secondary" onClick={onOnEdit}>
-                            <Icon icon="edit" margin="m-0" />
-                        </Button>
-                        {onDelete && (
-                            <Button
-                                color="danger"
-                                onClick={() => {
-                                    reportEvent("revisions", "create");
-                                    onDelete();
-                                }}
-                            >
-                                <Icon icon="trash" margin="m-0" />
-                            </Button>
+                        {isDatabaseAdmin && (
+                            <>
+                                <Button color={config.Disabled ? "success" : "secondary"} onClick={onToggle}>
+                                    <Icon icon={config.Disabled ? "start" : "disable"} />
+                                    {config.Disabled ? "Enable" : "Disable"}
+                                </Button>
+
+                                <Button color="secondary" onClick={onOnEdit}>
+                                    <Icon icon="edit" margin="m-0" />
+                                </Button>
+                                {onDelete && (
+                                    <Button
+                                        color="danger"
+                                        onClick={() => {
+                                            reportEvent("revisions", "create");
+                                            onDelete();
+                                        }}
+                                    >
+                                        <Icon icon="trash" margin="m-0" />
+                                    </Button>
+                                )}
+                            </>
                         )}
                     </RichPanelActions>
                 </RichPanelHeader>

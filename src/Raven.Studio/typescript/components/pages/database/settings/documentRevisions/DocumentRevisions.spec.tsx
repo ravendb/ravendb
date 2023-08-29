@@ -1,16 +1,24 @@
 import React from "react";
-import { composeStories } from "@storybook/react";
 import { rtlRender } from "test/rtlTestUtils";
-import * as stories from "./DocumentRevisions.stories";
+import { DatabaseAdmin, BelowDatabaseAdmin } from "./DocumentRevisions.stories";
 import { documentRevisionsConfigNames } from "./store/documentRevisionsSlice";
 
-const { DefaultDocumentRevisions } = composeStories(stories);
-
 describe("DocumentRevisions", () => {
-    it("can render", async () => {
-        const { screen } = rtlRender(<DefaultDocumentRevisions />);
+    it("can render for database admin", async () => {
+        const { screen } = rtlRender(<DatabaseAdmin />);
 
         expect(await screen.findByText(documentRevisionsConfigNames.defaultDocument)).toBeInTheDocument();
-        expect(await screen.findByText(documentRevisionsConfigNames.defaultConflicts)).toBeInTheDocument();
+        expect(screen.getByText(documentRevisionsConfigNames.defaultConflicts)).toBeInTheDocument();
+
+        expect(screen.queryByRole("button", { name: /Save/ })).toBeInTheDocument();
+    });
+
+    it("can render for database admin", async () => {
+        const { screen } = rtlRender(<BelowDatabaseAdmin />);
+
+        expect(await screen.findByText(documentRevisionsConfigNames.defaultDocument)).toBeInTheDocument();
+        expect(screen.getByText(documentRevisionsConfigNames.defaultConflicts)).toBeInTheDocument();
+
+        expect(screen.queryByRole("button", { name: /Save/ })).not.toBeInTheDocument();
     });
 });
