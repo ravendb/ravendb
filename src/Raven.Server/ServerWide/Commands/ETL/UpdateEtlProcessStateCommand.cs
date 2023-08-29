@@ -160,11 +160,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             etlState.SkippedTimeSeriesDocs = SkippedTimeSeriesDocs;
             etlState.LastBatchTime = LastBatchTime;
 
-            return new UpdatedValue
-            {
-                Action = Action.Update,
-                Value = context.ReadObject(etlState.ToJson(), GetItemId())
-            };
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(etlState.ToJson(), GetItemId()));
         }
 
         public static Func<string> GetLastResponsibleNode(

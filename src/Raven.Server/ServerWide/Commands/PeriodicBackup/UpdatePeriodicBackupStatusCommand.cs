@@ -26,11 +26,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 
         protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
-            return new UpdatedValue
-            {
-                Action = Action.Update,
-                Value = context.ReadObject(PeriodicBackupStatus.ToJson(), GetItemId())
-            };
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(PeriodicBackupStatus.ToJson(), GetItemId()));
         }
 
         public override void FillJson(DynamicJsonValue json)

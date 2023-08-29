@@ -1,5 +1,5 @@
-﻿using System.Diagnostics;
-using Raven.Client;
+﻿using System;
+using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -20,6 +20,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public virtual unsafe void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
         {
+            result = null;
+
             var itemKey = GetItemId();
             UpdatedValue updatedValue;
 
@@ -33,39 +35,31 @@ namespace Raven.Server.ServerWide.Commands
                 }
 
                 updatedValue = GetUpdatedValue(index, record, context, itemBlittable);
-                if (updatedValue.Action == Action.Noop)
+                switch (updatedValue.ActionType)
                 {
-                    result = null;
-                    return;
+                    case UpdatedValueActionType.Noop:
+                        return;
+                    case UpdatedValueActionType.Delete:
+                        items.DeleteByKey(valueNameLowered);
+                        return;
+                    default:
+                        // here we get the item key again, in case it was changed (a new entity, etc)
+                        itemKey = GetItemId();
+                        break;
                 }
-
-                if (updatedValue.Action == Action.Delete)
-                {
-                    items.DeleteByKey(valueNameLowered);
-                    result = GetResult();
-                    return;
-                }
-
-                // here we get the item key again, in case it was changed (a new entity, etc)
-                itemKey = GetItemId();
             }
 
-            Debug.Assert(updatedValue.Action == Action.Update && updatedValue.Value != null);
+            Debug.Assert(updatedValue.ActionType == UpdatedValueActionType.Update && updatedValue.Value != null);
 
             using (Slice.From(context.Allocator, itemKey, out Slice valueName))
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
+            using (updatedValue)
             {
                 ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, updatedValue.Value);
-                result = GetResult();
             }
         }
 
         public virtual object GetState()
-        {
-            return null;
-        }
-
-        public virtual object GetResult()
         {
             return null;
         }
@@ -106,18 +100,29 @@ namespace Raven.Server.ServerWide.Commands
         }
     }
 
-        protected enum Action
+        protected enum UpdatedValueActionType
         {
             Noop,
             Update,
             Delete
         }
 
-        protected struct UpdatedValue
+        protected readonly struct UpdatedValue : IDisposable
         {
-            public Action Action;
+            public readonly UpdatedValueActionType ActionType;
 
-            public BlittableJsonReaderObject Value;
+            public readonly BlittableJsonReaderObject Value;
+
+            public UpdatedValue(UpdatedValueActionType actionType, BlittableJsonReaderObject value)
+            {
+                ActionType = actionType;
+                Value = value;
+            }
+
+            public void Dispose()
+            {
+                Value?.Dispose();
+            }
         }
     }
 }

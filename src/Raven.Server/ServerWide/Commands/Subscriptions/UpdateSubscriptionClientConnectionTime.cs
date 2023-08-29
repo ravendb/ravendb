@@ -49,11 +49,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             subscription.LastClientConnectionTime = LastClientConnectionTime;
             subscription.NodeTag = NodeTag;
 
-            return new UpdatedValue
-            {
-                Action = Action.Update,
-                Value = context.ReadObject(subscription.ToJson(), itemId)
-            };
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(subscription.ToJson(), itemId));
         }
 
         public override void FillJson(DynamicJsonValue json)
