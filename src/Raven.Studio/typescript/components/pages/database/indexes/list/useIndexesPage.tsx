@@ -586,14 +586,14 @@ export function useIndexesPage(database: database, stale: boolean) {
                 label: "Static",
                 count: StaticIndex,
                 limit: staticIndexLimit,
-                limitMessage: <>Your license allows {staticIndexLimit} Static Indexes</>,
+                limitMessage: <div className="p-2">Your license allows {staticIndexLimit} Static Indexes</div>,
             },
             {
                 value: "AutoIndex",
                 label: "Auto",
                 count: AutoIndex,
                 limit: autoIndexLimit,
-                limitMessage: <>Your license allows {autoIndexLimit} Static Indexes</>,
+                limitMessage: <div className="p-2">Your license allows {autoIndexLimit} Static Indexes</div>,
             },
         ];
     }, [stats.indexes]);
