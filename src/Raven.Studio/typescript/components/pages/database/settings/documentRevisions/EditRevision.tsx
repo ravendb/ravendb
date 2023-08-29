@@ -72,52 +72,52 @@ export default function EditRevision(props: EditRevisionProps) {
                             <Label className="mb-0 md-label">Collection</Label>
                             <FormSelect
                                 control={control}
-                                name="CollectionName"
+                                name="collectionName"
                                 options={collectionOptions}
                                 disabled={!isForNewCollection}
                             />
                         </InputGroup>
                     )}
-                    <FormSwitch control={control} name="IsPurgeOnDeleteEnabled">
+                    <FormSwitch control={control} name="isPurgeOnDeleteEnabled">
                         Purge revisions on document delete
                     </FormSwitch>
-                    <FormSwitch control={control} name="IsMinimumRevisionsToKeepEnabled">
+                    <FormSwitch control={control} name="isMinimumRevisionsToKeepEnabled">
                         Limit # of revisions to keep
                     </FormSwitch>
-                    {formValues.IsMinimumRevisionsToKeepEnabled && (
+                    {formValues.isMinimumRevisionsToKeepEnabled && (
                         <InputGroup className="mb-2">
                             <FormInput
                                 type="number"
                                 control={control}
-                                name="MinimumRevisionsToKeep"
+                                name="minimumRevisionsToKeep"
                                 placeholder="Enter number of revisions to keep"
                             />
                         </InputGroup>
                     )}
-                    <FormSwitch control={control} name="IsMinimumRevisionAgeToKeepEnabled">
+                    <FormSwitch control={control} name="isMinimumRevisionAgeToKeepEnabled">
                         Limit # of revisions to keep by age
                     </FormSwitch>
-                    {formValues.IsMinimumRevisionAgeToKeepEnabled && (
+                    {formValues.isMinimumRevisionAgeToKeepEnabled && (
                         <InputGroup className="mb-2">
                             <FormDurationPicker
                                 control={control}
-                                name="MinimumRevisionAgeToKeep"
+                                name="minimumRevisionAgeToKeep"
                                 showDays
                                 showSeconds
                             />
                         </InputGroup>
                     )}
-                    {(formValues.IsMinimumRevisionsToKeepEnabled || formValues.IsMinimumRevisionAgeToKeepEnabled) && (
+                    {(formValues.isMinimumRevisionsToKeepEnabled || formValues.isMinimumRevisionAgeToKeepEnabled) && (
                         <>
-                            <FormSwitch control={control} name="IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled">
+                            <FormSwitch control={control} name="isMaximumRevisionsToDeleteUponDocumentUpdateEnabled">
                                 Set # of revisions to delete upon document update
                             </FormSwitch>
-                            {formValues.IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled && (
+                            {formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled && (
                                 <InputGroup className="mb-2">
                                     <FormInput
                                         type="number"
                                         control={control}
-                                        name="MaximumRevisionsToDeleteUponDocumentUpdate"
+                                        name="maximumRevisionsToDeleteUponDocumentUpdate"
                                         placeholder="Enter max revisions to delete (suggested 100)"
                                     />
                                 </InputGroup>
@@ -129,41 +129,41 @@ export default function EditRevision(props: EditRevisionProps) {
                         <ul className="m-0 p-0 vstack gap-1">
                             <li>
                                 A revision will be created anytime a document is modified
-                                {!formValues.IsPurgeOnDeleteEnabled && <span> or deleted</span>}.
+                                {!formValues.isPurgeOnDeleteEnabled && <span> or deleted</span>}.
                             </li>
-                            {formValues.IsPurgeOnDeleteEnabled ? (
+                            {formValues.isPurgeOnDeleteEnabled ? (
                                 <li>When a document is deleted all its revisions will be removed.</li>
                             ) : (
                                 <li>Revisions of a deleted document can be accessed in the Revisions Bin view.</li>
                             )}
-                            {formValues.IsMinimumRevisionsToKeepEnabled && formValues.MinimumRevisionsToKeep && (
+                            {formValues.isMinimumRevisionsToKeepEnabled && formValues.minimumRevisionsToKeep && (
                                 <>
                                     <li>
-                                        {formValues.IsMinimumRevisionAgeToKeepEnabled &&
-                                        formValues.MinimumRevisionAgeToKeep ? (
+                                        {formValues.isMinimumRevisionAgeToKeepEnabled &&
+                                        formValues.minimumRevisionAgeToKeep ? (
                                             <>
                                                 <span>At least</span>{" "}
-                                                <strong>{formValues.MinimumRevisionsToKeep}</strong> of the latest
+                                                <strong>{formValues.minimumRevisionsToKeep}</strong> of the latest
                                             </>
                                         ) : (
                                             <>
                                                 <span>
-                                                    Only the latest <strong>{formValues.MinimumRevisionsToKeep}</strong>
+                                                    Only the latest <strong>{formValues.minimumRevisionsToKeep}</strong>
                                                 </span>
                                             </>
                                         )}{" "}
-                                        {formValues.MinimumRevisionsToKeep === 1 ? (
+                                        {formValues.minimumRevisionsToKeep === 1 ? (
                                             <span>revision</span>
                                         ) : (
                                             <span>revisions</span>
                                         )}{" "}
                                         will be kept.
                                     </li>
-                                    {formValues.IsMinimumRevisionAgeToKeepEnabled &&
-                                    formValues.MinimumRevisionAgeToKeep ? (
+                                    {formValues.isMinimumRevisionAgeToKeepEnabled &&
+                                    formValues.minimumRevisionAgeToKeep ? (
                                         <li>
                                             Older revisions will be removed if they exceed{" "}
-                                            <strong>{formValues.MinimumRevisionAgeToKeep}</strong> on next revision
+                                            <strong>{formValues.minimumRevisionAgeToKeep}</strong> on next revision
                                             creation.
                                         </li>
                                     ) : (
@@ -171,19 +171,19 @@ export default function EditRevision(props: EditRevisionProps) {
                                     )}
                                 </>
                             )}
-                            {!formValues.IsMinimumRevisionsToKeepEnabled &&
-                                formValues.IsMinimumRevisionAgeToKeepEnabled &&
-                                formValues.MinimumRevisionAgeToKeep && (
+                            {!formValues.isMinimumRevisionsToKeepEnabled &&
+                                formValues.isMinimumRevisionAgeToKeepEnabled &&
+                                formValues.minimumRevisionAgeToKeep && (
                                     <li>
-                                        Revisions that exceed <strong>{formValues.MinimumRevisionAgeToKeep}</strong>{" "}
+                                        Revisions that exceed <strong>{formValues.minimumRevisionAgeToKeep}</strong>{" "}
                                         will be removed on next revision creation.
                                     </li>
                                 )}
-                            {formValues.IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
-                                formValues.MaximumRevisionsToDeleteUponDocumentUpdate && (
+                            {formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
+                                formValues.maximumRevisionsToDeleteUponDocumentUpdate && (
                                     <li>
                                         A maximum of{" "}
-                                        <strong>{formValues.MaximumRevisionsToDeleteUponDocumentUpdate}</strong>{" "}
+                                        <strong>{formValues.maximumRevisionsToDeleteUponDocumentUpdate}</strong>{" "}
                                         revisions will be deleted each time a document is updated, until the defined
                                         &apos;# of revisions to keep&apos; limit is reached.
                                     </li>
@@ -239,28 +239,28 @@ function getTitle(taskType: EditRevisionTaskType, configType: EditRevisionConfig
 function getInitialValues(config: DocumentRevisionsConfig): EditDocumentRevisionsCollectionConfig {
     if (!config) {
         return {
-            Disabled: false,
-            CollectionName: null,
-            IsPurgeOnDeleteEnabled: false,
-            IsMinimumRevisionAgeToKeepEnabled: false,
-            MinimumRevisionAgeToKeep: null,
-            IsMinimumRevisionsToKeepEnabled: false,
-            MinimumRevisionsToKeep: null,
-            IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled: false,
-            MaximumRevisionsToDeleteUponDocumentUpdate: null,
+            disabled: false,
+            collectionName: null,
+            isPurgeOnDeleteEnabled: false,
+            isMinimumRevisionAgeToKeepEnabled: false,
+            minimumRevisionAgeToKeep: null,
+            isMinimumRevisionsToKeepEnabled: false,
+            minimumRevisionsToKeep: null,
+            isMaximumRevisionsToDeleteUponDocumentUpdateEnabled: false,
+            maximumRevisionsToDeleteUponDocumentUpdate: null,
         };
     }
 
     return {
-        Disabled: config.Disabled,
-        CollectionName: config.Name,
-        IsPurgeOnDeleteEnabled: config.PurgeOnDelete,
-        IsMinimumRevisionAgeToKeepEnabled: config.MinimumRevisionAgeToKeep != null,
-        MinimumRevisionAgeToKeep: genUtils.timeSpanToSeconds(config.MinimumRevisionAgeToKeep),
-        IsMinimumRevisionsToKeepEnabled: config.MinimumRevisionsToKeep != null,
-        MinimumRevisionsToKeep: config.MinimumRevisionsToKeep,
-        IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled: config.MaximumRevisionsToDeleteUponDocumentUpdate != null,
-        MaximumRevisionsToDeleteUponDocumentUpdate: config.MaximumRevisionsToDeleteUponDocumentUpdate,
+        disabled: config.Disabled,
+        collectionName: config.Name,
+        isPurgeOnDeleteEnabled: config.PurgeOnDelete,
+        isMinimumRevisionAgeToKeepEnabled: config.MinimumRevisionAgeToKeep != null,
+        minimumRevisionAgeToKeep: genUtils.timeSpanToSeconds(config.MinimumRevisionAgeToKeep),
+        isMinimumRevisionsToKeepEnabled: config.MinimumRevisionsToKeep != null,
+        minimumRevisionsToKeep: config.MinimumRevisionsToKeep,
+        isMaximumRevisionsToDeleteUponDocumentUpdateEnabled: config.MaximumRevisionsToDeleteUponDocumentUpdate != null,
+        maximumRevisionsToDeleteUponDocumentUpdate: config.MaximumRevisionsToDeleteUponDocumentUpdate,
     };
 }
 
@@ -272,7 +272,7 @@ function mapToDocumentRevisionsConfig(
 
     switch (configType) {
         case "collectionSpecific":
-            name = formData.CollectionName;
+            name = formData.collectionName;
             break;
         case "defaultDocument":
             name = documentRevisionsConfigNames.defaultDocument;
@@ -286,10 +286,10 @@ function mapToDocumentRevisionsConfig(
 
     return {
         Name: name,
-        Disabled: formData.Disabled,
-        MaximumRevisionsToDeleteUponDocumentUpdate: formData.MaximumRevisionsToDeleteUponDocumentUpdate,
-        MinimumRevisionAgeToKeep: genUtils.formatAsTimeSpan(formData.MinimumRevisionAgeToKeep * 1000),
-        MinimumRevisionsToKeep: formData.MinimumRevisionsToKeep,
-        PurgeOnDelete: formData.IsPurgeOnDeleteEnabled,
+        Disabled: formData.disabled,
+        MaximumRevisionsToDeleteUponDocumentUpdate: formData.maximumRevisionsToDeleteUponDocumentUpdate,
+        MinimumRevisionAgeToKeep: genUtils.formatAsTimeSpan(formData.minimumRevisionAgeToKeep * 1000),
+        MinimumRevisionsToKeep: formData.minimumRevisionsToKeep,
+        PurgeOnDelete: formData.isPurgeOnDeleteEnabled,
     };
 }

@@ -9,35 +9,35 @@ export default function useEditRevisionFormController(
     const formValues = useWatch({ control: control });
 
     useEffect(() => {
-        if (!formValues.IsMinimumRevisionAgeToKeepEnabled && formValues.MinimumRevisionAgeToKeep !== null) {
-            setValue("MinimumRevisionAgeToKeep", null, { shouldValidate: true });
+        if (!formValues.isMinimumRevisionAgeToKeepEnabled && formValues.minimumRevisionAgeToKeep !== null) {
+            setValue("minimumRevisionAgeToKeep", null, { shouldValidate: true });
         }
 
-        if (!formValues.IsMinimumRevisionsToKeepEnabled && formValues.MinimumRevisionsToKeep !== null) {
-            setValue("MinimumRevisionsToKeep", null, { shouldValidate: true });
-        }
-
-        if (
-            !formValues.IsMinimumRevisionAgeToKeepEnabled &&
-            !formValues.IsMinimumRevisionsToKeepEnabled &&
-            formValues.IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled
-        ) {
-            setValue("IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled", false, { shouldValidate: true });
+        if (!formValues.isMinimumRevisionsToKeepEnabled && formValues.minimumRevisionsToKeep !== null) {
+            setValue("minimumRevisionsToKeep", null, { shouldValidate: true });
         }
 
         if (
-            !formValues.IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
-            formValues.MaximumRevisionsToDeleteUponDocumentUpdate !== null
+            !formValues.isMinimumRevisionAgeToKeepEnabled &&
+            !formValues.isMinimumRevisionsToKeepEnabled &&
+            formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled
         ) {
-            setValue("MaximumRevisionsToDeleteUponDocumentUpdate", null, { shouldValidate: true });
+            setValue("isMaximumRevisionsToDeleteUponDocumentUpdateEnabled", false, { shouldValidate: true });
+        }
+
+        if (
+            !formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
+            formValues.maximumRevisionsToDeleteUponDocumentUpdate !== null
+        ) {
+            setValue("maximumRevisionsToDeleteUponDocumentUpdate", null, { shouldValidate: true });
         }
     }, [
-        formValues.IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled,
-        formValues.IsMinimumRevisionAgeToKeepEnabled,
-        formValues.IsMinimumRevisionsToKeepEnabled,
-        formValues.MaximumRevisionsToDeleteUponDocumentUpdate,
-        formValues.MinimumRevisionAgeToKeep,
-        formValues.MinimumRevisionsToKeep,
+        formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled,
+        formValues.isMinimumRevisionAgeToKeepEnabled,
+        formValues.isMinimumRevisionsToKeepEnabled,
+        formValues.maximumRevisionsToDeleteUponDocumentUpdate,
+        formValues.minimumRevisionAgeToKeep,
+        formValues.minimumRevisionsToKeep,
         setValue,
     ]);
 
