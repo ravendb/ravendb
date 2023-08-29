@@ -75,7 +75,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(subscription.ToJson(), subscriptionName));
         }
 
-        private void AssertSubscriptionState(RawDatabaseRecord record, IDatabaseTask subscription, string subscriptionName)
+        public void AssertSubscriptionState(RawDatabaseRecord record, IDatabaseTask subscription, string subscriptionName)
         {
             var topology = record.Topology;
             var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
@@ -201,7 +201,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             return msg;
         }
 
-        private class SubscriptionTask : IDatabaseTask
+        public class SubscriptionTask : IDatabaseTask
         {
             private readonly BlittableJsonReaderObject _rawSubscription;
 
