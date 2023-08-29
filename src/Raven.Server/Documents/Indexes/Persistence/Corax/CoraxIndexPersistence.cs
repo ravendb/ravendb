@@ -109,7 +109,9 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
                 return false; 
         }
 
-            
+        if (_index.IsTestRun)
+            return false;
+        
         if (_index.SourceType != IndexSourceType.Documents)
             return false;
 
@@ -119,7 +121,6 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     public override void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator, CancellationToken token)
     {
         CreatePersistentDictionary(indexingStatsAggregator, token);
-        
     }
 
     private void CreatePersistentDictionary(IndexingStatsAggregator indexingStatsAggregator, CancellationToken token)
@@ -224,5 +225,4 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             _logger
         );
     }
-    
 }
