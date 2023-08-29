@@ -6,32 +6,22 @@ using Voron;
 
 namespace Raven.Server.Documents.DataArchival;
 
-internal class ArchiveDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+internal class ArchiveDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, string Id)>> toArchive, DocumentDatabase database, DateTime currentTime)
+    : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
 {
-    private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _toArchive;
-    private readonly DocumentDatabase _database;
-    private readonly DateTime _currentTime;
-
     public int ArchivedDocsCount;
-
-    public ArchiveDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, string Id)>> toArchive, DocumentDatabase database, DateTime currentTime)
-    {
-        _toArchive = toArchive;
-        _database = database;
-        _currentTime = currentTime;
-    }
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        ArchivedDocsCount = _database.DocumentsStorage.DataArchivalStorage.ArchiveDocuments(context, _toArchive, _currentTime);
+        ArchivedDocsCount = database.DocumentsStorage.DataArchivalStorage.ProcessDocuments(context, toArchive, currentTime);
         return ArchivedDocsCount;
     }
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ArchiveDocumentsCommand> ToDto(DocumentsOperationContext context)
     {
-        var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[_toArchive.Count];
+        var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[toArchive.Count];
         var i = 0;
-        foreach (var item in _toArchive)
+        foreach (var item in toArchive)
         {
             keyValuePairs[i] = item;
             i++;
@@ -40,7 +30,7 @@ internal class ArchiveDocumentsCommand : MergedTransactionCommand<DocumentsOpera
         return new ArchiveDocumentsCommandDto 
         {
             ToArchive = keyValuePairs,
-            CurrentTime = _currentTime
+            CurrentTime = currentTime
         };
     }
 }

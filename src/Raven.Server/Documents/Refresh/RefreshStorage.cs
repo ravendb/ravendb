@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents;
@@ -9,12 +9,11 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
 
-namespace Raven.Server.Documents.Expiration
+namespace Raven.Server.Documents.Refresh
 {
-    public sealed class ExpirationStorage(DocumentDatabase database, Transaction tx) : AbstractBackgroundWorkStorage(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByExpiration, Constants.Documents.Metadata.Expires)
+    public sealed class RefreshStorage(DocumentDatabase database, Transaction tx) : AbstractBackgroundWorkStorage(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
     {
-        private const string DocumentsByExpiration = "DocumentsByExpiration";
-
+        private const string DocumentsByRefresh = "DocumentsByRefresh";
         protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
         {
             try
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents.Expiration
                     Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
             }
         }
-        
+
         protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref List<(Slice LowerId, string Id)> expiredDocs)
         {
             if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
@@ -80,4 +79,5 @@ namespace Raven.Server.Documents.Expiration
         }
     }
 }
+
 

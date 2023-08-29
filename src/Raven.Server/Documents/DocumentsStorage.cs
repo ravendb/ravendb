@@ -16,6 +16,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.DataArchival;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Processors.Replication;
+using Raven.Server.Documents.Refresh;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
@@ -63,6 +64,7 @@ namespace Raven.Server.Documents
         public DocumentsContextPool ContextPool;
         public RevisionsStorage RevisionsStorage;
         public ExpirationStorage ExpirationStorage;
+        public RefreshStorage RefreshStorage;
         public DataArchivalStorage DataArchivalStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
@@ -259,6 +261,7 @@ namespace Raven.Server.Documents
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx, RevisionsSchema, CompressedRevisionsSchema);
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
+                    RefreshStorage = new RefreshStorage(DocumentDatabase, tx);
                     DataArchivalStorage = new DataArchivalStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx, ConflictsSchema);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx, AttachmentsSchema);

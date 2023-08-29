@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
 using Raven.Client;
-using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -11,78 +8,43 @@ using Voron;
 using Sparrow.Json.Parsing;
 using Voron.Impl;
 
-namespace Raven.Server.Documents.DataArchival
-{
-    public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
-    {
-        private const string DocumentsByArchiveAtDateTime = "DocumentsByArchiveAtDateTime";
-        
-        public DataArchivalStorage(DocumentDatabase database, Transaction tx) : base(database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name))
-        {
-            tx.CreateTree(DocumentsByArchiveAtDateTime);
-        }
-        
-        public sealed record ArchivedDocumentsOptions : BackgroundProcessDocumentsOptions
-        {
-            public ArchivedDocumentsOptions(DocumentsOperationContext context, DateTime currentTime, DatabaseTopology databaseTopology, string nodeTag,
-                long amountToTake) : base(context, currentTime, databaseTopology, nodeTag, amountToTake)
-            {
-            }
-        }
+namespace Raven.Server.Documents.DataArchival;
 
-        public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject metadata)
+public sealed class DataArchivalStorage(DocumentDatabase database, Transaction tx) : AbstractBackgroundWorkStorage(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name),
+    DocumentsByArchiveAtDateTime, Constants.Documents.Metadata.ArchiveAt)
+{
+    private const string DocumentsByArchiveAtDateTime = "DocumentsByArchiveAtDateTime";
+    protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
+    {
+        if (id == null)
+            throw new InvalidOperationException($"Couldn't archive the document. Document id is null. Lower id is {lowerId}");
+
+        using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data, throwOnConflict: true))
         {
-            if (metadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out string archiveDate) == false)
+            if (doc == null || doc.TryGetMetadata(out var metadata) == false)
+            {
+                throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
+            }
+                
+            if (HasPassed(metadata, currentTime) == false) 
                 return;
 
-            PutInternal(context, lowerId, archiveDate, DocumentsByArchiveAtDateTime);
-        }
+            // Add archived flag, remove archive timestamp, add document flag
+            metadata.Modifications = new DynamicJsonValue(metadata);
+            metadata.Modifications[Constants.Documents.Metadata.Archived] = true;
+            metadata.Modifications.Remove(Constants.Documents.Metadata.ArchiveAt);
+            doc.Flags |= DocumentFlags.Archived;
+                
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToArchive(ArchivedDocumentsOptions options, out Stopwatch duration,
-            CancellationToken cancellationToken)
-        {
-            return GetDocuments(options, DocumentsByArchiveAtDateTime, Constants.Documents.Metadata.ArchiveAt, out duration, cancellationToken);
-        }
-        
-        public int ArchiveDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> toArchive, DateTime currentTime)
-        {
-            return ProcessReadyDocuments(context, toArchive, currentTime, DocumentsByArchiveAtDateTime, ArchiveDocument);
-        }
-
-        private bool ArchiveDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
-        {
-            if (id == null)
-                throw new InvalidOperationException($"Couldn't archive the document. Document id is null. Lower id is {lowerId}");
-
-            using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data, throwOnConflict: true))
+            using (var updated = context.ReadObject(doc.Data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {
-                if (doc == null || doc.TryGetMetadata(out var metadata) == false)
-                {
-                    throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
-                }
-                
-                if (HasPassed(metadata, currentTime, Constants.Documents.Metadata.ArchiveAt) == false) 
-                    return false;
-
-                // Add archived flag, remove archive timestamp, add document flag
-                metadata.Modifications = new DynamicJsonValue(metadata);
-                metadata.Modifications[Constants.Documents.Metadata.Archived] = true;
-                metadata.Modifications.Remove(Constants.Documents.Metadata.ArchiveAt);
-                doc.Flags |= DocumentFlags.Archived;
-                
-
-                using (var updated = context.ReadObject(doc.Data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                {
-                    Database.DocumentsStorage.Put(context, id, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
-                }
+                Database.DocumentsStorage.Put(context, id, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
             }
-
-            return true;
         }
+    }
 
-        protected override void HandleDocumentConflict(BackgroundProcessDocumentsOptions options, Slice clonedId, ref List<(Slice LowerId, string Id)> docsToProcess)
-        {
-            // data archival ignores conflicts
-        }
+    protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref List<(Slice LowerId, string Id)> docsToProcess)
+    {
+        // data archival ignores conflicts
     }
 }
