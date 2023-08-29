@@ -90,7 +90,8 @@ public sealed class ChangeVector
     {
         if (IsSingle == false)
             throw new InvalidOperationException("Can't be performed on non-single change vector");
-
+        if (dbId == null) 
+            throw new ArgumentNullException(nameof(dbId));
         return _changeVector.Contains(dbId);
     }
 
