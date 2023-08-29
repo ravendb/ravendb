@@ -13,6 +13,7 @@ import saveServerWideBackupCommand = require("commands/serverWide/tasks/saveServ
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import licenseModel from "models/auth/licenseModel";
 
 class editServerWideBackup extends viewModelBase {
 
@@ -26,6 +27,8 @@ class editServerWideBackup extends viewModelBase {
     
     editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
+
+    licenseType = licenseModel.licenseStatus().Type;
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();

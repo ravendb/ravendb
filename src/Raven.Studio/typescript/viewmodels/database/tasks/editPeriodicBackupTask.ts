@@ -13,6 +13,7 @@ import manualBackupConfiguration = require("models/database/tasks/periodicBackup
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import licenseModel from "models/auth/licenseModel";
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 
@@ -28,6 +29,8 @@ class editPeriodicBackupTask extends shardViewModelBase {
 
     titleForView: KnockoutComputed<string>;
     configuration = ko.observable<backupConfigurationClass>();
+
+    licenseType = licenseModel.licenseStatus().Type;
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();
