@@ -221,7 +221,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 onDelete={() =>
                                     dispatch(documentRevisionsActions.deleteConfig(defaultDocumentsConfig.Name))
                                 }
-                                onOnEdit={() =>
+                                onEdit={() =>
                                     onEditRevision({
                                         taskType: "edit",
                                         configType: "defaultDocument",
@@ -236,7 +236,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 onToggle={() =>
                                     dispatch(documentRevisionsActions.toggleConfigState(defaultConflictsConfig.Name))
                                 }
-                                onOnEdit={() =>
+                                onEdit={() =>
                                     onEditRevision({
                                         taskType: "edit",
                                         configType: "defaultConflicts",
@@ -282,7 +282,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                             dispatch(documentRevisionsActions.toggleConfigState(config.Name))
                                         }
                                         onDelete={() => dispatch(documentRevisionsActions.deleteConfig(config.Name))}
-                                        onOnEdit={() =>
+                                        onEdit={() =>
                                             onEditRevision({
                                                 taskType: "edit",
                                                 configType: "collectionSpecific",
