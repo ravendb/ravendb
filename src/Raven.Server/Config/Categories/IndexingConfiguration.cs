@@ -97,6 +97,14 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Auto.ArchivedDataProcessingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public ArchivedDataProcessingBehavior AutoIndexArchivedDataProcessingBehavior{ get; protected set; }
+        
+        
+        [Description("The default archived data processing behavior for static indexes")]
+        [DefaultValue(ArchivedDataProcessingBehavior.ExcludeArchived)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Static.ArchivedDataProcessingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public ArchivedDataProcessingBehavior StaticIndexArchivedDataProcessingBehavior{ get; protected set; }
+
 
         [Description("Indicate if indexing performance metrics are gathered")]
         [DefaultValue(true)]

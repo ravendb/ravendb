@@ -4467,8 +4467,12 @@ namespace Raven.Server.Documents.Indexes
         public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; private set; }
 
         internal ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior()
-        {                                                       // z konfiguracji Indexing.Static...            // to samo
-            return SourceType == IndexSourceType.Documents ? ArchivedDataProcessingBehavior.ExcludeArchived : ArchivedDataProcessingBehavior.IncludeArchived;
+        {
+            return SourceType == IndexSourceType.Documents
+                ? Type.IsAuto()
+                    ? DocumentDatabase.Configuration.Indexing.AutoIndexArchivedDataProcessingBehavior
+                    : DocumentDatabase.Configuration.Indexing.StaticIndexArchivedDataProcessingBehavior
+                : ArchivedDataProcessingBehavior.IncludeArchived;
         }
 
         private DateTime _lastCheckedFlushLock;
