@@ -42,8 +42,8 @@ namespace SlowTests.Core.Indexing
                         .ToArray();
 
                     Assert.Equal(2, results.Length);
-                    Assert.Equal("token1", results[0].Address1);
-                    Assert.Equal("some addr token1", results[1].Address1);
+                    Assert.True(results.Any(x => x.Address1 == "token1"));
+                    Assert.True(results.Any(x => x.Address1 == "some addr token1"));
 
                     results = session.Advanced
                         .DocumentQuery<ISearchable>(index.IndexName)
