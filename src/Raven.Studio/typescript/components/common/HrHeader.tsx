@@ -15,9 +15,9 @@ export function HrHeader(props: HrHeaderProps) {
     const { right, children, className, count, ...rest } = props;
 
     return (
-        <div className="flex-horizontal align-items-center my-3">
+        <div className="hstack align-items-center my-3">
             {children && (
-                <h5 className={classNames("m-0 me-3 text-uppercase", { className })} {...rest}>
+                <h5 className={classNames("m-0 me-3 text-uppercase", className)} {...rest}>
                     {children}
                 </h5>
             )}

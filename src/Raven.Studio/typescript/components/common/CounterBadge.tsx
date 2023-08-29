@@ -7,7 +7,7 @@ import { uniqueId } from "lodash";
 interface CounterBadgeProps {
     count: number;
     limit?: number;
-    limitMessage?: string | ReactNode | ReactNode[];
+    limitMessage?: ReactNode | ReactNode[];
     className?: string;
     hideNotReached?: boolean;
 }
