@@ -629,7 +629,7 @@ public static class QueryBuilderHelper
     internal static string CoraxGetValueAsString(object value) => value switch
     {
         StringSegment s => s.Value,
-        string { Length: 0 } => @"""",
+        string { Length: 0 } => global::Corax.Constants.EmptyString,
         string s => s,
         long l => l.ToString(CultureInfo.InvariantCulture),
         double d => d.ToString(CultureInfo.InvariantCulture),

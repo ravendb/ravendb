@@ -14,21 +14,21 @@ namespace Corax
         public static readonly ReadOnlyMemory<char> NullValueCharSpan = new(Constants.NullValue.ToCharArray());
         
         
-        public const string EmptyString = @"""";
+        public const string EmptyString = "\u0003";
         public static readonly ReadOnlyMemory<char> EmptyStringCharSpan = new(Constants.EmptyString.ToCharArray());
         
         public const string IndexMetadata = "@index_metadata";
         public const string IndexTimeFields = "@index_time_fields";
         public const string DocumentBoost = "@document_boost";
-        public const string NullValueAsString = "NULL_VALUE";
+        public const string ProjectionNullValue = "NULL_VALUE";
 
-        public static readonly Slice NullValueSlice, NullValueAsStringSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice, IndexTimeFieldsSlice;
+        public static readonly Slice NullValueSlice, ProjectionNullValueSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice, IndexTimeFieldsSlice;
 
         static Constants()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, NullValueAsString, ByteStringType.Immutable, out NullValueAsStringSlice);
+                Slice.From(ctx, ProjectionNullValue, ByteStringType.Immutable, out ProjectionNullValueSlice);
                 Slice.From(ctx, NullValue, ByteStringType.Immutable, out NullValueSlice);
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);
                 Slice.From(ctx, IndexMetadata, ByteStringType.Immutable, out IndexMetadataSlice);
@@ -62,7 +62,7 @@ namespace Corax
 
             public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
                 StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice,
-                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists, RootPagesSlice;            
+                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists;            
             public const int DynamicField = -2;
             static IndexWriter()
             {
@@ -82,7 +82,6 @@ namespace Corax
                     Slice.From(ctx, "NumberOfTermsInIndex", ByteStringType.Immutable, out NumberOfTermsInIndex);
                     Slice.From(ctx, "MultipleTermsInField", ByteStringType.Immutable, out MultipleTermsInField);
                     Slice.From(ctx, "NullPostingLists", ByteStringType.Immutable, out NullPostingLists);
-                    Slice.From(ctx, "RootPages", ByteStringType.Immutable, out RootPagesSlice);
                 }
             }
         }
