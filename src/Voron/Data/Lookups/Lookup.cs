@@ -11,7 +11,6 @@ using Voron.Data.CompactTrees;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
-
 namespace Voron.Data.Lookups;
 
 public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
@@ -22,6 +21,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     
     private LowLevelTransaction _llt;
     private LookupState _state;
+    private int _treeStructureVersion;
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int EncodeEntry(LookupPageHeader* header, long keyData, long val, byte* buffer)
@@ -128,6 +128,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long GetValue(ref CursorState state, int pos)
     {
+        Debug.Assert(pos >= 0);
         var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
         var keyLen = buffer[0] >> 4;
         var valLen = buffer[0] & 0xF;
@@ -372,7 +373,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 DefragPage(_llt, ref state);
 
             if (MaybeMergeEntries(ref state))
+            {
+                _treeStructureVersion++;
                 InitializeCursorState(); // we change the structure of the tree, so we can't reuse 
+            }
         }
 
         VerifySizeOf(ref state);
@@ -599,7 +603,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
     [SkipLocalsInit]
-    private void AddToPage(ref TLookupKey key, long value)
+    private void AddToPage(ref TLookupKey key, long value, bool searchForKeyOnSplit = false)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
@@ -612,6 +616,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             state.LastSearchPosition = ~state.LastSearchPosition;
             key.OnNewKeyAddition(this);
         }
+        Debug.Assert(state.LastSearchPosition <= state.Header->NumberOfEntries, "state.LastSearchPosition <= state.Header->NumberOfEntries");
 
         var entryBufferPtr = stackalloc byte[EncodingBufferSize];
         var requiredSize = EncodeEntry(state.Header, key.ToLong(), value, entryBufferPtr);
@@ -656,10 +661,16 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
             if (splitAnyways)
             {
-                //DebugStuff.RenderAndShow(this);
+                if (searchForKeyOnSplit)
+                {
+                    // we have to do this if we are being called from BulkUpdate, since
+                    // we don't remember the LastMatch, and that _is_ being used during the 
+                    // splitting process to direct the shape of the tree
+                    SearchInCurrentPage(ref key, ref state);
+                    if (state.LastSearchPosition < 0)
+                        state.LastSearchPosition = ~state.LastSearchPosition;
+                }
                 SplitPage(ref key, value);
-                // a page split may cause us to do a search and reset the existing container id
-                //DebugStuff.RenderAndShow(this);
                 return;
             }
         }
@@ -728,6 +739,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
     private void SplitPage(ref TLookupKey currentCauseForSplit, long valueForSplit)
     {
+        _treeStructureVersion++;
+        
         if (_internalCursor._pos == 0) // need to create a root page
         {
             // We are going to be creating a root page with our first trained dictionary. 
@@ -779,7 +792,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var entryBufferPtr = stackalloc byte[EncodingBufferSize];
         newPageState.Header->KeysBase = causeForSplit.ToLong();
         newPageState.Header->ValuesBase = valueForSplit;
-
 
         // sequential write up, no need to actually split
         int numberOfEntries = state.Header->NumberOfEntries;
@@ -1079,7 +1091,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         cstate._len++;
     }
 
-    private void SearchInCurrentPage(ref TLookupKey key, ref CursorState state, int bot = 0)
+    private void SearchInCurrentPage(ref TLookupKey key, ref CursorState state)
+    {
+        SearchInCurrentPage(ref key, ref state, 0, state.Header->NumberOfEntries);
+    }
+
+    private void SearchInCurrentPage(ref TLookupKey key, ref CursorState state, int bot, int length)
     {
         Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
         Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
@@ -1087,7 +1104,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         ushort* @base = state.EntriesOffsetsPtr;
         byte* pagePtr = state.Page.Pointer;
         var header = state.Header;
-        int length = state.Header->NumberOfEntries;
         int match = -1;
         if (length == 0)
         {
@@ -1248,6 +1264,151 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         state.LastSearchPosition = 0;
     }
 
+    /// <summary>
+    /// The idea here is that we provide an optimization opportunity by reducing the total number of tree operations
+    /// and allowing more efficient work afterward. This will find the first key in 'keys' and then fill the output
+    /// values with all the _other_ keys that belong in the same page as the first key. Note that the key is whatever
+    /// they *should* go there, so missing values are also included. 
+    /// </summary>
+    public int BulkUpdateStart(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum)
+    {
+        // here we find the right page to start
+        TryGetNextValue(ref keys[0], out values[0]);
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        offsets[0] = state.LastSearchPosition;
+        pageNum = state.Page.PageNumber;
+
+        var limit = CurrentPageLimit();
+        int index = 1;
+        for (; index < keys.Length; index++)
+        {
+            ref var curKey = ref keys[index];
+            if (limit != null)
+            {
+                if (curKey.CompareTo(this, limit.Value) >= 0)
+                    break; // hit the limits of the page...
+            }
+            var pos = state.LastSearchPosition;
+            if (pos < 0)
+                pos = ~pos;
+            if (pos == state.Header->NumberOfEntries)
+            {
+                // nothing more on this page, we'll continue until we consume all the keys
+                // or we hit the limit for this page 
+                values[index] = -1;
+                offsets[index] = ~state.Header->NumberOfEntries;
+                continue;
+            } 
+
+            var (start, end) = ExponentialSearchPlacement(ref curKey, ref state, pos);
+            SearchInCurrentPage(ref curKey, ref state, start, end - start);
+            values[index] = state.LastSearchPosition < 0 ? -1 : GetValue(ref state, state.LastSearchPosition);
+            offsets[index] = state.LastSearchPosition;
+        }
+
+        return index;
+
+        (int Start, int End) ExponentialSearchPlacement(ref TLookupKey curKey, ref CursorState state, int last)
+        {
+            last = Math.Max(1, last);
+            while (last < state.Header->NumberOfEntries)
+            {
+                long keyData = GetKeyData(ref state, last);
+                if (curKey.CompareTo(this, keyData) < 0)
+                {
+                    break;
+                }
+
+                last *= 2;
+            }
+
+            return (last / 2, Math.Min(last + 1, state.Header->NumberOfEntries));
+        }
+    }
+
+    public TreeStructureChanged CheckTreeStructureChanges() => new TreeStructureChanged(this);
+
+    public readonly struct TreeStructureChanged
+    {
+        private readonly Lookup<TLookupKey> _parent;
+        private readonly int _initialVersion;
+
+        public TreeStructureChanged(Lookup<TLookupKey> parent)
+        {
+            _parent = parent;
+            _initialVersion = _parent._treeStructureVersion;
+        }
+
+        public bool Changed => _initialVersion != _parent._treeStructureVersion;
+    }
+
+    /// <summary>
+    /// Other side of BulkUpdateStart. Will accept keys that were used by BulkInsertStart and insert them
+    /// into the _current_ page in the relevant offset.
+    /// Can handle adding new items as well as updating existing ones
+    /// if the structure of the tree changed during the operation, it ***invalidates*** the previous
+    /// BulkUpdateStart results.
+    /// </summary>
+    public void BulkUpdateSet(ref TLookupKey key, long value, long pageNum, int offset, ref int adjustment)
+    {
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        if (state.Page.PageNumber != pageNum)
+            throw new InvalidOperationException("Different page number provided fro BulkUpdateSet");
+
+        if (offset >= 0)
+        {
+            state.LastSearchPosition = offset + adjustment;
+        }
+        else
+        {
+            state.LastSearchPosition = offset - adjustment;
+            adjustment++; // increment all future actions by one to account for the new item
+        }
+
+        // need to go negative because the value is negative and then flipped
+
+        AddToPage(ref key, value, searchForKeyOnSplit: true);
+    }
+
+    /// <summary>
+    /// Other side of BulkUpdateStart. Will accept keys that were used by BulkInsertStart and remove them
+    /// from the _current_ page in the relevant offset.
+    /// if the structure of the tree changed during the operation, it ***invalidates*** the previous
+    /// BulkUpdateStart results.
+    /// </summary>
+    public void BulkUpdateRemove(ref TLookupKey key, long pageNum, int offset, ref int adjustment)
+    {
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        if (state.Page.PageNumber != pageNum)
+            throw new InvalidOperationException("Different page number provided fro BulkUpdateSet");
+
+        if (offset < 0)
+            return; // want to removed a missing value, nothing to do
+
+        state.LastSearchPosition = offset + adjustment;
+        adjustment--; // all future operations are now *reduced*, to account for the removal
+        
+        // need to go negative because the value is negative and then flipped
+        state.LastMatch = 0; // ensure that we mark it properly
+        RemoveFromPage(ref key, allowRecurse: true);
+    }
+    
+    
+    private long? CurrentPageLimit()
+    {
+        for (int i = _internalCursor._pos - 1; i >= 0; i--)
+        {
+            ref var cur = ref _internalCursor._stk[i];
+            if (cur.LastSearchPosition + 1 >= cur.Header->NumberOfEntries)
+                continue;
+
+            return GetKeyData(ref cur, cur.LastSearchPosition + 1);
+        }
+
+        return null;
+    }
+    
+    
     public bool TryGetNextValue(ref TLookupKey key, out long value)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
@@ -1274,44 +1435,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             return true;
         }
 
-        var pos = ~state.LastSearchPosition;
-        var shouldBeInCurrentPage = pos < state.Header->NumberOfEntries;
-        if (shouldBeInCurrentPage)
-        {
-            var curKey = GetKeyData(ref state, pos);
-            var match = key.CompareTo(this, curKey);
-
-            shouldBeInCurrentPage = match < 0;
-        }
-
-        if (shouldBeInCurrentPage == false)
-        {
-            // if this isn't in this page, it may be in the _next_ one, but we 
-            // now need to check the parent page to see that
-            shouldBeInCurrentPage = true;
-
-            for (int i = _internalCursor._pos - 1; i >= 0; i--)
-            {
-                ref var cur = ref _internalCursor._stk[i];
-                if (cur.LastSearchPosition + 1 >= cur.Header->NumberOfEntries)
-                    continue;
-
-                var curKey = GetKeyData(ref cur, cur.LastSearchPosition+1 );
-                var match = key.CompareTo(this, curKey);
-                if (match < 0)
-                    continue;
-
-                shouldBeInCurrentPage = false;
-                break;
-            }
-        }
-
-        if (shouldBeInCurrentPage)
+        if (KeyShouldBeInCurrentPage(ref key, ref state))
         {
             // we didn't find the key, but we found a _greater_ key in the page
             // therefore, we don't have it (we know the previous key was in this page
             // so if there is a greater key in this page, we didn't find it
-            value = default;
+            value = -1;
             return false;
         }
 
@@ -1344,5 +1473,42 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         // if we go to here, we are at the root, so operate normally
         return TryGetValue(ref key, out value);
+    }
+
+    private bool KeyShouldBeInCurrentPage(ref TLookupKey key, ref CursorState state)
+    {
+        var pos = ~state.LastSearchPosition;
+        var shouldBeInCurrentPage = pos < state.Header->NumberOfEntries;
+        if (shouldBeInCurrentPage)
+        {
+            var curKey = GetKeyData(ref state, pos);
+            var match = key.CompareTo(this, curKey);
+
+            shouldBeInCurrentPage = match < 0;
+        }
+
+        if (shouldBeInCurrentPage == false)
+        {
+            // if this isn't in this page, it may be in the _next_ one, but we 
+            // now need to check the parent page to see that
+            shouldBeInCurrentPage = true;
+
+            for (int i = _internalCursor._pos - 1; i >= 0; i--)
+            {
+                ref var cur = ref _internalCursor._stk[i];
+                if (cur.LastSearchPosition + 1 >= cur.Header->NumberOfEntries)
+                    continue;
+
+                var curKey = GetKeyData(ref cur, cur.LastSearchPosition + 1);
+                var match = key.CompareTo(this, curKey);
+                if (match < 0)
+                    continue;
+
+                shouldBeInCurrentPage = false;
+                break;
+            }
+        }
+
+        return shouldBeInCurrentPage;
     }
 }
