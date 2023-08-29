@@ -10,11 +10,13 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { Button } from "reactstrap";
+import { Button, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import {
     DocumentRevisionsConfig,
+    DocumentRevisionsConfigName,
     documentRevisionsActions,
+    documentRevisionsConfigNames,
     documentRevisionsSelectors,
 } from "./store/documentRevisionsSlice";
 import classNames from "classnames";
@@ -27,12 +29,12 @@ interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
     isDatabaseAdmin: boolean;
     onToggle: () => void;
-    onOnEdit: () => void;
+    onEdit: () => void;
     onDelete?: () => void;
 }
 
 export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsConfigPanelProps) {
-    const { config, isDatabaseAdmin, onDelete, onToggle, onOnEdit } = props;
+    const { config, isDatabaseAdmin, onDelete, onToggle, onEdit } = props;
 
     const dispatch = useAppDispatch();
     const { reportEvent } = useEventsCollector();
@@ -54,8 +56,6 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
         config.MaximumRevisionsToDeleteUponDocumentUpdate;
 
     const isDetailsVisible = config.PurgeOnDelete || config.MinimumRevisionsToKeep || config.MinimumRevisionAgeToKeep;
-
-    // TODO kalczur tooltip for defaults
 
     const formattedMinimumRevisionAgeToKeep = config.MinimumRevisionAgeToKeep
         ? generalUtils.formatTimeSpan(generalUtils.timeSpanToSeconds(config.MinimumRevisionAgeToKeep) * 1000, true)
@@ -87,6 +87,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                         </RichPanelName>
                     </RichPanelInfo>
                     <RichPanelActions>
+                        <DefaultConfigInfoIcon name={config.Name} />
                         {isDatabaseAdmin && (
                             <>
                                 <Button
@@ -100,7 +101,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                     {config.Disabled ? "Enable" : "Disable"}
                                 </Button>
 
-                                <Button color="secondary" onClick={onOnEdit} title="Edit this revision configuration">
+                                <Button color="secondary" onClick={onEdit} title="Edit this revision configuration">
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                                 {onDelete && (
@@ -167,5 +168,66 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                 )}
             </div>
         </RichPanel>
+    );
+}
+
+function DefaultConfigInfoIcon({ name }: { name: DocumentRevisionsConfigName }) {
+    const isDefault =
+        name === documentRevisionsConfigNames.defaultDocument || name === documentRevisionsConfigNames.defaultConflicts;
+
+    if (!isDefault) {
+        return null;
+    }
+
+    const id = "info-" + name.split(" ").join("-");
+
+    return (
+        <>
+            <UncontrolledTooltip target={id} placement="left">
+                <ul className="margin-top margin-top-xs">
+                    {name === documentRevisionsConfigNames.defaultConflicts ? (
+                        <>
+                            <li>
+                                <small>
+                                    This is the default revision configuration for
+                                    <strong> conflicting documents only</strong>.
+                                </small>
+                            </li>
+                            <li>
+                                <small>When enabled, a revision is created for each conflicting item.</small>
+                            </li>
+                            <li>
+                                <small>A revision is also created for the conflict resolution document.</small>
+                            </li>
+                            <li>
+                                <small>
+                                    When Document Defaults or a collection-specific configuration is defined,
+                                    <br /> they <strong>override</strong> the Conflicting Document Defaults.
+                                </small>
+                            </li>
+                        </>
+                    ) : (
+                        <>
+                            <li>
+                                <small>
+                                    This is the default revision configuration for all
+                                    <strong> non-conflicting documents</strong>.
+                                </small>
+                            </li>
+                            <li>
+                                <small>When enabled, a revision is created for all non-conflicting documents.</small>
+                            </li>
+                            <li>
+                                <small>
+                                    When a collection specific configuration is defined, it <strong>overrides</strong>{" "}
+                                    these defaults.
+                                </small>
+                            </li>
+                        </>
+                    )}
+                </ul>
+            </UncontrolledTooltip>
+            <Icon id={id} icon="info" />
+        </>
     );
 }
