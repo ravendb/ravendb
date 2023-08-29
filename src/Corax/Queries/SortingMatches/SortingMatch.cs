@@ -366,9 +366,10 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)
         {
-            if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false || 
-                sortedIds[read-1] > _max)
+            if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false || EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds[currentIdx + read - 1]) > _max)
                 _postListIt = default;
+
+            EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds.Slice(currentIdx), read);
             currentIdx += read;
         }
 
