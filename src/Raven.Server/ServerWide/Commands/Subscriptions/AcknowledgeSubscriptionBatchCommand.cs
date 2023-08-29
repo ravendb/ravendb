@@ -55,10 +55,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 var subscriptionTask = new SubscriptionTask(existingValue);
                 AssertSubscriptionState(record, subscriptionTask, subscriptionName);
 
-                return new UpdatedValue
-                {
-                    Action = Action.Noop
-                };
+                return new UpdatedValue(UpdatedValueActionType.Noop, value: null);
             }
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
@@ -75,11 +72,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             subscription.NodeTag = NodeTag;
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
 
-            return new UpdatedValue
-            {
-                Action = Action.Update,
-                Value = context.ReadObject(subscription.ToJson(), subscriptionName)
-            };
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(subscription.ToJson(), subscriptionName));
         }
 
         private void AssertSubscriptionState(RawDatabaseRecord record, IDatabaseTask subscription, string subscriptionName)

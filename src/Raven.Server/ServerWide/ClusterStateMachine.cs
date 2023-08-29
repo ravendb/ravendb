@@ -397,7 +397,7 @@ namespace Raven.Server.ServerWide
                     case nameof(IncrementClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
                             throw new RachisApplyException(errorMessage);
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
                         leader?.SetStateOf(index, result);
                         SetIndexForBackup(context, UpdateValueForDatabaseCommand.GetDatabaseNameFromJson(cmd), index, type);
                         break;
@@ -405,7 +405,7 @@ namespace Raven.Server.ServerWide
                     case nameof(IncrementClusterIdentitiesBatchCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentitiesBatchCommand), nameof(IncrementClusterIdentitiesBatchCommand.DatabaseName), out errorMessage) == false)
                             throw new RachisApplyException(errorMessage);
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
                         leader?.SetStateOf(index, result);
                         SetIndexForBackup(context, UpdateValueForDatabaseCommand.GetDatabaseNameFromJson(cmd), index, type);
                         break;
@@ -413,7 +413,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(UpdateClusterIdentityCommand), nameof(UpdateClusterIdentityCommand.Identities), out errorMessage) == false)
                             throw new RachisApplyException(errorMessage);
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
                         leader?.SetStateOf(index, result);
                         SetIndexForBackup(context, UpdateValueForDatabaseCommand.GetDatabaseNameFromJson(cmd), index, type);
                         break;
@@ -490,7 +490,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
                     case nameof(RemoveEtlProcessStateCommand):
                     case nameof(DelayBackupCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out _);
                         break;
 
                     case nameof(AddOrUpdateCompareExchangeCommand):
@@ -1411,9 +1411,8 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, out object result)
+        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
         {
-            result = null;
             UpdateValueForDatabaseCommand updateCommand = null;
             Exception exception = null;
             try

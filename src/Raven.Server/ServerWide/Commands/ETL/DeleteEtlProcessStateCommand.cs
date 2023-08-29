@@ -30,10 +30,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context,
             BlittableJsonReaderObject existingValue)
         {
-            return new UpdatedValue
-            {
-                Action = Action.Delete
-            };
+            return new UpdatedValue(UpdatedValueActionType.Delete, value: null);
         }
 
         public override void FillJson(DynamicJsonValue json)
