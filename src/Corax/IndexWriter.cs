@@ -1959,7 +1959,7 @@ namespace Corax
                 
                 RecordTermsForEntries(entriesForTerm, entries, termContainerId);
                 
-                if (indexedField.Spatial == null)
+                if (indexedField.Spatial == null && isNullTerm == false)
                 {
                     Debug.Assert(termContainerId > 0);
                     InsertEntriesForTerm(termContainerId);

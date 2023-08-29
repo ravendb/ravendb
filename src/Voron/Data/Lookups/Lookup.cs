@@ -11,6 +11,7 @@ using Voron.Data.CompactTrees;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Voron.Data.Lookups;
 
@@ -1162,10 +1163,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 terms[i] = GetValue(ref state,
                     // limit the search on the _next_ call on this page
                     state.LastSearchPosition);
-
-                //NULL VALUE
-                if ((terms[i] & ~long.MaxValue) != 0)
-                    terms[i] = missingValue;
                 
                 continue;
             }
