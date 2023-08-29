@@ -15,12 +15,14 @@ using Corax.Pipeline;
 using Corax.Queries;
 using Corax.Queries.TermProviders;
 using Corax.Utils;
+using NetTopologySuite.Triangulate.QuadEdge;
 using Sparrow.Server;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
+using Voron.Util;
 using InvalidOperationException = System.InvalidOperationException;
 using static Voron.Data.CompactTrees.CompactTree;
 
@@ -32,6 +34,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
 
     private readonly IndexFieldsMapping _fieldMapping;
+    private NativeList<long> _rootPages;
     private Tree _persistedDynamicTreeAnalyzer;
     private long? _numberOfEntries;
 
@@ -113,8 +116,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
+
+        if (_rootPages.Count == 0)
+            InitializeRootPages();
+        
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, item.Address, item.Length, _dictionaryId);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _rootPages, item.Address, item.Length, _dictionaryId);
     }
 
 
@@ -421,6 +428,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     
     public void Dispose()
     {
+        _rootPages.Dispose(Allocator);
+        
         if (_ownsTransaction)
             _transaction?.Dispose();
 
@@ -476,6 +485,28 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         where TInner : IQueryMatch
     {
         return new IncludeNullMatch<TInner>(this, inner, field, forward);
+    }
+    
+    private void InitializeRootPages()
+    {
+        _rootPages = new NativeList<long>();
+        var it = _fieldsTree.Iterate(prefetch: false);
+        _rootPages.Initialize(Allocator, _fieldMapping.Count);
+        
+        if (it.Seek(Slices.BeforeAllKeys))
+        {
+            do
+            {
+                var state = (LookupState*)it.CreateReaderForCurrent().Base;
+                if (state->RootObjectType == RootObjectType.Lookup)
+                {
+                    _rootPages.EnsureCapacityFor(Allocator, 1);
+                    _rootPages.AddByRefUnsafe() = state->RootPage;
+                }
+            } while (it.MoveNext());
+        }
+
+        _rootPages.Sort();
     }
     
     public Dictionary<long, string> GetIndexedFieldNamesByRootPage()

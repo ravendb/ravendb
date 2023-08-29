@@ -98,7 +98,16 @@ public static class CoraxQueryBuilder
 
         public StreamingOptimization(IndexSearcher searcher, OrderMetadata[] orderMetadata, bool hasBoosting)
         {
-            if (orderMetadata is not [{FieldType: MatchCompareFieldType.Sequence or MatchCompareFieldType.Floating or MatchCompareFieldType.Integer}, ..]
+            bool hasSpecialSorter = false;
+            foreach (var order in orderMetadata ?? Array.Empty<OrderMetadata>())
+            {
+                hasSpecialSorter |= order.FieldType is not (MatchCompareFieldType.Sequence or MatchCompareFieldType.Integer or MatchCompareFieldType.Floating);
+                if (hasSpecialSorter)
+                    break;
+            }
+            
+            if (orderMetadata is null
+                || hasSpecialSorter
                 || searcher.HasMultipleTermsInField(orderMetadata[0].Field) 
                 || hasBoosting)
             {
