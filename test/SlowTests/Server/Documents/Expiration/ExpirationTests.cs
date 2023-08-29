@@ -19,6 +19,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Expiration;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.ServerWide.Context;
@@ -218,12 +219,12 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var options = new ExpirationStorage.ExpiredDocumentsOptions(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
+                    var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
                     
-                    var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out _, CancellationToken.None);
+                    var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, out _, CancellationToken.None);
                     Assert.Equal(1, expired.Count);
 
-                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out _, CancellationToken.None);
+                    var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(options, out _, CancellationToken.None);
                     Assert.Equal(1, toRefresh.Count);
                 }
             }
@@ -263,9 +264,9 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     DateTime time = SystemTime.UtcNow.AddMinutes(10);
-                    var options = new ExpirationStorage.ExpiredDocumentsOptions(context, time, topology,nodeTag, 10);
-                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out _, CancellationToken.None);
-                    database.DocumentsStorage.ExpirationStorage.RefreshDocuments(context, toRefresh, time);
+                    var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, time, topology,nodeTag, 10);
+                    var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(options, out _, CancellationToken.None);
+                    database.DocumentsStorage.RefreshStorage.ProcessDocuments(context, toRefresh, time);
                 }
             }
         }

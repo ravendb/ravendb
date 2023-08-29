@@ -252,8 +252,18 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsHiLo == false && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
-                    _documentsStorage.ExpirationStorage.Put(context, lowerId, metadata);
-                    _documentsStorage.DataArchivalStorage.Put(context, lowerId, metadata);
+                    var hasExpirationDate = metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
+                    var hasRefreshDate = metadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
+                    var hasArchiveAtDate= metadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out string archiveAtDate);
+
+                    if (hasExpirationDate)
+                        _documentsStorage.ExpirationStorage.Put(context, lowerId, expirationDate);
+
+                    if (hasRefreshDate)
+                        _documentsStorage.RefreshStorage.Put(context, lowerId, refreshDate);
+                    
+                    if (hasArchiveAtDate)
+                        _documentsStorage.DataArchivalStorage.Put(context, lowerId, archiveAtDate);
                 }
 
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);

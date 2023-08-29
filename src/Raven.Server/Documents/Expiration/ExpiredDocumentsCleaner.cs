@@ -151,12 +151,12 @@ namespace Raven.Server.Documents.Expiration
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, topology, nodeTag, batchSize);
+                            var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
 
                             var expired =
                                 forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out var duration, CancellationToken) :
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out duration, CancellationToken);
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocuments(options, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.RefreshStorage.GetDocuments(options, out duration, CancellationToken);
 
                             if (expired == null || expired.Count == 0)
                                 return;
@@ -203,8 +203,8 @@ namespace Raven.Server.Documents.Expiration
             {
                 DeletionCount =
                     _forExpiration
-                        ? _database.DocumentsStorage.ExpirationStorage.DeleteDocumentsExpiration(context, _expired, _currentTime)
-                        : _database.DocumentsStorage.ExpirationStorage.RefreshDocuments(context, _expired, _currentTime);
+                        ? _database.DocumentsStorage.ExpirationStorage.ProcessDocuments(context, _expired, _currentTime)
+                        : _database.DocumentsStorage.RefreshStorage.ProcessDocuments(context, _expired, _currentTime);
 
                 return DeletionCount;
             }

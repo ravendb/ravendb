@@ -9,7 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
@@ -110,9 +110,9 @@ namespace SlowTests.Issues
                             nodeTag = database.ServerStore.NodeTag;
                         }
                         
-                        var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, topology, nodeTag, batchSize);
+                        var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
                         
-                        var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out _, CancellationToken.None);
+                        var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, out _, CancellationToken.None);
                         var totalCount = 0;
                         if (expired != null)
                         {

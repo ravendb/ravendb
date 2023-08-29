@@ -19,6 +19,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.DataArchival;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -29,12 +30,8 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival
 {
-    public class DataArchivalTests : RavenTestBase
+    public class DataArchivalTests(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public DataArchivalTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         private async Task SetupDataArchival(DocumentStore store)
         {
             var config = new DataArchivalConfiguration {Disabled = false, ArchiveFrequencyInSec = 100};
@@ -73,9 +70,9 @@ namespace SlowTests.Server.Documents.DataArchival
                         nodeTag = database.ServerStore.NodeTag;
                     }
                     
-                    var options = new DataArchivalStorage.ArchivedDocumentsOptions(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
+                    var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
 
-                    var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocumentsToArchive(options, out _, CancellationToken.None);
+                    var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, out _, CancellationToken.None);
                     Assert.Equal(1, toArchive.Count);
                 }
             }
