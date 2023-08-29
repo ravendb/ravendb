@@ -70,7 +70,7 @@ namespace SlowTests.Server.Documents.DataArchival
                         nodeTag = database.ServerStore.NodeTag;
                     }
                     
-                    var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
+                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
 
                     var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, out _, CancellationToken.None);
                     Assert.Equal(1, toArchive.Count);

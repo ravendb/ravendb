@@ -119,7 +119,7 @@ public class DataArchivist : BackgroundWorkBase
 
                     using (context.OpenReadTransaction())
                     {
-                        var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
 
                         var toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, out var duration, CancellationToken);
 

@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
@@ -2568,7 +2569,7 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public virtual void HandleArchived(IndexItem indexItem, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats, LazyStringValue lowerId)
+        public virtual void DeleteArchived(IndexItem indexItem, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats, LazyStringValue lowerId)
         {
             if (MustDeleteArchivedDocument(indexItem))
                 HandleDelete(new Tombstone { LowerId = lowerId}, collection, writer, indexContext, stats);

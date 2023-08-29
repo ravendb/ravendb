@@ -219,7 +219,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
+                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
                     
                     var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, out _, CancellationToken.None);
                     Assert.Equal(1, expired.Count);
@@ -264,7 +264,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     DateTime time = SystemTime.UtcNow.AddMinutes(10);
-                    var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, time, topology,nodeTag, 10);
+                    var options = new BackgroundWorkParameters(context, time, topology,nodeTag, 10);
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(options, out _, CancellationToken.None);
                     database.DocumentsStorage.RefreshStorage.ProcessDocuments(context, toRefresh, time);
                 }

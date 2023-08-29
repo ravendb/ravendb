@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
                                         else
                                         {   // skip from indexing
-                                            _index.HandleArchived(current, collection, writeOperation, indexContext, stats, itemEnumerator.Current.LowerId);
+                                            _index.DeleteArchived(current, collection, writeOperation, indexContext, stats, itemEnumerator.Current.LowerId);
                                         }
                                     }
                                     catch (Exception e) when (e.IsIndexError())

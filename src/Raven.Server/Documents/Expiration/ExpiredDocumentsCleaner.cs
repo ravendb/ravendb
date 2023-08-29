@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Expiration
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
+                            var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
 
                             var expired =
                                 forExpiration ?

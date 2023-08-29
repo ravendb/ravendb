@@ -14,6 +14,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Raven.Client;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Operations.DataArchival;
 
 namespace SlowTests.Issues

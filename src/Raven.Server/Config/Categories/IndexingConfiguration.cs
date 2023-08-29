@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Raven.Client;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.Config.Attributes;
@@ -87,7 +88,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("The default deployment mode for auto indexes")]
         [DefaultValue(IndexDeploymentMode.Parallel)]
-        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Auto.DeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexDeploymentMode AutoIndexDeploymentMode { get; protected set; }
         

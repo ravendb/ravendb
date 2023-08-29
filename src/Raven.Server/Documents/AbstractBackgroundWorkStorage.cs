@@ -63,14 +63,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
     }
     
     
-    public record BackgroundWorkParameters(DocumentsOperationContext Context, DateTime CurrentTime, DatabaseTopology DatabaseTopology, string NodeTag, long AmountToTake)
-    {
-        public readonly DocumentsOperationContext Context = Context;
-        public readonly DateTime CurrentTime = CurrentTime;
-        public readonly DatabaseTopology DatabaseTopology = DatabaseTopology;
-        public readonly string NodeTag = NodeTag;
-        public readonly long AmountToTake = AmountToTake;
-    }
+
 
     public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(BackgroundWorkParameters options, out Stopwatch duration, CancellationToken cancellationToken)
     {

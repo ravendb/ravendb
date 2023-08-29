@@ -1,4 +1,4 @@
-﻿namespace Raven.Client.Documents.Operations.DataArchival;
+﻿namespace Raven.Client.Documents.DataArchival;
 
 public enum ArchivedDataProcessingBehavior
 {

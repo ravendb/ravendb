@@ -1310,7 +1310,10 @@ namespace Raven.Server.Json
             writer.WriteComma();
             
             writer.WritePropertyName(nameof(indexDefinition.ArchivedDataProcessingBehavior));
-            writer.WriteString(indexDefinition.ArchivedDataProcessingBehavior?.ToString());
+            if (indexDefinition.ArchivedDataProcessingBehavior.HasValue)
+                writer.WriteString(indexDefinition.ArchivedDataProcessingBehavior?.ToString());
+            else
+                writer.WriteNull();
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Priority));

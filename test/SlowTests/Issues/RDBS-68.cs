@@ -110,7 +110,7 @@ namespace SlowTests.Issues
                             nodeTag = database.ServerStore.NodeTag;
                         }
                         
-                        var options = new AbstractBackgroundWorkStorage.BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
                         
                         var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, out _, CancellationToken.None);
                         var totalCount = 0;
