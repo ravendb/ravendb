@@ -223,7 +223,10 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         
         void InsertTerm(ReadOnlySpan<byte> term, int freq)
         {
-            var termAsString = term is {Length: 0} ? CoraxProj.Constants.NullValueAsString : Encoding.UTF8.GetString(term);
+            var termAsString = term is {Length: 0} 
+                ? CoraxProj.Constants.ProjectionNullValue 
+                : Encoding.UTF8.GetString(term);
+            
             if (IsNoiseWord(termAsString)) // TODO optimize
                 return;
 

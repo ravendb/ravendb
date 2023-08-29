@@ -225,9 +225,8 @@ public partial class IndexSearcher
         if (terms == null && term != null)
             return 0;
         
-        if (term is null || ReferenceEquals(term, Constants.NullValueAsString))
+        if (term is null || ReferenceEquals(term, Constants.ProjectionNullValue))
         {
-            //todo perf
             var termMatch =  TryGetPostingListForNull(binding, out var postingListId) 
                 ? TermQuery(binding, postingListId, 1D) 
                 : TermMatch.CreateEmpty(this, Allocator);

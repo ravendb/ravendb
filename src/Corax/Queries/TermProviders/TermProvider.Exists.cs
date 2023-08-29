@@ -52,7 +52,6 @@ namespace Corax.Queries.TermProviders
             {
                 if (_nullIterator.Fill(containers, out var total))
                 {
-                    EntryIdEncodings.DecodeAndDiscardFrequency(containers, total);
                     return total;
                 }
                 
@@ -94,7 +93,7 @@ namespace Corax.Queries.TermProviders
         {
             if (_fetchNulls)
             {
-                term = Constants.NullValueAsStringSlice;
+                term = Constants.ProjectionNullValueSlice;
                 _fetchNulls = false;
                 return true;
             }

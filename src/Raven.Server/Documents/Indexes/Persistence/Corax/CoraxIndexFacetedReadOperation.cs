@@ -212,7 +212,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         while (reader.FindNext(fieldRootPage))
         {
             var key = reader.IsNull 
-                ? global::Corax.Constants.NullValueAsStringSlice 
+                ? Constants.ProjectionNullValueSlice 
                 : reader.Current.Decoded();
             
             InsertTerm(key, ref cloned);

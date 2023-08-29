@@ -1909,8 +1909,6 @@ namespace Corax
 
                         dumper.WriteAddition(term, termId);
                         termContainerId = fieldTree.AddAfterTryGetNext(ref keyLookup, termId);
-                        if (termContainerId % Voron.Global.Constants.Storage.PageSize == 0)
-                            Debugger.Break();
                     }
                     else
                     {
@@ -1947,8 +1945,7 @@ namespace Corax
                             default:
                                 throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
                         }
-                        if (termContainerId % Voron.Global.Constants.Storage.PageSize == 0)
-                            Debugger.Break();
+
                         void ThrowTriedToDeleteTermThatDoesNotExists()
                         {
                             throw new InvalidOperationException(
