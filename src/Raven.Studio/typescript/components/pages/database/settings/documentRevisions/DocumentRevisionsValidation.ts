@@ -2,11 +2,11 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 
 const editCollectionConfigSchema = yup.object({
-    CollectionName: yup.string().nullable().required(),
-    Disabled: yup.boolean(),
-    IsPurgeOnDeleteEnabled: yup.boolean(),
-    IsMinimumRevisionsToKeepEnabled: yup.boolean(),
-    MinimumRevisionsToKeep: yup
+    collectionName: yup.string().nullable().required(),
+    disabled: yup.boolean(),
+    isPurgeOnDeleteEnabled: yup.boolean(),
+    isMinimumRevisionsToKeepEnabled: yup.boolean(),
+    minimumRevisionsToKeep: yup
         .number()
         .nullable()
         .positive()
@@ -15,8 +15,8 @@ const editCollectionConfigSchema = yup.object({
             is: true,
             then: (schema) => schema.required(),
         }),
-    IsMinimumRevisionAgeToKeepEnabled: yup.boolean(),
-    MinimumRevisionAgeToKeep: yup
+    isMinimumRevisionAgeToKeepEnabled: yup.boolean(),
+    minimumRevisionAgeToKeep: yup
         .number()
         .nullable()
         .positive()
@@ -25,8 +25,8 @@ const editCollectionConfigSchema = yup.object({
             is: true,
             then: (schema) => schema.required(),
         }),
-    IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled: yup.boolean(),
-    MaximumRevisionsToDeleteUponDocumentUpdate: yup
+    isMaximumRevisionsToDeleteUponDocumentUpdateEnabled: yup.boolean(),
+    maximumRevisionsToDeleteUponDocumentUpdate: yup
         .number()
         .nullable()
         .positive()
@@ -37,7 +37,7 @@ const editCollectionConfigSchema = yup.object({
         }),
 });
 
-const editConfigSchema = editCollectionConfigSchema.omit(["CollectionName"]);
+const editConfigSchema = editCollectionConfigSchema.omit(["collectionName"]);
 
 export const documentRevisionsConfigYupResolver = yupResolver(editConfigSchema);
 export const documentRevisionsCollectionConfigYupResolver = yupResolver(editCollectionConfigSchema);
