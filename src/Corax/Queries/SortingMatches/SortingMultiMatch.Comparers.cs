@@ -377,7 +377,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             
             _lookup.GetFor(buffer[..2], buffer[2..], long.MinValue);
             if (swap) // In the case when we swapped the keys (since the lookup requires a sorted list as input), we have to swap the values before comparison to maintain the original order.
-
                 buffer[2..].Reverse();
             
             return buffer[2].CompareTo(buffer[3]);
