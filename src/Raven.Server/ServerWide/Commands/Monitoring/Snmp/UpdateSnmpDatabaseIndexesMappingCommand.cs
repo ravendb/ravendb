@@ -51,27 +51,16 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
 
                 if (previousValue.Modifications.Properties.Count == 0)
                 {
-                    return new UpdatedValue
-                    {
-                        Action = Action.Noop
-                    };
+                    return new UpdatedValue(UpdatedValueActionType.Noop, value: null);
                 }
 
-                return new UpdatedValue
-                {
-                    Action = Action.Update,
-                    Value = context.ReadObject(previousValue, GetItemId())
-                };
+                return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(previousValue, GetItemId()));
             }
 
             var djv = new DynamicJsonValue();
             AddIndexesIfNecessary(djv, null, Indexes);
 
-            return new UpdatedValue
-            {
-                Action = Action.Update,
-                Value = context.ReadObject(djv, GetItemId())
-            };
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(djv, GetItemId()));
         }
 
         private static void AddIndexesIfNecessary(DynamicJsonValue djv, BlittableJsonReaderObject previousValue, List<string> indexes)
