@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Corax.Mappings;
+using Corax.Utils;
+using Sparrow;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
@@ -49,7 +51,10 @@ namespace Corax.Queries.TermProviders
             if (_fetchNulls)
             {
                 if (_nullIterator.Fill(containers, out var total))
+                {
+                    EntryIdEncodings.DecodeAndDiscardFrequency(containers, total);
                     return total;
+                }
                 
                 _fetchNulls = false;
             }
