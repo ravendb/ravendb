@@ -42,12 +42,8 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
                 [nameof(DelayUntil)] = DelayUntil,
                 [nameof(OriginalBackupTime)] = OriginalBackupTime
             };
-            
-            return new UpdatedValue
-            {
-                Action = Action.Update,
-                Value = context.ReadObject(existingValue, GetItemId())
-            };
+
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(existingValue, GetItemId()));
         }
 
         var status = new PeriodicBackupStatus
@@ -56,11 +52,7 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
             OriginalBackupTime = OriginalBackupTime
         };
 
-        return new UpdatedValue
-        {
-            Action = Action.Update,
-            Value = context.ReadObject(status.ToJson(), GetItemId())
-        };
+        return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(status.ToJson(), GetItemId()));
     }
 
     public override object GetState()
