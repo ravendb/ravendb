@@ -41,7 +41,7 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Button, Col, Row } from "reactstrap";
+import { Alert, Button, Col, Row } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
@@ -54,6 +54,8 @@ import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
 import { StickyHeader } from "components/common/StickyHeader";
 import { KafkaSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/KafkaSinkPanel";
 import { RabbitMqSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/RabbitMqSinkPanel";
+import { CounterBadge } from "components/common/CounterBadge";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -61,6 +63,14 @@ interface OngoingTasksPageProps {
 
 export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const { database } = props;
+
+    const subscriptionsServerLimit = 3 * 5; //TODO
+    const subscriptionsServerCount = 15; //TODO
+
+    const subscriptionsServerLimitStatus = getLicenseLimitReachStatus(
+        subscriptionsServerLimit,
+        subscriptionsServerCount
+    );
 
     const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
     const { tasksService } = useServices();
@@ -258,6 +268,25 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     return (
         <div>
+            {subscriptionsServerLimitStatus !== "notReached" && (
+                <Alert
+                    color={subscriptionsServerLimitStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center"
+                >
+                    Your server {subscriptionsServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                    <strong>maximum number of subscriptions</strong> allowed by your license{" "}
+                    <strong>
+                        ({subscriptionsServerCount}/{subscriptionsServerLimit})
+                    </strong>
+                    <br />
+                    <strong>
+                        <a href="https://ravendb.net/l/FLDLO4" target="_blank">
+                            Upgrade your license
+                        </a>{" "}
+                    </strong>
+                    to add more
+                </Alert>
+            )}
             {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>
@@ -313,9 +342,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {externalReplications.length > 0 && (
                         <div key="external-replications">
-                            <HrHeader className="external-replication" count={externalReplications.length}>
-                                <Icon icon="external-replication" />
-                                External Replication
+                            <HrHeader className="external-replication">
+                                <Icon icon="external-replication" /> External Replication
+                                <CounterBadge count={externalReplications.length} limit={1} className="ms-3" />
                             </HrHeader>
 
                             {externalReplications.map((x) => (
@@ -485,9 +514,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {subscriptions.length > 0 && (
                         <div key="subscriptions">
-                            <HrHeader className="subscription" count={subscriptions.length}>
+                            <HrHeader className="subscription">
                                 <Icon icon="subscription" />
                                 Subscription
+                                <CounterBadge count={subscriptions.length} limit={3} className="ms-3" />
                             </HrHeader>
 
                             {subscriptions.map((x) => {
