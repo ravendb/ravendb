@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -159,6 +160,30 @@ namespace Raven.Server.Documents.Subscriptions
                 DatabaseName = _db.Name,
                 DocumentsToResend = docsToResend
             };
+
+            var state = _serverStore.Engine.CurrentState;
+            if (command.ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange) &&
+                (state == RachisState.Leader || state == RachisState.Follower))
+            {
+                // there are no changes for this subscription but we still want to check if we are the node that is responsible for this task.
+                // we can do that locally if we have a functional cluster (in a leader or follower state).
+
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var rawDatabaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, command.DatabaseName);
+                    if (rawDatabaseRecord == null)
+                        throw new DatabaseDoesNotExistException($"Cannot set command value of type {nameof(AcknowledgeSubscriptionBatchCommand)} for database {command.DatabaseName}, because it does not exist");
+
+                    var subscription = _serverStore.Cluster.Read(context, command.GetItemId());
+                    if (subscription == null)
+                        throw new SubscriptionDoesNotExistException($"Subscription with name '{command.SubscriptionName}' does not exist");
+
+                    var subscriptionTask = new AcknowledgeSubscriptionBatchCommand.SubscriptionTask(subscription);
+                    command.AssertSubscriptionState(rawDatabaseRecord, subscriptionTask, command.SubscriptionName);
+                    return;
+                }
+            }
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
