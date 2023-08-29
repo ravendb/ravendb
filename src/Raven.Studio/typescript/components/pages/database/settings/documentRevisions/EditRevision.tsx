@@ -22,6 +22,10 @@ import { useAppSelector } from "components/store";
 import { SelectOption } from "components/common/Select";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import genUtils from "common/generalUtils";
+import generalUtils from "common/generalUtils";
+
+const revisionsDelta = 100;
+const revisionsByAgeDelta = 604800; // 7 days
 
 export type EditRevisionConfigType = "collectionSpecific" | keyof typeof documentRevisionsConfigNames;
 export type EditRevisionTaskType = "edit" | "new";
@@ -39,6 +43,7 @@ export default function EditRevision(props: EditRevisionProps) {
 
     const isForNewCollection: boolean = configType === "collectionSpecific" && taskType === "new";
 
+    const originalConfig = useAppSelector(documentRevisionsSelectors.originalConfig(config?.Name));
     const collectionConfigsNames = useAppSelector(documentRevisionsSelectors.allConfigsNames);
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
@@ -61,6 +66,23 @@ export default function EditRevision(props: EditRevisionProps) {
         onConfirm(mapToDocumentRevisionsConfig(formData, configType));
         toggle();
     };
+
+    const formattedMinimumRevisionAgeToKeep = formValues.minimumRevisionAgeToKeep
+        ? generalUtils.formatTimeSpan(formValues.minimumRevisionAgeToKeep * 1000, true)
+        : null;
+
+    const isRevisionsToKeepLimitWarning =
+        originalConfig?.MinimumRevisionsToKeep &&
+        formValues.minimumRevisionsToKeep &&
+        !formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
+        originalConfig.MinimumRevisionsToKeep - formValues.minimumRevisionsToKeep > revisionsDelta;
+
+    const isRevisionsToKeepByAgeLimitWarning =
+        originalConfig?.MinimumRevisionAgeToKeep &&
+        formValues.minimumRevisionAgeToKeep &&
+        !formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
+        genUtils.timeSpanToSeconds(originalConfig.MinimumRevisionAgeToKeep) - formValues.minimumRevisionAgeToKeep >
+            revisionsByAgeDelta;
 
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info">
@@ -92,6 +114,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                 name="minimumRevisionsToKeep"
                                 placeholder="Enter number of revisions to keep"
                             />
+                            {isRevisionsToKeepLimitWarning && <LimitWarning limit={revisionsDelta} />}
                         </InputGroup>
                     )}
                     <FormSwitch control={control} name="isMinimumRevisionAgeToKeepEnabled">
@@ -105,6 +128,9 @@ export default function EditRevision(props: EditRevisionProps) {
                                 showDays
                                 showSeconds
                             />
+                            {isRevisionsToKeepByAgeLimitWarning && (
+                                <LimitWarning limit={generalUtils.formatTimeSpan(revisionsByAgeDelta * 1000, true)} />
+                            )}
                         </InputGroup>
                     )}
                     {(formValues.isMinimumRevisionsToKeepEnabled || formValues.isMinimumRevisionAgeToKeepEnabled) && (
@@ -136,34 +162,28 @@ export default function EditRevision(props: EditRevisionProps) {
                             ) : (
                                 <li>Revisions of a deleted document can be accessed in the Revisions Bin view.</li>
                             )}
-                            {formValues.isMinimumRevisionsToKeepEnabled && formValues.minimumRevisionsToKeep && (
+                            {formValues.minimumRevisionsToKeep > 0 && (
                                 <>
                                     <li>
-                                        {formValues.isMinimumRevisionAgeToKeepEnabled &&
-                                        formValues.minimumRevisionAgeToKeep ? (
+                                        {formValues.minimumRevisionAgeToKeep > 0 ? (
                                             <>
                                                 <span>At least</span>{" "}
                                                 <strong>{formValues.minimumRevisionsToKeep}</strong> of the latest
                                             </>
                                         ) : (
-                                            <>
-                                                <span>
-                                                    Only the latest <strong>{formValues.minimumRevisionsToKeep}</strong>
-                                                </span>
-                                            </>
-                                        )}{" "}
-                                        {formValues.minimumRevisionsToKeep === 1 ? (
-                                            <span>revision</span>
-                                        ) : (
-                                            <span>revisions</span>
-                                        )}{" "}
+                                            <span>
+                                                Only the latest <strong>{formValues.minimumRevisionsToKeep}</strong>
+                                            </span>
+                                        )}
+                                        <span>
+                                            {formValues.minimumRevisionsToKeep === 1 ? " revision " : " revisions "}
+                                        </span>
                                         will be kept.
                                     </li>
-                                    {formValues.isMinimumRevisionAgeToKeepEnabled &&
-                                    formValues.minimumRevisionAgeToKeep ? (
+                                    {formValues.minimumRevisionAgeToKeep > 0 ? (
                                         <li>
                                             Older revisions will be removed if they exceed{" "}
-                                            <strong>{formValues.minimumRevisionAgeToKeep}</strong> on next revision
+                                            <strong>{formattedMinimumRevisionAgeToKeep}</strong> on next revision
                                             creation.
                                         </li>
                                     ) : (
@@ -171,23 +191,20 @@ export default function EditRevision(props: EditRevisionProps) {
                                     )}
                                 </>
                             )}
-                            {!formValues.isMinimumRevisionsToKeepEnabled &&
-                                formValues.isMinimumRevisionAgeToKeepEnabled &&
-                                formValues.minimumRevisionAgeToKeep && (
-                                    <li>
-                                        Revisions that exceed <strong>{formValues.minimumRevisionAgeToKeep}</strong>{" "}
-                                        will be removed on next revision creation.
-                                    </li>
-                                )}
-                            {formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
-                                formValues.maximumRevisionsToDeleteUponDocumentUpdate && (
-                                    <li>
-                                        A maximum of{" "}
-                                        <strong>{formValues.maximumRevisionsToDeleteUponDocumentUpdate}</strong>{" "}
-                                        revisions will be deleted each time a document is updated, until the defined
-                                        &apos;# of revisions to keep&apos; limit is reached.
-                                    </li>
-                                )}
+                            {!formValues.minimumRevisionsToKeep && formValues.minimumRevisionAgeToKeep > 0 && (
+                                <li>
+                                    Revisions that exceed <strong>{formattedMinimumRevisionAgeToKeep}</strong> will be
+                                    removed on next revision creation.
+                                </li>
+                            )}
+                            {formValues.maximumRevisionsToDeleteUponDocumentUpdate > 0 && (
+                                <li>
+                                    A maximum of{" "}
+                                    <strong>{formValues.maximumRevisionsToDeleteUponDocumentUpdate}</strong> revisions
+                                    will be deleted each time a document is updated, until the defined &apos;# of
+                                    revisions to keep&apos; limit is reached.
+                                </li>
+                            )}
                         </ul>
                     </Alert>
                 </ModalBody>
@@ -202,6 +219,20 @@ export default function EditRevision(props: EditRevisionProps) {
                 </ModalFooter>
             </Form>
         </Modal>
+    );
+}
+
+interface LimitWarningProps {
+    limit: number | string;
+}
+
+function LimitWarning({ limit }: LimitWarningProps) {
+    return (
+        <Alert color="warning" className="mt-1">
+            The new limit is much lower than the current value (delta &gt; {limit}).
+            <br />
+            It is advised to set the # of revisions to delete upon document update.
+        </Alert>
     );
 }
 

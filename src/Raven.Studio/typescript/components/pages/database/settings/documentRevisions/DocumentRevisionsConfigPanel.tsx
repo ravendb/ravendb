@@ -39,17 +39,14 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
     const dispatch = useAppDispatch();
     const { reportEvent } = useEventsCollector();
 
-    const originalConfigs = useAppSelector(documentRevisionsSelectors.originalConfigs);
-    const isSelected = useAppSelector(documentRevisionsSelectors.isSelectedConfigName(config?.Name));
+    const originalConfig = useAppSelector(documentRevisionsSelectors.originalConfig(config.Name));
+    const isSelected = useAppSelector(documentRevisionsSelectors.isSelectedConfigName(config.Name));
 
     if (!config) {
         return null;
     }
 
-    const isModified = !_.isEqual(
-        originalConfigs.find((x) => x.Name === config.Name),
-        config
-    );
+    const isModified = !_.isEqual(originalConfig, config);
 
     const isDeleteOnUpdateVisible =
         (config.MinimumRevisionsToKeep || config.MinimumRevisionAgeToKeep) &&
@@ -108,7 +105,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                     <Button
                                         color="danger"
                                         onClick={() => {
-                                            reportEvent("revisions", "create");
+                                            reportEvent("revisions", "remove");
                                             onDelete();
                                         }}
                                         title="Delete this revision configuration"
