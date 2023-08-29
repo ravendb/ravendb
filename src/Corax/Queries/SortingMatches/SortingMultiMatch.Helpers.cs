@@ -102,9 +102,9 @@ public unsafe partial struct SortingMultiMatch<TInner>
             
             if (match._orderMetadata[0].Ascending)
                 indexes.Sort(new IndirectComparer<TComparer1, TComparer2, TComparer3>(ref match, batchTerms, comparer1,
-                comparer2, comparer3));
+                comparer2, comparer3, false));
             else
-                indexes.Sort(new IndirectComparer<Descending<TComparer1>, TComparer2, TComparer3>(ref match, batchTerms, new(comparer1), comparer2, comparer3));
+                indexes.Sort(new IndirectComparer<Descending<TComparer1>, TComparer2, TComparer3>(ref match, batchTerms, new(comparer1), comparer2, comparer3, true));
 
         }
     }
