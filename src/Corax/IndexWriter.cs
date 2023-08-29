@@ -1294,7 +1294,7 @@ namespace Corax
             var llt = _transaction.LowLevelTransaction;
             Page lastVisitedPage = default;
 
-            var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree);
+            var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree, out var rootPages);
             
             long dicId = CompactTree.GetDictionaryId(llt);
 
@@ -1310,15 +1310,17 @@ namespace Corax
 
                 var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
                 
-                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, dicId, entryToDelete, termsPerEntryIndex);
+                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, rootPages, dicId, entryToDelete, termsPerEntryIndex);
                 Container.Delete(llt, _entriesTermsContainerId, entryTermsId);
             }
+            
+            rootPages.Dispose(_entriesAllocator);
         }
 
-        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, long dicId,
+        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, in NativeList<long> rootPages, long dicId,
             long entryToDelete, int termsPerEntryIndex)
         {
-            var reader = new EntryTermsReader(llt, entryTerms.Address, entryTerms.Length, dicId);
+            var reader = new EntryTermsReader(llt, rootPages, entryTerms.Address, entryTerms.Length, dicId);
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
@@ -1414,9 +1416,12 @@ namespace Corax
         }
 
 
-        private unsafe Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree)
+        private unsafe Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree, out NativeList<long> rootPages)
         {
             var pageToField = new Dictionary<long, IndexedField>();
+            rootPages = new NativeList<long>();
+            rootPages.Initialize(_entriesAllocator, _knownFieldsTerms.Length);
+            
             var it = fieldsTree.Iterate(prefetch: false);
             if (it.Seek(Slices.BeforeAllKeys))
             {
@@ -1432,15 +1437,21 @@ namespace Corax
                                 continue; // numeric postfix values
                             var dynamicIndexedField = GetDynamicIndexedField(_entriesAllocator, it.CurrentKey.AsSpan());
                             pageToField.Add(state->RootPage, dynamicIndexedField);
+                            rootPages.EnsureCapacityFor(_entriesAllocator, 1);
+                            rootPages.AddByRefUnsafe() = state->RootPage;
+
                         }
                         else
                         {
                             pageToField.Add(state->RootPage, _knownFieldsTerms[field.FieldId]);
+                            rootPages.EnsureCapacityFor(_entriesAllocator, 1);
+                            rootPages.AddByRefUnsafe() = state->RootPage;
                         }
                     }
                 } while (it.MoveNext());
             }
-
+            
+            rootPages.Sort();
             return pageToField;
         }
 
@@ -1898,6 +1909,8 @@ namespace Corax
 
                         dumper.WriteAddition(term, termId);
                         termContainerId = fieldTree.AddAfterTryGetNext(ref keyLookup, termId);
+                        if (termContainerId % Voron.Global.Constants.Storage.PageSize == 0)
+                            Debugger.Break();
                     }
                     else
                     {
@@ -1934,7 +1947,8 @@ namespace Corax
                             default:
                                 throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
                         }
-
+                        if (termContainerId % Voron.Global.Constants.Storage.PageSize == 0)
+                            Debugger.Break();
                         void ThrowTriedToDeleteTermThatDoesNotExists()
                         {
                             throw new InvalidOperationException(
@@ -1947,9 +1961,7 @@ namespace Corax
                 
                 if (indexedField.Spatial == null)
                 {
-                    Debug.Assert(isNullTerm || termContainerId > 0);
-                    Debug.Assert(isNullTerm == false || (termContainerId & ~long.MaxValue) != 0);
-
+                    Debug.Assert(termContainerId > 0);
                     InsertEntriesForTerm(termContainerId);
                 }
             }
@@ -1965,7 +1977,8 @@ namespace Corax
                 //In the case where the field does not have any null values, we will create a posting list and store all documents immediately.
                 //However, when we do encounter null values, we will update this in the standard manner, just like any other term.
                 keyLookup = default;
-                termContainerId = EntryTermsWriter.GetTermContainerForNullFromRootPage(tree.RootPage);
+                termContainerId = tree.RootPage * Voron.Global.Constants.Storage.PageSize;
+                Debug.Assert((termContainerId & 0b111) == 0);
                 termExists = true;
                 alreadyIndexed = false;
                 var postingList = _nullEntriesPostingLists.ReadInt64(indexedField.Name);
@@ -2036,7 +2049,7 @@ namespace Corax
             for (int i = 0; i < entriesForTermCount; i++)
             {
                 var entry = rawItems[i];
-
+                
                 ref var recordedTermList = ref GetEntryTerms(entry.TermsPerEntryIndex);
 
                 if ( recordedTermList.HasCapacityFor(1) == false)
@@ -2053,10 +2066,7 @@ namespace Corax
                            0b100, // marker indicating that we have a term frequency here
                     _ => termContainerId
                 };
-
-                if ((termContainerId & EntryTermsWriter.NullMarker) != 0 && entry.Frequency > 1) //After shifting we will lose the sign bit (NULL handler) so we will have to set it again.
-                    EntryTermsWriter.SetNullMarkerInTermContainerId(ref recordedTermContainerId);
-
+                
                 if (entries.Long != null)
                 {
                     recordedTermContainerId |= 1; // marker!

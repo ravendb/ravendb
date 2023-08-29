@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -6,9 +7,11 @@ using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Json;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Corax.Utils;
 
@@ -68,15 +71,15 @@ namespace Corax.Utils;
 /// * 0b110 - indicates that this is a  *stored* field. The term id contains the type of term we deal with, not a term.
 ///
 ///
-/// ### NULL Handling:
-/// In the context of NULL handling, we faced the challenge that the three lowest bits in the TermContainer were already in use.
-/// In order to store information about NULL terms, we utilized the highest bit (the sign bit) since container IDs are always positive.
-/// To identify which field contains NULL values, we store the RootPage number of CompactTree as the TermContainerId.
-/// The rest of the configuration remains compatible with the assumptions mentioned above, including handling frequency and other aspects in the same manner.
+///### NULL Handling:
+///We store the root page multiplied by PageSize (which results in 0b000 at the end).
+///In cases where TermId is divisible by PageSize, we have a suspicion that we could have a NULL value.
+///To ensure that, we pass a list with all possible root pages, since all lowest bits are already in use.
 /// </summary>
 public unsafe struct EntryTermsReader
 {
     private readonly LowLevelTransaction _llt;
+    private readonly NativeList<long> _rootPages;
     private readonly long _dicId;
     private byte* _cur;
     private readonly byte* _end, _start;
@@ -95,11 +98,13 @@ public unsafe struct EntryTermsReader
     public bool HasNumeric;
     public bool IsRaw;
     public bool IsList;
-    public bool IsNull => (_prevTerm & ~long.MaxValue) != 0;
+    public bool IsNull;
 
-    public EntryTermsReader(LowLevelTransaction llt, byte* cur, int size, long dicId)
+    //rootPages has to be sorted.
+    public EntryTermsReader(LowLevelTransaction llt, in NativeList<long> rootPages, byte* cur, int size, long dicId)
     {
         _llt = llt;
+        _rootPages = rootPages;
         _start = _cur;
         _cur = cur;
         _start = cur;
@@ -113,6 +118,8 @@ public unsafe struct EntryTermsReader
 
     public bool FindNextStored(long fieldRootPage)
     {
+        IsNull = false;
+
         while (MoveNextStoredField())
         {
             if (FieldRootPage == fieldRootPage)
@@ -131,7 +138,9 @@ public unsafe struct EntryTermsReader
     }
     
     public bool FindNextSpatial(long fieldRootPage)
-    {
+    {        
+        IsNull = false;
+
         while (MoveNextSpatial())
         {
             if (FieldRootPage == fieldRootPage)
@@ -146,6 +155,7 @@ public unsafe struct EntryTermsReader
         if (_cur >= _end)
             return false;
 
+        IsNull = false;
         var termContainerId = VariableSizeEncoding.Read<long>(_cur, out var offset) + _prevTerm;
         _prevTerm = termContainerId;
         _cur += offset;
@@ -189,6 +199,7 @@ public unsafe struct EntryTermsReader
         if (_cur >= _end)
             return false;
 
+        IsNull = false;
         var termContainerId = VariableSizeEncoding.Read<long>(_cur, out var offset) + _prevTerm;
         _prevTerm = termContainerId;
         _cur += offset;
@@ -219,9 +230,10 @@ public unsafe struct EntryTermsReader
             TermId = (termContainerId >> 8) & ~0b111;
         }
 
-        if ((termContainerId & EntryTermsWriter.NullMarker) != 0 ) // null value
+        if ((TermId % Voron.Global.Constants.Storage.PageSize) == 0 && _rootPages.ToSpan().BinarySearch(TermId / Voron.Global.Constants.Storage.PageSize) >= 0) // null value
         {
-            FieldRootPage = (termContainerId & ~EntryTermsWriter.NullMarker) >> (hasFreq ? 11 : 3);
+            IsNull = true;
+            FieldRootPage = TermId / Voron.Global.Constants.Storage.PageSize;
             return;
         }
         
@@ -309,6 +321,7 @@ public unsafe struct EntryTermsReader
         _cur = _start;
         _prevLong = 0;
         _prevTerm = 0;
+        IsNull = false;
     }
 
     public string Debug(IndexWriter w)
@@ -414,7 +427,7 @@ public enum StoredFieldType : byte
     Null = 1 << 3,
     Empty = 2 << 3,
     Term = 3 << 3,
-    Raw = 4 << 3,
+    Raw = 4 << 3, 
     
     // Flag markers
     Tuple = 8 << 3,

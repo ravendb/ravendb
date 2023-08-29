@@ -59,10 +59,10 @@ namespace Corax
             public static ReadOnlySpan<byte> DoubleTreeSuffix => "-D"u8;
 
             public static ReadOnlySpan<byte> LongTreeSuffix => "-L"u8;
-            
+
             public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
                 StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice,
-                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists;            
+                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists, RootPagesSlice;            
             public const int DynamicField = -2;
             static IndexWriter()
             {
@@ -82,7 +82,7 @@ namespace Corax
                     Slice.From(ctx, "NumberOfTermsInIndex", ByteStringType.Immutable, out NumberOfTermsInIndex);
                     Slice.From(ctx, "MultipleTermsInField", ByteStringType.Immutable, out MultipleTermsInField);
                     Slice.From(ctx, "NullPostingLists", ByteStringType.Immutable, out NullPostingLists);
-
+                    Slice.From(ctx, "RootPages", ByteStringType.Immutable, out RootPagesSlice);
                 }
             }
         }
