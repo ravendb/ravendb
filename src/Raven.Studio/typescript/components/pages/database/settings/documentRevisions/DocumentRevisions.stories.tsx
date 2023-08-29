@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import DocumentRevisions from "./DocumentRevisions";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
@@ -7,22 +7,43 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Settings",
+    title: "Pages/Database/Settings/DocumentRevisions",
     component: DocumentRevisions,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentRevisions>;
 
-export const DefaultDocumentRevisions: StoryObj<typeof DocumentRevisions> = {
-    name: "Document Revisions",
-    render: () => {
-        const { collectionsTracker } = mockStore;
-        const { databasesService } = mockServices;
+const db = DatabasesStubs.nonShardedClusterDatabase();
 
-        collectionsTracker.with_Collections();
+function commonInit() {
+    const { collectionsTracker, accessManager } = mockStore;
+    const { databasesService } = mockServices;
 
-        databasesService.withRevisionsConfiguration();
-        databasesService.withRevisionsForConflictsConfiguration();
+    accessManager.with_securityClearance("ValidUser");
 
-        return <DocumentRevisions db={DatabasesStubs.nonShardedClusterDatabase()} />;
-    },
-};
+    collectionsTracker.with_Collections();
+
+    databasesService.withRevisionsConfiguration();
+    databasesService.withRevisionsForConflictsConfiguration();
+}
+
+export function DatabaseAdmin() {
+    commonInit();
+    const { accessManager } = mockStore;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseAdmin",
+    });
+
+    return <DocumentRevisions db={db} />;
+}
+
+export function BelowDatabaseAdmin() {
+    commonInit();
+    const { accessManager } = mockStore;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseRead",
+    });
+
+    return <DocumentRevisions db={db} />;
+}

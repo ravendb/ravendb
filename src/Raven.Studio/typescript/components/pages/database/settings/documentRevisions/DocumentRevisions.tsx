@@ -33,6 +33,7 @@ import DocumentRevisionsSelectActions from "./DocumentRevisionsSelectActions";
 import { StickyHeader } from "components/common/StickyHeader";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -42,7 +43,6 @@ interface EditRevisionData {
     config?: DocumentRevisionsConfig;
 }
 
-todo("Feature", "ANY", "Component for limit revisions by age inputs (dd/hh/mm/ss)");
 todo("Other", "ANY", "Test the view");
 todo("Feature", "Matteo", "Add the Revert revisions view");
 
@@ -59,8 +59,10 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
     const isAllCollectionsAdded = allCollectionNames.length === collectionConfigs.length;
 
-    useDirtyFlag(isAnyModified);
+    const isDatabaseAdmin =
+        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
+    useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();
     const { forCurrentDatabase: urls } = useAppUrls();
 
@@ -91,7 +93,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const asyncEnforceRevisionsConfiguration = useAsyncCallback(async () => {
         const dto = await databasesService.enforceRevisionsConfiguration(db);
 
-        shardingTodo("ANY", "openDetailsForOperationById does not work for sharded db");
+        shardingTodo("ANY", "openDetailsForOperationById() does not work for sharded db");
         notificationCenter.instance.openDetailsForOperationById(db, dto.OperationId);
     });
 
@@ -134,49 +136,51 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                     <Col>
                         <AboutViewHeading title="Document Revisions" icon="revisions" marginBottom={2} />
 
-                        <StickyHeader>
-                            <Row>
-                                <div className="d-flex gap-2">
-                                    <ButtonWithSpinner
-                                        color="primary"
-                                        icon="save"
-                                        disabled={!isAnyModified}
-                                        onClick={asyncSaveConfigs.execute}
-                                        isSpinning={asyncSaveConfigs.status === "loading"}
-                                    >
-                                        Save
-                                    </ButtonWithSpinner>
-                                    <FlexGrow />
+                        {isDatabaseAdmin && (
+                            <StickyHeader>
+                                <Row>
+                                    <div className="d-flex gap-2">
+                                        <ButtonWithSpinner
+                                            color="primary"
+                                            icon="save"
+                                            disabled={!isAnyModified}
+                                            onClick={asyncSaveConfigs.execute}
+                                            isSpinning={asyncSaveConfigs.status === "loading"}
+                                        >
+                                            Save
+                                        </ButtonWithSpinner>
+                                        <FlexGrow />
 
-                                    <a
-                                        className="btn btn-secondary"
-                                        href={urls.revertRevisions()}
-                                        title="Revert all documents in the database to a specific point in time"
-                                    >
-                                        <Icon icon="revert-revisions" />
-                                        Revert revisions
-                                    </a>
+                                        <a
+                                            className="btn btn-secondary"
+                                            href={urls.revertRevisions()}
+                                            title="Revert all documents in the database to a specific point in time"
+                                        >
+                                            <Icon icon="revert-revisions" />
+                                            Revert revisions
+                                        </a>
 
-                                    <ButtonWithSpinner
-                                        color="secondary"
-                                        onClick={toggleEnforceConfigurationModal}
-                                        disabled={isAnyModified}
-                                        isSpinning={asyncEnforceRevisionsConfiguration.status === "loading"}
-                                    >
-                                        <Icon icon="rocket" />
-                                        Enforce configuration
-                                    </ButtonWithSpinner>
-                                </div>
-                                <div className="mt-5">
-                                    <DocumentRevisionsSelectActions />
-                                </div>
-                            </Row>
-                        </StickyHeader>
+                                        <ButtonWithSpinner
+                                            color="secondary"
+                                            onClick={toggleEnforceConfigurationModal}
+                                            disabled={isAnyModified}
+                                            isSpinning={asyncEnforceRevisionsConfiguration.status === "loading"}
+                                        >
+                                            <Icon icon="rocket" />
+                                            Enforce configuration
+                                        </ButtonWithSpinner>
+                                    </div>
+                                    <div className="mt-5">
+                                        <DocumentRevisionsSelectActions />
+                                    </div>
+                                </Row>
+                            </StickyHeader>
+                        )}
 
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    !defaultDocumentsConfig ? (
+                                    isDatabaseAdmin && !defaultDocumentsConfig ? (
                                         <Button
                                             color="info"
                                             size="sm"
@@ -199,6 +203,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 Defaults
                             </HrHeader>
                             <DocumentRevisionsConfigPanel
+                                isDatabaseAdmin={isDatabaseAdmin}
                                 config={defaultDocumentsConfig}
                                 onToggle={() =>
                                     dispatch(documentRevisionsActions.toggleConfigState(defaultDocumentsConfig.Name))
@@ -216,6 +221,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 }
                             />
                             <DocumentRevisionsConfigPanel
+                                isDatabaseAdmin={isDatabaseAdmin}
                                 config={defaultConflictsConfig}
                                 onToggle={() =>
                                     dispatch(documentRevisionsActions.toggleConfigState(defaultConflictsConfig.Name))
@@ -233,7 +239,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    !isAllCollectionsAdded ? (
+                                    isDatabaseAdmin && !isAllCollectionsAdded ? (
                                         <Button
                                             color="info"
                                             size="sm"
@@ -259,6 +265,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 collectionConfigs.map((config) => (
                                     <DocumentRevisionsConfigPanel
                                         key={config.Name}
+                                        isDatabaseAdmin={isDatabaseAdmin}
                                         config={config}
                                         onToggle={() =>
                                             dispatch(documentRevisionsActions.toggleConfigState(config.Name))
