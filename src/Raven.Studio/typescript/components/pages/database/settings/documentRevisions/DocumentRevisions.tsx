@@ -43,8 +43,7 @@ interface EditRevisionData {
     config?: DocumentRevisionsConfig;
 }
 
-todo("Other", "ANY", "Test the view");
-todo("Feature", "Matteo", "Add the Revert revisions view");
+todo("Feature", "Damian", "Add the Revert revisions view");
 
 export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const { value: isEnforceConfigurationModalOpen, toggle: toggleEnforceConfigurationModal } = useBoolean(false);

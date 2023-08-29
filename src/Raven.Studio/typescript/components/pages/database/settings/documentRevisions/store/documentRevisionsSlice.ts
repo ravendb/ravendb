@@ -202,7 +202,7 @@ export const documentRevisionsSelectors = {
     isAnyModified: (store: RootState) => {
         return !_.isEqual(store.documentRevisions.originalConfigs, store.documentRevisions.configs);
     },
-    originalConfigs: (store: RootState) => {
-        return configsSelectors.selectAll(store.documentRevisions.originalConfigs);
+    originalConfig: (name: string) => (store: RootState) => {
+        return configsSelectors.selectById(store.documentRevisions.originalConfigs, name);
     },
 };
