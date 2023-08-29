@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Server;
 // ReSharper disable StaticMemberInGenericType
 
@@ -16,10 +17,16 @@ namespace Voron.Impl
     // dictionary is that the small set will calculate the hash ONLY if there are strong candidates that match already. 
     public sealed class SliceSmallSet<TValue> : IDisposable
     {
-        private static readonly ArrayPool<int> KeySizesPool = ArrayPool<int>.Create();
-        private static readonly ArrayPool<ulong> KeyHashesPool = ArrayPool<ulong>.Create();
-        private static readonly ArrayPool<Slice> KeysPool = ArrayPool<Slice>.Create();
-        private static readonly ArrayPool<TValue> ValuesPool = ArrayPool<TValue>.Create();
+        private sealed class ArrayPoolContainer
+        {
+            public readonly ArrayPool<int> KeySizesPool = ArrayPool<int>.Create();
+            public readonly ArrayPool<ulong> KeyHashesPool = ArrayPool<ulong>.Create();
+            public readonly ArrayPool<Slice> KeysPool = ArrayPool<Slice>.Create();
+            public readonly ArrayPool<TValue> ValuesPool = ArrayPool<TValue>.Create();
+        }
+
+        private static readonly PerCoreContainer<ArrayPoolContainer> PerCoreArrayPools = new();
+        private readonly ArrayPoolContainer _perCorePools;
 
         private const int Invalid = -1;
 
@@ -34,10 +41,14 @@ namespace Voron.Impl
         public SliceSmallSet(int size = 0)
         {
             _length = size > Vector<long>.Count ? (size - size % Vector<long>.Count) : Vector<long>.Count;
-            _keySizes = KeySizesPool.Rent(_length);
-            _keyHashes = KeyHashesPool.Rent(_length);
-            _keys = KeysPool.Rent(_length);
-            _values = ValuesPool.Rent(_length);
+
+            if (PerCoreArrayPools.TryPull(out _perCorePools) == false)
+                _perCorePools = new ArrayPoolContainer();
+
+            _keySizes = _perCorePools.KeySizesPool.Rent(_length);
+            _keyHashes = _perCorePools.KeyHashesPool.Rent(_length);
+            _keys = _perCorePools.KeysPool.Rent(_length);
+            _values = _perCorePools.ValuesPool.Rent(_length);
             _overflowStorage = null;
             _currentIdx = Invalid;
         }
@@ -215,10 +226,11 @@ namespace Voron.Impl
 
         public void Dispose()
         {
-            KeySizesPool.Return(_keySizes, clearArray: true);
-            KeyHashesPool.Return(_keyHashes, clearArray: true);
-            KeysPool.Return(_keys, clearArray: true);
-            ValuesPool.Return(_values, clearArray: true);
+            _perCorePools.KeySizesPool.Return(_keySizes, clearArray: true);
+            _perCorePools.KeyHashesPool.Return(_keyHashes, clearArray: true);
+            _perCorePools.KeysPool.Return(_keys, clearArray: true);
+            _perCorePools.ValuesPool.Return(_values, clearArray: true);
+            PerCoreArrayPools.TryPush(_perCorePools);
         }
 
         public void Remove(Slice name)
