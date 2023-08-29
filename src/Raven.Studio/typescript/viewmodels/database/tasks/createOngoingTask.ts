@@ -3,11 +3,14 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database from "models/resources/database";
-import shardedDatabase from "models/resources/shardedDatabase"; 
+import shardedDatabase from "models/resources/shardedDatabase";
+import licenseModel from "models/auth/licenseModel"; 
 
 class createOngoingTask extends dialogViewModelBase {
 
     view = require("views/database/tasks/createOngoingTask.html");
+    
+    licenseType = licenseModel.licenseStatus().Type;
     
     private readonly db: database;
     

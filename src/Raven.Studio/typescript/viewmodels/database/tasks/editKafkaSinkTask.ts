@@ -20,6 +20,7 @@ import testQueueSinkCommand from "commands/database/tasks/testQueueSinkCommand";
 import getOngoingTaskInfoCommand from "commands/database/tasks/getOngoingTaskInfoCommand";
 import queueSinkSyntax from "viewmodels/database/tasks/queueSinkSyntax";
 import patchDebugActions from "viewmodels/database/patch/patchDebugActions";
+import licenseModel from "models/auth/licenseModel";
  
 
 class kafkaTaskTestMode {
@@ -102,6 +103,8 @@ class editKafkaSinkTask extends viewModelBase {
     patchDebugActionsLoadedView = require("views/database/patch/patchDebugActionsLoaded.html");
     patchDebugActionsModifiedView = require("views/database/patch/patchDebugActionsModified.html");
     patchDebugActionsDeletedView = require("views/database/patch/patchDebugActionsDeleted.html");
+
+    licenseType = licenseModel.licenseStatus().Type;
     
     static readonly scriptNamePrefix = "Script_";
 
