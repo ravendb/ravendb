@@ -323,6 +323,72 @@ public class DataArchivalIndexingTests : RavenTestBase
             }
         }
     }
+    
+    [Fact]
+    public async Task CanIndexOnlyArchivedDocuments_AfterChangingConfiguration_MapSearchIndex()
+    {
+        Options options = new()
+        {
+            ModifyDatabaseRecord = dr =>
+            {
+                dr.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexArchivedDataProcessingBehavior)] = "ArchivedOnly";
+            }
+        };
+        
+        using (var store = GetDocumentStore(options))
+        {
+            // Spin up the index
+            await new Companies_AddressText().ExecuteAsync(store);
+            
+            
+            // Insert document with archive time before activating the archival
+            var company = new Company {Name = "Company Name", Address1 = "Dabrowskiego 6"};
+            var retires = SystemTime.UtcNow.AddMinutes(5);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                var metadata = session.Advanced.GetMetadataFor(company);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await session.SaveChangesAsync();
+            }
+
+            // Make sure that the company is not skipped while indexing yet
+            using (var session = store.OpenAsyncSession())
+            {
+                
+                await Indexes.WaitForIndexingAsync(store);
+                List<Company> companies = await session.Query<Companies_AddressText.IndexEntry, Companies_AddressText>()
+                    .Search(x => x.AddressText, "Dabrowskiego").OfType<Company>()
+                    .ToListAsync(); 
+                Assert.Equal(0, companies.Count);
+            }
+
+            // Activate the archival
+            await SetupDataArchival(store);
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var archivedCompany = await session.LoadAsync<Company>(company.Id);
+                var metadata = session.Advanced.GetMetadataFor(archivedCompany);
+                Assert.DoesNotContain(Constants.Documents.Metadata.ArchiveAt, metadata.Keys);
+                Assert.Contains(Constants.Documents.Metadata.Collection, metadata.Keys);
+                Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
+                Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
+
+                await Indexes.WaitForIndexingAsync(store);
+                // Make sure that the company is skipped while indexing
+                List<Company> companies = await session.Query<Companies_AddressText.IndexEntry, Companies_AddressText>()
+                    .Search(x => x.AddressText, "Dabrowskiego").OfType<Company>()
+                    .ToListAsync(); 
+                Assert.Equal(1, companies.Count);
+            }
+        }
+    }
 
     private class ArchivedCompanies_AddressText: AbstractIndexCreationTask<Company, ArchivedCompanies_AddressText.IndexEntry>
     {
