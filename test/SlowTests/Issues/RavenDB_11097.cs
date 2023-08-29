@@ -139,6 +139,10 @@ public class RavenDB_11097 : RavenTestBase
                 var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
                 var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                 var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                
+                Assert.NotEmpty(indexEntriesObjectList);
+                Assert.NotEmpty(queryResultsObjectList);
+                Assert.NotEmpty(mapResultsObjectList);
 
                 Assert.Equal("name1", indexEntriesObjectList[0].Name);
                 Assert.Equal("name2", indexEntriesObjectList[1].Name);
@@ -203,6 +207,10 @@ public class RavenDB_11097 : RavenTestBase
                 var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
                 var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                 var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                
+                Assert.NotEmpty(indexEntriesObjectList);
+                Assert.NotEmpty(queryResultsObjectList);
+                Assert.NotEmpty(mapResultsObjectList);
                 
                 Assert.Equal("name1", indexEntriesObjectList[0].Name);
                 Assert.Equal("name2", indexEntriesObjectList[1].Name);
@@ -294,6 +302,11 @@ public class RavenDB_11097 : RavenTestBase
                 var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                 var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
                 
+                Assert.NotEmpty(indexEntriesObjectList);
+                Assert.NotEmpty(queryResultsObjectList);
+                Assert.NotEmpty(mapResultsObjectList);
+                Assert.NotEmpty(reduceResultsObjectList);
+                
                 Assert.Equal("name1", indexEntriesObjectList[0].Name);
                 Assert.Equal("name2", indexEntriesObjectList[1].Name);
                 Assert.Equal(76, indexEntriesObjectList[0].Age);
@@ -379,6 +392,11 @@ public class RavenDB_11097 : RavenTestBase
                 var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
                 var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                 var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                
+                Assert.NotEmpty(indexEntriesObjectList);
+                Assert.NotEmpty(queryResultsObjectList);
+                Assert.NotEmpty(mapResultsObjectList);
+                Assert.NotEmpty(reduceResultsObjectList);
                 
                 Assert.Equal("name1", indexEntriesObjectList[0].Name);
                 Assert.Equal("name2", indexEntriesObjectList[1].Name);
@@ -495,6 +513,10 @@ public class RavenDB_11097 : RavenTestBase
                 var mapResultsObjectList = JsonConvert.DeserializeObject<List<DtoForTS>>(mapResults.ToString());
                 var reduceResultsObjectList = JsonConvert.DeserializeObject<List<DtoForTS>>(reduceResults.ToString());
                 
+                Assert.NotEmpty(indexEntriesObjectList);
+                Assert.NotEmpty(queryResultsObjectList);
+                Assert.NotEmpty(mapResultsObjectList);
+                
                 Assert.Equal("tag/1", indexEntriesObjectList[0].Tag);
                 Assert.Equal("tag/2", indexEntriesObjectList[1].Tag);
                 Assert.Equal("tag/3", indexEntriesObjectList[2].Tag);
@@ -598,6 +620,11 @@ public class RavenDB_11097 : RavenTestBase
                 var mapResultsObjectList = JsonConvert.DeserializeObject<List<DtoForTS>>(mapResults.ToString());
                 var reduceResultsObjectList = JsonConvert.DeserializeObject<List<DtoForTS>>(reduceResults.ToString());
                 
+                Assert.NotEmpty(indexEntriesObjectList);
+                Assert.NotEmpty(queryResultsObjectList);
+                Assert.NotEmpty(mapResultsObjectList);
+                Assert.NotEmpty(reduceResultsObjectList);
+                
                 Assert.Equal("tag/1", indexEntriesObjectList[0].Tag);
                 Assert.Equal("tag/2", indexEntriesObjectList[1].Tag);
                 Assert.Equal(136, indexEntriesObjectList[0].FirstValue);
@@ -696,6 +723,10 @@ public class RavenDB_11097 : RavenTestBase
                 var queryResultsObjectList = JsonConvert.DeserializeObject<List<DtoForCounters>>(queryResults.ToString());
                 var mapResultsObjectList = JsonConvert.DeserializeObject<List<DtoForCounters>>(mapResults.ToString());
                 var reduceResultsObjectList = JsonConvert.DeserializeObject<List<DtoForCounters>>(reduceResults.ToString());
+                
+                Assert.NotEmpty(indexEntriesObjectList);
+                Assert.NotEmpty(queryResultsObjectList);
+                Assert.NotEmpty(mapResultsObjectList);
                 
                 Assert.Null(indexEntriesObjectList[0].Name);
                 Assert.Null(indexEntriesObjectList[1].Name);
@@ -800,6 +831,11 @@ public class RavenDB_11097 : RavenTestBase
                 var queryResultsObjectList = JsonConvert.DeserializeObject<List<DtoForCounters>>(queryResults.ToString());
                 var mapResultsObjectList = JsonConvert.DeserializeObject<List<DtoForCounters>>(mapResults.ToString());
                 var reduceResultsObjectList = JsonConvert.DeserializeObject<List<DtoForCounters>>(reduceResults.ToString());
+                
+                Assert.NotEmpty(indexEntriesObjectList);
+                Assert.NotEmpty(queryResultsObjectList);
+                Assert.NotEmpty(mapResultsObjectList);
+                Assert.NotEmpty(reduceResultsObjectList);
                 
                 Assert.Equal("likes", indexEntriesObjectList[0].Name);
                 Assert.Equal(59, indexEntriesObjectList[0].Value);
@@ -928,6 +964,10 @@ public class RavenDB_11097 : RavenTestBase
                     var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                     var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
                     
+                    Assert.NotEmpty(indexEntriesObjectList);
+                    Assert.NotEmpty(queryResultsObjectList);
+                    Assert.NotEmpty(mapResultsObjectList);
+                    
                     Assert.Equal(6, indexEntriesObjectList.Count);
                     Assert.Equal(4, queryResultsObjectList.Count);
                     Assert.Equal(6, mapResultsObjectList.Count);
@@ -1004,6 +1044,10 @@ public class RavenDB_11097 : RavenTestBase
                         var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
                         var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                         var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                        
+                        Assert.NotEmpty(indexEntriesObjectList);
+                        Assert.NotEmpty(queryResultsObjectList);
+                        Assert.NotEmpty(mapResultsObjectList);
                         
                         var dtoIndexEntries = indexEntriesObjectList.Where(entry => entry.Name.StartsWith("dto")).ToList();
                         Assert.Equal(500, dtoIndexEntries.Count);
@@ -1085,6 +1129,10 @@ public class RavenDB_11097 : RavenTestBase
                     var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                     var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
                     
+                    Assert.NotEmpty(indexEntriesObjectList);
+                    Assert.NotEmpty(queryResultsObjectList);
+                    Assert.NotEmpty(mapResultsObjectList);
+                    
                     Assert.Equal(21, indexEntriesObjectList[0].Age);
                     Assert.Equal(37, indexEntriesObjectList[1].Age);
                     Assert.Equal(2, indexEntriesObjectList.Count);
@@ -1151,6 +1199,10 @@ public class RavenDB_11097 : RavenTestBase
                     var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                     var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
                     
+                    Assert.NotEmpty(indexEntriesObjectList);
+                    Assert.NotEmpty(queryResultsObjectList);
+                    Assert.NotEmpty(mapResultsObjectList);
+                    
                     Assert.Equal(1, indexEntriesObjectList.Count);
                     Assert.Equal(1, queryResultsObjectList.Count);
                     Assert.Equal(3, mapResultsObjectList.Count);
@@ -1197,6 +1249,8 @@ public class RavenDB_11097 : RavenTestBase
                     res.TryGet(nameof(TestIndexResult.MapResults), out BlittableJsonReaderArray mapResults);
                 
                     var mapResultsObjectList = JsonConvert.DeserializeObject<List<NestedDtoQueryResult>>(mapResults.ToString());
+                    
+                    Assert.NotEmpty(mapResultsObjectList);
 
                     Assert.Equal("UpperName1", mapResultsObjectList[0].UpperName);
                     Assert.Equal("Name1", mapResultsObjectList[0].LowerName);
@@ -1285,6 +1339,10 @@ public class RavenDB_11097 : RavenTestBase
                     var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
                     var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                     var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                    
+                    Assert.NotEmpty(indexEntriesObjectList);
+                    Assert.NotEmpty(queryResultsObjectList);
+                    Assert.NotEmpty(mapResultsObjectList);
                     
                     Assert.Equal(3, indexEntriesObjectList.Count);
                     Assert.Equal(3, queryResultsObjectList.Count);
