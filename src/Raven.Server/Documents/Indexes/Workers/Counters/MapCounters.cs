@@ -2,7 +2,6 @@
 using Raven.Client;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
-using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers.Counters
 {

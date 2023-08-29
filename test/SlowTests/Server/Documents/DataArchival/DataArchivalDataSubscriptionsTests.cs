@@ -6,6 +6,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;

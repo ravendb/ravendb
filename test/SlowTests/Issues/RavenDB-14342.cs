@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Orders;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Indexes;

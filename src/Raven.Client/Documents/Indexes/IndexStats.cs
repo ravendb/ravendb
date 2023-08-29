@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Util;
 
