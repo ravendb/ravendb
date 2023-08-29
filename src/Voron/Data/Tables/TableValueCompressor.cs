@@ -172,7 +172,7 @@ namespace Voron.Data.Tables
                         {
                             if (totalSkipped++ > 16 * 1024)
                                 return;  // we are scanning too much, no need to try this hard
-                                         // we don't want to skip documents that are too big, they will compress
+                                         // we want to skip documents that are too big, they will compress
                                          // well on their own, and likely be *too* unique to add meaningfully to the
                                          // dictionary
                             continue;
