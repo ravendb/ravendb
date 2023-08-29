@@ -40,29 +40,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
         {
-            var startIndex = false;
-            if (definition.ClusterState?.LastStateIndex > (Definition.ClusterState?.LastStateIndex ?? -1))
-            {
-                switch (definition.State)
-                {
-                    case IndexState.Disabled:
-                        Disable();
-                        break;
-                    case IndexState.Normal:
-                        if (Definition.State == IndexState.Disabled)
-                            startIndex = true;
-                        Definition.ClusterState ??= new ClusterState();
-                        Definition.ClusterState.LastStateIndex = definition.ClusterState.LastStateIndex;
-                        SetState(definition.State);
-                        break;
-                    case IndexState.Error:
-                        SetState(definition.State);// Just in case we change to error manually ==> indexState == error and the index is paused
-                        break;
-                    case IndexState.Idle:
-                        SetState(definition.State);
-                        break;
-                }
-            }
+            bool startIndex = UpdateIndexState(definition, true);
+
             if (startIndex && Status != IndexRunningStatus.Running)
                 Start();
         }

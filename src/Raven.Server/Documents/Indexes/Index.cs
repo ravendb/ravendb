@@ -1162,7 +1162,6 @@ namespace Raven.Server.Documents.Indexes
 
             configuration.InitializeAnalyzers(DocumentDatabase.Name);
             InitializeMetrics(configuration);
-            var startIndex = false;
 
             using (DrainRunningQueries())
             {
@@ -1172,22 +1171,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexStorage.WriteDefinition(definition);
 
-                if (definition.ClusterState?.LastStateIndex > (Definition.ClusterState?.LastStateIndex ?? -1))
-                {
-                    switch (definition.State)
-                    {
-                        case IndexState.Disabled:
-                            Disable();
-                            break;
-                        case IndexState.Normal:
-                            startIndex = true;
-                            SetState(definition.State);
-                            break;
-                        case IndexState.Error:
-                            SetState(definition.State);// Just in case we change to error manually ==> indexState == error and the index is paused
-                            break;
-                    }
-                }
+                bool startIndex = UpdateIndexState(definition);
 
                 Definition = definition;
                 Configuration = configuration;
@@ -1202,6 +1186,38 @@ namespace Raven.Server.Documents.Indexes
                 if (status == IndexRunningStatus.Running || startIndex)
                     Start();
             }
+        }
+
+        internal bool UpdateIndexState(IndexDefinitionBaseServerSide definition, bool autoIndex = false)
+        {
+            var startIndex = false;
+            if (definition.ClusterState?.LastStateIndex > (Definition.ClusterState?.LastStateIndex ?? -1))
+            {
+                switch (definition.State)
+                {
+                    case IndexState.Disabled:
+                        Disable();
+                        break;
+                    case IndexState.Normal:
+                        startIndex = true;
+                        if (autoIndex)
+                        {
+                            Definition.ClusterState ??= new ClusterState();
+                            Definition.ClusterState.LastStateIndex = definition.ClusterState.LastStateIndex;
+                        }
+                        SetState(definition.State);
+                        break;
+                    case IndexState.Error:
+                        SetState(definition.State); // Just in case we change to error manually ==> indexState == error and the index is paused
+                        break;
+                    case IndexState.Idle:
+                        if (autoIndex)
+                            SetState(definition.State);
+                        break;
+                }
+            }
+
+            return startIndex;
         }
 
         private DisposeOnce<SingleAttempt> _disposeOnce;
