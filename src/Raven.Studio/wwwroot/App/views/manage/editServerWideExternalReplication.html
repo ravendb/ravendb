@@ -3,7 +3,7 @@
         <div class="align-items-center d-flex gap-2 margin-bottom-md">
             <i class="icon-server-wide-replication"></i>
             <h2 data-bind="text: $root.isAddingNewExternalReplicationTask() ? `New Server-Wide External Replication` : `Edit Server-Wide External Replication`" class="mb-0"></h2>
-            <span class="badge license-restricted-badge">Professional +</span>
+            <span class="badge license-restricted-badge" data-bind="if: $root.licenseType === 'Community'">Professional +</span>
         </div>
         <div class="row flex-row">
             <div class="col-xs-12 col-lg-6 flex-vertical">
@@ -15,7 +15,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
                     <div class="panel-body" data-bind="with: editedTask">
                         <div class="form-group margin-top" data-bind="validationElement: taskName">
                             <label for="taskName" class="control-label">Task Name</label>

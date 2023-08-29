@@ -9,6 +9,7 @@ import connectionStringRavenEtlModel = require("models/database/settings/connect
 import generalUtils = require("common/generalUtils");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
+import licenseModel from "models/auth/licenseModel";
 
 class editServerWideExternalReplication extends viewModelBase {
     
@@ -19,6 +20,8 @@ class editServerWideExternalReplication extends viewModelBase {
     
     editedTask = ko.observable<serverWideExternalReplicationEditModel>();
     isAddingNewExternalReplicationTask = ko.observable<boolean>(true);
+
+    licenseType = licenseModel.licenseStatus().Type;
 
     connectionStringForTest = ko.observable<connectionStringRavenEtlModel>();
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
