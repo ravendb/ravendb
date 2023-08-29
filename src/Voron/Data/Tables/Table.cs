@@ -252,7 +252,23 @@ namespace Voron.Data.Tables
             size = buffer.Length;
             return buffer.Ptr;
         }
-        
+
+        public int GetSize(long id)
+        {
+            var ptr = DirectReadRaw(id, out var size, out var compressed);
+            if (compressed == false)
+                return size;
+
+            if (_tx.CachedDecompressedBuffersByStorageId.TryGetValue(id, out var t))
+                return t.Length;
+
+            BlittableJsonReaderBase.ReadVariableSizeIntInReverse(ptr, size - 1, out var offset);
+            int length = size - offset;
+
+            int decompressedSize = GetDecompressedSize(new Span<byte>(ptr, length));
+            return decompressedSize;
+        }
+
         private static ReadOnlySpan<byte> LookupTable => new byte[] { 5, 6, 7, 9 };
         private static int GetDecompressedSize(Span<byte> buffer)
         {
