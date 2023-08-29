@@ -83,6 +83,8 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
                 using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
                 using (var queryContext = QueryOperationContext.Allocate(RequestHandler.Database))
                 {
+                    // we don't wait for non stale results because
+                    // it's handled by WaitForProcessingOfSampleDocs
                     indexQueryServerSide.WaitForNonStaleResults = false;
 
                     var entries = await index.IndexEntries(indexQueryServerSide, queryContext, ignoreLimit: false, token);
