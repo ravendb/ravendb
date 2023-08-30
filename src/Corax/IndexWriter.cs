@@ -1978,9 +1978,6 @@ namespace Corax
         {
             var fieldTree = _fieldsTree.CompactTreeFor(indexedField.Name);
             
-            var currentFieldTerms = indexedField.Textual;
-            int termsCount = currentFieldTerms.Count;
-
             ClearEntriesForTerm();
             using var dumper = new IndexTermDumper(_fieldsTree, indexedField.Name);
 
@@ -2007,7 +2004,7 @@ namespace Corax
                 PrepareTextualFieldBatch(buffers, 
                     indexedField, 
                     fieldTree,
-                    sortedTerms,
+                    sortedTerms, 
                     termsOffsets,
                     out var keys,
                     out var postListIds,
