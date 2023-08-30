@@ -140,11 +140,13 @@ namespace Raven.Server.Documents.Handlers
                 configuration = JsonDeserializationServer.EnforceRevisionsConfiguration(json);
             }
 
+            HashSet<string> collections = configuration.Collections?.Length > 0 ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
+
             var t = Database.Operations.AddOperation(
                 Database,
                 $"Enforce revision configuration in database '{Database.Name}'.",
                 Operations.Operations.OperationType.EnforceRevisionConfiguration,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, configuration.IncludeForceCreated, configuration.Collection, token),
+                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, configuration.IncludeForceCreated, collections, token),
                 operationId,
                 token: token);
 

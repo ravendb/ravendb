@@ -33,6 +33,12 @@ public class RavenDB_20846 : ClusterTestBase
         public string Name { get; set; }
     }
 
+    class Product
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
     [Fact]
     public async Task EnforceConfigurationForSingleCollection()
     {
@@ -56,14 +62,20 @@ public class RavenDB_20846 : ClusterTestBase
             Id = "Users/1-A",
             Name = ""
         };
+        var product = new Product()
+        {
+            Id = "Product/1-A",
+            Name = ""
+        };
 
 
         for (int i = 0; i < 10; i++)
         {
             using var session = store.OpenAsyncSession();
-            company.Name = user.Name = $"revision{i}";
+            company.Name = user.Name = product.Name = $"revision{i}";
             await session.StoreAsync(company);
             await session.StoreAsync(user);
+            await session.StoreAsync(product);
             await session.SaveChangesAsync();
         }
 
@@ -77,9 +89,10 @@ public class RavenDB_20846 : ClusterTestBase
 
         configuration.Default.MinimumRevisionsToKeep = 5;
         await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+
         var db = await Databases.GetDocumentDatabaseInstanceFor(store);
         using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, collection: "Users", token: token);
+            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, collections: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Users", "Products" }, token: token);
 
         using (var session = store.OpenAsyncSession())
         {
@@ -87,6 +100,8 @@ public class RavenDB_20846 : ClusterTestBase
             Assert.Equal(10, companyRevCount);
             var userRevCount = await session.Advanced.Revisions.GetCountForAsync(user.Id);
             Assert.Equal(5, userRevCount);
+            var productRevCount = await session.Advanced.Revisions.GetCountForAsync(product.Id);
+            Assert.Equal(5, productRevCount);
         }
     }
 }
