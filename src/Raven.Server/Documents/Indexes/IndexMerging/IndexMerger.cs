@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
     {
         private readonly Dictionary<string, IndexDefinition> _indexDefinitions;
         private static readonly IdentifierNameSyntax DefaultDocumentIdentifier = SyntaxFactory.IdentifierName("doc");
+
         public IndexMerger(Dictionary<string, IndexDefinition> indexDefinitions)
         {
             _indexDefinitions = indexDefinitions

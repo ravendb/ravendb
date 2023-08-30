@@ -193,6 +193,12 @@ namespace Raven.Server.Commercial
 
         public bool HasServerWideTasks => Enabled(LicenseAttribute.ServerWideTasks);
 
+        public bool HasStudioConfiguration => Enabled(LicenseAttribute.StudioConfiguration);
+
+        public bool HasClientConfiguration => Enabled(LicenseAttribute.ClientConfiguration);
+
+        public bool HasIndexCleanup => Enabled(LicenseAttribute.IndexCleanup);
+
         public int? MaxNumberOfStaticIndexesPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfStaticIndexesPerDatabase);
 
         public int? MaxNumberOfStaticIndexesPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfStaticIndexesPerCluster);
