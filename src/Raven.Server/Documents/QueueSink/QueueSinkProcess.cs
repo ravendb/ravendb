@@ -37,6 +37,9 @@ namespace Raven.Server.Documents.QueueSink;
 
 public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 {
+    internal const string KafkaTag = "Kafka Sink"; 
+    internal const string RabbitMqTag = "RabbitMQ Sink";
+
     private const int MinBatchSize = 16;
 
     private CancellationTokenSource _cts;
@@ -76,9 +79,9 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         switch (configuration.BrokerType)
         {
             case QueueBrokerType.Kafka:
-                return new KafkaQueueSink(configuration, script, database, "Kafka Sink");
+                return new KafkaQueueSink(configuration, script, database, KafkaTag);
             case QueueBrokerType.RabbitMq:
-                return new RabbitMqQueueSink(configuration, script, database, "RabbitMQ Sink");
+                return new RabbitMqQueueSink(configuration, script, database, RabbitMqTag);
             default:
                 throw new NotSupportedException($"Unknown broker type: {configuration.BrokerType}");
         }
