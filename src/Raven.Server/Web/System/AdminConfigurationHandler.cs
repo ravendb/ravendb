@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Json;
@@ -55,6 +56,11 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/studio", "PUT", AuthorizationStatus.Operator)]
         public async Task PutStudioConfiguration()
         {
+            if (ServerStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
+            {
+                throw new LicenseLimitException("Your license doesn't support adding the studio configuration.");
+            }
+
             await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -96,6 +102,11 @@ namespace Raven.Server.Web.System
         public async Task PutClientConfiguration()
         {
             await ServerStore.EnsureNotPassiveAsync();
+
+            if (ServerStore.LicenseManager.LicenseStatus.HasClientConfiguration)
+            {
+                throw new LicenseLimitException("Your license doesn't support adding the client configuration.");
+            }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {

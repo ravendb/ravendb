@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Sparrow.Json;
 
@@ -14,6 +15,10 @@ internal abstract class AbstractIndexHandlerProcessorForSuggestIndexMerge<TReque
 {
     protected AbstractIndexHandlerProcessorForSuggestIndexMerge([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
+        if (requestHandler.ServerStore.LicenseManager.LicenseStatus.HasIndexCleanup)
+        {
+            throw new LicenseLimitException("Your license doesn't include the index suggestions feature.");
+        }
     }
 
     protected abstract Dictionary<string, IndexDefinition> GetIndexes();
