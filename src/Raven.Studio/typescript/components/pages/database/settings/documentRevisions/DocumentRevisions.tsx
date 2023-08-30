@@ -31,6 +31,8 @@ import { StickyHeader } from "components/common/StickyHeader";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -57,6 +59,8 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
 
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();
@@ -199,7 +203,9 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                                         dispatch(documentRevisionsActions.addConfig(config)),
                                                 })
                                             }
+                                            disabled={licenseType === "Community"}
                                         >
+                                            <Icon icon="plus" />
                                             Add new
                                         </Button>
                                     ) : null
@@ -265,6 +271,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                                 })
                                             }
                                         >
+                                            <Icon icon="plus" />
                                             Add new
                                         </Button>
                                     ) : null
@@ -321,6 +328,32 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Revisions
                                 </a>
                             </AccordionItemWrapper>
+                            {licenseType === "Community" && (
+                                <AccordionCommunityLicenseLimited
+                                    targetId="licensing"
+                                    featureName="Document Revisions"
+                                    featureIcon="revisions"
+                                    description={
+                                        <div>
+                                            <span>Your Community license has following limits:</span>
+                                            <div className="vstack gap-1 my-3 text-warning">
+                                                <small>
+                                                    <Icon icon="default" />
+                                                    Defaults policy can't be set up
+                                                </small>
+                                                <small>
+                                                    <Icon icon="documents" />
+                                                    Max 2 revisions to keep
+                                                </small>
+                                                <small>
+                                                    <Icon icon="clock" /> Max 45 days retention time
+                                                </small>
+                                            </div>
+                                            <span>Upgrade to a paid plan and get unlimited availability.</span>
+                                        </div>
+                                    }
+                                />
+                            )}
                         </AboutViewAnchored>
                     </Col>
                 </Row>

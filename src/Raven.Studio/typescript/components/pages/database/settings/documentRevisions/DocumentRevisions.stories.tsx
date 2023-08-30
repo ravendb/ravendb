@@ -47,3 +47,16 @@ export function BelowDatabaseAdmin() {
 
     return <DocumentRevisions db={db} />;
 }
+
+export function LicenseRestricted() {
+    commonInit();
+    const { accessManager } = mockStore;
+    const { license } = mockStore;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseAdmin",
+    });
+    license.with_Community();
+
+    return <DocumentRevisions db={db} />;
+}

@@ -10,7 +10,7 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { Button, UncontrolledTooltip } from "reactstrap";
+import { Button, UncontrolledPopover } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import {
     DocumentRevisionsConfig,
@@ -130,7 +130,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                     </>
                                 }
                             >
-                                {config.MinimumRevisionsToKeep}
+                                {config.MinimumRevisionsToKeep} revisions
                             </RichPanelDetailItem>
                         )}
                         {formattedMinimumRevisionAgeToKeep && (
@@ -154,7 +154,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                     </>
                                 }
                             >
-                                {config.MaximumRevisionsToDeleteUponDocumentUpdate}
+                                {config.MaximumRevisionsToDeleteUponDocumentUpdate} revisions
                             </RichPanelDetailItem>
                         )}
                     </RichPanelDetails>
@@ -176,50 +176,36 @@ function DefaultConfigInfoIcon({ name }: { name: DocumentRevisionsConfigName }) 
 
     return (
         <>
-            <UncontrolledTooltip target={id} placement="left">
+            <UncontrolledPopover target={id} placement="left" trigger="hover">
                 <ul className="margin-top margin-top-xs">
                     {name === documentRevisionsConfigNames.defaultConflicts ? (
                         <>
                             <li>
-                                <small>
-                                    This is the default revision configuration for
-                                    <strong> conflicting documents only</strong>.
-                                </small>
+                                This is the default revision configuration for
+                                <strong> conflicting documents only</strong>.
                             </li>
+                            <li>When enabled, a revision is created for each conflicting item.</li>
+                            <li>A revision is also created for the conflict resolution document.</li>
                             <li>
-                                <small>When enabled, a revision is created for each conflicting item.</small>
-                            </li>
-                            <li>
-                                <small>A revision is also created for the conflict resolution document.</small>
-                            </li>
-                            <li>
-                                <small>
-                                    When Document Defaults or a collection-specific configuration is defined,
-                                    <br /> they <strong>override</strong> the Conflicting Document Defaults.
-                                </small>
+                                When Document Defaults or a collection-specific configuration is defined, they{" "}
+                                <strong>override</strong> the Conflicting Document Defaults.
                             </li>
                         </>
                     ) : (
                         <>
                             <li>
-                                <small>
-                                    This is the default revision configuration for all
-                                    <strong> non-conflicting documents</strong>.
-                                </small>
+                                This is the default revision configuration for all
+                                <strong> non-conflicting documents</strong>.
                             </li>
+                            <li>When enabled, a revision is created for all non-conflicting documents.</li>
                             <li>
-                                <small>When enabled, a revision is created for all non-conflicting documents.</small>
-                            </li>
-                            <li>
-                                <small>
-                                    When a collection specific configuration is defined, it <strong>overrides</strong>{" "}
-                                    these defaults.
-                                </small>
+                                When a collection specific configuration is defined, it <strong>overrides</strong> these
+                                defaults.
                             </li>
                         </>
                     )}
                 </ul>
-            </UncontrolledTooltip>
+            </UncontrolledPopover>
             <Icon id={id} icon="info" />
         </>
     );
