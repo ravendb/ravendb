@@ -90,7 +90,8 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
             ShardingState = new SubscriptionShardingState
             {
                 ChangeVectorForNextBatchStartingPointPerShard = InitialChangeVectorPerShard
-            }
+            },
+            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
         }.ToJson();
     }
 
