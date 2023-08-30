@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Raven.Client.Exceptions.Sharding;
+﻿using Raven.Client.Exceptions.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Utils;
@@ -36,8 +35,7 @@ public sealed class ShardedDocumentPutAction : DocumentPutAction
                 // RavenDB-21104
                 // we allow writing the document to the wrong shard to avoid inconsistent data within the shard group
                 // and handle the leftovers at the end of the transaction 
-                var task = new Task(delegate { _ = _documentDatabase.DocumentsMigrator.ExecuteMoveDocumentsAsync(); });
-                context.Transaction.InvokeDocumentsMigration(task);
+                context.Transaction.ExecuteDocumentsMigrationBeforeCommit();
                 return;
             }
 
