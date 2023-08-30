@@ -16,6 +16,6 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(ArchivedDataProcessingBehavior.ExcludeArchived)]
         [ConfigurationEntry("Subscriptions.ArchivedDataProcessingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [Description("The default subscriptions archived data processing behavior per database")]
-        public ArchivedDataProcessingBehavior DefaultArchivedDataProcessingBehavior { get; set; }
+        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
     }
 }

@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.DataArchival;
             {
                 ModifyDatabaseRecord = dr =>
                 {
-                    dr.Settings[RavenConfiguration.GetKey(x => x.Subscriptions.DefaultArchivedDataProcessingBehavior)] = "ArchivedOnly";
+                    dr.Settings[RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior)] = "ArchivedOnly";
                 }
             };
             

@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = subscriptionId,
                 PinToMentorNode = options.PinToMentorNode,
                 Disabled = disabled ?? false,
-                ArchivedDataProcessingBehavior = options.ArchivedDataProcessingBehavior ?? _db.Configuration.Subscriptions.DefaultArchivedDataProcessingBehavior
+                ArchivedDataProcessingBehavior = options.ArchivedDataProcessingBehavior ?? _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
