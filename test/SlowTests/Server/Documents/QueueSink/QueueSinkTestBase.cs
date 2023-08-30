@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.NotificationCenter;
@@ -59,31 +60,31 @@ namespace SlowTests.Server.Documents.QueueSink
             }
         }
         
-        public bool TryGetLoadError(string databaseName, QueueSinkConfiguration config, out QueueSinkErrorInfo error)
+        public bool TryErrorFromAlert(string databaseName, QueueSinkConfiguration config, out QueueSinkErrorInfo error)
         {
             var database = GetDatabase(databaseName).Result;
 
-            string tag = "Kafka Sink";
+            string tag = config.BrokerType == QueueBrokerType.Kafka ? QueueSinkProcess.KafkaTag : QueueSinkProcess.RabbitMqTag;
 
-            var loadAlertError = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_Error);
-            var loadAlertConsumeError = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ConsumeError);
-            var loadAlertScriptError = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ScriptError);
+            var errorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_Error);
+            var consumeErrorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ConsumeError);
+            var scriptErrorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ScriptError);
 
-            if (loadAlertError.Errors.Count != 0)
+            if (errorAlert.Errors.Count != 0)
             {
-                error = loadAlertError.Errors.First();
+                error = errorAlert.Errors.First();
 
                 return true;
             }
-            if (loadAlertConsumeError.Errors.Count != 0)
+            if (consumeErrorAlert.Errors.Count != 0)
             {
-                error = loadAlertConsumeError.Errors.First();
+                error = consumeErrorAlert.Errors.First();
 
                 return true;
             }
-            if (loadAlertScriptError.Errors.Count != 0)
+            if (scriptErrorAlert.Errors.Count != 0)
             {
-                error = loadAlertScriptError.Errors.First();
+                error = scriptErrorAlert.Errors.First();
 
                 return true;
             }
@@ -108,14 +109,13 @@ namespace SlowTests.Server.Documents.QueueSink
             return mre;
         }
 
-        protected void AssertQueueSinkDone(ManualResetEventSlim etlDone, TimeSpan timeout)
+        protected void AssertQueueSinkDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, QueueSinkConfiguration config)
         {
             if (etlDone.Wait(timeout) == false)
             {
-                //TryGetLoadError(databaseName, config, out var loadError);
-                //TryGetTransformationError(databaseName, config, out var transformationError);
+                TryErrorFromAlert(databaseName, config, out var error);
 
-                //Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
+                Assert.True(false, $"Queue Sink wasn't done. Error: {error?.Error}");
             }
         }
 

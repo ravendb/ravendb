@@ -39,11 +39,11 @@ public class RabbitMqSinkTests : QueueSinkTestBase
             body: new ReadOnlyMemory<byte>(userBytes2));
 
         using var store = GetDocumentStore();
-        SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
+        var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
             new List<string>() { UsersQueueName });
 
-        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 2);
+        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
 
@@ -93,11 +93,11 @@ public class RabbitMqSinkTests : QueueSinkTestBase
             body: new ReadOnlyMemory<byte>(userBytes4));
 
         using var store = GetDocumentStore();
-        SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
+        var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
             new List<string>() { UsersQueueName, developersQueueName });
 
-        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses !>= 4);
+        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
 
@@ -152,10 +152,10 @@ public class RabbitMqSinkTests : QueueSinkTestBase
             body: new ReadOnlyMemory<byte>(userBytes2));
 
         using var store = GetDocumentStore();
-        SetupRabbitMqQueueSink(store, script, new List<string>() { UsersQueueName });
+        var config = SetupRabbitMqQueueSink(store, script, new List<string>() { UsersQueueName });
 
-        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromSeconds(20));
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 2);
+        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
 
@@ -192,11 +192,11 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         }
 
         using var store = GetDocumentStore();
-        SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
+        var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
             new List<string>() { UsersQueueName });
 
-        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= numberOfUsers);
+        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
 
@@ -242,7 +242,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         Assert.Equal("Script 'test' must not be empty", errors[0]);
     }
 
-    private void SetupRabbitMqQueueSink(DocumentStore store, string script, List<string> queues,
+    private QueueSinkConfiguration SetupRabbitMqQueueSink(DocumentStore store, string script, List<string> queues,
         string configurationName = null, string transformationName = null)
     {
         var connectionStringName = $"{store.Database} to Kafka";
@@ -271,6 +271,8 @@ public class RabbitMqSinkTests : QueueSinkTestBase
                     ConnectionString = RabbitMqConnectionString.Instance.VerifiedConnectionString.Value
                 }
             });
+
+        return config;
     }
 
     private IModel CreateRabbitMqProducer()

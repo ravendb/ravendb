@@ -51,10 +51,10 @@ namespace SlowTests.Server.Documents.QueueSink
             producer.Produce(UsersQueueName, kafkaMessage2);
 
             using var store = GetDocumentStore();
-            SetupKafkaQueueSink(store, "put(this.Id, this)", new List<string>() { UsersQueueName });
+            var config = SetupKafkaQueueSink(store, "put(this.Id, this)", new List<string>() { UsersQueueName });
 
-            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
+            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 2);
+            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using var session = store.OpenSession();
 
@@ -93,10 +93,10 @@ namespace SlowTests.Server.Documents.QueueSink
             producer.Produce(UsersQueueName, kafkaMessage2);
 
             using var store = GetDocumentStore();
-            SetupKafkaQueueSink(store, script, new List<string>() { UsersQueueName });
+            var config = SetupKafkaQueueSink(store, script, new List<string>() { UsersQueueName });
 
-            var queueSinkDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-            AssertQueueSinkDone(queueSinkDone, TimeSpan.FromSeconds(20));
+            var queueSinkDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 2);
+            AssertQueueSinkDone(queueSinkDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using var session = store.OpenSession();
 
@@ -131,10 +131,10 @@ namespace SlowTests.Server.Documents.QueueSink
             }
             
             using var store = GetDocumentStore();
-            SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { UsersQueueName });
+            var config = SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { UsersQueueName });
 
-            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
+            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= numberOfUsers);
+            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using var session = store.OpenSession();
 
@@ -167,10 +167,10 @@ namespace SlowTests.Server.Documents.QueueSink
             }
             
             using var store = GetDocumentStore();
-            SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { UsersQueueName });
+            var config = SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { UsersQueueName });
 
-            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses != 0);
-            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1));
+            var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= numberOfUsers);
+            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using var session = store.OpenSession();
 
@@ -404,7 +404,7 @@ output('test: ' + this.Id)
         private readonly HashSet<string> _definedTopics = new HashSet<string>();
 
 
-        protected void SetupKafkaQueueSink(DocumentStore store, string script, List<string> queues,
+        protected QueueSinkConfiguration SetupKafkaQueueSink(DocumentStore store, string script, List<string> queues,
             string configurationName = null,
             string transformationName = null, Dictionary<string, string> configuration = null,
             string bootstrapServers = null)
@@ -441,6 +441,8 @@ output('test: ' + this.Id)
                         BootstrapServers = bootstrapServers ?? KafkaConnectionString.Instance.VerifiedUrl.Value,
                     }
                 });
+
+            return config;
         }
 
         public static IProducer<string, byte[]> CreateKafkaProducer(string bootstrapServers = null)
