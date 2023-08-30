@@ -207,6 +207,22 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
+            if (CompoundFields.Count != other.CompoundFields.Count)
+                result |= IndexDefinitionCompareDifferences.CompoundFields;
+            else if (CompoundFields.Count > 0)
+            {
+                foreach (var compoundField in CompoundFields)
+                {
+                    var matched = other.CompoundFields.Count(i => i.Length == compoundField.Length && compoundField.SequenceEqual(i, StringComparer.InvariantCulture)) > 0;
+                    if (matched is false)
+                    {
+                        result |= IndexDefinitionCompareDifferences.CompoundFields;
+                        break;
+                    }
+                }
+            }
+            
+            
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
             {
                 var additionalSources = new Dictionary<string, string>();
@@ -594,7 +610,8 @@ namespace Raven.Client.Documents.Indexes
         AdditionalSources = 1 << 10,
         AdditionalAssemblies = 1 << 11,
         DeploymentMode = 1 << 12,
+        CompoundFields = 1 << 13,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode,
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields,
     }
 }
