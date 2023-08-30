@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Changes;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Sharding;
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents
 
         private List<Slice> _attachmentHashesToMaybeDelete;
 
-        private Task _handleReplicationChanges;
+        private bool _executeDocumentsMigrationBeforeCommit;
 
         private bool _replaced;
 
@@ -48,7 +48,11 @@ namespace Raven.Server.Documents
 
         public override void BeforeCommit()
         {
-            _handleReplicationChanges?.Start();
+            if (_executeDocumentsMigrationBeforeCommit)
+            {
+                var shardedDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(_context.DocumentDatabase);
+                shardedDatabase.DocumentsMigrator.ExecuteMoveDocumentsAsync().IgnoreUnobservedExceptions();
+            }
 
             if (_attachmentHashesToMaybeDelete == null)
                 return;
@@ -178,9 +182,9 @@ namespace Raven.Server.Documents
             _attachmentHashesToMaybeDelete.Add(clone);
         }
 
-        internal void InvokeDocumentsMigration(Task migrationTask)
+        internal void ExecuteDocumentsMigrationBeforeCommit()
         {
-            _handleReplicationChanges ??= migrationTask;
+            _executeDocumentsMigrationBeforeCommit = true;
         }
     }
 }
