@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
+using FastTests.Voron.FixedSize;
 using Voron.Data.Lookups;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,11 +14,12 @@ public class LookupBulkTests : StorageTest
     public LookupBulkTests(ITestOutputHelper output) : base(output)
     {
     }
-
-    [Fact]
-    public void CanBulkAddToEmptyLookup()
+    [Theory]
+    [InlineData(214)]
+    [InlineDataWithRandomSeed]
+    public void CanBulkAddToEmptyLookup(int seed)
     {
-        var random = new Random(214);
+        var random = new Random(seed);
         var items = Enumerable.Range(0, 1024)
             .Select(_ => new Int64LookupKey(random.NextInt64()))
             .OrderBy(x=>x.Value).ToArray();
@@ -69,14 +71,15 @@ public class LookupBulkTests : StorageTest
         }
     }
     
-    [Fact]
-    public void CanBulkUpdateAndInsertAndRemove()
+    [Theory]
+    [InlineData(214)]
+    [InlineDataWithRandomSeed]
+    public void CanBulkUpdateAndInsertAndRemove(int seed)
     {
         int count = 0;
         var random = new Random(214);
         var firstItems = Enumerable.Range(0, 1024)
-            //.Select(_ => new Int64LookupKey(random.NextInt64()))
-            .Select(_=> new Int64LookupKey(++count))
+            .Select(_ => new Int64LookupKey(random.NextInt64()))
             .ToArray();
 
         using (var wtx = Env.WriteTransaction())
@@ -93,8 +96,7 @@ public class LookupBulkTests : StorageTest
 
 
         var secondItems = Enumerable.Range(0, 512)
-            //.Select(_ => new Int64LookupKey(random.NextInt64()))
-            .Select(_=> new Int64LookupKey(++count + 1000))
+            .Select(_ => new Int64LookupKey(random.NextInt64()))
             .ToArray();
         var updatesAndInserts = secondItems
             .Concat(firstItems.Where((_, i) => i % 2 == 0)) // update half of them
