@@ -78,10 +78,9 @@ class conflictExceededDetails extends abstractAlertDetails {
     }
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.ConflictPerformanceDetails): conflictExceededDetailsItemDto[] {
-        return Object.keys(details.Details).map(key => {
-            const item = details.Details[key];
+        return details.Details.map(item => {
             return {
-                Id: key,
+                Id: item.Id,
                 Deleted: item.Deleted,
                 Reason: item.Reason,
                 Time: item.Time

@@ -24,6 +24,7 @@ public class Revisions
     private readonly string _database;
 
     private readonly object _locker = new object();
+    public static readonly long QueueMaxSize = 64;
     private readonly ConcurrentQueue<ConflictInfo> _queue = new ConcurrentQueue<ConflictInfo>();
     public enum ExceedingReason
     {
@@ -46,7 +47,7 @@ public class Revisions
     {
         _queue.Enqueue(info);
 
-        while (_queue.Count > 64)
+        while (_queue.Count > QueueMaxSize)
             _queue.TryDequeue(out _);
 
         if (_timer != null)
@@ -90,7 +91,7 @@ public class Revisions
         using (_notificationsStorage.Read(ConflictRevisionExceededMaxId, out NotificationTableValue ntv))
         {
             ConflictPerformanceDetails details;
-            if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+            if (ntv == null || ntv.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                 details = new ConflictPerformanceDetails();
             else
                 details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ConflictPerformanceDetails>(detailsJson, ConflictRevisionExceededMaxId);

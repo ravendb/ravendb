@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,37 +13,43 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
     {
         public ConflictPerformanceDetails()
         {
-            Details = new Dictionary<string, ActionDetails>(StringComparer.OrdinalIgnoreCase);
+            Details = new Queue<ActionDetails>();
         }
 
-        public Dictionary<string, ActionDetails> Details { get; set; }
+        public Queue<ActionDetails> Details { get; set; }
 
         public DynamicJsonValue ToJson()
         {
-            var djv = new DynamicJsonValue();
-            foreach (var (key, details) in Details)
+            var dja = new DynamicJsonArray();
+            foreach (var details in Details)
             {
-                djv[key] = new DynamicJsonValue
+                var djv = new DynamicJsonValue
                 {
+                    [nameof(ActionDetails.Id)] = details.Id,
                     [nameof(ActionDetails.Reason)] = details.Reason,
                     [nameof(ActionDetails.Deleted)] = details.Deleted,
                     [nameof(ActionDetails.Time)] = details.Time
                 };
+                dja.Add(djv);
             }
 
             return new DynamicJsonValue(GetType())
             {
-                [nameof(Details)] = djv
+                [nameof(Details)] = dja
             };
         }
 
         public void Update(ConflictInfo info)
         {
-            Details[info.GetId()] = new ActionDetails { Reason = info.Reason.ToString(), Deleted = info.Deleted, Time = info.Time };
+            Details.Enqueue(new ActionDetails { Id = info.GetId(), Reason = info.Reason.ToString(), Deleted = info.Deleted, Time = info.Time });
+
+            while (Details.Count > QueueMaxSize)
+                Details.TryDequeue(out _);
         }
 
         public class ActionDetails
         {
+            public string Id { get; set; }
             public string Reason { get; set; }
             public long Deleted { get; set; }
             public DateTime Time { get; set; }
