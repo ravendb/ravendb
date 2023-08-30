@@ -34,7 +34,7 @@ public sealed class DelayBackupCommand : UpdateValueForDatabaseCommand
         json[nameof(OriginalBackupTime)] = OriginalBackupTime;
     }
 
-    protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
+    protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
     {
         if (existingValue != null)
         {
@@ -43,7 +43,8 @@ public sealed class DelayBackupCommand : UpdateValueForDatabaseCommand
                 [nameof(DelayUntil)] = DelayUntil,
                 [nameof(OriginalBackupTime)] = OriginalBackupTime
             };
-            return context.ReadObject(existingValue, GetItemId());
+
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(existingValue, GetItemId()));
         }
 
         var status = new PeriodicBackupStatus
@@ -51,7 +52,8 @@ public sealed class DelayBackupCommand : UpdateValueForDatabaseCommand
             DelayUntil = DelayUntil,
             OriginalBackupTime = OriginalBackupTime
         };
-        return context.ReadObject(status.ToJson(), GetItemId());
+
+        return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(status.ToJson(), GetItemId()));
     }
 
     public override object GetState()

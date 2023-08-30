@@ -10,6 +10,7 @@ internal static class MemoryUtils
     private const string GenericOutMemoryException = "Failed to generate an out of memory exception";
     private static readonly InvertedComparer InvertedComparerInstance = new InvertedComparer();
     private const int MinAllocatedThresholdInBytes = 10 * 1024 * 1024;
+
     public static string GetExtendedMemoryInfo(MemoryInfoResult memoryInfo)
     {
         try
@@ -21,8 +22,8 @@ internal static class MemoryUtils
             TryAppend(() => sb.Append("Dirty memory: ").Append(memoryInfo.TotalScratchDirtyMemory).Append(", "));
             TryAppend(() => sb.Append("Managed memory: ").Append(new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)).Append(", "));
             TryAppend(() => sb.Append("Unmanaged allocations: ").Append(new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)).Append(", "));
-            TryAppend(() => sb.Append("Lucene managed allocations for term cache: ").Append(new Size(NativeMemory.TotalLuceneManagedAllocationsForTermCache, SizeUnit.Bytes)));
-            TryAppend(() => sb.Append("Lucene unmanaged allocations for sorting: ").Append(new Size(NativeMemory.TotalLuceneUnmanagedAllocationsForSorting, SizeUnit.Bytes)));
+            TryAppend(() => sb.Append("Lucene managed: ").Append(new Size(NativeMemory.TotalLuceneManagedAllocationsForTermCache, SizeUnit.Bytes)).Append(", "));
+            TryAppend(() => sb.Append("Lucene unmanaged: ").Append(new Size(NativeMemory.TotalLuceneUnmanagedAllocationsForSorting, SizeUnit.Bytes)));
 
             try
             {

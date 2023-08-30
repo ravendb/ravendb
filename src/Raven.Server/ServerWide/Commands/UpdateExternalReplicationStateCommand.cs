@@ -23,10 +23,9 @@ namespace Raven.Server.ServerWide.Commands
             return ExternalReplicationState.GenerateItemName(DatabaseName, ExternalReplicationState.TaskId);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
-            BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
-            return context.ReadObject(ExternalReplicationState.ToJson(), GetItemId());
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(ExternalReplicationState.ToJson(), GetItemId()));
         }
 
         public override void FillJson(DynamicJsonValue json)

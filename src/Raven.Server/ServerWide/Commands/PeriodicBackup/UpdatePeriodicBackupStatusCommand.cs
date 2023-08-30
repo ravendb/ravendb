@@ -25,10 +25,9 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             return PeriodicBackupStatus.GenerateItemName(DatabaseName, PeriodicBackupStatus.TaskId);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
-            BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
-            return context.ReadObject(PeriodicBackupStatus.ToJson(), GetItemId());
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(PeriodicBackupStatus.ToJson(), GetItemId()));
         }
 
         public override void FillJson(DynamicJsonValue json)

@@ -28,10 +28,10 @@ namespace Raven.Server.ServerWide.Commands.ETL
             return EtlProcessState.GenerateItemName(DatabaseName, ConfigurationName, TransformationName);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
             BlittableJsonReaderObject existingValue)
         {
-            return null; // it's going to delete the value
+            return new UpdatedValue(UpdatedValueActionType.Delete, value: null);
         }
 
         public override void FillJson(DynamicJsonValue json)
