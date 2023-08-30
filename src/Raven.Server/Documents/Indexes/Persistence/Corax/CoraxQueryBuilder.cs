@@ -257,6 +257,7 @@ public static class CoraxQueryBuilder
                 };
 
                 coraxQuery = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending);
+                streamingOptimization.SkipOrderByClause = true; //manually turn off the order by
             }
             else 
             {

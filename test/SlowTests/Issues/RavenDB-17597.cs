@@ -115,7 +115,8 @@ namespace SlowTests.Issues
                         }
                     }
                 },
-                Configuration = conf
+                Configuration = conf,
+                CompoundFields = new List<string[]> {new []{"Name","Age"}}
             };
         }
 

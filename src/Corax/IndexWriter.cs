@@ -937,7 +937,13 @@ namespace Corax
                 ref var entryTerms = ref _parent.GetEntryTerms(_termPerEntryIndex);
 
                 _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-
+                
+                if (field.FieldRootPage == -1)
+                {
+                    _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                    field.FieldRootPage = _parent._fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
+                }
+                
                 var recordedTerm = new RecordedTerm
                 (
                     // why: entryTerms.Count << 8 
