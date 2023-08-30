@@ -2,7 +2,7 @@
 import { Alert, Button, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
-import { documentRevisionsSelectors } from "./store/documentRevisionsSlice";
+import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
 
 interface EnforceConfigurationProps {
     toggle: () => void;

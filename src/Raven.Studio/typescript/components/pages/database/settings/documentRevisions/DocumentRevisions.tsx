@@ -13,11 +13,8 @@ import EnforceConfiguration from "components/pages/database/settings/documentRev
 import { todo, shardingTodo } from "common/developmentHelper";
 import { NonShardedViewProps } from "components/models/common";
 import { LoadingView } from "components/common/LoadingView";
-import {
-    DocumentRevisionsConfig,
-    documentRevisionsActions,
-    documentRevisionsSelectors,
-} from "./store/documentRevisionsSlice";
+import { DocumentRevisionsConfig, documentRevisionsActions } from "./store/documentRevisionsSlice";
+import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { LoadError } from "components/common/LoadError";
 import DocumentRevisionsConfigPanel from "./DocumentRevisionsConfigPanel";

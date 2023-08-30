@@ -17,8 +17,8 @@ import {
     DocumentRevisionsConfigName,
     documentRevisionsActions,
     documentRevisionsConfigNames,
-    documentRevisionsSelectors,
 } from "./store/documentRevisionsSlice";
+import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
 import classNames from "classnames";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { Checkbox } from "components/common/Checkbox";

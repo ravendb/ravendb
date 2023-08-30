@@ -39,10 +39,8 @@ const initialState: DocumentRevisionsState = {
     originalConfigs: configsAdapter.getInitialState(),
 };
 
-const sliceName = "documentRevisions";
-
 export const documentRevisionsSlice = createSlice({
-    name: sliceName,
+    name: "documentRevisions",
     initialState,
     reducers: {
         addConfig: (state, { payload }: PayloadAction<DocumentRevisionsConfig>) => {
@@ -168,7 +166,7 @@ const fetchConfigs = createAsyncThunk<
         conflictsConfig: RevisionsCollectionConfiguration;
     },
     database
->(sliceName + "/fetchConfigs", async (db: database) => {
+>(documentRevisionsSlice.name + "/fetchConfigs", async (db: database) => {
     const config = await services.databasesService.getRevisionsConfiguration(db);
     const conflictsConfig = await services.databasesService.getRevisionsForConflictsConfiguration(db);
 
@@ -183,29 +181,6 @@ export const documentRevisionsActions = {
     fetchConfigs,
 };
 
-export const documentRevisionsSelectors = {
-    loadStatus: (store: RootState) => store.documentRevisions.loadStatus,
-    defaultDocumentsConfig: (store: RootState) =>
-        configsSelectors.selectById(store.documentRevisions.configs, documentRevisionsConfigNames.defaultDocument),
-    defaultConflictsConfig: (store: RootState) =>
-        configsSelectors.selectById(store.documentRevisions.configs, documentRevisionsConfigNames.defaultConflicts),
-    collectionConfigs: (store: RootState) =>
-        configsSelectors
-            .selectAll(store.documentRevisions.configs)
-            .filter(
-                (x) =>
-                    x.Name !== documentRevisionsConfigNames.defaultConflicts &&
-                    x.Name !== documentRevisionsConfigNames.defaultDocument
-            ),
-    allConfigsNames: (store: RootState) =>
-        configsSelectors.selectIds(store.documentRevisions.configs) as DocumentRevisionsConfigName[],
-    selectedConfigNames: (store: RootState) => store.documentRevisions.selectedConfigNames,
-    isSelectedConfigName: (name: DocumentRevisionsConfigName) => (store: RootState) =>
-        store.documentRevisions.selectedConfigNames.includes(name),
-    isAnyModified: (store: RootState) => {
-        return !_.isEqual(store.documentRevisions.originalConfigs, store.documentRevisions.configs);
-    },
-    originalConfig: (name: string) => (store: RootState) => {
-        return configsSelectors.selectById(store.documentRevisions.originalConfigs, name);
-    },
+export const documentRevisionsSliceInternal = {
+    configsSelectors,
 };
