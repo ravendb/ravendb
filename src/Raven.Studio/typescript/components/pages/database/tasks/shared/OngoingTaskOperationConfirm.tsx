@@ -7,6 +7,7 @@ import { Icon } from "components/common/Icon";
 import classNames = require("classnames");
 import { Modal, ModalBody, Button, ModalFooter, Alert } from "reactstrap";
 import IconName from "typings/server/icons";
+import { TextColor } from "components/models/common";
 
 export type OngoingTaskOperationConfirmType = "enable" | "disable" | "delete";
 
@@ -121,7 +122,7 @@ function getInfinitiveForType(type: OngoingTaskOperationConfirmType) {
     return capitalize(type);
 }
 
-function getTypeColor(type: OngoingTaskOperationConfirmType): string {
+function getTypeColor(type: OngoingTaskOperationConfirmType): TextColor {
     switch (type) {
         case "enable":
             return "success";
@@ -146,7 +147,7 @@ function getTypeIcon(type: OngoingTaskOperationConfirmType): IconName {
     }
 }
 
-function getStatusColor(status: OngoingTaskState | DestinationStatus): string {
+function getStatusColor(status: OngoingTaskState | DestinationStatus): TextColor {
     switch (status) {
         case "Enabled":
             return "success";

@@ -1,7 +1,8 @@
 import { Icon } from "components/common/Icon";
+import { TextColor } from "components/models/common";
 import React, { ReactNode } from "react";
 import { useState } from "react";
-import { Modal, ModalHeader, ModalBody, ModalFooter, Button } from "reactstrap";
+import { Modal, ModalBody, ModalFooter, Button } from "reactstrap";
 import IconName from "typings/server/icons";
 
 interface UseConfirmProps {
@@ -9,7 +10,7 @@ interface UseConfirmProps {
     title: string;
     icon: IconName;
     confirmText?: string;
-    actionColor: "primary" | "secondary" | "success" | "info" | "warning" | "danger" | "node" | "shard";
+    actionColor: TextColor;
 }
 
 const useConfirm = (props: UseConfirmProps): [() => React.JSX.Element, () => Promise<unknown>] => {
