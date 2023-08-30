@@ -1015,6 +1015,7 @@ namespace Voron.Data.Containers
             var container = new Container(page);
             var metadata = container.MetadataFor(OffsetToIndex(offset));
             Debug.Assert(metadata.IsFree == false);
+            Debug.Assert(metadata.IsFree == false, "metadata.IsFree == false");
             var pagePointer= page.Pointer;
             int size = metadata.Get(ref pagePointer);
             return new Span<byte>(pagePointer, size);

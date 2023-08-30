@@ -110,6 +110,8 @@ public sealed partial class CompactTree : IPrepareForCommit
             }
 
             var k = GetKey(parent);
+            if (ReferenceEquals(k, CompactKey.NullInstance))
+                return -1; // null is smallest
             
             var match = k.CompareEncodedWithCurrent(keyPtr, keyLengthInBits);
             if (match == 0)
@@ -131,13 +133,18 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         public void OnNewKeyAddition<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
+            CreateTermInContainer(parent);
+
+            IncrementTermReferenceCount(parent.Llt, ContainerId);
+        }
+
+        public void CreateTermInContainer<T>(Lookup<T> parent) where T : struct, ILookupKey
+        {
             if (ContainerId == -1) // need to save this in the external terms container
             {
                 var encodedKey = Key.EncodedWithCurrent(out int encodedKeyLengthInBits);
                 ContainerId = WriteTermToContainer(encodedKey, encodedKeyLengthInBits, ref parent.State, parent.Llt);
             }
-
-            IncrementTermReferenceCount(parent.Llt, ContainerId);
         }
 
         public void OnKeyRemoval<T>(Lookup<T> parent) where T : struct, ILookupKey
@@ -417,6 +424,36 @@ public sealed partial class CompactTree : IPrepareForCommit
         var result = _inner.TryGetNextValue(ref lookup, out value);
         termContainerId = lookup.ContainerId;
         return result;
+    }
+    
+    
+    public void BulkUpdateSet(ref CompactKeyLookup key, long value, long pageNum, int offset, ref int adjustment)
+    {
+        _inner.BulkUpdateSet(ref key, value, pageNum, offset, ref adjustment);   
+    }
+
+    public Lookup<CompactKeyLookup>.TreeStructureChanged CheckTreeStructureChanges()
+    {
+        return _inner.CheckTreeStructureChanges();
+    }
+
+    public bool BulkUpdateRemove(ref CompactKeyLookup key, long pageNum, int offset, ref int adjustment, out long oldValue)
+    {
+        return _inner.BulkUpdateRemove(ref key, pageNum, offset, ref adjustment, out oldValue);
+    }
+    
+    public int BulkUpdateStart(Span<CompactKeyLookup> keys, Span<long> values, Span<int> offsets, out long pageNum)
+    {
+        var read = _inner.BulkUpdateStart(keys, values, offsets, out pageNum);
+        for (int i = 0; i < read; i++)
+        {
+            if (keys[i].ContainerId == -1)
+            {
+                keys[i].CreateTermInContainer(_inner);
+            }
+        }
+
+        return read;
     }
 
     public List<long> AllPages() => _inner.AllPages();

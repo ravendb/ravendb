@@ -50,4 +50,9 @@ unsafe partial class CompactTree
             compactKey.Dispose();
         }
     }
+    
+    public void Render()
+    {
+        _inner.Render();
+    }
 }

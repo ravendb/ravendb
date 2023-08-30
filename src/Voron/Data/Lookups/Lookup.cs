@@ -1377,21 +1377,27 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     /// if the structure of the tree changed during the operation, it ***invalidates*** the previous
     /// BulkUpdateStart results.
     /// </summary>
-    public void BulkUpdateRemove(ref TLookupKey key, long pageNum, int offset, ref int adjustment)
+    public bool BulkUpdateRemove(ref TLookupKey key, long pageNum, int offset, ref int adjustment, out long oldValue)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         if (state.Page.PageNumber != pageNum)
             throw new InvalidOperationException("Different page number provided fro BulkUpdateSet");
 
         if (offset < 0)
-            return; // want to removed a missing value, nothing to do
+        {
+            oldValue = -1;
+            return false; // want to removed a missing value, nothing to do
+        }
+    
 
         state.LastSearchPosition = offset + adjustment;
         adjustment--; // all future operations are now *reduced*, to account for the removal
         
         // need to go negative because the value is negative and then flipped
         state.LastMatch = 0; // ensure that we mark it properly
+        oldValue = GetValue(ref state, state.LastSearchPosition);
         RemoveFromPage(ref key, allowRecurse: true);
+        return true;
     }
     
     

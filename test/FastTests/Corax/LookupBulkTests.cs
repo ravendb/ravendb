@@ -126,7 +126,9 @@ public class LookupBulkTests : StorageTest
                 {
                     if (wrote % 15 == 0)
                     {
-                        lookup.BulkUpdateRemove(ref curItems[i], pg, curOffsets[i], ref adjustment);
+                        var result = lookup.BulkUpdateRemove(ref curItems[i], pg, curOffsets[i], ref adjustment, out long v);
+                        if (result)
+                            Assert.Equal((curItems[i].Value % 601) + 1000, v);
                         removed.Add(curItems[i].Value);
                     }
                     else
