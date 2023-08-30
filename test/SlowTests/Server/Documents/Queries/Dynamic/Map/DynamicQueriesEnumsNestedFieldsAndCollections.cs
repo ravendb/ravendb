@@ -93,8 +93,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                     var orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.ShipTo.City == "Torun").ToList();
 
                     Assert.Equal(2, orders.Count);
-                    Assert.Equal("orders/1", orders[0].Id);
-                    Assert.Equal("orders/3", orders[1].Id);
+                    Assert.Contains("orders/1", orders.Select(x => x.Id));
+                    Assert.Contains("orders/3", orders.Select(x => x.Id));
                 }
             }
         }
