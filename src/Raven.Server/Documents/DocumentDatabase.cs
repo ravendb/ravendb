@@ -909,7 +909,8 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
-                IoChanges.OnIoChange -= CheckWriteRateAndNotifyIfNecessary;
+                if (IoChanges != null)
+                    IoChanges.OnIoChange -= CheckWriteRateAndNotifyIfNecessary;
             });
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing MasterKey");
