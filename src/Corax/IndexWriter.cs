@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -1988,6 +1989,8 @@ namespace Corax
 
             var entriesForTerm = new NativeList<TermInEntryModification>();
             entriesForTerm.Initialize(_entriesAllocator);
+
+            var pagesToPrefetch = new NativeIntegersList(_entriesAllocator);
             
             var buffers = _textualFieldBuffers ??= new TextualFieldBuffers(this);
             buffers.PrepareTerms(indexedField, out var sortedTerms, out var termsOffsets);
@@ -2017,7 +2020,9 @@ namespace Corax
                     
                     int offsetAdjustment = 0;
                     int read = fieldTree.BulkUpdateStart(keys, postListIds, pageOffsets, out long curPage);
-                    // TODO: prefetch posting lists
+
+                    PrefetchContainerPages(ref pagesToPrefetch, postListIds[..read]);
+
                     int idx = 0;
                     for (; idx < read; idx++)
                     {
@@ -2126,10 +2131,32 @@ namespace Corax
             InsertEntriesForTermBulk(entriesToTermsTree, indexedField.Name);
 
             entriesForTerm.Dispose(_entriesAllocator);
+            pagesToPrefetch.Dispose();
 
             _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
         }
 
+        private void PrefetchContainerPages(ref NativeIntegersList pagesToPrefetch, Span<long> postListIds)
+        {
+            pagesToPrefetch.Clear();
+            pagesToPrefetch.EnsureCapacity(postListIds.Length);
+
+            foreach (var cur in postListIds)
+            {
+                if (cur == -1)
+                    continue;
+                if ((cur & (long)TermIdMask.EnsureIsSingleMask) == 0) 
+                    continue;
+                
+                long containerId = EntryIdEncodings.GetContainerId(cur);
+                pagesToPrefetch.Add(containerId / Voron.Global.Constants.Storage.PageSize);
+            }
+
+            pagesToPrefetch.SortAndRemoveDuplicates();
+            
+            _transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch.GetEnumerator());
+        }
+        
         private void ClearEntriesForTerm()
         {
             _entriesAlreadyAdded.Clear();

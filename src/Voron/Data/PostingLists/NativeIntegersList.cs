@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -171,4 +173,53 @@ public unsafe struct NativeIntegersList : IDisposable
         
         GrowListUnlikely(requiredSize - Capacity);
     }
+
+    public Enumerator GetEnumerator() => new Enumerator(RawItems, Count);
+    
+    public struct Enumerator : IEnumerator<long>
+    {
+        private readonly long* _items;
+        private int _len;
+        private int _index;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Enumerator(long* items, int len)
+        {
+            _items = items;
+            _len = len;
+            _index = -1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext()
+        {
+            int index = _index + 1;
+            if (index < _len)
+            {
+                _index = index;
+                return true;
+            }
+
+            return false;
+        }
+
+        public void Reset()
+        {
+            _index = -1;
+        }
+
+        object IEnumerator.Current => Current;
+
+        public long Current
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _items[_index];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose()
+        {
+        }
+    }
+
 }
