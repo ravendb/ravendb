@@ -14,8 +14,8 @@ import {
     DocumentRevisionsConfig,
     DocumentRevisionsConfigName,
     documentRevisionsConfigNames,
-    documentRevisionsSelectors,
 } from "./store/documentRevisionsSlice";
+import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
 import useEditRevisionFormController from "./useEditRevisionFormController";
 import IconName from "typings/server/icons";
 import { useAppSelector } from "components/store";

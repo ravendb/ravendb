@@ -5,7 +5,8 @@ import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
 import { ButtonGroup, UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem, Button } from "reactstrap";
 import { useAppSelector } from "components/store";
-import { documentRevisionsActions, documentRevisionsSelectors } from "./store/documentRevisionsSlice";
+import { documentRevisionsActions } from "./store/documentRevisionsSlice";
+import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
 import { useDispatch } from "react-redux";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 
