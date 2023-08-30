@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var mapIndexName = AutoIndexNameFinder.FindMapIndexName(ForCollection, autoIndexFields);
 
-                return new AutoMapIndexDefinition(mapIndexName, ForCollection, autoIndexFields, deploymentMode: null, clusterState: null, archivedDataProcessingBehavior: null);
+                return new AutoMapIndexDefinition(mapIndexName, ForCollection, autoIndexFields, deploymentMode: null, clusterState: null);
             }
 
             if (GroupByFields.Count == 0)
@@ -132,9 +132,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var mapReduceIndexName = AutoIndexNameFinder.FindMapReduceIndexName(ForCollection, mapFields, groupByFields);
 
-            return new AutoMapReduceIndexDefinition(mapReduceIndexName, ForCollection, mapFields, groupByFields, GroupByFieldNames, archivedDataProcessingBehavior: null,
-                deploymentMode: null,
-                clusterState: null);
+            return new AutoMapReduceIndexDefinition(mapReduceIndexName, ForCollection, mapFields, groupByFields, GroupByFieldNames, deploymentMode: null, clusterState: null);
         }
 
         internal void ExtendMappingBasedOn(AutoIndexDefinitionBaseServerSide definitionOfExistingIndex)
