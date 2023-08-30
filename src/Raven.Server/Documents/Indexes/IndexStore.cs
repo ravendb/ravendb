@@ -1950,11 +1950,6 @@ namespace Raven.Server.Documents.Indexes
                             oldIndexDefinition.LockMode.HasValue)
                             newIndex.SetLock(oldIndexDefinition.LockMode.Value);
 
-                        if (newIndex.Definition.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived &&
-                            newIndexDefinition.ArchivedDataProcessingBehavior.HasValue == false &&
-                            oldIndexDefinition.ArchivedDataProcessingBehavior.HasValue)
-                            newIndex.Definition.ArchivedDataProcessingBehavior = oldIndexDefinition.ArchivedDataProcessingBehavior.Value;
-
                         if (newIndex.Definition.Priority == IndexPriority.Normal &&
                             newIndexDefinition.Priority.HasValue == false &&
                             oldIndexDefinition.Priority.HasValue)
