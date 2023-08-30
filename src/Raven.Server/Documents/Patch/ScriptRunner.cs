@@ -254,6 +254,7 @@ namespace Raven.Server.Documents.Patch
             public JavaScriptUtils JavaScriptUtils;
 
             private const string _timeSeriesSignature = "timeseries(doc, name)";
+            private const string _unarchiveSignature = "unarchive(doc)";
             public const string GetMetadataMethod = "getMetadata";
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Script> scriptsSource, bool ignoreValidationErrors)
@@ -306,6 +307,12 @@ namespace Raven.Server.Documents.Patch
                 includesObject.FastSetProperty("cmpxchg", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false));
                 includesObject.FastSetProperty("revisions", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false));
                 ScriptEngine.SetValue("includes", includesObject);
+
+                // unarchive
+                var unarchiveDocumentFunc = new ClrFunctionInstance(ScriptEngine, "unarchive", UnarchiveDoc);
+                ObjectInstance archivedObject = new JsObject(ScriptEngine);
+                archivedObject.FastSetProperty("unarchive", new PropertyDescriptor(unarchiveDocumentFunc, false, false, false));
+                ScriptEngine.SetValue("archived", archivedObject);
 
                 // includes - backward compatibility
                 ScriptEngine.SetValue("include", includeDocumentFunc);
@@ -858,6 +865,44 @@ namespace Raven.Server.Documents.Patch
             {
                 GenericSortTwoElementArray(args);
                 return args[0];
+            }
+
+            private JsValue UnarchiveDoc(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 1)
+                    throw new InvalidOperationException("unarchive(doc) must be called with a single argument");
+                 
+                if (args[0].IsNull() || args[0].IsUndefined())
+                    return args[0];
+                
+                if ((args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance) == false)
+                    throw new InvalidOperationException("unarchive(doc) must take document object as the first argument");
+                
+                var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
+                using (var doc = _database.DocumentsStorage.Get(_docsCtx, archivedDocId, DocumentFields.Data, throwOnConflict: true))
+                {
+                    if (doc.Flags.HasFlag(DocumentFlags.Archived) == false)
+                    {
+                        return JsValue.Undefined;
+                    }
+                    
+                    if (doc.TryGetMetadata(out var metadata) == false)
+                    {
+                        throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
+                    }
+                    
+                    // Remove archived metadata marker, remove archived document flag
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
+                    doc.Flags = doc.Flags.Strip(DocumentFlags.Archived);
+        
+                    using (var updated = _docsCtx.ReadObject(doc.Data, archivedDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    {
+                         _database.DocumentsStorage.Put(_docsCtx, archivedDocId, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                    }
+                }
+
+                return JsValue.Undefined;
             }
 
             private JsValue IncludeDoc(JsValue self, JsValue[] args)
