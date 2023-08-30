@@ -1667,7 +1667,6 @@ namespace Corax
             if (_boostedDocs != null)
                 AppendDocumentsBoost();
             
-            Slice[] keys = Array.Empty<Slice>();
             for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
             {
                 var indexedField = _knownFieldsTerms[fieldId];
@@ -1677,7 +1676,7 @@ namespace Corax
                     continue;
 
                 using (staticFieldScope.For(CommitOperation.TextualValues))
-                    InsertTextualField(entriesToTermsTree, indexedField, workingBuffer, ref keys);
+                    InsertTextualField(entriesToTermsTree, indexedField, workingBuffer);
                 
                 using (staticFieldScope.For(CommitOperation.IntegerValues))
                     InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
@@ -1701,7 +1700,7 @@ namespace Corax
                     using var dynamicFieldScope = stats.For(indexedField.NameForStatistics);
 
                     using (dynamicFieldScope.For(CommitOperation.TextualValues))
-                        InsertTextualField(entriesToTermsTree, indexedField, workingBuffer, ref keys);
+                        InsertTextualField(entriesToTermsTree, indexedField, workingBuffer);
 
                     using (dynamicFieldScope.For(CommitOperation.IntegerValues))
                         InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
@@ -1725,9 +1724,6 @@ namespace Corax
             _pForEncoder.Dispose();
             _pForEncoder = null;
             
-            if(keys.Length>0)
-                ArrayPool<Slice>.Shared.Return(keys);
-
             // Check if we have suggestions to deal with. 
             if (_hasSuggestions)
             {
@@ -1834,12 +1830,42 @@ namespace Corax
         {
             private readonly IndexWriter _parent;
             public const int BatchSize = 1024;
+
+            public Slice[] SortedTerms;
+            public int[] TermIndexes;
             
             public CompactTree.CompactKeyLookup[] Keys;
             public int[] PageOffsets;
             public long[] PostListIds;
             public int[] EntriesOffsets;
 
+            public void PrepareTerms(IndexedField field, out Span<Slice> terms, out Span<int> indexes)
+            {
+                int termsCount = field.Textual.Count;
+                if (SortedTerms == null || SortedTerms.Length < termsCount)
+                {
+                    if (SortedTerms != null)
+                    {
+                        ArrayPool<Slice>.Shared.Return(SortedTerms);
+                        ArrayPool<int>.Shared.Return(TermIndexes);
+                    }
+                    SortedTerms = ArrayPool<Slice>.Shared.Rent(termsCount);
+                    TermIndexes = ArrayPool<int>.Shared.Rent(termsCount);
+                }
+
+                int idx = 0;
+                foreach (var (k,v) in field.Textual)
+                {
+                    SortedTerms[idx] = k;
+                    TermIndexes[idx] = v;
+                    idx++;
+                }
+
+                terms = new Span<Slice>(SortedTerms, 0, termsCount);
+                indexes = new Span<int>(TermIndexes, 0, termsCount);
+
+                terms.Sort(indexes, SliceComparer.Instance);
+            }
 
             public TextualFieldBuffers(IndexWriter parent)
             {
@@ -1856,7 +1882,9 @@ namespace Corax
                 if (PageOffsets != null) ArrayPool<int>.Shared.Return(PageOffsets);
                 if (EntriesOffsets != null) ArrayPool<int>.Shared.Return(EntriesOffsets);
 
-
+                if (SortedTerms != null) ArrayPool<Slice>.Shared.Return(SortedTerms);
+                if (TermIndexes != null) ArrayPool<int>.Shared.Return(TermIndexes);
+                
                 if (Keys != null)
                 {
                     var llt = _parent._transaction.LowLevelTransaction;
@@ -1880,25 +1908,20 @@ namespace Corax
 
         private TextualFieldBuffers _textualFieldBuffers;
 
-        private void PrepareTextualFieldBatch(IndexedField indexedField, CompactTree fieldTree,
+        private void PrepareTextualFieldBatch(TextualFieldBuffers buffers,
+            IndexedField indexedField, 
+            CompactTree fieldTree,
             Span<Slice> sortedTerms,
+            Span<int> termsIndexes,
             out Span<CompactTree.CompactKeyLookup> keys,
             out Span<long> postListIds,
-            out Span<int> pageOffsets,
-            out Span<int> entriesOffsets)
+            out Span<int> pageOffsets)
         {
-            var currentFieldTerms = indexedField.Textual;
             var max = Math.Min(TextualFieldBuffers.BatchSize, sortedTerms.Length);
-            var buffers = _textualFieldBuffers ??= new TextualFieldBuffers(this);
             var llt = _transaction.LowLevelTransaction;
             for (int i = 0; i < max; i++)
             {
                 var term = sortedTerms[i];
-                //TODO: Can we optimize this further? We are iterating over the entire set, sort and operate in parallel?
-                ref var entriesLocation = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
-                Debug.Assert(Unsafe.IsNullRef(ref entriesLocation) == false);
-                buffers.EntriesOffsets[i] = entriesLocation;
-
                 
                 bool isNullTerm = term.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan());
 
@@ -1917,14 +1940,13 @@ namespace Corax
                     key.EncodedWithCurrent(out _);
                 }
                 
-                ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
+                ref var entries = ref indexedField.Storage.GetAsRef(termsIndexes[i]);
                 entries.Prepare(_entriesAllocator);
             }
 
             keys = new Span<CompactTree.CompactKeyLookup>(buffers.Keys, 0, max);
             postListIds = new Span<long>(buffers.PostListIds, 0, max);
             pageOffsets = new Span<int>(buffers.PageOffsets, 0, max);
-            entriesOffsets = new Span<int>(buffers.EntriesOffsets, 0, max);
             
             
             long GetOrCreateNullTermPostingList()
@@ -1952,7 +1974,7 @@ namespace Corax
             }
         }
         
-        private void InsertTextualField(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
+        private void InsertTextualField(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             var fieldTree = _fieldsTree.CompactTreeFor(indexedField.Name);
             
@@ -1960,20 +1982,6 @@ namespace Corax
             int termsCount = currentFieldTerms.Count;
 
             ClearEntriesForTerm();
-
-            if (sortedTermsBuffer.Length < termsCount)
-            {
-                if (sortedTermsBuffer.Length > 0)
-                    ArrayPool<Slice>.Shared.Return(sortedTermsBuffer);
-                sortedTermsBuffer = ArrayPool<Slice>.Shared.Rent(termsCount);
-            }
-
-            currentFieldTerms.Keys.CopyTo(sortedTermsBuffer, 0);
-
-            // Sorting the terms buffer.
-            Sorter<Slice, SliceStructComparer> sorter = default;
-            sorter.Sort(sortedTermsBuffer, 0, termsCount);
-
             using var dumper = new IndexTermDumper(_fieldsTree, indexedField.Name);
 
             fieldTree.InitializeStateForTryGetNextValue();
@@ -1983,23 +1991,29 @@ namespace Corax
 
             var entriesForTerm = new NativeList<TermInEntryModification>();
             entriesForTerm.Initialize(_entriesAllocator);
-
-            var sortedTerms = new Span<Slice>(sortedTermsBuffer, 0, termsCount);
+            
+            var buffers = _textualFieldBuffers ??= new TextualFieldBuffers(this);
+            buffers.PrepareTerms(indexedField, out var sortedTerms, out var termsOffsets);
             var processed = 0;
             while (true)
             {
                 sortedTerms = sortedTerms[processed..];
+                termsOffsets = termsOffsets[processed..];
                 processed = 0;
 
                 if (sortedTerms.IsEmpty)
                     break;
 
-                PrepareTextualFieldBatch(indexedField, fieldTree,
+                PrepareTextualFieldBatch(buffers, 
+                    indexedField, 
+                    fieldTree,
                     sortedTerms,
+                    termsOffsets,
                     out var keys,
                     out var postListIds,
-                    out var pageOffsets,
-                    out var entriesOffsets);
+                    out var pageOffsets);
+                
+                var entriesOffsets = termsOffsets; // a copy that we trim internally in the loop belows
                 while (keys.IsEmpty == false) 
                 {
                     var treeChanged = fieldTree.CheckTreeStructureChanges();
@@ -2413,7 +2427,7 @@ namespace Corax
 
             if (numberOfEntries == 0)
             {
-                if (isNullTerm == false) // we don't want to remove the null term posting list 
+                if (isNullTerm) // we don't want to remove the null term posting list 
                     return AddEntriesToTermResult.RemoveTermId;
                 
                 llt.FreePage(postingListState.RootPage);
