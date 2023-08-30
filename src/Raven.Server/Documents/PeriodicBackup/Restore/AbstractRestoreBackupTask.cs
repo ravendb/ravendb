@@ -199,6 +199,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, RestoreSettings.DatabaseValues, Result, Progress);
 
+            ServerStore.ForTestingPurposes?.RestoreDatabaseAfterSavingDatabaseRecord?.Invoke();
+
             Database.SetIds(RestoreSettings.DatabaseRecord);
 
             return Database;

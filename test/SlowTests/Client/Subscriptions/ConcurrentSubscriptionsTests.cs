@@ -1114,10 +1114,12 @@ namespace SlowTests.Client.Subscriptions
             DoNotReuseServer();
             const int expectedNumberOfDocsToResend = 7;
 
+            long id;
             string databaseName = GetDatabaseName();
-            using (var store = GetDocumentStore(new Options{ModifyDatabaseName = _ => databaseName}))
+            using (var store = GetDocumentStore(new Options { ModifyDatabaseName = _ => databaseName }))
             {
                 var subscriptionId = await store.Subscriptions.CreateAsync<User>();
+                id = long.Parse(subscriptionId);
                 await using var subscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     Strategy = SubscriptionOpeningStrategy.Concurrent,
@@ -1139,29 +1141,16 @@ namespace SlowTests.Client.Subscriptions
                     tcs.Task.Wait();
                 });
 
-                await AssertWaitForValueAsync(() =>
-                {
-                    List<SubscriptionStorage.ResendItem> items;
-
-                    using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (context.OpenReadTransaction())
-                        items = SubscriptionStorage.GetResendItemsForDatabase(context, store.Database).ToList();
-
-                    return Task.FromResult(items.Count);
-                }, expectedNumberOfDocsToResend);
+                await AssertWaitForValueAsync(() => Task.FromResult(AbstractSubscriptionConnectionsState.GetNumberOfResendDocuments(Server.ServerStore, store.Database, SubscriptionType.Document, id)), expectedNumberOfDocsToResend);
             }
 
             // Upon disposing of the store, the database gets deleted.
             // Then we recreate the database to ensure no leftover subscription data from the previous instance.
             using (var _ = GetDocumentStore(new Options { ModifyDatabaseName = _ => databaseName }))
             {
-                List<SubscriptionStorage.ResendItem> items;
+                var count = AbstractSubscriptionConnectionsState.GetNumberOfResendDocuments(Server.ServerStore, databaseName, SubscriptionType.Document, id);
 
-                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                    items = SubscriptionStorage.GetResendItemsForDatabase(context, databaseName).ToList();
-
-                Assert.Equal(0, items.Count);
+                Assert.Equal(0, count);
             }
         }
 

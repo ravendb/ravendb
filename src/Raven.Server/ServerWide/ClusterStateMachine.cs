@@ -1675,7 +1675,7 @@ namespace Raven.Server.ServerWide
                 context.Transaction.InnerTransaction.OpenTable(IdentitiesSchema, Identities).DeleteByPrimaryKeyPrefix(databaseSlice);
             }
 
-            using (Slice.From(context.Allocator, databaseName.ToLowerInvariant(), SpecialChars.RecordSeparator, ByteStringType.Immutable, out var databaseSlice))
+            using (Slice.From(context.Allocator, record.DatabaseName.ToLowerInvariant(), SpecialChars.RecordSeparator, ByteStringType.Immutable, out var databaseSlice))
             {
                 context.Transaction.InnerTransaction.OpenTable(SubscriptionStateSchema, SubscriptionState).DeleteByPrimaryKeyPrefix(databaseSlice);
             }

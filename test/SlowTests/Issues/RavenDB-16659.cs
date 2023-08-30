@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,24 +12,24 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_16659 :RavenTestBase
+    public class RavenDB_16659 : RavenTestBase
     {
-
         public RavenDB_16659(ITestOutputHelper output) : base(output)
         {
         }
+
         [Fact]
         public async Task DeleteDatabaseDuringRestore()
         {
             DoNotReuseServer();
             var mre = new ManualResetEventSlim();
             var backupPath = NewDataPath();
-            
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Toli" },"users/1");
+                    await session.StoreAsync(new User { Name = "Toli" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -50,10 +49,10 @@ namespace SlowTests.Issues
                 {
                     RestoreBackupOperation restoreOperation =
                         new RestoreBackupOperation(new RestoreBackupConfiguration
-                            {BackupLocation = Path.Combine(backupPath, result.LocalBackup.BackupDirectory), DatabaseName = databaseName });
+                        { BackupLocation = Path.Combine(backupPath, result.LocalBackup.BackupDirectory), DatabaseName = databaseName });
                     Server.ServerStore.ForTestingPurposesOnly().RestoreDatabaseAfterSavingDatabaseRecord += () => mre.Set();
-                    
-                    var op  = await store.Maintenance.Server.SendAsync(restoreOperation);
+
+                    var op = await store.Maintenance.Server.SendAsync(restoreOperation);
                     var res = mre.Wait(TimeSpan.FromSeconds(30));
                     Assert.True(res);
                     var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true)));
