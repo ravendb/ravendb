@@ -540,9 +540,10 @@
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
                 <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" placeholder="Enter number of nodes"
-                       data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput">
+                       data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput, disable: $root.licenseType === 'Community' || $root.licenseType === 'Developer'">
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning">
-                    With replication factor set to 1, the data won't be replicated
+                    <span data-bind="visible: $root.licenseType === 'Community' || $root.licenseType === 'Developer'">Your license doesn't allow replication factor higher than 1. The data won't be replicated.</span>
+                    <span data-bind="visible: $root.licenseType !== 'Community' && $root.licenseType !== 'Developer'">With replication factor set to 1, the data won't be replicated</span>
                 </div>
             </div>
         </div>
@@ -564,7 +565,7 @@
             </div>
             <small class="toggle-caption">Maintain replication factor upon node failure.</small>
             <div class="help-block" data-bind="visible: $root.showDynamicDatabaseDistributionWarning">
-                Your current license doesn't include the dynamic database distribution feature.
+                Your license doesn't include the dynamic database distribution feature.
             </div>
         </div>
     </div>
@@ -604,6 +605,15 @@
         </div>
         <div data-bind="if: manualMode() && !enableSharding()">
             <div data-bind="template: { name: 'manual-selection-non-sharded' }"></div>
+        </div>
+        <div class="margin-top-sm" data-bind="if: manualMode() && enableSharding() && $root.licenseType === 'Community' || $root.licenseType === 'Professional' ">
+            <div class="alert alert-warning">
+                <small>
+                    <strong class="text-warning"><i class="icon-license"></i> Your license allows replication only across a single node.</strong>
+                    <br/>
+                    Unleash the full potential of <span><i class="icon-sharding"></i> Sharding</span> and <a href="https://ravendb.net/buy" target="_blank">upgrade</a> your plan.
+                </small>
+            </div>
         </div>
     </div>
 </script>
