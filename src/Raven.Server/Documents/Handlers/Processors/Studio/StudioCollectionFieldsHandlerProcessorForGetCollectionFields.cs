@@ -19,51 +19,53 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
 
         protected override ValueTask<Dictionary<LazyStringValue, FieldType>> GetFieldsAsync(DocumentsOperationContext context, string collection, string prefix)
         {
-            using (context.OpenReadTransaction())
+            long totalResults;
+            string changeVector;
+            string etag = null;
+
+            if (string.IsNullOrEmpty(collection))
             {
-                long totalResults;
-                string changeVector;
-                string etag = null;
-
-                if (string.IsNullOrEmpty(collection))
-                {
-                    changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                    totalResults = RequestHandler.Database.DocumentsStorage.GetNumberOfDocuments(context);
-                    etag = $"{changeVector}/{totalResults}";
-                }
-                else
-                {
-                    changeVector = RequestHandler.Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, collection);
-                    totalResults = RequestHandler.Database.DocumentsStorage.GetCollection(collection, context).Count;
-
-                    if (changeVector != null)
-                        etag = $"{changeVector}/{totalResults}";
-                }
-
-                if (etag != null && RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch) == etag)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return ValueTask.FromResult<Dictionary<LazyStringValue, FieldType>>(null);
-                }
-
-                HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
-
-                var fields = new Dictionary<LazyStringValue, FieldType>(LazyStringValueComparer.Instance);
-
-                if (string.IsNullOrEmpty(collection))
-                {
-                    foreach (var collectionStats in RequestHandler.Database.DocumentsStorage.GetCollections(context))
-                    {
-                        FetchFieldsForCollection(context, collectionStats.Name, prefix, fields);
-                    }
-                }
-                else
-                {
-                    FetchFieldsForCollection(context, collection, prefix, fields);
-                }
-
-                return ValueTask.FromResult(fields);
+                changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                totalResults = RequestHandler.Database.DocumentsStorage.GetNumberOfDocuments(context);
+                etag = $"{changeVector}/{totalResults}";
             }
+            else
+            {
+                changeVector = RequestHandler.Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, collection);
+                totalResults = RequestHandler.Database.DocumentsStorage.GetCollection(collection, context).Count;
+
+                if (changeVector != null)
+                    etag = $"{changeVector}/{totalResults}";
+            }
+
+            if (etag != null && RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch) == etag)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return ValueTask.FromResult<Dictionary<LazyStringValue, FieldType>>(null);
+            }
+
+            HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
+
+            var fields = new Dictionary<LazyStringValue, FieldType>(LazyStringValueComparer.Instance);
+
+            if (string.IsNullOrEmpty(collection))
+            {
+                foreach (var collectionStats in RequestHandler.Database.DocumentsStorage.GetCollections(context))
+                {
+                    FetchFieldsForCollection(context, collectionStats.Name, prefix, fields);
+                }
+            }
+            else
+            {
+                FetchFieldsForCollection(context, collection, prefix, fields);
+            }
+
+            return ValueTask.FromResult(fields);
+        }
+
+        protected override DocumentsTransaction OpenReadTransaction(DocumentsOperationContext context)
+        {
+            return context.OpenReadTransaction();
         }
 
         private void FetchFieldsForCollection(DocumentsOperationContext context, string collection, string prefix,

@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             var prefix = RequestHandler.GetStringQueryString("prefix", required: false);
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
+            using (OpenReadTransaction(context))
             {
                 var fields = await GetFieldsAsync(context, collection, prefix);
 
@@ -49,6 +50,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
                 }
             }
         }
+
+        protected abstract DocumentsTransaction OpenReadTransaction(TOperationContext context);
     }
 
     [Flags]
