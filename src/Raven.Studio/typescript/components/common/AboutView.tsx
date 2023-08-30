@@ -133,7 +133,7 @@ const AccordionItemLicensing = (props: AccordionItemLicensingProps) => {
     ];
     return (
         <div className="text-center">
-            <p className="lead fs-4">{description}</p>
+            <div className="lead mb-3 fs-4">{description}</div>
             <h4>
                 <Icon icon={featureIcon} /> {featureName}
             </h4>

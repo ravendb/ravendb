@@ -24,9 +24,12 @@ import { collectionsTrackerSelectors } from "components/common/shell/collections
 import genUtils from "common/generalUtils";
 import generalUtils from "common/generalUtils";
 import { todo } from "common/developmentHelper";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
+const revisionsToKeepCommunityLimit = 2;
+const revisionsByAgeCommunityLimit = 3888000; // 45 days
 
 export type EditRevisionConfigType = "collectionSpecific" | keyof typeof documentRevisionsConfigNames;
 export type EditRevisionTaskType = "edit" | "new";
@@ -87,6 +90,12 @@ export default function EditRevision(props: EditRevisionProps) {
         genUtils.timeSpanToSeconds(originalConfig.MinimumRevisionAgeToKeep) - formValues.minimumRevisionAgeToKeep >
             revisionsByAgeDelta;
 
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
+
+    const disableSubmitButton =
+        (licenseType === "Community" && formValues.minimumRevisionAgeToKeep > revisionsByAgeCommunityLimit) ||
+        formValues.minimumRevisionsToKeep > revisionsToKeepCommunityLimit;
+
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info">
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
@@ -110,15 +119,23 @@ export default function EditRevision(props: EditRevisionProps) {
                         Limit # of revisions to keep
                     </FormSwitch>
                     {formValues.isMinimumRevisionsToKeepEnabled && (
-                        <InputGroup className="mb-2">
-                            <FormInput
-                                type="number"
-                                control={control}
-                                name="minimumRevisionsToKeep"
-                                placeholder="Enter number of revisions to keep"
-                            />
-                            {isRevisionsToKeepLimitWarning && <LimitWarning limit={revisionsDelta} />}
-                        </InputGroup>
+                        <div>
+                            <InputGroup className="mb-2">
+                                <FormInput
+                                    type="number"
+                                    control={control}
+                                    name="minimumRevisionsToKeep"
+                                    placeholder="Enter number of revisions to keep"
+                                />
+                                {isRevisionsToKeepLimitWarning && <LimitWarning limit={revisionsDelta} />}
+                            </InputGroup>
+                            {licenseType === "Community" && formValues.minimumRevisionsToKeep > 2 ? (
+                                <Alert color="warning" className="mb-2">
+                                    <Icon icon="warning" />
+                                    Your Community license allows max 2 revisions to keep
+                                </Alert>
+                            ) : null}
+                        </div>
                     )}
                     <FormSwitch control={control} name="isMinimumRevisionAgeToKeepEnabled">
                         Limit # of revisions to keep by age
@@ -131,6 +148,13 @@ export default function EditRevision(props: EditRevisionProps) {
                                 showDays
                                 showSeconds
                             />
+                            {licenseType === "Community" &&
+                            formValues.minimumRevisionAgeToKeep > revisionsByAgeCommunityLimit ? (
+                                <Alert color="warning" className="my-2">
+                                    <Icon icon="warning" />
+                                    Your Community license allows max 45 days retention time
+                                </Alert>
+                            ) : null}
                             {isRevisionsToKeepByAgeLimitWarning && (
                                 <LimitWarning limit={generalUtils.formatTimeSpan(revisionsByAgeDelta * 1000, true)} />
                             )}
@@ -155,7 +179,7 @@ export default function EditRevision(props: EditRevisionProps) {
                     )}
 
                     <Alert color="info" className="mt-3">
-                        <ul className="m-0 p-0 vstack gap-1">
+                        <ul className="m-0 ps-2 vstack gap-1">
                             <li>
                                 A revision will be created anytime a document is modified
                                 {!formValues.isPurgeOnDeleteEnabled && <span> or deleted</span>}.
@@ -215,7 +239,7 @@ export default function EditRevision(props: EditRevisionProps) {
                     <Button type="button" color="secondary" onClick={toggle}>
                         Cancel
                     </Button>
-                    <Button type="submit" color="success">
+                    <Button type="submit" color="success" disabled={disableSubmitButton}>
                         <Icon icon={getSubmitIcon(taskType)} />
                         {_.startCase(taskType)} config
                     </Button>

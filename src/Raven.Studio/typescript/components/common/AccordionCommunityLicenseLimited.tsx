@@ -1,13 +1,13 @@
 ﻿import { AccordionItemLicensing, AccordionItemWrapper } from "./AboutView";
 import { Icon } from "./Icon";
-import React from "react";
+import React, { ReactNode } from "react";
 import IconName from "../../../typings/server/icons";
 
 interface AccordionCommunityLicenseLimitedProps {
     targetId: string;
     featureName: string;
     featureIcon: IconName;
-    description: string;
+    description: string | ReactNode;
 }
 
 export default function AccordionCommunityLicenseLimited(props: AccordionCommunityLicenseLimitedProps) {

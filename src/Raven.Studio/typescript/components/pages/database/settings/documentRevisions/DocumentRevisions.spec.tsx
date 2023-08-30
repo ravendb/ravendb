@@ -1,6 +1,6 @@
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";
-import { DatabaseAdmin, BelowDatabaseAdmin } from "./DocumentRevisions.stories";
+import { DatabaseAdmin, BelowDatabaseAdmin, LicenseRestricted } from "./DocumentRevisions.stories";
 import { documentRevisionsConfigNames } from "./store/documentRevisionsSlice";
 
 describe("DocumentRevisions", () => {
@@ -20,5 +20,11 @@ describe("DocumentRevisions", () => {
         expect(screen.getByText(documentRevisionsConfigNames.defaultConflicts)).toBeInTheDocument();
 
         expect(screen.queryByRole("button", { name: /Save/ })).not.toBeInTheDocument();
+    });
+    it("is license restricted", async () => {
+        const { screen } = rtlRender(<LicenseRestricted />);
+
+        const licensingText = await screen.findByText(/Licensing/i);
+        expect(licensingText).toBeInTheDocument();
     });
 });
