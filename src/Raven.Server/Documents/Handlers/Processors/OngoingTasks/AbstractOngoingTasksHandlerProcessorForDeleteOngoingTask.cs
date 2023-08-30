@@ -130,10 +130,17 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
                 if (_deletingQueueSink.Name != null)
                 {
+                    long? maxIndex = null;
+
                     foreach (var script in _deletingQueueSink.Scripts)
                     {
                         var (index, _) = await _serverStore.RemoveQueueSinkProcessState(_context, _requestHandler.DatabaseName, _deletingQueueSink.Name, script,
                             $"{raftRequestId}/{script}");
+
+                        if (maxIndex.HasValue == false)
+                            maxIndex = index;
+                        else
+                            maxIndex = Math.Max(maxIndex.Value, index);
 
                         await _requestHandler.WaitForIndexNotificationAsync(index);
                     }

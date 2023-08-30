@@ -21,17 +21,17 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
     public BatchQueueSinkScriptCommand(string script, List<BlittableJsonReaderObject> messages, QueueSinkStatsScope scriptProcessingScope,
         QueueSinkProcessStatistics statistics, Logger logger)
     {
-        _messages = messages;
-        _script = script;
-        _scriptProcessingScope = scriptProcessingScope;
-        _statistics = statistics;
-        _logger = logger;
+        _script = script ?? throw new ArgumentException("Script cannot be null", nameof(script));
+        _messages = messages ?? throw new ArgumentException("Messages cannot be null", nameof(messages));
+        _scriptProcessingScope = scriptProcessingScope ?? throw new ArgumentException($"{nameof(QueueSinkStatsScope)} cannot be null", nameof(scriptProcessingScope));
+        _statistics = statistics ?? throw new ArgumentException($"{nameof(QueueSinkProcessStatistics)} cannot be null", nameof(statistics));
+        _logger = logger ?? throw new ArgumentException($"{nameof(Logger)} cannot be null", nameof(logger));
     }
 
     private BatchQueueSinkScriptCommand(string script, List<BlittableJsonReaderObject> messages)
     {
-        _messages = messages;
-        _script = script;
+        _script = script ?? throw new ArgumentException("Script cannot be null", nameof(script));
+        _messages = messages ?? throw new ArgumentException("Messages cannot be null", nameof(messages));
         _scriptProcessingScope = null;
         _statistics = null;
         _logger = null;
@@ -43,35 +43,36 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
     {
         var mainScript = new PatchRequest(_script, PatchRequestType.QueueSink);
 
-        context.DocumentDatabase.Scripts.GetScriptRunner(mainScript, false, out var documentScript);
-
-        var processed = 0L;
-
-        foreach (var message in _messages)
+        using (context.DocumentDatabase.Scripts.GetScriptRunner(mainScript, readOnly: false, out var documentScript))
         {
-            try
-            {
-                processed++;
+            var processed = 0L;
 
-                using (message)
-                using (documentScript.Run(context, context, "execute", new object[] { message }))
+            foreach (var message in _messages)
+            {
+                try
                 {
+                    processed++;
+
+                    using (message)
+                    using (documentScript.Run(context, context, "execute", new object[] {message}))
+                    {
+                    }
+
+                    _scriptProcessingScope?.RecordProcessedMessage();
+                    ProcessedSuccessfully++;
                 }
+                catch (Exception e)
+                {
+                    if (_logger?.IsOperationsEnabled == true)
+                        _logger.Operations("Failed to process consumed message by the script.", e);
 
-                _scriptProcessingScope?.RecordProcessedMessage();
-                ProcessedSuccessfully++;
+                    _scriptProcessingScope?.RecordScriptProcessingError();
+                    _statistics?.RecordScriptExecutionError(e);
+                }
             }
-            catch (Exception e)
-            {
-                if (_logger?.IsOperationsEnabled == true)
-                    _logger.Operations("Failed to process consumed message by the script.", e);
 
-                _scriptProcessingScope?.RecordScriptProcessingError();
-                _statistics?.RecordScriptExecutionError(e);
-            }
+            return processed;
         }
-
-        return processed;
     }
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
