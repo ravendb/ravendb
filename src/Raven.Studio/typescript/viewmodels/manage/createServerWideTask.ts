@@ -6,7 +6,7 @@ import licenseModel from "models/auth/licenseModel";
 
 class createServerWideTask extends dialogViewModelBase {
 
-    licenseType = licenseModel.licenseStatus().Type;
+    licenseType = licenseModel.licenseType();
 
     view = require("views/manage/createServerWideTask.html");
 
