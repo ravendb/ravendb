@@ -10,8 +10,10 @@ using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -24,12 +26,8 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival;
 
-public class DataArchivalIndexingTests : RavenTestBase
+public class DataArchivalIndexingTests(ITestOutputHelper output) : RavenTestBase(output)
 {
-    public DataArchivalIndexingTests(ITestOutputHelper output) : base(output)
-    {
-    }
-
     private async Task SetupDataArchival(IDocumentStore store)
     {
         var config = new DataArchivalConfiguration {Disabled = false, ArchiveFrequencyInSec = 100};
@@ -1235,6 +1233,74 @@ User: counter.DocumentId
                 // Make sure that the company is not skipped while indexing (auto map index)
                 List<Company> companies = await session.Query<Company>().Where(x => x.Email == "gracjan@ravendb.net").ToListAsync();
                 Assert.Equal(1, companies.Count);
+            }
+        }
+    }
+    
+    [Fact]
+    public async Task CanRevertDataArchivalUsingPatch()
+    {
+        using (var store = GetDocumentStore())
+        {
+            // Insert document with archive time before activating the archival
+            var company = new Company {Name = "Company Name"};
+            var retires = SystemTime.UtcNow.AddMinutes(5);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                var metadata = session.Advanced.GetMetadataFor(company);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await session.SaveChangesAsync();
+            }
+
+            // Make sure that the company is not skipped while indexing yet
+            using (var session = store.OpenAsyncSession())
+            {
+                List<Company> companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
+                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 1);
+            }
+
+            // Activate the archival
+            await SetupDataArchival(store);
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var archivedCompany = await session.LoadAsync<Company>(company.Id);
+                var metadata = session.Advanced.GetMetadataFor(archivedCompany);
+                Assert.DoesNotContain(Constants.Documents.Metadata.ArchiveAt, metadata.Keys);
+                Assert.Contains(Constants.Documents.Metadata.Collection, metadata.Keys);
+                Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
+                Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
+
+                // Make sure that the company is skipped while indexing (auto map index)
+                List<Company> companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
+                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 0);
+            }
+            
+            // Unarchive document using patch
+            var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery()
+            {
+                Query = "from Companies update { archived.unarchive(this) }"
+            }));
+            await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+            
+            using (var session = store.OpenAsyncSession())
+            {
+                // Make sure that item is unarchived, and the flags & markers are gone 
+                var unarchivedCompany = await session.LoadAsync<Company>(company.Id);
+                var metadata = session.Advanced.GetMetadataFor(unarchivedCompany);
+                Assert.DoesNotContain(Constants.Documents.Metadata.ArchiveAt, metadata.Keys);
+                Assert.DoesNotContain(Constants.Documents.Metadata.Archived, metadata.Keys);
+                Assert.DoesNotContain(Constants.Documents.Metadata.Flags, metadata.Keys); // the last flag in the @flags was 'Archived', so now the property should completely disappear
+
+                // Make sure that the company is not anymore skipped while indexing 
+                List<Company> companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
+                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 1);
             }
         }
     }
