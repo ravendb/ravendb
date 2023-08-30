@@ -358,8 +358,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 json[nameof(Deleted)] = new DynamicJsonArray(Deleted);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
-            BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
             throw new System.NotImplementedException();
         }

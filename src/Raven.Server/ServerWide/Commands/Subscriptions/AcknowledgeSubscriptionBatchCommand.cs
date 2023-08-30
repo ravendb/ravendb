@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             var subscriptionName = SubscriptionName;
             if (string.IsNullOrEmpty(subscriptionName))
@@ -65,16 +65,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             if (appropriateNode != NodeTag)
             {
-                throw new SubscriptionDoesNotBelongToNodeException(
-                    $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
-                    $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.")
-                { AppropriateNode = appropriateNode };
+                var subscriptionTask = new SubscriptionTask(existingValue);
+                AssertSubscriptionState(record, subscriptionTask, subscriptionName);
+
+                return new UpdatedValue(UpdatedValueActionType.Noop, value: null);
             }
 
-            if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
-            {
-                return context.ReadObject(existingValue, SubscriptionName);
-            }
+            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+            AssertSubscriptionState(record, subscription, subscriptionName);
 
             if (IsLegacyCommand())
             {
@@ -207,6 +205,51 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
 
             return msg;
+        }
+
+        private class SubscriptionTask : IDatabaseTask
+        {
+            private readonly BlittableJsonReaderObject _rawSubscription;
+
+            public SubscriptionTask(BlittableJsonReaderObject rawSubscription)
+            {
+                _rawSubscription = rawSubscription;
+    }
+
+            public ulong GetTaskKey()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId);
+                return (ulong)subscriptionId;
+}
+
+            public string GetMentorNode()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.MentorNode), out string mentorNode);
+                return mentorNode;
+            }
+
+            public string GetDefaultTaskName()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionName), out string subscriptionName);
+                return subscriptionName;
+            }
+
+            public string GetTaskName()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionName), out string subscriptionName);
+                return subscriptionName;
+            }
+
+            public bool IsResourceIntensive()
+            {
+                return false;
+            }
+
+            public bool IsPinnedToMentorNode()
+            {
+                _rawSubscription.TryGet(nameof(SubscriptionState.PinToMentorNode), out bool pinToMentorNode);
+                return pinToMentorNode;
+            }
         }
     }
 }

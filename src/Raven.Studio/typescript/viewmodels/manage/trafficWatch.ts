@@ -195,7 +195,7 @@ class trafficWatch extends viewModelBase {
     private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Changes.TrafficWatchChangeBase>();
 
     private readonly allTypeDataHttp: Raven.Client.Documents.Changes.TrafficWatchChangeType[] =
-        ["BulkDocs", "Counters", "Documents", "Hilo", "Index", "MultiGet", "None", "Operations", "Queries", "Streams", "Subscriptions", "TimeSeries"];
+        ["BulkDocs", "ClusterCommands", "Counters", "Documents", "Hilo", "Index", "MultiGet", "None", "Notifications", "Operations", "Queries", "Streams", "Subscriptions", "TimeSeries"];
     private readonly allTypeDataTcp: Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes[] =
         ["Cluster", "Drop", "Heartbeats", "None", "Ping", "Replication", "Subscription", "TestConnection"];
     

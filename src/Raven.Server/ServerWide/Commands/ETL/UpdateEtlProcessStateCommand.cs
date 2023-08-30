@@ -124,7 +124,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             return null;
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
             EtlProcessState etlState;
 
@@ -159,7 +159,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             etlState.SkippedTimeSeriesDocs = SkippedTimeSeriesDocs;
             etlState.LastBatchTime = LastBatchTime;
 
-            return context.ReadObject(etlState.ToJson(), GetItemId());
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(etlState.ToJson(), GetItemId()));
         }
 
         public static Func<string> GetLastResponsibleNode(
