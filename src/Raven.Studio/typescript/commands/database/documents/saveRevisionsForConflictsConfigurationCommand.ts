@@ -7,7 +7,6 @@ class saveRevisionsForConflictsConfigurationCommand extends commandBase {
     private readonly db: database;
     private readonly revisionsConfiguration: RevisionsCollectionConfiguration;
 
-
     constructor(db: database, revisionsConfiguration: RevisionsCollectionConfiguration) {
         super();
         this.db = db;
@@ -15,7 +14,6 @@ class saveRevisionsForConflictsConfigurationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
-
         const url = endpoint.databases.adminRevisions.adminRevisionsConflictsConfig;
         const args = ko.toJSON(this.revisionsConfiguration);
         return this.post<updateDatabaseConfigurationsResult>(url, args, this.db)

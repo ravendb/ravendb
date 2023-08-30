@@ -86,7 +86,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         await Promise.all(promises);
         messagePublisher.reportSuccess("Revisions configuration has been saved");
 
-        dispatch(documentRevisionsActions.fetchConfigs(db));
+        dispatch(documentRevisionsActions.saveConfigs());
     });
 
     const asyncEnforceRevisionsConfiguration = useAsyncCallback(async () => {
@@ -211,24 +211,29 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 <Icon icon="default" />
                                 Defaults
                             </HrHeader>
-                            <DocumentRevisionsConfigPanel
-                                isDatabaseAdmin={isDatabaseAdmin}
-                                config={defaultDocumentsConfig}
-                                onToggle={() =>
-                                    dispatch(documentRevisionsActions.toggleConfigState(defaultDocumentsConfig.Name))
-                                }
-                                onDelete={() =>
-                                    dispatch(documentRevisionsActions.deleteConfig(defaultDocumentsConfig.Name))
-                                }
-                                onEdit={() =>
-                                    onEditRevision({
-                                        taskType: "edit",
-                                        configType: "defaultDocument",
-                                        onConfirm: (config) => dispatch(documentRevisionsActions.editConfig(config)),
-                                        config: defaultDocumentsConfig,
-                                    })
-                                }
-                            />
+                            {defaultDocumentsConfig && (
+                                <DocumentRevisionsConfigPanel
+                                    isDatabaseAdmin={isDatabaseAdmin}
+                                    config={defaultDocumentsConfig}
+                                    onToggle={() =>
+                                        dispatch(
+                                            documentRevisionsActions.toggleConfigState(defaultDocumentsConfig.Name)
+                                        )
+                                    }
+                                    onDelete={() =>
+                                        dispatch(documentRevisionsActions.deleteConfig(defaultDocumentsConfig.Name))
+                                    }
+                                    onEdit={() =>
+                                        onEditRevision({
+                                            taskType: "edit",
+                                            configType: "defaultDocument",
+                                            onConfirm: (config) =>
+                                                dispatch(documentRevisionsActions.editConfig(config)),
+                                            config: defaultDocumentsConfig,
+                                        })
+                                    }
+                                />
+                            )}
                             <DocumentRevisionsConfigPanel
                                 isDatabaseAdmin={isDatabaseAdmin}
                                 config={defaultConflictsConfig}

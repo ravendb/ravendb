@@ -13,7 +13,7 @@ describe("DocumentRevisions", () => {
         expect(screen.queryByRole("button", { name: /Save/ })).toBeInTheDocument();
     });
 
-    it("can render for database admin", async () => {
+    it("can render for access below database admin", async () => {
         const { screen } = rtlRender(<BelowDatabaseAdmin />);
 
         expect(await screen.findByText(documentRevisionsConfigNames.defaultDocument)).toBeInTheDocument();
