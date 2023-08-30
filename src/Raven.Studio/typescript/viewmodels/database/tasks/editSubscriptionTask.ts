@@ -22,6 +22,7 @@ import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import licenseModel from "models/auth/licenseModel";
+import { EditSubscriptionTaskInfoHub } from "./EditSubscriptionTaskInfoHub";
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -44,6 +45,8 @@ class editSubscriptionTask extends shardViewModelBase {
     view = require("views/database/tasks/editSubscriptionTask.html");
     pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
+
+    infoHubView: ReactInKnockout<typeof EditSubscriptionTaskInfoHub>;
 
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
@@ -83,6 +86,10 @@ class editSubscriptionTask extends shardViewModelBase {
         this.languageService = new rqlLanguageService(this.db, ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
         
         this.canUseChangeVectorAsStartingPoint = ko.pureComputed(() => !this.db.isSharded());
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditSubscriptionTaskInfoHub
+        }));
     }
 
     activate(args: any) { 
