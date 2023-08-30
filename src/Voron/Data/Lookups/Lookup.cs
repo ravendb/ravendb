@@ -632,13 +632,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 return;
             }
 
-            // remove the entry, we'll need to add it as new
-            int entriesCount = state.Header->NumberOfEntries;
-            ushort* stateEntriesOffsetsPtr = state.EntriesOffsetsPtr;
-            for (int i = state.LastSearchPosition; i < entriesCount - 1; i++)
-            {
-                stateEntriesOffsetsPtr[i] = stateEntriesOffsetsPtr[i + 1];
-            }
+            // mark the entry as invalid, we'll need to set it later
+            state.EntriesOffsetsPtr[state.LastSearchPosition] = ushort.MaxValue;
 
             state.Header->Lower -= sizeof(short);
             state.Header->FreeSpace += (ushort)(sizeof(short) + len);
@@ -675,11 +670,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             }
         }
 
-        AddEntryToPage(ref state, requiredSize, entryBufferPtr);
+        AddEntryToPage(ref state, requiredSize, entryBufferPtr, isUpdate);
         VerifySizeOf(ref state);
     }
 
-    private void AddEntryToPage(ref CursorState state, int requiredSize, byte* entryBufferPtr)
+    private void AddEntryToPage(ref CursorState state, int requiredSize, byte* entryBufferPtr, bool isUpdate)
     {
         //VerifySizeOf(ref state);
 
@@ -691,35 +686,40 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         ushort* newEntriesStartPtr = state.EntriesOffsetsPtr + newNumberOfEntries - 1;
         ushort* newEntriesEndPtr = state.EntriesOffsetsPtr + state.LastSearchPosition;
 
-        if (Vector256.IsHardwareAccelerated)
+        // for updates, we put an invalid marker, and don't need to shift the list of offsets twice
+        if (isUpdate == false)
         {
-            int N256 = (Vector256<ushort>.Count - 1);
-            while (newEntriesStartPtr - Vector256<ushort>.Count >= newEntriesEndPtr)
+            if (Vector256.IsHardwareAccelerated)
             {
-                var source = Vector256.Load(newEntriesStartPtr - N256 - 1);
-                Vector256.Store(source, newEntriesStartPtr - N256);
-                newEntriesStartPtr -= Vector256<ushort>.Count;
+                int N256 = (Vector256<ushort>.Count - 1);
+                while (newEntriesStartPtr - Vector256<ushort>.Count >= newEntriesEndPtr)
+                {
+                    var source = Vector256.Load(newEntriesStartPtr - N256 - 1);
+                    Vector256.Store(source, newEntriesStartPtr - N256);
+                    newEntriesStartPtr -= Vector256<ushort>.Count;
+                }
             }
-        }
 
-        if (Vector128.IsHardwareAccelerated)
-        {
-            int N128 = (Vector128<ushort>.Count - 1);
-            while (newEntriesStartPtr - Vector128<ushort>.Count >= newEntriesEndPtr)
+            if (Vector128.IsHardwareAccelerated)
             {
-                var source = Vector128.Load(newEntriesStartPtr - N128 - 1);
-                Vector128.Store(source, newEntriesStartPtr - N128);
-                newEntriesStartPtr -= Vector128<ushort>.Count;
+                int N128 = (Vector128<ushort>.Count - 1);
+                while (newEntriesStartPtr - Vector128<ushort>.Count >= newEntriesEndPtr)
+                {
+                    var source = Vector128.Load(newEntriesStartPtr - N128 - 1);
+                    Vector128.Store(source, newEntriesStartPtr - N128);
+                    newEntriesStartPtr -= Vector128<ushort>.Count;
+                }
             }
-        }
 
-        // This will move one element at a time... the worst case scenario.
-        while (newEntriesStartPtr >= newEntriesEndPtr)
-        {
-            *newEntriesStartPtr = *(newEntriesStartPtr - 1);
-            newEntriesStartPtr--;
-        }
+            // This will move one element at a time... the worst case scenario.
+            while (newEntriesStartPtr >= newEntriesEndPtr)
+            {
+                *newEntriesStartPtr = *(newEntriesStartPtr - 1);
+                newEntriesStartPtr--;
+            }
 
+        }
+        
         if (header->PageFlags.HasFlag(LookupPageFlags.Leaf))
             _state.NumberOfEntries++; // we aren't counting branch entries
 
@@ -733,6 +733,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         byte* writePos = state.Page.Pointer + header->Upper;
 
         Unsafe.CopyBlockUnaligned(writePos, entryBufferPtr, (uint)requiredSize);
+        
         state.EntriesOffsetsPtr[state.LastSearchPosition] = header->Upper;
         //VerifySizeOf(ref state);
     }
@@ -799,7 +800,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             newPageState.LastSearchPosition = 0; // add as first
             var entryLength = EncodeEntry(newPageState.Header, causeForSplit.ToLong(), valueForSplit, entryBufferPtr);
-            AddEntryToPage(ref newPageState, entryLength, entryBufferPtr);
+            AddEntryToPage(ref newPageState, entryLength, entryBufferPtr, isUpdate: false);
             return causeForSplit;
         }
 
@@ -846,7 +847,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             var entryLength = EncodeEntry(updatedPageState.Header, causeForSplit.ToLong(), valueForSplit, entryBufferPtr);
             Debug.Assert(updatedPageState.Header->Upper - updatedPageState.Header->Lower >= entryLength + sizeof(ushort));
-            AddEntryToPage(ref updatedPageState, entryLength, entryBufferPtr);
+            AddEntryToPage(ref updatedPageState, entryLength, entryBufferPtr, isUpdate: false);
         }
         VerifySizeOf(ref newPageState);
         VerifySizeOf(ref state);
