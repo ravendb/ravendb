@@ -110,6 +110,9 @@ export const documentRevisionsSlice = createSlice({
                 }))
             );
         },
+        saveConfigs: (state) => {
+            configsAdapter.setAll(state.originalConfigs, configsSelectors.selectAll(state.configs));
+        },
     },
     extraReducers: (builder) => {
         builder

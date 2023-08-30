@@ -42,10 +42,6 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
     const originalConfig = useAppSelector(documentRevisionsSelectors.originalConfig(config.Name));
     const isSelected = useAppSelector(documentRevisionsSelectors.isSelectedConfigName(config.Name));
 
-    if (!config) {
-        return null;
-    }
-
     const isModified = !_.isEqual(originalConfig, config);
 
     const isDeleteOnUpdateVisible =

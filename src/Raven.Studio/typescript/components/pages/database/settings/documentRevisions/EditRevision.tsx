@@ -23,6 +23,7 @@ import { SelectOption } from "components/common/Select";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import genUtils from "common/generalUtils";
 import generalUtils from "common/generalUtils";
+import { todo } from "common/developmentHelper";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
@@ -37,6 +38,8 @@ interface EditRevisionProps {
     taskType: EditRevisionTaskType;
     config?: DocumentRevisionsConfig;
 }
+
+todo("Other", "Damian", "Use select with autocomplete for collections");
 
 export default function EditRevision(props: EditRevisionProps) {
     const { toggle, configType, taskType, config, onConfirm } = props;

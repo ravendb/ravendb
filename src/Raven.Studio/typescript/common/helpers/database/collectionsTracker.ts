@@ -38,7 +38,7 @@ class collectionsTracker {
             .done(stats => this.collectionsLoaded(stats));
 
         this.configureRevisions(db);
-        
+
         return this.loadStatsTask;
     }
 
@@ -94,8 +94,6 @@ class collectionsTracker {
                 this.onCollectionRemoved(toRemove);    
             }
         });
-
-        console.log('kalczur onDatabaseStatsChanged yes');
 
         this.events.globalChangeVector.forEach(handler => handler(notification.GlobalChangeVector));
 
