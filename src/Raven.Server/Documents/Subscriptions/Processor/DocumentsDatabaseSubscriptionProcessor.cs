@@ -135,17 +135,18 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
+                var effectiveBehavior = SubscriptionState.ArchivedDataProcessingBehavior ?? Database.Configuration.Subscriptions.ArchivedDataProcessingBehavior;
                 
-                if (item.Flags.Contain(DocumentFlags.Archived) && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived)
+                if (item.Flags.Contain(DocumentFlags.Archived) && effectiveBehavior == ArchivedDataProcessingBehavior.ExcludeArchived)
                 {
-                    reason = $"{id} is archived, while the item kind is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
+                    reason = $"{id} is archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
                 
-                if (item.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ArchivedOnly)
+                if (item.Flags.Contain(DocumentFlags.Archived) == false && effectiveBehavior == ArchivedDataProcessingBehavior.ArchivedOnly)
                 {
-                    reason = $"{id} is not archived, while the item kind is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
+                    reason = $"{id} is not archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }

@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string Query { get; set; }
         public string SubscriptionName { get; set; }
         public long SubscriptionId { get; set; }
-        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
         public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
         public DateTime? LastBatchAckTime { get; set; }

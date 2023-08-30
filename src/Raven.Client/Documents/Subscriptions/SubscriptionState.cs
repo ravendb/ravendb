@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Subscriptions
         // in sharding context - orchestrator node tag
         public string NodeTag { get; set; }
 
-        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
 
         public SubscriptionShardingState ShardingState { get; set; }
 
@@ -98,6 +98,11 @@ namespace Raven.Client.Documents.Subscriptions
         public static string SubscriptionPrefix(string databaseName)
         {
             return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}subscriptions/";
+        }
+
+        public SubscriptionState()
+        {
+            
         }
     }
 
