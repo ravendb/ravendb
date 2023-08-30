@@ -7,12 +7,16 @@ import alert = require("common/notifications/models/alert");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import genUtils from "common/generalUtils";
+import hyperlinkColumn from "widgets/virtualGrid/columns/hyperlinkColumn";
+import appUrl from "common/appUrl";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 
 interface WarningItem {
     source: string;
     collection: string;
     count: number;
-    type: string;
+    blockerType: Raven.Server.Documents.ITombstoneAware.TombstoneDeletionBlockerType;
+    blockerTaskId: number;
     size: number;
 }
 
@@ -31,12 +35,68 @@ class blockingTombstonesDetails extends abstractAlertDetails {
         const detailsList = warning.BlockingTombstones as Raven.Server.NotificationCenter.BlockingTombstoneDetails[];
         
         this.tableItems = detailsList.map(x => ({
-            type: x.BlockerType,
+            blockerType: x.BlockerType,
+            blockerTaskId: x.BlockerTaskId,
             source: x.Source,
             collection: x.Collection,
             count: x.NumberOfTombstones,
             size: x.SizeOfTombstonesInBytes
         }));
+    }
+    
+    private static getBrokerTypeDescription(type: Raven.Server.Documents.ITombstoneAware.TombstoneDeletionBlockerType) {
+        switch (type) {
+            case "RavenEtl":
+                return "RavenDB ETL";
+            case "ExternalReplication":
+                return "External Replication";
+            case "SqlEtl":
+                return "SQL ETL";
+            case "OlapEtl":
+                return "OLAP ETL";
+            case "ElasticSearchEtl":
+                return "Elasticsearch ETL";
+            case "PullReplicationAsHub":
+                return "Replication Hub";
+            case "PullReplicationAsSink":
+                return "Replication Sink";
+            case "QueueEtl":
+                return "Queue ETL";
+            default:
+                return type;
+        }
+    }
+    
+    private static formatSource(item: WarningItem) {
+        return blockingTombstonesDetails.getBrokerTypeDescription(item.blockerType) + ' "' + item.source + '"';
+    }
+    
+    private static linkToSource(item: WarningItem) {
+        const currentDatabase = activeDatabaseTracker.default.database();
+        
+        switch (item.blockerType) {
+            case "Index":
+                return appUrl.forEditIndex(item.source, currentDatabase);
+            case "Backup":
+                return appUrl.forEditPeriodicBackupTask(currentDatabase, item.blockerTaskId);
+            case "ElasticSearchEtl":
+                return appUrl.forEditElasticSearchEtl(currentDatabase, item.blockerTaskId);
+            case "ExternalReplication":
+                return appUrl.forEditExternalReplication(currentDatabase, item.blockerTaskId);
+            case "OlapEtl":
+                return appUrl.forEditOlapEtl(currentDatabase, item.blockerTaskId);
+            case "PullReplicationAsHub":
+                return appUrl.forEditReplicationHub(currentDatabase, item.blockerTaskId);
+            case "PullReplicationAsSink":
+                return appUrl.forEditReplicationSink(currentDatabase, item.blockerTaskId);
+            case "SqlEtl":
+                return appUrl.forEditSqlEtl(currentDatabase, item.blockerTaskId);
+            case "RavenEtl":
+                return appUrl.forEditRavenEtl(currentDatabase, item.blockerTaskId);
+            default:
+                // we fallback to ongoing task list
+                return appUrl.forOngoingTasks(currentDatabase);
+        }
     }
     
     compositionComplete() {
@@ -46,11 +106,9 @@ class blockingTombstonesDetails extends abstractAlertDetails {
         grid.headerVisible(true);
 
         grid.init(() => this.fetcher(), () => {
-            const typeColumn = new textColumn<WarningItem>(grid, x => x.type, "Type", "15%", {
-                sortable: x => x.type
-            });
-            const sourceColumn = new textColumn<WarningItem>(grid, x => x.source, "Source", "20%", {
-                sortable: x => x.source
+            const sourceColumn = new hyperlinkColumn<WarningItem>(grid, x => blockingTombstonesDetails.formatSource(x), x => blockingTombstonesDetails.linkToSource(x), "Blockage source", "35%", {
+                sortable: x => x.blockerType + "_" + x.source,
+                handler: () => this.close()
             });
             const collectionColumn = new textColumn<WarningItem>(grid, x => x.collection, "Collection", "20%", {
                 sortable: x => x.collection
@@ -61,7 +119,7 @@ class blockingTombstonesDetails extends abstractAlertDetails {
                 transformValue: genUtils.formatBytesToSize
             });
 
-            return [typeColumn, sourceColumn, collectionColumn, countColumn, sizeColumn];
+            return [sourceColumn, collectionColumn, countColumn, sizeColumn];
         });
         
         
