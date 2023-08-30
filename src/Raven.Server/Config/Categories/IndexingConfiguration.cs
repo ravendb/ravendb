@@ -35,6 +35,7 @@ namespace Raven.Server.Config.Categories
             QueryClauseCacheSize = PlatformDetails.Is32Bits ? new Size(32, SizeUnit.Megabytes) : (MemoryInformation.TotalPhysicalMemory / 10);
             MaximumSizePerSegment = new Size(PlatformDetails.Is32Bits ? 128 : 1024, SizeUnit.Megabytes);
             LargeSegmentSizeToMerge = new Size(PlatformDetails.Is32Bits ? 16 : 32, SizeUnit.Megabytes);
+            MaxAllocationsAtDictionaryTraining = new Size(PlatformDetails.Is32Bits ? 128 : 2048, SizeUnit.Megabytes);
 
             var totalMem = MemoryInformation.TotalPhysicalMemory;
 
@@ -500,6 +501,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Corax.MaxMemoizationSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size MaxMemoizationSize { get; set; }
+
+        [Description("Expert: The maximum amount of MB that we'll allocate for training indexing dictionaries.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public Size MaxAllocationsAtDictionaryTraining { get; protected set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {

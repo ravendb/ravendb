@@ -9,6 +9,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -140,7 +141,6 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             queryContext.OpenReadTransaction();
 
             using var tx = indexContext.OpenWriteTransaction();
-            
             
             // We are creating a new converter because converters get tied through their accessors to the structure, and since on Map-Reduce indexes
             // we only care about the map and not the reduce hilarity can ensure when properties do not share the type. 

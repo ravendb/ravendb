@@ -42,6 +42,7 @@ class configurationItem {
         "Indexing.Corax.IncludeDocumentScore",
         "Indexing.Corax.IncludeSpatialDistance",
         "Indexing.Corax.MaxMemoizationSizeInMb",
+        "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
 
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
