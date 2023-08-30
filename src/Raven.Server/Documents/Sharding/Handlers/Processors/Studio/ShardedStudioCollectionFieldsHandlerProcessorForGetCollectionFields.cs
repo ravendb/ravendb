@@ -35,5 +35,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
                 return collectionFields.Result;
             }
         }
+
+        protected override DocumentsTransaction OpenReadTransaction(TransactionOperationContext context)
+        {
+            return null;
+        }
     }
 }
