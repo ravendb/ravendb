@@ -1,11 +1,12 @@
 ﻿import React, { HTMLAttributes } from "react";
 import classNames from "classnames";
 import IconName from "typings/server/icons";
+import { TextColor } from "components/models/common";
 
 export interface IconProps extends HTMLAttributes<HTMLDivElement> {
     icon: IconName;
     addon?: IconName;
-    color?: string;
+    color?: TextColor;
     margin?: string;
     className?: string;
 }

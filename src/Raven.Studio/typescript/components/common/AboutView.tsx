@@ -14,6 +14,7 @@ import classNames from "classnames";
 import useId from "components/hooks/useId";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
+import { TextColor } from "components/models/common";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
@@ -70,7 +71,7 @@ const AboutViewFloating = (props: AboutViewProps) => {
 interface AccordionItemWrapperProps {
     targetId: string;
     icon: IconName;
-    color: string;
+    color: TextColor;
     heading: string;
     description: string;
     children: ReactNode;

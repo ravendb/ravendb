@@ -1,11 +1,12 @@
 ﻿import React, { ReactNode } from "react";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
+import { TextColor } from "components/models/common";
 
 interface EmptySetProps {
     children?: ReactNode | ReactNode[];
     icon?: IconName;
-    color?: string | "muted";
+    color?: TextColor;
 }
 
 export function EmptySet(props: EmptySetProps) {

@@ -11,6 +11,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import "./DatabaseGroup.scss";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
+import { TextColor } from "components/models/common";
 
 interface DatabaseGroupProps extends HTMLAttributes<HTMLDivElement> {
     children?: ReactNode | ReactNode[];
@@ -40,7 +41,7 @@ export function DatabaseGroupItem(props: DatabaseGroupItemProps) {
 interface DatabaseGroupNodeProps extends HTMLAttributes<HTMLDivElement> {
     children?: ReactNode | ReactNode[];
     icon?: IconName;
-    color?: string;
+    color?: TextColor;
 }
 
 export function DatabaseGroupNode(props: DatabaseGroupNodeProps) {
