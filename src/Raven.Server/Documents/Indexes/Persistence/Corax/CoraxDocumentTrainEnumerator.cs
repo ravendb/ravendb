@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Corax;
@@ -11,6 +11,8 @@ using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
+using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -143,7 +145,8 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private readonly List<(int FieldId, string FieldName, ByteString Value)> _terms;
     private readonly Builder _builder;
     private readonly CancellationToken _token;
-    
+    private readonly Size _maxAllocatedMemory;
+
     public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, QueryOperationContext queryContext, HashSet<string> collections, CancellationToken token, int take = int.MaxValue)
     {
         _indexContext = indexContext;
@@ -152,6 +155,12 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         _converter = converter;
         _take = take;
         _token = token;
+
+        // RavenDB-21043: Tracking the total memory allocated by the thread is also a way to limit the total resources allocated
+        // to the training process. We are currently limiting the default to 2Gb and we haven't seen any deterioration in the 
+        // compression using that limit. However, given there is no limitation in 64bits mode, we could increase it if we find
+        // cases which are not covered.
+        _maxAllocatedMemory = _index.Configuration.MaxAllocationsAtDictionaryTraining;
 
         _documentStorage = storage;
         _queryContext = queryContext;
@@ -167,13 +176,20 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         
         var wordsBuffer = new byte[1024];
         var tokenBuffer = new Token[1024];
-        
+
+        // RavenDB-21043: Track the total allocations that we will allow each collection to use. The idea is that multi-collection indexes
+        // use this number to also ensure that all collections have the opportunity to give samples to the training process.
+        var maxAllocatedMemoryPerCollection = _maxAllocatedMemory / _collections.Count;
+
         foreach (var collection in _collections)
         {
+            // We retrieve the baseline memory in order to calculate the difference.
+            var atStartAllocated = new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes);
+
             using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_queryContext, collection, _take, _token), collection, _indexContext, scope, _indexType);
             while (true)
             {
-                if (itemEnumerator.MoveNext(_queryContext.Documents, out var mapResults, out var _) == false)
+                if (itemEnumerator.MoveNext(_queryContext.Documents, out var mapResults, out _) == false)
                     break;
 
                 var doc = (Document)itemEnumerator.Current.Item;
@@ -231,6 +247,11 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                         }
                     }
                 }
+
+                // Check if we have already hit the threshold allocations.
+                var totalAllocated = new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes) - atStartAllocated;
+                if (totalAllocated > maxAllocatedMemoryPerCollection)
+                    break;
             }
         }
     }
