@@ -54,8 +54,8 @@ namespace SlowTests.Issues
                     Server.ServerStore.ForTestingPurposesOnly().RestoreDatabaseAfterSavingDatabaseRecord += () => mre.Set();
                     
                     var op  = await store.Maintenance.Server.SendAsync(restoreOperation);
-                    mre.Wait();
-                    
+                    var res = mre.Wait(TimeSpan.FromSeconds(30));
+                    Assert.True(res);
                     var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true)));
                     Assert.Contains($"Can't delete database '{databaseName}' while the restore process is in progress.", e.Message);
                     await op.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
