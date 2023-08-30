@@ -116,6 +116,10 @@ class licenseModel {
         return status.Id;
     });
 
+    static licenseType = ko.pureComputed(() => {
+        return licenseModel.licenseStatus()?.Type ?? null;
+    });
+
     static developerLicense = ko.pureComputed(() => {
         const licenseStatus = licenseModel.licenseStatus();
         
