@@ -11,9 +11,9 @@ namespace Raven.Server.Documents.Indexes.Auto
     internal abstract class AutoIndexDefinitionBaseServerSide : IndexDefinitionBaseServerSide<AutoIndexField>
     {
         protected AutoIndexDefinitionBaseServerSide(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode,
-            IndexDefinitionClusterState clusterState, ArchivedDataProcessingBehavior? archivedDataProcessingBehavior, long? indexVersion = null)
+            IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(indexName, new[] {collection}, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion,
-                deploymentMode, clusterState, archivedDataProcessingBehavior)
+                deploymentMode, clusterState, archivedDataProcessingBehavior: null)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));

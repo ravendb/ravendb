@@ -117,7 +117,7 @@ public partial class ShardedDatabaseContext
         {
             foreach ((string indexName, AutoIndexDefinition definition) in indexDefinitions)
             {
-                var indexDefinition = IndexStore.CreateAutoDefinition(definition, _context.Configuration.Indexing.AutoIndexDeploymentMode, _context.Configuration.Indexing.AutoIndexArchivedDataProcessingBehavior);
+                var indexDefinition = IndexStore.CreateAutoDefinition(definition, _context.Configuration.Indexing.AutoIndexDeploymentMode);
 
                 IndexInformationHolder indexInformationHolder = null;
 

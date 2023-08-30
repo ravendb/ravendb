@@ -491,8 +491,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         else
                         {
-                            var definition = IndexStore.CreateAutoDefinition(autoDef, documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode,
-                                documentDatabase.Configuration.Indexing.AutoIndexArchivedDataProcessingBehavior);
+                            var definition = IndexStore.CreateAutoDefinition(autoDef, documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode);
 
                             if (definition is AutoMapIndexDefinition autoMapDef)
                                 return AutoMapIndex.CreateNew(autoMapDef, documentDatabase);

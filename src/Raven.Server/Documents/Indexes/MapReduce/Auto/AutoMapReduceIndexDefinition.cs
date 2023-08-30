@@ -23,8 +23,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public List<string> GroupByFieldNames { get; }
 
-        public AutoMapReduceIndexDefinition(string indexName, string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, List<string> groupByFieldNames, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, ArchivedDataProcessingBehavior? archivedDataProcessingBehavior, long? indexVersion = null)
-            : base(indexName, collection, mapFields, deploymentMode, clusterState, archivedDataProcessingBehavior, indexVersion)
+        public AutoMapReduceIndexDefinition(string indexName, string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, List<string> groupByFieldNames, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
+            : base(indexName, collection, mapFields, deploymentMode, clusterState, indexVersion)
         {
             OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
 
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         // For Legacy test
         public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, long? indexVersion = null)
-            : this(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, groupByFields, groupByFieldNames: groupByFields.Select(x => x.Name).ToList(), deploymentMode: null, clusterState: null, archivedDataProcessingBehavior: null, indexVersion)
+            : this(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, groupByFields, groupByFieldNames: groupByFields.Select(x => x.Name).ToList(), deploymentMode: null, clusterState: null, indexVersion)
         {
 
         }
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 }
             }
 
-            return new AutoMapReduceIndexDefinition(indexName, collection, mapFields, groupByFields, groupByFieldNames, deploymentMode: null, clusterState: null, archivedDataProcessingBehavior: null, version)
+            return new AutoMapReduceIndexDefinition(indexName, collection, mapFields, groupByFields, groupByFieldNames, deploymentMode: null, clusterState: null, version)
             {
                 LockMode = lockMode,
                 Priority = priority,
