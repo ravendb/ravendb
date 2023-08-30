@@ -1,4 +1,6 @@
-﻿using Raven.Client.ServerWide;
+﻿using System;
+using System.Diagnostics;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -39,13 +41,13 @@ namespace Raven.Server.ServerWide.Commands
                     case UpdatedValueActionType.Noop:
                         return;
                     case UpdatedValueActionType.Delete:
-                    items.DeleteByKey(valueNameLowered);
-                    return;
+                        items.DeleteByKey(valueNameLowered);
+                        return;
                     default:
-                // here we get the item key again, in case it was changed (a new entity, etc)
-                itemKey = GetItemId();
+                        // here we get the item key again, in case it was changed (a new entity, etc)
+                        itemKey = GetItemId();
                         break;
-            }
+                }
             }
 
             Debug.Assert(updatedValue.ActionType == UpdatedValueActionType.Update && updatedValue.Value != null);
@@ -56,8 +58,6 @@ namespace Raven.Server.ServerWide.Commands
             {
                 ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, updatedValue.Value);
             }
-
-            return result;
         }
 
         public virtual object GetState()
@@ -112,7 +112,7 @@ namespace Raven.Server.ServerWide.Commands
             Noop,
             Update,
             Delete
-    }
+        }
 
         protected readonly struct UpdatedValue : IDisposable
         {
@@ -124,7 +124,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 ActionType = actionType;
                 Value = value;
-}
+            }
 
             public void Dispose()
             {

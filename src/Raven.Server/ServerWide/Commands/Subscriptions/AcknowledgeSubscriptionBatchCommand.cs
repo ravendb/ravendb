@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         // in regular subscription LastKnownSubscriptionChangeVector used only for backward compatibility
         // in sharing subscription LastKnownSubscriptionChangeVector used to save orchestrator cv
-        public string LastKnownSubscriptionChangeVector; 
+        public string LastKnownSubscriptionChangeVector;
         public long SubscriptionId;
         public string SubscriptionName;
         public string NodeTag;
@@ -32,7 +32,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public long? BatchId;
         public List<DocumentRecord> DocumentsToResend; // documents that were updated while this batch was processing 
-        
+
         public string ShardName;
 
         // for serialization
@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
-        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
             var subscriptionName = SubscriptionName;
             if (string.IsNullOrEmpty(subscriptionName))
@@ -55,9 +55,49 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
-            var currentState = JsonDeserializationCluster.SubscriptionState(existingValue);
+            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+            AssertSubscriptionState(record, subscription, subscriptionName);
 
-            var appropriateNode = AbstractSubscriptionStorage.GetSubscriptionResponsibleNodeForProgress(record, ShardName, currentState, HasHighlyAvailableTasks);
+            if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
+            {
+                return new UpdatedValue(UpdatedValueActionType.Noop, value: null);
+            }
+
+            if (IsLegacyCommand())
+            {
+                if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+
+                subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
+            }
+
+            if (string.IsNullOrEmpty(ShardName))
+            {
+                subscription.NodeTag = NodeTag;
+            }
+            else
+            {
+                var changeVector = context.GetChangeVector(ChangeVector);
+                subscription.ShardingState.NodeTagPerShard[ShardName] = NodeTag;
+                subscription.ChangeVectorForNextBatchStartingPoint =
+                    ChangeVectorUtils.MergeVectors(changeVector.Order.StripMoveTag(context), subscription.ChangeVectorForNextBatchStartingPoint);
+
+                if (string.IsNullOrEmpty(LastKnownSubscriptionChangeVector) == false)
+                {
+                    var orchestratorCv = context.GetChangeVector(LastKnownSubscriptionChangeVector);
+                    subscription.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator =
+                        ChangeVectorUtils.MergeVectors(orchestratorCv.Order.StripMoveTag(context), subscription.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator);
+                }
+            }
+
+            subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
+
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(subscription.ToJson(), subscriptionName));
+        }
+
+        private void AssertSubscriptionState(RawDatabaseRecord record, SubscriptionState subscription, string subscriptionName)
+        {
+            var appropriateNode = AbstractSubscriptionStorage.GetSubscriptionResponsibleNodeForProgress(record, ShardName, subscription, HasHighlyAvailableTasks);
             var deletionKey = DatabaseRecord.GetKeyForDeletionInProgress(NodeTag, ShardName);
 
             if (appropriateNode == null && record.DeletionInProgress.ContainsKey(deletionKey))
@@ -65,45 +105,11 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             if (appropriateNode != NodeTag)
             {
-                var subscriptionTask = new SubscriptionTask(existingValue);
-                AssertSubscriptionState(record, subscriptionTask, subscriptionName);
-
-                return new UpdatedValue(UpdatedValueActionType.Noop, value: null);
+                throw new SubscriptionDoesNotBelongToNodeException(
+                    $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
+                    $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.")
+                { AppropriateNode = appropriateNode };
             }
-
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
-            AssertSubscriptionState(record, subscription, subscriptionName);
-
-            if (IsLegacyCommand())
-            {
-                if (LastKnownSubscriptionChangeVector != currentState.ChangeVectorForNextBatchStartingPoint)
-                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {currentState.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
-
-                currentState.ChangeVectorForNextBatchStartingPoint = ChangeVector;
-            }
-
-            if (string.IsNullOrEmpty(ShardName))
-            {
-                currentState.NodeTag = NodeTag;
-            }
-            else
-            {
-                var changeVector = context.GetChangeVector(ChangeVector);
-                currentState.ShardingState.NodeTagPerShard[ShardName] = NodeTag;
-                currentState.ChangeVectorForNextBatchStartingPoint =
-                    ChangeVectorUtils.MergeVectors(changeVector.Order.StripMoveTag(context), currentState.ChangeVectorForNextBatchStartingPoint);
-
-                if (string.IsNullOrEmpty(LastKnownSubscriptionChangeVector) == false)
-                {
-                    var orchestratorCv = context.GetChangeVector(LastKnownSubscriptionChangeVector);
-                    currentState.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator =
-                        ChangeVectorUtils.MergeVectors(orchestratorCv.Order.StripMoveTag(context), currentState.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator);
-                }
-            }
-
-            currentState.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
-            
-            return context.ReadObject(currentState.ToJson(), subscriptionName);
         }
 
         private bool IsLegacyCommand()
@@ -119,7 +125,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (IsLegacyCommand())
                 return;
 
-            ExecuteAcknowledgeSubscriptionBatch(context,items, index);
+            ExecuteAcknowledgeSubscriptionBatch(context, items, index);
         }
 
         private unsafe void ExecuteAcknowledgeSubscriptionBatch(ClusterOperationContext context, Table items, long index)
@@ -193,63 +199,18 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             var msg = $"Got 'Ack' for id={SubscriptionId}, name={SubscriptionName}, CV={ChangeVector}, Tag={NodeTag}, lastProgressTime={LastTimeServerMadeProgressWithDocuments}" +
                 $"lastKnownCV={LastKnownSubscriptionChangeVector}, HasHighlyAvailableTasks={HasHighlyAvailableTasks}.";
-            
+
             if (ShardName != null)
             {
                 msg += $" for shard {ShardName}.";
             }
-            
+
             if (exception != null)
             {
                 msg += $" Exception = {exception}.";
             }
 
             return msg;
-        }
-
-        private class SubscriptionTask : IDatabaseTask
-        {
-            private readonly BlittableJsonReaderObject _rawSubscription;
-
-            public SubscriptionTask(BlittableJsonReaderObject rawSubscription)
-            {
-                _rawSubscription = rawSubscription;
-    }
-
-            public ulong GetTaskKey()
-            {
-                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId);
-                return (ulong)subscriptionId;
-}
-
-            public string GetMentorNode()
-            {
-                _rawSubscription.TryGet(nameof(SubscriptionState.MentorNode), out string mentorNode);
-                return mentorNode;
-            }
-
-            public string GetDefaultTaskName()
-            {
-                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionName), out string subscriptionName);
-                return subscriptionName;
-            }
-
-            public string GetTaskName()
-            {
-                _rawSubscription.TryGet(nameof(SubscriptionState.SubscriptionName), out string subscriptionName);
-                return subscriptionName;
-            }
-
-            public bool IsResourceIntensive()
-            {
-                return false;
-            }
-
-            public bool IsPinnedToMentorNode()
-            {
-                _rawSubscription.TryGet(nameof(SubscriptionState.PinToMentorNode), out bool pinToMentorNode);
-                return pinToMentorNode;
-            }
         }
     }
 }

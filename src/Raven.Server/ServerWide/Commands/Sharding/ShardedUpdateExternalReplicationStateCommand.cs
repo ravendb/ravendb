@@ -25,10 +25,10 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             return ShardedExternalReplicationState.GenerateShardedItemName(DatabaseName, ReplicationState.SourceDatabaseName, ReplicationState.SourceShardedDatabaseId);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
             if (existingValue == null)
-                return context.ReadObject(ReplicationState.ToJson(), GetItemId());
+                return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(ReplicationState.ToJson(), GetItemId()));
 
             var existingState = JsonDeserializationCluster.ShardedExternalReplicationState(existingValue);
             var existingStates = existingState.ReplicationStates;
@@ -57,7 +57,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-            return context.ReadObject(existingState.ToJson(), GetItemId());
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(existingState.ToJson(), GetItemId()));
         }
 
         public override void FillJson(DynamicJsonValue json)

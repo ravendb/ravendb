@@ -483,7 +483,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateUnusedDatabaseIdsCommand):
                     case nameof(EditLockModeCommand):
                     case nameof(EditPostgreSqlConfigurationCommand):
-                    case nameof(PutIndexHistoryCommand):    
+                    case nameof(PutIndexHistoryCommand):
                     case nameof(DeleteIndexHistoryCommand):
                     case nameof(StartBucketMigrationCommand):
                     case nameof(SourceMigrationSendCompletedCommand):
@@ -505,11 +505,11 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateSubscriptionClientConnectionTime):
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
                     case nameof(RemoveEtlProcessStateCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
                         if (result != null)
                             leader?.SetStateOf(index, result);
                         break;
-                        
+
                     case nameof(DelayBackupCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, out _);
                         break;
@@ -606,7 +606,7 @@ namespace Raven.Server.ServerWide
                         var parameters = UpdateValue<ToggleServerWideTaskStateCommand.Parameters>(context, type, cmd, index, skipNotifyValueChanged: true);
                         ToggleServerWideTaskState(cmd, parameters, context, type, index);
                         break;
-                        
+
                     case nameof(PutCertificateWithSamePinningHashCommand):
                         PutCertificate(context, type, cmd, index, serverStore);
                         if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.Name), out string thumbprint))
@@ -828,7 +828,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 using (databaseRecordJson)
-                UpdateValue(index, items, keyLowered, key, databaseRecordJson);
+                    UpdateValue(index, items, keyLowered, key, databaseRecordJson);
             }
         }
 
@@ -1281,7 +1281,7 @@ namespace Raven.Server.ServerWide
                                 continue;
                             }
                         }
-                        
+
                         if (record.IsSharded == false)
                         {
                             if (record.Topology.RelevantFor(removed))
@@ -1311,7 +1311,7 @@ namespace Raven.Server.ServerWide
                                 continue;
                             }
 
-                            
+
                             void RemoveFromTopology(DatabaseTopology topology)
                             {
                                 if (topology.RelevantFor(removed))
@@ -1378,7 +1378,7 @@ namespace Raven.Server.ServerWide
                     NotifyAndSetCompleted(index);
                     return;
                 }
-                
+
 
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
                 {
@@ -1531,7 +1531,7 @@ namespace Raven.Server.ServerWide
                     var rawRecord = ReadRawDatabaseRecord(context, shardedDatabaseName, out _);
                     if (rawRecord == null)
                         throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
-                    
+
                     DatabaseRecord databaseRecord;
 
                     if (isShard) //shard database
@@ -1572,7 +1572,7 @@ namespace Raven.Server.ServerWide
 
                         databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
                         remove.UpdateDatabaseRecord(databaseRecord, index);
-                        
+
                         if (databaseRecord.IsSharded)
                         {
                             throw new RachisApplyException($"Attempting to remove node {remove.NodeTag} from database {databaseName} but it is sharded.");
@@ -3293,7 +3293,7 @@ namespace Raven.Server.ServerWide
                 if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.Take), out long take) == false)
                     throw new RachisApplyException("Clear Compare Exchange command must contain a Take property");
 
-                var databaseNameLowered = (databaseName + "/"). ToLowerInvariant();
+                var databaseNameLowered = (databaseName + "/").ToLowerInvariant();
                 result = DeleteCompareExchangeTombstonesUpToPrefix(context, databaseNameLowered, maxEtag, take);
             }
             finally
@@ -3608,7 +3608,7 @@ namespace Raven.Server.ServerWide
             {
                 if (databaseRecord.IsSharded)
                     throw new InvalidOperationException($"The database record '{name}' is sharded and doesn't contain topology directly.");
-                
+
                 var topology = databaseRecord.Topology;
                 if (topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
@@ -4174,9 +4174,9 @@ namespace Raven.Server.ServerWide
                             continue;
                         }
 
-                        oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord) {[nameof(DatabaseRecord.PeriodicBackups)] = newBackups};
+                        oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord) { [nameof(DatabaseRecord.PeriodicBackups)] = newBackups };
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
-                        
+
                         toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName, perDbState: periodicBackupTaskId));
                     }
                 }
@@ -4206,7 +4206,7 @@ namespace Raven.Server.ServerWide
             return configuration.BackupType == BackupType.Snapshot &&
                    databaseRecord.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject shadingConfig) &&
                    shadingConfig != null &&
-                   shadingConfig.TryGet(nameof(Client.ServerWide.Sharding.ShardingConfiguration.Shards), out BlittableJsonReaderObject shards) 
+                   shadingConfig.TryGet(nameof(Client.ServerWide.Sharding.ShardingConfiguration.Shards), out BlittableJsonReaderObject shards)
                    && shards?.Count > 0 &&
                    configuration.IsExcluded(databaseName) == false;
         }
@@ -4396,7 +4396,7 @@ namespace Raven.Server.ServerWide
             // we don't mind indexForValueChanges for ServerWideExternalReplication
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
-        
+
         private static unsafe HashSet<string> GetAllSeverWideExternalReplicationNames(ClusterOperationContext context)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -4421,7 +4421,7 @@ namespace Raven.Server.ServerWide
         {
             if (deleteConfiguration == null)
                 throw new RachisInvalidOperationException($"No configuration was supplied to {type}: raftIndex {index}");
-            
+
             if (string.IsNullOrWhiteSpace(deleteConfiguration.TaskName))
                 throw new RachisInvalidOperationException($"Task name to delete cannot be null or white space for command type {type} : raftIndex {index}");
 
@@ -4578,7 +4578,7 @@ namespace Raven.Server.ServerWide
 
             ExecuteManyOnDispose(context, index, type, tasks);
         }
-        
+
         public const string SnapshotInstalled = "SnapshotInstalled";
 
         public override Task OnSnapshotInstalledAsync(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
@@ -4796,10 +4796,10 @@ namespace Raven.Server.ServerWide
                     continue;
 
                 access = JsonDeserializationCluster.DetailedReplicationHubAccess(obj);
-                return true;                                                       
-            }                                                                                                     
-                                                                                                                                                                                                                                                                                                                                                                                                                               
-            return false;                 
+                return true;
+            }
+
+            return false;
         }
 
         public ClusterStateMachine()
