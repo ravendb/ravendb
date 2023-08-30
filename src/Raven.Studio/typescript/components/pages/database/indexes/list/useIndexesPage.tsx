@@ -31,10 +31,10 @@ import collection from "models/database/documents/collection";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { useAsync } from "react-async-hook";
-import { InputItem } from "components/models/common";
+import { InputItem, InputItemLimit } from "components/models/common";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
-import React from "react";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -569,33 +569,52 @@ export function useIndexesPage(database: database, stale: boolean) {
     };
 
     const filterByTypeOptions: InputItem<IndexType>[] = useMemo(() => {
-        let StaticIndex = 0,
-            AutoIndex = 0;
+        let staticIndexCount = 0,
+            autoIndexCount = 0;
 
         for (const index of stats.indexes) {
             if (IndexUtils.isAutoIndex(index)) {
-                AutoIndex++;
+                autoIndexCount++;
             } else {
-                StaticIndex++;
+                staticIndexCount++;
             }
         }
+
+        const staticIndexReachStatus = getLicenseLimitReachStatus(staticIndexCount, staticIndexLimit);
+        const autoIndexReachStatus = getLicenseLimitReachStatus(autoIndexCount, autoIndexLimit);
+
+        const staticIndexInputLimit: InputItemLimit =
+            staticIndexReachStatus !== "notReached"
+                ? {
+                      value: staticIndexLimit,
+                      badgeColor: staticIndexReachStatus === "closeToLimit" ? "warning" : "danger",
+                      message: `Your license allows ${staticIndexLimit} Static Indexes`,
+                  }
+                : null;
+
+        const autoIndexInputLimit: InputItemLimit =
+            autoIndexReachStatus !== "notReached"
+                ? {
+                      value: autoIndexLimit,
+                      badgeColor: autoIndexReachStatus === "closeToLimit" ? "warning" : "danger",
+                      message: `Your license allows ${autoIndexLimit} Auto Indexes`,
+                  }
+                : null;
 
         return [
             {
                 value: "StaticIndex",
                 label: "Static",
-                count: StaticIndex,
-                limit: staticIndexLimit,
-                limitMessage: <div className="p-2">Your license allows {staticIndexLimit} Static Indexes</div>,
+                count: staticIndexCount,
+                limit: staticIndexInputLimit,
             },
             {
                 value: "AutoIndex",
                 label: "Auto",
-                count: AutoIndex,
-                limit: autoIndexLimit,
-                limitMessage: <div className="p-2">Your license allows {autoIndexLimit} Static Indexes</div>,
+                count: autoIndexCount,
+                limit: autoIndexInputLimit,
             },
-        ];
+        ] satisfies InputItem<IndexType>[];
     }, [stats.indexes]);
 
     const filterByStatusOptions: InputItem<IndexStatus>[] = useMemo(() => {
@@ -784,6 +803,17 @@ function matchesAnyIndexStatus(
     );
 }
 
+function matchesIndexType(index: IndexSharedInfo, types: IndexType[]) {
+    if (types.length === 0) {
+        return true;
+    }
+
+    return (
+        (types.includes("AutoIndex") && IndexUtils.isAutoIndex(index)) ||
+        (types.includes("StaticIndex") && !IndexUtils.isAutoIndex(index))
+    );
+}
+
 function indexMatchesFilter(
     index: IndexSharedInfo,
     filter: IndexFilterCriteria,
@@ -795,5 +825,7 @@ function indexMatchesFilter(
         !filter.showOnlyIndexesWithIndexingErrors ||
         (filter.showOnlyIndexesWithIndexingErrors && index.nodesInfo.some((x) => x.details?.errorCount > 0));
 
-    return nameMatch && statusMatch && indexingErrorsMatch;
+    const typeMatch = matchesIndexType(index, filter.types);
+
+    return nameMatch && statusMatch && indexingErrorsMatch && typeMatch;
 }

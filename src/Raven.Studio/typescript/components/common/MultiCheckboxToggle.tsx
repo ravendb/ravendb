@@ -2,11 +2,10 @@
 import useId from "hooks/useId";
 import classNames from "classnames";
 import useBoolean from "components/hooks/useBoolean";
-import { InputItem } from "components/models/common";
+import { InputItem, InputItemLimit } from "components/models/common";
 import "./Toggles.scss";
 import { Icon } from "./Icon";
-import { Button, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
-import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { Button, UncontrolledPopover } from "reactstrap";
 
 interface MultiCheckboxToggleProps<T extends string | number = string> {
     inputItems: InputItem<T>[];
@@ -99,59 +98,42 @@ export function MultiCheckboxToggle<T extends string | number = string>({
                                 onChange={(x) => toggleItem(x.currentTarget.checked, inputItem.value)}
                             />
                             <label htmlFor={uniqueId + inputItem.value}>
-                                <span>
-                                    {inputItem.label}
-                                    {inputItem.count >= 0 && (
-                                        <>
-                                            {getLicenseLimitReachStatus(inputItem.count, inputItem.limit) !==
-                                            "notReached" ? (
-                                                <>
-                                                    <span
-                                                        className={classNames(
-                                                            "multi-toggle-item-count",
-                                                            "text-dark",
-                                                            {
-                                                                "bg-warning":
-                                                                    getLicenseLimitReachStatus(
-                                                                        inputItem.count,
-                                                                        inputItem.limit
-                                                                    ) === "closeToLimit",
-                                                            },
-                                                            {
-                                                                "bg-danger":
-                                                                    getLicenseLimitReachStatus(
-                                                                        inputItem.count,
-                                                                        inputItem.limit
-                                                                    ) === "limitReached",
-                                                            }
-                                                        )}
-                                                    >
-                                                        {inputItem.count} / {inputItem.limit}
-                                                    </span>
-                                                    <UncontrolledPopover
-                                                        target={uniqueId + inputItem.value}
-                                                        trigger="hover"
-                                                        placement="top"
-                                                        className="bs5"
-                                                    >
-                                                        {inputItem.limitMessage ? (
-                                                            inputItem.limitMessage
-                                                        ) : (
-                                                            <div className="p-2">Limited by your license</div>
-                                                        )}
-                                                    </UncontrolledPopover>
-                                                </>
-                                            ) : (
-                                                <span className="multi-toggle-item-count">{inputItem.count}</span>
-                                            )}
-                                        </>
-                                    )}
-                                </span>
+                                <span>{inputItem.label}</span>
+                                {inputItem.count !== null && inputItem.limit ? (
+                                    <LimitBadge
+                                        target={uniqueId + inputItem.value}
+                                        count={inputItem.count}
+                                        limit={inputItem.limit}
+                                    />
+                                ) : (
+                                    <span className="multi-toggle-item-count">{inputItem.count}</span>
+                                )}
                             </label>
                         </div>
                     </div>
                 ))}
             </div>
         </div>
+    );
+}
+
+interface LimitBadgeProps {
+    target: string;
+    count: number;
+    limit: InputItemLimit;
+}
+
+function LimitBadge({ target, count, limit }: LimitBadgeProps) {
+    return (
+        <>
+            <span className={`multi-toggle-item-count text-dark bg-${limit.badgeColor ?? "warning"}`}>
+                {count} / {limit.value}
+            </span>
+            {limit.message && (
+                <UncontrolledPopover target={target} trigger="hover" placement="top" className="bs5">
+                    <div className="p-2">{limit.message}</div>
+                </UncontrolledPopover>
+            )}
+        </>
     );
 }
