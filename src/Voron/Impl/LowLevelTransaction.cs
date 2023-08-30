@@ -1062,9 +1062,12 @@ namespace Voron.Impl
                 return;
             
             // The reason why we reset the key, which in turn will null the storage is to avoid cases of reused keys
-            // been used by multiple operations. Eventually someone wil restore 
-            key.Reset();
-            _sharedCompactKeyPool.Free(key);
+            // been used by multiple operations. Eventually someone wil restore
+            if (ReferenceEquals(key, CompactKey.NullInstance) == false)
+            {
+                key.Reset();
+                _sharedCompactKeyPool.Free(key);
+            }
             key = null;
         }
 

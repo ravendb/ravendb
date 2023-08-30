@@ -18,6 +18,8 @@ namespace Voron.Data.CompactTrees;
 // when the same key is reused on multiple operations in the same transaction.
 public sealed unsafe class CompactKey : IDisposable
 {
+    public static readonly CompactKey NullInstance = new();
+    
     private static readonly ArrayPool<byte> StoragePool = ArrayPool<byte>.Shared;
     private static readonly ArrayPool<long> KeyMappingPool = ArrayPool<long>.Shared;
 
