@@ -1,5 +1,5 @@
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import AccordionCommunityLicenseNotIncluded from "components/common/AccordionCommunityLicenseNotIncluded";
+import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
@@ -21,10 +21,11 @@ export function EditSubscriptionTaskInfoHub() {
                 </p>
             </AccordionItemWrapper>
             {licenseType === "Community" && (
-                <AccordionCommunityLicenseNotIncluded
+                <AccordionCommunityLicenseLimited
+                    description="Your Community license does not include Subscriptions Revisions. Upgrade to a paid plan and get unlimited availability."
                     targetId="licensing"
-                    featureName="Index Cleanup"
-                    featureIcon="index-cleanup"
+                    featureName="Subscriptions"
+                    featureIcon="subscription"
                 />
             )}
         </AboutViewFloating>
