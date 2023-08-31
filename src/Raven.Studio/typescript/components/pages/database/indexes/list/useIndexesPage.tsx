@@ -327,10 +327,9 @@ export function useIndexesPage(database: database, stale: boolean) {
                     const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
                     for (const location of locations) {
-                        const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details
-                            ?.status;
+                        const details = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details;
 
-                        if (indexStatus === "Paused") {
+                        if (details?.status === "Paused" && details?.state !== "Error") {
                             startRequests.push(
                                 indexesService.resume(index, database, location).then(() => {
                                     dispatch({
