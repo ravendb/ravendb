@@ -1,19 +1,19 @@
 ﻿import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import CustomAnalyzers from "./CustomAnalyzers";
+import ServerWideSorters from "./CustomServerWideSorters";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
-    title: "Pages/Database/Settings",
-    component: CustomAnalyzers,
+    title: "Pages/ManageServer",
+    component: ServerWideSorters,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof CustomAnalyzers>;
+} satisfies Meta<typeof ServerWideSorters>;
 
-export const DefaultCustomAnalyzers: StoryObj<typeof CustomAnalyzers> = {
-    name: "Custom Analyzers",
+export const DefaultServerWideSorters: StoryObj<typeof ServerWideSorters> = {
+    name: "Server-Wide Sorters",
     render: () => {
-        return <CustomAnalyzers db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <ServerWideSorters db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
 };
