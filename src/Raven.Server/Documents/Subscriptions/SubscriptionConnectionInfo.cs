@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions.Stats;
+using Raven.Server.Documents.TcpHandlers;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Subscriptions;
@@ -20,6 +23,24 @@ public class SubscriptionConnectionInfo : IDynamicJson
 
     public SubscriptionConnectionStatsAggregator LastConnectionStats { get; set; }
     public List<SubscriptionBatchStatsAggregator> LastBatchesStats { get; set; }
+
+    public SubscriptionConnectionInfo()
+    {
+    }
+
+    public SubscriptionConnectionInfo(SubscriptionConnection connection)
+    {
+        ClientUri = connection.ClientUri;
+        Query = connection.SubscriptionConnectionsState.Query;
+        LatestChangeVector = connection.SubscriptionConnectionsState.LastChangeVectorSent;
+        ConnectionException = connection.ConnectionException;
+        RecentSubscriptionStatuses = connection.RecentSubscriptionStatuses.ToList();
+        Date = SystemTime.UtcNow;
+        Strategy = connection.Strategy;
+        TcpConnectionStats = connection.TcpConnection.GetConnectionStats();
+        LastConnectionStats = connection.GetPerformanceStats();
+        LastBatchesStats = connection.GetBatchesPerformanceStats();
+    }
 
     public DynamicJsonValue ToJson()
     {
