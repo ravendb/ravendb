@@ -1,7 +1,9 @@
 ﻿using System;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Config;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -25,6 +27,18 @@ public sealed class SubscriptionsClusterStorage
             throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
 
         var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
+        
+        if (subscriptionState.ArchivedDataProcessingBehavior.HasValue)
+            return subscriptionState;
+        
+        // persisted state from v5.x
+        if(Enum.TryParse(_cluster.ReadDatabase(context, databaseName).Settings[RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior)], false,
+               out ArchivedDataProcessingBehavior archivedDataProcessingBehavior) == false)
+        {
+            throw new InvalidOperationException(
+                $"Failed to fetch {nameof(RavenConfiguration.Subscriptions.ArchivedDataProcessingBehavior)} from subscriptions configuration in database settings.");
+        }
+        subscriptionState.ArchivedDataProcessingBehavior = archivedDataProcessingBehavior;
         return subscriptionState;
     }
 
