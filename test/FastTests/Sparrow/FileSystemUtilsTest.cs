@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Sparrow.Platform.Posix;
 using Sparrow.Server.Platform.Posix;
 using Xunit;
 using Xunit.Abstractions;

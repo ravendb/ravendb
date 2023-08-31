@@ -12,7 +12,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Logging;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 
 namespace Sparrow.Server.LowMemory

@@ -6,6 +6,7 @@ using Raven.Server.Exceptions;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
+using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 using Voron.Platform.Win32;

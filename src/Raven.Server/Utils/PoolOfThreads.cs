@@ -7,6 +7,7 @@ using System.Threading;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.LowMemory;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;

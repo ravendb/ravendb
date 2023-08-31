@@ -6,6 +6,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Server.LowMemory;
 using Sparrow.Utils;
 using Voron;
 

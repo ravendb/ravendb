@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Sparrow.Platform.Posix.macOS
+namespace Sparrow.Server.Platform.Posix.macOS
 {
     internal static unsafe class macSyscall
     {

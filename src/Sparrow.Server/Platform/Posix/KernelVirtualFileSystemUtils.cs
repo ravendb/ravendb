@@ -7,7 +7,7 @@ using System.Linq;
 using Sparrow.Collections;
 using Sparrow.Logging;
 
-namespace Sparrow.Platform.Posix
+namespace Sparrow.Server.Platform.Posix
 {
     internal static class KernelVirtualFileSystemUtils
     {

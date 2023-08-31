@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 
 namespace Sparrow.Server.LowMemory
 {

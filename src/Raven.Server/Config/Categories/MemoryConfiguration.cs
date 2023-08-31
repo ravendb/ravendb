@@ -4,6 +4,7 @@ using Raven.Server.Config.Settings;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.LowMemory;
 
 namespace Raven.Server.Config.Categories
 {

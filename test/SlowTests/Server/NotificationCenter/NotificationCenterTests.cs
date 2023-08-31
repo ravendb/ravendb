@@ -23,6 +23,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Server.Collections;
+using Sparrow.Server.LowMemory;
 using Xunit;
 using Xunit.Abstractions;
 

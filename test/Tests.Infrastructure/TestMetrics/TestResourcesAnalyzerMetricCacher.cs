@@ -3,7 +3,8 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.LowMemory;
+using Sparrow.Server.Platform.Posix;
 
 namespace Tests.Infrastructure.TestMetrics
 {

@@ -2,6 +2,7 @@
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.LowMemory;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Memory
