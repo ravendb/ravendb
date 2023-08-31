@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {

@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Apache.Arrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Threading;

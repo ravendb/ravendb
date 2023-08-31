@@ -17,14 +17,12 @@ using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.Utilities.Collections;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.ServerWide

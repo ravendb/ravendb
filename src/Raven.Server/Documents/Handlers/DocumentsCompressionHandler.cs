@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.DocumentsCompression;
 using Raven.Server.Routing;

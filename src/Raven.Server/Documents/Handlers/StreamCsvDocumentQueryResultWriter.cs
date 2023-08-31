@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Json;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers
 {

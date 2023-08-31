@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Corax.Mappings;
 using Corax.Queries.Meta;
 using Corax.Utils;

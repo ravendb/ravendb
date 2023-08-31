@@ -2,7 +2,6 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Raven.Server.Dashboard;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.NotificationCenter;
 using Sparrow.Json;

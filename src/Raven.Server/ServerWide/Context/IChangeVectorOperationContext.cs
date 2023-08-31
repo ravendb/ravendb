@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Raven.Server.Utils;
+﻿using Raven.Server.Utils;
 
 namespace Raven.Server.ServerWide.Context;
 

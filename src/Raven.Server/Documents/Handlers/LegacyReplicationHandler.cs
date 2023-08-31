@@ -13,12 +13,10 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
-using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.Handlers
 {

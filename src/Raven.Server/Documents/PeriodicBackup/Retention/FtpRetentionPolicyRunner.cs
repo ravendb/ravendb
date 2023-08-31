@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {

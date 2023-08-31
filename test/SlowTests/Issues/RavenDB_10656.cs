@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using FastTests.Utils;
 using Orders;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;

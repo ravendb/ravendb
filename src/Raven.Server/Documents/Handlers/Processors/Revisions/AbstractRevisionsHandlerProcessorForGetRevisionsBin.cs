@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions

@@ -16,7 +16,6 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using XunitLogger;
 
 namespace SlowTests.Server.Documents.ETL
 {

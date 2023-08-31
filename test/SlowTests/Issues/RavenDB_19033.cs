@@ -3,10 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Extensions;
-using Raven.Client.Util;
 using Raven.Server.Documents;
-using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
 

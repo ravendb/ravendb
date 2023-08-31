@@ -2,10 +2,8 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Security;
-using Raven.Client;
 using Raven.Client.Util;
 using Tests.Infrastructure;
 using Xunit;

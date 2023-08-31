@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using FastTests.Voron;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;

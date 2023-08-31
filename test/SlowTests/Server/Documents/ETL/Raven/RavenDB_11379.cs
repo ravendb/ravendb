@@ -3,13 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static SlowTests.Issues.RavenDB_13335;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {

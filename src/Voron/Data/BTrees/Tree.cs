@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data.Compression;

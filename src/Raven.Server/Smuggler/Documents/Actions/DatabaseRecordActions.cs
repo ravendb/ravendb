@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;

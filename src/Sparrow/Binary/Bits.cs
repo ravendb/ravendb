@@ -1,6 +1,5 @@
 using System;
 using System.Buffers.Binary;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 

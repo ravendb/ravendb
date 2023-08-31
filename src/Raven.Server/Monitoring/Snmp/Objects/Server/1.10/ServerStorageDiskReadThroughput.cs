@@ -1,7 +1,6 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.ServerWide;
 using Sparrow;
-using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 

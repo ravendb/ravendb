@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using FastTests.Voron;
-using FastTests.Voron.FixedSize;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Xunit;

@@ -5,7 +5,6 @@ using Corax.Mappings;
 using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Sparrow.Server;

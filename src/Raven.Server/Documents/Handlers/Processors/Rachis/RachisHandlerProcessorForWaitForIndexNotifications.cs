@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Commands;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Rachis

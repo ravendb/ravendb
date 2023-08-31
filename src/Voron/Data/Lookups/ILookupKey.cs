@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.Contracts;
-using Voron.Impl;
 
 namespace Voron.Data.Lookups;
 

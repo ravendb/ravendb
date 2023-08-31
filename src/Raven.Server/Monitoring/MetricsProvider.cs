@@ -7,7 +7,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

@@ -1,7 +1,5 @@
 using Lextm.SharpSnmpLib;
-using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.LowMemory;
 using Sparrow.Server.LowMemory;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server

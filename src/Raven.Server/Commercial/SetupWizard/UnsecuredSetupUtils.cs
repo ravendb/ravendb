@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations;
 using Raven.Server.Commercial.LetsEncrypt;
 
 namespace Raven.Server.Commercial.SetupWizard;

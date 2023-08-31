@@ -3,7 +3,6 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using System.Linq;
-using Raven.Server.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

@@ -8,7 +8,6 @@ using Voron.Impl;
 
 namespace Voron.Util
 {
-    using Sparrow;
     using System.Diagnostics;
 
     /// <summary>

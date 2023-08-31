@@ -1,23 +1,13 @@
 using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
-using Amqp.Framing;
 using Corax;
 using Corax.IndexSearcher;
-using Corax.Pipeline;
 using Corax.Utils;
-using Esprima.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
-using Voron;
-using Voron.Data.Containers;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 

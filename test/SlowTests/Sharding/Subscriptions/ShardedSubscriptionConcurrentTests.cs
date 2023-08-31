@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
-using SlowTests.Client.Subscriptions;
 using SlowTests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

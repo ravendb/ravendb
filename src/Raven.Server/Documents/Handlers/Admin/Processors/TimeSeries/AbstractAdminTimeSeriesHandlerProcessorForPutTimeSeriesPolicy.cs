@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.TimeSeries

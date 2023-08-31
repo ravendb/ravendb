@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
 

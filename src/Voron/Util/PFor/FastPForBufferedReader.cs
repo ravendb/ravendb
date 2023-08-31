@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Sparrow.Server;
 
 namespace Voron.Util.PFor;

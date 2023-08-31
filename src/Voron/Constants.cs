@@ -1,7 +1,6 @@
 ﻿using System;
 using Sparrow.Server;
 using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
 

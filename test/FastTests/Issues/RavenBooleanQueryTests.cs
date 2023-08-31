@@ -1,4 +1,3 @@
-using System.Linq;
 using Lucene.Net.Search;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;

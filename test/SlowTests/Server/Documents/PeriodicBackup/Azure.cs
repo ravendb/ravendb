@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Azure;

@@ -9,8 +9,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Counters;
 using Raven.Server.Documents.Queries;

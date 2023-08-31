@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
-using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
 

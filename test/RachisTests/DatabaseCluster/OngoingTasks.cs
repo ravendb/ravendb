@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -9,8 +7,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

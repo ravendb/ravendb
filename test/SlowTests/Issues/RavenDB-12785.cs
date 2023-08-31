@@ -2,7 +2,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
 using Xunit.Abstractions;

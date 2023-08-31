@@ -7,12 +7,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Util;
-using Raven.Server.Utils;
 using Raven.Server.Commercial.SetupWizard;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Raven.Server.Commercial
 {

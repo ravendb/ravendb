@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.Intrinsics.X86;
-using Corax.Queries;
 using Corax.Queries.Meta;
 using Tests.Infrastructure;
 using Xunit;

@@ -1,5 +1,4 @@
-﻿using FastTests;
-using FastTests.Utils;
+﻿using FastTests.Utils;
 using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
 using Xunit;

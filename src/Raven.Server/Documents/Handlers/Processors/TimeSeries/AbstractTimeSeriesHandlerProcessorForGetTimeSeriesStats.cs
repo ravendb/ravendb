@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries

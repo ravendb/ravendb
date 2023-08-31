@@ -1,7 +1,6 @@
 ﻿using FastTests;
 using Orders;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Server.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

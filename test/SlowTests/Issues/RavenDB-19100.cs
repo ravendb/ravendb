@@ -1,32 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text.RegularExpressions;
-using System.Threading;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
-using FastTests.Client;
-using Orders;
-using Raven.Client;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Database;
-using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server;
-using Raven.Server.Commercial;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace SlowTests.Issues
 {

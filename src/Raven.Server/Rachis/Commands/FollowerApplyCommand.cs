@@ -1,11 +1,8 @@
-﻿using Jint;
-using Nest;
-using Raven.Client.Http;
+﻿using Raven.Client.Http;
 using System;
 using JetBrains.Annotations;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using System.Collections.Generic;
 using System.Diagnostics;
 

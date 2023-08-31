@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Google.Cloud.Storage.V1;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;

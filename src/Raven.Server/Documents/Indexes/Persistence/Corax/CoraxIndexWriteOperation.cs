@@ -6,7 +6,6 @@ using System.Threading;
 using Corax;
 using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;

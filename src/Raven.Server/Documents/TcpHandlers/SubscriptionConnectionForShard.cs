@@ -15,7 +15,6 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.TcpHandlers;

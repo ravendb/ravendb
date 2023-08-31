@@ -1,4 +1,3 @@
-using FastTests.Voron;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

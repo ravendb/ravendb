@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Corax.Mappings;
 using Corax.Queries.Meta;
-using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 

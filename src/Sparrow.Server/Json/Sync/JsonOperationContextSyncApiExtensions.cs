@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;

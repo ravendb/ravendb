@@ -1,13 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

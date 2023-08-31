@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Http;
-using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

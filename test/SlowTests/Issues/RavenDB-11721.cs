@@ -5,7 +5,6 @@ using Xunit;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents;
-using Raven.Server.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 

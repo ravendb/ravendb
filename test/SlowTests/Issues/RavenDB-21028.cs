@@ -6,7 +6,6 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.PeriodicBackup;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;

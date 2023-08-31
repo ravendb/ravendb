@@ -17,8 +17,6 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
-using Raven.Server;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

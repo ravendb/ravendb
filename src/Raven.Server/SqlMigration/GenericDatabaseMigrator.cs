@@ -11,11 +11,9 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.Model;
-using Raven.Server.SqlMigration.MsSQL;
 using Raven.Server.SqlMigration.Schema;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using DbProviderFactories = Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.DbProviderFactories;
 
 namespace Raven.Server.SqlMigration

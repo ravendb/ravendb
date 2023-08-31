@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Comparers;

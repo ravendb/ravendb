@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Tests.Infrastructure;

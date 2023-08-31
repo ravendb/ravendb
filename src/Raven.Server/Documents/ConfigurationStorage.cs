@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Raven.Server.Documents.Operations;
-using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;

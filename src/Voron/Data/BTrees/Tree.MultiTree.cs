@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using Sparrow;
-using Voron.Impl;
-using Voron.Impl.Paging;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Voron.Exceptions;

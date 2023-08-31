@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;

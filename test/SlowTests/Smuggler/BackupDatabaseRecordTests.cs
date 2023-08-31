@@ -6,7 +6,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;

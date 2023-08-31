@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.JsonPatch.Operations;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;

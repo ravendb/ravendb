@@ -19,13 +19,10 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
-using Encoding = System.Text.Encoding;
 using System.Diagnostics;
 using Corax.Mappings;
 using Raven.Client.Exceptions.Corax;
 using System.Diagnostics.CodeAnalysis;
-using Voron.Data.CompactTrees;
-using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 

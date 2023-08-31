@@ -1,11 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
-using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;

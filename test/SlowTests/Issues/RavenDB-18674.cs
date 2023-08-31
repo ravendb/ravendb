@@ -1,26 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests;
-using Raven.Client;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Queries.Timings;
-using Raven.Server;
-using Raven.Server.Documents;
-using Raven.Server.Documents.TimeSeries;
-using Raven.Server.ServerWide.Context;
-using Raven.Tests.Core.Utils.Entities;
-using Raven.Server.Config;
+﻿using FastTests;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

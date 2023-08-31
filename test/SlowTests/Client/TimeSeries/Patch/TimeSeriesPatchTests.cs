@@ -9,7 +9,6 @@ using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;

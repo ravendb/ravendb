@@ -14,7 +14,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;

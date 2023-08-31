@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.IO;
 using Corax.Utils;
-using Google.Protobuf.WellKnownTypes;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;

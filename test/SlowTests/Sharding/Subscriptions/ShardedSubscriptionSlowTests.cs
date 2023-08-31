@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents;

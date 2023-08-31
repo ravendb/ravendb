@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Google.Protobuf;
-using Microsoft.CodeAnalysis;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Serialization;
@@ -10,12 +8,9 @@ using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
-using Raven.Server.Web;
-using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using System.Diagnostics.CodeAnalysis;
 

@@ -2,7 +2,6 @@
 using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Counters

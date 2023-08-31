@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Replication;
@@ -9,7 +8,6 @@ using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Client.ServerWide
 {

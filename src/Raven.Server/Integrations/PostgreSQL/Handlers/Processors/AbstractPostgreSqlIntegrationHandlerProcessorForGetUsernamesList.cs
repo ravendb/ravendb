@@ -5,7 +5,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

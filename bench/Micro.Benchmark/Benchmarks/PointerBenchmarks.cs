@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -11,7 +8,6 @@ using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow.Binary;
-using Sparrow.Compression;
 
 namespace Micro.Benchmark.Benchmarks
 {

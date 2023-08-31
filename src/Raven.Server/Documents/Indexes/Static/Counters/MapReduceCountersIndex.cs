@@ -8,7 +8,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.MapReduce.Workers;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Counters;
 using Raven.Server.ServerWide.Context;

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
@@ -8,7 +7,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
-using Raven.Server.Utils;
 using Raven.Server.Web.Studio.Processors;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;

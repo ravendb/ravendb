@@ -1,6 +1,3 @@
-using System;
-using System.Text;
-
 namespace Voron.Data.PostingLists
 {
     public unsafe struct PostingListCursorState

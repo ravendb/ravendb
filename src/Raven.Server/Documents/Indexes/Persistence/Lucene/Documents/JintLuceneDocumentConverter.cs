@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
-using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Lucene.Net.Documents;
 using Raven.Client;

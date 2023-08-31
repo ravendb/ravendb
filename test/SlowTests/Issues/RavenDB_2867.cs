@@ -7,7 +7,6 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;

@@ -14,7 +14,6 @@ using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Server.Meters;
 using Sparrow.Utils;
-using Voron.Data;
 using Voron.Platform.Win32;
 using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32MemoryMapNativeMethods;

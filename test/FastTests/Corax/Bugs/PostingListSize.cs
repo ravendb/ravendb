@@ -3,8 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using FastTests.Voron;
-using Lucene.Net.Search.Function;
-using Raven.Client.Documents.Linq.Indexing;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;

@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Exceptions;
 using Raven.Embedded;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

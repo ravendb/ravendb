@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Raven.Client;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;

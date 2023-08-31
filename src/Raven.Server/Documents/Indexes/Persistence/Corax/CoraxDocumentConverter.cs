@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
-using Corax;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Sparrow.Json;
-using Sparrow.Server;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;

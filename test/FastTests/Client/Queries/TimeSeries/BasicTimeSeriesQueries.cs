@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;

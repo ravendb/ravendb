@@ -8,7 +8,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;

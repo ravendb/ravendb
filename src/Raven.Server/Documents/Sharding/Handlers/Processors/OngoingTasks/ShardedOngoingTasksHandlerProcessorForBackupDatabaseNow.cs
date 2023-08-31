@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks

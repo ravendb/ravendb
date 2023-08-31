@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using FastTests.Voron;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
 using Voron.Global;

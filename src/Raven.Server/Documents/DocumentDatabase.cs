@@ -26,7 +26,6 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.OngoingTasks;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -70,7 +69,6 @@ using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
-using Raven.Server.Documents.Handlers.Processors;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
 

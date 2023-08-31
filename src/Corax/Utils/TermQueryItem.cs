@@ -1,5 +1,4 @@
-﻿using System;
-using Voron.Data.CompactTrees;
+﻿using Voron.Data.CompactTrees;
 
 namespace Corax.Utils;
 

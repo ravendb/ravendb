@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;

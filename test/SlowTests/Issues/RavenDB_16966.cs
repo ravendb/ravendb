@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;

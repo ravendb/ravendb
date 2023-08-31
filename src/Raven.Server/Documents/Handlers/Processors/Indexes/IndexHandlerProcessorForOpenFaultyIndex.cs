@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Http;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

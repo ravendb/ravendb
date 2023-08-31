@@ -5,7 +5,6 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

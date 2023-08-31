@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Documents;
-using Raven.Server.Documents.Indexes;
-using Voron;
 using Xunit;
 using Xunit.Abstractions;
 

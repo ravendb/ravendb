@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Server.ServerWide;
-using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Utils;
 

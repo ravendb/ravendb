@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using Raven.Server.ServerWide.Context;
 

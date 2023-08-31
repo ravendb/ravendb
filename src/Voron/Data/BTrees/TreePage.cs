@@ -10,7 +10,6 @@ using Sparrow.Server;
 using Voron.Data.Compression;
 using Voron.Debugging;
 using Voron.Impl;
-using Voron.Impl.Paging;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees

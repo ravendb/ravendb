@@ -2,7 +2,6 @@
 using System.Linq;
 using FastTests;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.MailingList

@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

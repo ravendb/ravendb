@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;

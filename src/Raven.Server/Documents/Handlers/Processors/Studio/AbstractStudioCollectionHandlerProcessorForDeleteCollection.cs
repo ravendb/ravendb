@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio

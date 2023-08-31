@@ -7,7 +7,6 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using Sparrow.Json;
 using Sparrow.Server;

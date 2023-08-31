@@ -1,10 +1,7 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
-using Raven.Server.Json;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;

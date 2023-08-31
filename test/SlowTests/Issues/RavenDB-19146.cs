@@ -1,5 +1,4 @@
-﻿using System;
-using System.Dynamic;
+﻿using System.Dynamic;
 using FastTests;
 using Raven.Client;
 using Xunit;

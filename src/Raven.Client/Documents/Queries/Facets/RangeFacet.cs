@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Tokens;
 using Sparrow.Extensions;
 using Sparrow.Json;

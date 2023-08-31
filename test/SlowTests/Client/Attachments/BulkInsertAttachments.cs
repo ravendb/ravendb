@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.BulkInsert;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.BulkInsert;

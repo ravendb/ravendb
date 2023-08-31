@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Orders;
 using Raven.Client;

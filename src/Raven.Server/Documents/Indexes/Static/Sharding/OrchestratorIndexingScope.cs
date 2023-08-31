@@ -1,5 +1,4 @@
-﻿using Raven.Server.Documents.Indexes.Static.Spatial;
-using Raven.Server.ServerWide;
+﻿using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static.Sharding;

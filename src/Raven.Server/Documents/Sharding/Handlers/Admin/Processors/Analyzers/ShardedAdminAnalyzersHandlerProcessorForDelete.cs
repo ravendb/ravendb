@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Analyzers;
 using Raven.Server.ServerWide.Context;
 

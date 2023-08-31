@@ -23,7 +23,6 @@ using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

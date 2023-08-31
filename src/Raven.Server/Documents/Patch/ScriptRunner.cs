@@ -33,7 +33,6 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Extensions;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;

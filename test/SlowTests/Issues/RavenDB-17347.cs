@@ -1,30 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Esprima.Ast;
-using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
-using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace SlowTests.Issues
 {

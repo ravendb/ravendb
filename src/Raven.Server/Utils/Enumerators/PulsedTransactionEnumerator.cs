@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Utils.Enumerators

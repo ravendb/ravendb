@@ -10,7 +10,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;

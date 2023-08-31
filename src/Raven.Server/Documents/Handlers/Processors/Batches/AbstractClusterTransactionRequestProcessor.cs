@@ -12,7 +12,6 @@ using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Web;
 using Sparrow.Json;

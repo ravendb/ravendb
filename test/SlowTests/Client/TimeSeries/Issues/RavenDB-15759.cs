@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.TimeSeries;

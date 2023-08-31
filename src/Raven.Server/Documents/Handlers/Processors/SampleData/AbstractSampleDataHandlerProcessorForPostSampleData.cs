@@ -9,9 +9,6 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.Smuggler.Documents;
-using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Web;
 using Raven.Server.Web.Studio;
 using Sparrow.Json;
 

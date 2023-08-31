@@ -25,7 +25,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Threading;
 using Exception = System.Exception;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 

@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Analyzers;

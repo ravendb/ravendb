@@ -1,17 +1,9 @@
-﻿using System;
-using System.IO;
-using System.IO.Compression;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Raven.Client.Exceptions.Security;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Smuggler;
 using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
-using Raven.Server.Smuggler.Documents.Data;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {

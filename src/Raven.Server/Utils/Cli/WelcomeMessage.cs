@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Raven.Server.ServerWide;
 using Sparrow;
-using Sparrow.LowMemory;
 using Sparrow.Server.LowMemory;
 using Sparrow.Utils;
 

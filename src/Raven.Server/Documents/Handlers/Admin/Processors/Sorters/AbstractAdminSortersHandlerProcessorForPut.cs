@@ -5,7 +5,6 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands.Sorters;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
 

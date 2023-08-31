@@ -9,7 +9,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Server.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

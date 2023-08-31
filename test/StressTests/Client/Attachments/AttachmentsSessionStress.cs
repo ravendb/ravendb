@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;

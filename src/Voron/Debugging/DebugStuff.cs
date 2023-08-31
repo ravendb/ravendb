@@ -2,23 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Threading.Tasks;
-using Sparrow;
 using Sparrow.Platform;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
-using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
-using Container = Voron.Data.Containers.Container;
 
 namespace Voron.Debugging
 {

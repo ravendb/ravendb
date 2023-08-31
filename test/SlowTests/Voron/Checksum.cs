@@ -11,7 +11,6 @@ using FastTests.Utils;
 using FastTests.Voron;
 using Voron;
 using Xunit;
-using Voron.Data;
 using Voron.Impl.Paging;
 using Xunit.Abstractions;
 

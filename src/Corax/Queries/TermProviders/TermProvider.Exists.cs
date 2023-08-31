@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using Corax.Mappings;
 using Corax.Queries.Meta;
-using Corax.Utils;
-using Sparrow;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;

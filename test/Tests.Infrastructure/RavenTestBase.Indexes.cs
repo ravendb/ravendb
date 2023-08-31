@@ -11,7 +11,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Sparrow.Json;

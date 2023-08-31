@@ -1,5 +1,4 @@
-﻿using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.PeriodicBackup.Aws;
+﻿using Raven.Server.Documents.PeriodicBackup.Aws;
 using SlowTests.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Xunit;

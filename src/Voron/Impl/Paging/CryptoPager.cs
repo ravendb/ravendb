@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Utils;
-using Voron.Data;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Paging

@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Xunit;
 using Xunit.Abstractions;

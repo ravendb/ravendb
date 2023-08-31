@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Handlers.Processors;
 using Raven.Server.Routing;
 

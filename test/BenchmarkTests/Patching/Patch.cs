@@ -1,10 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using BenchmarkTests.Utils;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

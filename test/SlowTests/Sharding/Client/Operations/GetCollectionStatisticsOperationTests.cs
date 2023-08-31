@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using SlowTests.Core.Utils.Entities;

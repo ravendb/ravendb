@@ -5,7 +5,6 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;

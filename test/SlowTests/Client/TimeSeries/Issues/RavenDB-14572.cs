@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;

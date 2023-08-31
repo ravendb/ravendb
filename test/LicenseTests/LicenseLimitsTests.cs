@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;

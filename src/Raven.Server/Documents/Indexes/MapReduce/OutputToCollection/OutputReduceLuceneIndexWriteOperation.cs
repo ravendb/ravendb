@@ -1,16 +1,10 @@
-using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
-using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Server.Exceptions;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection

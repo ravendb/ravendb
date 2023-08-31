@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Linq;
 using Xunit;
 using Xunit.Abstractions;

@@ -13,7 +13,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;

@@ -4,7 +4,6 @@ using System.IO.Pipelines;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Types;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages

@@ -8,7 +8,6 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow;
 using Sparrow.Utils;
-using System.Linq;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {

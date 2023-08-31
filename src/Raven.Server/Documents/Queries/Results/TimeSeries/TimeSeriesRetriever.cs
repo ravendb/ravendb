@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
-using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;

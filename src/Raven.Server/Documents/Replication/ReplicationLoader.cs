@@ -26,7 +26,6 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter;

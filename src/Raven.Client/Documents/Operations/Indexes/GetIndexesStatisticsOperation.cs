@@ -4,7 +4,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {

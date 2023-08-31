@@ -4,7 +4,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Json.Serialization;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Counters

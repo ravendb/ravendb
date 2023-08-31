@@ -13,7 +13,6 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;

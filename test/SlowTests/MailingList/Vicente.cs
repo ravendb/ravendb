@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Xunit;
 using System.Linq;
 using Raven.Client.Documents;
 using Xunit.Abstractions;

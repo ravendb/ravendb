@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Client;
-using Orders;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Tests.Infrastructure;

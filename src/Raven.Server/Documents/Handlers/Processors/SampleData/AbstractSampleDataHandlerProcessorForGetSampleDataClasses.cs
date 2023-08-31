@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Web;
 using Raven.Server.Web.Studio;
 using Sparrow.Json;
 

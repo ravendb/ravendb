@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Sparrow;

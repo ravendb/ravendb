@@ -1,16 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using Corax;
 using Corax.IndexSearcher;
 using Corax.Mappings;
-using Corax.Queries;
-using Corax.Utils;
 using FastTests.Voron;
-using Raven.Client.Documents.Linq;
-using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Xunit.Abstractions;

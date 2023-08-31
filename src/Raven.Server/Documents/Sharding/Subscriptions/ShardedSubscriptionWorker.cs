@@ -8,7 +8,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 

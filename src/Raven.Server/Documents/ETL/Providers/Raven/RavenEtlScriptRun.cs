@@ -6,7 +6,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;

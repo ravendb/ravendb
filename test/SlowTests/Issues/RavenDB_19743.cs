@@ -1,10 +1,6 @@
-﻿using System;
-using FastTests;
+﻿using FastTests;
 using Orders;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;

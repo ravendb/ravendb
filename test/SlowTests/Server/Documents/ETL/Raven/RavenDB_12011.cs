@@ -2,11 +2,8 @@
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.ServerWide.Context;

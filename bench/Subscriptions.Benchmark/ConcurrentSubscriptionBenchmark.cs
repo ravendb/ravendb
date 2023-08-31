@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Conventions;

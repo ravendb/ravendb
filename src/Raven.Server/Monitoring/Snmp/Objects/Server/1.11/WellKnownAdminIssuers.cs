@@ -1,4 +1,3 @@
-using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.ServerWide;
 

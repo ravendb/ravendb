@@ -6,7 +6,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {

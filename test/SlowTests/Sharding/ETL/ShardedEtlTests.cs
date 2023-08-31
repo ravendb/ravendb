@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Nest;
-using Newtonsoft.Json;
 using Parquet;
 using Raven.Client;
 using Raven.Client.Documents;

@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Tests.Infrastructure;
-using Voron;
 using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;

@@ -13,7 +13,6 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow.Binary;
 using Sparrow.Collections;
-using Sparrow.Utils;
 
 namespace Micro.Benchmark.Benchmarks
 {

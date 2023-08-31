@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.Client.Json;
 
 namespace Raven.Client.Documents.Session
 {

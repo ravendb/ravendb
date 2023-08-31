@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;

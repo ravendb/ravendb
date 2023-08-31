@@ -5,7 +5,6 @@ using System.Net;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions

@@ -2,7 +2,6 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands.Sorters;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
 

@@ -1,5 +1,4 @@
 using System;
-using Corax;
 using Corax.IndexSearcher;
 using Corax.Queries;
 using Corax.Queries.Meta;

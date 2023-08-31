@@ -1,10 +1,6 @@
-﻿using System;
-using Sparrow.Compression;
-using Sparrow.Server;
+﻿using Sparrow.Server;
 using Sparrow.Threading;
-using Voron.Data.PostingLists;
 using Voron.Util.PFor;
-using Voron.Util.Simd;
 using Xunit;
 using Xunit.Abstractions;
 

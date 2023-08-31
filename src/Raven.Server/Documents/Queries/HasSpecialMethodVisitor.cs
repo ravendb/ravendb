@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Esprima.Ast;
+﻿using Esprima.Ast;
 using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Queries
