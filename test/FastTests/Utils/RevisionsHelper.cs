@@ -55,7 +55,7 @@ namespace FastTests.Utils
 
        
 
-        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, Action<RevisionsConfiguration> modifyConfiguration = null, int minRevisionToKeep = 5)
+        public static async Task<long> SetupRevisionsAsync(Raven.Server.ServerWide.ServerStore serverStore, string database, Action<RevisionsConfiguration> modifyConfiguration = null, int minRevisionToKeep = 5)
         {
             var configuration = new RevisionsConfiguration
             {
@@ -95,7 +95,7 @@ namespace FastTests.Utils
             return index;
         }
 
-        public static async Task<long> SetupRevisions(IDocumentStore documentStore, Raven.Server.ServerWide.ServerStore serverStore)
+        public static async Task<long> SetupRevisionsAsync(IDocumentStore documentStore, Raven.Server.ServerWide.ServerStore serverStore)
         {
             var configuration = new RevisionsConfiguration
             {
@@ -114,7 +114,7 @@ namespace FastTests.Utils
             return index;
         }
 
-        public static async Task SetupRevisions(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, RevisionsConfiguration configuration)
+        public static async Task SetupRevisionsAsync(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, RevisionsConfiguration configuration)
         {
             if (store == null)
                 throw new ArgumentNullException(nameof(store));

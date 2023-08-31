@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
@@ -20,14 +21,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
             return RequestHandler.DatabaseContext.Operations.GetNextOperationId();
         }
 
-        protected override void ScheduleEnforceConfigurationOperation(long operationId, bool includeForceCreated, OperationCancelToken token)
+        protected override void ScheduleEnforceConfigurationOperation(long operationId, EnforceRevisionsConfigurationOperation.Parameters parameters, OperationCancelToken token)
         {
             var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, EnforceConfigurationResult, EnforceConfigurationResult>(
                 operationId,
                 OperationType.EnforceRevisionConfiguration,
                 $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.",
                 detailedDescription: null,
-                (_, shardNumber) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(includeForceCreated),
+                (_, shardNumber) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(parameters, DocumentConventions.DefaultForServer),
                 token: token);
 
             _ = task.ContinueWith(_ =>

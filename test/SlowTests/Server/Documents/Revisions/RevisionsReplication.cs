@@ -313,7 +313,7 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 var dbName = db.Name;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(_ => { }, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, token);
 
                 await EnsureReplicatingAsync(store1, store2);
 
@@ -979,7 +979,7 @@ namespace SlowTests.Server.Documents.Revisions
                 EnforceConfigurationResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(onProgress: null, token: token);
+                    result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress: null, token: token);
                 }
 
                 Assert.Equal(11, result.ScannedRevisions);

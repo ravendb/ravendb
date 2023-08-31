@@ -22,7 +22,7 @@ namespace SlowTests.Issues
             using (var src = GetDocumentStore())
             using (var dst = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, src.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, src.Database);
                 var configuration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test", Name = "aaa", Transforms = {new Transformation {Name = "S1", Collections = {"Users"}}}
