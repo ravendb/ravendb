@@ -14,6 +14,8 @@ import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import licenseModel from "models/auth/licenseModel";
+import { EditServerWideBackupInfoHub } from "./EditServerWideBackupInfoHub";
+import React from "react";
 
 class editServerWideBackup extends viewModelBase {
 
@@ -24,6 +26,8 @@ class editServerWideBackup extends viewModelBase {
     backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
     pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
+    
+    infoHubView: ReactInKnockout<typeof EditServerWideBackupInfoHub>;
     
     editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
@@ -44,6 +48,9 @@ class editServerWideBackup extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("testCredentials", "setState");
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditServerWideBackupInfoHub
+        }))
     }
     
     activate(args: any) {

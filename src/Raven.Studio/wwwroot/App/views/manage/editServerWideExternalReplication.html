@@ -1,9 +1,12 @@
 <div class="content-margin edit-server-wide-replication edit-ongoing-task">
     <form class="flex-form" data-bind="submit: saveServerWideExternalReplication" autocomplete="off">
-        <div class="align-items-center d-flex gap-2 margin-bottom-md">
-            <i class="icon-server-wide-replication"></i>
-            <h2 data-bind="text: $root.isAddingNewExternalReplicationTask() ? `New Server-Wide External Replication` : `Edit Server-Wide External Replication`" class="mb-0"></h2>
-            <span class="badge license-restricted-badge" data-bind="if: $root.licenseType === 'Community'">Professional +</span>
+        <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+            <div class="flex-horizontal gap-2">
+                <i class="icon-server-wide-replication"></i>
+                <h2 data-bind="text: $root.isAddingNewExternalReplicationTask() ? `New Server-Wide External Replication` : `Edit Server-Wide External Replication`" class="mb-0"></h2>
+                <span class="badge license-restricted-badge" data-bind="if: $root.licenseType === 'Community'">Professional +</span>
+            </div>
+            <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
         </div>
         <div class="row flex-row">
             <div class="col-xs-12 col-lg-6 flex-vertical">

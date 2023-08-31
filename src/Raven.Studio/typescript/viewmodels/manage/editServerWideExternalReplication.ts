@@ -10,6 +10,7 @@ import generalUtils = require("common/generalUtils");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import licenseModel from "models/auth/licenseModel";
+import { EditServerWideExternalReplicationInfoHub } from "./EditServerWideExternalReplicationInfoHub";
 
 class editServerWideExternalReplication extends viewModelBase {
     
@@ -17,7 +18,9 @@ class editServerWideExternalReplication extends viewModelBase {
     certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
     pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
-    
+
+    infoHubView: ReactInKnockout<typeof EditServerWideExternalReplicationInfoHub>;
+
     editedTask = ko.observable<serverWideExternalReplicationEditModel>();
     isAddingNewExternalReplicationTask = ko.observable<boolean>(true);
 
@@ -42,6 +45,9 @@ class editServerWideExternalReplication extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("onTestConnection", "setState");
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditServerWideExternalReplicationInfoHub
+        }))
     }
     
     activate(args: any) {
