@@ -334,7 +334,7 @@ namespace Raven.Server.Json
 
             public static readonly Func<BlittableJsonReaderObject, PutTrafficWatchConfigurationOperation.Parameters> PutTrafficWatchConfigurationParameters = GenerateJsonDeserializationRoutine<PutTrafficWatchConfigurationOperation.Parameters>();
 
-            public static readonly Func<BlittableJsonReaderObject, EnforceRevisionsConfigurationOperation.Parameters> EnforceRevisionsConfiguration = GenerateJsonDeserializationRoutine<EnforceRevisionsConfigurationOperation.Parameters>();
+            public static readonly Func<BlittableJsonReaderObject, EnforceRevisionsConfigurationOperation.Parameters> EnforceRevisionsConfigurationOperationParameters = GenerateJsonDeserializationRoutine<EnforceRevisionsConfigurationOperation.Parameters>();
 
         }
     }

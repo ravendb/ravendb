@@ -1576,20 +1576,12 @@ namespace Raven.Server.Documents.Revisions
 
         public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress,
             bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
-            HashSet<string> collections,
+            string[] collections,
             OperationCancelToken token)
         {
-            if (collections != null)
-            {
-                if (collections.Comparer?.Equals(StringComparer.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
-
-                foreach (var collection in collections)
-                {
-                    if (string.IsNullOrEmpty(collection))
-                        throw new InvalidOperationException("There is no collection with name which is empty string or 'null'.");
-                }
-            }
+            HashSet<string> collectionsToUse = null;
+            if (collections is { Length: > 0 })
+                collectionsToUse = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
 
             var parameters = new Parameters
             {
@@ -1620,7 +1612,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     using (ctx.OpenReadTransaction())
                     {
-                        var tables = GetRevisionsTables(ctx, collections, parameters.LastScannedEtag);
+                        var tables = GetRevisionsTables(ctx, collectionsToUse, parameters.LastScannedEtag);
 
                         foreach (var table in tables)
                         {

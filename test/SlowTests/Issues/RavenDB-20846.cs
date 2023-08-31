@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Corax;
 using FastTests.Utils;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.ServerWide;
 using Tests.Infrastructure;
@@ -21,19 +15,19 @@ public class RavenDB_20846 : ClusterTestBase
     {
     }
 
-    class Company
+    private class Company
     {
         public string Id { get; set; }
         public string Name { get; set; }
     }
 
-    class User
+    private class User
     {
         public string Id { get; set; }
         public string Name { get; set; }
     }
 
-    class Product
+    private class Product
     {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -92,7 +86,7 @@ public class RavenDB_20846 : ClusterTestBase
 
         var db = await Databases.GetDocumentDatabaseInstanceFor(store);
         using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, collections: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Users", "Products" }, token: token);
+            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, collections: new[] { "Users", "Products" }, token: token);
 
         using (var session = store.OpenAsyncSession())
         {

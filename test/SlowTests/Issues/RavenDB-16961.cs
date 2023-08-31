@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                 var db1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
                 IOperationResult enforceResult;
                 using (var token = new OperationCancelToken(db1.Configuration.Databases.OperationTimeout.AsTimeSpan, db1.DatabaseShutdown, CancellationToken.None))
-                    enforceResult = await db1.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreatedAsync(_ => { }, token);
+                    enforceResult = await db1.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, token);
 
                 var val = await WaitForValueAsync(() =>
                     {

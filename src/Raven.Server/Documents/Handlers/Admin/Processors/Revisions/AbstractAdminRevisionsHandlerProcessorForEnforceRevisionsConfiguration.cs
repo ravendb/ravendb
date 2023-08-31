@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -20,23 +20,21 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
         protected abstract long GetNextOperationId();
 
-        protected abstract void ScheduleEnforceConfigurationOperation(long operationId, bool includeForceCreated, HashSet<string> collections, OperationCancelToken token);
+        protected abstract void ScheduleEnforceConfigurationOperation(long operationId, EnforceRevisionsConfigurationOperation.Parameters parameters, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
             var token = RequestHandler.CreateTimeLimitedBackgroundOperationToken();
             var operationId = RequestHandler.GetLongQueryString("operationId", false) ?? GetNextOperationId();
 
-            EnforceRevisionsConfigurationRequest configuration;
+            EnforceRevisionsConfigurationOperation.Parameters parameters;
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "revisions/revert");
-                configuration = JsonDeserializationServer.EnforceRevisionsConfiguration(json);
+                parameters = JsonDeserializationServer.Parameters.EnforceRevisionsConfigurationOperationParameters(json);
             }
 
-            HashSet<string> collections = configuration.Collections?.Length > 0 ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
-
-            ScheduleEnforceConfigurationOperation(operationId, configuration.IncludeForceCreated, collections, token);
+            ScheduleEnforceConfigurationOperation(operationId, parameters, token);
 
             using (ClusterContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
