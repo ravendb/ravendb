@@ -267,19 +267,7 @@ namespace Raven.Server.Documents.Subscriptions
                         _recentConnections.TryDequeue(out SubscriptionConnectionInfo _);
                     }
 
-                    _recentConnections.Enqueue(new SubscriptionConnectionInfo()
-                    {
-                        ClientUri = incomingConnection.ClientUri,
-                        Query = incomingConnection.SubscriptionConnectionsState.Query,
-                        LatestChangeVector = incomingConnection.SubscriptionConnectionsState.LastChangeVectorSent,
-                        ConnectionException = incomingConnection.ConnectionException,
-                        RecentSubscriptionStatuses = incomingConnection.RecentSubscriptionStatuses.ToList(),
-                        Date = SystemTime.UtcNow,
-                        Strategy = incomingConnection.Strategy,
-                        TcpConnectionStats = incomingConnection.TcpConnection.GetConnectionStats(),
-                        LastConnectionStats = incomingConnection.GetPerformanceStats(),
-                        LastBatchesStats = incomingConnection.GetBatchesPerformanceStats()
-                    });
+                    _recentConnections.Enqueue(new SubscriptionConnectionInfo(incomingConnection));
 
                     DropSingleConnection(incomingConnection);
                 });
@@ -395,19 +383,7 @@ namespace Raven.Server.Documents.Subscriptions
                 _rejectedConnections.TryDequeue(out SubscriptionConnectionInfo _);
             }
 
-            _rejectedConnections.Enqueue(new SubscriptionConnectionInfo()
-            {
-                ClientUri = connection.ClientUri,
-                Query = connection.SubscriptionConnectionsState.Query,
-                LatestChangeVector = connection.SubscriptionConnectionsState.LastChangeVectorSent,
-                ConnectionException = connection.ConnectionException,
-                RecentSubscriptionStatuses = connection.RecentSubscriptionStatuses.ToList(),
-                Date = SystemTime.UtcNow,
-                Strategy = connection.Strategy,
-                TcpConnectionStats = connection.TcpConnection.GetConnectionStats(),
-                LastConnectionStats = connection.GetPerformanceStats(),
-                LastBatchesStats = connection.GetBatchesPerformanceStats()
-            });
+            _rejectedConnections.Enqueue(new SubscriptionConnectionInfo(connection));
         }
 
         public SubscriptionConnectionsDetails GetSubscriptionConnectionsDetails()
