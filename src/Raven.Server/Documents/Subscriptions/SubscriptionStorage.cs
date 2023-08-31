@@ -247,6 +247,8 @@ namespace Raven.Server.Documents.Subscriptions
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
 
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
+            subscriptionState.ArchivedDataProcessingBehavior ??= _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior; // persisted state from v5.x  
+            
             var subscriptionConnectionsState = GetSubscriptionConnectionsState(context, subscriptionState.SubscriptionName);
 
             var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState)
