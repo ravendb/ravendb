@@ -1,19 +1,21 @@
 ﻿import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import ServerWideAnalyzers from "./CustomServerWideAnalyzers";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import ServerWideCustomAnalyzers from "./ServerWideCustomAnalyzers";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
     title: "Pages/ManageServer",
-    component: ServerWideAnalyzers,
+    component: ServerWideCustomAnalyzers,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof ServerWideAnalyzers>;
+} satisfies Meta<typeof ServerWideCustomAnalyzers>;
 
-export const DefaultServerWideAnalyzers: StoryObj<typeof ServerWideAnalyzers> = {
+export const Default: StoryObj<typeof ServerWideCustomAnalyzers> = {
     name: "Server-Wide Analyzers",
     render: () => {
-        return <ServerWideAnalyzers db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        const { manageServerService } = mockServices;
+        manageServerService.withGetServerWideCustomAnalyzers();
+
+        return <ServerWideCustomAnalyzers />;
     },
 };
