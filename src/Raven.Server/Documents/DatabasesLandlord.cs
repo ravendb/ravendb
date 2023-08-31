@@ -138,6 +138,15 @@ namespace Raven.Server.Documents
                             var topology = rawRecord.Sharding.Orchestrator.Topology;
                             if (topology.RelevantFor(_serverStore.NodeTag))
                             {
+                                if (rawRecord.IsDisabled)
+                                {
+                                    if (ShardedDatabasesCache.TryGetValue(databaseName, out var shardedDatabaseTask) == false)
+                                        return; // sharded database was already unloaded
+
+                                    UnloadDatabaseInternal(databaseName, shardedDatabaseTask);
+                                    return;
+                                }
+
                                 // we need to update this upon any shard topology change
                                 // and upon migration completion
                                 var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
@@ -301,28 +310,7 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            if (databaseTask.IsCompletedSuccessfully)
-            {
-                UnloadDatabaseInternal(databaseName);
-            }
-            else if (databaseTask.IsCompleted == false)
-            {
-                // This case is when an unload was issued prior to the actual loading of a database.
-                databaseTask.ContinueWith(t =>
-                {
-                    if (databaseTask.IsCompletedSuccessfully)
-                    {
-                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
-                        using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                        {
-                            // unload only if DB is still disabled
-                            if (IsDatabaseDisabled(databaseRecord.Raw))
-                                UnloadDatabaseInternal(databaseName);
-                        }
-                    }
-                });
-            }
+            UnloadDatabaseInternal(databaseName, databaseTask);
         }
 
         public static bool IsDatabaseDisabled(BlittableJsonReaderObject databaseRecord)
@@ -351,6 +339,33 @@ namespace Raven.Server.Documents
                     databaseContextTask.Result.Dispose();
             }
         }
+
+        private void UnloadDatabaseInternal(string databaseName, Task databaseTask)
+        {
+            if (databaseTask.IsCompletedSuccessfully)
+            {
+                UnloadDatabaseInternal(databaseName);
+            }
+            else if (databaseTask.IsCompleted == false)
+            {
+                // This case is when an unload was issued prior to the actual loading of a database.
+                databaseTask.ContinueWith(t =>
+                {
+                    if (databaseTask.IsCompletedSuccessfully)
+                    {
+                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                        {
+                            // unload only if DB is still disabled
+                            if (IsDatabaseDisabled(databaseRecord.Raw))
+                                UnloadDatabaseInternal(databaseName);
+                        }
+                    }
+                });
+            }
+        }
+
 
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord, bool fromReplication = false)
         {
