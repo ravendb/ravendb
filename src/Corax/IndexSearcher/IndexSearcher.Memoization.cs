@@ -1,7 +1,7 @@
 ﻿using Corax.Queries;
-using Sparrow.Server;
+using Corax.Queries.Meta;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 partial class IndexSearcher
 {

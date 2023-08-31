@@ -1,4 +1,4 @@
-﻿namespace Corax;
+﻿namespace Corax.IndexSearcher;
 public enum SpatialMethod
 {
     IsWithin,

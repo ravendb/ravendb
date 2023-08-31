@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -580,7 +581,7 @@ namespace Corax.Queries
             return totalResults;
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldIsNull(in TInner inner, IndexSearcher searcher, FieldMetadata field,
+        public static UnaryMatch<TInner, TValueType> YieldIsNull(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             return new UnaryMatch<TInner, TValueType>(
@@ -590,7 +591,7 @@ namespace Corax.Queries
                 inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldIsNotNull(in TInner inner, IndexSearcher searcher, FieldMetadata field,
+        public static UnaryMatch<TInner, TValueType> YieldIsNotNull(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             return new UnaryMatch<TInner, TValueType>(
@@ -600,7 +601,7 @@ namespace Corax.Queries
                 inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldGreaterThan(in TInner inner, IndexSearcher searcher, FieldMetadata field, TValueType value,
+        public static UnaryMatch<TInner, TValueType> YieldGreaterThan(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field, TValueType value,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
             int take = -1)
         {
@@ -622,7 +623,7 @@ namespace Corax.Queries
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldGreaterThanOrEqualMatch(in TInner inner, IndexSearcher searcher, FieldMetadata field, TValueType value,
+        public static UnaryMatch<TInner, TValueType> YieldGreaterThanOrEqualMatch(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field, TValueType value,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
@@ -645,7 +646,7 @@ namespace Corax.Queries
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldLessThan(in TInner inner, IndexSearcher searcher, FieldMetadata field, TValueType value,
+        public static UnaryMatch<TInner, TValueType> YieldLessThan(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field, TValueType value,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
             int take = -1)
         {
@@ -667,7 +668,7 @@ namespace Corax.Queries
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldLessThanOrEqualMatch(in TInner inner, IndexSearcher searcher, FieldMetadata field, TValueType value,
+        public static UnaryMatch<TInner, TValueType> YieldLessThanOrEqualMatch(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field, TValueType value,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
@@ -690,7 +691,7 @@ namespace Corax.Queries
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldNotEqualsMatch(in TInner inner, IndexSearcher searcher, FieldMetadata field, TValueType value,
+        public static UnaryMatch<TInner, TValueType> YieldNotEqualsMatch(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field, TValueType value,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
@@ -711,7 +712,7 @@ namespace Corax.Queries
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldEqualsMatch(in TInner inner, IndexSearcher searcher, FieldMetadata binding, TValueType value,
+        public static UnaryMatch<TInner, TValueType> YieldEqualsMatch(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata binding, TValueType value,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
@@ -732,7 +733,7 @@ namespace Corax.Queries
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldAllIn(in TInner inner, IndexSearcher searcher, FieldMetadata field, TValueType value,
+        public static UnaryMatch<TInner, TValueType> YieldAllIn(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field, TValueType value,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             return new UnaryMatch<TInner, TValueType>(

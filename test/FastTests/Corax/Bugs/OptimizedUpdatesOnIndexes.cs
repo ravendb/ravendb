@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;

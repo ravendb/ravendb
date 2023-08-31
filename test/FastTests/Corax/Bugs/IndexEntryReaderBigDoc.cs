@@ -1,4 +1,5 @@
 ﻿using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;

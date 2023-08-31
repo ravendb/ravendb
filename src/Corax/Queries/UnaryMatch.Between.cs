@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Sparrow;
 using Voron;
 
@@ -132,7 +133,7 @@ namespace Corax.Queries
             return totalResults;
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldBetweenMatch<TLeftSideComparer, TRightSideComparer>(in TInner inner, IndexSearcher searcher, FieldMetadata field, TValueType value1, TValueType value2, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldBetweenMatch<TLeftSideComparer, TRightSideComparer>(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field, TValueType value1, TValueType value2, int take = -1)
             where TLeftSideComparer : IUnaryMatchComparer
             where TRightSideComparer : IUnaryMatchComparer
         {
@@ -320,7 +321,7 @@ namespace Corax.Queries
             return totalResults;
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldNotBetweenMatch<TLeftSideComparer, TRightSideComparer>(in TInner inner, IndexSearcher searcher, FieldMetadata field, TValueType value1, TValueType value2, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldNotBetweenMatch<TLeftSideComparer, TRightSideComparer>(in TInner inner, IndexSearcher.IndexSearcher searcher, FieldMetadata field, TValueType value1, TValueType value2, int take = -1)
             where TLeftSideComparer : IUnaryMatchComparer
             where TRightSideComparer : IUnaryMatchComparer
         {

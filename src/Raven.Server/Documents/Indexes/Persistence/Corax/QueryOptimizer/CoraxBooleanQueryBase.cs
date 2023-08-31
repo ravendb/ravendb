@@ -1,6 +1,8 @@
 using System;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Queries;
+using Corax.Queries.Meta;
 using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;

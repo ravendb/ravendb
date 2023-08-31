@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Corax.Utils;
 using Sparrow;
 using Voron.Data.CompactTrees;
@@ -14,7 +15,7 @@ namespace Corax.Queries.TermProviders
         where TLookupIterator : struct, ILookupIterator
     {
         private readonly CompactTree _tree;
-        private readonly IndexSearcher _searcher;
+        private readonly IndexSearcher.IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         
         
@@ -26,7 +27,7 @@ namespace Corax.Queries.TermProviders
         
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
-        public ExistsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field)
+        public ExistsTermProvider(IndexSearcher.IndexSearcher searcher, CompactTree tree, FieldMetadata field)
         {
             _tree = tree;
             _field = field;

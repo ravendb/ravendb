@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Corax;
+using Corax.IndexSearcher;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;

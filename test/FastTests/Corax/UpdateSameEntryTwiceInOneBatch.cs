@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;

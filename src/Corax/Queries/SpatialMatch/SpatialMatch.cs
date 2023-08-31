@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
 using Spatial4n.Context;
@@ -11,11 +12,11 @@ using Voron;
 using Voron.Data.CompactTrees;
 using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
-namespace Corax.Queries;
+namespace Corax.Queries.SpatialMatch;
 
 public sealed class SpatialMatch : IQueryMatch
 {
-    private readonly IndexSearcher _indexSearcher;
+    private readonly IndexSearcher.IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
     private readonly double _error;
     private readonly IShape _shape;
@@ -33,7 +34,7 @@ public sealed class SpatialMatch : IQueryMatch
     private HashSet<long> _alreadyReturned;
     private long _fieldRootPage;
 
-    public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
+    public SpatialMatch(IndexSearcher.IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
         CompactTree tree,
         double errorInPercentage, Utils.Spatial.SpatialRelation spatialRelation, CancellationToken token)
     {

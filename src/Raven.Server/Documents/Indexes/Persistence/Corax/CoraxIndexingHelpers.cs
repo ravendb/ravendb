@@ -9,7 +9,7 @@ using Raven.Server.Documents.Indexes.Static;
 using KeywordTokenizer = Corax.Pipeline.KeywordTokenizer;
 using Version = Lucene.Net.Util.Version;
 using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
-using CoraxAnalyzer = Corax.Analyzer;
+using CoraxAnalyzer = Corax.Analyzers.Analyzer;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Indexes;

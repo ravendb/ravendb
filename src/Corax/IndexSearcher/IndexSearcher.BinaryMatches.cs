@@ -1,9 +1,9 @@
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Queries;
-using Sparrow.Server;
+using Corax.Queries.Meta;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Queries.Meta;
 
 namespace Corax.Queries
 {

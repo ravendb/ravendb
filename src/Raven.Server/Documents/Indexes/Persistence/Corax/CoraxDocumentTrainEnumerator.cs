@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Corax;
+using Corax.Analyzers;
 using Corax.Pipeline;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;

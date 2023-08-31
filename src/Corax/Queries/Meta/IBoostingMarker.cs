@@ -1,4 +1,4 @@
-namespace Corax.Queries;
+namespace Corax.Queries.Meta;
 
 public interface IBoostingMarker
 {

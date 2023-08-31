@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Compression;
@@ -56,7 +57,7 @@ namespace Corax.Queries
 
         public QueryCountConfidence Confidence => _confidence;
 
-        public MultiTermMatch(IndexSearcher indexSearcher, in FieldMetadata field, ByteStringContext context, TTermProvider inner, bool streamingEnabled,
+        public MultiTermMatch(IndexSearcher.IndexSearcher indexSearcher, in FieldMetadata field, ByteStringContext context, TTermProvider inner, bool streamingEnabled,
             long maxNumberOfTerms = long.MaxValue, QueryCountConfidence confidence = QueryCountConfidence.Low, in CancellationToken token = default)
         {
             _inner = inner;
@@ -117,7 +118,7 @@ namespace Corax.Queries
             private FastPForBufferedReader _smallListReader;
             private bool _hasSmallListRead;
             private readonly long _max;
-            private readonly IndexSearcher _searcher;
+            private readonly IndexSearcher.IndexSearcher _searcher;
             private readonly ByteStringContext _allocator;
 
             private const int BufferSize = 1024;
@@ -130,7 +131,7 @@ namespace Corax.Queries
             private ByteStringContext<ByteStringMemoryCache>.InternalScope _itBufferScope, _containerItemsScope;
             private readonly PageLocator _pageLocator;
 
-            public MultiTermReader(IndexSearcher searcher, long max = long.MaxValue)
+            public MultiTermReader(IndexSearcher.IndexSearcher searcher, long max = long.MaxValue)
             {
                 _searcher = searcher;
                 _max = max;

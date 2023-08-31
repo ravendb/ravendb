@@ -24,7 +24,7 @@ namespace Corax.Queries.SortingMatches;
 public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
-    private readonly IndexSearcher _searcher;
+    private readonly IndexSearcher.IndexSearcher _searcher;
     private readonly TInner _inner;
     private readonly OrderMetadata _orderMetadata;
     private readonly CancellationToken _cancellationToken;
@@ -42,7 +42,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     public long TotalResults;
     public bool DoNotSortResults() => throw new NotSupportedException();
 
-    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
+    public SortingMatch(IndexSearcher.IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
     {
         _searcher = searcher;
         _inner = inner;
@@ -241,7 +241,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private TDirection _termsIt;
         private readonly long _min;
         private readonly long _max;
-        private readonly IndexSearcher _searcher;
+        private readonly IndexSearcher.IndexSearcher _searcher;
         private readonly LowLevelTransaction _llt;
 
         private const int BufferSize = 1024;
@@ -256,7 +256,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private bool _hasSmallListReader;
 
 
-        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, TDirection it, long min, long max)
+        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher.IndexSearcher searcher, TDirection it, long min, long max)
         {
             _termsIt = it;
             _min = min;

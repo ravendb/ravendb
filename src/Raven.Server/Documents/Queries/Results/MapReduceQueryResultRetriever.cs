@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -12,7 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow;
 using Constants = Raven.Client.Constants;
-using IndexSearcher = Corax.IndexSearcher;
+using IndexSearcher = Corax.IndexSearcher.IndexSearcher;
 
 namespace Raven.Server.Documents.Queries.Results
 {

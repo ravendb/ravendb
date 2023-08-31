@@ -4,7 +4,7 @@ using Corax.Queries;
 using Sparrow.Server.Strings;
 using static Corax.Constants;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public enum StringDistanceAlgorithm
 {

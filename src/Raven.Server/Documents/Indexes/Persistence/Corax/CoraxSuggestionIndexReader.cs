@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Raven.Client.Documents.Queries.Suggestions;

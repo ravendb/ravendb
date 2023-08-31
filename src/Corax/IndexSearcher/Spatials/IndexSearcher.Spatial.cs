@@ -1,12 +1,12 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using Corax.Mappings;
 using Corax.Queries;
-using Corax.Utils;
+using Corax.Queries.Meta;
+using Corax.Queries.SpatialMatch;
 using Spatial4n.Shapes;
 using SpatialContext = Spatial4n.Context.SpatialContext;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {

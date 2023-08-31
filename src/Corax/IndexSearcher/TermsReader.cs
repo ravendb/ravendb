@@ -1,18 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
-using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using Voron.Impl;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public unsafe struct TermsReader : IDisposable
 {

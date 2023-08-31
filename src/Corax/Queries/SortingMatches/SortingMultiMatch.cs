@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Queries.SortingMatches.Meta;
 using System.Threading;
+using Corax.Queries.Meta;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
@@ -18,7 +19,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
     private const int NextComparerOffset = 3;
-    private readonly IndexSearcher _searcher;
+    private readonly IndexSearcher.IndexSearcher _searcher;
     private readonly TInner _inner;
     private readonly OrderMetadata[] _orderMetadata;
     private readonly delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> _fillFunc;
@@ -38,7 +39,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     public long TotalResults;
     public bool DoNotSortResults() => throw new NotSupportedException();
 
-    public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1, in CancellationToken token = default)
+    public SortingMultiMatch(IndexSearcher.IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1, in CancellationToken token = default)
     {
         _searcher = searcher;
         _inner = inner;

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Utils;
 using Jint;
 using Jint.Native;

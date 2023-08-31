@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Jint;
 using Jint.Native;

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Corax.Analyzers;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;

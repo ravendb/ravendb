@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 
-namespace Corax.Queries
+namespace Corax.Queries.Meta
 {
     public static class QueryMatch
     {

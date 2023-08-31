@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Corax;
+using Corax.Analyzers;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Corax;

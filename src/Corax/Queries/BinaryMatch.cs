@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Corax.Queries.Meta;
 using Sparrow.Server;
 
 namespace Corax.Queries
@@ -19,7 +20,7 @@ namespace Corax.Queries
         private TOuter _outer;
         private MemoizationMatchProvider<TOuter> _memoizedOuter;
         private readonly ByteStringContext _ctx;
-        private readonly IndexSearcher _indexSearcher;
+        private readonly IndexSearcher.IndexSearcher _indexSearcher;
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
         private readonly CancellationToken _token;
@@ -41,7 +42,7 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => _confidence;
 
         private BinaryMatch(
-            IndexSearcher indexSearcher,
+            IndexSearcher.IndexSearcher indexSearcher,
             in TInner inner, in TOuter outer,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> fillFunc,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> andWithFunc,

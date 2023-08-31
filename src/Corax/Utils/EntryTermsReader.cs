@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using Corax.IndexSearcher;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Json;
@@ -329,7 +330,7 @@ public unsafe struct EntryTermsReader
         return Debug(w.GetIndexedFieldNamesByRootPage());
     }
 
-    public string Debug(IndexSearcher r)
+    public string Debug(IndexSearcher.IndexSearcher r)
     {
         return Debug(r.GetIndexedFieldNamesByRootPage());
     }

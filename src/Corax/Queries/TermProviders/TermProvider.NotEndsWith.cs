@@ -2,24 +2,24 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
-using CompactTreeForwardIterator = Voron.Data.CompactTrees.CompactTree.Iterator<Voron.Data.Lookups.Lookup<Voron.Data.CompactTrees.CompactTree.CompactKeyLookup>.ForwardIterator>;
 
-namespace Corax.Queries
+namespace Corax.Queries.TermProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public struct NotEndsWithTermProvider<TLookupIterator> : ITermProvider
         where TLookupIterator : struct, ILookupIterator
     {
         private readonly CompactTree _tree;
-        private readonly IndexSearcher _searcher;
+        private readonly IndexSearcher.IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _endsWith;
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
-        public NotEndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
+        public NotEndsWithTermProvider(IndexSearcher.IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
         {
             _searcher = searcher;
             _field = field;

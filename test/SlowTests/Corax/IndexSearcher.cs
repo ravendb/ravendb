@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.Analyzers;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow;

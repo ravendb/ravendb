@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Corax.Queries;
+using Corax.Queries.Meta;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Server.Utils.Stats;
 

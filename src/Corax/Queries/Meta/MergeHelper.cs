@@ -1,11 +1,9 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
-namespace Corax.Queries
+namespace Corax.Queries.Meta
 {
     internal sealed unsafe class MergeHelper
     {

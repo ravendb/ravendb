@@ -5,13 +5,13 @@ using Corax.Pipeline;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Raven.Server.Json;
-using Analyzer = Corax.Analyzer;
+using Analyzer = Corax.Analyzers.Analyzer;
 using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
 using Token = Corax.Pipeline.Token;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public sealed unsafe class LuceneAnalyzerAdapter : Analyzer
+    public sealed unsafe class LuceneAnalyzerAdapter : global::Corax.Analyzers.Analyzer
     {
         private static readonly ITransformer[] NoTransformers = new ITransformer[0];
         private LazyStringReader _lazyStringReader;

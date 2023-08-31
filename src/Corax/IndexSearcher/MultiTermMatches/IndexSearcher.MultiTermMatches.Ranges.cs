@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Mappings;
@@ -10,7 +9,7 @@ using Voron.Data.Lookups;
 using static Voron.Data.CompactTrees.CompactTree;
 using Range = Corax.Queries.Meta.Range;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {
