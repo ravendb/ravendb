@@ -38,7 +38,7 @@ export class MockCollectionsTracker {
                     lastDocumentChangeVector: null,
                 },
                 {
-                    name: "Employees",
+                    name: "Shippers",
                     countPrefix: "9",
                     documentCount: 9,
                     hasBounceClass: false,
