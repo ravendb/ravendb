@@ -1,8 +1,7 @@
 using System.Runtime.CompilerServices;
-using Voron.Data.BTrees;
 using Voron.Global;
 
-namespace Voron.Impl
+namespace Voron.Data.BTrees
 {
     internal sealed unsafe class TreeSizeOf
     {
