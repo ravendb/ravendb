@@ -47,6 +47,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int DecodeEntry(ref CursorState state, int pos, out long keyData, out long val)
     {
+        Debug.Assert(pos >= 0 && pos < state.Header->NumberOfEntries);
         var  buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
         return DecodeEntry(state.Header, buffer, out keyData, out val);
     }
@@ -75,6 +76,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetEntryBuffer(ref CursorState state, int pos, out byte* buffer)
     {
+        Debug.Assert(pos >= 0 && pos < state.Header->NumberOfEntries);
         buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
         var keyLen = buffer[0] >> 4;
         var valLen = buffer[0] & 0xF;
@@ -84,6 +86,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetEntrySize(ref CursorState state, int pos)
     {
+        Debug.Assert(pos >= 0 && pos < state.Header->NumberOfEntries);
         var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
         return GetEntrySize(buffer);
     }
@@ -99,6 +102,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long GetKeyData(ref CursorState state, int pos)
     {
+        Debug.Assert(pos >= 0 && pos < state.Header->NumberOfEntries);
         var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
         return GetKeyData(state.Header, buffer);
     }
@@ -128,7 +132,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long GetValue(ref CursorState state, int pos)
     {
-        Debug.Assert(pos >= 0);
+        Debug.Assert(pos >= 0 && pos < state.Header->NumberOfEntries);
         var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
         var keyLen = buffer[0] >> 4;
         var valLen = buffer[0] & 0xF;
@@ -140,6 +144,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void GetKeyAndValue(ref CursorState state, int pos, out long key, out long value)
     {
+        Debug.Assert(pos >= 0 && pos < state.Header->NumberOfEntries);
         var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
         var keyLen = buffer[0] >> 4;
         var valLen = buffer[0] & 0xF;
@@ -644,6 +649,20 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
         if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
         {
+            if (isUpdate)
+            {
+                // we put an *invalid* marker in there (to avoid moving entries back & forth)
+                // but now we need to defrag or split, so let's remove it
+
+                var src = new Span<ushort>(state.EntriesOffsetsPtr + state.LastSearchPosition + 1,
+                    // not reducing the count here because the number of elements here was reduced the count previously
+                    state.Header->NumberOfEntries - state.LastSearchPosition);
+                var dst = new Span<ushort>(state.EntriesOffsetsPtr + state.LastSearchPosition, 
+                    state.Header->NumberOfEntries - state.LastSearchPosition);
+                src.CopyTo(dst);
+                isUpdate = false; // so the follow up on AddEntryToPage() will know to move it back
+            }
+            
             bool splitAnyways = true;
             if (state.Header->FreeSpace >= requiredSize + sizeof(short) &&
                 // at the same time, we need to avoid spending too much time doing de-frags
