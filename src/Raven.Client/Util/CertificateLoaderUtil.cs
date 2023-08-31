@@ -5,7 +5,7 @@ using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using Sparrow.Logging;
 
-namespace Raven.Client;
+namespace Raven.Client.Util;
 
 internal static class CertificateLoaderUtil
 {
