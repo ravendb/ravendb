@@ -44,3 +44,42 @@
         }
     }
 }
+
+.destination-modal {
+    .task-item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        padding: sizes.$gutter-sm;
+        border-radius: sizes.$gutter-xxs;
+        height: 100%;
+        text-align: center;
+
+        h4 {
+            color: inherit;
+        }
+
+        i {
+            font-size: 48px;
+            line-height: 1em;
+        }
+        transition: background-color 0.5s sizes.$global-easing, color 0.1s !important;
+
+        &:hover {
+            transition: background-color 0.05s sizes.$global-easing, color 0.05s !important;
+            color: colors.$white;
+        }
+    }
+
+    @each $name, $color in colors.$task-colors {
+        .#{$name} {
+            background-color: fade-out($color, 0.9);
+            color: $color;
+
+            &:hover {
+                background-color: fade-out($color, 0.1);
+            }
+        }
+    }
+}
