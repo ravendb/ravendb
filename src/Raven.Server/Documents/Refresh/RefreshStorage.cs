@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.DataArchival;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
@@ -16,25 +18,38 @@ namespace Raven.Server.Documents.Refresh
         private const string DocumentsByRefresh = "DocumentsByRefresh";
         protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
         {
-            try
+            using (var doc = Database.DocumentsStorage.Get(context, lowerId, throwOnConflict: false))
             {
-                using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data, throwOnConflict: true))
+                if (doc == null || doc.TryGetMetadata(out var metadata) == false)
                 {
-                    if (doc == null || doc.TryGetMetadata(out var metadata) == false)
-                    {
-                        throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
-                    }
-                    
-                    if (HasPassed(metadata, currentTime) == false) 
-                        return;
-                    
-                    Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
+                    throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
                 }
-            }
-            catch (DocumentConflictException)
-            {
-                if (GetConflictedExpiration(context, currentTime, lowerId).AllExpired)
-                    Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
+
+                if (HasPassed(metadata, currentTime) == false)
+                    return;
+
+                // remove the @refresh tag
+                metadata.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(metadata);
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Refresh);
+
+                using (var updated = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    try
+                    {
+                        Database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                    }
+                    catch (ConcurrencyException)
+                    {
+                        // This is expected and safe to ignore
+                        // It can happen if there is a mismatch with the Cluster-Transaction-Index, which will
+                        // sort itself out when the cluster & database will be in sync again
+                    }
+                    catch (DocumentConflictException)
+                    {
+                        // no good way to handle this, we'll wait to resolve
+                        // the issue when the conflict is resolved
+                    }
+                }
             }
         }
 
