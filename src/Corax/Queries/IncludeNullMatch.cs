@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Corax.Utils;
 using Voron.Data.PostingLists;
 
@@ -14,7 +15,7 @@ where TInner : IQueryMatch
     private bool _hasLeftNulls;
     private bool _innerEnd = false;
     private PostingList.Iterator _postingListIterator;
-    public IncludeNullMatch(IndexSearcher searcher, in TInner inner, in FieldMetadata field, bool forward)
+    public IncludeNullMatch(IndexSearcher.IndexSearcher searcher, in TInner inner, in FieldMetadata field, bool forward)
     {
         _forward = forward;
         _inner = inner;

@@ -1,10 +1,7 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-#if DEBUG
 using System.Text;
-#endif
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
@@ -14,8 +11,10 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
+#if DEBUG
+#endif
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {

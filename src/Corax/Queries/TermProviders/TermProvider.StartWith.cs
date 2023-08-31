@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 
@@ -14,7 +15,7 @@ namespace Corax.Queries.TermProviders
         where TLookupIterator : struct, ILookupIterator
     {
         private readonly CompactTree _tree;
-        private readonly IndexSearcher _searcher;
+        private readonly IndexSearcher.IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
         private readonly CompactKey _startWithLimit;
@@ -24,7 +25,7 @@ namespace Corax.Queries.TermProviders
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
-        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith, CompactKey seekTerm, bool validatePostfixLen, CancellationToken token)
+        public StartsWithTermProvider(IndexSearcher.IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith, CompactKey seekTerm, bool validatePostfixLen, CancellationToken token)
         {
             _searcher = searcher;
             _field = field;

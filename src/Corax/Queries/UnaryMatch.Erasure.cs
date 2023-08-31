@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Corax.Queries.Meta;
 
 
 namespace Corax.Queries

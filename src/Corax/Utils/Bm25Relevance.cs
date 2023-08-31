@@ -54,7 +54,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
     private Span<long> Matches => new(_matchBuffer, _currentId);
     private Span<short> Scores => new(_scoreBuffer, _currentId);
 
-    private Bm25Relevance(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection,
+    private Bm25Relevance(IndexSearcher.IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection,
         delegate*<Bm25Relevance, Span<long>, Span<float>, float, void> dynamicalScoreFunc)
     {
         _termRatioToWholeCollection = (float)termRatioToWholeCollection;
@@ -88,7 +88,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
     /// We add 1 to the IDF (Inverse Document Frequency) value to ensure that it is not equal to 0.
     /// This guarantees that the boost factor is not 'forgotten' in the calculation of the score. 
     /// </summary>
-    private static float ComputeIdf(IndexSearcher indexSearcher, long termFrequency)
+    private static float ComputeIdf(IndexSearcher.IndexSearcher indexSearcher, long termFrequency)
     {
         var m = indexSearcher.NumberOfEntries - termFrequency + 0.5D;
         var d = termFrequency + 0.5D;
@@ -188,18 +188,18 @@ public sealed unsafe class Bm25Relevance : IDisposable
         _memoryHolder?.Dispose();
     }
 
-    public static Bm25Relevance Once(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection)
+    public static Bm25Relevance Once(IndexSearcher.IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection)
     {
         return new(indexSearcher, termFrequency, context, numberOfDocuments, termRatioToWholeCollection, dynamicalScoreFunc: null);
     }
 
-    public static Bm25Relevance Small(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments,
+    public static Bm25Relevance Small(IndexSearcher.IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments,
         double termRatioToWholeCollection)
     {
         return new(indexSearcher, termFrequency, context, numberOfDocuments, termRatioToWholeCollection, dynamicalScoreFunc: null);
     }
 
-    public static Bm25Relevance Set(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection,
+    public static Bm25Relevance Set(IndexSearcher.IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection,
         PostingList postingList)
     {
         static void PostingListCalculateScoreDynamically(Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)

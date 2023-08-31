@@ -4,10 +4,11 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.Meta;
 using Corax.Utils;
 using Voron;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {

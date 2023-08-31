@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Corax.Queries.Meta;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using static Voron.Global.Constants;
@@ -323,7 +324,7 @@ namespace Corax.Queries
         string DebugView => Inspect().ToString();
 
 
-        public static AndNotMatch<TInner, TOuter> Create(IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
+        public static AndNotMatch<TInner, TOuter> Create(IndexSearcher.IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
             // Estimate Confidence values.
             QueryCountConfidence confidence;

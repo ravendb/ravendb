@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Voron;
 
 namespace Corax.Queries.TermProviders
@@ -11,12 +12,12 @@ namespace Corax.Queries.TermProviders
     [DebuggerDisplay("{DebugView,nq}")]
     public struct InTermProvider<TTermsType> : ITermProvider
     {
-        private readonly IndexSearcher _searcher;
+        private readonly IndexSearcher.IndexSearcher _searcher;
         private readonly List<TTermsType> _terms;
         private int _termIndex;
         private readonly FieldMetadata _field;
 
-        public InTermProvider(IndexSearcher searcher, FieldMetadata field, List<TTermsType> terms)
+        public InTermProvider(IndexSearcher.IndexSearcher searcher, FieldMetadata field, List<TTermsType> terms)
         {
             _field = field;
             _searcher = searcher;

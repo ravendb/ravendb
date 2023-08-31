@@ -7,10 +7,10 @@ using System.Threading;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
-using Sparrow;
+using Corax.Queries.Meta;
 using Voron;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {
@@ -71,8 +71,8 @@ public partial class IndexSearcher
             
                 searchQuery = @operator switch
                 {
-                    Constants.Search.Operator.Or => Or(searchQuery, query, token: cancellationToken),
-                    Constants.Search.Operator.And => And(searchQuery, query, token: cancellationToken),
+                    Constants.Search.Operator.Or => Or<IQueryMatch, MultiTermMatch>(searchQuery, query, token: cancellationToken),
+                    Constants.Search.Operator.And => And<IQueryMatch, MultiTermMatch>(searchQuery, query, token: cancellationToken),
                     _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
                 };
             }
@@ -95,8 +95,8 @@ public partial class IndexSearcher
             {
                 searchQuery = @operator switch
                 {
-                    Constants.Search.Operator.Or => Or(termMatchesQuery, searchQuery),
-                    Constants.Search.Operator.And => And(termMatchesQuery, searchQuery),
+                    Constants.Search.Operator.Or => Or<IQueryMatch, IQueryMatch>(termMatchesQuery, searchQuery),
+                    Constants.Search.Operator.And => And<IQueryMatch, IQueryMatch>(termMatchesQuery, searchQuery),
                     _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
                 };
             }

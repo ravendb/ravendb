@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Amqp.Framing;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Pipeline;
 using Corax.Utils;
 using Esprima.Utils;

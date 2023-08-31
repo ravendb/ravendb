@@ -3,27 +3,29 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Voron;
-using Voron.Impl;
-using Voron.Data.Containers;
-using Sparrow;
 using System.Runtime.Intrinsics.X86;
+using Corax.Analyzers;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Queries.Meta;
 using Corax.Queries.TermProviders;
 using Corax.Utils;
+using Sparrow;
 using Sparrow.Server;
+using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
+using Voron.Impl;
 using Voron.Util;
 using InvalidOperationException = System.InvalidOperationException;
 using static Voron.Data.CompactTrees.CompactTree;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public sealed unsafe partial class IndexSearcher : IDisposable
 {

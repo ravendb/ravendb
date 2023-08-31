@@ -15,7 +15,7 @@ namespace Corax.Analyzers
 {
     internal sealed unsafe class AnalyzerScope : IDisposable
     {
-        private readonly IndexSearcher _indexSearcher;
+        private readonly IndexSearcher.IndexSearcher _indexSearcher;
         private readonly Analyzer _analyzer;
 
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _tempBufferScope;
@@ -24,7 +24,7 @@ namespace Corax.Analyzers
         private int _tempOutputTokenSize;
         private Token* _tempTokenBuffer;
 
-        public AnalyzerScope(IndexSearcher indexSearcher, Analyzer analyzer)
+        public AnalyzerScope(IndexSearcher.IndexSearcher indexSearcher, Analyzer analyzer)
         {
             _indexSearcher = indexSearcher;
             _analyzer = analyzer;
@@ -32,7 +32,7 @@ namespace Corax.Analyzers
             InitializeTemporaryBuffers(indexSearcher.Allocator);
         }
 
-        public AnalyzerScope(string fieldName, IndexSearcher indexSearcher, IndexFieldsMapping fieldsMapping, bool hasDynamics)
+        public AnalyzerScope(string fieldName, IndexSearcher.IndexSearcher indexSearcher, IndexFieldsMapping fieldsMapping, bool hasDynamics)
         {
             _indexSearcher = indexSearcher;
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Queries.Meta;
 using Sparrow.Server;
 
 namespace Corax.Queries

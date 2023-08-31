@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Xml.Linq;
+using Corax.Queries.Meta;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron.Data.PostingLists;
@@ -14,7 +15,7 @@ namespace Corax.Queries
     unsafe partial struct BinaryMatch<TInner, TOuter>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static BinaryMatch<TInner, TOuter> YieldAnd(IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
+        public static BinaryMatch<TInner, TOuter> YieldAnd(IndexSearcher.IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
@@ -49,7 +50,7 @@ namespace Corax.Queries
                     
                     // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
                     // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                    if (match._doNotSortResults == false && iterations >= 1 || inner is SpatialMatch)
+                    if (match._doNotSortResults == false && iterations >= 1 || inner is SpatialMatch.SpatialMatch)
                     {
                         if (totalResults > 0)
                         {
@@ -126,7 +127,7 @@ namespace Corax.Queries
             return new BinaryMatch<TInner, TOuter>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, token);
         }
 
-        public static BinaryMatch<TInner, TOuter> YieldOr(IndexSearcher indexSearcher, in TInner inner, in TOuter outer, in CancellationToken token)
+        public static BinaryMatch<TInner, TOuter> YieldOr(IndexSearcher.IndexSearcher indexSearcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
 #if !DEBUG
             [SkipLocalsInit]

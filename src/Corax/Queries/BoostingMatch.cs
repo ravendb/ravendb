@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Corax.Queries.SortingMatches;
 using Corax.Queries.SortingMatches.Meta;
 
@@ -34,7 +35,7 @@ namespace Corax.Queries
     {
         internal IQueryMatch _inner;
         public float BoostFactor;
-        public BoostingMatch(IndexSearcher searcher, in IQueryMatch inner, float boostFactor)
+        public BoostingMatch(IndexSearcher.IndexSearcher searcher, in IQueryMatch inner, float boostFactor)
         {
             _inner = inner;
             BoostFactor = boostFactor;

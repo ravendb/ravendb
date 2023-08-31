@@ -6,8 +6,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.Meta;
 using Corax.Queries.SortingMatches;
 using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
@@ -33,7 +35,7 @@ using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
-using IndexSearcher = Corax.IndexSearcher;
+using IndexSearcher = Corax.IndexSearcher.IndexSearcher;
 using CoraxSpatialResult = global::Corax.Utils.Spatial.SpatialResult;
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {

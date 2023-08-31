@@ -26,7 +26,7 @@ namespace Corax.Queries
     public unsafe partial struct SuggestionTermProvider<TDistanceProvider> : IRawTermProvider
         where TDistanceProvider : IStringDistance
     {
-        private readonly IndexSearcher _searcher;
+        private readonly IndexSearcher.IndexSearcher _searcher;
         private readonly int _fieldId;
         private readonly Slice _term;
         private IndexFieldBinding _binding;
@@ -37,7 +37,7 @@ namespace Corax.Queries
         private readonly TDistanceProvider _distanceProvider;
 
         public SuggestionTermProvider(
-            IndexSearcher searcher, int fieldId,
+            IndexSearcher.IndexSearcher searcher, int fieldId,
             Slice term, IndexFieldBinding binding, int take, bool sortByPopularity, float accuracy, TDistanceProvider distanceProvider,
             delegate*<ref SuggestionTermProvider<TDistanceProvider>, ref Span<byte>, ref Span<Token>, ref Span<float>, void> nextFunc)
         {            
@@ -168,7 +168,7 @@ namespace Corax.Queries
         }
 
 
-        public static SuggestionTermProvider<TDistanceProvider> YieldSuggestions(IndexSearcher searcher, int fieldId, Slice term, IndexFieldBinding binding, TDistanceProvider distanceProvider, bool sortByPopularity, float distance, int take = -1)
+        public static SuggestionTermProvider<TDistanceProvider> YieldSuggestions(IndexSearcher.IndexSearcher searcher, int fieldId, Slice term, IndexFieldBinding binding, TDistanceProvider distanceProvider, bool sortByPopularity, float distance, int take = -1)
         {
             static void NextNGram(ref SuggestionTermProvider<TDistanceProvider> provider, ref Span<byte> terms, ref Span<Token> tokens, ref Span<float> scores)
             {

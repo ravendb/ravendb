@@ -4,6 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
+using Corax.Analyzers;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Sparrow.Server;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
@@ -17,7 +18,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
     where THigh : struct, Range.Marker
 {
     private readonly CompactTree _tree;
-    private readonly IndexSearcher _indexSearcher;
+    private readonly IndexSearcher.IndexSearcher _indexSearcher;
     private readonly FieldMetadata _field;
     private Slice _low, _high;
 
@@ -29,7 +30,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
     private bool _shouldIncludeLastTerm;
     private long _endContainerId;
 
-    public TermRangeProvider(IndexSearcher indexSearcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
+    public TermRangeProvider(IndexSearcher.IndexSearcher indexSearcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
     {
         _indexSearcher = indexSearcher;
         _field = field;

@@ -1,11 +1,10 @@
-using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Corax.Queries;
+using Corax.Queries.Meta;
 using Corax.Queries.SortingMatches;
 using Corax.Utils;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public unsafe partial class IndexSearcher
 {

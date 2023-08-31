@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Corax.Queries
+namespace Corax.Queries.Meta
 {
     public interface IMemoizationMatchSource : IDisposable
     {

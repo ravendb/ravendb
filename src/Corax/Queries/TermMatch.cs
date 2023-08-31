@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using Corax.Queries.Meta;
 using Corax.Utils;
 using Sparrow.Compression;
 using Sparrow.Json;
@@ -47,7 +48,7 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
 
         private TermMatch(
-            IndexSearcher indexSearcher,
+            IndexSearcher.IndexSearcher indexSearcher,
             ByteStringContext ctx,
             long totalResults,
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
@@ -70,7 +71,7 @@ namespace Corax.Queries
 #endif
         }
 
-        public static TermMatch CreateEmpty(IndexSearcher indexSearcher, ByteStringContext ctx)
+        public static TermMatch CreateEmpty(IndexSearcher.IndexSearcher indexSearcher, ByteStringContext ctx)
         {
             static int FillFunc(ref TermMatch term, Span<long> matches)
             {
@@ -101,7 +102,7 @@ namespace Corax.Queries
             };
         }
         
-        public static TermMatch YieldOnce(IndexSearcher indexSearcher, ByteStringContext ctx, long value, double termRatioToWholeCollection, bool isBoosting)
+        public static TermMatch YieldOnce(IndexSearcher.IndexSearcher indexSearcher, ByteStringContext ctx, long value, double termRatioToWholeCollection, bool isBoosting)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -173,7 +174,7 @@ namespace Corax.Queries
             };
         }
 
-        public static TermMatch YieldSmall(IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem, double termRatioToWholeCollection, bool isBoosting)
+        public static TermMatch YieldSmall(IndexSearcher.IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem, double termRatioToWholeCollection, bool isBoosting)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc<TBoostingMode>(ref TermMatch term, Span<long> matches) where TBoostingMode : IBoostingMarker
@@ -290,7 +291,7 @@ namespace Corax.Queries
             };
         }
         
-        public static TermMatch YieldSet(IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, double termRatioToWholeCollection, bool isBoosting, bool useAccelerated = true)
+        public static TermMatch YieldSet(IndexSearcher.IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, double termRatioToWholeCollection, bool isBoosting, bool useAccelerated = true)
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

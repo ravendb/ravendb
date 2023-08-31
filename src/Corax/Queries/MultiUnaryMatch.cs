@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Corax.Utils;
 using Voron;
 
@@ -145,7 +146,7 @@ public unsafe struct MultiUnaryItem
             : leftResult;
     }
 
-    public MultiUnaryItem(IndexSearcher searcher, FieldMetadata binding, string value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
+    public MultiUnaryItem(IndexSearcher.IndexSearcher searcher, FieldMetadata binding, string value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
     {
         SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, value);
     }
@@ -160,7 +161,7 @@ public unsafe struct MultiUnaryItem
         DoubleValueLeft = value;
     }
 
-    public MultiUnaryItem(IndexSearcher searcher, FieldMetadata binding, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
+    public MultiUnaryItem(IndexSearcher.IndexSearcher searcher, FieldMetadata binding, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
         : this(binding, DataType.Slice, true, leftOperation, rightOperation)
     {
         SliceValueRight = searcher.EncodeAndApplyAnalyzer(binding, rightValue);
@@ -364,11 +365,11 @@ public unsafe struct MultiUnaryItem
 public struct MultiUnaryMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
-    private readonly IndexSearcher _searcher;
+    private readonly IndexSearcher.IndexSearcher _searcher;
     private TInner _inner;
     private readonly MultiUnaryItem[] _comparers;
 
-    public MultiUnaryMatch(IndexSearcher searcher, TInner inner, MultiUnaryItem[] items)
+    public MultiUnaryMatch(IndexSearcher.IndexSearcher searcher, TInner inner, MultiUnaryItem[] items)
     {
         _inner = inner;
         _searcher = searcher;

@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.Meta;
 using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;

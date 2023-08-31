@@ -1,7 +1,7 @@
-using System;
 using Corax.Queries;
+using Corax.Queries.Meta;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {

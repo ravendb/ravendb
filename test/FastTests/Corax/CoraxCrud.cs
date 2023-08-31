@@ -1,5 +1,6 @@
 ﻿using System;
 using Corax;
+using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;

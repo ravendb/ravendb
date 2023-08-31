@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Queries.Meta;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
@@ -23,7 +24,7 @@ namespace Corax.Queries
             return false; //we are already returning in sorted order
         }
         
-        public AllEntriesMatch(IndexSearcher searcher, Transaction tx)
+        public AllEntriesMatch(IndexSearcher.IndexSearcher searcher, Transaction tx)
         {
             _count = searcher.NumberOfEntries;
             if (_count == 0)

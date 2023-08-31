@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 
@@ -12,13 +13,13 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
     where TLookupIterator : struct, ILookupIterator
 {
     private readonly CompactTree _tree;
-    private readonly IndexSearcher _searcher;
+    private readonly IndexSearcher.IndexSearcher _searcher;
     private readonly FieldMetadata _field;
     private readonly Regex _regex;
 
     private CompactTree.Iterator<TLookupIterator> _iterator;
 
-    public RegexTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Regex regex)
+    public RegexTermProvider(IndexSearcher.IndexSearcher searcher, CompactTree tree, FieldMetadata field, Regex regex)
     {
         _searcher = searcher;
         _regex = regex;

@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Queries.Meta;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -17,7 +18,7 @@ namespace Corax.Queries
         public int ReplayCounter => _replayCounter;
 
         private readonly ByteStringContext _ctx;
-        private readonly IndexSearcher _indexSearcher;
+        private readonly IndexSearcher.IndexSearcher _indexSearcher;
         private TInner _inner;
 
         public bool IsBoosting => _inner.IsBoosting;
@@ -44,7 +45,7 @@ namespace Corax.Queries
             return true;
         }
 
-        public MemoizationMatchProvider(IndexSearcher indexSearcher, in TInner inner)
+        public MemoizationMatchProvider(IndexSearcher.IndexSearcher indexSearcher, in TInner inner)
         {
             _indexSearcher = indexSearcher;
             _ctx = indexSearcher.Allocator;

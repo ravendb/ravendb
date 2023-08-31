@@ -3,14 +3,14 @@ using System.Diagnostics;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.Meta;
 using Corax.Queries.TermProviders;
 using Voron;
 using Voron.Data.CompactTrees;
-using static Voron.Data.CompactTrees.CompactTree;
 using Voron.Data.Lookups;
-using Range = Corax.Queries.Meta.Range;
+using static Voron.Data.CompactTrees.CompactTree;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {

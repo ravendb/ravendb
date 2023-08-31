@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
+using Corax.Queries.Meta;
 using Sparrow.Extensions;
 using Voron.Data.Lookups;
 using Range = Corax.Queries.Meta.Range;
@@ -17,7 +18,7 @@ namespace Corax.Queries.TermProviders
         where THigh  : struct, Range.Marker
         where TVal : struct, ILookupKey
     {
-        private readonly IndexSearcher _searcher;
+        private readonly IndexSearcher.IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private TVal _low, _high;
         private TLookupIterator _iterator;
@@ -26,7 +27,7 @@ namespace Corax.Queries.TermProviders
         private bool _includeLastTerm = true;
         private bool _isEmpty;
 
-        public TermNumericRangeProvider(IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)
+        public TermNumericRangeProvider(IndexSearcher.IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)
         {
             _searcher = searcher;
             _field = field;

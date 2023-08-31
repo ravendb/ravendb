@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Sparrow.Json.Parsing;
 
-namespace Corax.Queries
+namespace Corax.Queries.Meta
 {
     public sealed class QueryInspectionNode : IDynamicJson
     {

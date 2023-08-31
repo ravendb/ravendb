@@ -5,11 +5,10 @@ using Corax.Mappings;
 using Corax.Queries;
 using Corax.Queries.TermProviders;
 using Voron;
-using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using static Voron.Data.CompactTrees.CompactTree;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public partial class IndexSearcher
 {
@@ -65,7 +64,7 @@ public partial class IndexSearcher
         };
     }
     
-    public MultiTermMatch ContainsQuery(FieldMetadata field, string containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default) => ContainsQuery(field, EncodeAndApplyAnalyzer(field, containsTerm), isNegated, forward, token);
+    public MultiTermMatch ContainsQuery(FieldMetadata field, string containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default) => ContainsQuery(field, (Slice)EncodeAndApplyAnalyzer(field, containsTerm), isNegated, forward, token);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch ContainsQuery(FieldMetadata field, Slice containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default)

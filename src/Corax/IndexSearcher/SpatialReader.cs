@@ -3,11 +3,10 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
 using Voron.Impl;
 
-namespace Corax;
+namespace Corax.IndexSearcher;
 
 public struct SpatialReader : IDisposable
 {

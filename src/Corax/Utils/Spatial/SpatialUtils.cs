@@ -104,7 +104,7 @@ public sealed class SpatialUtils
     }
 
 
-    public static IEnumerable<(string Geohash, bool IsTermMatch)> GetGeohashesForQueriesOutsideShape(IndexSearcher searcher, CompactTree tree,
+    public static IEnumerable<(string Geohash, bool IsTermMatch)> GetGeohashesForQueriesOutsideShape(IndexSearcher.IndexSearcher searcher, CompactTree tree,
         ByteStringContext allocator,
         SpatialContext ctx,
         IShape shape, int currentPrecision = 0, string currentGeohash = "", int maxPrecision = DefaultGeohashLevel)
@@ -192,7 +192,7 @@ public sealed class SpatialUtils
     //https://user-images.githubusercontent.com/86351904/166668006-31d0f5e5-70c1-4a7c-820d-c933e5d2960d.png
     //https://user-images.githubusercontent.com/86351904/166668024-ab05247b-68c1-45ae-a17e-3e7d5f6f4c50.png
     //https://user-images.githubusercontent.com/86351904/166668035-e9f94e0a-59ed-42fa-bcfe-c33d7a87d02d.png
-    public static IEnumerable<(string Geohash, bool IsTermMatch)> GetGeohashesForQueriesInsideShape(IndexSearcher searcher, CompactTree tree, ByteStringContext allocator,
+    public static IEnumerable<(string Geohash, bool IsTermMatch)> GetGeohashesForQueriesInsideShape(IndexSearcher.IndexSearcher searcher, CompactTree tree, ByteStringContext allocator,
         SpatialContext ctx,
         IShape shape, int currentPrecision = 0, string currentGeohash = "", int maxPrecision = DefaultGeohashLevel)
     {
