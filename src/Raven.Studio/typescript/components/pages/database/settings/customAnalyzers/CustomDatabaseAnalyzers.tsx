@@ -1,12 +1,7 @@
 ﻿import database from "models/resources/database";
 import React from "react";
 import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
-import {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemLicensing,
-    AccordionItemWrapper,
-} from "components/common/AboutView";
+import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
@@ -18,6 +13,7 @@ import {
     RichPanelName,
 } from "components/common/RichPanel";
 import { todo } from "common/developmentHelper";
+import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 
 interface CustomAnalyzersPageProps {
     db: database;
@@ -43,7 +39,9 @@ todo("Feature", "Damian", "Connect the view to studio");
 todo("Feature", "Damian", "Add conditional rendering for Community license");
 todo("Feature", "Damian", "Add unique ids for HrHeader popovers");
 
-export default function CustomAnalyzers(props: CustomAnalyzersPageProps) {
+export default function CustomDatabaseAnalyzers(props: CustomAnalyzersPageProps) {
+    const limit = 1; // TODO get from license selector
+
     return (
         <div className="content-margin">
             <Col xxl={12}>
@@ -56,9 +54,9 @@ export default function CustomAnalyzers(props: CustomAnalyzersPageProps) {
                         </Button>
                         <HrHeader
                             count={databaseCustomAnalyzersCount}
-                            limit={1}
+                            limit={limit}
                             right={
-                                <a href="https://ravendb.net/l/LGUJH8/6.0.0-custom-60" target="_blank">
+                                <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
                                     <Icon icon="link" />
                                     Analyzers tutorial
                                 </a>
@@ -145,37 +143,12 @@ export default function CustomAnalyzers(props: CustomAnalyzersPageProps) {
                                 Umm
                             </AccordionItemWrapper>
                             {databaseCustomAnalyzersCount === 1 && (
-                                <AccordionItemWrapper
+                                <AccordionCommunityLicenseLimited
                                     targetId="licensing"
-                                    icon="license"
-                                    color="warning"
-                                    description="See available upgrade options"
-                                    heading="Licensing"
-                                    pill
-                                    pillText="Upgrade available"
-                                    pillIcon="upgrade-arrow"
-                                >
-                                    <AccordionItemLicensing
-                                        description="You've reached the limit of 1 database custom analyzer for Community license. Upgrade to a paid plan and get unlimited availability."
-                                        featureName="Custom Analyzers"
-                                        featureIcon="custom-analyzers"
-                                        checkedLicenses={["Community", "Professional", "Enterprise"]}
-                                        isCommunityLimited
-                                    >
-                                        <p className="lead fs-4">Get your license expanded</p>
-                                        <div className="mb-3">
-                                            <Button color="primary" className="rounded-pill">
-                                                <Icon icon="notifications" />
-                                                Contact us
-                                            </Button>
-                                        </div>
-                                        <small>
-                                            <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
-                                                See pricing plans
-                                            </a>
-                                        </small>
-                                    </AccordionItemLicensing>
-                                </AccordionItemWrapper>
+                                    featureName="Custom Analyzers"
+                                    featureIcon="custom-analyzers"
+                                    description={`You've reached the limit of ${limit} database custom analyzer for Community license. Upgrade to a paid plan and get unlimited availability.`}
+                                />
                             )}
                         </AboutViewAnchored>
                     </Col>

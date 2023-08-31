@@ -1,9 +1,8 @@
 ﻿import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import CustomSorters from "./CustomSorters";
+import CustomSorters from "./CustomDatabaseSorters";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
     title: "Pages/Database/Settings",
