@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Client.Exceptions.Documents.Indexes
+namespace Raven.Client.Exceptions.Documents.Attachments
 {
     public sealed class AttachmentDoesNotExistException : RavenException
     {
