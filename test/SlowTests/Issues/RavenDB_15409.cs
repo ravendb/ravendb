@@ -15,7 +15,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
-using Leader = Raven.Server.Rachis.Commands.Leader;
 
 namespace SlowTests.Issues
 {

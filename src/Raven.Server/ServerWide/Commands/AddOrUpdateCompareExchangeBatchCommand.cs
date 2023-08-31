@@ -2,7 +2,6 @@
 using Raven.Server.Rachis;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Leader = Raven.Server.Rachis.Commands.Leader;
 
 namespace Raven.Server.ServerWide.Commands
 {

@@ -33,7 +33,7 @@ namespace Raven.Server.Rachis
             Validator = InitializeValidator();
         }
 
-        public long Apply(ClusterOperationContext context, long uptoInclusive, Commands.Leader leader, ServerStore serverStore, Stopwatch duration)
+        public long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, ServerStore serverStore, Stopwatch duration)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -75,7 +75,7 @@ namespace Raven.Server.Rachis
             return lastAppliedIndex;
         }
 
-        protected abstract void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Commands.Leader leader, ServerStore serverStore);
+        protected abstract void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore);
 
         public virtual void EnsureNodeRemovalOnDeletion(ClusterOperationContext context, long term, string nodeTag)
         {

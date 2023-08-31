@@ -35,7 +35,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Xunit;
 using Xunit.Abstractions;
-using Leader = Raven.Server.Rachis.Commands.Leader;
 
 namespace Tests.Infrastructure
 {

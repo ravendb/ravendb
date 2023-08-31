@@ -35,7 +35,6 @@ using Voron.Data;
 using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
-using Leader = Raven.Server.Rachis.Commands.Leader;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Tests.Infrastructure

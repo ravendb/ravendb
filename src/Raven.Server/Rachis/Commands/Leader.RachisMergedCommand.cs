@@ -1,13 +1,16 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using System.Diagnostics.CodeAnalysis;
 using Voron.Impl;
 
-namespace Raven.Server.Rachis.Commands
+namespace Raven.Server.Rachis
 {
     public partial class Leader
     {
@@ -52,7 +55,7 @@ namespace Raven.Server.Rachis.Commands
                             {
                                 if (result != null)
                                 {
-                                    result = Rachis.Leader.GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
+                                    result = GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
                                 }
 
                                 TaskResult = Task.FromResult<(long, object)>((index, result));
@@ -95,7 +98,7 @@ namespace Raven.Server.Rachis.Commands
                 {
                     var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
                     TaskResult = tcs.Task; //will set only after leader gets consensus on this command and finish with execute 'Command'.
-                    var newState = new Rachis.Leader.CommandState
+                    var newState = new CommandState
                     {
                         // we need to add entry inside write tx lock to avoid
                         // a situation when command will be applied (and state set)
@@ -103,7 +106,7 @@ namespace Raven.Server.Rachis.Commands
 
                         CommandIndex = index,
                         TaskCompletionSource = tcs,
-                        ConvertResult = Rachis.Leader.GetConvertResult(Command),
+                        ConvertResult = GetConvertResult(Command),
                     };
                     _leader._entries[index] = newState;
                     context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += AfterCommit;

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Replication.ReplicationItems;

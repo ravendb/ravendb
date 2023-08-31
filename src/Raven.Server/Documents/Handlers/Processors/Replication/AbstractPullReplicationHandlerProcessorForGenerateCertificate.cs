@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
