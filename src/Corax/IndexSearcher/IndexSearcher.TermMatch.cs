@@ -74,8 +74,8 @@ public partial class IndexSearcher
             // If either the term or the field does not exist the request will be empty. 
             return TermMatch.CreateEmpty(this, Allocator);
         }
-
-        if (term is null)
+        
+        if (term is null || ReferenceEquals(term, Constants.ProjectionNullValue))
         {
             return TryGetPostingListForNull(field, out var postingListId) 
                 ? TermQuery(field, postingListId, 1D) 
