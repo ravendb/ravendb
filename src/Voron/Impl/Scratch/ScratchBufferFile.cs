@@ -16,6 +16,7 @@ using Voron.Global;
 using Voron.Impl.Paging;
 using Sparrow.Server.Utils;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Server.LowMemory;
 
 namespace Voron.Impl.Scratch
 {

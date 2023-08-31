@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -6,7 +6,7 @@ using System.Text;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
-namespace Sparrow.Platform.Posix
+namespace Sparrow.Server.Platform.Posix
 {
     internal sealed class SmapsReaderResults
     {

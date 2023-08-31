@@ -4,7 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using FastTests;
-using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 using Xunit;
 using Xunit.Abstractions;
 

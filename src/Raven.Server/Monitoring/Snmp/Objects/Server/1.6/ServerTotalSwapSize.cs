@@ -4,7 +4,6 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {

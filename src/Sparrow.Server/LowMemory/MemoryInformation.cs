@@ -3,20 +3,19 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Sparrow.Platform.Posix.macOS;
 using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Platform.Posix.macOS;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
-namespace Sparrow.LowMemory
+namespace Sparrow.Server.LowMemory
 {
     public static class MemoryInformation
     {

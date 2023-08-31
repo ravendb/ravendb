@@ -1,4 +1,4 @@
-namespace Sparrow.Platform.Posix.macOS
+namespace Sparrow.Server.Platform.Posix.macOS
 {
     internal struct vm_statistics64
     {

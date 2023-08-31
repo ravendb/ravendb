@@ -15,6 +15,7 @@ using Voron.Impl.Paging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Server.LowMemory;
 
 namespace Voron.Impl.Scratch
 {

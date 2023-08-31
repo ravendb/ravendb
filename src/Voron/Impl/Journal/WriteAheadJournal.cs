@@ -34,6 +34,7 @@ using Voron.Util;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Server.LowMemory;
 
 namespace Voron.Impl.Journal
 {
