@@ -24,7 +24,7 @@ public class RavenDB_16751 : RavenTestBase
         using (var src = GetDocumentStore())
         using (var dest = GetDocumentStore())
         {
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, src.Database);
+            await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, src.Database);
             
             // Act
             using (var session = src.OpenSession())

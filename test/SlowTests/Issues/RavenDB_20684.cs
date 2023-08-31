@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                     changeVector = session.Advanced.GetChangeVectorFor(user);
                 }
 
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
+                await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore);
 
                 using (var session = store.OpenSession())
                 {

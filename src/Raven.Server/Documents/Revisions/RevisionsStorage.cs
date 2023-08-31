@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Revisions
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByTimeSeriesUpdate))
                     return false;
 
-                if (docConfiguration == ConflictConfiguration.Default || docConfiguration.Disabled)
+                if (docConfiguration == ConflictConfiguration.Default || docConfiguration == _emptyConfiguration || docConfiguration.Disabled)
                     return false;
             }
 
@@ -547,9 +547,6 @@ namespace Raven.Server.Documents.Revisions
         {
             var result = new DeleteOldRevisionsResult();
             result.PreviousCount = GetRevisionsCount(context, prefixSlice);
-
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
-                return result;
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return result;

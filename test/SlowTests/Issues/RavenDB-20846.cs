@@ -44,7 +44,7 @@ public class RavenDB_20846 : ClusterTestBase
                 Disabled = false,
             }
         };
-        await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+        await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
 
         var company = new Company()
         {
@@ -82,7 +82,7 @@ public class RavenDB_20846 : ClusterTestBase
         }
 
         configuration.Default.MinimumRevisionsToKeep = 5;
-        await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+        await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
 
         var db = await Databases.GetDocumentDatabaseInstanceFor(store);
         using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))

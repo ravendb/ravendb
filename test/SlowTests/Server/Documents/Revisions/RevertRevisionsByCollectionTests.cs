@@ -48,7 +48,7 @@ namespace SlowTests.Server.Documents.Revisions
 
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             database.DocumentsStorage.RevisionsStorage.SizeLimitInBytes = batchSizeLimitInBytes;
-            await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
+            await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore);
             
             using (var session = store.OpenAsyncSession())
             {
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -204,7 +204,7 @@ namespace SlowTests.Server.Documents.Revisions
                         ["Comments"] = new RevisionsCollectionConfiguration { Disabled = true },
                     }
                 };
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: c =>
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database, modifyConfiguration: c =>
                 {
                     c.Default = null;
                     c.Collections = config.Collections;
@@ -262,7 +262,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -328,7 +328,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -402,7 +402,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -446,7 +446,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -504,7 +504,7 @@ namespace SlowTests.Server.Documents.Revisions
                         ["Comments"] = new RevisionsCollectionConfiguration { Disabled = true },
                     }
                 };
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: c =>
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database, modifyConfiguration: c =>
                 {
                     c.Default = null;
                     c.Collections = config.Collections;
@@ -556,7 +556,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -616,7 +616,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -684,7 +684,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -724,7 +724,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
