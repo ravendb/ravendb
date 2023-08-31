@@ -668,6 +668,9 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
+                    if (subscriptionStateKvp.Value.IsSubscriptionActive() == false)
+                        continue;
+
                     var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
                     if (subscriptionState.Disabled)
                     {
