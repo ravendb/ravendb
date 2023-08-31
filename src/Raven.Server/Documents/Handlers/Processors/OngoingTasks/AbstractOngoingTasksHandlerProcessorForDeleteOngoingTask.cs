@@ -117,6 +117,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             public async Task Complete(string raftRequestId)
             {
+                long? maxIndex = null;
+
                 if (_deletingEtl.Name != null)
                 {
                     foreach (var transformation in _deletingEtl.Transformations)
@@ -124,27 +126,24 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _requestHandler.DatabaseName, _deletingEtl.Name, transformation,
                             $"{raftRequestId}/{transformation}");
 
-                        await _requestHandler.WaitForIndexNotificationAsync(index);
+                        maxIndex = maxIndex.HasValue == false ? index : Math.Max(maxIndex.Value, index);
                     }
                 }
 
                 if (_deletingQueueSink.Name != null)
                 {
-                    long? maxIndex = null;
 
                     foreach (var script in _deletingQueueSink.Scripts)
                     {
                         var (index, _) = await _serverStore.RemoveQueueSinkProcessState(_context, _requestHandler.DatabaseName, _deletingQueueSink.Name, script,
                             $"{raftRequestId}/{script}");
 
-                        if (maxIndex.HasValue == false)
-                            maxIndex = index;
-                        else
-                            maxIndex = Math.Max(maxIndex.Value, index);
-
-                        await _requestHandler.WaitForIndexNotificationAsync(index);
+                        maxIndex = maxIndex.HasValue == false ? index : Math.Max(maxIndex.Value, index);
                     }
                 }
+
+                if (maxIndex.HasValue)
+                    await _requestHandler.WaitForIndexNotificationAsync(maxIndex.Value);
             }
         }
     }
