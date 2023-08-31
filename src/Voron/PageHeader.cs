@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Voron.Data
+namespace Voron
 {
     /// <summary>
     /// The PageHeader is the base information we can find in any voron allocated page. It is important to note 
