@@ -14,6 +14,7 @@ import periodicBackupConfiguration = require("models/database/tasks/periodicBack
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import licenseModel from "models/auth/licenseModel";
+import { EditPeriodicBackupTaskInfoHub } from "./EditPeriodicBackupTaskInfoHub";
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 
@@ -26,6 +27,8 @@ class editPeriodicBackupTask extends shardViewModelBase {
     backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
     pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
+
+    infoHubView: ReactInKnockout<typeof EditPeriodicBackupTaskInfoHub>;
 
     titleForView: KnockoutComputed<string>;
     configuration = ko.observable<backupConfigurationClass>();
@@ -45,6 +48,10 @@ class editPeriodicBackupTask extends shardViewModelBase {
         this.bindToCurrentInstance("testCredentials", "setState");
         
         this.titleForView = ko.pureComputed(() => this.configuration().getTitleForView(this.isAddingNewBackupTask()));
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditPeriodicBackupTaskInfoHub
+        }));
     }
 
     activate(args: any) { 

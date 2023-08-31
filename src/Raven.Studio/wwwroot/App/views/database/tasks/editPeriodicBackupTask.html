@@ -1,9 +1,14 @@
 <form class="content-margin edit-backup edit-ongoing-task" data-bind="with: configuration" autocomplete="off">
-    <div class="align-items-center d-flex gap-2 margin-bottom-md">
-        <i class="icon-periodic-backup" data-bind="visible: backupOperation === 'periodic'"></i>
-        <i class="icon-backup" data-bind="visible: backupOperation === 'manual'"></i>
-        <h2 data-bind="text: $root.titleForView" class="mb-0"></h2>
-        <span class="badge license-restricted-badge" data-bind="if: backupOperation === 'periodic' && licenseType === 'Community'">Professional +</span>
+    <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+        <div class="flex-horizontal gap-2">
+            <i class="icon-periodic-backup" data-bind="visible: backupOperation === 'periodic'"></i>
+            <i class="icon-backup" data-bind="visible: backupOperation === 'manual'"></i>
+            <h2 data-bind="text: $root.titleForView" class="mb-0"></h2>
+            <span class="badge license-restricted-badge" data-bind="if: backupOperation === 'periodic' && licenseType === 'Community'">Professional +</span>
+        </div>
+        <div data-bind="if: backupOperation === 'periodic'">
+            <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
+        </div>
     </div>
     <div class="toolbar" data-bind="with: $root">
         <button data-bind="click: onSubmit, enable: dirtyFlag().isDirty" type="submit" class="btn btn-primary">
