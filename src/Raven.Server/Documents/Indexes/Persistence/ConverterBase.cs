@@ -9,6 +9,7 @@ using Google.Protobuf.WellKnownTypes;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;

@@ -1,22 +1,15 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using Corax.Pipeline;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
-using Raven.Server.Indexing;
 using Raven.Server.Json;
 using Analyzer = Corax.Analyzer;
 using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
 using Token = Corax.Pipeline.Token;
 
-namespace Raven.Server.Documents.Indexes.Persistence.Corax
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public sealed unsafe class LuceneAnalyzerAdapter : Analyzer
     {

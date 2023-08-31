@@ -13,6 +13,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using Leader = Raven.Server.Rachis.Commands.Leader;
 
 namespace Raven.Server.ServerWide.Commands
 {

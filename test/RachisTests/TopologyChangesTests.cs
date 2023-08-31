@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Leader = Raven.Server.Rachis.Commands.Leader;
 
 namespace RachisTests
 {

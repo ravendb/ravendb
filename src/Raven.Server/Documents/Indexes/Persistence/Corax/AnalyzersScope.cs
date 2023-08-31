@@ -6,10 +6,10 @@ using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Mappings;
 using Corax.Pipeline;
-using Microsoft.CodeAnalysis;
 using Sparrow.Server;
 using Voron;
-using static Raven.Server.Documents.Indexes.MapReduce.ReduceKeyProcessor;
+
+namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 internal sealed unsafe class AnalyzersScope : IDisposable
 {

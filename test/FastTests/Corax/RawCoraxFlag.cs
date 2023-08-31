@@ -4,6 +4,7 @@ using Corax;
 using Corax.Mappings;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Sparrow;
 using Sparrow.Json;

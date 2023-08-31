@@ -10,15 +10,14 @@ using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Server;
+using Voron;
+using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
-using Voron.Data;
-using Voron;
 using Voron.Impl;
 
-namespace Raven.Server.Rachis;
+namespace Raven.Server.Rachis.Commands;
 
 public partial class Follower
 {

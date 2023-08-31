@@ -1,6 +1,6 @@
 ﻿using System.Net.Mail;
 
-namespace Raven.Server.Commercial.LetsEncrypt;
+namespace Raven.Server.Commercial;
 
 public sealed class EmailValidator
 {

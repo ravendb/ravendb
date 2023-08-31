@@ -1,6 +1,4 @@
-using Raven.Server.Documents.Indexes;
-
-namespace Corax.Utils;
+namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public sealed class CoraxDynamicItem
 {

@@ -2,7 +2,7 @@
 using System.Data.Common;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.SqlMigration.MsSQL
+namespace Raven.Server.SqlMigration.Model
 {
     public sealed class SqlStatementProvider<T> : IDataProvider<T> where T : class
     {

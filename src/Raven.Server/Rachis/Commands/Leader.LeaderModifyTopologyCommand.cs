@@ -1,32 +1,29 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Exception = System.Exception;
 
-namespace Raven.Server.Rachis;
+namespace Raven.Server.Rachis.Commands;
 
 public partial class Leader
 {
     public sealed class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
     {
         private readonly RachisConsensus _engine;
-        private readonly Leader.TopologyModification _modification;
+        private readonly Rachis.Leader.TopologyModification _modification;
         private string _nodeTag;
         private readonly string _nodeUrl;
         public readonly Leader _leader;
         private readonly bool _validateNotInTopology;
 
-        public LeaderModifyTopologyCommand([NotNull] RachisConsensus engine, [NotNull] Leader leader, Leader.TopologyModification modification, string nodeTag,
+        public LeaderModifyTopologyCommand([NotNull] RachisConsensus engine, [NotNull] Leader leader, Rachis.Leader.TopologyModification modification, string nodeTag,
             string nodeUrl, bool validateNotInTopology)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -67,19 +64,19 @@ public partial class Leader
 
             switch (_modification)
             {
-                case Leader.TopologyModification.Voter:
+                case Rachis.Leader.TopologyModification.Voter:
                     Debug.Assert(_nodeUrl != null);
                     newVotes[_nodeTag] = _nodeUrl;
                     break;
-                case Leader.TopologyModification.Promotable:
+                case Rachis.Leader.TopologyModification.Promotable:
                     Debug.Assert(_nodeUrl != null);
                     newPromotables[_nodeTag] = _nodeUrl;
                     break;
-                case Leader.TopologyModification.NonVoter:
+                case Rachis.Leader.TopologyModification.NonVoter:
                     Debug.Assert(_nodeUrl != null);
                     newNonVotes[_nodeTag] = _nodeUrl;
                     break;
-                case Leader.TopologyModification.Remove:
+                case Rachis.Leader.TopologyModification.Remove:
                     _leader.PeersVersion.TryRemove(_nodeTag, out _);
                     if (clusterTopology.Contains(_nodeTag) == false)
                     {
@@ -104,7 +101,7 @@ public partial class Leader
             var topologyJson = _engine.SetTopology(context, clusterTopology);
             var index = _engine.InsertToLeaderLog(context, _leader.Term, topologyJson, RachisEntryFlags.Topology);
 
-            if (_modification == Leader.TopologyModification.Remove)
+            if (_modification == Rachis.Leader.TopologyModification.Remove)
             {
                 _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, _leader.Term, _nodeTag);
             }
@@ -137,10 +134,10 @@ public partial class Leader
         private void AfterCommit(long index)
         {
             var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _leader._entries[index] = new Leader.CommandState { TaskCompletionSource = tcs, CommandIndex = index };
+            _leader._entries[index] = new Rachis.Leader.CommandState { TaskCompletionSource = tcs, CommandIndex = index };
             tcs.Task.ContinueWith(t =>
             {
-                var current = Interlocked.Exchange(ref _leader._topologyModification, null);
+                var current = Interlocked.Exchange<TaskCompletionSource<object>>(ref _leader._topologyModification, null);
 
                 try
                 {

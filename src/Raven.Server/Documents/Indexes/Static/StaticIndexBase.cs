@@ -12,6 +12,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Corax;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Sharding;
 using Raven.Server.Documents.Indexes.Static.Spatial;
