@@ -6,27 +6,20 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
-using Sparrow.Json;
-using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival;
 
-public class DataArchivalSmugglerTests: RavenTestBase
+public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase(output)
 {
-    public DataArchivalSmugglerTests(ITestOutputHelper output) : base(output)
-    {
-    }
-    
-    
     private async Task SetupDataArchival(IDocumentStore store)
     {
         var config = new DataArchivalConfiguration {Disabled = false, ArchiveFrequencyInSec = 100};
@@ -113,18 +106,16 @@ public class DataArchivalSmugglerTests: RavenTestBase
             
     }
     
-    
     [Fact]
-    public async Task CanCreateOneTimeBackupAndRestore_WithArchivedData()
+    public async Task Backup_And_Restore_ArchivedDocuments()
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
-        var name = "EGR";
 
-        using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
+        using (var store = GetDocumentStore())
         {
             using (var session = store.OpenAsyncSession())
             {
-                var user = new User {Name = name, Id = "users/1"};
+                var user = new User {Name = "OG IT", Id = "users/1"};
                 await session.StoreAsync(user, "users/1");
                 var retires = SystemTime.UtcNow.AddMinutes(5);
                 var metadata = session.Advanced.GetMetadataFor(user);
@@ -140,53 +131,29 @@ public class DataArchivalSmugglerTests: RavenTestBase
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
 
-            var config = new BackupConfiguration
+            var beforeBackupStats = store.Maintenance.Send(new GetStatisticsOperation());
+
+            var config = Backup.CreateBackupConfiguration(backupPath);
+            await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+            // restore the database with a different name
+            var restoredDatabaseName = GetDatabaseName();
+
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
             {
-                BackupType = BackupType.Backup,
-                LocalSettings = new LocalSettings
-                {
-                    FolderPath = backupPath
-                }
-            };
-
-            var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
-            var backupResult = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
-            Assert.True(backupResult.Documents.Processed);
-            Assert.Equal(1, backupResult.Documents.ReadCount);
-            Assert.NotEmpty(backupResult.Messages);
-
-            var databaseName = $"restored_database-{Guid.NewGuid()}";
-            var backupLocation = Directory.GetDirectories(backupPath).First();
-
-            using (ReadOnly(backupLocation))
-            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupLocation, DatabaseName = databaseName }))
+                BackupLocation = Directory.GetDirectories(backupPath).First(),
+                DatabaseName = restoredDatabaseName
+            }))
             {
-                using (var session = store.OpenAsyncSession(databaseName))
+                using (var session = store.OpenAsyncSession(restoredDatabaseName))
                 {
                     var usr = await session.LoadAsync<User>("users/1");
-                    Assert.Equal(name, usr.Name);
+                    Assert.Equal("OG IT", usr.Name);
                 }
+                var afterRestoreStats = store.Maintenance.ForDatabase(restoredDatabaseName).Send(new GetStatisticsOperation());
+                Assert.Equal(beforeBackupStats.CountOfDocuments, afterRestoreStats.CountOfDocuments);
             }
         }
-    }
-
-    
-    private static IDisposable ReadOnly(string path)
-    {
-        var files = Directory.GetFiles(path);
-        var attributes = new FileInfo(files[0]).Attributes;
-        foreach (string file in files)
-        {
-            File.SetAttributes(file, FileAttributes.ReadOnly);
-        }
-
-        return new DisposableAction(() =>
-        {
-            foreach (string file in files)
-            {
-                File.SetAttributes(file, attributes);
-            }
-        });
     }
      
 }

@@ -306,7 +306,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                SkipRevisionCreation = true
+                SkipRevisionCreation = true,
+                IncludeArchived = true
             };
 
             options.OperateOnTypes |= DatabaseItemType.LegacyDocumentDeletions;
