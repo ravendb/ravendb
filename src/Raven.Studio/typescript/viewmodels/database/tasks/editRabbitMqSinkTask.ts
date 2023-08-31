@@ -20,6 +20,7 @@ import getOngoingTaskInfoCommand from "commands/database/tasks/getOngoingTaskInf
 import queueSinkSyntax from "viewmodels/database/tasks/queueSinkSyntax";
 import patchDebugActions from "viewmodels/database/patch/patchDebugActions";
 import licenseModel from "models/auth/licenseModel";
+import { EditRabbitMqSinkTaskInfoHub } from "./EditRabbitMqSinkTaskInfoHub";
  
 
 class rabbitMqTaskTestMode {
@@ -100,12 +101,14 @@ class editRabbitMqSinkTask extends viewModelBase {
     patchDebugActionsModifiedView = require("views/database/patch/patchDebugActionsModified.html");
     patchDebugActionsDeletedView = require("views/database/patch/patchDebugActionsDeleted.html");
 
-    licenseType = licenseModel.licenseStatus().Type;
+    licenseType = licenseModel.licenseType();
 
     static readonly scriptNamePrefix = "Script_";
 
     enableTestArea = ko.observable<boolean>(false);
     test: rabbitMqTaskTestMode;
+    
+    infoHubView: ReactInKnockout<typeof EditRabbitMqSinkTaskInfoHub>;
     
     editedRabbitMqSink = ko.observable<ongoingTaskRabbitMqSinkEditModel>();
 
@@ -143,6 +146,10 @@ class editRabbitMqSinkTask extends viewModelBase {
         this.bindToCurrentInstance("useConnectionString", "removeScript", 
             "cancelEditedScript", "saveEditedScript", "syntaxHelp", "onTestConnectionRabbitMq", "toggleTestArea",
             "setState");
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditRabbitMqSinkTaskInfoHub
+        }));
     }
 
     activate(args: any) {
