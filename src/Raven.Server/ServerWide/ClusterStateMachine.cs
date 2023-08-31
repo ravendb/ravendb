@@ -71,6 +71,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
+using Leader = Raven.Server.Rachis.Commands.Leader;
 
 namespace Raven.Server.ServerWide
 {

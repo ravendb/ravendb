@@ -18,6 +18,7 @@ using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;

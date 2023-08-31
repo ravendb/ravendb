@@ -4,22 +4,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
-using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Sharding.Executors
+namespace Raven.Server.Documents.Sharding.Executors;
+
+public sealed class ShardExecutionResult<T>
 {
-    public sealed class ShardExecutionResult<T>
-    {
-        public int ShardNumber;
-        public RavenCommand<T> Command;
-        public T Result;
-        public Task CommandTask;
-        public IDisposable ContextReleaser;
-    }
-};
+    public int ShardNumber;
+    public RavenCommand<T> Command;
+    public T Result;
+    public Task CommandTask;
+    public IDisposable ContextReleaser;
+}
 
 public abstract class AbstractExecutor : IDisposable
 {
@@ -60,9 +58,9 @@ public abstract class AbstractExecutor : IDisposable
         => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(GetAllPositions(), operation, token);
 
     protected Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation, CancellationToken token = default)
-    where TExecutionMode : struct, IExecutionMode
+        where TExecutionMode : struct, IExecutionMode
         where TFailureMode : struct, IFailureMode
-    => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation, token);
+        => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation, token);
 
     public Task ExecuteParallelForShardsAsync(Memory<int> shards,
         IShardedOperation operation, CancellationToken token = default)

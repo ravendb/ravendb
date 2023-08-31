@@ -28,6 +28,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using Leader = Raven.Server.Rachis.Commands.Leader;
 
 namespace Raven.Server.ServerWide.Maintenance
 {

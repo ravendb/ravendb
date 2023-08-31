@@ -116,13 +116,13 @@ namespace Raven.Server.Rachis
                             var currentTerm = _engine.CurrentTerm;
                             if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
                             {
-                                var r = Follower.CheckIfValidLeader(_engine, _connection);
+                                var r = Commands.Follower.CheckIfValidLeader(_engine, _connection);
                                 if (r.Success)
                                 {
                                     _electionWon = true;
                                     try
                                     {
-                                        var follower = new Follower(_engine, r.Negotiation.Term, _connection);
+                                        var follower = new Commands.Follower(_engine, r.Negotiation.Term, _connection);
                                         follower.AcceptConnectionAsync(r.Negotiation).GetAwaiter().GetResult();
                                     }
                                     catch
