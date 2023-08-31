@@ -409,3 +409,19 @@ $well-bg-var: var(--well-bg);
 $shadow-color-var: var(--shadow-color);
 
 $hover-filter-var: var(--hover-filter);
+
+$task-colors: (
+    "external-replication": $color-5,
+    "pull-replication-hub": $color-5-1,
+    "pull-replication-sink": $color-5-2,
+    "ravendb-etl": $color-1-1,
+    "elastic-etl": $color-1-2,
+    "kafka-etl": $color-1-3,
+    "sql-etl": $color-2,
+    "olap-etl": $color-2-1,
+    "rabbitmq-etl": $color-2-2,
+    "kafka-sink": $color-3,
+    "rabbitmq-sink": $color-3-1,
+    "backup": $color-4,
+    "subscription": $color-4-1,
+) !default;
