@@ -9,7 +9,7 @@ namespace Raven.Server.Json
     public sealed class BlittableJsonTraverser
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
-        public readonly static char[] DefaultFlatMapReduceSeparators = new char[] { } ;
+        public static readonly char[] DefaultFlatMapReduceSeparators = new char[] { } ;
         public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(DefaultFlatMapReduceSeparators); // map-reduce results have always a flat structure, let's ignore separators
 
         private const char PropertySeparator = '.';

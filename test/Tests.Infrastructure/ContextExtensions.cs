@@ -6,7 +6,7 @@ namespace Tests.Infrastructure
 {
     public static class ContextExtensions
     {
-        private readonly static FieldInfo _exceptionField;
+        private static readonly FieldInfo _exceptionField;
 
         static ContextExtensions()
         {

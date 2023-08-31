@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static readonly string[] _newLineSplitters = new[] { "\r\n", "\n", "\r" }; //TODO: check if Jint is using only \r\n
 
-        static internal (string Message, bool Success) PrepareErrorMessageForJavaScriptIndexFuncException(string script, JavaScriptException jse)
+        internal static (string Message, bool Success) PrepareErrorMessageForJavaScriptIndexFuncException(string script, JavaScriptException jse)
         {
             var lines = script.Split(_newLineSplitters, StringSplitOptions.None);
             if (jse.Location.Start.Line > lines.Length || jse.Location.End.Line > lines.Length || jse.Location.Start.Line > jse.Location.End.Line)
