@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
 
         public EnforceRevisionsConfigurationOperation()
+            : this(new Parameters())
         {
 
         }
@@ -53,18 +54,17 @@ namespace Raven.Client.Documents.Operations.Revisions
 
                 url = pathBuilder.ToString();
 
-                return new HttpRequestMessage
+                var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(async stream =>
                     {
-                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
-                        {
-                            var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx);
-                            await ctx.WriteAsync(stream, config).ConfigureAwait(false);
-                        }
+                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx);
+                        await ctx.WriteAsync(stream, config).ConfigureAwait(false);
                     }, _conventions)
                 };
+
+                return request;
             }
 
             public override bool IsReadRequest => false;
