@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -214,12 +213,12 @@ namespace Raven.Server.Documents.Revisions
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 return true;
 
-            if(docConfiguration == ConflictConfiguration.Default || docConfiguration==_emptyConfiguration)
+            if (docConfiguration == ConflictConfiguration.Default || docConfiguration == _emptyConfiguration)
             {
                 // If comes from resolver (creating conflicted/resolved revision when resolving a conflict), and doc has no config, do not touch the revisions.
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
                     return false;
-            
+
                 if (documentFlags.Contain(DocumentFlags.HasRevisions) == false) // If the doc has revisions but no config, do not touch the revisions
                     return false;
             }
@@ -639,7 +638,7 @@ namespace Raven.Server.Documents.Revisions
                     Debug.Assert(local.Document != null || local.Tombstone != null);
                 }
 
-                var result = DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, 
+                var result = DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration,
                     NonPersistentDocumentFlags.None,
                     changeVector, lastModifiedTicks, fromDelete, skipForceCreated: false);
 
@@ -777,7 +776,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private long DeleteRevisionsInternal(DocumentsOperationContext context, Table table, CollectionName collectionName,
-            ChangeVector changeVector, long lastModifiedTicks, 
+            ChangeVector changeVector, long lastModifiedTicks,
             IEnumerable<Document> revisionsToRemove, DocumentFlags tombstoneFlags)
         {
             var writeTables = new Dictionary<string, Table>();
@@ -842,7 +841,7 @@ namespace Raven.Server.Documents.Revisions
             private readonly DateTime _databaseTime;
             private readonly long? _minimumConflictRevisionsToKeep;
 
-            public ConflictedRevisionsDeletionState(long allRevisionCount, long conflictRevisionsCount, 
+            public ConflictedRevisionsDeletionState(long allRevisionCount, long conflictRevisionsCount,
                 RevisionsCollectionConfiguration conflictConfig, HandleConflictRevisionsFlags handlingFlags,
                 DateTime databaseTime, bool documentDeleted)
             {
@@ -853,7 +852,7 @@ namespace Raven.Server.Documents.Revisions
                 _regularCount = allRevisionCount - conflictRevisionsCount;
 
                 _databaseTime = databaseTime;
-                _skipForceCreated = handlingFlags.HasFlag(HandleConflictRevisionsFlags.ForceCreated)==false;
+                _skipForceCreated = handlingFlags.HasFlag(HandleConflictRevisionsFlags.ForceCreated) == false;
 
                 FinishedRegular = handlingFlags.HasFlag(HandleConflictRevisionsFlags.Regular) == false || AllRegularAreDeleted();
 
@@ -862,7 +861,7 @@ namespace Raven.Server.Documents.Revisions
                     _minimumConflictRevisionsToKeep = 0L;
                     FinishedConflicted = ConflictedReachedMinimumToKeep();
                 }
-                else if(_config.MinimumRevisionsToKeep.HasValue==false && _config.MinimumRevisionAgeToKeep.HasValue==false)
+                else if (_config.MinimumRevisionsToKeep.HasValue == false && _config.MinimumRevisionAgeToKeep.HasValue == false)
                 {
                     FinishedConflicted = true;
                 }
@@ -889,7 +888,7 @@ namespace Raven.Server.Documents.Revisions
                 }
             }
 
-            public bool ReachedMaximumRevisionsToDeleteUponDocumentUpdate() => 
+            public bool ReachedMaximumRevisionsToDeleteUponDocumentUpdate() =>
                     _config.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue &&
                         _config.MaximumRevisionsToDeleteUponDocumentUpdate.Value <= DeletedCount;
 
@@ -930,7 +929,7 @@ namespace Raven.Server.Documents.Revisions
                 return true;
             }
 
-            private bool ShouldDeleteNonConflicted( DocumentFlags revisionFlags)
+            private bool ShouldDeleteNonConflicted(DocumentFlags revisionFlags)
             {
 
                 if (FinishedRegular)
@@ -1052,7 +1051,7 @@ namespace Raven.Server.Documents.Revisions
                         conflictCount++;
                 }
             }
-        
+
             return conflictCount;
         }
 
@@ -1240,7 +1239,7 @@ namespace Raven.Server.Documents.Revisions
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
 
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
-            if (configuration.Disabled && hadRevisions==false && fromReplication == false)
+            if (configuration.Disabled && hadRevisions == false && fromReplication == false)
                 return;
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -1565,15 +1564,32 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public Task<IOperationResult> EnforceConfigurationIncludeForceCreatedAsync(Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return EnforceConfigurationAsync(onProgress, includeForceCreated: true, token);
+            return EnforceConfigurationAsync(onProgress, includeForceCreated: true, null, token: token);
         }
 
-        public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, 
+        public Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, bool includeForceCreated, OperationCancelToken token)
+        {
+            return EnforceConfigurationAsync(onProgress, includeForceCreated, null, token: token);
+        }
+
+        public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress,
             bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
+            HashSet<string> collections,
             OperationCancelToken token)
         {
+            if (collections != null)
+            {
+                if (collections.Comparer?.Equals(StringComparer.OrdinalIgnoreCase) == false)
+                    throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
+
+                foreach (var collection in collections)
+                {
+                    if (string.IsNullOrEmpty(collection))
+                        throw new InvalidOperationException("There is no collection with name which is empty string or 'null'.");
+                }
+            }
 
             var parameters = new Parameters
             {
@@ -1604,43 +1620,48 @@ namespace Raven.Server.Documents.Revisions
                 {
                     using (ctx.OpenReadTransaction())
                     {
-                        var revisions = new Table(RevisionsSchema, ctx.Transaction.InnerTransaction);
-                        foreach (var tvr in revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
-                            parameters.LastScannedEtag))
-                        {
-                            token.ThrowIfCancellationRequested();
+                        var tables = GetRevisionsTables(ctx, collections, parameters.LastScannedEtag);
 
-                            var state = ShouldProcessNextRevisionId(ctx, ref tvr.Reader, parameters, result, out var id);
-                            if (state == NextRevisionIdResult.Break)
-                                break;
-                            if (state == NextRevisionIdResult.Continue)
+                        foreach (var table in tables)
+                        {
+                            foreach (var tvr in table)
                             {
+                                token.ThrowIfCancellationRequested();
+
+                                var state = ShouldProcessNextRevisionId(ctx, ref tvr.Reader, parameters, result, out var id);
+                                if (state == NextRevisionIdResult.Break)
+                                    break;
+                                if (state == NextRevisionIdResult.Continue)
+                                {
+                                    if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
+                                    {
+                                        hasMore = true;
+                                        break;
+                                    }
+                                    else
+                                        continue;
+                                }
+
+                                ids.Add(id);
+
                                 if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
                                 {
                                     hasMore = true;
                                     break;
                                 }
-                                else
-                                    continue;
                             }
 
-                            ids.Add(id);
-
-                            if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
+                            EnforceRevisionConfigurationCommand cmd;
+                            do
                             {
-                                hasMore = true;
-                                break;
-                            }
+                                token.Delay();
+                                cmd = new EnforceRevisionConfigurationCommand(this, ids, result, includeForceCreated, token);
+                                await _database.TxMerger.Enqueue(cmd);
+                            } while (cmd.MoreWork);
                         }
                     }
 
-                    EnforceRevisionConfigurationCommand cmd;
-                    do
-                    {
-                        token.Delay();
-                        cmd = new EnforceRevisionConfigurationCommand(this, ids, result, includeForceCreated, token);
-                        await _database.TxMerger.Enqueue(cmd);
-                    } while (cmd.MoreWork);
+
                 }
             }
 
@@ -1659,6 +1680,38 @@ namespace Raven.Server.Documents.Revisions
 
                 return true;
             }
+        }
+
+        private List<IEnumerable<Table.TableValueHolder>> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, long lastScannedEtag)
+        {
+            var collectionsTables = new List<IEnumerable<Table.TableValueHolder>>();
+
+            if (collections == null)
+            {
+                var revisions = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
+                collectionsTables.Add(table);
+            }
+            else
+            {
+                foreach (var collection in collections)
+                {
+                    IEnumerable<Table.TableValueHolder> table = null;
+                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: true);
+                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                    var revisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+                    if (revisions == null) // there is no revisions for that collection
+                    {
+                        continue;
+                    }
+
+                    table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
+
+                    collectionsTables.Add(table);
+                }
+            }
+
+            return collectionsTables;
         }
 
         private static readonly RevisionsCollectionConfiguration ZeroConfiguration = new RevisionsCollectionConfiguration
@@ -1692,7 +1745,7 @@ namespace Raven.Server.Documents.Revisions
 
                 var configuration = GetRevisionsConfiguration(collectionName.Name, docFlags, deleteRevisionsWhenNoCofiguration: true);
 
-                var result = DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, 
+                var result = DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration,
                     NonPersistentDocumentFlags.ByEnforceRevisionConfiguration,
                     changeVector, lastModifiedTicks, deletedDoc, skipForceCreated);
 
@@ -1775,7 +1828,7 @@ namespace Raven.Server.Documents.Revisions
 
                 public EnforceRevisionConfigurationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
                 {
-                    return new EnforceRevisionConfigurationCommand(_revisionsStorage, _ids,  new EnforceConfigurationResult(), _includeForceCreated, OperationCancelToken.None);
+                    return new EnforceRevisionConfigurationCommand(_revisionsStorage, _ids, new EnforceConfigurationResult(), _includeForceCreated, OperationCancelToken.None);
                 }
             }
         }

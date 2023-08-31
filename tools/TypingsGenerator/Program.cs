@@ -156,6 +156,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.Number, typeof(UInt64))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(LinkedList<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IEnumerable<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(Queue<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(ConcurrentQueue<>))
@@ -296,6 +297,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(EtlErrorsDetails));
             scripter.AddType(typeof(SlowSqlDetails));
             scripter.AddType(typeof(SlowIoDetails));
+            scripter.AddType(typeof(ServerLimitsDetails));
 
             // indexes
             scripter.AddType(typeof(IndexDefinition));
