@@ -1590,6 +1590,7 @@ namespace Corax
                     for (int i = 0; i < read; i++)
                     {
                         long entryId = buffer[i];
+                        Debug.Assert(entryId > 0);
                         _deletedEntries.Add(entryId);
                     }
                     _numberOfModifications -= read;
@@ -1617,6 +1618,7 @@ namespace Corax
                     for (int i = 0; i < read; i++)
                     {
                         long entryId = output[i];
+                        Debug.Assert(entryId > 0);
                         _deletedEntries.Add(entryId);
                     }
                     _numberOfModifications -= read;
@@ -1626,6 +1628,7 @@ namespace Corax
             }
 
             singleEntryId = containerId;
+            Debug.Assert(containerId > 0);
             _deletedEntries.Add(containerId);
             _numberOfModifications--;
             return true;

@@ -294,7 +294,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         if (state.LastMatch != 0)
         {
-            value = default;
+            value = -1;
             return false;
         }
 
@@ -317,7 +317,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         FindPageFor(ref key, ref _internalCursor);
         if (_internalCursor._stk[_internalCursor._pos].LastMatch != 0)
         {
-            value = default;
+            value = -1;
             return false;
         }
         return TryRemoveExistingValue(ref key, out value);
@@ -1488,7 +1488,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 state = ref _internalCursor._stk[_internalCursor._pos];
                 if (state.LastMatch != 0)
                 {
-                    value = default;
+                    value = -1;
                     return false;
                 }
 
