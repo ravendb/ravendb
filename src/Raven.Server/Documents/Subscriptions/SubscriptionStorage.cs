@@ -381,15 +381,9 @@ namespace Raven.Server.Documents.Subscriptions
                 if (take-- <= 0)
                     yield break;
 
-                var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var subscriptionConnectionsState = GetSubscriptionConnectionsState(serverStoreContext, subscriptionState.SubscriptionName);
+                var task = JsonDeserializationClient.SubscriptionState(keyValue.Value);
+                var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(task);
 
-                var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(subscriptionState)
-                {
-                    Connections = subscriptionConnectionsState?.GetConnections(),
-                    RecentConnections = subscriptionConnectionsState?.RecentConnections,
-                    RecentRejectedConnections = subscriptionConnectionsState?.RecentRejectedConnections
-                };
                 GetSubscriptionInternal(subscriptionGeneralData, history);
                 yield return subscriptionGeneralData;
             }
@@ -542,14 +536,9 @@ namespace Raven.Server.Documents.Subscriptions
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
 
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
-            var subscriptionConnectionsState = GetSubscriptionConnectionsState(context, subscriptionState.SubscriptionName);
 
-            var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState)
-            {
-                Connections = subscriptionConnectionsState?.GetConnections(),
-                RecentConnections = subscriptionConnectionsState?.RecentConnections,
-                RecentRejectedConnections = subscriptionConnectionsState?.RecentRejectedConnections
-            };
+            var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState);
+
             return subscriptionJsonValue;
         }
 
@@ -611,10 +600,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
-            public SubscriptionConnection Connection => Connections?.FirstOrDefault();
             public List<SubscriptionConnection> Connections;
-            public IEnumerable<SubscriptionConnection> RecentConnections;
-            public IEnumerable<SubscriptionConnection> RecentRejectedConnections;
+            public IEnumerable<SubscriptionConnectionInfo> RecentConnections;
+            public IEnumerable<SubscriptionConnectionInfo> RecentRejectedConnections;
+            public IEnumerable<SubscriptionConnectionInfo> CurrentPendingConnections;
 
             public SubscriptionGeneralDataAndStats() { }
 
@@ -652,6 +641,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             subscriptionData.RecentConnections = subscriptionConnectionsState.RecentConnections;
             subscriptionData.RecentRejectedConnections = subscriptionConnectionsState.RecentRejectedConnections;
+            subscriptionData.CurrentPendingConnections = subscriptionConnectionsState.PendingConnections;
         }
 
         private static void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionsState subscriptionConnectionsState)
@@ -749,7 +739,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 var recentConnection = kvp.Value.MostRecentEndedConnection();
 
-                if (recentConnection != null && recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
+                if (recentConnection != null && recentConnection.Date < oldestPossibleIdleSubscription)
                 {
                     if (_subscriptions.TryRemove(kvp.Key, out var subsState))
                     {
