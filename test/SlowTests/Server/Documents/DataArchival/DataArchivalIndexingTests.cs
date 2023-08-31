@@ -1278,8 +1278,16 @@ User: counter.DocumentId
                 Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
 
                 // Make sure that the company is skipped while indexing (auto map index)
-                List<Company> companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
-                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 0);
+                var companies = new List<Company>();
+                int attempts = 0;
+                while (companies.Count == 1 && attempts < 20)
+                {
+                    companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
+                    attempts++;
+                    await Task.Delay(500);
+                }
+
+                Assert.Equal(0, companies.Count);
             }
             
             // Unarchive document using patch
@@ -1299,8 +1307,17 @@ User: counter.DocumentId
                 Assert.DoesNotContain(Constants.Documents.Metadata.Flags, metadata.Keys); // the last flag in the @flags was 'Archived', so now the property should completely disappear
 
                 // Make sure that the company is not anymore skipped while indexing 
-                List<Company> companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
-                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 1);
+                
+                var companies = new List<Company>();
+                int attempts = 0;
+                while (companies.Count == 0 && attempts < 20)
+                {
+                    companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
+                    attempts++;
+                    await Task.Delay(500);
+                }
+
+                Assert.Equal(1, companies.Count);
             }
         }
     }
