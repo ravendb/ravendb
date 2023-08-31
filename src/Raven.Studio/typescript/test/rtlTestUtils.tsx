@@ -95,3 +95,7 @@ export function rtlRender(
 }
 
 export * from "@testing-library/react";
+
+export const commonSelectors = {
+    loadingError: "Error loading data",
+};

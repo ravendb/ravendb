@@ -5,6 +5,8 @@ import getClientConfigurationCommand = require("commands/resources/getClientConf
 import saveClientConfigurationCommand = require("commands/resources/saveClientConfigurationCommand");
 import database = require("models/resources/database");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
+import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
+import deleteServerWideCustomAnalyzerCommand = require("commands/serverWide/analyzers/deleteServerWideCustomAnalyzerCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -25,5 +27,13 @@ export default class ManageServerService {
 
     async runAdminJsScript(script: string, targetDatabaseName?: string): Promise<{ Result: any }> {
         return new adminJsScriptCommand(script, targetDatabaseName).execute();
+    }
+
+    async getServerWideCustomAnalyzers() {
+        return new getServerWideCustomAnalyzersCommand().execute();
+    }
+
+    async deleteServerWideCustomAnalyzer(name: string) {
+        return new deleteServerWideCustomAnalyzerCommand(name).execute();
     }
 }

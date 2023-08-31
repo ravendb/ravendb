@@ -2,9 +2,11 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class deleteServerWideCustomAnalyzerCommand extends commandBase {
+    private readonly name: string;
 
-    constructor(private name: string) {
+    constructor(name: string) {
         super();
+        this.name = name;
     }
 
     execute(): JQueryPromise<void> {

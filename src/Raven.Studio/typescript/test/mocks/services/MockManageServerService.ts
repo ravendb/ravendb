@@ -2,6 +2,7 @@ import ManageServerService from "components/services/ManageServerService";
 import { AutoMockService, MockedValue } from "./AutoMockService";
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
+import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 
 export default class MockManageServerService extends AutoMockService<ManageServerService> {
     constructor() {
@@ -26,5 +27,17 @@ export default class MockManageServerService extends AutoMockService<ManageServe
             dto,
             ManageServerStubs.getSampleClientDatabaseConfiguration()
         );
+    }
+
+    withGetServerWideCustomAnalyzers(dto?: MockedValue<AnalyzerDefinition[]>) {
+        return this.mockResolvedValue(
+            this.mocks.getServerWideCustomAnalyzers,
+            dto,
+            ManageServerStubs.getServerWideCustomAnalyzers()
+        );
+    }
+
+    withThrowingGetServerWideCustomAnalyzers() {
+        this.mocks.getServerWideCustomAnalyzers.mockRejectedValue(new Error());
     }
 }

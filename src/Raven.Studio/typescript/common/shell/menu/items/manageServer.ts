@@ -7,6 +7,7 @@ import AdminJsConsole from "components/pages/resources/manageServer/adminJsConso
 import ClientGlobalConfiguration from "components/pages/resources/manageServer/clientConfiguration/ClientGlobalConfiguration";
 import StudioGlobalConfiguration from "components/pages/resources/manageServer/studioConfiguration/StudioGlobalConfiguration";
 import GatherDebugInfo from "components/pages/resources/manageServer/gatherDebugInfo/GatherDebugInfo";
+import ServerWideCustomAnalyzers from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers";
 
 export = getManageServerMenuItem;
 
@@ -100,7 +101,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideCustomAnalyzers',
-            moduleId: require("viewmodels/manage/serverWideCustomAnalyzers"),
+            moduleId: bridgeToReact(ServerWideCustomAnalyzers, "nonShardedView"),
             title: "Server-Wide Analyzers",
             nav: true,
             css: 'icon-server-wide-custom-analyzers',
