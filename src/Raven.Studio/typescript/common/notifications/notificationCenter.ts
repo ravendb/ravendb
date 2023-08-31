@@ -58,6 +58,7 @@ import mismatchedReferenceLoadDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/mismatchedReferenceLoadDetails";
 import blockingTombstonesDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/blockingTombstonesDetails";
+import serverLimitsDetails from "viewmodels/common/notificationCenter/detailViewer/alerts/serverLimitsDetails";
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -178,6 +179,7 @@ class notificationCenter {
             etlTransformOrLoadErrorDetails,
             mismatchedReferenceLoadDetails,
             blockingTombstonesDetails,
+            serverLimitsDetails,
 
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );

@@ -123,7 +123,7 @@ class blockingTombstonesDetails extends abstractAlertDetails {
         });
         
         
-        this.columnPreview.install(".blockingTombstonesDetails", ".js-blocking-tombstones-detials-tooltip",
+        this.columnPreview.install(".blockingTombstonesDetails", ".js-blocking-tombstones-details-tooltip",
             (details: WarningItem,
              column: textColumn<WarningItem>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
