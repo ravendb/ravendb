@@ -42,7 +42,7 @@ namespace Raven.Server.Rachis
     public sealed class FollowerAmbassador : IDisposable
     {
         private readonly RachisConsensus _engine;
-        private readonly Commands.Leader _leader;
+        private readonly Leader _leader;
         private ManualResetEvent _wakeLeader;
         private readonly string _tag;
         private readonly string _url;
@@ -126,7 +126,7 @@ namespace Raven.Server.Rachis
             Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
         }
 
-        public FollowerAmbassador(RachisConsensus engine, Commands.Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null)
         {
             _engine = engine;
             _term = leader.Term;
@@ -410,7 +410,7 @@ namespace Raven.Server.Rachis
 
                         if (e is TopologyMismatchException)
                         {
-                            if (_leader.TryModifyTopology(_tag, _url, Commands.Leader.TopologyModification.Remove, out _))
+                            if (_leader.TryModifyTopology(_tag, _url, Leader.TopologyModification.Remove, out _))
                             {
                                 StatusMessage = "No longer in the topology";
                                 Status = AmbassadorStatus.Disconnected;

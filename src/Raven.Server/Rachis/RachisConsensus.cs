@@ -82,7 +82,7 @@ namespace Raven.Server.Rachis
             base.Dispose();
         }
 
-        public override long Apply(ClusterOperationContext context, long uptoInclusive, Commands.Leader leader, Stopwatch duration)
+        public override long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration)
         {
             return StateMachine.Apply(context, uptoInclusive, leader, _serverStore, duration);
         }
@@ -404,8 +404,8 @@ namespace Raven.Server.Rachis
         public int? MaximalVersion { get; set; }
         public long? MaxSizeOfSingleRaftCommandInBytes { get; set; }
 
-        private Commands.Leader _currentLeader;
-        public Commands.Leader CurrentLeader => _currentLeader;
+        private Leader _currentLeader;
+        public Leader CurrentLeader => _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -553,7 +553,7 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to leader state");
             }
-            var leader = new Commands.Leader(this, electionTerm);
+            var leader = new Leader(this, electionTerm);
             SetNewStateInTx(context, RachisState.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader", () => _currentLeader = leader);
             SwitchToSingleLeaderAction?.Invoke(context);
 
@@ -631,7 +631,7 @@ namespace Raven.Server.Rachis
             return _topologyChanged.Task;
         }
 
-        public async Task WaitForTopology(Commands.Leader.TopologyModification modification, string nodeTag = null, CancellationToken token = default)
+        public async Task WaitForTopology(Leader.TopologyModification modification, string nodeTag = null, CancellationToken token = default)
         {
             while (true)
             {
@@ -643,22 +643,22 @@ namespace Raven.Server.Rachis
                     var clusterTopology = GetTopology(context);
                     switch (modification)
                     {
-                        case Commands.Leader.TopologyModification.Voter:
+                        case Leader.TopologyModification.Voter:
                             if (clusterTopology.Members.ContainsKey(tag))
                                 return;
                             break;
 
-                        case Commands.Leader.TopologyModification.Promotable:
+                        case Leader.TopologyModification.Promotable:
                             if (clusterTopology.Promotables.ContainsKey(tag))
                                 return;
                             break;
 
-                        case Commands.Leader.TopologyModification.NonVoter:
+                        case Leader.TopologyModification.NonVoter:
                             if (clusterTopology.Watchers.ContainsKey(tag))
                                 return;
                             break;
 
-                        case Commands.Leader.TopologyModification.Remove:
+                        case Leader.TopologyModification.Remove:
                             if (clusterTopology.Members.ContainsKey(tag) == false &&
                                 clusterTopology.Promotables.ContainsKey(tag) == false &&
                                 clusterTopology.Watchers.ContainsKey(tag) == false)
@@ -1061,7 +1061,7 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to leader state");
             }
-            var leader = new Commands.Leader(this, electionTerm);
+            var leader = new Leader(this, electionTerm);
             SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
             {
                 CommandsVersionManager.SetClusterVersion(version);
@@ -1325,10 +1325,10 @@ namespace Raven.Server.Rachis
                             break;
 
                         case InitialMessageType.AppendEntries:
-                            var r = Commands.Follower.CheckIfValidLeader(this, remoteConnection);
+                            var r = Follower.CheckIfValidLeader(this, remoteConnection);
                             if (r.Success)
                             {
-                                var follower = new Commands.Follower(this, r.Negotiation.Term, remoteConnection);
+                                var follower = new Follower(this, r.Negotiation.Term, remoteConnection);
                                 await follower.AcceptConnectionAsync(r.Negotiation);
                             }
                             else
@@ -2177,15 +2177,15 @@ namespace Raven.Server.Rachis
 
         public Task AddToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
         {
-            return ModifyTopologyAsync(nodeTag, url, asWatcher ? Commands.Leader.TopologyModification.NonVoter : Commands.Leader.TopologyModification.Promotable, validateNotInTopology);
+            return ModifyTopologyAsync(nodeTag, url, asWatcher ? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Promotable, validateNotInTopology);
         }
 
         public Task RemoveFromClusterAsync(string nodeTag)
         {
-            return ModifyTopologyAsync(nodeTag, null, Commands.Leader.TopologyModification.Remove);
+            return ModifyTopologyAsync(nodeTag, null, Leader.TopologyModification.Remove);
         }
 
-        public async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Commands.Leader.TopologyModification modification, bool validateNotInTopology = false)
+        public async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Leader.TopologyModification modification, bool validateNotInTopology = false)
         {
             var leader = _currentLeader;
             if (leader == null)
@@ -2239,7 +2239,7 @@ namespace Raven.Server.Rachis
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
-        public abstract long Apply(ClusterOperationContext context, long uptoInclusive, Commands.Leader leader, Stopwatch duration);
+        public abstract long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
         public abstract Task AfterSnapshotInstalledAsync(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
         public abstract Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token);

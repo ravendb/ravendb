@@ -5,6 +5,7 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client;
+using Raven.Client.Util;
 
 namespace FastTests
 {

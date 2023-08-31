@@ -28,7 +28,6 @@ using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Leader = Raven.Server.Rachis.Commands.Leader;
 
 namespace SlowTests.Cluster
 {

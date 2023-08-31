@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
