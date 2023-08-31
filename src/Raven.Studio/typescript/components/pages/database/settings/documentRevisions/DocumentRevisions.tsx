@@ -339,7 +339,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                             <div className="vstack gap-1 my-3 text-warning">
                                                 <small>
                                                     <Icon icon="default" />
-                                                    Defaults policy can't be set up
+                                                    Defaults policy can&apos;t be set up
                                                 </small>
                                                 <small>
                                                     <Icon icon="documents" />

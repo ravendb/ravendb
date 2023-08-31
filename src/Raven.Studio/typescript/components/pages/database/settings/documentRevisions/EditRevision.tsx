@@ -53,9 +53,14 @@ export default function EditRevision(props: EditRevisionProps) {
     const collectionConfigsNames = useAppSelector(documentRevisionsSelectors.allConfigsNames);
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
-    const collectionOptions: SelectOption<string>[] = allCollectionNames
-        .filter((name) => !collectionConfigsNames.includes(name))
-        .map((name) => ({ label: name, value: name }));
+    const allCollectionOptions: SelectOption<string>[] = allCollectionNames.map((name) => ({
+        label: name,
+        value: name,
+    }));
+
+    const newCollectionOptions: SelectOption<string>[] = allCollectionOptions.filter(
+        (option) => !collectionConfigsNames.includes(option.value)
+    );
 
     const { control, formState, setValue, handleSubmit } = useForm<EditDocumentRevisionsCollectionConfig>({
         resolver: isForNewCollection
@@ -78,14 +83,14 @@ export default function EditRevision(props: EditRevisionProps) {
         : null;
 
     const isRevisionsToKeepLimitWarning =
-        originalConfig?.MinimumRevisionsToKeep &&
-        formValues.minimumRevisionsToKeep &&
+        originalConfig?.MinimumRevisionsToKeep != null &&
+        formValues.minimumRevisionsToKeep != null &&
         !formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
         originalConfig.MinimumRevisionsToKeep - formValues.minimumRevisionsToKeep > revisionsDelta;
 
     const isRevisionsToKeepByAgeLimitWarning =
-        originalConfig?.MinimumRevisionAgeToKeep &&
-        formValues.minimumRevisionAgeToKeep &&
+        originalConfig?.MinimumRevisionAgeToKeep != null &&
+        formValues.minimumRevisionAgeToKeep != null &&
         !formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
         genUtils.timeSpanToSeconds(originalConfig.MinimumRevisionAgeToKeep) - formValues.minimumRevisionAgeToKeep >
             revisionsByAgeDelta;
@@ -107,7 +112,7 @@ export default function EditRevision(props: EditRevisionProps) {
                             <FormSelect
                                 control={control}
                                 name="collectionName"
-                                options={collectionOptions}
+                                options={isForNewCollection ? newCollectionOptions : allCollectionOptions}
                                 disabled={!isForNewCollection}
                             />
                         </InputGroup>

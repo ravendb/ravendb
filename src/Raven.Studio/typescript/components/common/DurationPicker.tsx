@@ -20,15 +20,19 @@ export default function DurationPicker(props: DurationPickerProps) {
 
     const initialValues = getInitialValues(totalSeconds, showDays);
 
-    const [days, setDays] = useState(initialValues.days);
-    const [hours, setHours] = useState(initialValues.hours);
-    const [minutes, setMinutes] = useState(initialValues.minutes);
-    const [seconds, setSeconds] = useState(initialValues.seconds);
+    const [days, setDays] = useState(initialValues?.days ?? null);
+    const [hours, setHours] = useState(initialValues?.hours ?? null);
+    const [minutes, setMinutes] = useState(initialValues?.minutes ?? null);
+    const [seconds, setSeconds] = useState(initialValues?.seconds ?? null);
 
     useEffect(() => {
-        const totalSeconds = seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
-        onChange(totalSeconds);
-    }, [onChange, days, hours, minutes, seconds]);
+        if (days == null && hours == null && minutes == null && seconds == null) {
+            return;
+        }
+
+        const calculatedTotalSeconds = seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
+        onChange(calculatedTotalSeconds);
+    }, [onChange, days, hours, minutes, seconds, totalSeconds]);
 
     const getInputValue = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.currentTarget.value;
@@ -61,13 +65,8 @@ export default function DurationPicker(props: DurationPickerProps) {
     );
 }
 function getInitialValues(totalSeconds: number, showDays: boolean): Duration {
-    if (!totalSeconds) {
-        return {
-            days: 0,
-            hours: 0,
-            minutes: 0,
-            seconds: 0,
-        };
+    if (totalSeconds == null) {
+        return null;
     }
 
     let total = totalSeconds,
