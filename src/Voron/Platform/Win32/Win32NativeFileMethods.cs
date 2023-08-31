@@ -412,7 +412,7 @@ namespace Voron.Platform.Win32
         public static extern void SetLastError(uint dwErrCode);
 
         [DllImport("Kernel32.dll", SetLastError = true)]
-        public extern static bool DeviceIoControl(
+        public static extern bool DeviceIoControl(
             IntPtr hDevice,
             uint IoControlCode,
             IntPtr InMediaRemoval,
@@ -423,7 +423,7 @@ namespace Voron.Platform.Win32
             IntPtr Overlapped);
         
         [DllImport("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true, CharSet = CharSet.Unicode, BestFitMapping = false)]
-        public extern static IntPtr CreateFile(string FileName, uint DesiredAccess,
+        public static extern IntPtr CreateFile(string FileName, uint DesiredAccess,
             uint ShareMode, IntPtr lpSecurityAttributes,
             uint CreationDisposition, uint dwFlagsAndAttributes,
             IntPtr hTemplateFile);

@@ -33,7 +33,7 @@ namespace Corax.Queries.Meta
         /// AVX2 implementation of vectorized AND.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe static int AndVectorized(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        internal static unsafe int AndVectorized(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             // This is effectively a constant. 
             uint N = (uint)Vector256<ulong>.Count;
@@ -157,7 +157,7 @@ namespace Corax.Queries.Meta
         /// is also used for testing purposes. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe static int AndScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        internal static unsafe int AndScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* leftPtr = left;
@@ -206,7 +206,7 @@ namespace Corax.Queries.Meta
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static int Or(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static unsafe int Or(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             if (Sse2.IsSupported)
                 return OrNonTemporal(dst, dstLength, left, leftLength, right, rightLength);
@@ -217,7 +217,7 @@ namespace Corax.Queries.Meta
         /// dst and left may *not* be the same buffer
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static int OrNonTemporal(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static unsafe int OrNonTemporal(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* dstEndPtr = dst + dstLength;
@@ -277,7 +277,7 @@ namespace Corax.Queries.Meta
         /// dst and left may *not* be the same buffer
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static int OrScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static unsafe int OrScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* dstEndPtr = dst + dstLength;
@@ -344,7 +344,7 @@ namespace Corax.Queries.Meta
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static int AndNot(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static unsafe int AndNot(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             // PERF: This can be improved implementing support Sse2 implementation. This type of algorithms
             //       are very suitable for instruction level parallelism.
@@ -356,7 +356,7 @@ namespace Corax.Queries.Meta
         /// is also used for testing purposes. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe static int AndNotScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        internal static unsafe int AndNotScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* leftPtr = left;

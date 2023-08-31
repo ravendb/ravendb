@@ -597,8 +597,8 @@ namespace Sparrow.Compression
             }
         }
 
-        private readonly static int[] dec32table = new int[] { 4, 1, 2, 1, 4, 4, 4, 4 };
-        private readonly static int[] dec64table = new int[] { 0, 0, 0, -1, 0, 1, 2, 3 };
+        private static readonly int[] dec32table = new int[] { 4, 1, 2, 1, 4, 4, 4, 4 };
+        private static readonly int[] dec64table = new int[] { 0, 0, 0, -1, 0, 1, 2, 3 };
 
         private static int LZ4_decompress_generic<TEndCondition, TEarlyEnd, TDictionaryType>(byte* source, byte* dest, int inputSize, int outputSize, int targetOutputSize, byte* lowPrefix, byte* dictStart, int dictSize)
             where TEndCondition : IEndConditionDirective

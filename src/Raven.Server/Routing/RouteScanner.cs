@@ -32,7 +32,7 @@ namespace Raven.Server.Routing
             .Where(x => x.Method != "OPTIONS")
             .ToList();
 
-        public readonly static Dictionary<string, RouteInformation> AllRoutes = Scan();
+        public static readonly Dictionary<string, RouteInformation> AllRoutes = Scan();
 
         public static Dictionary<string, RouteInformation> Scan(Func<RavenActionAttribute, bool> predicate = null)
         {

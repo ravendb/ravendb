@@ -404,7 +404,7 @@ public static class QueryBuilderHelper
         }
     }
 
-    internal unsafe static bool TryGetTime(Index index, object value, out long ticks)
+    internal static unsafe bool TryGetTime(Index index, object value, out long ticks)
     {
         ticks = -1;
         DateTime dt = default;

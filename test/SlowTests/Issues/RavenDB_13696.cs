@@ -76,7 +76,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private unsafe static void ValidateProperties(List<string> properties, BlittableJsonReaderObject json)
+        private static unsafe void ValidateProperties(List<string> properties, BlittableJsonReaderObject json)
         {
             var propDetails = new BlittableJsonReaderObject.PropertyDetails();
             var propertiesByInsertionOrder = json.GetPropertiesByInsertionOrder();
