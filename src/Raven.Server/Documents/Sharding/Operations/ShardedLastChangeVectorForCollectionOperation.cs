@@ -4,7 +4,6 @@ using System.Net.Http;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Executors;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow.Json;

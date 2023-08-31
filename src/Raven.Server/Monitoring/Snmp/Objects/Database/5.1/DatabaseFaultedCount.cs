@@ -1,4 +1,3 @@
-using System;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;

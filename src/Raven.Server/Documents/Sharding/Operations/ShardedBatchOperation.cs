@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;

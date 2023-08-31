@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 using FastTests;
-using NuGet.Protocol.Plugins;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;

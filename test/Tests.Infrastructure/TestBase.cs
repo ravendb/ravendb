@@ -11,7 +11,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Debug.StackTrace;

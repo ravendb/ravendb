@@ -24,7 +24,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web.System;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Server.Utils;

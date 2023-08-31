@@ -1,5 +1,4 @@
-﻿using FastTests.Server.Replication;
-using SlowTests.Core.Utils.Entities;
+﻿using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

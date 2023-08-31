@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Text;
 using Raven.Client.Http;
 using Raven.Server;
-using Raven.Server.Documents.Sharding.Commands;
 using Xunit;
 using Xunit.Abstractions;
 

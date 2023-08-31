@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;

@@ -9,10 +9,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 

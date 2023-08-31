@@ -4,7 +4,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 

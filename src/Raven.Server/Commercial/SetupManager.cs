@@ -20,19 +20,16 @@ using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
-using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial
 {

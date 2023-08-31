@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
 using Voron;

@@ -1,7 +1,6 @@
 ﻿using System;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server.Utils;
 using Voron;

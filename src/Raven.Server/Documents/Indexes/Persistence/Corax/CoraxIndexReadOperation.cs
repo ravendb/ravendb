@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
-using Corax;
 using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Queries;

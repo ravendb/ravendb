@@ -18,7 +18,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Properties;
 using Raven.Client.Util;
-using Raven.Server.Config;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;

@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Utils;
 using Sparrow.Platform;

@@ -2,14 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
-using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron.Impl;
 using Voron.Util.PFor;
-using Voron.Util.Simd;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.PostingLists;

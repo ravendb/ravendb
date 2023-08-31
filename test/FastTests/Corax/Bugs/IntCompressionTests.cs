@@ -1,20 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Sparrow.Compression;
 using Sparrow.Server;
 using Sparrow.Server.Debugging;
 using Sparrow.Threading;
 using Tests.Infrastructure;
-using Voron.Data.Containers;
-using Voron.Data.PostingLists;
 using Voron.Util.PFor;
-using Voron.Util.Simd;
 using Xunit;
 using Xunit.Abstractions;
 

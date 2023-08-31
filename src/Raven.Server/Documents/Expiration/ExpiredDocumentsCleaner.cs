@@ -15,7 +15,6 @@ using Raven.Server.Background;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron;

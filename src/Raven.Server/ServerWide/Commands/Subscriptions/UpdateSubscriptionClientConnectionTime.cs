@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

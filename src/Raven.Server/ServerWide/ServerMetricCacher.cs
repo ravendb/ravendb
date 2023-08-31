@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Platform.Posix;
 using Raven.Server.Utils;
-using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform.Posix;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications

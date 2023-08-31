@@ -15,7 +15,6 @@ using Lambda2Js;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;

@@ -1,7 +1,6 @@
 ﻿using System;
 using Sparrow;
 using Voron.Global;
-using Voron.Impl;
 using Sparrow.Binary;
 using Sparrow.Compression;
 using Voron.Data.Compression;

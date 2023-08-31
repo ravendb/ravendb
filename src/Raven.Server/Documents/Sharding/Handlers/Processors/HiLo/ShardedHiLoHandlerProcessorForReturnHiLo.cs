@@ -1,11 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.HiLo;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 

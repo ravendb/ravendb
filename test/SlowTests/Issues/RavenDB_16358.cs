@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Http;
 using Sparrow.Collections;
 using Xunit;
 using Xunit.Abstractions;

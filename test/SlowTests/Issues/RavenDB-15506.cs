@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;

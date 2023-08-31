@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;

@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;

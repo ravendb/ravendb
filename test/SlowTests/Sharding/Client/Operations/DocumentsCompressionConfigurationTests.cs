@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;

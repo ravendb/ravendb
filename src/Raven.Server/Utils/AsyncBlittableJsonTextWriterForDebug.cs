@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
-using Microsoft.AspNetCore.Http;
 using Raven.Client;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 

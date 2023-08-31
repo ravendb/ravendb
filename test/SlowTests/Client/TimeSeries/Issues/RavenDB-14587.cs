@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;

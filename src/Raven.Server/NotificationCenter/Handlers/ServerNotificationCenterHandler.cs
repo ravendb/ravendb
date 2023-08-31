@@ -6,7 +6,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using NuGet.Protocol;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Util;
 using Raven.Server.Dashboard;

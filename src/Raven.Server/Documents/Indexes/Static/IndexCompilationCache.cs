@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 
 namespace Raven.Server.Documents.Indexes.Static

@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Compression;
 using Xunit;
 using Xunit.Abstractions;
 

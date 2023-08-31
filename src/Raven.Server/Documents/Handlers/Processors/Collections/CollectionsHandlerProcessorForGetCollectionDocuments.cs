@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 

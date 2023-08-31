@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Http;

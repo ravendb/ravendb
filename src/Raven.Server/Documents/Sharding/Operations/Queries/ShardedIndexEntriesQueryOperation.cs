@@ -8,7 +8,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands.Querying;
-using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Extensions;

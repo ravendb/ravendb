@@ -10,7 +10,6 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Server.Utils.VxSort;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;

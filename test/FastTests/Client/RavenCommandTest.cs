@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Http;
-using Raven.Server.ServerWide.Commands;
 using Xunit;
 using Xunit.Abstractions;
 

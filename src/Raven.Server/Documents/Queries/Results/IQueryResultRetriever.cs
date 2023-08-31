@@ -1,16 +1,11 @@
 ﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
-using Corax;
 using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Utils;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Raven.Server.Documents.Indexes;
-using IndexSearcher = Lucene.Net.Search.IndexSearcher;
 using Sparrow;
-using Sparrow.Server;
 
 namespace Raven.Server.Documents.Queries.Results
 {

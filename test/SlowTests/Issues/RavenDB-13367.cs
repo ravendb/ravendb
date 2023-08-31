@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;

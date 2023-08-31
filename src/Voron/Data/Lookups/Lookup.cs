@@ -11,7 +11,6 @@ using Voron.Data.CompactTrees;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Voron.Data.Lookups;
 

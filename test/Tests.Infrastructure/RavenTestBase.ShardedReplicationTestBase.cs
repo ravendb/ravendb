@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Utils;

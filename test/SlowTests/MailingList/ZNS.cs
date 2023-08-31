@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;

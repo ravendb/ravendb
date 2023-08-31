@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Configuration;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration;

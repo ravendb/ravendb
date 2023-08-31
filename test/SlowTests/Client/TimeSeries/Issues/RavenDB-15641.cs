@@ -1,7 +1,5 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;

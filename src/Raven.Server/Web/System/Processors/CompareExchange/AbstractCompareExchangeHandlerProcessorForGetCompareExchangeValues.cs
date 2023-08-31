@@ -7,7 +7,6 @@ using JetBrains.Annotations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

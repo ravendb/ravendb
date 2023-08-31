@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using FastTests;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Session;

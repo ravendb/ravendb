@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Diagnostics.Eventing.Reader;
 using Raven.Client;
 using Microsoft.AspNetCore.Http;
-using Raven.Server.Web;
 
 namespace Raven.Server.Extensions
 {

@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;

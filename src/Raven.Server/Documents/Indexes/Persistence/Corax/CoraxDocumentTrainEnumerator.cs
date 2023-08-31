@@ -11,7 +11,6 @@ using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
-using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;

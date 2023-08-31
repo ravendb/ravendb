@@ -18,7 +18,6 @@ using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
-using Voron.Impl.Paging;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Fixed

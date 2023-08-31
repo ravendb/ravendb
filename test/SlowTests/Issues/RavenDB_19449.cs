@@ -1,18 +1,11 @@
 ﻿#nullable enable
-using System;
 using System.IO;
 using System.IO.Compression;
-using System.Net.Http;
-using System.Threading.Tasks;
 using FastTests;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Utils;
 using SlowTests.Corax;
-using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Security;

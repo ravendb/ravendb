@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using static Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.PropertyAccessor;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {

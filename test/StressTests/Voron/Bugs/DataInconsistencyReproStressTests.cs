@@ -1,5 +1,4 @@
-﻿using FastTests;
-using SlowTests.Utils;
+﻿using SlowTests.Utils;
 using SlowTests.Voron.Bugs;
 using Tests.Infrastructure;
 using Xunit;

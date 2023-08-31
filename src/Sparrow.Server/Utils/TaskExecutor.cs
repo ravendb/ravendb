@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.Server.Utils

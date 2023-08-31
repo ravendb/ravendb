@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Nest;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;

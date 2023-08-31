@@ -5,7 +5,6 @@ using System.Reflection;
 using CsvHelper;
 using Raven.Server.Utils.Cpu;
 using Sparrow;
-using Sparrow.LowMemory;
 using Sparrow.Server.LowMemory;
 using Xunit.Abstractions;
 

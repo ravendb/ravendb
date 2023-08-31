@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents;

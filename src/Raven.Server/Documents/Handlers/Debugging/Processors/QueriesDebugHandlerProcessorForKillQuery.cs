@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging.Processors;
 

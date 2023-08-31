@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
-using Raven.Server.Dashboard;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;

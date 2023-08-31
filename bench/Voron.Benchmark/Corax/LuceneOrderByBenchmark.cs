@@ -1,16 +1,12 @@
 ﻿//using System;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Diagnostics.Windows.Configs;
 using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
@@ -21,7 +17,6 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Lucene.Net.Util;
 using Directory = System.IO.Directory;
 using Version = Lucene.Net.Util.Version;
 

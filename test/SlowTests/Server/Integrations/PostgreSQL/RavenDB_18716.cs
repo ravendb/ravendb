@@ -1,6 +1,4 @@
-using System;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;
 

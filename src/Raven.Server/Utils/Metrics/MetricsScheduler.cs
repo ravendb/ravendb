@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
-using Sparrow.Platform;
 
 namespace Raven.Server.Utils.Metrics
 {

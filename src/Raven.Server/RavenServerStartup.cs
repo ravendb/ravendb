@@ -32,7 +32,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Web;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;

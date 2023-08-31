@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
-using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {

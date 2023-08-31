@@ -1,5 +1,4 @@
 using System;
-using System.Security.Cryptography.X509Certificates;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json.Parsing;
 

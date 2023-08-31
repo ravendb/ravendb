@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;

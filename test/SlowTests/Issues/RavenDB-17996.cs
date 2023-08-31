@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;

@@ -10,7 +10,6 @@ using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;

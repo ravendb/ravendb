@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Orders;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;

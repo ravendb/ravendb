@@ -8,7 +8,6 @@ using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {

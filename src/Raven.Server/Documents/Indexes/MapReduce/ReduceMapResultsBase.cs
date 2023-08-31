@@ -11,7 +11,6 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -18,7 +17,6 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
-using Sparrow.Server;
 using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents

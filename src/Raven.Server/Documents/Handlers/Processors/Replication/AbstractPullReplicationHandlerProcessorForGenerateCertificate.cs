@@ -3,7 +3,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Utils;

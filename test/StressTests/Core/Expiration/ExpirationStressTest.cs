@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using FastTests;
 using SlowTests.Server.Documents.Expiration;
 using Tests.Infrastructure;
 using Xunit;

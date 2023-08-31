@@ -1,6 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Utils;
 
 namespace Raven.Server.Commercial;
 

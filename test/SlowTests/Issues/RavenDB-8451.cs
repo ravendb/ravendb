@@ -9,7 +9,6 @@ using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Voron;

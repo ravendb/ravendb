@@ -1,10 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.IoMetrics;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
 using Sparrow.Json;

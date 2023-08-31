@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Server.Commercial;

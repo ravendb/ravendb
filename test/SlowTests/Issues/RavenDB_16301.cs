@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;

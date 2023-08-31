@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Embedded;
 using Xunit;
 

@@ -3,8 +3,6 @@ using System.IO;
 using Lucene.Net.Store;
 using Raven.Server.Utils;
 using Sparrow.Logging;
-using Sparrow.Server.Exceptions;
-using Sparrow.Server.Utils;
 using Voron.Impl;
 using Voron;
 

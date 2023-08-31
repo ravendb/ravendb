@@ -9,7 +9,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;

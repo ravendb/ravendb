@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Queries.Highlighting;
-using SlowTests.Tests.Linq;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

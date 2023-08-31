@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Corax;
 using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Queries;

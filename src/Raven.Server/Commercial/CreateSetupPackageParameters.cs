@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 
 namespace Raven.Server.Commercial;

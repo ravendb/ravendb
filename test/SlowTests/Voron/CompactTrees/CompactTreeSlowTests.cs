@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
-using Voron.Data.CompactTrees;
 using Xunit;
 using Xunit.Abstractions;
 

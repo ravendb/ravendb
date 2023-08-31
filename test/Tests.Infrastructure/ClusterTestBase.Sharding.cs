@@ -11,7 +11,6 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 

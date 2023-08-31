@@ -6,7 +6,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance.Sharding
 {

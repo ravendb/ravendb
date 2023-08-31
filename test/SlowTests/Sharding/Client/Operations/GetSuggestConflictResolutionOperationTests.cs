@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Server.Web.Operations;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;

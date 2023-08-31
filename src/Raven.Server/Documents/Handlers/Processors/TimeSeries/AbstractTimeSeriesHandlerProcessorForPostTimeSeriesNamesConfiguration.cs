@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries

@@ -7,7 +7,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
-using SlowTests.MailingList;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

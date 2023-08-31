@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;

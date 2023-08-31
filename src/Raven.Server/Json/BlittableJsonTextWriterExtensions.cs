@@ -36,7 +36,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Data.BTrees;
-using static Raven.Server.Documents.Sharding.Queries.ShardedQueryResultDocument;
 using IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 
 namespace Raven.Server.Json

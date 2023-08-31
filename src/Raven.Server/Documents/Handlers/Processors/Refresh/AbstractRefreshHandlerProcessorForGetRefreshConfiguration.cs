@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Refresh;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Refresh;

@@ -1,10 +1,6 @@
 using System;
 using Corax.Analyzers;
 using Voron;
-using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
-using Voron.Data.Lookups;
-using Voron.Impl;
 
 namespace Corax.Mappings;
 

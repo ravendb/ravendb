@@ -2,7 +2,6 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Handlers.Processors.Rachis;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Rachis

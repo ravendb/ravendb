@@ -1,21 +1,7 @@
-﻿using System;
-using System.IO;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents.Changes;
-using Raven.Client.Extensions;
-using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
-using Raven.Server.Documents.Sharding.Queries;
-using Raven.Server.Json;
-using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
-using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {

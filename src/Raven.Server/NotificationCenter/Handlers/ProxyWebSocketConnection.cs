@@ -4,7 +4,6 @@ using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

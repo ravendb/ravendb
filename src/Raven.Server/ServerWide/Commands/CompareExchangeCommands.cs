@@ -2,7 +2,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;

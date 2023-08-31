@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler

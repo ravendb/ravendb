@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Net.Http;
 using Tests.Infrastructure;
 using Xunit;

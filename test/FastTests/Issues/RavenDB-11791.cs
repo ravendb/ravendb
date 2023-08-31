@@ -1,9 +1,7 @@
 ﻿using System.Linq;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Issues

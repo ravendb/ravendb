@@ -7,7 +7,6 @@
 using FastTests;
 using Lucene.Net.Analysis;
 using Xunit;
-using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Mime;
-using System.Runtime.InteropServices;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Core;
 using Sparrow.Json;

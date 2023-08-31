@@ -9,7 +9,6 @@ using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
 using Raven.Server.NotificationCenter;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;

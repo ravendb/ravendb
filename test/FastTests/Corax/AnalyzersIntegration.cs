@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents;
 using Xunit;

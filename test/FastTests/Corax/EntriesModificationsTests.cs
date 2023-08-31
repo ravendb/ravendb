@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using Corax;
 using Sparrow.Server;
 using Sparrow.Threading;

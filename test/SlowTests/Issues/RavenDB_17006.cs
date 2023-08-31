@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.NotificationCenter.Handlers;

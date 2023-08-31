@@ -7,7 +7,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Http;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 

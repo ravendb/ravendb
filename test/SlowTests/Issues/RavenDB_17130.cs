@@ -5,7 +5,6 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations;
-using Raven.Server.Config;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;

@@ -2,7 +2,6 @@
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Queries.Dynamic;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;

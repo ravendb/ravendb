@@ -2,17 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Voron.Util;

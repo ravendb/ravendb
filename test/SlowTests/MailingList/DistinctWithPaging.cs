@@ -6,7 +6,6 @@
 
 using System.Linq;
 using FastTests;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;

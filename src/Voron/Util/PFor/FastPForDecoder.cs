@@ -5,7 +5,6 @@ using System.Runtime.Intrinsics;
 using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Server;
-using Sparrow.Utils;
 using Voron.Data.PostingLists;
 
 namespace Voron.Util.PFor;

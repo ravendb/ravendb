@@ -9,7 +9,6 @@ using Raven.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

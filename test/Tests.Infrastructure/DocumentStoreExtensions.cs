@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Org.BouncyCastle.Asn1;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;

@@ -7,7 +7,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Json.Sync;
 
 namespace Raven.Server.Web.System
 {

@@ -12,7 +12,6 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 using Sparrow.Json;
-using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Facets

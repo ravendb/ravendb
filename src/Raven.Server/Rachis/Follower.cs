@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Rachis.Commands;

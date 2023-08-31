@@ -7,7 +7,6 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
-using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide.Operations.Certificates;

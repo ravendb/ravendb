@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.NotificationCenter.Notifications;

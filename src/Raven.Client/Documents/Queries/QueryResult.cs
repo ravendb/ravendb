@@ -4,10 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries

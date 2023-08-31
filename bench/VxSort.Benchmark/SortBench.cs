@@ -1,12 +1,10 @@
 using System;
 using System.Globalization;
-using System.Net.Http.Headers;
 using Bench.Utils;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnostics.Windows.Configs;
-using BenchmarkDotNet.Extensions;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Reports;
 using Perfolizer.Horology;

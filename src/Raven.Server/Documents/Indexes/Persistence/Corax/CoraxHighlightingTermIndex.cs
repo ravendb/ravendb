@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JetBrains.Annotations;
-
-namespace Raven.Server.Documents.Indexes.Persistence.Corax
+﻿namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public sealed class CoraxHighlightingTermIndex
     {

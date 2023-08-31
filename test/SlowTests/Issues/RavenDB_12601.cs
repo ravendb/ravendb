@@ -1,17 +1,9 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests.Server.Replication;
+﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
-using Raven.Server;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using XunitLogger;
 
 namespace SlowTests.Issues
 {

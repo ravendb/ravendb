@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Tests.Infrastructure;
 using Xunit;

@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;

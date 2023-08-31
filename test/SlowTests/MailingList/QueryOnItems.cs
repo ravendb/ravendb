@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using FastTests;
 using Newtonsoft.Json;
-using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;

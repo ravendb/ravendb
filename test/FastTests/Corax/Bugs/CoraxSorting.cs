@@ -1,5 +1,4 @@
 using System.Linq;
-using Nest;
 using Raven.Client.Documents.Linq;
 using Tests.Infrastructure;
 using Xunit;

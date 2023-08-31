@@ -2,7 +2,6 @@
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.ServerWide;
 using Sparrow.Json;

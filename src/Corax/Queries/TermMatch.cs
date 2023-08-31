@@ -9,11 +9,9 @@ using System.Runtime.Intrinsics.X86;
 using Corax.Queries.Meta;
 using Corax.Utils;
 using Sparrow.Compression;
-using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.Containers;
 using Voron.Util.PFor;
-using Voron.Util.Simd;
 
 namespace Corax.Queries
 {

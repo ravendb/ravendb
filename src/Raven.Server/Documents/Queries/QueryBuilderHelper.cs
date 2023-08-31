@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
-using Corax.Queries.SortingMatches;
 using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;

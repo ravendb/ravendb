@@ -7,7 +7,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;

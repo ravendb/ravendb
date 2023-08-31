@@ -11,7 +11,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Formatting;
 using Raven.Client.Exceptions.Documents.Compilation;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Analysis

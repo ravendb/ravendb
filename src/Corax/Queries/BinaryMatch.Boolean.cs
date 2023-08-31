@@ -4,11 +4,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Xml.Linq;
 using Corax.Queries.Meta;
-using Sparrow.Server;
 using Sparrow.Server.Utils;
-using Voron.Data.PostingLists;
 
 namespace Corax.Queries
 {

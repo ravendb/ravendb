@@ -3,7 +3,6 @@ using System.Text;
 using Sparrow;
 using Sparrow.Server.Compression;
 using Voron;
-using Voron.Data;
 using Voron.Data.CompactTrees;
 using Voron.Global;
 

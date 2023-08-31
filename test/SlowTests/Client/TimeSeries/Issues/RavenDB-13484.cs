@@ -2,12 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

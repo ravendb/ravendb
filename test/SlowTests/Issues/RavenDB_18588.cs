@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using SlowTests.Core.Commands;
 using Xunit;
 using Xunit.Abstractions;
 

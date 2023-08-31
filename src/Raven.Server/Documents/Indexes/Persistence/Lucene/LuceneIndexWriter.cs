@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;

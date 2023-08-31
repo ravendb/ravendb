@@ -18,17 +18,10 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
-using Lucene.Net.Analysis.Tokenattributes;
-using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Lucene.Net.Store;
-using Lucene.Net.Support;
 using Lucene.Net.Util;
 using Sparrow.Json;
-using IndexReader = Lucene.Net.Index.IndexReader;
-using Term = Lucene.Net.Index.Term;
 using Analyzer = Lucene.Net.Analysis.Analyzer;
 using StandardAnalyzer = Lucene.Net.Analysis.Standard.StandardAnalyzer;
 using Version = Lucene.Net.Util.Version;

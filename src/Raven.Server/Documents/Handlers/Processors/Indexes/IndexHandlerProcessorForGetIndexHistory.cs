@@ -6,7 +6,6 @@ using JetBrains.Annotations;
 using Raven.Client.ServerWide;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;

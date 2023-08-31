@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Raven.Server.Exceptions;
-using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.LowMemory;

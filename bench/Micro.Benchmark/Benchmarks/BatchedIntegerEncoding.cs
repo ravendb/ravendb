@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -10,8 +9,6 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow.Compression;
-using Sparrow.Json;
-using Sparrow.Server.Compression;
 
 namespace Micro.Benchmark.Benchmarks
 {

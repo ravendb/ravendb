@@ -17,7 +17,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication.Incoming;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using NetTopologySuite.Algorithm;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;

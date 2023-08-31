@@ -5,8 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Jint;
 using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;

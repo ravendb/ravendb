@@ -4,7 +4,6 @@ using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Sparrow.Threading;
 using Voron;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.ServerWide.Context
 {

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;

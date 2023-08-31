@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

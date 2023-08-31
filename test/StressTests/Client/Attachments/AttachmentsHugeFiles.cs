@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
-using FastTests;
 using Microsoft.AspNetCore.Http.Features;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;

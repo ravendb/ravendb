@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Corax;
 using Corax.IndexSearcher;
-using Corax.Queries;
 using Corax.Queries.Meta;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;

@@ -1,5 +1,4 @@
 ﻿using System.Net.Http;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 

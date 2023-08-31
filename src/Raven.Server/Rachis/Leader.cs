@@ -6,13 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Server.Commercial;
-using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis.Commands;
@@ -21,14 +17,11 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
-using Voron.Impl;
 using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis

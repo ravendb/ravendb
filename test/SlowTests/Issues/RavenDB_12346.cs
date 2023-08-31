@@ -2,7 +2,6 @@
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
-using Raven.Server.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;

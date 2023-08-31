@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using FastTests.Voron;
 using Tests.Infrastructure;
-using Voron;
-using Voron.Data.CompactTrees;
 using Xunit;
 using Xunit.Abstractions;
 

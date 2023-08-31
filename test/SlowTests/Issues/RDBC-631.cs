@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Microsoft.Azure.Documents.SystemFunctions;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;

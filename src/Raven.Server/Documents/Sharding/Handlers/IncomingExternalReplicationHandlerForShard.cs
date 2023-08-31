@@ -1,5 +1,4 @@
-﻿using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Replication.Messages;
+﻿using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.ReplicationItems;

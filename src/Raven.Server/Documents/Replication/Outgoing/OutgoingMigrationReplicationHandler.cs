@@ -4,7 +4,6 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.Sharding.Operations;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;

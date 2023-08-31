@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;

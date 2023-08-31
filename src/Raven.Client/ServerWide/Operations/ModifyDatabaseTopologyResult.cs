@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
-
 namespace Raven.Client.ServerWide.Operations
 {
     public sealed class ModifyDatabaseTopologyResult

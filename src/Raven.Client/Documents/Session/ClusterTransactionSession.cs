@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Json.Serialization;

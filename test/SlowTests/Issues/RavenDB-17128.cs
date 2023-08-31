@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;

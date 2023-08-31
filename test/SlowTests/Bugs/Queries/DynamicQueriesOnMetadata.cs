@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using Xunit.Abstractions;
 using Tests.Infrastructure;

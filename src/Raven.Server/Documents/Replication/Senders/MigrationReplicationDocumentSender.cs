@@ -6,7 +6,6 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders

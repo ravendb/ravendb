@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;

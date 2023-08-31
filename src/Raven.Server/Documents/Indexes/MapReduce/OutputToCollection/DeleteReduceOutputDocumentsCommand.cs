@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Raven.Client.Documents.Indexes.MapReduce;
-using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

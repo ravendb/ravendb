@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;

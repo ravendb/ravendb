@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using Voron.Data;
 using Voron.Global;
 
 namespace Voron.Impl.Paging

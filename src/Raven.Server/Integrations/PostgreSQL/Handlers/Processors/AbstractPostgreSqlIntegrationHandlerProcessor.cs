@@ -4,7 +4,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Utils.Features;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;

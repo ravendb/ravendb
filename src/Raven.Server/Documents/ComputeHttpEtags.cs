@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding.Executors;
 using Sparrow.Platform;

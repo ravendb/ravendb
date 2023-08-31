@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Session.Operations.Lazy;
 

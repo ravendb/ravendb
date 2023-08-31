@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Raven.Client.Documents.Smuggler
+﻿namespace Raven.Client.Documents.Smuggler
 {
     public sealed class DatabaseSmugglerImportOptions : DatabaseSmugglerOptions, IDatabaseSmugglerImportOptions
     {

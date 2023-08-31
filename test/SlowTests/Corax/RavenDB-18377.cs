@@ -1,9 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using SlowTests.Bugs.Indexing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;

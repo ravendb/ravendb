@@ -4,8 +4,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Server;
-using Sparrow.Server.Binary;
 using Sparrow.Server.Compression;
 using Voron.Exceptions;
 using Voron.Global;

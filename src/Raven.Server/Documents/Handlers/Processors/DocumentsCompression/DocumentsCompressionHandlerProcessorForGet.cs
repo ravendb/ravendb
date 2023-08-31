@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 

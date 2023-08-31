@@ -3,7 +3,6 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions

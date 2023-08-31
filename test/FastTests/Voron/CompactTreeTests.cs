@@ -1,5 +1,4 @@
 using Tests.Infrastructure;
-using Voron.Data.CompactTrees;
 using Xunit;
 using Xunit.Abstractions;
 

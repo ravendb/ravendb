@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;

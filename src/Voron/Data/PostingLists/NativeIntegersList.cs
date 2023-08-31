@@ -6,7 +6,6 @@ using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
-using Voron.Util;
 
 namespace Voron.Data.PostingLists;
 

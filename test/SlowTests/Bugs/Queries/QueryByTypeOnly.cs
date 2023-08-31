@@ -2,7 +2,6 @@
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries

@@ -18,7 +18,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions

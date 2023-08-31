@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using NuGet.Protocol.Plugins;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Sparrow.Json.Parsing;
 

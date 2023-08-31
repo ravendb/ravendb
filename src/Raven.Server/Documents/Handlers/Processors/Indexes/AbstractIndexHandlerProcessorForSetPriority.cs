@@ -2,7 +2,6 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;

@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.ContinuationTokens
 {

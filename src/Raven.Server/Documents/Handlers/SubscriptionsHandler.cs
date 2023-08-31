@@ -1,12 +1,10 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

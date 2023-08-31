@@ -1,5 +1,4 @@
 ﻿using Voron;
-using Voron.Impl.Paging;
 using Xunit;
 using Assert = Xunit.Assert;
 using Xunit.Abstractions;

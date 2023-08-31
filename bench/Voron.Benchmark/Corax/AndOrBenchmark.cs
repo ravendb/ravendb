@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
@@ -17,7 +15,6 @@ using BenchmarkDotNet.Validators;
 using Corax;
 using Corax.IndexSearcher;
 using Corax.Mappings;
-using Corax.Queries;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Server;
 using Sparrow.Threading;

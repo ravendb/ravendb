@@ -1,13 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Debugging.Processors;
-using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {

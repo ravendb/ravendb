@@ -6,17 +6,13 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.ObjectPool;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.Routing;
 using Raven.Server.Web;
-using Sparrow.Exceptions;
-using Sparrow.Json;
 
 namespace Raven.Server.ServerWide
 {

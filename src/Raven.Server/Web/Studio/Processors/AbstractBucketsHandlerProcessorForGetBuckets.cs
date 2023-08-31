@@ -7,7 +7,6 @@ using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow.Json;

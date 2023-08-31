@@ -20,7 +20,6 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Smuggler.Migration
 {

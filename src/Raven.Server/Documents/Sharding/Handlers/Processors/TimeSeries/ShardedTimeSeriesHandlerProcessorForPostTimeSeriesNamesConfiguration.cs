@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 {

@@ -1,14 +1,8 @@
-﻿using System;
-using System.Text;
-using Corax;
+﻿using Corax;
 using Corax.IndexSearcher;
 using Corax.Mappings;
-using Corax.Queries;
-using Corax.Utils;
 using FastTests.Voron;
-using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Threading;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;

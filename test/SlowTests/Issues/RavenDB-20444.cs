@@ -1,11 +1,9 @@
 using System.Linq;
 using FastTests;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

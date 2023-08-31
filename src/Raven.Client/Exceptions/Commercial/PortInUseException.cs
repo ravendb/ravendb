@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using Sparrow.Json;
 
 namespace Raven.Client.Exceptions.Commercial;
 

@@ -1,9 +1,6 @@
-﻿using System.Linq;
-using FastTests;
-using Raven.Client.Documents;
+﻿using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
