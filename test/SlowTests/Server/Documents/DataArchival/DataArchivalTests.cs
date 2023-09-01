@@ -130,6 +130,8 @@ namespace SlowTests.Server.Documents.DataArchival
                 var documentsArchiver = database.DataArchivist;
                 await documentsArchiver.ArchiveDocs();
                 
+                await Indexes.WaitForIndexingAsync(store);
+                
                 using (var session = store.OpenAsyncSession())
                 {
                     var companies = await session.Query<Company>().Where(x=>x.Name == "Company Name").ToListAsync();
