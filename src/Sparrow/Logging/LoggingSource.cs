@@ -348,7 +348,8 @@ namespace Sparrow.Logging
         internal sealed class LogInfo
         {
             public const string LogExtension = ".log"; 
-            public const string AdditionalCompressExtension = ".gz";
+            public const string AdditionalCompressExtension = ".gz"; 
+            public const string FullCompressExtension = LogExtension + AdditionalCompressExtension; 
             private const string DateFormat = "yyyy-MM-dd";
 
             public readonly string FullName;
