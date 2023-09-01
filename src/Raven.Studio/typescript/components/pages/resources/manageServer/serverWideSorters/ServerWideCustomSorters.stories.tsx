@@ -1,20 +1,20 @@
 ﻿import React from "react";
 import { Meta } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import ServerWideCustomAnalyzers from "./ServerWideCustomAnalyzers";
+import ServerWideCustomSorters from "./ServerWideCustomSorters";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/ManageServer/Server-Wide Analyzers",
-    component: ServerWideCustomAnalyzers,
+    title: "Pages/ManageServer/Server-Wide Sorters",
+    component: ServerWideCustomSorters,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof ServerWideCustomAnalyzers>;
+} satisfies Meta<typeof ServerWideCustomSorters>;
 
 function commonInit() {
     const { manageServerService } = mockServices;
 
-    manageServerService.withGetServerWideCustomAnalyzers();
+    manageServerService.withGetServerWideCustomSorters();
 }
 
 export function NoLimits() {
@@ -23,7 +23,7 @@ export function NoLimits() {
     const { license } = mockStore;
     license.with_Enterprise();
 
-    return <ServerWideCustomAnalyzers />;
+    return <ServerWideCustomSorters />;
 }
 
 export function CommunityLimits() {
@@ -32,5 +32,5 @@ export function CommunityLimits() {
     const { license } = mockStore;
     license.with_Community();
 
-    return <ServerWideCustomAnalyzers />;
+    return <ServerWideCustomSorters />;
 }

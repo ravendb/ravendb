@@ -11,63 +11,60 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
-import { useServices } from "components/hooks/useServices";
-import { AsyncStateStatus, useAsync, useAsyncCallback } from "react-async-hook";
-import { LoadingView } from "components/common/LoadingView";
-import { LoadError } from "components/common/LoadError";
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 import { todo } from "common/developmentHelper";
+import { AsyncStateStatus, useAsync, useAsyncCallback } from "react-async-hook";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { LoadError } from "components/common/LoadError";
+import { LoadingView } from "components/common/LoadingView";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CounterBadge } from "components/common/CounterBadge";
+import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 
-todo("Feature", "Damian", "Get limit from license selector");
-
-export default function ServerWideCustomAnalyzers() {
+export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
-    const asyncGetAnalyzers = useAsync(manageServerService.getServerWideCustomAnalyzers, []);
+    const asyncGetSorters = useAsync(manageServerService.getServerWideCustomSorters, []);
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
     const communityLimit = 5; // TODO get from license selector
 
-    const resultsCount = asyncGetAnalyzers.result?.length ?? null;
+    const resultsCount = asyncGetSorters.result?.length ?? null;
 
     return (
         <div className="content-margin">
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
-                        <AboutViewHeading title="Server-Wide Analyzers" icon="server-wide-custom-analyzers" />
+                        <AboutViewHeading title="Server-Wide Sorters" icon="server-wide-custom-sorters" />
                         <Button
                             color="primary"
                             className="mb-3"
                             disabled={
-                                asyncGetAnalyzers.status !== "success" ||
-                                (isCommunity && resultsCount === communityLimit)
+                                asyncGetSorters.status !== "success" || (isCommunity && resultsCount === communityLimit)
                             }
                         >
                             <Icon icon="plus" />
-                            Add a server-wide custom analyzer
+                            Add a server-wide custom sorter
                         </Button>
                         <HrHeader
                             right={
-                                <a href="https://ravendb.net/l/VWCQPI/6.0" target="_blank">
+                                <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
                                     <Icon icon="link" />
-                                    Server-wide custom analyzers
+                                    Sorters tutorial
                                 </a>
                             }
                         >
-                            Server-wide custom analyzers
+                            Server-wide custom sorters
                             {isCommunity && (
                                 <CounterBadge className="ms-2" count={resultsCount} limit={communityLimit} />
                             )}
                         </HrHeader>
-                        <AnalyzersList
-                            fetchStatus={asyncGetAnalyzers.status}
-                            analyzers={asyncGetAnalyzers.result}
-                            reload={asyncGetAnalyzers.execute}
+                        <SortersList
+                            fetchStatus={asyncGetSorters.status}
+                            sorters={asyncGetSorters.result}
+                            reload={asyncGetSorters.execute}
                         />
                     </Col>
                     <Col sm={12} lg={4}>
@@ -79,13 +76,13 @@ export default function ServerWideCustomAnalyzers() {
                                 description="Get additional info on what this feature can offer you"
                                 heading="About this view"
                             >
-                                TODO
+                                Umm
                             </AccordionItemWrapper>
                             {isCommunity && (
                                 <AccordionCommunityLicenseLimited
                                     targetId="licensing"
-                                    featureName="Custom Analyzers"
-                                    featureIcon="custom-analyzers"
+                                    featureName="Custom Sorters"
+                                    featureIcon="custom-sorters"
                                     description="Upgrade to a paid plan and get unlimited availability."
                                 />
                             )}
@@ -97,16 +94,16 @@ export default function ServerWideCustomAnalyzers() {
     );
 }
 
-interface AnalyzersListProps {
+interface SortersListProps {
     fetchStatus: AsyncStateStatus;
-    analyzers: Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition[];
+    sorters: Raven.Client.Documents.Queries.Sorting.SorterDefinition[];
     reload: () => void;
 }
 
-function AnalyzersList({ fetchStatus, analyzers, reload }: AnalyzersListProps) {
+function SortersList({ fetchStatus, sorters, reload }: SortersListProps) {
     const { manageServerService } = useServices();
 
-    const asyncDeleteAnalyzer = useAsyncCallback(manageServerService.deleteServerWideCustomAnalyzer, {
+    const asyncDeleteSorter = useAsyncCallback(manageServerService.deleteServerWideCustomSorter, {
         onSuccess: reload,
     });
 
@@ -117,35 +114,32 @@ function AnalyzersList({ fetchStatus, analyzers, reload }: AnalyzersListProps) {
     }
 
     if (fetchStatus === "error") {
-        return <LoadError error="Unable to load custom analyzers" refresh={reload} />;
+        return <LoadError error="Unable to load custom sorters" refresh={reload} />;
     }
 
-    if (analyzers.length === 0) {
-        return <EmptySet>No server-wide custom analyzers have been defined</EmptySet>;
+    if (sorters.length === 0) {
+        return <EmptySet>No server-wide custom sorters have been defined</EmptySet>;
     }
 
-    todo("Feature", "Damian", "Render react edit analyzer");
+    todo("Feature", "Damian", "Render react edit sorter");
 
     return (
         <div>
-            {analyzers.map((analyzer) => (
-                <RichPanel key={analyzer.Name} className="mt-3">
+            {sorters.map((sorter) => (
+                <RichPanel key={sorter.Name} className="mt-3">
                     <RichPanelHeader>
                         <RichPanelInfo>
-                            <RichPanelName>{analyzer.Name}</RichPanelName>
+                            <RichPanelName>{sorter.Name}</RichPanelName>
                         </RichPanelInfo>
                         <RichPanelActions>
-                            <a
-                                href={appUrl.forEditServerWideCustomAnalyzer(analyzer.Name)}
-                                className="btn btn-secondary"
-                            >
+                            <a href={appUrl.forEditServerWideCustomAnalyzer(sorter.Name)} className="btn btn-secondary">
                                 <Icon icon="edit" margin="m-0" />
                             </a>
                             <ButtonWithSpinner
                                 color="danger"
-                                onClick={() => asyncDeleteAnalyzer.execute(analyzer.Name)}
+                                onClick={() => asyncDeleteSorter.execute(sorter.Name)}
                                 icon="trash"
-                                isSpinning={asyncDeleteAnalyzer.status === "loading"}
+                                isSpinning={asyncDeleteSorter.status === "loading"}
                             />
                         </RichPanelActions>
                     </RichPanelHeader>
