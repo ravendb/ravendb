@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Button, Col, Row } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -22,6 +22,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CounterBadge } from "components/common/CounterBadge";
+import classNames from "classnames";
 
 todo("Feature", "Damian", "Get limit from license selector");
 
@@ -29,10 +30,13 @@ export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
     const asyncGetAnalyzers = useAsync(manageServerService.getServerWideCustomAnalyzers, []);
 
+    const { appUrl } = useAppUrls();
+
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
     const communityLimit = 5; // TODO get from license selector
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
+    const isAddDisabled = asyncGetAnalyzers.status !== "success" || (isCommunity && resultsCount === communityLimit);
 
     return (
         <div className="content-margin">
@@ -40,17 +44,13 @@ export default function ServerWideCustomAnalyzers() {
                 <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading title="Server-Wide Analyzers" icon="server-wide-custom-analyzers" />
-                        <Button
-                            color="primary"
-                            className="mb-3"
-                            disabled={
-                                asyncGetAnalyzers.status !== "success" ||
-                                (isCommunity && resultsCount === communityLimit)
-                            }
+                        <a
+                            href={appUrl.forEditServerWideCustomAnalyzer()}
+                            className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
                         >
                             <Icon icon="plus" />
                             Add a server-wide custom analyzer
-                        </Button>
+                        </a>
                         <HrHeader
                             right={
                                 <a href="https://ravendb.net/l/VWCQPI/6.0" target="_blank">

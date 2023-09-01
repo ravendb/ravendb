@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Button, Col, Row } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -22,15 +22,19 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CounterBadge } from "components/common/CounterBadge";
 import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import classNames from "classnames";
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
     const asyncGetSorters = useAsync(manageServerService.getServerWideCustomSorters, []);
 
+    const { appUrl } = useAppUrls();
+
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
     const communityLimit = 5; // TODO get from license selector
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
+    const isAddDisabled = asyncGetSorters.status !== "success" || (isCommunity && resultsCount === communityLimit);
 
     return (
         <div className="content-margin">
@@ -38,16 +42,13 @@ export default function ServerWideCustomSorters() {
                 <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading title="Server-Wide Sorters" icon="server-wide-custom-sorters" />
-                        <Button
-                            color="primary"
-                            className="mb-3"
-                            disabled={
-                                asyncGetSorters.status !== "success" || (isCommunity && resultsCount === communityLimit)
-                            }
+                        <a
+                            href={appUrl.forEditServerWideCustomAnalyzer()}
+                            className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
                         >
                             <Icon icon="plus" />
                             Add a server-wide custom sorter
-                        </Button>
+                        </a>
                         <HrHeader
                             right={
                                 <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
