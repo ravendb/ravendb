@@ -1472,12 +1472,6 @@ namespace Corax
             using var __ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
             return TryDeleteEntry(termSlice, out _);
         }
-        
-        private bool TryDeleteEntry(ReadOnlySpan<byte> term, out long entryId)
-        {
-            using var __ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
-            return TryDeleteEntry(termSlice, out entryId);
-        }
 
         private bool TryDeleteEntry(Slice termSlice, out long entryId)
         {

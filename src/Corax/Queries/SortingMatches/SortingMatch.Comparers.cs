@@ -221,14 +221,6 @@ namespace Corax.Queries.SortingMatches;
             }
         }
 
-        private static long CopyTermPrefix(UnmanagedSpan item)
-        {
-            long l = 0;
-            Memory.Copy(&l, item.Address + 1 /* skip metadata byte */, Math.Min(6, item.Length - 1));
-            l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
-            return l;
-        }
-
         private static Span<int> SortByTerms<TComparer>(ref SortingMatch<TInner> match, Span<long> buffer, UnmanagedSpan* batchTerms, bool isDescending,
             TComparer tieBreaker)
             where TComparer : struct, IComparer<long>

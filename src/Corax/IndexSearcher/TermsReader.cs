@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
@@ -114,9 +113,6 @@ public unsafe struct TermsReader : IDisposable
         cache = (entryId, term);
         return term;
     }
-
-    public (long, UnmanagedSpan)[] CacheView => new Span<(long, UnmanagedSpan)>(_cache, CacheSize)
-        .ToArray().Where(x =>x.Item1 != 0).ToArray();
 
     public int Compare(long x, long y)
     {

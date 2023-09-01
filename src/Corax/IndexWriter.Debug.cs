@@ -54,10 +54,6 @@ namespace Corax
             {
                 
             }
-            public void Index(string id, Span<byte> data)
-            {
-              
-            }
 
             public void Commit()
             {
@@ -81,16 +77,9 @@ namespace Corax
 #else
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public IndexTermDumper(Tree tree, Slice field)
-            {}
-#endif
-
-            [Conditional("ENABLE_TERMDUMPER")]
-            public void WriteBatch()
             {
-#if ENABLE_TERMDUMPER
-                _writer.WriteLine("###");
-#endif
             }
+#endif
 
             [Conditional("ENABLE_TERMDUMPER")]
             public void WriteAddition(Slice term, long termId)

@@ -75,8 +75,6 @@ namespace Corax.Queries
 
             public readonly int MaxGramSize;
 
-            public int Count => _count;
-
             public SuggestionsNGramTable(int maxGramSize)
             {
                 MaxGramSize = maxGramSize;
@@ -88,7 +86,6 @@ namespace Corax.Queries
                 _storage = null;
             }
 
-            private int WordIdx => 0;
             private int GramPositionIdx => _maxSize;
             private int GramSizeIdx => GramPositionIdx + _maxSize * sizeof(int);
             private int GramBoostIdx => GramSizeIdx + _maxSize * sizeof(int);
@@ -132,11 +129,6 @@ namespace Corax.Queries
                         _count++;
                     }
                 }
-            }
-
-            public void Reset()
-            {
-                _currentIdx = -1;
             }
 
             public bool MoveNext(out ReadOnlySpan<byte> ngram, out float boost)

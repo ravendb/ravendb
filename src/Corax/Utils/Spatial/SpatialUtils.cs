@@ -40,7 +40,6 @@ public sealed class SpatialUtils
 
     public const int DefaultGeohashLevel = 9;
     private static readonly Dictionary<string, IRectangle> CachedFigures = new ();
-    private const int CachePrefixLength = 4;
 
     /// <summary>
     ///  Minimum amount of terms in specific area required to start compressing query into smaller ones.
@@ -67,14 +66,6 @@ public sealed class SpatialUtils
         return distance - distance % round;
     }
 
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static double GetRoundedValue(in double roundFactor, double value)
-    {
-        return value - value % roundFactor;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     internal static double HaverstineDistanceInInternationalNauticalMiles(double lat1, double lng1, double lat2, double lng2)
     {
         // from : https://www.geodatasource.com/developers/javascript
