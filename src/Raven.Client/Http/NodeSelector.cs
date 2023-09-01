@@ -196,11 +196,6 @@ namespace Raven.Client.Http
             }
         }
 
-        private static void ThrowEmptyTopology()
-        {
-            throw new InvalidOperationException("Empty database topology, this shouldn't happen.");
-        }
-
         private void SwitchToSpeedTestPhase(object _)
         {
             var state = _state;

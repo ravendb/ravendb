@@ -50,8 +50,6 @@ namespace Raven.Client.Json.Serialization
 {
     internal sealed class JsonDeserializationClient : JsonDeserializationBase
     {
-        public static readonly Func<BlittableJsonReaderObject, SmugglerProgressBase.CountsWithSkippedCountAndLastEtag> CountsWithSkippedCountAndLastEtag = GenerateJsonDeserializationRoutine<SmugglerProgressBase.CountsWithSkippedCountAndLastEtag>();
-
         public static readonly Func<BlittableJsonReaderObject, IsDatabaseLoadedCommand.CommandResult> IsDatabaseLoadedCommandResult = GenerateJsonDeserializationRoutine<IsDatabaseLoadedCommand.CommandResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetConflictsResult.Conflict> DocumentConflict = GenerateJsonDeserializationRoutine<GetConflictsResult.Conflict>();
@@ -71,8 +69,6 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, QueryResult> QueryResult = GenerateJsonDeserializationRoutine<QueryResult>();
         
         public static readonly Func<BlittableJsonReaderObject, ChangesSupportedFeatures> ChangesSupportedFeatures = GenerateJsonDeserializationRoutine<ChangesSupportedFeatures>();
-
-        public static readonly Func<BlittableJsonReaderObject, MoreLikeThisQueryResult> MoreLikeThisQueryResult = GenerateJsonDeserializationRoutine<MoreLikeThisQueryResult>();
 
         public static readonly Func<BlittableJsonReaderObject, Topology> Topology = GenerateJsonDeserializationRoutine<Topology>();
 
@@ -171,8 +167,6 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, GetCertificatesResponse> GetCertificatesResponse = GenerateJsonDeserializationRoutine<GetCertificatesResponse>();
         
         public static readonly Func<BlittableJsonReaderObject, GetCertificatesMetadataResponse> GetCertificatesMetadataResponse = GenerateJsonDeserializationRoutine<GetCertificatesMetadataResponse>();
-
-        public static readonly Func<BlittableJsonReaderObject, GetClientCertificatesResponse> GetClientCertificatesResponse = GenerateJsonDeserializationRoutine<GetClientCertificatesResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, BuildNumber> BuildNumber = GenerateJsonDeserializationRoutine<BuildNumber>();
 

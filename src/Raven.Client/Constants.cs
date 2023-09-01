@@ -154,7 +154,6 @@ namespace Raven.Client
             public const string AnyIp = "0.0.0.0";
             public const int ZeroValue = 0;
             public const int DefaultSecuredRavenDbHttpPort = 443;
-            public const int DefaultUnsecuredRavenDbHttpPort = 8080;
             public const int DefaultSecuredRavenDbTcpPort = 38888;
         }
 
@@ -203,8 +202,6 @@ namespace Raven.Client
             }
 
             public const string Prefix = "db/";
-
-            public const string UrlPrefix = "databases";
 
             public const int MaxDatabaseNameLength = 128;
 
@@ -306,8 +303,6 @@ namespace Raven.Client
                     }
 
                     public const string CountFieldName = "Count";
-
-                    public const string SumFieldName = "Sum";
 
 #if FEATURE_CUSTOM_SORTING
                     public const string CustomSortFieldName = "__customSort";
@@ -421,15 +416,6 @@ namespace Raven.Client
 
                     internal const string ShardContextParameterName = "__shardContext";
                 }
-            }
-
-            public sealed class Encryption
-            {
-                private Encryption()
-                {
-                }
-
-                public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
             }
 
             public sealed class PeriodicBackup

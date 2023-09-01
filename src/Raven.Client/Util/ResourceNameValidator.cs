@@ -19,10 +19,8 @@ namespace Raven.Client.Util
             "_", @"\-", @"\.", @"\/"
         };
 
-        public static string ValidResourceNameCharacters = $"([{string.Join("", AllowedResourceNameCharacters)}]+)";
         public static string ValidIndexNameCharacters = $"([{string.Join("", AllowedIndexNameCharacters)}]+)";
 
-        private static readonly Regex ValidResourceNameCharactersRegex = new Regex(ValidResourceNameCharacters, RegexOptions.Compiled);
         private static readonly Regex ValidIndexNameCharactersRegex = new Regex(ValidIndexNameCharacters, RegexOptions.Compiled);
         private static readonly Regex NameStartsOrEndsWithDotOrContainsConsecutiveDotsRegex = new Regex(@"^\.|\.\.|\.$", RegexOptions.Compiled);
        
