@@ -1,4 +1,5 @@
-﻿using Sparrow.Server;
+﻿using System;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
@@ -174,7 +175,8 @@ namespace FastTests.Sparrow
                 Assert.Equal(first.Key >> 32, repeat._pointer->Key >> 32);
                 context.Release(ref repeat);
             }
-        }
+        } 
+#endif
 
         [Fact]
         public void FailValidationTryingToReleaseInAnotherContext()
@@ -232,7 +234,5 @@ namespace FastTests.Sparrow
                 }
             });
         }
-#endif
-
     }
 }

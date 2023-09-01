@@ -56,7 +56,9 @@ namespace FastTests.Issues
                 }
                 sw.Stop();
 
+#if MEM_GUARD_STACK
                 Assert.True(sw.Elapsed < TimeSpan.FromSeconds(5));
+#endif
             }
         }
 

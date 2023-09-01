@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Util;
+using Sparrow.Server.Debugging;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Xunit;
@@ -28,6 +29,8 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
 
     static ParallelTestBase()
     {
+        DebugStuff.Attach();
+
         var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
         if (int.TryParse(Environment.GetEnvironmentVariable("RAVEN_MAX_RUNNING_TESTS"), out var maxRunningTests))
