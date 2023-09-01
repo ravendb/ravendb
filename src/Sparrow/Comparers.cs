@@ -6,6 +6,8 @@ namespace Sparrow
 {
     internal readonly struct NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>, IEqualityComparer<uint>
     {
+        public static readonly IEqualityComparer<long> BoxedInstanceInt64 = new NumericEqualityComparer();
+        public static readonly IEqualityComparer<ulong> BoxedInstanceUInt64 = new NumericEqualityComparer();
         public static readonly IEqualityComparer<int> BoxedInstanceInt32 = new NumericEqualityComparer();
         
         public static readonly NumericEqualityComparer StructInstance = new NumericEqualityComparer();

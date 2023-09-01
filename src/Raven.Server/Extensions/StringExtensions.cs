@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Text;
 using Sparrow;
 
@@ -9,13 +6,6 @@ namespace Raven.Server.Extensions
 {
     public static class StringExtensions
     {
-        public static List<string> GetSemicolonSeparatedValues(this string self)
-        {
-            return self.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.Trim())
-                .ToList();
-        }
-
         public static bool IsIdentifier(this StringSegment token)
         {
             return Raven.Client.Extensions.StringExtensions.IsIdentifier(token.Buffer, token.Offset, token.Length);
