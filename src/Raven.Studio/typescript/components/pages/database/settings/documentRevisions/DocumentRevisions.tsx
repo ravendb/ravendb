@@ -32,7 +32,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -329,7 +329,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             {licenseType === "Community" && (
-                                <AccordionCommunityLicenseLimited
+                                <AccordionLicenseLimited
                                     targetId="licensing"
                                     featureName="Document Revisions"
                                     featureIcon="revisions"

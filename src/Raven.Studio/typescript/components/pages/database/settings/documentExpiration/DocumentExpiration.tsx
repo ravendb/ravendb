@@ -24,7 +24,7 @@ import { useAsyncCallback } from "react-async-hook";
 import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 
 export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -189,7 +189,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             {licenseType === "Community" && (
-                                <AccordionCommunityLicenseLimited
+                                <AccordionLicenseLimited
                                     description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
                                     targetId="licensing"
                                     featureName="Document Expiration"

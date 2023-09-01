@@ -24,7 +24,7 @@ import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 
 export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -195,7 +195,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             {licenseType === "Community" && (
-                                <AccordionCommunityLicenseLimited
+                                <AccordionLicenseLimited
                                     description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
                                     targetId="licensing"
                                     featureName="Document Refresh"

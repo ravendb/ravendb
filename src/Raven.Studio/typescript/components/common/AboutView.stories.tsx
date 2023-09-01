@@ -11,7 +11,7 @@ import {
 import { Button, Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
 import Code from "./Code";
-import AccordionCommunityLicenseNotIncluded from "./AccordionCommunityLicenseNotIncluded";
+import AccordionLicenseNotIncluded from "./AccordionLicenseNotIncluded";
 
 export default {
     title: "Bits/AboutView",
@@ -71,10 +71,11 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                 </p>
                                 <Code code={codeExample} language="javascript" />
                             </AccordionItemWrapper>
-                            <AccordionCommunityLicenseNotIncluded
-                                targetId="3"
+                            <AccordionLicenseNotIncluded
+                                targetId="licensing"
                                 featureName="Document Compression"
                                 featureIcon="documents-compression"
+                                checkedLicenses={["Professional", "Enterprise"]}
                             />
                         </AboutViewFloating>
                     </Col>

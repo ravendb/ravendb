@@ -3,14 +3,14 @@ import { Icon } from "./Icon";
 import React, { ReactNode } from "react";
 import IconName from "../../../typings/server/icons";
 
-interface AccordionCommunityLicenseLimitedProps {
+interface AccordionLicenseLimitedProps {
     targetId: string;
     featureName: string;
     featureIcon: IconName;
     description: string | ReactNode;
 }
 
-export default function AccordionCommunityLicenseLimited(props: AccordionCommunityLicenseLimitedProps) {
+export default function AccordionLicenseLimited(props: AccordionLicenseLimitedProps) {
     const { targetId, featureName, featureIcon, description } = props;
 
     return (

@@ -21,7 +21,7 @@ import { NonShardedViewProps } from "components/models/common";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import AccordionCommunityLicenseNotIncluded from "components/common/AccordionCommunityLicenseNotIncluded";
+import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -179,10 +179,11 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                             </a>
                         </AccordionItemWrapper>
                         {licenseType === "Community" && (
-                            <AccordionCommunityLicenseNotIncluded
+                            <AccordionLicenseNotIncluded
                                 targetId="licensing"
                                 featureName="Studio Configuration"
                                 featureIcon="studio-configuration"
+                                checkedLicenses={["Professional", "Enterprise"]}
                             />
                         )}
                     </AboutViewAnchored>

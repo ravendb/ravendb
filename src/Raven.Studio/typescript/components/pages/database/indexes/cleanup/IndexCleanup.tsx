@@ -16,7 +16,7 @@ import AboutViewFloating, { AboutViewHeading, AccordionItemWrapper } from "compo
 import { FlexGrow } from "components/common/FlexGrow";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionCommunityLicenseNotIncluded from "components/common/AccordionCommunityLicenseNotIncluded";
+import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
@@ -76,10 +76,11 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                     </p>
                                 </AccordionItemWrapper>
                                 {licenseType === "Community" && (
-                                    <AccordionCommunityLicenseNotIncluded
+                                    <AccordionLicenseNotIncluded
                                         targetId="licensing"
                                         featureName="Index Cleanup"
                                         featureIcon="index-cleanup"
+                                        checkedLicenses={["Professional", "Enterprise"]}
                                     />
                                 )}
                             </AboutViewFloating>

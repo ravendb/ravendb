@@ -19,7 +19,7 @@ import { studioEnvironmentOptions } from "components/common/studioConfiguration/
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionCommunityLicenseNotIncluded from "components/common/AccordionCommunityLicenseNotIncluded";
+import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 
 export default function StudioGlobalConfiguration() {
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
@@ -203,10 +203,11 @@ export default function StudioGlobalConfiguration() {
                             </a>
                         </AccordionItemWrapper>
                         {licenseType === "Community" && (
-                            <AccordionCommunityLicenseNotIncluded
+                            <AccordionLicenseNotIncluded
                                 targetId="licensing"
                                 featureName="Studio Configuration"
                                 featureIcon="studio-configuration"
+                                checkedLicenses={["Professional", "Enterprise"]}
                             />
                         )}
                     </AboutViewAnchored>
