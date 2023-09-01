@@ -51,11 +51,13 @@ public class DataArchivalIndexingTests(ITestOutputHelper output) : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
+            await Indexes.WaitForIndexingAsync(store);
+
             // Make sure that the company is not skipped while indexing yet
             using (var session = store.OpenAsyncSession())
             {
                 List<Company> companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
-                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 1);
+                Assert.Equal(1, companies.Count);
             }
 
             // Activate the archival
@@ -66,6 +68,8 @@ public class DataArchivalIndexingTests(ITestOutputHelper output) : RavenTestBase
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
 
+            await Indexes.WaitForIndexingAsync(store);
+            
             using (var session = store.OpenAsyncSession())
             {
                 var archivedCompany = await session.LoadAsync<Company>(company.Id);
@@ -77,7 +81,7 @@ public class DataArchivalIndexingTests(ITestOutputHelper output) : RavenTestBase
 
                 // Make sure that the company is skipped while indexing (auto map index)
                 List<Company> companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
-                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 0);
+                Assert.Equal(0, companies.Count);
             }
         }
     }
@@ -240,7 +244,7 @@ public class DataArchivalIndexingTests(ITestOutputHelper output) : RavenTestBase
                 await Indexes.WaitForIndexingAsync(store);
                 // Make sure that the company is skipped while indexing (auto map index)
                 var companies = await session.Query<ArchivedCompanies_NamesCount.Result, ArchivedCompanies_NamesCount>().ToListAsync();
-                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 1);
+                Assert.Equal(1, companies.Count);
             }
         }
     }
@@ -1230,6 +1234,7 @@ User: counter.DocumentId
                 Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
                 Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
 
+                await Indexes.WaitForIndexingAsync(store);
                 // Make sure that the company is not skipped while indexing (auto map index)
                 List<Company> companies = await session.Query<Company>().Where(x => x.Email == "gracjan@ravendb.net").ToListAsync();
                 Assert.Equal(1, companies.Count);
@@ -1257,7 +1262,7 @@ User: counter.DocumentId
             using (var session = store.OpenAsyncSession())
             {
                 List<Company> companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
-                await AssertWaitForCountAsync(() => Task.FromResult(companies) , 1);
+                Assert.Equal(1, companies.Count);
             }
 
             // Activate the archival

@@ -134,6 +134,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 
                 using (var session = store.OpenAsyncSession())
                 {
+                    WaitForUserToContinueTheTest(store);
                     var companies = await session.Query<Company>().Where(x=>x.Name == "Company Name").ToListAsync();
                     Assert.Equal(0, companies.Count);
                 }
