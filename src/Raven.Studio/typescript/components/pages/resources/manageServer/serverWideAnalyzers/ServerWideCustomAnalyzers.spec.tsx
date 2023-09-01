@@ -19,7 +19,7 @@ describe("ServerWideCustomAnalyzers", () => {
 
     it("can render empty view", async () => {
         const { manageServerService } = mockServices;
-        manageServerService.withGetServerWideCustomAnalyzers([]);
+        manageServerService.withServerWideCustomAnalyzers([]);
 
         const { screen } = rtlRender(<ServerWideCustomAnalyzers />);
 
@@ -28,11 +28,11 @@ describe("ServerWideCustomAnalyzers", () => {
 
     it("can render analyzers list", async () => {
         const { manageServerService } = mockServices;
-        manageServerService.withGetServerWideCustomAnalyzers();
+        manageServerService.withServerWideCustomAnalyzers();
 
         const { screen } = rtlRender(<ServerWideCustomAnalyzers />);
 
-        const existingName = ManageServerStubs.getServerWideCustomAnalyzers()[0].Name;
+        const existingName = ManageServerStubs.serverWideCustomAnalyzers()[0].Name;
         expect(await screen.findByText(existingName)).toBeInTheDocument();
     });
 });

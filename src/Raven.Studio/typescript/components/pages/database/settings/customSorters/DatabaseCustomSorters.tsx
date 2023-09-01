@@ -1,5 +1,4 @@
-﻿import database from "models/resources/database";
-import React from "react";
+﻿import React from "react";
 import { Col, Row, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -25,14 +24,12 @@ import { CounterBadge } from "components/common/CounterBadge";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ServerWideCustomSortersList from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSortersList";
-
-interface CustomSortersPageProps {
-    db: database;
-}
+import { NonShardedViewProps } from "components/models/common";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
+todo("Limits", "Damian", "Get limit from license selector");
 
-export default function DatabaseCustomSorters({ db }: CustomSortersPageProps) {
+export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
 
     const asyncGetServerWideSorters = useAsync(manageServerService.getServerWideCustomSorters, []);

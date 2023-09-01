@@ -30,11 +30,11 @@ export default class MockManageServerService extends AutoMockService<ManageServe
         );
     }
 
-    withGetServerWideCustomAnalyzers(dto?: MockedValue<AnalyzerDefinition[]>) {
+    withServerWideCustomAnalyzers(dto?: MockedValue<AnalyzerDefinition[]>) {
         return this.mockResolvedValue(
             this.mocks.getServerWideCustomAnalyzers,
             dto,
-            ManageServerStubs.getServerWideCustomAnalyzers()
+            ManageServerStubs.serverWideCustomAnalyzers()
         );
     }
 
