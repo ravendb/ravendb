@@ -43,7 +43,7 @@ todo("Feature", "Damian", "Connect the view to studio");
 todo("Feature", "Damian", "Add conditional rendering for Community license");
 todo("Feature", "Damian", "Add unique ids for HrHeader popovers");
 
-export default function CustomSorters(props: CustomSortersPageProps) {
+export default function DatabaseCustomSorters(props: CustomSortersPageProps) {
     return (
         <div className="content-margin">
             <Col xxl={12}>
@@ -56,7 +56,7 @@ export default function CustomSorters(props: CustomSortersPageProps) {
                         </Button>
                         <HrHeader
                             count={databaseCustomSortersCount}
-                            limit={1}
+                            // limit={1}
                             right={
                                 <a href="https://ravendb.net/l/LGUJH8/6.0.0-custom-60" target="_blank">
                                     <Icon icon="link" />
@@ -99,7 +99,7 @@ export default function CustomSorters(props: CustomSortersPageProps) {
                         )}
                         <HrHeader
                             count={serverCustomSortersCount}
-                            limit={5}
+                            // limit={5}
                             right={
                                 <a href="#" target="_blank">
                                     <Icon icon="link" />
