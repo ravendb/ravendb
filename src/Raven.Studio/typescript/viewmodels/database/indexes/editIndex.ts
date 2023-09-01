@@ -158,7 +158,7 @@ class editIndex extends shardViewModelBase {
         this.testIndex.dispose();
     }
 
-    textForArchivedDataProcessingBehavior(mode: Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior) {
+    textForArchivedDataProcessingBehavior(mode: Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior) {
         if (!mode) {
             return "";
         }
@@ -174,7 +174,7 @@ class editIndex extends shardViewModelBase {
         }
     }
 
-    formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior) {
+    formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior) {
         if (!mode) {
             return "";
         }

@@ -50,7 +50,7 @@ class indexDefinition {
     reduceOutputCollectionName = ko.observable<string>();
     
     specifyArchivedDataProcessingBehavior = ko.observable<boolean>(false);
-    archivedDataProcessingBehavior = ko.observable<Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior>("IncludeArchived");
+    archivedDataProcessingBehavior = ko.observable<Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior>("IncludeArchived");
     
     createReferencesToResultsCollection = ko.observable<boolean>();
     patternForReferencesToReduceOutputCollection = ko.observable<string>();
