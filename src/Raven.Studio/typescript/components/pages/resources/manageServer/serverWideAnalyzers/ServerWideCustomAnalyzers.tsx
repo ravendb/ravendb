@@ -55,7 +55,7 @@ export default function ServerWideCustomAnalyzers() {
                             right={
                                 <a href="https://ravendb.net/l/VWCQPI/6.0" target="_blank">
                                     <Icon icon="link" />
-                                    Server-wide custom analyzers
+                                    Analyzers tutorial
                                 </a>
                             }
                         >

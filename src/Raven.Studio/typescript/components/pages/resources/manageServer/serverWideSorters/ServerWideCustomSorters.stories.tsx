@@ -14,7 +14,7 @@ export default {
 function commonInit() {
     const { manageServerService } = mockServices;
 
-    manageServerService.withGetServerWideCustomSorters();
+    manageServerService.withServerWideCustomSorters();
 }
 
 export function NoLimits() {

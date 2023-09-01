@@ -9,6 +9,7 @@ import DocumentRefresh from "components/pages/database/settings/documentRefresh/
 import DocumentExpiration from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 import DocumentRevisions from "components/pages/database/settings/documentRevisions/DocumentRevisions";
 import TombstonesState from "components/pages/database/settings/tombstones/TombstonesState";
+import DatabaseCustomSorters from "components/pages/database/settings/customSorters/DatabaseCustomSorters";
 
 export = getSettingsMenuItem;
 
@@ -122,7 +123,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/customSorters',
-            moduleId: require('viewmodels/database/settings/customSorters'),
+            moduleId: bridgeToReact(DatabaseCustomSorters, "nonShardedView"),
             title: 'Custom Sorters',
             shardingMode: "allShards",
             nav: true,

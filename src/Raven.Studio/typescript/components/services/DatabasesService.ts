@@ -38,6 +38,8 @@ import getRevisionsConfigurationCommand = require("commands/database/documents/g
 import saveRevisionsConfigurationCommand = require("commands/database/documents/saveRevisionsConfigurationCommand");
 import saveRevisionsForConflictsConfigurationCommand = require("commands/database/documents/saveRevisionsForConflictsConfigurationCommand");
 import enforceRevisionsConfigurationCommand = require("commands/database/settings/enforceRevisionsConfigurationCommand");
+import getCustomSortersCommand = require("commands/database/settings/getCustomSortersCommand");
+import deleteCustomSorterCommand = require("commands/database/settings/deleteCustomSorterCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -149,5 +151,13 @@ export default class DatabasesService {
 
     async enforceRevisionsConfiguration(db: database) {
         return new enforceRevisionsConfigurationCommand(db).execute();
+    }
+
+    async getCustomSorters(db: database) {
+        return new getCustomSortersCommand(db).execute();
+    }
+
+    async deleteCustomSorter(db: database, name: string) {
+        return new deleteCustomSorterCommand(db, name).execute();
     }
 }

@@ -31,7 +31,7 @@ export class ManageServerStubs {
         ];
     }
 
-    static getServerWideCustomSorters(): SorterDefinition[] {
+    static serverWideCustomSorters(): SorterDefinition[] {
         return [
             { Code: "server-sorter-code-1", Name: "First Server sorter" },
             { Code: "server-sorter-code-2", Name: "Second Server sorter" },
