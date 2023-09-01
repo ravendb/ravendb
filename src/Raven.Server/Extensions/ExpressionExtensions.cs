@@ -54,38 +54,6 @@ namespace Raven.Server.Extensions
             throw new InvalidQueryException($"A 'where' clause after '{whereCollectionName}' cannot contain just a '" + me.Name + "' method", queryText, parameters);
         }
 
-        public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)
-        {
-            const char propertySeparator = '.';
-            const char collectionSeparator = ',';
-            var collectionSeparatorAsString = collectionSeparator.ToString();
-            var propertyPath = path.ToPropertyPath(propertySeparator, collectionSeparator);
-            var properties = propertyPath.Split(propertySeparator);
-            var type = typeof(T);
-            foreach (var property in properties)
-            {
-                if (property.Contains(collectionSeparatorAsString))
-                {
-                    var normalizedProperty = property.Replace(collectionSeparatorAsString, string.Empty);
-
-                    if (type.IsArray)
-                    {
-                        type = type.GetElementType().GetProperty(normalizedProperty).PropertyType;
-                    }
-                    else
-                    {
-                        type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
-                    }
-                }
-                else
-                {
-                    type = type.GetProperty(property).PropertyType;
-                }
-            }
-
-            return type;
-        }
-
         public static MemberInfo ToProperty(this LambdaExpression expr)
         {
             var expression = expr.Body;

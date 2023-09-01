@@ -268,12 +268,6 @@ public sealed class VoronBufferedInput : BufferedIndexInput
     }
 
     [DoesNotReturn]
-    private void ThrowEndOfStreamException()
-    {
-        throw new EndOfStreamException($"Input name: {_name}. Current position: {_stream.Position}, length: {_stream.Length}");
-    }
-
-    [DoesNotReturn]
     private void ThrowInvalidSeekPosition(long pos)
     {
         throw new InvalidOperationException($"Cannot set stream position to {pos} because the length of '{_name}' stream is {_stream.Length}");
