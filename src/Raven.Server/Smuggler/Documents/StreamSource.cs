@@ -1367,12 +1367,6 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public JsonOperationContext GetContextForNewDocument()
-        {
-            _context.CachedProperties.NewDocument();
-            return _context;
-        }
-
         private async IAsyncEnumerable<DocumentItem> ReadLegacyAttachmentsAsync(INewDocumentActions actions)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
@@ -2021,13 +2015,6 @@ namespace Raven.Server.Smuggler.Documents
         {
             tag = null;
             return null;
-        }
-
-        public Task<DatabaseRecord> GetShardedDatabaseRecordAsync()
-        {
-            // Used only in Database Source
-            throw new NotSupportedException("GetShardedDatabaseRecordAsync is not supported in Stream Source, " +
-                                            "it is only supported from Sharded Database Source.");
         }
 
         public virtual void Dispose()

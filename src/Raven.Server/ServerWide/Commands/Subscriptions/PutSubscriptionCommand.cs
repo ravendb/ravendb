@@ -43,14 +43,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new NotImplementedException();
         }
 
-        protected virtual void AssertCanPutSubscription(RawDatabaseRecord record)
-        {
-            if (record.IsSharded)
-            {
-                throw new SubscriptionCreationException($"'{nameof(PutSubscriptionCommand)}' is not supported for sharded database.");
-            }
-        }
-
         public override unsafe void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
         {
             long i = 1;

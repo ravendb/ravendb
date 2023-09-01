@@ -162,17 +162,6 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected bool ClientSentGzipRequest()
-        {
-
-            return
-                Server.Configuration.Http.UseResponseCompression &&
-                (HttpContext.Request.IsHttps == false ||
-                 (HttpContext.Request.IsHttps && Server.Configuration.Http.AllowResponseCompressionOverHttps)) &&
-                HeadersAllowGzip(HttpContext.Request.Headers, Constants.Headers.ContentEncoding);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool HeadersAllowGzip(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
         {
             if (headers.TryGetValue(encodingsHeader, out Microsoft.Extensions.Primitives.StringValues acceptedContentEncodings) == false)
@@ -338,11 +327,6 @@ namespace Raven.Server.Web
             return _responseStream;
         }
 
-        protected bool IsWebsocketRequest()
-        {
-            return HttpContext.WebSockets.IsWebSocketRequest;
-        }
-
         internal string GetRaftRequestIdFromQuery()
         {
             var guid = GetStringQueryString("raft-request-id", required: false);
@@ -440,18 +424,6 @@ namespace Raven.Server.Web
 
             if (long.TryParse(longAsString, out long result) == false)
                 ThrowInvalidInteger(name, longAsString, "long");
-
-            return result;
-        }
-
-        protected float? GetFloatValueQueryString(string name, bool required = true)
-        {
-            var floatAsString = GetStringQueryString(name, required);
-            if (floatAsString == null)
-                return null;
-
-            if (float.TryParse(floatAsString, out float result) == false)
-                ThrowInvalidFloat(name, result);
 
             return result;
         }

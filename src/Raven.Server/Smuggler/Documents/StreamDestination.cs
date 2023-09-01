@@ -1535,12 +1535,6 @@ namespace Raven.Server.Smuggler.Documents
                 await Writer.MaybeFlushAsync();
             }
 
-            public JsonOperationContext GetContextForNewCompareExchangeValue()
-            {
-                return _context;
-            }
-
-
             public ValueTask FlushAsync()
             {
                 return ValueTask.CompletedTask;

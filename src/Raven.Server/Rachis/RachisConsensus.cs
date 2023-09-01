@@ -2060,12 +2060,6 @@ namespace Raven.Server.Rachis
 
         public abstract Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate);
 
-        public sealed class BootstrapOptions
-        {
-            public string NewNodeTag;
-            public Guid? TopologyId;
-        }
-
         public bool Bootstrap(string selfUrl, string nodeTag)
         {
             if (selfUrl == null)

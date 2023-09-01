@@ -127,16 +127,6 @@ namespace Raven.Server.Smuggler.Documents
             return Task.FromResult(_types[_currentTypeIndex++]);
         }
 
-        public Task<DatabaseRecord> GetShardedDatabaseRecordAsync()
-        {
-            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardHelper.ToDatabaseName(_database.Name)))
-            {
-                return Task.FromResult(rawRecord.MaterializedRecord);
-            }
-        }
-
         public Task<DatabaseRecord> GetDatabaseRecordAsync()
         {
             var databaseRecord = ReadDatabaseRecord();

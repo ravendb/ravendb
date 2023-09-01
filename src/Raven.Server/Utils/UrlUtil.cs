@@ -1,24 +1,7 @@
-﻿using System;
-
-namespace Raven.Server.Utils
+﻿namespace Raven.Server.Utils
 {
     public static class UrlUtil
     {
-        public static string EnsureValidExternalUrl(string url)
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                if (IsZeros(uri.Host))
-                {
-                    url = new UriBuilder(uri)
-                    {
-                        Host = Environment.MachineName
-                    }.Uri.ToString();
-                }
-            }
-            return url.TrimEnd('/');
-        }
-
         public static string TrimTrailingSlash(string url)
         {
             return url.TrimEnd('/');

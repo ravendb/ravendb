@@ -84,15 +84,6 @@ namespace Raven.Server.ServerWide
             return config.HasActiveMigrations();
         }
 
-        public void ClearPublishedUrls()
-        {
-            _serverStore.Engine.TxMerger.EnqueueSync(ctx =>
-            {
-                PublishedServerUrls.Clear(ctx);
-                return 1;
-            });
-        }
-
         public DocumentConventions DocumentConventionsForShard =>
             new()
             {
