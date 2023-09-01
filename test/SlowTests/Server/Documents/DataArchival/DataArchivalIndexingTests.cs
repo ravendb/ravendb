@@ -1268,6 +1268,8 @@ User: counter.DocumentId
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
 
+            await Indexes.WaitForIndexingAsync(store);
+            
             using (var session = store.OpenAsyncSession())
             {
                 var archivedCompany = await session.LoadAsync<Company>(company.Id);
@@ -1278,15 +1280,7 @@ User: counter.DocumentId
                 Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
 
                 // Make sure that the company is skipped while indexing (auto map index)
-                var companies = new List<Company>();
-                int attempts = 0;
-                while (companies.Count == 1 && attempts < 20)
-                {
-                    companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
-                    attempts++;
-                    await Task.Delay(500);
-                }
-
+                var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                 Assert.Equal(0, companies.Count);
             }
             
@@ -1296,6 +1290,8 @@ User: counter.DocumentId
                 Query = "from Companies update { archived.unarchive(this) }"
             }));
             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+            
+            await Indexes.WaitForIndexingAsync(store);
             
             using (var session = store.OpenAsyncSession())
             {
@@ -1308,15 +1304,7 @@ User: counter.DocumentId
 
                 // Make sure that the company is not anymore skipped while indexing 
                 
-                var companies = new List<Company>();
-                int attempts = 0;
-                while (companies.Count == 0 && attempts < 20)
-                {
-                    companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
-                    attempts++;
-                    await Task.Delay(500);
-                }
-
+                var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                 Assert.Equal(1, companies.Count);
             }
         }
