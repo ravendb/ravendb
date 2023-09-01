@@ -29,13 +29,18 @@ namespace Corax.Queries.TermProviders
             _tree = tree;
             _field = field;
             _searcher = searcher;
-            if ((_nullExists = _searcher.TryGetPostingListForNull(field, out  _postingListId)) == false)
-                _nullIterator = default;
-            else
+            _nullIterator = default;
+            _nullExists = false;
+            _fetchNulls = false;
+            if (_searcher.TryGetPostingListForNull(field, out  _postingListId))
             {
                 _nullPostingList = searcher.GetPostingList(_postingListId);
-                _nullIterator = _nullPostingList.Iterate();
-                _fetchNulls = true;
+                _nullExists = _nullPostingList.State.NumberOfEntries > 0;
+                if (_nullExists)
+                {
+                    _nullIterator = _nullPostingList.Iterate();
+                    _fetchNulls = true;
+                }
             }
             
             _iterator = tree.Iterate<TLookupIterator>();
