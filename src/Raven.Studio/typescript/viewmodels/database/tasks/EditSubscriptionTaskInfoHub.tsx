@@ -1,5 +1,5 @@
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
@@ -21,7 +21,7 @@ export function EditSubscriptionTaskInfoHub() {
                 </p>
             </AccordionItemWrapper>
             {licenseType === "Community" && (
-                <AccordionCommunityLicenseLimited
+                <AccordionLicenseLimited
                     description="Your Community license does not include Subscriptions Revisions. Upgrade to a paid plan and get unlimited availability."
                     targetId="licensing"
                     featureName="Subscriptions"

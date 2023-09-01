@@ -122,10 +122,19 @@ interface AccordionItemLicensingProps {
     children: ReactNode;
     checkedLicenses: string[];
     isCommunityLimited?: boolean;
+    isProfessionalLimited?: boolean;
 }
 
 const AccordionItemLicensing = (props: AccordionItemLicensingProps) => {
-    const { featureName, featureIcon, children, checkedLicenses, description, isCommunityLimited } = props;
+    const {
+        featureName,
+        featureIcon,
+        children,
+        checkedLicenses,
+        description,
+        isCommunityLimited,
+        isProfessionalLimited,
+    } = props;
     const licenses = [
         { name: "Community", checked: checkedLicenses.includes("Community") },
         { name: "Professional", checked: checkedLicenses.includes("Professional") },
@@ -143,6 +152,9 @@ const AccordionItemLicensing = (props: AccordionItemLicensingProps) => {
                         <h5 className={classNames("license-name", license.name.toLowerCase())}>{license.name}</h5>
                         <Icon icon={license.checked ? "tick" : "cancel"} />
                         {isCommunityLimited && license.name === "Community" ? (
+                            <small className="text-muted">(limited)</small>
+                        ) : null}
+                        {isProfessionalLimited && license.name === "Professional" ? (
                             <small className="text-muted">(limited)</small>
                         ) : null}
                     </div>

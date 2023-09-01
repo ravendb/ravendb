@@ -1,5 +1,5 @@
 ﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import AccordionCommunityLicenseNotIncluded from "components/common/AccordionCommunityLicenseNotIncluded";
+import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
@@ -21,10 +21,11 @@ export function EditServerWideExternalReplicationInfoHub() {
                 </p>
             </AccordionItemWrapper>
             {licenseType === "Community" && (
-                <AccordionCommunityLicenseNotIncluded
+                <AccordionLicenseNotIncluded
                     targetId="licensing"
                     featureName="Server-Wide External Replication"
                     featureIcon="server-wide-replication"
+                    checkedLicenses={["Professional", "Enterprise"]}
                 />
             )}
         </AboutViewFloating>

@@ -3,14 +3,15 @@ import { AccordionItemWrapper, AccordionItemLicensing } from "./AboutView";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
 
-interface AccordionCommunityLicenseNotIncludedProps {
+interface AccordionLicenseNotIncludedProps {
     targetId: string;
     featureName: string;
     featureIcon: IconName;
+    checkedLicenses: string[];
 }
 
-export default function AccordionCommunityLicenseNotIncluded(props: AccordionCommunityLicenseNotIncludedProps) {
-    const { targetId, featureName, featureIcon } = props;
+export default function AccordionLicenseNotIncluded(props: AccordionLicenseNotIncludedProps) {
+    const { targetId, featureName, featureIcon, checkedLicenses } = props;
 
     return (
         <AccordionItemWrapper
@@ -27,7 +28,7 @@ export default function AccordionCommunityLicenseNotIncluded(props: AccordionCom
                 description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
                 featureName={featureName}
                 featureIcon={featureIcon}
-                checkedLicenses={["Professional", "Enterprise"]}
+                checkedLicenses={checkedLicenses}
             >
                 <p className="lead fs-4">Get your license expanded</p>
                 <div className="mb-3">
