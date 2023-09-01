@@ -72,23 +72,6 @@ namespace Sparrow.Server.Compression
             BuildDictionary(symbolCodes);
         }
 
-        private string ToBinaryString(short sBuf, int sLen)
-        {
-            Span<short> value = stackalloc short[1];
-            value[0] = BinaryPrimitives.ReverseEndianness((short)(sBuf << (sizeof(short) * 8 - sLen)));
-            BitReader reader = new(MemoryMarshal.Cast<short, byte>(value), sLen);
-
-            string result = string.Empty;
-            while (reader.Length != 0)
-            {
-                if (reader.Read().IsSet)
-                    result += "R";
-                else
-                    result += "L";
-            }
-            return result;
-        }
-
         public void EncodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSizes, in TOutputEnumerator outputBuffers)
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
             where TOutputEnumerator : struct, ISpanIndexer

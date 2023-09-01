@@ -14,14 +14,11 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.Databases;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Processors.Studio;
 
 internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerProcessorForAllowedDatabases<StudioDatabasesHandlerForGetDatabases.StudioDatabasesInfo>
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
-
     public StudioDatabasesHandlerForGetDatabases([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {
     }

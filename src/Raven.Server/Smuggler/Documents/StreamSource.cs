@@ -719,33 +719,6 @@ namespace Raven.Server.Smuggler.Documents
             return InternalGetCounterValuesAsync(actions);
         }
 
-        public async IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync()
-        {
-            await foreach (var reader in ReadArrayAsync())
-            {
-                using (reader)
-                {
-                    if (reader.TryGet(nameof(CounterItem.DocId), out string docId) == false ||
-                        reader.TryGet(nameof(CounterItem.ChangeVector), out string cv) == false ||
-                        reader.TryGet(nameof(CounterItem.Legacy.Name), out string name) == false ||
-                        reader.TryGet(nameof(CounterItem.Legacy.Value), out long value) == false)
-                    {
-                        _result.Counters.ErroredCount++;
-                        _result.AddWarning("Could not read counter entry.");
-                        continue;
-                    }
-
-                    yield return new CounterDetail
-                    {
-                        DocumentId = docId,
-                        ChangeVector = cv,
-                        CounterName = name,
-                        TotalValue = value
-                    };
-                }
-            }
-        }
-
         public async IAsyncEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificatesAsync()
         {
             await foreach (var reader in ReadArrayAsync())

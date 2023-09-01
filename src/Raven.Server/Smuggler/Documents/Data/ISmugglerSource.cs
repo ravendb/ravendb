@@ -47,8 +47,6 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions);
 
-        IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync();
-
         IAsyncEnumerable<SubscriptionState> GetSubscriptionsAsync();
 
         IAsyncEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificatesAsync();

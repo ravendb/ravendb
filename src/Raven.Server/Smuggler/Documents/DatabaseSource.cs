@@ -489,12 +489,6 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync()
-        {
-            // used only in StreamSource
-            return AsyncEnumerable.Empty<CounterDetail>();
-        }
-
         public IAsyncEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificatesAsync()
         {
             return _database.ServerStore.Cluster.GetReplicationHubCertificateForDatabase(_serverContext, ShardHelper.ToDatabaseName(_database.Name)).ToAsyncEnumerable();

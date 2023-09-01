@@ -75,24 +75,6 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SwapIfGreaterWithItems(Span<T> keys, int a, int b)
-        {
-            Contract.Requires(keys != null);
-            Contract.Requires(0 <= a && a < keys.Length);
-            Contract.Requires(0 <= b && b < keys.Length);
-
-            ref T ka = ref keys[a];
-            ref T kb = ref keys[b];
-
-            if (ka != null && _sorter.Compare(ka, kb) > 0)
-            {
-                T aux = ka;
-                ka = kb;
-                kb = aux;
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Swap(Span<T> keys, int x, int y)
         {
             ref T kx = ref keys[x];

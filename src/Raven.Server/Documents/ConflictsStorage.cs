@@ -644,34 +644,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static int FindIndexOfLargestEtagAndMergeChangeVectors(IReadOnlyList<DocumentConflict> conflicts, out string mergedChangeVectorEntries)
-        {
-            mergedChangeVectorEntries = null;
-            bool firstTime = true;
-
-            int indexOfLargestEtag = 0;
-            long largestEtag = 0;
-            for (var i = 0; i < conflicts.Count; i++)
-            {
-                var conflict = conflicts[i];
-                if (conflict.Etag > largestEtag)
-                {
-                    largestEtag = conflict.Etag;
-                    indexOfLargestEtag = i;
-                }
-
-                if (firstTime)
-                {
-                    mergedChangeVectorEntries = conflict.ChangeVector;
-                    firstTime = false;
-                    continue;
-                }
-                mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
-            }
-
-            return indexOfLargestEtag;
-        }
-
         public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, out bool hasLocalClusterTx)
         {
             hasLocalClusterTx = false;

@@ -233,19 +233,6 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public sealed class ListDomainsInfo
-    {
-        public License License { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(License)] = License.ToJson(),
-            };
-        }
-    }
-
     public sealed class ClaimDomainInfo
     {
         public License License { get; set; }

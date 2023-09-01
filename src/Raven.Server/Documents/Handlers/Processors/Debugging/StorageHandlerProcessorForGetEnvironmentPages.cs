@@ -9,10 +9,8 @@ using JetBrains.Annotations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
-using Voron;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
-using Voron.Debugging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging;
 
@@ -113,18 +111,4 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
     }
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
-
-    private DetailedStorageReport GetDetailedReport(StorageEnvironmentWithType environment, bool details)
-    {
-        if (environment.Type != StorageEnvironmentWithType.StorageEnvironmentType.Index)
-        {
-            using (var tx = environment.Environment.ReadTransaction())
-            {
-                return environment.Environment.GenerateDetailedReport(tx, details);
-            }
-        }
-
-        var index = RequestHandler.Database.IndexStore.GetIndex(environment.Name);
-        return index.GenerateStorageReport(details);
-    }
 }

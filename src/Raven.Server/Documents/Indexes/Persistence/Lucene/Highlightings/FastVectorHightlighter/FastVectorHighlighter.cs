@@ -76,22 +76,6 @@ namespace Lucene.Net.Search.Vectorhighlight
 
 
         /// <summary>
-        /// return the best fragment.
-        /// </summary>
-        /// <param name="fieldQuery">FieldQuery object</param>
-        /// <param name="reader">IndexReader of the index</param>
-        /// <param name="docId">document id to be highlighted</param>
-        /// <param name="fieldName">field of the document to be highlighted</param>
-        /// <param name="fragCharSize">the length (number of chars) of a fragment</param>
-        /// <returns>the best fragment (snippet) string</returns>
-        public String GetBestFragment(FieldQuery fieldQuery, IndexReader reader, int docId,
-            String fieldName, int fragCharSize, IState state)
-        {
-            FieldFragList fieldFragList = GetFieldFragList(fieldQuery, reader, docId, fieldName, fragCharSize, state);
-            return fragmentsBuilder.CreateFragment(reader, docId, fieldName, fieldFragList, fragCharSize, state);
-        }
-
-        /// <summary>
         /// return the best fragments.
         /// </summary>
         /// <param name="fieldQuery">FieldQuery object</param>
@@ -114,35 +98,6 @@ namespace Lucene.Net.Search.Vectorhighlight
             FieldTermStack fieldTermStack = new FieldTermStack(reader, docId, fieldName, fieldQuery, state);
             FieldPhraseList fieldPhraseList = new FieldPhraseList(fieldTermStack, fieldQuery, phraseLimit);
             return fragListBuilder.CreateFieldFragList(fieldPhraseList, fragCharSize);
-        }
-
-        /// <summary>
-        /// return whether phraseHighlight or not.
-        /// </summary>
-        /// <returns>return whether phraseHighlight or not.</returns>
-        public bool IsPhraseHighlight()
-        {
-            return phraseHighlight;
-        }
-
-        /// <summary>
-        /// return whether fieldMatch or not.
-        /// </summary>
-        /// <returns>return whether fieldMatch or not.</returns>
-        public bool IsFieldMatch()
-        {
-            return fieldMatch;
-        }
-                                
-        /// <summary>
-        /// The maximum number of phrases to analyze when searching for the highest-scoring phrase.
-        /// The default is 5000.  To ensure that all phrases are analyzed, use a negative number or Integer.MAX_VALUE.
-        /// </summary>
-        
-        public int PhraseLimit
-        {
-            get{ return phraseLimit; }
-            set{ this.phraseLimit = value; }
         }
     }
 }

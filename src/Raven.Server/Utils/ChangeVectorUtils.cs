@@ -431,30 +431,6 @@ namespace Raven.Server.Utils
             return rest;
         }
 
-        private static string StripTags(this string from, string tag, string exclude)
-        {
-            if (from == null)
-                return null;
-
-            if (from.Contains(tag, StringComparison.OrdinalIgnoreCase) == false)
-                return from;
-
-            var newChangeVector = new List<ChangeVectorEntry>();
-            var changeVectorList = from.ToChangeVectorList();
-            var tagAsInt = ChangeVectorExtensions.FromBase26(tag);
-
-            foreach (var entry in changeVectorList)
-            {
-                if (entry.NodeTag != tagAsInt ||
-                    exclude?.Contains(entry.DbId) == true)
-                {
-                    newChangeVector.Add(entry);
-                }
-            }
-
-            return newChangeVector.SerializeVector();
-        }
-        
         public static string GetClusterWideChangeVector(string databaseId, long prevCountPerShard, bool addTrxAddition, long index, string clusterTransactionId)
         {
             var stringBuilder = new StringBuilder(ChangeVectorParser.RaftTag)

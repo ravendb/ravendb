@@ -1611,8 +1611,6 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            public bool IsCurrentThreadInFlushOperation => Monitor.IsEntered(_flushingLock);
-
             public IDisposable TryTakeFlushingLock(ref bool lockTaken, TimeSpan? timeout = null)
             {
                 ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken();
@@ -1655,7 +1653,6 @@ namespace Voron.Impl.Journal
                 });
             }
 
-            [DoesNotReturn]
             [Conditional("DEBUG")]
             private void ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken()
             {

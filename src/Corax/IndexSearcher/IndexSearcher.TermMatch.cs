@@ -159,16 +159,6 @@ public partial class IndexSearcher
         return termRatioToWholeCollection;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal TermMatch TermQuery(in FieldMetadata field, long containerId, CompactKey term, CompactTree tree)
-    {
-        var termRatioToWholeCollection = 1D;
-        if (field.HasBoost)
-            termRatioToWholeCollection = GetTermRatioToWholeCollection(field, term, tree);
-
-        return TermQuery(field, containerId, termRatioToWholeCollection);
-    }
-    
     internal TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
     {
         TermMatch matches;

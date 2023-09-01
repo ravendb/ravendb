@@ -283,37 +283,6 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
-        public bool TryPeekNextToken(Func<char, bool> predicate, StringSegment currentToken, out StringSegment nextToken)
-        {
-            nextToken = null;
-            if (SkipWhitespace() == false)
-                return false;
-
-            var tokenOffset = currentToken.Offset + currentToken.Length;
-            var tokenLength = 0;
-            var peekOffset = tokenOffset;
-            if (currentToken.Length > 0)
-            {
-                tokenOffset++; //include the whitespace too
-                tokenLength = currentToken.Length;
-            }
-
-            while (peekOffset < _q.Length && predicate(_q[peekOffset]))
-            {
-                var current = _q[peekOffset];
-                if (char.IsWhiteSpace(current))
-                {
-                    nextToken = new StringSegment(_q, tokenOffset, tokenLength);
-                    return true;
-                }
-                peekOffset++;
-                tokenLength++;
-            }
-
-            nextToken = new StringSegment(_q, tokenOffset, tokenLength);
-            return true;
-        }
-
         public bool TryScan(string[] matches, out string found)
         {
             if (SkipWhitespace() == false)

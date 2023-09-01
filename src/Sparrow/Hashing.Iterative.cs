@@ -232,14 +232,6 @@ namespace Sparrow
                     }
                 }
 
-                public static XXHash32Block PreprocessRaw(string buf, uint seed = 0)
-                {
-                    fixed (char* buffer = buf)
-                    {
-                        return PreprocessInline((byte*)buffer, buf.Length * sizeof(char), seed);
-                    }
-                }
-
                 public static XXHash32Block Preprocess(byte[] buf, int len = -1, uint seed = 0)
                 {
                     if (len == -1)

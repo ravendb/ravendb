@@ -1383,11 +1383,6 @@ namespace Voron
             _activeCryptoPagers.TryRemove(cryptoPager);
         }
 
-        public ConcurrentSet<CryptoPager> GetActiveCryptoPagers()
-        {
-            return _activeCryptoPagers;
-        }
-
         public sealed class StorageEncryptionOptions : IDisposable
         {
             private IJournalCompressionBufferCryptoHandler _journalCompressionBufferHandler;

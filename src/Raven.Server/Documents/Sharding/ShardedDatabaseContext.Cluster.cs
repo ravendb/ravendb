@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -35,15 +34,6 @@ public partial class ShardedDatabaseContext
         public async ValueTask WaitForExecutionOnShardsAsync(long index)
         {
             var op = new WaitForIndexNotificationOperation(index);
-            await _context.ShardExecutor.ExecuteParallelForAllAsync(op);
-        }
-
-        /// <summary>
-        /// Wait for indexes to be applied on the cluster nodes where the physical database shards are available
-        /// </summary>
-        public async ValueTask WaitForExecutionOnShardsAsync(List<long> indexes)
-        {
-            var op = new WaitForIndexNotificationOperation(indexes);
             await _context.ShardExecutor.ExecuteParallelForAllAsync(op);
         }
     }

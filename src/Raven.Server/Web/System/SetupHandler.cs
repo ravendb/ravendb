@@ -805,14 +805,6 @@ namespace Raven.Server.Web.System
             throw new AuthorizationException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
         }
 
-        private static string IpAddressToUrl(string address, int port, string scheme = "http")
-        {
-            var url = scheme + "://" + address;
-            if (port != 80)
-                url += ":" + port;
-            return url;
-        }
-
         private static string GeneralDomainRegistrationError = "Registration error.";
         private static string DomainRegistrationServiceUnreachableError = $"Failed to contact {ApiHttpClient.ApiRavenDbNet}. Please try again later.";
     }

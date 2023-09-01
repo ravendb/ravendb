@@ -413,11 +413,6 @@ namespace Raven.Server.Smuggler.Documents
             return AsyncEnumerable.Empty<CounterGroupDetail>();
         }
 
-        public IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync()
-        {
-            return AsyncEnumerable.Empty<CounterDetail>();
-        }
-
         public IAsyncEnumerable<SubscriptionState> GetSubscriptionsAsync()
         {
             return AsyncEnumerable.Empty<SubscriptionState>();

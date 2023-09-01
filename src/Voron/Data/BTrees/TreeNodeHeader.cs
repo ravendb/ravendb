@@ -41,12 +41,6 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.InternalScope ToSlice(ByteStringContext context, TreeNodeHeader* node, out Slice str)
-        {
-            return ToSlice(context, node, ByteStringType.Immutable, out str);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice str)
         {
             ByteString byteString;

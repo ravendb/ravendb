@@ -780,15 +780,6 @@ namespace Voron.Data.Containers
             return new Span<byte>(p, size);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte* GetItemPtr(int pos, out int size)
-        {
-            ref var item = ref MetadataFor(pos);
-            byte* p = _page.Pointer;
-            size = item.Get(ref p);
-            return p;
-        }
-
         public static void AddToFreeList(LowLevelTransaction llt, in Container rootContainer, long pageNum, long pageLevelMetadata)
         {
             var txState = llt.Transaction.GetContainerState(rootContainer._page.PageNumber);

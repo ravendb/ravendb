@@ -33,10 +33,6 @@ namespace Raven.Client.Documents.Operations
     internal sealed class GetCertificatesMetadataResponse : ResultsResponse<CertificateMetadata>
     {
     }
-    
-    internal sealed class GetClientCertificatesResponse : ResultsResponse<CertificateRawData>
-    {
-    }
 
     internal sealed class GetServerWideBackupConfigurationsResponse : ResultsResponse<ServerWideBackupConfiguration>
     {

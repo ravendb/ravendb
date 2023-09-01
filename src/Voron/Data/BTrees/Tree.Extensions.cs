@@ -22,16 +22,6 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public bool AddMax(string key, long value)
-        {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
-            {
-                return AddMax(keySlice, value);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, Stream value)
         {
             Slice keySlice;

@@ -164,26 +164,6 @@ public sealed unsafe class FastPForEncoder  : IDisposable
         return size;
     }
 
-    public static int WriteVarIntDelta(long previous, long* buffer, int count, Span<byte> output)
-    {
-        var offset = 0;
-        for (int i = 0; i < count; i++)
-        {
-            var cur = buffer[i];
-            var delta = cur - previous;
-            previous = cur;
-
-            while (delta >= 0x80)
-            {
-                output[offset++] = (byte)(delta | 0x80);
-                delta >>= 7;
-            }
-            output[offset++] = (byte)(delta);
-        }
-
-        return offset;
-    }
-
     public bool Done => _metadataPos == _metadata.Count;
 
     public (int Count, int SizeUsed) Write(byte* output, int outputSize)

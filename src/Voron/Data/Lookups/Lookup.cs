@@ -868,13 +868,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
     [Conditional("DEBUG")]
-    public void VerifySizeOf(long page)
-    {
-        var state = new CursorState { Page = _llt.GetPage(page) };
-        VerifySizeOf(ref state);
-    }
-
-    [Conditional("DEBUG")]
     private static void VerifySizeOf(ref CursorState p)
     {
         if (p.Header == null)
@@ -1255,7 +1248,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         state.LastSearchPosition = 0;
     }
 
-    public bool TryGetNextValue(TLookupKey key, out long value) => TryGetNextValue(ref key, out value);
     public bool TryGetNextValue(ref TLookupKey key, out long value)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];

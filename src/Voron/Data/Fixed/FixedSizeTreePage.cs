@@ -68,12 +68,6 @@ namespace Voron.Data.Fixed
             get { return (Header->TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch; }
         }
 
-        public bool IsOverflow
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (Header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
-        }
-
         public int PageMaxSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -296,11 +296,6 @@ namespace Voron.Impl.Journal
             Sodium.sodium_memzero(pagePointer, (UIntPtr)recoveryBufferSize);
         }
 
-        public void SetStartPage(long value)
-        {
-            _readAt4Kb = value;
-        }
-
         private void DecryptTransaction(byte* page, StorageEnvironmentOptions options)
         {
             var txHeader = (TransactionHeader*)page;
@@ -815,8 +810,6 @@ namespace Voron.Impl.Journal
 
         // JournalReader actually writes to the data file
         bool IPagerLevelTransactionState.IsWriteTransaction => true;
-
-        public long NumberOfAllocated4Kb => _journalPagerNumberOfAllocated4Kb;
 
         private string AddSkipTxInfoDetails()
         {
