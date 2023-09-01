@@ -1,18 +1,18 @@
 ﻿import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import CustomSorters from "./CustomDatabaseSorters";
+import DatabaseCustomSorters from "./DatabaseCustomSorters";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/Database/Settings",
-    component: CustomSorters,
+    component: DatabaseCustomSorters,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof CustomSorters>;
+} satisfies Meta<typeof DatabaseCustomSorters>;
 
-export const DefaultCustomSorters: StoryObj<typeof CustomSorters> = {
+export const DefaultCustomSorters: StoryObj<typeof DatabaseCustomSorters> = {
     name: "Custom Sorters",
     render: () => {
-        return <CustomSorters db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DatabaseCustomSorters db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
 };

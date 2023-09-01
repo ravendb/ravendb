@@ -39,7 +39,7 @@ todo("Feature", "Damian", "Connect the view to studio");
 todo("Feature", "Damian", "Add conditional rendering for Community license");
 todo("Feature", "Damian", "Add unique ids for HrHeader popovers");
 
-export default function CustomDatabaseAnalyzers(props: CustomAnalyzersPageProps) {
+export default function DatabaseCustomAnalyzers(props: CustomAnalyzersPageProps) {
     const limit = 1; // TODO get from license selector
 
     return (
@@ -54,7 +54,7 @@ export default function CustomDatabaseAnalyzers(props: CustomAnalyzersPageProps)
                         </Button>
                         <HrHeader
                             count={databaseCustomAnalyzersCount}
-                            limit={limit}
+                            // limit={limit}
                             right={
                                 <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
                                     <Icon icon="link" />
@@ -97,7 +97,7 @@ export default function CustomDatabaseAnalyzers(props: CustomAnalyzersPageProps)
                         )}
                         <HrHeader
                             count={serverCustomAnalyzersCount}
-                            limit={5}
+                            // limit={5}
                             right={
                                 <a href="#" target="_blank">
                                     <Icon icon="link" />
