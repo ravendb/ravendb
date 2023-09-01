@@ -49,6 +49,7 @@ class icomoonHelpers {
         "rabbitmq-etl": 0xf130,
         "kafka-sink": 0xf131,
         "rabbitmq-sink": 0xf132,
+        "preview": 0xf133
     } as const;
     
     static getCodePointForCanvas(iconName: keyof typeof icomoonHelpers.fixedCodepoints): string {

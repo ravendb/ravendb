@@ -178,7 +178,8 @@ module.exports = (env, args) => {
                                     "kafka-etl": 0xf129,
                                     "rabbitmq-etl": 0xf130,
                                     "kafka-sink": 0xf131,
-                                    "rabbitmq-sink": 0xf132
+                                    "rabbitmq-sink": 0xf132,
+                                    "preview": 0xf133,
                                 },
                                 cssTemplate: path.resolve(__dirname, "wwwroot/Content/css/fonts/icomoon.template.css.hbs")
                             }

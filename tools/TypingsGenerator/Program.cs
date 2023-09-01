@@ -269,6 +269,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RequestLatencyDetail));
             scripter.AddType(typeof(WarnIndexOutputsPerDocument));
             scripter.AddType(typeof(IndexingReferenceLoadWarning));
+            scripter.AddType(typeof(QueueSinkErrorsDetails));
+            
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionStatsCollector));

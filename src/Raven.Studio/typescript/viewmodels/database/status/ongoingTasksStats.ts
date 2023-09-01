@@ -1664,7 +1664,7 @@ class ongoingTasksStats extends shardViewModelBase {
         context.fillText(text, ongoingTasksStats.textLeftPadding + 4, yStart + textShift);
 
         context.font = "16px icomoon";
-        context.fillText('\ue9a3', ongoingTasksStats.textLeftPadding + textWidth + ongoingTasksStats.previewIconWidth / 2, yStart + 16);
+        context.fillText('\uf133', ongoingTasksStats.textLeftPadding + textWidth + ongoingTasksStats.previewIconWidth / 2, yStart + 16);
         
         return areaWidth;
     }
