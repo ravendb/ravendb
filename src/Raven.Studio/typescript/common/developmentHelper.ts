@@ -1,5 +1,5 @@
 ﻿
-type TodoType = "Sharding" | "Styling" | "Feature" | "BugFix" | "Other";
+type TodoType = "Sharding" | "Styling" | "Feature" | "BugFix" | "Limits" | "Other";
 
 type TeamMember = "Marcin" | "Danielle" | "Kwiato" | "Damian" | "Matteo" | "ANY";
 
