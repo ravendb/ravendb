@@ -9,6 +9,7 @@ import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshC
 import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
+import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -374,5 +375,9 @@ export class DatabasesStubs {
             PurgeOnDelete: false,
             MaximumRevisionsToDeleteUponDocumentUpdate: 100,
         };
+    }
+
+    static customSorters(): SorterDefinition[] {
+        return [{ Code: "database-sorter-code-1", Name: "First Database sorter" }];
     }
 }

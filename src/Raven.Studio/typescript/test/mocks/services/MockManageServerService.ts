@@ -42,11 +42,11 @@ export default class MockManageServerService extends AutoMockService<ManageServe
         this.mocks.getServerWideCustomAnalyzers.mockRejectedValue(new Error());
     }
 
-    withGetServerWideCustomSorters(dto?: MockedValue<SorterDefinition[]>) {
+    withServerWideCustomSorters(dto?: MockedValue<SorterDefinition[]>) {
         return this.mockResolvedValue(
             this.mocks.getServerWideCustomSorters,
             dto,
-            ManageServerStubs.getServerWideCustomSorters()
+            ManageServerStubs.serverWideCustomSorters()
         );
     }
 

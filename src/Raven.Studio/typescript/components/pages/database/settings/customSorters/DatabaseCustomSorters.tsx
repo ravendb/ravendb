@@ -1,12 +1,7 @@
 ﻿import database from "models/resources/database";
 import React from "react";
-import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
-import {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemLicensing,
-    AccordionItemWrapper,
-} from "components/common/AboutView";
+import { Col, Row, UncontrolledTooltip } from "reactstrap";
+import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
@@ -18,120 +13,106 @@ import {
     RichPanelName,
 } from "components/common/RichPanel";
 import { todo } from "common/developmentHelper";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useAppUrls } from "components/hooks/useAppUrls";
+import { useServices } from "components/hooks/useServices";
+import { useAppSelector } from "components/store";
+import { AsyncStateStatus, useAsync, useAsyncCallback } from "react-async-hook";
+import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import classNames from "classnames";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { CounterBadge } from "components/common/CounterBadge";
+import { LoadError } from "components/common/LoadError";
+import { LoadingView } from "components/common/LoadingView";
+import ServerWideCustomSortersList from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSortersList";
 
 interface CustomSortersPageProps {
     db: database;
 }
 
-interface CustomSorter {
-    name: string;
-    overridesServerConfig?: boolean;
-}
+todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
-const databaseCustomSorters: CustomSorter[] = [];
-const serverCustomSorters: CustomSorter[] = [
-    { name: "serverCustomSorter" },
-    { name: "dingdong" },
-    { name: "dingdong" },
-];
+export default function DatabaseCustomSorters({ db }: CustomSortersPageProps) {
+    const { databasesService, manageServerService } = useServices();
 
-const databaseCustomSortersCount = databaseCustomSorters.length;
-const serverCustomSortersCount = serverCustomSorters.length;
+    const asyncGetServerWideSorters = useAsync(manageServerService.getServerWideCustomSorters, []);
+    const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db), [db]);
 
-todo("Feature", "Damian", "Add logic");
-todo("Feature", "Damian", "Connect the view to studio");
-todo("Feature", "Damian", "Add conditional rendering for Community license");
-todo("Feature", "Damian", "Add unique ids for HrHeader popovers");
+    const { appUrl } = useAppUrls();
 
-export default function DatabaseCustomSorters(props: CustomSortersPageProps) {
+    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const communityServerWideLimit = 5; // TODO get from license selector
+    const communityDatabaseLimit = 1; // TODO get from license selector
+
+    const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
+    const serverWideResultsCount = asyncGetServerWideSorters.result?.length ?? null;
+
+    const isAddDisabled =
+        asyncGetDatabaseSorters.status !== "success" ||
+        (isCommunity && databaseResultsCount === communityDatabaseLimit);
+
     return (
         <div className="content-margin">
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
-                        <Button color="primary" className="mb-3" disabled={databaseCustomSortersCount === 1}>
+                        <a
+                            href={appUrl.forEditCustomSorter(db)}
+                            className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                        >
                             <Icon icon="plus" />
-                            Add a database custom sorter
-                        </Button>
+                            Add a custom sorter
+                        </a>
                         <HrHeader
-                            count={databaseCustomSortersCount}
-                            // limit={1}
                             right={
-                                <a href="https://ravendb.net/l/LGUJH8/6.0.0-custom-60" target="_blank">
+                                <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
                                     <Icon icon="link" />
                                     Sorters tutorial
                                 </a>
                             }
                         >
-                            Database custom sorters
+                            Server-wide custom sorters
+                            {isCommunity && (
+                                <CounterBadge
+                                    className="ms-2"
+                                    count={databaseResultsCount}
+                                    limit={communityDatabaseLimit}
+                                />
+                            )}
                         </HrHeader>
-                        {databaseCustomSortersCount > 0 ? (
-                            <div className="mb-5">
-                                {databaseCustomSorters.map((customSorter, index) => (
-                                    <RichPanel key={index} className="mt-3">
-                                        <RichPanelHeader>
-                                            <RichPanelInfo>
-                                                <RichPanelName>{customSorter.name}</RichPanelName>
-                                            </RichPanelInfo>
-                                            <RichPanelActions>
-                                                {customSorter.overridesServerConfig && (
-                                                    <div className="d-flex">
-                                                        <Icon icon="info" color="info" id="overridesServer" />
-                                                        <UncontrolledTooltip target="overridesServer" placeholder="top">
-                                                            Overrides server-wide configuration
-                                                        </UncontrolledTooltip>
-                                                    </div>
-                                                )}
-                                                <Button>
-                                                    <Icon icon="edit" margin="m-0" />
-                                                </Button>
-                                                <Button color="danger">
-                                                    <Icon icon="trash" margin="m-0" />
-                                                </Button>
-                                            </RichPanelActions>
-                                        </RichPanelHeader>
-                                    </RichPanel>
-                                ))}
-                            </div>
-                        ) : (
-                            <EmptySet className="mb-5">No database custom sorters have been defined</EmptySet>
-                        )}
+                        <DatabaseSortersList
+                            fetchStatus={asyncGetDatabaseSorters.status}
+                            sorters={asyncGetDatabaseSorters.result}
+                            reload={asyncGetDatabaseSorters.execute}
+                            forEditLink={(name) => appUrl.forEditCustomSorter(db, name)}
+                            deleteCustomSorter={(name) => databasesService.deleteCustomSorter(db, name)}
+                            serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
+                        />
+
                         <HrHeader
-                            count={serverCustomSortersCount}
-                            // limit={5}
                             right={
-                                <a href="#" target="_blank">
+                                <a href={appUrl.forServerWideCustomSorters()} target="_blank">
                                     <Icon icon="link" />
                                     Server-wide custom sorters
                                 </a>
                             }
                         >
                             Server-wide custom sorters
+                            {isCommunity && (
+                                <CounterBadge
+                                    className="ms-2"
+                                    count={serverWideResultsCount}
+                                    limit={communityServerWideLimit}
+                                />
+                            )}
                         </HrHeader>
-                        {serverCustomSortersCount > 0 ? (
-                            <div>
-                                {serverCustomSorters.map((customSorter, index) => (
-                                    <RichPanel key={index} className="mt-3">
-                                        <RichPanelHeader>
-                                            <RichPanelInfo>
-                                                <RichPanelName>{customSorter.name}</RichPanelName>
-                                            </RichPanelInfo>
-                                            <RichPanelActions>
-                                                <Button>
-                                                    <Icon icon="edit" margin="m-0" />
-                                                </Button>
-                                                <Button color="danger">
-                                                    <Icon icon="trash" margin="m-0" />
-                                                </Button>
-                                            </RichPanelActions>
-                                        </RichPanelHeader>
-                                    </RichPanel>
-                                ))}
-                            </div>
-                        ) : (
-                            <EmptySet>No server-wide custom sorters have been defined</EmptySet>
-                        )}
+                        <ServerWideCustomSortersList
+                            fetchStatus={asyncGetServerWideSorters.status}
+                            sorters={asyncGetServerWideSorters.result}
+                            reload={asyncGetServerWideSorters.execute}
+                            isReadOnly
+                        />
                     </Col>
                     <Col sm={12} lg={4}>
                         <AboutViewAnchored>
@@ -144,43 +125,91 @@ export default function DatabaseCustomSorters(props: CustomSortersPageProps) {
                             >
                                 Umm
                             </AccordionItemWrapper>
-                            {databaseCustomSortersCount === 1 && (
-                                <AccordionItemWrapper
+                            {isCommunity && (
+                                <AccordionCommunityLicenseLimited
                                     targetId="licensing"
-                                    icon="license"
-                                    color="warning"
-                                    description="See available upgrade options"
-                                    heading="Licensing"
-                                    pill
-                                    pillText="Upgrade available"
-                                    pillIcon="upgrade-arrow"
-                                >
-                                    <AccordionItemLicensing
-                                        description="You've reached the limit of 1 database custom sorter for Community license. Upgrade to a paid plan and get unlimited availability."
-                                        featureName="Custom Sorters"
-                                        featureIcon="custom-sorters"
-                                        checkedLicenses={["Community", "Professional", "Enterprise"]}
-                                        isCommunityLimited
-                                    >
-                                        <p className="lead fs-4">Get your license expanded</p>
-                                        <div className="mb-3">
-                                            <Button color="primary" className="rounded-pill">
-                                                <Icon icon="notifications" />
-                                                Contact us
-                                            </Button>
-                                        </div>
-                                        <small>
-                                            <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
-                                                See pricing plans
-                                            </a>
-                                        </small>
-                                    </AccordionItemLicensing>
-                                </AccordionItemWrapper>
+                                    featureName="Custom Sorters"
+                                    featureIcon="custom-sorters"
+                                    description="Upgrade to a paid plan and get unlimited availability."
+                                />
                             )}
                         </AboutViewAnchored>
                     </Col>
                 </Row>
             </Col>
+        </div>
+    );
+}
+
+interface DatabaseSortersListProps {
+    fetchStatus: AsyncStateStatus;
+    sorters: Raven.Client.Documents.Queries.Sorting.SorterDefinition[];
+    reload: () => void;
+    forEditLink: (name: string) => string;
+    deleteCustomSorter: (name: string) => Promise<void>;
+    serverWideSorterNames: string[];
+}
+
+function DatabaseSortersList({
+    forEditLink,
+    fetchStatus,
+    sorters,
+    reload,
+    deleteCustomSorter,
+    serverWideSorterNames,
+}: DatabaseSortersListProps) {
+    const asyncDeleteSorter = useAsyncCallback(deleteCustomSorter, {
+        onSuccess: reload,
+    });
+
+    if (fetchStatus === "loading") {
+        return <LoadingView />;
+    }
+
+    if (fetchStatus === "error") {
+        return <LoadError error="Unable to load custom sorters" refresh={reload} />;
+    }
+
+    if (sorters.length === 0) {
+        return <EmptySet>No custom sorters have been defined</EmptySet>;
+    }
+
+    todo("Feature", "Damian", "Render react edit sorter");
+
+    return (
+        <div>
+            {sorters.map((sorter) => {
+                const tooltipId = "override-info" + sorter.Name.replace(/\s/g, "-");
+
+                return (
+                    <RichPanel key={sorter.Name} className="mt-3">
+                        <RichPanelHeader>
+                            <RichPanelInfo>
+                                <RichPanelName>{sorter.Name}</RichPanelName>
+                            </RichPanelInfo>
+                            {serverWideSorterNames.includes(sorter.Name) && (
+                                <>
+                                    <UncontrolledTooltip target={tooltipId} placement="left">
+                                        Overrides server-wide sorter
+                                    </UncontrolledTooltip>
+                                    <Icon id={tooltipId} icon="info" />
+                                </>
+                            )}
+                            <RichPanelActions>
+                                <a href={forEditLink(sorter.Name)} className="btn btn-secondary">
+                                    <Icon icon="edit" margin="m-0" />
+                                </a>
+                                <ButtonWithSpinner
+                                    color="danger"
+                                    onClick={() => asyncDeleteSorter.execute(sorter.Name)}
+                                    icon="trash"
+                                    isSpinning={asyncDeleteSorter.status === "loading"}
+                                />
+                            </RichPanelActions>
+                        </RichPanelHeader>
+                    </RichPanel>
+                );
+            })}
         </div>
     );
 }

@@ -8,6 +8,7 @@ import ClientGlobalConfiguration from "components/pages/resources/manageServer/c
 import StudioGlobalConfiguration from "components/pages/resources/manageServer/studioConfiguration/StudioGlobalConfiguration";
 import GatherDebugInfo from "components/pages/resources/manageServer/gatherDebugInfo/GatherDebugInfo";
 import ServerWideCustomAnalyzers from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers";
+import ServerWideCustomSorters from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSorters";
 
 export = getManageServerMenuItem;
 
@@ -118,7 +119,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideCustomSorters',
-            moduleId: require("viewmodels/manage/serverWideCustomSorters"),
+            moduleId: bridgeToReact(ServerWideCustomSorters, "nonShardedView"),
             title: "Server-Wide Sorters",
             nav: true,
             css: 'icon-server-wide-custom-sorters',
