@@ -25,6 +25,7 @@ namespace Raven.Debug.LogTrafficWatch
         private readonly int _port;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly int _threads;
+        private readonly bool _logUnsuccessfulResponses;
         
         public HttpClient HttpClient;
         private readonly Channel<TrafficWatchHttpChange> _trafficChannel = Channel.CreateBounded<TrafficWatchHttpChange>(1024);
@@ -32,7 +33,7 @@ namespace Raven.Debug.LogTrafficWatch
         private readonly Stopwatch _sp = new();
 
 
-        public TrafficWatchReplay(string path, string certPath, string certPass, string host, int port, int threads = 8)
+        public TrafficWatchReplay(string path, string certPath, string certPass, string host, int port, bool logUnsuccessfulResponses, int threads = 8)
         {
             if (File.GetAttributes(path).HasFlag(FileAttributes.Directory) == false)
                 ExitAndPrintError(null, $"'path' should be a directory. Received {path}");
@@ -48,6 +49,7 @@ namespace Raven.Debug.LogTrafficWatch
             _port = port;
             _cancellationTokenSource = new CancellationTokenSource();
             _consumers = new Task[_threads];
+            _logUnsuccessfulResponses = logUnsuccessfulResponses;
 
             InitializeHttpClient(certPath, certPass);
         }
@@ -66,7 +68,7 @@ namespace Raven.Debug.LogTrafficWatch
 
             for (var i = 0; i < _threads; i++)
             {
-                _consumers[i] = new TrafficReplay(_trafficChannel, HttpClient, _cancellationTokenSource.Token, _schema, _host, _port).Execute();
+                _consumers[i] = new TrafficReplay(_trafficChannel, HttpClient, _cancellationTokenSource.Token, _logUnsuccessfulResponses, _schema, _host, _port).Execute();
             }
 
             var whenAllProducersTask = Task.WhenAll(producers);
@@ -144,10 +146,11 @@ namespace Raven.Debug.LogTrafficWatch
             private readonly Channel<TrafficWatchHttpChange> _trafficChannel;
             private readonly HttpClient _httpClient;
             private readonly CancellationToken _cancellationToken;
+            private readonly bool _logUnsuccessfulResponses;
 
             public static int RequestsCount;
 
-            internal TrafficReplay(Channel<TrafficWatchHttpChange> trafficChannel, HttpClient httpClient, CancellationToken cancellationToken, string schema = "http",
+            internal TrafficReplay(Channel<TrafficWatchHttpChange> trafficChannel, HttpClient httpClient, CancellationToken cancellationToken, bool logUnsuccessfulResponses, string schema = "http",
                 string host = "127.0.0.1",
                 int port = 8080)
             {
@@ -157,11 +160,12 @@ namespace Raven.Debug.LogTrafficWatch
                 _trafficChannel = trafficChannel;
                 _httpClient = httpClient;
                 _cancellationToken = cancellationToken;
+                _logUnsuccessfulResponses = logUnsuccessfulResponses;
             }
 
             public async Task Execute()
             {
-                var responseBuffer = new byte[4 * 1024];
+                var responseBuffer = new byte[16 * 1024];
 
                 while (true)
                 {
@@ -197,7 +201,7 @@ namespace Raven.Debug.LogTrafficWatch
                                 // use the uri as is
                                 using var getRequest = new HttpRequestMessage(HttpMethod.Get, uri);
                                 using var response = await _httpClient.SendAsync(getRequest, _cancellationToken);
-                                await ConsumeResponse(response, responseBuffer);
+                                await ConsumeResponse(response, responseBuffer, item);
                                 break;
                             }
                             case "POST":
@@ -224,7 +228,7 @@ namespace Raven.Debug.LogTrafficWatch
 
                                 using var postRequest = new HttpRequestMessage(HttpMethod.Post, uri) { Content = new StringContent(body) };
                                 using var response = await _httpClient.SendAsync(postRequest, _cancellationToken);
-                                await ConsumeResponse(response, responseBuffer);
+                                await ConsumeResponse(response, responseBuffer, item);
                                 break;
                             }
                         }
@@ -242,12 +246,15 @@ namespace Raven.Debug.LogTrafficWatch
                 }
             }
 
-            private async Task ConsumeResponse(HttpResponseMessage response, byte[] responseBuffer)
+            private async Task ConsumeResponse(HttpResponseMessage response, byte[] responseBuffer, TrafficWatchHttpChange item)
             {
                 await using var stream = await response.Content.ReadAsStreamAsync(_cancellationToken);
                 while (await stream.ReadAsync(responseBuffer, _cancellationToken) > 0)
                 {
                 }
+                
+                if (_logUnsuccessfulResponses && response.IsSuccessStatusCode == false)
+                    OutputLogToConsole(response, responseBuffer, item);
             }
 
             private Uri UriReplace(string original)
@@ -277,6 +284,29 @@ namespace Raven.Debug.LogTrafficWatch
                     JsonValueKind.Object => e.ToString(),
                     _ => $"\"{e}\""
                 };
+            }
+
+            private static void OutputLogToConsole(HttpResponseMessage response, byte[] responseBuffer, TrafficWatchHttpChange item)
+            {
+                Console.WriteLine("Failed to execute request");
+                
+                Console.WriteLine($"Http method: {item.HttpMethod}");
+                
+                Console.WriteLine($"Request Uri: {item.RequestUri}");
+                
+                Console.WriteLine($"Absolute Uri: {item.AbsoluteUri}");
+                        
+                Console.WriteLine($"Custom info: {item.CustomInfo}");
+                        
+                Console.WriteLine($"Status code: {(int)response.StatusCode}");
+                
+                Console.WriteLine($"Request size in bytes: {item.RequestSizeInBytes}");
+                
+                Console.WriteLine($"Response size in bytes: {item.ResponseSizeInBytes}");
+                
+                Console.WriteLine($"Request Id: {item.RequestId}");
+                    
+                Console.WriteLine(System.Text.Encoding.Default.GetString(responseBuffer));
             }
         }
 

@@ -325,6 +325,7 @@ namespace Raven.Debug
                 var certArg = cmd.Option("--certificate-path", "Path to pfx certificate file.", CommandOptionType.SingleOrNoValue);
                 var certPassArg = cmd.Option("--certificate-password", "Certificate password.", CommandOptionType.SingleOrNoValue);
                 var threadsArg = cmd.Option("--threads", $"Number of concurrent threads to run (default: {concurrentThreadsCount})", CommandOptionType.SingleValue);
+                var logUnsuccessfulResponsesArg = cmd.Option("--log-unsuccessful-responses", "Log unsuccessful responses in command line.", CommandOptionType.NoValue);
 
                 cmd.OnExecuteAsync(async (_) =>
                 {
@@ -374,8 +375,9 @@ namespace Raven.Debug
 
                     var cert = certArg.HasValue() ? certArg.Value() : null;
                     var certPass = certPassArg.HasValue() ? certPassArg.Value() : null;
+                    var logUnsuccessfulResponses = logUnsuccessfulResponsesArg.HasValue();
 
-                    using (var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, threads))
+                    using (var logTrafficWatchReply = new TrafficWatchReplay(path, cert, certPass, host, port, logUnsuccessfulResponses, threads))
                     {
                         Console.CancelKeyPress += (sender, args) =>
                         {
