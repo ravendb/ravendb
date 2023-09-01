@@ -6,7 +6,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/ManageServer",
+    title: "Pages/ManageServer/Server-Wide Analyzers",
     component: ServerWideCustomAnalyzers,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof ServerWideCustomAnalyzers>;
@@ -17,7 +17,7 @@ function commonInit() {
     manageServerService.withGetServerWideCustomAnalyzers();
 }
 
-export function WithNoLimits() {
+export function NoLimits() {
     commonInit();
 
     const { license } = mockStore;
@@ -26,7 +26,7 @@ export function WithNoLimits() {
     return <ServerWideCustomAnalyzers />;
 }
 
-export function WithLimits() {
+export function Limits() {
     commonInit();
 
     const { license } = mockStore;
