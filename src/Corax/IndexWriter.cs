@@ -1704,6 +1704,9 @@ namespace Corax
             {
                 foreach (var (_, indexedField) in _dynamicFieldsTerms)
                 {
+                    if(indexedField.Textual.Count ==0)
+                        continue;
+                    
                     using var dynamicFieldScope = stats.For(indexedField.NameForStatistics);
 
                     using (dynamicFieldScope.For(CommitOperation.TextualValues))
@@ -1961,6 +1964,23 @@ namespace Corax
                 long totalLengthOfTerm = 0;
                 _buffers.PrepareTerms(_indexedField, out var sortedTerms, out var termsOffsets);
                 var processed = 0;
+                Debug.Assert(sortedTerms.Length > 0, "sortedTerms.Length > 0 (checked by the caller)");
+
+                var firstTerm = sortedTerms[0]; // if we have null, it will always sort first
+                if (firstTerm.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan()))
+                {
+                    long postingListId = GetOrCreateNullTermPostingList();
+                    long termContainerId = _fieldTree.RootPage * Voron.Global.Constants.Storage.PageSize;
+                    ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[0]);
+                    var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
+                    totalLengthOfTerm += ProcessSingleEntry(ref entries, ref nullLookup, isNullTerm: true,
+                        sortedTerms[0], postingListId, termContainerId, -1);
+                    
+                    // now skip it the null so we don't have the special case it
+                    sortedTerms = sortedTerms[1..]; 
+                    termsOffsets = termsOffsets[1..];
+                }
+                
                 while (true)
                 {
                     sortedTerms = sortedTerms[processed..];
@@ -1993,7 +2013,9 @@ namespace Corax
                         for (; idx < read; idx++)
                         {
                             ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[idx]);
-                            totalLengthOfTerm += ProcessSingleEntry(ref entries, ref keys[idx], sortedTerms[idx], postListIds[idx], pageOffsets[idx]);
+                            totalLengthOfTerm += ProcessSingleEntry(ref entries, ref keys[idx], isNullTerm: false,
+                                sortedTerms[idx], postListIds[idx],
+                                keys[idx].ContainerId, pageOffsets[idx]);
 
                             processed++;
                             // if the tree structure changed, the bulk insert details are wrong
@@ -2018,7 +2040,8 @@ namespace Corax
                 _writer._indexMetadata.Increment(_indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
             }
 
-            private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key, Slice term, long postListId, int pageOffset)
+            private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key,
+                bool isNullTerm, Slice term, long postListId, long termContainerId, int pageOffset)
             {
                 UpdateEntriesForTerm(ref _entriesForTerm, in entries);
                 if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
@@ -2027,9 +2050,7 @@ namespace Corax
                     _writer.SetRange(_writer._removalsForTerm, entries.Removals);
                 }
 
-                bool isNullTerm = ReferenceEquals(key.Key, CompactKey.NullInstance);
-                long existingIdInTree = isNullTerm ? key.ContainerId : postListId;
-                bool found = existingIdInTree != -1;
+                bool found = postListId != -1;
                 Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
 
                 int totalLengthOfTerm = 0;
@@ -2050,21 +2071,23 @@ namespace Corax
                     }
                     else
                     {
-                        var entriesToTermResult = _writer.AddEntriesToTerm(_tmpBuf, existingIdInTree, isNullTerm, ref entries, out termId);
+                        var entriesToTermResult = _writer.AddEntriesToTerm(_tmpBuf, postListId, isNullTerm, ref entries, out termId);
                         switch (entriesToTermResult)
                         {
                             case AddEntriesToTermResult.UpdateTermId:
-                                if (termId != existingIdInTree)
+                                if (termId != postListId)
                                 {
-                                    _dumper.WriteRemoval(term, existingIdInTree);
+                                    _dumper.WriteRemoval(term, postListId);
                                 }
 
+                                Debug.Assert(isNullTerm == false, "isNullTerm == false - we pre-generate the ids, after all");
+                                
                                 _dumper.WriteAddition(term, termId);
                                 _fieldTree.BulkUpdateSet(ref key, termId, _curPage, pageOffset, ref _offsetAdjustment);
                                 break;
                             case AddEntriesToTermResult.RemoveTermId:
-                                if (isNullTerm == false &&
-                                    _fieldTree.BulkUpdateRemove(ref key, _curPage, pageOffset, ref _offsetAdjustment, out long oldValue) == false)
+                                Debug.Assert(isNullTerm == false, "isNullTerm == false, checked inside AddEntriesToTerm");
+                                if (_fieldTree.BulkUpdateRemove(ref key, _curPage, pageOffset, ref _offsetAdjustment, out long oldValue) == false)
                                 {
                                     _dumper.WriteRemoval(term, termId);
                                     ThrowTriedToDeleteTermThatDoesNotExists(term);
@@ -2081,15 +2104,6 @@ namespace Corax
                         }
                     }
                 }
-
-                if (isNullTerm)
-                {
-                    key.Key = null; // ensure we won't be using the NullInstance again
-                }
-
-                long termContainerId = isNullTerm
-                    ? _fieldTree.RootPage * Voron.Global.Constants.Storage.PageSize
-                    : key.ContainerId;
                 
                 RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
 
@@ -2175,22 +2189,11 @@ namespace Corax
                 {
                     var term = sortedTerms[i];
 
-                    bool isNullTerm = term.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan());
-
-                    if (isNullTerm)
-                    {
-                        buffers.Keys[i].ContainerId = GetOrCreateNullTermPostingList();
-                        llt.ReleaseCompactKey(ref buffers.Keys[i].Key);
-                        buffers.Keys[i].Key = CompactKey.NullInstance;
-                    }
-                    else
-                    {
-                        var key = buffers.Keys[i].Key ??= llt.AcquireCompactKey();
-                        buffers.Keys[i].ContainerId = -1;
-                        key.Set(term.AsSpan());
-                        key.ChangeDictionary(fieldTree.DictionaryId);
-                        key.EncodedWithCurrent(out _);
-                    }
+                    var key = buffers.Keys[i].Key ??= llt.AcquireCompactKey();
+                    buffers.Keys[i].ContainerId = -1;
+                    key.Set(term.AsSpan());
+                    key.ChangeDictionary(fieldTree.DictionaryId);
+                    key.EncodedWithCurrent(out _);
 
                     ref var entries = ref indexedField.Storage.GetAsRef(termsIndexes[i]);
                     entries.Prepare(_writer._entriesAllocator);
@@ -2199,8 +2202,6 @@ namespace Corax
                 keys = new Span<CompactTree.CompactKeyLookup>(buffers.Keys, 0, max);
                 postListIds = new Span<long>(buffers.PostListIds, 0, max);
                 pageOffsets = new Span<int>(buffers.PageOffsets, 0, max);
-
-
             }
 
             private long GetOrCreateNullTermPostingList()
@@ -2504,7 +2505,7 @@ namespace Corax
             if (numberOfEntries == 0)
             {
                 if (isNullTerm) // we don't want to remove the null term posting list 
-                    return AddEntriesToTermResult.RemoveTermId;
+                    return AddEntriesToTermResult.NothingToDo;
                 
                 llt.FreePage(postingListState.RootPage);
 

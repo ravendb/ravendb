@@ -1373,7 +1373,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         if (state.Page.PageNumber != pageNum)
-            throw new InvalidOperationException("Different page number provided fro BulkUpdateSet");
+            throw new InvalidOperationException("Different page number provided from BulkUpdateSet");
 
         if (offset >= 0)
         {
@@ -1400,7 +1400,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         if (state.Page.PageNumber != pageNum)
-            throw new InvalidOperationException("Different page number provided fro BulkUpdateSet");
+            throw new InvalidOperationException("Different page number provided from BulkUpdateSet");
 
         if (offset < 0)
         {
