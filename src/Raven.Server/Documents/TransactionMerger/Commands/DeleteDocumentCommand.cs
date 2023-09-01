@@ -37,7 +37,6 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
     {
         public string Id { get; set; }
         public string ChangeVector { get; set; }
-        public bool CatchConcurrencyErrors { get; set; }
 
         public DeleteDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {

@@ -491,12 +491,6 @@ namespace Raven.Server.Documents.TimeSeries
 
         public Enumerator GetEnumerator(ByteStringContext allocator) => new Enumerator(this, allocator);
 
-        public void AssertNoRecomputeRequired()
-        {
-            if (_recomputeRequired)
-                throw new InvalidOperationException("This segment contains duplicate values and need to be recomputed");
-        }
-
         public sealed class ReadTimestampState
         {
             public int Delta;
