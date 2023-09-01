@@ -10,10 +10,12 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Debugging;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Global;
+using Voron.Impl.Paging;
 
 namespace Voron.Impl
 {
@@ -36,12 +38,12 @@ namespace Voron.Impl
         public long Generation => _generation;
 
         private readonly int _maxNumberOfAllocationsToKeepInGlobalStackPerSlot;
-        private long[] _numberOfAllocationsDisposedInGlobalStacks;
+        private readonly long[] _numberOfAllocationsDisposedInGlobalStacks;
 
-        private DateTime[] _lastPerCoreCleanups;
+        private readonly DateTime[] _lastPerCoreCleanups;
         private readonly TimeSpan _perCoreCleanupInterval = TimeSpan.FromMinutes(5);
 
-        private DateTime[] _lastGlobalStackRebuilds;
+        private readonly DateTime[] _lastGlobalStackRebuilds;
         private readonly TimeSpan _globalStackRebuildInterval = TimeSpan.FromMinutes(15);
 
         public EncryptionBuffersPool(bool registerLowMemory = true, bool registerCleanup = true)
@@ -76,6 +78,11 @@ namespace Voron.Impl
 
         public byte* Get(int numberOfPages, out long size, out NativeMemory.ThreadStats thread)
         {
+            return Get(null, numberOfPages, out size, out thread);
+        }
+
+        public byte* Get(CryptoPager pager, int numberOfPages, out long size, out NativeMemory.ThreadStats thread)
+        {
             var numberOfPagesPowerOfTwo = Bits.PowerOf2(numberOfPages);
 
             size = numberOfPagesPowerOfTwo * Constants.Storage.PageSize;
@@ -102,7 +109,9 @@ namespace Voron.Impl
                 thread.Allocations += size;
 
                 Debug.Assert(size == allocation.Size, $"size ({size}) == allocation.Size ({allocation.Size})");
-
+#if VALIDATE
+                pager?.UnprotectPageRange(allocation.Ptr, (ulong)size);
+#endif
                 return allocation.Ptr;
             }
 
@@ -117,7 +126,9 @@ namespace Voron.Impl
 
                 thread = NativeMemory.ThreadAllocations.Value;
                 thread.Allocations += size;
-
+#if VALIDATE
+                pager?.UnprotectPageRange(allocation.Ptr, (ulong)size);
+#endif
                 return allocation.Ptr;
             }
 
@@ -126,12 +137,21 @@ namespace Voron.Impl
 
         public void Return(byte* ptr, long size, NativeMemory.ThreadStats allocatingThread, long generation)
         {
+            Return(null, ptr, size, allocatingThread, generation);
+        }
+
+        public void Return(CryptoPager pager, byte* ptr, long size, NativeMemory.ThreadStats allocatingThread, long generation)
+        {
             if (ptr == null)
                 return;
-
+            
             Interlocked.Add(ref _currentlyInUseBytes, -size);
 
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
+            
+#if VALIDATE
+            pager?.ProtectPageRange(ptr, (ulong)size);
+#endif
 
             var numberOfPages = size / Constants.Storage.PageSize;
 
@@ -153,7 +173,7 @@ namespace Voron.Impl
             };
 
             var addToPerCorePool = ForTestingPurposes == null || ForTestingPurposes.CanAddToPerCorePool;
-            var success = addToPerCorePool ? _items[index].TryPush(allocation) : false;
+            var success = addToPerCorePool && _items[index].TryPush(allocation);
 
             if (success)
             {

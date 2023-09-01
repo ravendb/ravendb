@@ -56,7 +56,10 @@ namespace FastTests.Issues
                 }
                 sw.Stop();
 
-#if MEM_GUARD_STACK
+#if !MEM_GUARD_STACK
+                // RavenDB-10786: Testing performance requirements during validation is not necessary and counterproductive
+                // as extra validations will require readjusting this value. However, this test should be available to execute
+                // to ensure memory validation will happen for the rest of the test.
                 Assert.True(sw.Elapsed < TimeSpan.FromSeconds(5));
 #endif
             }

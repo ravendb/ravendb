@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ScratchBufferFile.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -215,19 +215,19 @@ namespace Voron.Impl.Scratch
             long asOfTxId = txId ?? -1;
 
 #if VALIDATE
-            using (var tempTx = new TempPagerTransaction())
+            // If we have encryption enabled, then VALIDATE calls are handled by the EncryptionBufferPool
+            if (Pager.Options.Encryption.IsEnabled == false)
             {
-                byte* pagePointer = _scratchPager.AcquirePagePointer(tempTx, pageNumber, PagerState);
-
-                PageFromScratchBuffer temporary;
-                if (_allocatedPages.TryGetValue(pageNumber, out temporary) != false)
+                using (var tempTx = new TempPagerTransaction())
                 {
-                    var page = new Page(pagePointer);
-                    ulong pageSize = (ulong) (page.IsOverflow ? VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize) : 1) * Constants.Storage.PageSize;
-                    // This has to be forced, as the scratchPager does NOT protect on allocate,
-                    // (on the contrary, we force protection/unprotection when freeing a page and allocating it
-                    // from the reserve)
-                    _scratchPager.ProtectPageRange(pagePointer, pageSize, true);
+                    var pagePointer = _scratchPager.AcquirePagePointer(tempTx, pageNumber, PagerState);
+                    if (_allocatedPages.TryGetValue(pageNumber, out _))
+                    {
+                        var page = new Page(pagePointer);
+                        var pageSize = (ulong)(page.IsOverflow ? VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize) : 1) *
+                                       Constants.Storage.PageSize;
+                        _scratchPager.ProtectPageRange(pagePointer, pageSize, true);
+                    }
                 }
             }
 #endif

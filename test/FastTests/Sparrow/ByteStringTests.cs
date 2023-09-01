@@ -176,7 +176,7 @@ namespace FastTests.Sparrow
                 context.Release(ref repeat);
             }
         } 
-#endif
+
 
         [Fact]
         public void FailValidationTryingToReleaseInAnotherContext()
@@ -234,5 +234,7 @@ namespace FastTests.Sparrow
                 }
             });
         }
+
+#endif
     }
 }
