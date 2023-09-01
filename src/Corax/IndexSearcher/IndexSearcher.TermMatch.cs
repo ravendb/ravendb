@@ -27,7 +27,7 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private long GetContainerIdOfNumericalTerm<TNumeric>(in FieldMetadata field, out FieldMetadata numericalField, TNumeric term)
     {
-        long containerId = default;
+        long containerId = -1;
         numericalField = default;
         if (typeof(TNumeric) == typeof(long))
         {
@@ -53,7 +53,7 @@ public partial class IndexSearcher
     {
         var containerId = GetContainerIdOfNumericalTerm(field, out var numericalField, term);
 
-        return containerId == 0 
+        return containerId == -1 
             ? TermMatch.CreateEmpty(this, Allocator) 
             : TermQuery(numericalField, containerId, 1);
     }
@@ -247,7 +247,7 @@ public partial class IndexSearcher
     
     private long NumberOfDocumentsUnderSpecificTerm(long containerId)
     {
-        if (containerId == 0)
+        if (containerId == -1)
             return 0;
         
         if ((containerId & (long)TermIdMask.PostingList) != 0)
