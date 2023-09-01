@@ -335,6 +335,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RevisionsConfiguration));
             scripter.AddType(typeof(RevertRevisionsRequest));
             scripter.AddType(typeof(RevertResult));
+            scripter.AddType(typeof(EnforceRevisionsConfigurationRequest));
             scripter.AddType(typeof(EnforceConfigurationResult));
             scripter.AddType(typeof(GetRevisionsCountOperation.DocumentRevisionsCount));
 
