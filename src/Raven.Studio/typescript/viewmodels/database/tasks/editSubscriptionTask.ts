@@ -363,7 +363,7 @@ class editSubscriptionTask extends shardViewModelBase {
         }
     }
 
-    formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior) {
+    formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior) {
         if (!mode) {
             return "";
         }

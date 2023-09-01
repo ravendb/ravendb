@@ -17,7 +17,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null);
 
     specifyArchivedDataProcessingBehavior = ko.observable<boolean>(false);
-    archivedDataProcessingBehavior = ko.observable<Raven.Client.Documents.Indexes.ArchivedDataProcessingBehavior>("IncludeArchived");
+    archivedDataProcessingBehavior = ko.observable<Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior>("IncludeArchived");
 
     validationGroup: KnockoutValidationGroup; 
     
