@@ -122,13 +122,6 @@ namespace Voron.Data.RawData
             return ids;
         }
 
-        public List<long> GetAllIdsInSamePageAs(long id)
-        {
-            var ids = new List<long>();
-            FillAllIdsInPage((id / Constants.Storage.PageSize) - 1, ids);
-            return ids;
-        }
-
         public void FillAllIdsInPage(long pageNumber, List<long> ids)
         {
             var pageHeader = PageHeaderFor(_llt, pageNumber + 1);

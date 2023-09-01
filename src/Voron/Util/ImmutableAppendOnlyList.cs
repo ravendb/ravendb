@@ -159,28 +159,6 @@ namespace Voron.Util
         }
 
         /// <summary>
-        /// Returns a new list from which the first element is removed.
-        /// </summary>
-        public ImmutableAppendOnlyList<T> RemoveFront()
-        {
-            return _count == 1
-                ? Empty
-                : new ImmutableAppendOnlyList<T>(_values, _head + 1, _count - 1);
-        }
-
-        /// <summary>
-        /// Returns a new list from which the first element is removed, where
-        /// this element is provided as output in <paramref name="removed"/>.
-        /// </summary>
-        public ImmutableAppendOnlyList<T> RemoveFront(out T removed)
-        {
-            removed = _values[_head];
-            return _count == 1
-                ? Empty
-                : new ImmutableAppendOnlyList<T>(_values, _head + 1, _count - 1);
-        }
-
-        /// <summary>
         /// Returns a new list from which the given number of first elements
         /// are removed.
         /// </summary>

@@ -55,15 +55,6 @@ namespace Lucene.Net.Search.Vectorhighlight
             this.postTags = postTags;
         }
 
-        static Object CheckTagsArgument(Object tags)
-        {
-            if (tags is String)
-                return tags;
-            else if (tags is String[])
-                return tags;
-            throw new ArgumentException("type of preTags/postTags must be a String or String[]");
-        }
-
         public abstract List<WeightedFragInfo> GetWeightedFragInfoList(List<WeightedFragInfo> src);
 
         public virtual string CreateFragment(IndexReader reader, int docId, string fieldName, FieldFragList fieldFragList, int fragCharSize, IState state)
@@ -93,13 +84,6 @@ namespace Lucene.Net.Search.Vectorhighlight
                 fragments.Add(MakeFragment(buffer, nextValueIndex, values, fragInfo, fragCharSize, state));
             }
             return fragments.ToArray();
-        }
-
-        [Obsolete]
-        protected virtual String[] GetFieldValues(IndexReader reader, int docId, String fieldName, IState state)
-        {
-            Document doc = reader.Document(docId, new MapFieldSelector(new String[] { fieldName }), state);
-            return doc.GetValues(fieldName, state); // according to Document class javadoc, this never returns null
         }
 
         protected virtual Field[] GetFields(IndexReader reader, int docId, String fieldName, IState state)
@@ -170,34 +154,6 @@ namespace Lucene.Net.Search.Vectorhighlight
         }
         */
 
-
-        [Obsolete]
-        protected virtual String GetFragmentSource(StringBuilder buffer, int[] index, String[] values, int startOffset, int endOffset)
-        {
-            while (buffer.Length < endOffset && index[0] < values.Length)
-            {
-                buffer.Append(values[index[0]]);
-                if (values[index[0]].Length > 0 && index[0] + 1 < values.Length)
-                    buffer.Append(' ');
-                index[0]++;
-            }
-            int eo = buffer.Length < endOffset ? buffer.Length : endOffset;
-            return buffer.ToString().Substring(startOffset, eo - startOffset);
-        }
-
-        protected virtual String GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, int startOffset, int endOffset, IState state)
-        {
-            while (buffer.Length < endOffset && index[0] < values.Length)
-            {
-                buffer.Append(values[index[0]].StringValue(state));
-                if (values[index[0]].IsTokenized && values[index[0]].StringValue(state).Length > 0 && index[0] + 1 < values.Length)
-                    buffer.Append(' ');
-                index[0]++;
-            }
-            int eo = buffer.Length < endOffset ? buffer.Length : endOffset;
-
-            return buffer.ToString(startOffset, eo - startOffset);
-        }
 
         private string GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo weightedFragInfo, out int startOffset, IState state)
         {

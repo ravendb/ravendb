@@ -64,23 +64,6 @@ public unsafe struct NativeList<T>
         Count = newSize;
     }
 
-    public bool TryPop(out T value)
-    {
-        if (Count == 0)
-        {
-            Unsafe.SkipInit(out value);
-            return false;
-        }
-        
-        value = RawItems[--Count];
-        return true;
-    }
-
-    public T PopUnsafe()
-    {
-        return RawItems[--Count];
-    }
-
     public void Initialize(ByteStringContext ctx, int count = 16)
     {
         var capacity = Math.Max(16, Bits.PowerOf2(count));

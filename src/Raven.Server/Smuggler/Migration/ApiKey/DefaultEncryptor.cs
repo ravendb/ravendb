@@ -39,36 +39,6 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
 
             }
 
-            public byte[] ComputeForStorage(byte[] bytes)
-            {
-                SHA256 algorithm = null;
-                try
-                {
-                    algorithm = this.sha256Pool.Allocate();
-                    return ComputeHashInternal(algorithm, bytes);
-                }
-                finally
-                {
-                    if (algorithm != null)
-                        this.sha256Pool.Free(algorithm);
-                }
-            }
-
-            public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
-            {
-                SHA256 algorithm = null;
-                try
-                {
-                    algorithm = this.sha256Pool.Allocate();
-                    return ComputeHashInternal(algorithm, bytes, offset, length);
-                }
-                finally
-                {
-                    if (algorithm != null)
-                        this.sha256Pool.Free(algorithm);
-                }
-            }
-
             public byte[] ComputeForOAuth(byte[] bytes)
             {
                 SHA1 algorithm = null;

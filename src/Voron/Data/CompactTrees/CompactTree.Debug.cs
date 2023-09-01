@@ -25,15 +25,6 @@ unsafe partial class CompactTree
             writer.WriteLine($"+{Encodings.Utf8.GetString(key)}|{value}");
 #endif
         }
-
-        [Conditional("ENABLE_COMPACT_DUMPER")]
-        public static void WriteRemoval(CompactTree tree, ReadOnlySpan<byte> key)
-        {
-#if ENABLE_COMPACT_DUMPER
-            using var writer = File.AppendText(tree.Name.ToString());
-            writer.WriteLine($"-{Encodings.Utf8.GetString(key)}");
-#endif
-        }
     }
 
 

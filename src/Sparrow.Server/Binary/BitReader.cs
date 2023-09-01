@@ -36,21 +36,6 @@ namespace Sparrow.Server.Binary
 
         public int Length => _length;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int MaskShift()
-        {
-            if (typeof(long) == typeof(T) || typeof(ulong) == typeof(T))
-                return sizeof(long) * 8 - 1;
-            if (typeof(int) == typeof(T) || typeof(uint) == typeof(T))
-                return sizeof(int) * 8 - 1;
-            if (typeof(short) == typeof(T) || typeof(ushort) == typeof(T))
-                return sizeof(short) * 8 - 1;
-            if (typeof(byte) == typeof(T) || typeof(sbyte) == typeof(T))
-                return sizeof(byte) * 8 - 1;
-
-            throw new ArgumentException($"Type '{nameof(T)}' is not supported by this reader.");
-        }
-
         public void Skip(int bits)
         {            
             _shift = (byte)(_shift + bits);

@@ -55,32 +55,6 @@ namespace Raven.Server.Documents.Sharding
             public async ValueTask<Memory<ShardStreamItem<T>>> ReadCombinedObjectAsync<T>(
                 CombinedReadContinuationState combinedState,
                 string name,
-                Func<BlittableJsonReaderObject, T> converter)
-            {
-                var combined = new ShardStreamItem<T>[combinedState.States.Count];
-                int index = 0;
-                foreach (var shardNumber in combinedState.States.Keys)
-                {
-                    var state = combinedState.States[shardNumber];
-                    var property = state.ReadString();
-                    if (property != name)
-                        state.ThrowInvalidJson();
-
-                    var result = await state.ReadObjectAsync();
-                    combined[index] = new ShardStreamItem<T>
-                    {
-                        Item = converter(result),
-                        ShardNumber = shardNumber
-                    };
-                    index++;
-                }
-
-                return new Memory<ShardStreamItem<T>>(combined);
-            }
-
-            public async ValueTask<Memory<ShardStreamItem<T>>> ReadCombinedObjectAsync<T>(
-                CombinedReadContinuationState combinedState,
-                string name,
                 Func<BlittableJsonReaderArray, T> converter)
             {
                 var combined = new ShardStreamItem<T>[combinedState.States.Count];

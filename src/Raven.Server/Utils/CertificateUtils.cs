@@ -128,24 +128,6 @@ namespace Raven.Server.Utils
             return certBytes;
         }
 
-        public static (byte[], byte[]) CreateTwoTestCertificatesWithSameKey(string commonNameValue, string issuerName, StringBuilder log = null)
-        {
-            CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
-
-            var existingKeyPair = GetRsaKey();
-
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes1, existingKeyPair, log);
-            var selfSignedCertificateBasedOnPrivateKey1 = CertificateLoaderUtil.CreateCertificate(certBytes1);
-            selfSignedCertificateBasedOnPrivateKey1.Verify();
-
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes2, existingKeyPair, log);
-            var selfSignedCertificateBasedOnPrivateKey2 = CertificateLoaderUtil.CreateCertificate(certBytes2);
-            selfSignedCertificateBasedOnPrivateKey2.Verify();
-
-            RemoveOldTestCertificatesFromOsStore(commonNameValue);
-            return (certBytes1, certBytes2);
-        }
-
         private static void RemoveOldTestCertificatesFromOsStore(string commonNameValue)
         {
             // We have the same logic in AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts when the server starts

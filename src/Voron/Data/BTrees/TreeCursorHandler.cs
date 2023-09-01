@@ -3,16 +3,6 @@ using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public struct TreeCursorRef
-    {
-        public readonly TreeCursor Cursor;
-
-        public TreeCursorRef(TreeCursor cursor)
-        {
-            this.Cursor = cursor;
-        }
-    }
-
     public unsafe struct TreeCursorConstructor
     {
         private readonly Tree _tree;

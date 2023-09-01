@@ -731,7 +731,6 @@ namespace Sparrow.Json.Parsing
             return true;
         }
 
-        private const byte NoSubstitution = 0;
         private const byte Unlikely = 1;
         private static readonly byte[] ParseStringTable;
 

@@ -8,12 +8,6 @@ namespace Voron.Impl.FileHeaders
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct FileHeader
     {
-        /// <summary>
-        /// If the size of file header is ever over 512 bytes, we are going to fail compilation here.
-        /// We need this because the minimum sector size is 512 bytes, and we require the file header
-        /// to be written to a single sector, because we assume atomic sector writes.
-        /// </summary>
-        private static readonly unsafe byte[] AssertTransactionHeaderSize = new byte[sizeof(FileHeader) < 512 ? 0 : -1];
         public static int HashOffset = (int)Marshal.OffsetOf<FileHeader>(nameof(Hash));
 
         /// <summary>

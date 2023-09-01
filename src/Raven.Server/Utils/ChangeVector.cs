@@ -128,8 +128,6 @@ public sealed class ChangeVector
 
     public static ConflictStatus GetConflictStatusForDocument(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote?.Version, local?.Version);
 
-    public static ConflictStatus GetConflictStatusForDatabase(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote?.Order, local?.Order);
-
     private ChangeVector UpdateInternal(string nodeTag, string dbId, long etag, ChangeVector changeVector, IChangeVectorOperationContext context)
     {
         EnsureValid();

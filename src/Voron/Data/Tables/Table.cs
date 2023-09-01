@@ -1398,31 +1398,6 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice last)
-        {
-            var tree = GetTree(index);
-            if (tree == null)
-                yield break;
-
-            using (var it = tree.Iterate(true))
-            {
-                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
-                    yield break;
-
-                do
-                {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
-                    {
-                        yield return new SeekResult
-                        {
-                            Key = it.CurrentKey,
-                            Result = result
-                        };
-                    }
-                } while (it.MovePrev());
-            }
-        }
-
         public TableValueHolder SeekOneBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last)
         {
             var tree = GetTree(index);
@@ -2123,49 +2098,6 @@ namespace Voron.Data.Tables
                             }
                             beforeDelete?.Invoke(tableValueHolder);
                         }
-
-                        Delete(fstIt.CurrentKey);
-                        deleted++;
-                    }
-                }
-            }
-            return deleted;
-        }
-
-        public long DeleteForwardFrom(TableSchema.AbstractTreeIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
-            Func<TableValueHolder, bool> beforeDelete)
-        {
-            AssertWritableTable();
-
-            if (numberOfEntriesToDelete < 0)
-                ThrowNonNegativeNumberOfEntriesToDelete();
-
-            var deleted = 0;
-            var tree = GetTree(index);
-            TableValueHolder tableValueHolder = null;
-            while (deleted < numberOfEntriesToDelete)
-            {
-                // deleting from a table can shift things around, so we delete 
-                // them one at a time
-                using (var it = tree.Iterate(true))
-                {
-                    if (startsWith)
-                        it.SetRequiredPrefix(value);
-                    if (it.Seek(value) == false)
-                        return deleted;
-
-                    var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0, index.IsGlobal);
-                    using (var fstIt = fst.Iterate())
-                    {
-                        if (fstIt.Seek(long.MinValue) == false)
-                            break;
-
-                        var ptr = DirectRead(fstIt.CurrentKey, out int size);
-                        if (tableValueHolder == null)
-                            tableValueHolder = new TableValueHolder();
-                        tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
-                        if (beforeDelete(tableValueHolder) == false)
-                            return deleted;
 
                         Delete(fstIt.CurrentKey);
                         deleted++;

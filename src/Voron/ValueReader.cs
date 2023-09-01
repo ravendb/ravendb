@@ -37,8 +37,6 @@ namespace Voron
             get { return _len; }
         }
 
-        public bool EndOfData => _len == _pos;
-
         public void Reset()
         {
             _pos = 0;
@@ -203,14 +201,6 @@ namespace Voron
         public Span<byte> AsSpan()
         {
             return new Span<byte>(_val, _len);
-        }
-
-        public ByteStringContext.InternalScope AsPartialSlice(ByteStringContext context, int removeFromEnd, out Slice str)
-        {
-            if (_len >= ushort.MaxValue)
-                throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
-
-            return Slice.From(context, _val, _len - removeFromEnd, out str);
         }
     }
 }

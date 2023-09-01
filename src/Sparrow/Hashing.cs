@@ -31,20 +31,6 @@ namespace Sparrow
             }
             return result;
         }
-
-        public static Metro128Hash FromByteArray(byte[] source)
-        {
-            if (source.Length != sizeof(ulong) * 2)
-                throw new ArgumentException("Byte array is not a Metro128 hash.");
-
-            unsafe
-            {
-                fixed (byte* ptr = source)
-                {
-                    return new Metro128Hash(((ulong*)ptr)[0], ((ulong*)ptr)[1]);
-                }
-            }
-        }
     }
 
     internal static unsafe partial class Hashing
@@ -78,17 +64,6 @@ namespace Sparrow
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public char Modify(char ch)
             {
-                return ch;
-            }
-        }
-
-        internal struct OrdinalIgnoreCaseModifier : ICharacterModifier
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public char Modify(char ch)
-            {
-                if (ch >= 65 && ch <= 90)
-                    ch = (char)(ch | 0x0020);
                 return ch;
             }
         }

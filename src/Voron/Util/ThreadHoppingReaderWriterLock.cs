@@ -25,8 +25,6 @@ namespace Voron.Util
         private readonly AutoResetEvent _writerWait = new AutoResetEvent(false);
         private int _writeLockOwnerThreadId;
 
-      
-        public bool WriteLockRequested => ((uint) Volatile.Read(ref _waiters) & ~ReaderMask) != 0;
 
         public void EnterWriteLock()
         {

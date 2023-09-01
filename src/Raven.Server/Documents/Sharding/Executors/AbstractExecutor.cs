@@ -43,19 +43,11 @@ public abstract class AbstractExecutor : IDisposable
 
     protected abstract void OnCertificateChange(object sender, EventArgs e);
 
-    public Task<TResult> ExecuteOneByOneForAllAsync<TResult>(IShardedOperation<TResult> operation)
-        => ExecuteForShardsAsync<OneByOneExecution, ThrowOnFailure, TResult>(GetAllPositions(), operation);
-
     public Task<TCombinedResult> ExecuteParallelForAllAsync<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
         => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
 
     public Task<TResult> ExecuteParallelForAllAsync<TResult>(IShardedOperation<TResult> operation, CancellationToken token = default)
         => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult>(GetAllPositions(), operation, token);
-
-    public Task<TResult> ExecuteForAllAsync<TExecutionMode, TFailureMode, TResult>(IShardedOperation<TResult> operation, CancellationToken token = default)
-        where TExecutionMode : struct, IExecutionMode
-        where TFailureMode : struct, IFailureMode
-        => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(GetAllPositions(), operation, token);
 
     protected Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation, CancellationToken token = default)
         where TExecutionMode : struct, IExecutionMode

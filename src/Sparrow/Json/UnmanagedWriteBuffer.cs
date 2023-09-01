@@ -178,20 +178,6 @@ namespace Sparrow.Json
             }
 
 #if DEBUG
-            public int Depth
-            {
-                get
-                {
-                    int count = 1;
-                    var prev = Previous;
-                    while (prev != null)
-                    {
-                        count++;
-                        prev = prev.Previous;
-                    }
-                    return count;
-                }
-            }
 
             public string DebugInfo => Encodings.Utf8.GetString(Address, Used);
 #endif

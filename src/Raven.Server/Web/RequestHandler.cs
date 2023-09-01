@@ -428,12 +428,6 @@ namespace Raven.Server.Web
             return result;
         }
 
-        [DoesNotReturn]
-        private static void ThrowInvalidFloat(string name, float result)
-        {
-            throw new ArgumentException($"Could not parse query string '{name}' as float, value was: {result}");
-        }
-
         internal string GetStringQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];

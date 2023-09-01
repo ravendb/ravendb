@@ -19,9 +19,7 @@ public readonly unsafe struct PostingListLeafPage
     {
         return (size + 255) / 256 * 256;
     }
-    
-    private const long InvalidValue = long.MaxValue;
-    
+
     private readonly Page _page;
     public PostingListLeafPageHeader* Header => (PostingListLeafPageHeader*)_page.Pointer;
 

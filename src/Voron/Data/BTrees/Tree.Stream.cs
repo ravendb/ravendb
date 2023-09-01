@@ -538,15 +538,6 @@ namespace Voron.Data.BTrees
             }
         }
 
-        private ByteStringContext.InternalScope GetStreamTag(StreamInfo* info, out Slice tag)
-        {
-            tag = default;
-            if (info == null || info->TagSize == 0)
-                return default;
-
-            return Slice.From(_tx.Allocator, StreamInfo.GetTagPtr(info), info->TagSize, out tag);
-        }
-
         [DoesNotReturn]
         private void ThrowStreamSizeMismatch(Slice name, long totalChunksSize, StreamInfo* info)
         {

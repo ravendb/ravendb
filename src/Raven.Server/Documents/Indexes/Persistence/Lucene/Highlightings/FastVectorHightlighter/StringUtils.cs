@@ -16,7 +16,6 @@
  */
 
 using System;
-using System.Collections.Generic;
 
 namespace Lucene.Net.Search.Vectorhighlight
 {
@@ -42,15 +41,5 @@ namespace Lucene.Net.Search.Vectorhighlight
             }
             return term.Equals(termToMatch);
         }
-
-        public static Boolean AnyTermMatch(IList<String> terms, String term)
-        {
-            for (int i = 0; i < terms.Count; i++)
-            {
-                if (StringUtils.TermStringMatch(terms[i], term))
-                    return true;
-            }
-            return false;
-        }
-     }
+    }
 }

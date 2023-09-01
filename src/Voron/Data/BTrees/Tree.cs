@@ -1374,28 +1374,6 @@ namespace Voron.Data.BTrees
             return false;
         }
 
-        public Slice LastKeyOrDefault()
-        {
-            using (var it = Iterate(false))
-            {
-                if (it.Seek(Slices.AfterAllKeys) == false)
-                    return new Slice();
-
-                return it.CurrentKey.Clone(_tx.Allocator);
-            }
-        }
-
-        public Slice FirstKeyOrDefault()
-        {
-            using (var it = Iterate(false))
-            {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    return new Slice();
-
-                return it.CurrentKey.Clone(_tx.Allocator);
-            }
-        }
-
         public void ClearPagesCache()
         {
             _recentlyFoundPages?.Clear();
@@ -1427,14 +1405,7 @@ namespace Voron.Data.BTrees
             return (CompactTree)prep;
         }
 
-        
-        public Lookup<TKey> LookupFor<TKey>(string key)
-            where TKey : struct, ILookupKey
-        {
-            using var _ = Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out var keySlice);
-            return LookupFor<TKey>(keySlice);
-        }
-        
+
         public Lookup<TKey> LookupFor<TKey>(Slice key)
             where TKey : struct, ILookupKey
         {

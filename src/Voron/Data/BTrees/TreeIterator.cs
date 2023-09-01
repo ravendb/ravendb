@@ -285,11 +285,6 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public long TreeRootPage
-        {
-            get { return this._tree.State.RootPageNumber; }
-        }
-
         private void DecompressedCurrentPage()
         {
             Debug.Assert(_tree.IsLeafCompressionSupported);

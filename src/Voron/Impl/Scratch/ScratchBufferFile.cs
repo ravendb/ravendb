@@ -130,12 +130,7 @@ namespace Voron.Impl.Scratch
 
         public long TxIdAfterWhichLatestFreePagesBecomeAvailable => _txIdAfterWhichLatestFreePagesBecomeAvailable;
 
-        public ScratchFileDebugInfo DebugInfo { get; } 
-
-        public long SizeAfterAllocation(long sizeToAllocate)
-        {
-            return (_lastUsedPage + sizeToAllocate) * Constants.Storage.PageSize;
-        }
+        public ScratchFileDebugInfo DebugInfo { get; }
 
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
         {

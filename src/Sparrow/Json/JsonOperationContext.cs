@@ -767,12 +767,6 @@ namespace Sparrow.Json
                 ThrowObjectDisposed();
         }
 
-        private async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, CancellationToken? token = null)
-        {
-            using (GetMemoryBuffer(out MemoryBuffer bytes))
-                return await ParseToMemoryAsync(stream, documentId, mode, bytes, modifier: null, token).ConfigureAwait(false);
-        }
-
         public async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(
             Stream stream,
             string documentId,
@@ -1168,30 +1162,6 @@ namespace Sparrow.Json
             _sizeOfMemoryStreamCache -= stream.Capacity;
 
             return stream;
-        }
-
-        public IDisposable CheckoutMemoryStream(out MemoryStream ms)
-        {
-            ms = CheckoutMemoryStream();
-
-            return new ReturnMemoryStreamToContext(this, ms);
-        }
-
-        private readonly struct ReturnMemoryStreamToContext : IDisposable
-        {
-            private readonly JsonOperationContext _context;
-            private readonly MemoryStream _ms;
-
-            public ReturnMemoryStreamToContext(JsonOperationContext context, MemoryStream ms)
-            {
-                _context = context;
-                _ms = ms;
-            }
-
-            public void Dispose()
-            {
-                _context.ReturnMemoryStream(_ms);
-            }
         }
 
         private const long MemoryStreamCacheThreshold = Constants.Size.Megabyte;

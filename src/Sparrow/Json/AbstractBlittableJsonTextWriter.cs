@@ -736,26 +736,5 @@ namespace Sparrow.Json
             _buffer[_pos++] = (byte)'\r';
             _buffer[_pos++] = (byte)'\n';
         }
-
-        public void WriteMemoryChunk(IntPtr ptr, int size)
-        {
-            WriteMemoryChunk((byte*)ptr.ToPointer(), size);
-        }
-
-        public void WriteMemoryChunk(byte* ptr, int size)
-        {
-            FlushInternal();
-            var leftToWrite = size;
-            var totalWritten = 0;
-            while (leftToWrite > 0)
-            {
-                var toWrite = Math.Min(JsonOperationContext.MemoryBuffer.DefaultSize, leftToWrite);
-                Memory.Copy(_buffer, ptr + totalWritten, toWrite);
-                _pos += toWrite;
-                totalWritten += toWrite;
-                leftToWrite -= toWrite;
-                FlushInternal();
-            }
-        }
     }
 }

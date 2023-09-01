@@ -464,6 +464,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerCertificateExpiration(server.ServerStore));
             store.Add(new ServerCertificateExpirationLeft(server.ServerStore));
             store.Add(new WellKnownAdminCertificates(server.ServerStore));
+            store.Add(new WellKnownAdminIssuers(server.ServerStore));
             store.Add(new CertificateExpiringCount(server.ServerStore));
             store.Add(new CertificateExpiredCount(server.ServerStore));
 

@@ -37,11 +37,6 @@ namespace Voron.Impl.Paging
             return pager.AcquirePagePointer(tx, pageNumber);
         }
 
-        public static bool WillRequireExtension(this AbstractPager pager, long requestedPageNumber, int numberOfPages)
-        {
-            return requestedPageNumber + numberOfPages > pager.NumberOfAllocatedPages;
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetNumberOfOverflowPages(long overflowSize)
         {
