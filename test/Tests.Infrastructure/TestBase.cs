@@ -32,6 +32,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Debugging;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -83,6 +84,8 @@ namespace FastTests
 
         static unsafe TestBase()
         {
+            DebugStuff.Attach();
+
             IgnoreProcessorAffinityChanges(ignore: true);
             LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
             RachisStateMachine.EnableDebugLongCommit = true;
