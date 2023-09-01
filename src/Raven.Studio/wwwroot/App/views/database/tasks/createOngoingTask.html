@@ -12,9 +12,14 @@
                         <hr />
                     </div>
                     <div class="row row-sm flex-row">
-                        <div class="col-sm-4 margin-bottom" title="Create new External Replication task">
-                            <a href="#" class="external-replication" data-bind="click: newReplicationTask">
+                        <div class="col-sm-4 margin-bottom" title="Create new External Replication task" data-bind="click: newReplicationTask, css: { 'item-disabled': licenseType === 'Community' }">
+                            <a href="#" class="external-replication">
                                 <i class="icon-external-replication"></i><br />External Replication
+                                <span
+                                    class="badge license-restricted-badge margin-bottom-sm" 
+                                    data-bind="if: licenseType === 'Community'">
+                                    Professional +
+                                </span>
                             </a>
                         </div>
                         <div class="col-sm-4 margin-bottom" title="Create new Replication Hub task">
