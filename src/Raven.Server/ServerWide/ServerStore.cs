@@ -2019,15 +2019,6 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(cmd);
         }
 
-        public Task<(long Index, object Result)> DeleteValueInClusterAsync(string key)
-        {
-            var deleteValueCommand = new DeleteValueCommand
-            {
-                Name = key
-            };
-            return SendToLeaderAsync(deleteValueCommand);
-        }
-
         public Task<(long Index, object Result)> ModifyDatabaseExpiration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var expiration = JsonDeserializationCluster.ExpirationConfiguration(configurationJson);

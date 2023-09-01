@@ -161,8 +161,6 @@ namespace Raven.Server.Smuggler.Documents
                 _rtnCtx = DatabaseContext.AllocateOperationContext(out _context);
             }
 
-            public JsonOperationContext GetContextForNewCompareExchangeValue() => GetContextForNewDocument();
-
             public JsonOperationContext GetContextForNewDocument()
             {
                 if (_context.AllocatedMemory > 16 * 1024 * 1024)

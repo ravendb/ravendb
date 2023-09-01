@@ -49,11 +49,5 @@ namespace Raven.Server.ServerWide
             database = ShardHelper.ToDatabaseName(database);
             return $"{database}{_separator}{key}".ToLowerInvariant();
         }
-
-        public static (string Database, string Key) SplitStorageKey(string storageKey)
-        {
-            var strArray = storageKey.Split(_separator, 2);
-            return (strArray[0], strArray[1]);
-        }
     }
 }

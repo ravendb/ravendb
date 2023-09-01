@@ -466,12 +466,6 @@ namespace Raven.Server
             }
         }
 
-        public void ClearExternalCertificateValidationCache()
-        {
-            // Can be called from the Admin JS Console
-            _externalCertificateValidator?.ClearCache();
-        }
-
         public void ForceSyncCpuCredits()
         {
             CpuCreditsBalance.ForceSync = true;

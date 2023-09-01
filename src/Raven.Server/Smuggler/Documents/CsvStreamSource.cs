@@ -211,13 +211,6 @@ namespace Raven.Server.Smuggler.Documents
             return Task.FromResult(new DatabaseRecord());
         }
 
-        public Task<DatabaseRecord> GetShardedDatabaseRecordAsync()
-        {
-            // Used only in Database Source
-            throw new NotSupportedException("GetShardedDatabaseRecordAsync is not supported in Stream Source, " +
-                                            "it is only supported from Sharded Database Source.");
-        }
-
         public async IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var line = 0;

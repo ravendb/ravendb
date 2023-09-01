@@ -185,11 +185,6 @@ namespace Raven.Server.Smuggler.Documents.Actions
             _lastAddOrUpdateOrRemoveResultIndex = addOrUpdateResult.Index;
         }
 
-        public JsonOperationContext GetContextForNewCompareExchangeValue()
-        {
-            return _context;
-        }
-
         protected struct DisposableReturnedArray<T> : IDisposable
         {
             private readonly T[] _array;

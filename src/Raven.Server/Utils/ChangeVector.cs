@@ -376,12 +376,6 @@ public sealed class ChangeVector
         throw new InvalidOperationException($"inner is '{_changeVector}' while order or version are not empty");
     }
 
-    [DoesNotReturn]
-    private static void ThrowEmptyChangeVector()
-    {
-        throw new InvalidOperationException("Empty change vector");
-    }
-
     public static implicit operator string(ChangeVector changeVector) => changeVector?.AsString();
 
     public string AsString() => ToString();

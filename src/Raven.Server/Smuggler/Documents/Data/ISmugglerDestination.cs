@@ -65,7 +65,6 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface INewCompareExchangeActions
     {
-        JsonOperationContext GetContextForNewCompareExchangeValue();
     }
 
     public interface INewItemActions

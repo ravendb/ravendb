@@ -76,14 +76,6 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
         // the CVs were validated in handler
     }
 
-    protected override void AssertCanPutSubscription(RawDatabaseRecord record)
-    {
-        if (record.IsSharded == false)
-        {
-            throw new SubscriptionCreationException($"'{nameof(PutShardedSubscriptionCommand)}' is not supported for regular database.");
-        }
-    }
-
     protected override DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId)
     {
         return new SubscriptionState

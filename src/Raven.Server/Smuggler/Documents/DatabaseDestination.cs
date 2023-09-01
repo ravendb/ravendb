@@ -130,11 +130,6 @@ namespace Raven.Server.Smuggler.Documents
             return new CounterActions(_database, result);
         }
 
-        public ICounterActions LegacyCounters(SmugglerResult result)
-        {
-            return new CounterActions(_database, result);
-        }
-
         public ISubscriptionActions Subscriptions()
         {
             return new DatabaseSubscriptionActions(_database.ServerStore, _database.Name);

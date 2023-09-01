@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -218,13 +217,6 @@ namespace Raven.Server.Utils
             return (true, vectorBuffer.ToString());
         }
 
-        [DoesNotReturn]
-        public static void ThrowConflictingEtag(string id, string changeVector, long newEtag, string dbId, string nodeTag)
-        {
-            throw new InvalidOperationException($"Tried to update the change vector '{changeVector}' but the new etag '{newEtag}' is smaller than " +
-                                                $"the etag in the change vector. DocumentId= '{id}', DatabaseId='{dbId}', NodeTag='{nodeTag}'.");
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void InitializeThreadLocalState()
         {
@@ -437,16 +429,6 @@ namespace Raven.Server.Utils
             }
 
             return rest;
-        }
-
-        public static string StripSinkTags(this string from, string exclude)
-        {
-            return from.StripTags(ChangeVectorParser.SinkTag, exclude);
-        }
-
-        public static string StripTrxnTags(this string from)
-        {
-            return from.StripTags(ChangeVectorParser.TrxnTag, exclude: null);
         }
 
         private static string StripTags(this string from, string tag, string exclude)

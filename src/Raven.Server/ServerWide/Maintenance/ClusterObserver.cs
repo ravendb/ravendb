@@ -913,11 +913,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 return RawDatabase.IsDisabled;
             }
 
-            public bool ReadRestoringInProgress()
-            {
-                return RawDatabase.DatabaseState == DatabaseStateStatus.RestoreInProgress;
-            }
-
             public Dictionary<string, string> ReadSettings()
             {
                 return RawDatabase.Settings;

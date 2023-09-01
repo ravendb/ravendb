@@ -130,57 +130,6 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
 
             return false;
         }
-
-        public static Dictionary<string, MergedDatabaseStatusReport> BuildMergedReports(Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous)
-        {
-            var mergedReport = new Dictionary<string, MergedDatabaseStatusReport>();
-
-            PopulateReport(current, mergedReport);
-            PopulateReport(previous, mergedReport);
-
-            return mergedReport;
-        }
-
-        private static void PopulateReport(Dictionary<string, ClusterNodeStatusReport> clusterReport, Dictionary<string, MergedDatabaseStatusReport> mergedReport)
-        {
-            foreach (var node in clusterReport)
-            foreach (var database in node.Value.Report)
-            {
-                var fullName = database.Key;
-                var shardSeparator = fullName.IndexOf('$');
-                if (shardSeparator < 0)
-                    continue;
-
-                var split = fullName.Split('$');
-                var name = split[0];
-                var shardNumber = int.Parse(split[1]);
-
-                mergedReport.TryAdd(name, new MergedDatabaseStatusReport());
-                if (mergedReport[name].MergedReport.TryGetValue(shardNumber, out var currentReport) == false)
-                {
-                    mergedReport[name].MergedReport.Add(shardNumber, database.Value);
-                }
-                else
-                {
-                    var conflict = ChangeVectorUtils.GetConflictStatus(database.Value.DatabaseChangeVector, currentReport.DatabaseChangeVector);
-                    switch (conflict)
-                    {
-                        case ConflictStatus.Update:
-                            mergedReport[name].MergedReport[shardNumber] = database.Value;
-                            break;
-                        case ConflictStatus.Conflict:
-                            var distance = ChangeVectorUtils.Distance(database.Value.DatabaseChangeVector, currentReport.DatabaseChangeVector);
-                            if (distance > 0)
-                                mergedReport[name].MergedReport[shardNumber] = database.Value;
-                            break;
-                        case ConflictStatus.AlreadyMerged:
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                }
-            }
-        }
     }
 
     public sealed class ShardReport
