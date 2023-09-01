@@ -830,6 +830,9 @@ namespace Voron.Data.Containers
             txState.FreeListRemovals.Add(pageNum);
             txState.Additions.Remove(pageNum);
             txState.Removals.Add(pageNum);
+
+            if (txState.LastFreePageByPageLevelMetadata.TryGetValue(rootContainer.Header.PageLevelMetadata, out var page) && page == pageNum)
+                txState.LastFreePageByPageLevelMetadata.Remove(rootContainer.Header.PageLevelMetadata);
         }
         
         private bool HasEnoughSpaceFor(int reqSize)
