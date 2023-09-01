@@ -19,6 +19,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 import { todo } from "common/developmentHelper";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 todo("Feature", "Damian", "Get limit from license selector");
 
@@ -26,7 +28,8 @@ export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
     const asyncGetConfig = useAsync(manageServerService.getServerWideCustomAnalyzers, []);
 
-    const limit = 5; // TODO get from license selector
+    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const communityLimit = 5; // TODO get from license selector
 
     return (
         <div className="content-margin">
@@ -37,12 +40,18 @@ export default function ServerWideCustomAnalyzers() {
                         <Button
                             color="primary"
                             className="mb-3"
-                            disabled={asyncGetConfig.status !== "success" || asyncGetConfig.result?.length === limit}
+                            disabled={
+                                asyncGetConfig.status !== "success" ||
+                                (isCommunity && asyncGetConfig.result?.length === communityLimit)
+                            }
                         >
                             <Icon icon="plus" />
                             Add a server-wide custom analyzer
                         </Button>
-                        <HrHeader count={asyncGetConfig.result?.length ?? null} limit={limit}>
+                        <HrHeader
+                            count={asyncGetConfig.result?.length ?? null}
+                            limit={isCommunity ? communityLimit : null}
+                        >
                             Server-wide custom analyzers
                         </HrHeader>
                         <AnalyzersList
@@ -62,7 +71,7 @@ export default function ServerWideCustomAnalyzers() {
                             >
                                 TODO
                             </AccordionItemWrapper>
-                            {asyncGetConfig.result?.length === limit && (
+                            {isCommunity && asyncGetConfig.result?.length === communityLimit && (
                                 <AccordionCommunityLicenseLimited
                                     targetId="licensing"
                                     featureName="Custom Analyzers"
