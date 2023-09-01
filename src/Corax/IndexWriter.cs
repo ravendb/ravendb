@@ -1930,6 +1930,8 @@ namespace Corax
             private NativeList<TermInEntryModification> _entriesForTerm;
             private NativeIntegersList _pagesToPrefetch;
             private TextualFieldBuffers _buffers;
+            private int _offsetAdjustment;
+            private long _curPage;
 
             public TextualFieldInserter(IndexWriter writer, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
             {
@@ -1982,8 +1984,8 @@ namespace Corax
                     {
                         var treeChanged = _fieldTree.CheckTreeStructureChanges();
 
-                        int offsetAdjustment = 0;
-                        int read = _fieldTree.BulkUpdateStart(keys, postListIds, pageOffsets, out long curPage);
+                        _offsetAdjustment = 0;
+                        int read = _fieldTree.BulkUpdateStart(keys, postListIds, pageOffsets, out _curPage);
 
                         PrefetchContainerPages(ref _pagesToPrefetch, postListIds[..read]);
 
@@ -1991,83 +1993,7 @@ namespace Corax
                         for (; idx < read; idx++)
                         {
                             ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[idx]);
-                            UpdateEntriesForTerm(ref _entriesForTerm, in entries);
-                            if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
-                            {
-                                _writer.SetRange(_writer._additionsForTerm, entries.Additions);
-                                _writer.SetRange(_writer._removalsForTerm, entries.Removals);
-                            }
-
-                            bool isNullTerm = ReferenceEquals(keys[idx].Key, CompactKey.NullInstance);
-                            long existingIdInTree = isNullTerm ? keys[idx].ContainerId : postListIds[idx];
-                            bool found = existingIdInTree != -1;
-                            Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
-
-                            if (entries.HasChanges)
-                            {
-                                long termId;
-                                if (entries.Additions.Count > 0 && found == false)
-                                {
-                                    if (entries.Removals.Count != 0)
-                                        throw new InvalidOperationException(
-                                            $"Attempt to remove entries from new term: '{sortedTerms[idx]}' for field {_indexedField.Name}! This is a bug.");
-
-                                    _writer.AddNewTerm(ref entries, _tmpBuf, out termId);
-                                    totalLengthOfTerm += entries.TermSize;
-
-                                    _dumper.WriteAddition(sortedTerms[idx], termId);
-                                    _fieldTree.BulkUpdateSet(ref keys[idx], termId, curPage, pageOffsets[idx], ref offsetAdjustment);
-                                }
-                                else
-                                {
-                                    var entriesToTermResult = _writer.AddEntriesToTerm(_tmpBuf, existingIdInTree, isNullTerm, ref entries, out termId);
-                                    switch (entriesToTermResult)
-                                    {
-                                        case AddEntriesToTermResult.UpdateTermId:
-                                            if (termId != existingIdInTree)
-                                            {
-                                                _dumper.WriteRemoval(sortedTerms[idx], existingIdInTree);
-                                            }
-
-                                            _dumper.WriteAddition(sortedTerms[idx], termId);
-                                            _fieldTree.BulkUpdateSet(ref keys[idx], termId, curPage, pageOffsets[idx], ref offsetAdjustment);
-                                            break;
-                                        case AddEntriesToTermResult.RemoveTermId:
-                                            if (isNullTerm == false &&
-                                                _fieldTree.BulkUpdateRemove(ref keys[idx], curPage, pageOffsets[idx], ref offsetAdjustment, out long oldValue) == false)
-                                            {
-                                                _dumper.WriteRemoval(sortedTerms[idx], termId);
-                                                ThrowTriedToDeleteTermThatDoesNotExists(sortedTerms[idx]);
-                                            }
-
-                                            totalLengthOfTerm -= entries.TermSize;
-                                            _dumper.WriteRemoval(sortedTerms[idx], oldValue);
-                                            _writer._numberOfTermModifications--;
-                                            break;
-                                        case AddEntriesToTermResult.NothingToDo:
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
-                                    }
-
-                                }
-                            }
-
-                            if (isNullTerm)
-                            {
-                                keys[idx].Key = null; // ensure we won't be using the NullInstance again
-                            }
-
-                            long termContainerId = isNullTerm
-                                ? _fieldTree.RootPage * Voron.Global.Constants.Storage.PageSize
-                                : keys[idx].ContainerId;
-                            RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
-
-                            if (_indexedField.Spatial == null)
-                            {
-                                Debug.Assert(termContainerId > 0);
-                                _writer.InsertEntriesForTerm(termContainerId);
-                            }
+                            totalLengthOfTerm += ProcessSingleEntry(ref entries, ref keys[idx], sortedTerms[idx], postListIds[idx], pageOffsets[idx]);
 
                             processed++;
                             // if the tree structure changed, the bulk insert details are wrong
@@ -2090,6 +2016,90 @@ namespace Corax
                 _writer.InsertEntriesForTermBulk(_entriesToTermsTree, _indexedField.Name);
 
                 _writer._indexMetadata.Increment(_indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
+            }
+
+            private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key, Slice term, long postListId, int pageOffset)
+            {
+                UpdateEntriesForTerm(ref _entriesForTerm, in entries);
+                if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
+                {
+                    _writer.SetRange(_writer._additionsForTerm, entries.Additions);
+                    _writer.SetRange(_writer._removalsForTerm, entries.Removals);
+                }
+
+                bool isNullTerm = ReferenceEquals(key.Key, CompactKey.NullInstance);
+                long existingIdInTree = isNullTerm ? key.ContainerId : postListId;
+                bool found = existingIdInTree != -1;
+                Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
+
+                int totalLengthOfTerm = 0;
+                if (entries.HasChanges)
+                {
+                    long termId;
+                    if (entries.Additions.Count > 0 && found == false)
+                    {
+                        if (entries.Removals.Count != 0)
+                            throw new InvalidOperationException(
+                                $"Attempt to remove entries from new term: '{term}' for field {_indexedField.Name}! This is a bug.");
+
+                        _writer.AddNewTerm(ref entries, _tmpBuf, out termId);
+                        totalLengthOfTerm = entries.TermSize;
+
+                        _dumper.WriteAddition(term, termId);
+                        _fieldTree.BulkUpdateSet(ref key, termId, _curPage, pageOffset, ref _offsetAdjustment);
+                    }
+                    else
+                    {
+                        var entriesToTermResult = _writer.AddEntriesToTerm(_tmpBuf, existingIdInTree, isNullTerm, ref entries, out termId);
+                        switch (entriesToTermResult)
+                        {
+                            case AddEntriesToTermResult.UpdateTermId:
+                                if (termId != existingIdInTree)
+                                {
+                                    _dumper.WriteRemoval(term, existingIdInTree);
+                                }
+
+                                _dumper.WriteAddition(term, termId);
+                                _fieldTree.BulkUpdateSet(ref key, termId, _curPage, pageOffset, ref _offsetAdjustment);
+                                break;
+                            case AddEntriesToTermResult.RemoveTermId:
+                                if (isNullTerm == false &&
+                                    _fieldTree.BulkUpdateRemove(ref key, _curPage, pageOffset, ref _offsetAdjustment, out long oldValue) == false)
+                                {
+                                    _dumper.WriteRemoval(term, termId);
+                                    ThrowTriedToDeleteTermThatDoesNotExists(term);
+                                }
+
+                                totalLengthOfTerm = -entries.TermSize;
+                                _dumper.WriteRemoval(term, oldValue);
+                                _writer._numberOfTermModifications--;
+                                break;
+                            case AddEntriesToTermResult.NothingToDo:
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
+                        }
+                    }
+                }
+
+                if (isNullTerm)
+                {
+                    key.Key = null; // ensure we won't be using the NullInstance again
+                }
+
+                long termContainerId = isNullTerm
+                    ? _fieldTree.RootPage * Voron.Global.Constants.Storage.PageSize
+                    : key.ContainerId;
+                
+                RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
+
+                if (_indexedField.Spatial == null)
+                {
+                    Debug.Assert(termContainerId > 0);
+                    _writer.InsertEntriesForTerm(termContainerId);
+                }
+
+                return totalLengthOfTerm;
             }
 
 
