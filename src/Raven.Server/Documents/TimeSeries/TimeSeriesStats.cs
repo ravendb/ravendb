@@ -81,17 +81,6 @@ namespace Raven.Server.Documents.TimeSeries
             return tx.OpenTable(TimeSeriesStatsSchema, tableName);
         }
 
-        public void UpdateCountOfExistingStats(DocumentsOperationContext context, string docId, string name, CollectionName collection, long count)
-        {
-            if (count == 0)
-                return;
-
-            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
-            {
-                UpdateCountOfExistingStats(context, slicer, collection, count);
-            }
-        }
-
         public void UpdateCountOfExistingStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, long count)
         {
             if (count == 0)

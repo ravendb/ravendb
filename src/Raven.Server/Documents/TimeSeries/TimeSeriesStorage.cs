@@ -1247,32 +1247,6 @@ namespace Raven.Server.Documents.TimeSeries
                 timeSeriesValuesSegment = newValueSegment;
             }
 
-            private void DiscardsAllEntriesAtSameTimestampToSingleDeadEntry(ref TimeSeriesValuesSegment timeSeriesSegment, Span<byte> currentTag, Span<double> values)
-            {
-                using (_context.Allocator.Allocate(timeSeriesSegment.NumberOfBytes, out var currentSegmentBuffer))
-                {
-                    Memory.Copy(currentSegmentBuffer.Ptr, timeSeriesSegment.Ptr, timeSeriesSegment.NumberOfBytes);
-                    var readOnlySegment = new TimeSeriesValuesSegment(currentSegmentBuffer.Ptr, timeSeriesSegment.NumberOfBytes);
-                    Debug.Assert(timeSeriesSegment.Capacity == MaxSegmentSize);
-                    var newSegment = new TimeSeriesValuesSegment(timeSeriesSegment.Ptr, timeSeriesSegment.Capacity);
-                    newSegment.Initialize(timeSeriesSegment.NumberOfValues);
-
-                    foreach (var segmentValue in readOnlySegment.YieldAllValues(_context, BaselineDate, includeDead: false))
-                    {
-                        Span<double> valuesSpan = segmentValue.Values.Span;
-                        for (int i = 0; i < segmentValue.Values.Length; i++)
-                        {
-                            values[i] += valuesSpan[i];
-                        }
-                    }
-
-                    RaiseAlertOnMaxCapacityForSingleSegmentReached(values);
-
-                    newSegment.Append(_context.Allocator, 0, values, currentTag, TimeSeriesValuesSegment.Dead);
-                    AppendExistingSegment(newSegment);
-                }
-            }
-
             public void Dispose()
             {
                 SliceHolder.Dispose();
