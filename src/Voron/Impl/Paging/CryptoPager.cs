@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Platform;
+using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
 
@@ -329,8 +330,7 @@ namespace Voron.Impl.Paging
 
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int numberOfPages)
         {
-            var ptr = _encryptionBuffersPool.Get(numberOfPages, out var size, out var thread);
-
+            var ptr = _encryptionBuffersPool.Get(this,numberOfPages, out var size, out var thread);
             var buffer = new EncryptionBuffer(_encryptionBuffersPool)
             {
                 Size = size,
@@ -442,12 +442,12 @@ namespace Voron.Impl.Paging
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {
                 // First page of a separated section, returned with its original size.
-                _encryptionBuffersPool.Return(buffer.Pointer, (long)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
+                _encryptionBuffersPool.Return(this, buffer.Pointer, (long)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
             }
             else
             {
                 // Normal buffers
-                _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
+                _encryptionBuffersPool.Return(this, buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
             }
         }
 

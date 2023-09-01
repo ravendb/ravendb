@@ -6,6 +6,7 @@ using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -195,7 +196,7 @@ namespace FastTests.Voron
         {
             var encryptionBuffersPool = new EncryptionBuffersPool(registerLowMemory: false, registerCleanup: false);
 
-            var ptr = encryptionBuffersPool.Get(1, out var initialSize, out var threadStats);
+            var ptr = encryptionBuffersPool.Get(null, 1, out var initialSize, out var threadStats);
 
             var size = initialSize;
             var free4KbAlignedMemoryCount = 0;
