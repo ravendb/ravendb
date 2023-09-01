@@ -7,6 +7,8 @@ import database = require("models/resources/database");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
 import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 import deleteServerWideCustomAnalyzerCommand = require("commands/serverWide/analyzers/deleteServerWideCustomAnalyzerCommand");
+import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
+import deleteServerWideCustomSorterCommand = require("commands/serverWide/sorters/deleteServerWideCustomSorterCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -35,5 +37,13 @@ export default class ManageServerService {
 
     async deleteServerWideCustomAnalyzer(name: string) {
         return new deleteServerWideCustomAnalyzerCommand(name).execute();
+    }
+
+    async getServerWideCustomSorters() {
+        return new getServerWideCustomSortersCommand().execute();
+    }
+
+    async deleteServerWideCustomSorter(name: string) {
+        return new deleteServerWideCustomSorterCommand(name).execute();
     }
 }

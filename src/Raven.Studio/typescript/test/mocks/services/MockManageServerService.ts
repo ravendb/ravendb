@@ -3,6 +3,7 @@ import { AutoMockService, MockedValue } from "./AutoMockService";
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
+import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 
 export default class MockManageServerService extends AutoMockService<ManageServerService> {
     constructor() {
@@ -39,5 +40,17 @@ export default class MockManageServerService extends AutoMockService<ManageServe
 
     withThrowingGetServerWideCustomAnalyzers() {
         this.mocks.getServerWideCustomAnalyzers.mockRejectedValue(new Error());
+    }
+
+    withGetServerWideCustomSorters(dto?: MockedValue<SorterDefinition[]>) {
+        return this.mockResolvedValue(
+            this.mocks.getServerWideCustomSorters,
+            dto,
+            ManageServerStubs.getServerWideCustomSorters()
+        );
+    }
+
+    withThrowingGetServerWideCustomSorters() {
+        this.mocks.getServerWideCustomSorters.mockRejectedValue(new Error());
     }
 }
