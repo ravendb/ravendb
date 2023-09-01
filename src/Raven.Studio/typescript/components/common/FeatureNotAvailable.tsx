@@ -1,9 +1,12 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import { Badge } from "reactstrap";
 import { EmptySet } from "./EmptySet";
-import { Icon } from "./Icon";
 
-export default function FeatureNotAvailable() {
+interface FeatureNotAvailableProps {
+    children: ReactNode | ReactNode[];
+}
+
+export default function FeatureNotAvailable({ children }: FeatureNotAvailableProps) {
     return (
         <div>
             <EmptySet icon="disabled" color="warning">
@@ -13,10 +16,7 @@ export default function FeatureNotAvailable() {
                             Feature not available
                         </Badge>
                     </span>
-                    <span>
-                        Import documents from a CSV file into a collection is not available for{" "}
-                        <Icon icon="sharding" color="shard" margin="m-0" /> sharded databases
-                    </span>
+                    {children}
                 </div>
             </EmptySet>
         </div>

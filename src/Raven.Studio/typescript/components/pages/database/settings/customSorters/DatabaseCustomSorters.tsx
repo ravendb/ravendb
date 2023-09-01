@@ -25,6 +25,7 @@ import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ServerWideCustomSortersList from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSortersList";
 import { NonShardedViewProps } from "components/models/common";
+import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 todo("Limits", "Damian", "Get limit from license selector");
@@ -47,6 +48,17 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const isAddDisabled =
         asyncGetDatabaseSorters.status !== "success" ||
         (isCommunity && databaseResultsCount === communityDatabaseLimit);
+
+    if (db.isSharded()) {
+        return (
+            <FeatureNotAvailable>
+                <span>
+                    Custom sorters are not available for <Icon icon="sharding" color="shard" margin="m-0" /> sharded
+                    databases
+                </span>
+            </FeatureNotAvailable>
+        );
+    }
 
     return (
         <div className="content-margin">
