@@ -22,7 +22,6 @@ public partial class IndexSearcher
     ///  Test API, should not be used anywhere else
     /// </summary>
     public TermMatch TermQuery(string field, string term, bool hasBoost = false) => TermQuery(FieldMetadataBuilder(field, hasBoost: hasBoost), term);
-    public TermMatch TermQuery(string field, Slice term, bool hasBoost = false) => TermQuery(FieldMetadataBuilder(field, hasBoost: hasBoost), term);
     public TermMatch TermQuery(Slice field, Slice term, bool hasBoost = false) => TermQuery(FieldMetadata.Build(field, default, default, default, default, hasBoost: hasBoost), term);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

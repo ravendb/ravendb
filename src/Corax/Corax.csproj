@@ -37,6 +37,10 @@
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Exceptions\" />
+  </ItemGroup>
+
 
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">

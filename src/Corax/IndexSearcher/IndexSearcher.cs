@@ -51,8 +51,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     internal Transaction Transaction => _transaction;
 
-    public IndexFieldsMapping FieldMapping => _fieldMapping;
-
     private readonly bool _ownsTransaction;
     private readonly bool _ownsIndexMapping;
 
@@ -323,26 +321,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
         return mode;
-    }
-
-    public FieldMetadata GetWriterFieldMetadata(string fieldName)
-    {
-        var handler = Slice.From(Allocator, fieldName, ByteStringType.Immutable, out var fieldNameSlice);
-        if (_fieldMapping.TryGetByFieldName(fieldNameSlice, out var binding))
-        {
-            handler.Dispose();
-            return binding.Metadata;
-        }
-
-        var mode = GetFieldIndexingModeForDynamic(fieldNameSlice);
-
-        return FieldMetadata.Build(fieldNameSlice, binding.FieldTermTotalSumField, Constants.IndexWriter.DynamicField, mode, mode switch
-        {
-            FieldIndexingMode.Search => _fieldMapping.SearchAnalyzer(fieldName),
-            FieldIndexingMode.Exact => _fieldMapping.ExactAnalyzer(fieldName),
-            FieldIndexingMode.Normal => _fieldMapping.DefaultAnalyzer,
-            _ => null,
-        });
     }
 
     public FieldMetadata GetFieldMetadata(string fieldName, FieldIndexingMode mode = FieldIndexingMode.Normal)
