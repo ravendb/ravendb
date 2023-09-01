@@ -465,20 +465,6 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected in argument to be value, but was: " + val, query.QueryText, parameters);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static QueryFieldName ExtractIndexFieldNameForOrderBy(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
-    {
-        if (field is MethodExpression me)
-        {
-            if (me.Name.Value is "score")
-                return new QueryFieldName("score()", false);
-
-            return new QueryFieldName("score()", false);
-        }
-
-        return ExtractIndexFieldName(query, parameters, field, metadata);
-    }
-
     internal static QueryFieldName ExtractIndexFieldName(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
     {
         if (field is FieldExpression fe)
@@ -582,11 +568,6 @@ public static class QueryBuilderHelper
 
         return metadata;
         void ThrowNotFoundInIndex() => throw new InvalidQueryException($"Field {fieldName} not found in Index '{index.Name}'.");
-    }
-
-    internal static QueryFieldName ExtractIndexFieldName(ValueExpression field, QueryMetadata metadata, BlittableJsonReaderObject parameters)
-    {
-        return metadata.GetIndexFieldName(new QueryFieldName(field.Token.Value, field.Value == ValueTokenType.String), parameters);
     }
 
     internal static bool IsExact(Index index, bool exact, QueryFieldName fieldName)

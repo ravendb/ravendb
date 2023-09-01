@@ -354,28 +354,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             set => _maxNumTokensParsed = value;
         }
 
-        /// <summary> Describe the parameters that control how the "more like this" query is formed.</summary>
-        public string DescribeParams()
-        {
-            var sb = new StringBuilder();
-            sb.Append("\t" + "maxQueryTerms  : " + _maxQueryTerms + "\n");
-            sb.Append("\t" + "minWordLen     : " + _minWordLen + "\n");
-            sb.Append("\t" + "maxWordLen     : " + _maxWordLen + "\n");
-            sb.Append("\t" + "fieldNames     : \"");
-            var delim = "";
-            for (var i = 0; i < _fieldNames.Length; i++)
-            {
-                var fieldName = _fieldNames[i];
-                sb.Append(delim).Append(fieldName);
-                delim = ", ";
-            }
-            sb.Append("\n");
-            sb.Append("\t" + "boost          : " + _boost + "\n");
-            sb.Append("\t" + "minTermFreq    : " + _minTermFreq + "\n");
-            sb.Append("\t" + "minDocFreq     : " + _minDocFreq + "\n");
-            return sb.ToString();
-        }
-
         /// <summary>determines if the passed term is likely to be of interest in "more like" comparisons 
         /// 
         /// </summary>

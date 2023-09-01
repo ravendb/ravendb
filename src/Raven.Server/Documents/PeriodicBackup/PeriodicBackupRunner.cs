@@ -45,7 +45,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly ConcurrentDictionary<long, PeriodicBackup> _periodicBackups
             = new ConcurrentDictionary<long, PeriodicBackup>();
 
-        private static readonly Dictionary<string, long> EmptyDictionary = new Dictionary<string, long>();
         private readonly ConcurrentSet<Task> _inactiveRunningPeriodicBackupsTasks = new ConcurrentSet<Task>();
 
         private bool _disposed;
@@ -915,19 +914,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_tempBackupPath != null)
                     IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
             }
-        }
-
-        public bool HasRunningBackups()
-        {
-            foreach (var periodicBackup in _periodicBackups)
-            {
-                var runningTask = periodicBackup.Value.RunningTask;
-                if (runningTask != null &&
-                    runningTask.Task.IsCompleted == false)
-                    return true;
-            }
-
-            return false;
         }
 
         public BackupInfo GetBackupInfo()

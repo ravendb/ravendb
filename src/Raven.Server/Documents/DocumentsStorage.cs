@@ -358,20 +358,6 @@ namespace Raven.Server.Documents
             _documentsMetadataCache = obj.ImmutableExternalState as DocumentTransactionCache;
         }
 
-        public void AssertFixedSizeTrees(Transaction tx)
-        {
-            // here we validate the table fixed size indexes
-            tx.OpenTable(DocsSchema, DocsSlice).AssertValidFixedSizeTrees();
-            tx.OpenTable(DocsSchema, LastReplicatedEtagsSlice).AssertValidFixedSizeTrees();
-            tx.OpenTable(DocsSchema, GlobalTreeSlice).AssertValidFixedSizeTrees();
-        }
-
-        private static void AssertTransaction(DocumentsOperationContext context)
-        {
-            if (context.Transaction == null) //precaution
-                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
-        }
-
         public static ChangeVector GetDatabaseChangeVector(DocumentsOperationContext context)
         {
             return context.GetChangeVector(GetDatabaseChangeVector(context.Transaction.InnerTransaction));
@@ -401,15 +387,6 @@ namespace Raven.Server.Documents
                 return false;
 
             return true;
-        }
-
-        public ChangeVector CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
-        {
-            var cv = context.GetChangeVector(changeVector);
-            var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-            context.SkipChangeVectorValidation = databaseChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out databaseChangeVector);
-            cv = ChangeVector.Merge(databaseChangeVector, cv, context);
-            return context.GetChangeVector(ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, cv).ChangeVector);
         }
 
         public (ChangeVector ChangeVector, long Etag) GetNewChangeVector(DocumentsOperationContext context)
@@ -1200,23 +1177,6 @@ namespace Raven.Server.Documents
         public Tombstone GetTombstoneAtOrBefore(DocumentsOperationContext context, long etag)
         {
             return GetTombstonesInReverseEtagOrderFrom(context, etag, 0, 2).FirstOrDefault(t => t.Etag <= etag);
-        }
-
-        public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, List<string> collections, long etag, long take)
-        {
-            foreach (var collection in collections)
-            {
-                if (take <= 0)
-                    yield break;
-
-                foreach (var tombstone in GetTombstonesFrom(context, collection, etag, 0, long.MaxValue))
-                {
-                    if (take-- <= 0)
-                        yield break;
-
-                    yield return tombstone;
-                }
-            }
         }
 
         public IEnumerable<ReplicationBatchItem> GetTombstonesFrom(DocumentsOperationContext context, long etag, bool revisionTombstonesWithId = true)

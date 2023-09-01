@@ -319,16 +319,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public long? GetLastReplicatedEtagForDestination(ReplicationNode dest)
-        {
-            foreach (var replicationHandler in _outgoing)
-            {
-                if (replicationHandler.Node.IsEqualTo(dest))
-                    return replicationHandler._lastSentDocumentEtag;
-            }
-            return null;
-        }
-
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
             TcpConnectionHeaderMessage header,
             X509Certificate2 certificate,
@@ -1847,18 +1837,6 @@ namespace Raven.Server.Documents.Replication
             result = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             _waitForReplicationTasks.Enqueue(result);
             return result.Task;
-        }
-
-        private int ReplicatedPast(string changeVector)
-        {
-            var count = 0;
-            foreach (var destination in _outgoing)
-            {
-                var conflictStatus = ChangeVectorUtils.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
-                if (conflictStatus == ConflictStatus.AlreadyMerged)
-                    count++;
-            }
-            return count;
         }
 
         private int ReplicatedPastInternalDestinations(DocumentsOperationContext context, HashSet<string> internalUrls, ChangeVector changeVector)

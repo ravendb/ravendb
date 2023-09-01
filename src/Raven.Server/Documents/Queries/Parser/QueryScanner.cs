@@ -44,16 +44,6 @@ namespace Raven.Server.Documents.Queries.Parser
             return _pos == _q.Length;
         }
 
-        public bool NextPathSegment()
-        {
-            if (SkipWhitespace() == false)
-                return false;
-            for (; _pos < _q.Length; _pos++)
-                if (char.IsLetter(_q[_pos]))
-                    break;
-            return true;
-        }
-
         public bool SkipUntil(char match)
         {
             
@@ -323,9 +313,6 @@ namespace Raven.Server.Documents.Queries.Parser
             nextToken = new StringSegment(_q, tokenOffset, tokenLength);
             return true;
         }
-
-        public bool TryPeekNextToken(Func<char, bool> predicate, out StringSegment nextToken) => 
-            TryPeekNextToken(predicate, new StringSegment(_q, _pos, 0), out nextToken);
 
         public bool TryScan(string[] matches, out string found)
         {

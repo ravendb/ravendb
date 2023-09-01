@@ -318,8 +318,6 @@ namespace Raven.Server.Documents
 
         public bool Is32Bits { get; }
 
-        public long LastDatabaseRecordChangeIndex => _databaseStateChange.LastIndexChange;
-
         private long _lastValueChangeIndex;
 
         public long LastValueChangeIndex
@@ -1591,19 +1589,6 @@ namespace Raven.Server.Documents
             {
                 Interlocked.Exchange(ref DocumentsStorage.UnusedDatabaseIds, record.UnusedDatabaseIds);
             }
-        }
-
-        private bool CanSkipDatabaseRecordChange(string database, long index)
-        {
-            if (LastDatabaseRecordChangeIndex > index)
-            {
-                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordChangeIndex}) for {database} because it was already precessed.");
-                return true;
-            }
-
-            return false;
         }
 
         private bool CanSkipValueChange(string database, long index)

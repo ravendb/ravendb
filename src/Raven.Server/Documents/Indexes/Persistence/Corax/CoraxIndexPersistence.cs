@@ -174,9 +174,6 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
         // lucene method
     }
 
-    private const int IndexingCompressionMaxTestDocuments = 10000;
-
-
     public override void Initialize(StorageEnvironment environment)
     {
     }

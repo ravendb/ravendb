@@ -700,13 +700,6 @@ namespace Raven.Server.Documents
             return tree.StreamExist(base64Hash);
         }
 
-        public bool AttachmentMetadataExists(DocumentsOperationContext context, Slice keySlice)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-
-            return table.SeekOnePrimaryKeyPrefix(keySlice, out _);
-        }
-
         private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector,
             string hash = null, string contentType = null, bool usePartialKey = true)
         {

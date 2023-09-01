@@ -24,33 +24,7 @@ namespace Raven.Server.Documents.Replication
             Etag,
             Whitespace
         }
-         
-        public static long GetEtagByNode(string changeVector, string nodeTag)
-        {
-            int nodeStart = 0;
-            while (nodeStart + nodeTag.Length < changeVector.Length ) 
-            {
-                var endNode = changeVector.IndexOf(':', nodeStart);
-                if (string.Compare(nodeTag, 0, changeVector, nodeStart, endNode - nodeStart) == 0)
-                {
-                    long etagVal = 0;
-                    var endEtag = changeVector.IndexOf('-', endNode + 1);
-                    for (int i = endNode+1; i < endEtag; i++)
-                    {
-                        etagVal *= 10;
-                        etagVal += changeVector[i] - '0';
-                    }
-                    return etagVal;
-                }
-                nodeStart = changeVector.IndexOf(' ', endNode);
-                if (nodeStart == -1)
-                    break;
-                nodeStart++;
-            }
 
-            return 0;
-        }
-       
 
         public static int ParseNodeTag(this string nodeTag)
         {

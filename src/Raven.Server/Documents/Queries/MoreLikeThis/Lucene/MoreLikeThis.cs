@@ -150,12 +150,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis.Lucene
             _state = state;
         }
 
-        public Similarity Similarity
-        {
-            get => _similarity;
-            set => _similarity = value;
-        }
-
         /// <summary> Gets or sets the analyzer used to parse source doc with. The default analyzer
         /// is the <see cref="DEFAULT_ANALYZER"/>.
         /// <para />
@@ -462,23 +456,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis.Lucene
                 AddTermFrequencies(r, words, fieldName);
             }
             return CreateQueue(words);
-        }
-
-        public string[] RetrieveInterestingTerms(int docNum)
-        {
-            var al = new List<object>(_maxQueryTerms);
-            var pq = RetrieveTerms(docNum);
-            object cur;
-            var lim = _maxQueryTerms; // have to be careful, retrieveTerms returns all words but that's probably not useful to our caller...
-            // we just want to return the top words
-            while ((cur = pq.Pop()) != null && lim-- > 0)
-            {
-                var ar = (object[])cur;
-                al.Add(ar[0]); // the 1st entry is the interesting word
-            }
-            //System.String[] res = new System.String[al.Count];
-            //return al.toArray(res);
-            return al.Select(x => x.ToString()).ToArray();
         }
 
         /// <summary> Convenience routine to make it easy to return the most interesting words in a document.

@@ -55,12 +55,6 @@ namespace Raven.Server.Documents
             ConflictsCount = conflictsTable.NumberOfEntries;
         }
 
-        public void AssertFixedSizeTrees(Transaction tx)
-        {
-            var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
-            conflictsTable.AssertValidFixedSizeTrees();
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ByteStringContext.InternalScope GetConflictsIdPrefix(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
         {
@@ -248,16 +242,6 @@ namespace Raven.Server.Documents
                     return true;
             }
             return false;
-        }
-
-        public (IReadOnlyList<string> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
-            DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
-        {
-            if (ConflictsCount == 0)
-                return (null, NonPersistentDocumentFlags.None);
-
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
-                return DeleteConflictsFor(context, lowerId, document);
         }
 
         public (List<string> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
@@ -658,30 +642,6 @@ namespace Raven.Server.Documents
                     ExpectedChangeVector = expectedChangeVector
                 };
             }
-        }
-
-        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context, ChangeVector changeVector,
-            IReadOnlyList<DocumentConflict> conflicts, out long etag)
-        {
-            var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts, out string mergedChangeVector);
-            var latestConflict = conflicts[indexOfLargestEtag];
-            var collectionName = new CollectionName(latestConflict.Collection);
-
-            using (DocumentIdWorker.GetSliceFromId(context, latestConflict.Id, out Slice lowerId))
-            {
-                //note that CreateTombstone is also deleting conflicts
-                etag = _documentsStorage.CreateTombstone(context,
-                    lowerId,
-                    latestConflict.Etag,
-                    collectionName,
-                    mergedChangeVector,
-                    latestConflict.LastModified.Ticks,
-                    changeVector,
-                    latestConflict.Flags,
-                    NonPersistentDocumentFlags.None).Etag;
-            }
-
-            return collectionName;
         }
 
         private static int FindIndexOfLargestEtagAndMergeChangeVectors(IReadOnlyList<DocumentConflict> conflicts, out string mergedChangeVectorEntries)

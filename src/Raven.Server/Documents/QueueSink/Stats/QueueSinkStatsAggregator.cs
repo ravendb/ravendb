@@ -57,11 +57,6 @@ public class QueueSinkStatsAggregator : StatsAggregator<QueueSinkRunStats, Queue
         return CreatePerformanceStats(completed: false);
     }
 
-    public QueueSinkPerformanceStats ToPerformanceLiveStats()
-    {
-        throw new System.NotImplementedException();
-    }
-
     private QueueSinkPerformanceStats CreatePerformanceStats(bool completed)
     {
         return new QueueSinkPerformanceStats(Scope.Duration)
