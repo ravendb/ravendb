@@ -10,6 +10,7 @@ import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.Ex
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
+import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -375,6 +376,10 @@ export class DatabasesStubs {
             PurgeOnDelete: false,
             MaximumRevisionsToDeleteUponDocumentUpdate: 100,
         };
+    }
+
+    static customAnalyzers(): AnalyzerDefinition[] {
+        return [{ Code: "database-analyzer-code-1", Name: "First Database analyzer" }];
     }
 
     static customSorters(): SorterDefinition[] {

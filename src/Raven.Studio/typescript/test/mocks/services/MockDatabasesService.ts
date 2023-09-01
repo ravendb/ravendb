@@ -8,6 +8,7 @@ import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshC
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
+import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 
 interface WithGetDatabasesStateOptions {
     loadError?: string[];
@@ -88,6 +89,10 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             dto,
             DatabasesStubs.revisionsForConflictsConfiguration()
         );
+    }
+
+    withCustomAnalyzers(dto?: MockedValue<AnalyzerDefinition[]>) {
+        return this.mockResolvedValue(this.mocks.getCustomAnalyzers, dto, DatabasesStubs.customAnalyzers());
     }
 
     withCustomSorters(dto?: MockedValue<SorterDefinition[]>) {

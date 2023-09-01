@@ -12,6 +12,9 @@ import { CounterBadge } from "components/common/CounterBadge";
 import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
 import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
+import { todo } from "common/developmentHelper";
+
+todo("Limits", "Damian", "Get limit from license selector");
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();

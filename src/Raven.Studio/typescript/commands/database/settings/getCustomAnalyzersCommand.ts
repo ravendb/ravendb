@@ -4,8 +4,13 @@ import endpoints = require("endpoints");
 
 class getCustomAnalyzersCommand extends commandBase {
 
-    constructor(private db: database, private getNamesOnly: boolean = false) {
+    private readonly db: database;
+    private readonly getNamesOnly: boolean;
+
+    constructor(db: database, getNamesOnly = false) {
         super();
+        this.db = db;
+        this.getNamesOnly = getNamesOnly;
     }
 
     execute(): JQueryPromise<Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>> {

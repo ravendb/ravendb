@@ -22,7 +22,7 @@ export class ManageServerStubs {
         };
     }
 
-    static getServerWideCustomAnalyzers(): AnalyzerDefinition[] {
+    static serverWideCustomAnalyzers(): AnalyzerDefinition[] {
         return [
             { Code: "server-analyzer-code-1", Name: "First Server analyzer" },
             { Code: "server-analyzer-code-2", Name: "Second Server analyzer" },

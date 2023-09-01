@@ -3,9 +3,13 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class deleteCustomAnalyzerCommand extends commandBase {
+    private readonly db: database;
+    private readonly name: string;
 
-    constructor(private db: database, private name: string) {
+    constructor(db: database, name: string) {
         super();
+        this.db = db;
+        this.name = name;
     }
 
     execute(): JQueryPromise<void> {

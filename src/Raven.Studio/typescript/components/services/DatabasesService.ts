@@ -40,6 +40,8 @@ import saveRevisionsForConflictsConfigurationCommand = require("commands/databas
 import enforceRevisionsConfigurationCommand = require("commands/database/settings/enforceRevisionsConfigurationCommand");
 import getCustomSortersCommand = require("commands/database/settings/getCustomSortersCommand");
 import deleteCustomSorterCommand = require("commands/database/settings/deleteCustomSorterCommand");
+import deleteCustomAnalyzerCommand = require("commands/database/settings/deleteCustomAnalyzerCommand");
+import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -151,6 +153,14 @@ export default class DatabasesService {
 
     async enforceRevisionsConfiguration(db: database) {
         return new enforceRevisionsConfigurationCommand(db).execute();
+    }
+
+    async getCustomAnalyzers(db: database, getNamesOnly = false) {
+        return new getCustomAnalyzersCommand(db, getNamesOnly).execute();
+    }
+
+    async deleteCustomAnalyzer(db: database, name: string) {
+        return new deleteCustomAnalyzerCommand(db, name).execute();
     }
 
     async getCustomSorters(db: database) {
