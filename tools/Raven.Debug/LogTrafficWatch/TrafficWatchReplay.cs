@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -288,25 +289,29 @@ namespace Raven.Debug.LogTrafficWatch
 
             private static void OutputLogToConsole(HttpResponseMessage response, byte[] responseBuffer, TrafficWatchHttpChange item)
             {
-                Console.WriteLine("Failed to execute request");
+                StringBuilder sb = new ();
                 
-                Console.WriteLine($"Http method: {item.HttpMethod}");
+                sb.AppendLine("Failed to execute request");
                 
-                Console.WriteLine($"Request Uri: {item.RequestUri}");
+                sb.AppendLine($"Http method: {item.HttpMethod}");
                 
-                Console.WriteLine($"Absolute Uri: {item.AbsoluteUri}");
+                sb.AppendLine($"Request Uri: {item.RequestUri}");
+                
+                sb.AppendLine($"Absolute Uri: {item.AbsoluteUri}");
                         
-                Console.WriteLine($"Custom info: {item.CustomInfo}");
+                sb.AppendLine($"Custom info: {item.CustomInfo}");
                         
-                Console.WriteLine($"Status code: {(int)response.StatusCode}");
+                sb.AppendLine($"Status code: {(int)response.StatusCode}");
                 
-                Console.WriteLine($"Request size in bytes: {item.RequestSizeInBytes}");
+                sb.AppendLine($"Request size in bytes: {item.RequestSizeInBytes}");
                 
-                Console.WriteLine($"Response size in bytes: {item.ResponseSizeInBytes}");
+                sb.AppendLine($"Response size in bytes: {item.ResponseSizeInBytes}");
                 
-                Console.WriteLine($"Request Id: {item.RequestId}");
+                sb.AppendLine($"Request Id: {item.RequestId}");
                     
-                Console.WriteLine(System.Text.Encoding.Default.GetString(responseBuffer));
+                sb.AppendLine(Encoding.Default.GetString(responseBuffer));
+                
+                Console.WriteLine(sb);
             }
         }
 
