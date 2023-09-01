@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -860,7 +859,7 @@ namespace Corax
                 var maxLen = Encoding.UTF8.GetMaxByteCount(entry.Geohash.Length);
                 using var _ = _parent._entriesAllocator.Allocate(maxLen, out var buffer);
                 var len = Encoding.UTF8.GetBytes(entry.Geohash, buffer.ToSpan());
-                for (int i = 1; i <= entry.Geohash.Length; ++i)
+                for (int i = 1; i <= len; ++i)
                 {
                     ExactInsert(field, buffer.ToReadOnlySpan()[..i]);
                 }
@@ -1403,7 +1402,7 @@ namespace Corax
         }
 
 
-        public unsafe Dictionary<long, string> GetIndexedFieldNamesByRootPage()
+        public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
         {
             var pageToField = new Dictionary<long, string>();
             var it = _fieldsTree.Iterate(prefetch: false);
@@ -1423,7 +1422,7 @@ namespace Corax
         }
 
 
-        private unsafe Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree, out NativeList<long> rootPages)
+        private Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree, out NativeList<long> rootPages)
         {
             var pageToField = new Dictionary<long, IndexedField>();
             rootPages = new NativeList<long>();
@@ -1590,7 +1589,7 @@ namespace Corax
                     for (int i = 0; i < read; i++)
                     {
                         long entryId = buffer[i];
-                        Debug.Assert(entryId > 0);
+                        Debug.Assert(entryId>0);
                         _deletedEntries.Add(entryId);
                     }
                     _numberOfModifications -= read;
@@ -1618,7 +1617,7 @@ namespace Corax
                     for (int i = 0; i < read; i++)
                     {
                         long entryId = output[i];
-                        Debug.Assert(entryId > 0);
+                        Debug.Assert(entryId>0);
                         _deletedEntries.Add(entryId);
                     }
                     _numberOfModifications -= read;
@@ -1628,7 +1627,7 @@ namespace Corax
             }
 
             singleEntryId = containerId;
-            Debug.Assert(containerId > 0);
+            Debug.Assert(containerId>0);
             _deletedEntries.Add(containerId);
             _numberOfModifications--;
             return true;
@@ -1680,7 +1679,11 @@ namespace Corax
                     continue;
 
                 using (staticFieldScope.For(CommitOperation.TextualValues))
-                    InsertTextualField(entriesToTermsTree, indexedField, workingBuffer);
+                {
+                    var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
+                    inserter.InsertTextualField();
+                    inserter.Dispose();
+                }
                 
                 using (staticFieldScope.For(CommitOperation.IntegerValues))
                     InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
@@ -1704,8 +1707,11 @@ namespace Corax
                     using var dynamicFieldScope = stats.For(indexedField.NameForStatistics);
 
                     using (dynamicFieldScope.For(CommitOperation.TextualValues))
-                        InsertTextualField(entriesToTermsTree, indexedField, workingBuffer);
-
+                    {
+                        var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
+                        inserter.InsertTextualField();
+                        inserter.Dispose();
+                    }
                     using (dynamicFieldScope.For(CommitOperation.IntegerValues))
                         InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
                     
@@ -1763,7 +1769,7 @@ namespace Corax
             _boostedDocs.Sort();
             foreach (var (entryId, documentBoost) in _boostedDocs)
             {
-                using var __ = _documentBoost.DirectAdd(entryId, out var isNew, out byte* boostPtr);
+                using var __ = _documentBoost.DirectAdd(entryId, out _, out byte* boostPtr);
                 float* floatBoostPtr = (float*)boostPtr;
                 *floatBoostPtr = documentBoost;
             }
@@ -1835,38 +1841,38 @@ namespace Corax
             private readonly IndexWriter _parent;
             public const int BatchSize = 1024;
 
-            public Slice[] SortedTerms;
-            public int[] TermIndexes;
+            private Slice[] _sortedTerms;
+            private int[] _termIndexes;
             
             public CompactTree.CompactKeyLookup[] Keys;
             public int[] PageOffsets;
             public long[] PostListIds;
-            public int[] EntriesOffsets;
+            private int[] _entriesOffsets;
 
             public void PrepareTerms(IndexedField field, out Span<Slice> terms, out Span<int> indexes)
             {
                 int termsCount = field.Textual.Count;
-                if (SortedTerms == null || SortedTerms.Length < termsCount)
+                if (_sortedTerms == null || _sortedTerms.Length < termsCount)
                 {
-                    if (SortedTerms != null)
+                    if (_sortedTerms != null)
                     {
-                        ArrayPool<Slice>.Shared.Return(SortedTerms);
-                        ArrayPool<int>.Shared.Return(TermIndexes);
+                        ArrayPool<Slice>.Shared.Return(_sortedTerms);
+                        ArrayPool<int>.Shared.Return(_termIndexes);
                     }
-                    SortedTerms = ArrayPool<Slice>.Shared.Rent(termsCount);
-                    TermIndexes = ArrayPool<int>.Shared.Rent(termsCount);
+                    _sortedTerms = ArrayPool<Slice>.Shared.Rent(termsCount);
+                    _termIndexes = ArrayPool<int>.Shared.Rent(termsCount);
                 }
 
                 int idx = 0;
                 foreach (var (k,v) in field.Textual)
                 {
-                    SortedTerms[idx] = k;
-                    TermIndexes[idx] = v;
+                    _sortedTerms[idx] = k;
+                    _termIndexes[idx] = v;
                     idx++;
                 }
 
-                terms = new Span<Slice>(SortedTerms, 0, termsCount);
-                indexes = new Span<int>(TermIndexes, 0, termsCount);
+                terms = new Span<Slice>(_sortedTerms, 0, termsCount);
+                indexes = new Span<int>(_termIndexes, 0, termsCount);
 
                 terms.Sort(indexes, SliceComparer.Instance);
             }
@@ -1877,17 +1883,17 @@ namespace Corax
                 Keys = ArrayPool<CompactTree.CompactKeyLookup>.Shared.Rent(BatchSize);
                 PageOffsets = ArrayPool<int>.Shared.Rent(BatchSize);
                 PostListIds = ArrayPool<long>.Shared.Rent(BatchSize);
-                EntriesOffsets = ArrayPool<int>.Shared.Rent(BatchSize);
+                _entriesOffsets = ArrayPool<int>.Shared.Rent(BatchSize);
             }
 
             public void Dispose()
             {
                 if (PostListIds != null) ArrayPool<long>.Shared.Return(PostListIds);
                 if (PageOffsets != null) ArrayPool<int>.Shared.Return(PageOffsets);
-                if (EntriesOffsets != null) ArrayPool<int>.Shared.Return(EntriesOffsets);
+                if (_entriesOffsets != null) ArrayPool<int>.Shared.Return(_entriesOffsets);
 
-                if (SortedTerms != null) ArrayPool<Slice>.Shared.Return(SortedTerms);
-                if (TermIndexes != null) ArrayPool<int>.Shared.Return(TermIndexes);
+                if (_sortedTerms != null) ArrayPool<Slice>.Shared.Return(_sortedTerms);
+                if (_termIndexes != null) ArrayPool<int>.Shared.Return(_termIndexes);
                 
                 if (Keys != null)
                 {
@@ -1905,261 +1911,344 @@ namespace Corax
 
                 PostListIds = null;
                 PageOffsets = null;
-                EntriesOffsets = null;
+                _entriesOffsets = null;
                 Keys = null;
             }
         }
 
         private TextualFieldBuffers _textualFieldBuffers;
 
-        private void PrepareTextualFieldBatch(TextualFieldBuffers buffers,
-            IndexedField indexedField, 
-            CompactTree fieldTree,
-            Span<Slice> sortedTerms,
-            Span<int> termsIndexes,
-            out Span<CompactTree.CompactKeyLookup> keys,
-            out Span<long> postListIds,
-            out Span<int> pageOffsets)
-        {
-            var max = Math.Min(TextualFieldBuffers.BatchSize, sortedTerms.Length);
-            var llt = _transaction.LowLevelTransaction;
-            for (int i = 0; i < max; i++)
-            {
-                var term = sortedTerms[i];
-                
-                bool isNullTerm = term.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan());
 
-                if (isNullTerm)
-                {
-                    buffers.Keys[i].ContainerId = GetOrCreateNullTermPostingList();
-                    llt.ReleaseCompactKey(ref buffers.Keys[i].Key);
-                    buffers.Keys[i].Key = CompactKey.NullInstance;
-                }
-                else
-                {
-                    var key = buffers.Keys[i].Key ??= llt.AcquireCompactKey();
-                    buffers.Keys[i].ContainerId = -1;
-                    key.Set(term.AsSpan());
-                    key.ChangeDictionary(fieldTree.DictionaryId);
-                    key.EncodedWithCurrent(out _);
-                }
-                
-                ref var entries = ref indexedField.Storage.GetAsRef(termsIndexes[i]);
-                entries.Prepare(_entriesAllocator);
+        private ref struct TextualFieldInserter
+        {
+            private readonly IndexWriter _writer;
+            private readonly Tree _entriesToTermsTree;
+            private readonly IndexedField _indexedField;
+            private readonly Span<byte> _tmpBuf;
+            private CompactTree _fieldTree;
+            private IndexTermDumper _dumper;
+            private NativeList<TermInEntryModification> _entriesForTerm;
+            private NativeIntegersList _pagesToPrefetch;
+            private TextualFieldBuffers _buffers;
+
+            public TextualFieldInserter(IndexWriter writer, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+            {
+                _writer = writer;
+                _entriesToTermsTree = entriesToTermsTree;
+                _indexedField = indexedField;
+                _tmpBuf = tmpBuf;
+                _fieldTree = writer._fieldsTree.CompactTreeFor(_indexedField.Name);
+                _dumper = new IndexTermDumper(writer._fieldsTree, _indexedField.Name);
+                _writer.ClearEntriesForTerm();
+                _fieldTree.InitializeStateForTryGetNextValue();
+                _entriesForTerm = new NativeList<TermInEntryModification>();
+                _entriesForTerm.Initialize(_writer._entriesAllocator);
+                _pagesToPrefetch = new NativeIntegersList(_writer._entriesAllocator);
+                _buffers = _writer._textualFieldBuffers ??= new TextualFieldBuffers(_writer);
             }
 
-            keys = new Span<CompactTree.CompactKeyLookup>(buffers.Keys, 0, max);
-            postListIds = new Span<long>(buffers.PostListIds, 0, max);
-            pageOffsets = new Span<int>(buffers.PageOffsets, 0, max);
-            
-            
-            long GetOrCreateNullTermPostingList()
+            public void Dispose()
             {
-                // In the case where the field does not have any null values, we will create a *large* posting list (an empty one)
-                // then we'll insert data to it as if it was any other term
-                var postingList = _nullEntriesPostingLists.ReadInt64(indexedField.Name);
-
-                if (postingList != null) 
-                    return postingList.Value;
-                
-                long setId = Container.Allocate(_transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
-
-                // we need to account for the size of the posting lists, once a term has been switch to a posting list
-                // it will always be in this model, so we don't need to do any cleanup
-                _largePostingListSet ??= _transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
-                _largePostingListSet.Add(setId);
-
-                ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
-                PostingList.Create(_transaction.LowLevelTransaction, ref postingListState);
-                postingList = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
-                _nullEntriesPostingLists.Add(indexedField.Name, postingList.Value);
-
-                return postingList.Value;
+                _dumper.Dispose();
+                _entriesForTerm.Dispose(_writer._entriesAllocator);
+                _pagesToPrefetch.Dispose();
             }
-        }
-        
-        private void InsertTextualField(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
-        {
-            var fieldTree = _fieldsTree.CompactTreeFor(indexedField.Name);
-            
-            ClearEntriesForTerm();
-            using var dumper = new IndexTermDumper(_fieldsTree, indexedField.Name);
 
-            fieldTree.InitializeStateForTryGetNextValue();
-            long totalLengthOfTerm = 0;
-
-            using var compactKeyCacheScope = new CompactKeyCacheScope(_transaction.LowLevelTransaction);
-
-            var entriesForTerm = new NativeList<TermInEntryModification>();
-            entriesForTerm.Initialize(_entriesAllocator);
-
-            var pagesToPrefetch = new NativeIntegersList(_entriesAllocator);
-            
-            var buffers = _textualFieldBuffers ??= new TextualFieldBuffers(this);
-            buffers.PrepareTerms(indexedField, out var sortedTerms, out var termsOffsets);
-            var processed = 0;
-            while (true)
+            public void InsertTextualField()
             {
-                sortedTerms = sortedTerms[processed..];
-                termsOffsets = termsOffsets[processed..];
-                processed = 0;
-
-                if (sortedTerms.IsEmpty)
-                    break;
-
-                PrepareTextualFieldBatch(buffers, 
-                    indexedField, 
-                    fieldTree,
-                    sortedTerms, 
-                    termsOffsets,
-                    out var keys,
-                    out var postListIds,
-                    out var pageOffsets);
-                
-                var entriesOffsets = termsOffsets; // a copy that we trim internally in the loop belows
-                while (keys.IsEmpty == false) 
+                long totalLengthOfTerm = 0;
+                _buffers.PrepareTerms(_indexedField, out var sortedTerms, out var termsOffsets);
+                var processed = 0;
+                while (true)
                 {
-                    var treeChanged = fieldTree.CheckTreeStructureChanges();
-                    
-                    int offsetAdjustment = 0;
-                    int read = fieldTree.BulkUpdateStart(keys, postListIds, pageOffsets, out long curPage);
+                    sortedTerms = sortedTerms[processed..];
+                    termsOffsets = termsOffsets[processed..];
+                    processed = 0;
 
-                    PrefetchContainerPages(ref pagesToPrefetch, postListIds[..read]);
+                    if (sortedTerms.IsEmpty)
+                        break;
 
-                    int idx = 0;
-                    for (; idx < read; idx++)
+                    PrepareTextualFieldBatch(_buffers,
+                        _indexedField,
+                        _fieldTree,
+                        sortedTerms,
+                        termsOffsets,
+                        out var keys,
+                        out var postListIds,
+                        out var pageOffsets);
+
+                    var entriesOffsets = termsOffsets; // a copy that we trim internally in the loop belows
+                    while (keys.IsEmpty == false)
                     {
-                        ref var entries = ref indexedField.Storage.GetAsRef(entriesOffsets[idx]);
-                        UpdateEntriesForTerm(ref entriesForTerm, in entries);
-                        if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
-                        {
-                            SetRange(_additionsForTerm, entries.Additions);
-                            SetRange(_removalsForTerm, entries.Removals);
-                        }
+                        var treeChanged = _fieldTree.CheckTreeStructureChanges();
 
-                        bool isNullTerm = ReferenceEquals(keys[idx].Key, CompactKey.NullInstance);
-                        long existingIdInTree = isNullTerm ? keys[idx].ContainerId : postListIds[idx]; 
-                        bool found = existingIdInTree != -1;
-                        Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
+                        int offsetAdjustment = 0;
+                        int read = _fieldTree.BulkUpdateStart(keys, postListIds, pageOffsets, out long curPage);
 
-                        if (entries.HasChanges)
+                        PrefetchContainerPages(ref _pagesToPrefetch, postListIds[..read]);
+
+                        int idx = 0;
+                        for (; idx < read; idx++)
                         {
-                            long termId;
-                            if (entries.Additions.Count > 0 && found == false)
+                            ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[idx]);
+                            UpdateEntriesForTerm(ref _entriesForTerm, in entries);
+                            if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
                             {
-                                if (entries.Removals.Count != 0)
-                                    throw new InvalidOperationException(
-                                        $"Attempt to remove entries from new term: '{sortedTerms[idx]}' for field {indexedField.Name}! This is a bug.");
-
-                                AddNewTerm(ref entries, tmpBuf, out termId);
-                                totalLengthOfTerm += entries.TermSize;
-
-                                dumper.WriteAddition(sortedTerms[idx], termId);
-                                fieldTree.BulkUpdateSet(ref keys[idx], termId, curPage, pageOffsets[idx], ref offsetAdjustment);
+                                _writer.SetRange(_writer._additionsForTerm, entries.Additions);
+                                _writer.SetRange(_writer._removalsForTerm, entries.Removals);
                             }
-                            else
+
+                            bool isNullTerm = ReferenceEquals(keys[idx].Key, CompactKey.NullInstance);
+                            long existingIdInTree = isNullTerm ? keys[idx].ContainerId : postListIds[idx];
+                            bool found = existingIdInTree != -1;
+                            Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
+
+                            if (entries.HasChanges)
                             {
-                                var entriesToTermResult = AddEntriesToTerm(tmpBuf, existingIdInTree, isNullTerm, ref entries, out termId);
-                                switch (entriesToTermResult)
+                                long termId;
+                                if (entries.Additions.Count > 0 && found == false)
                                 {
-                                    case AddEntriesToTermResult.UpdateTermId:
-                                        if (termId != existingIdInTree)
-                                        {
-                                            dumper.WriteRemoval(sortedTerms[idx], existingIdInTree);
-                                        }
+                                    if (entries.Removals.Count != 0)
+                                        throw new InvalidOperationException(
+                                            $"Attempt to remove entries from new term: '{sortedTerms[idx]}' for field {_indexedField.Name}! This is a bug.");
 
-                                        dumper.WriteAddition(sortedTerms[idx], termId);
-                                        fieldTree.BulkUpdateSet(ref keys[idx], termId, curPage, pageOffsets[idx], ref offsetAdjustment);
-                                        break;
-                                    case AddEntriesToTermResult.RemoveTermId:
-                                        if (isNullTerm == false &&
-                                            fieldTree.BulkUpdateRemove(ref keys[idx], curPage, pageOffsets[idx], ref offsetAdjustment, out long oldValue) == false)
-                                        {
-                                            dumper.WriteRemoval(sortedTerms[idx], termId);
-                                            ThrowTriedToDeleteTermThatDoesNotExists(sortedTerms[idx]);
-                                        }
+                                    _writer.AddNewTerm(ref entries, _tmpBuf, out termId);
+                                    totalLengthOfTerm += entries.TermSize;
 
-                                        totalLengthOfTerm -= entries.TermSize;
-                                        dumper.WriteRemoval(sortedTerms[idx], oldValue);
-                                        _numberOfTermModifications--;
-                                        break;
-                                    case AddEntriesToTermResult.NothingToDo:
-                                        break;
-                                    default:
-                                        throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
+                                    _dumper.WriteAddition(sortedTerms[idx], termId);
+                                    _fieldTree.BulkUpdateSet(ref keys[idx], termId, curPage, pageOffsets[idx], ref offsetAdjustment);
                                 }
-
-                                void ThrowTriedToDeleteTermThatDoesNotExists(Slice term)
+                                else
                                 {
-                                    throw new InvalidOperationException(
-                                        $"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
+                                    var entriesToTermResult = _writer.AddEntriesToTerm(_tmpBuf, existingIdInTree, isNullTerm, ref entries, out termId);
+                                    switch (entriesToTermResult)
+                                    {
+                                        case AddEntriesToTermResult.UpdateTermId:
+                                            if (termId != existingIdInTree)
+                                            {
+                                                _dumper.WriteRemoval(sortedTerms[idx], existingIdInTree);
+                                            }
+
+                                            _dumper.WriteAddition(sortedTerms[idx], termId);
+                                            _fieldTree.BulkUpdateSet(ref keys[idx], termId, curPage, pageOffsets[idx], ref offsetAdjustment);
+                                            break;
+                                        case AddEntriesToTermResult.RemoveTermId:
+                                            if (isNullTerm == false &&
+                                                _fieldTree.BulkUpdateRemove(ref keys[idx], curPage, pageOffsets[idx], ref offsetAdjustment, out long oldValue) == false)
+                                            {
+                                                _dumper.WriteRemoval(sortedTerms[idx], termId);
+                                                ThrowTriedToDeleteTermThatDoesNotExists(sortedTerms[idx]);
+                                            }
+
+                                            totalLengthOfTerm -= entries.TermSize;
+                                            _dumper.WriteRemoval(sortedTerms[idx], oldValue);
+                                            _writer._numberOfTermModifications--;
+                                            break;
+                                        case AddEntriesToTermResult.NothingToDo:
+                                            break;
+                                        default:
+                                            throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
+                                    }
+
                                 }
+                            }
+
+                            if (isNullTerm)
+                            {
+                                keys[idx].Key = null; // ensure we won't be using the NullInstance again
+                            }
+
+                            long termContainerId = isNullTerm
+                                ? _fieldTree.RootPage * Voron.Global.Constants.Storage.PageSize
+                                : keys[idx].ContainerId;
+                            RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
+
+                            if (_indexedField.Spatial == null)
+                            {
+                                Debug.Assert(termContainerId > 0);
+                                _writer.InsertEntriesForTerm(termContainerId);
+                            }
+
+                            processed++;
+                            // if the tree structure changed, the bulk insert details are wrong
+                            // and will need to restart the operation with a new BulkUpdateStart
+                            if (treeChanged.Changed)
+                            {
+                                // next time, we start from the _next_ key, not the current one
+                                idx++;
+                                break;
                             }
                         }
 
-                        if (isNullTerm)
-                        {
-                            keys[idx].Key = null; // ensure we won't be using the NullInstance again
-                        }
-                        
-                        long termContainerId = isNullTerm
-                            ? fieldTree.RootPage * Voron.Global.Constants.Storage.PageSize
-                            : keys[idx].ContainerId;
-                        RecordTermsForEntries(entriesForTerm, entries, termContainerId);
+                        keys = keys[idx..];
+                        postListIds = postListIds[idx..];
+                        pageOffsets = pageOffsets[idx..];
+                        entriesOffsets = entriesOffsets[idx..];
+                    }
+                }
+
+                _writer.InsertEntriesForTermBulk(_entriesToTermsTree, _indexedField.Name);
+
+                _writer._indexMetadata.Increment(_indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
+            }
+
+
+            private void ThrowTriedToDeleteTermThatDoesNotExists(Slice term)
+            {
+                throw new InvalidOperationException(
+                    $"Attempt to remove term: '{term}' for field {_indexedField.Name}, but it does not exists! This is a bug.");
+            }
+            
+            private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
+            {
+                var entriesForTermCount = entriesForTerm.Count;
+                var rawItems = entriesForTerm.RawItems;
+            
+                for (int i = 0; i < entriesForTermCount; i++)
+                {
+                    var entry = rawItems[i];
                 
-                        if (indexedField.Spatial == null)
-                        {
-                            Debug.Assert(termContainerId > 0);
-                            InsertEntriesForTerm(termContainerId);
-                        }
+                    ref var recordedTermList = ref _writer.GetEntryTerms(entry.TermsPerEntryIndex);
 
-                        processed++;
-                        // if the tree structure changed, the bulk insert details are wrong
-                        // and will need to restart the operation with a new BulkUpdateStart
-                        if (treeChanged.Changed)
+                    if ( recordedTermList.HasCapacityFor(1) == false)
+                        recordedTermList.Grow(_writer._entriesAllocator, 1);
+
+                    ref var recordedTerm = ref recordedTermList.AddByRefUnsafe();
+
+                    Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
+                
+                    long recordedTermContainerId = entry.Frequency switch
+                    {
+                        > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
+                               EntryIdEncodings.FrequencyQuantization(entry.Frequency) << 3 |
+                               0b100, // marker indicating that we have a term frequency here
+                        _ => termContainerId
+                    };
+                
+                    if (entries.Long != null)
+                    {
+                        recordedTermContainerId |= 1; // marker!
+                        recordedTerm.Long = entries.Long.Value;
+
+                        // only if the double value can not be computed by casting from long, we store it 
+                        if (entries.Double != null && Math.Abs(entries.Double.Value - recordedTerm.Long) > double.Epsilon)
                         {
-                            // next time, we start from the _next_ key, not the current one
-                            idx++;
-                            break;
+                            recordedTermContainerId |= 2; // marker!
+                            recordedTerm.Double = entries.Double.Value;
                         }
                     }
 
-                    keys = keys[idx..];
-                    postListIds = postListIds[idx..];
-                    pageOffsets = pageOffsets[idx..];
-                    entriesOffsets = entriesOffsets[idx..];
+                    recordedTerm.TermContainerId = recordedTermContainerId;
                 }
             }
-            
-            InsertEntriesForTermBulk(entriesToTermsTree, indexedField.Name);
 
-            entriesForTerm.Dispose(_entriesAllocator);
-            pagesToPrefetch.Dispose();
 
-            _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
-        }
-
-        private void PrefetchContainerPages(ref NativeIntegersList pagesToPrefetch, Span<long> postListIds)
-        {
-            pagesToPrefetch.Clear();
-            pagesToPrefetch.EnsureCapacity(postListIds.Length);
-
-            foreach (var cur in postListIds)
+            private void UpdateEntriesForTerm(ref NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries)
             {
-                if (cur == -1)
-                    continue;
-                if ((cur & (long)TermIdMask.EnsureIsSingleMask) == 0) 
-                    continue;
-                
-                long containerId = EntryIdEncodings.GetContainerId(cur);
-                pagesToPrefetch.Add(containerId / Voron.Global.Constants.Storage.PageSize);
+                entriesForTerm.ResetAndEnsureCapacity(_writer._entriesAllocator, entries.Additions.Count + entries.Updates.Count);
+                entriesForTerm.AddRangeUnsafe(entries.Additions.RawItems, entries.Additions.Count);
+                entriesForTerm.AddRangeUnsafe(entries.Updates.RawItems, entries.Updates.Count);
             }
 
-            pagesToPrefetch.SortAndRemoveDuplicates();
+            private void PrepareTextualFieldBatch(TextualFieldBuffers buffers,
+                IndexedField indexedField,
+                CompactTree fieldTree,
+                Span<Slice> sortedTerms,
+                Span<int> termsIndexes,
+                out Span<CompactTree.CompactKeyLookup> keys,
+                out Span<long> postListIds,
+                out Span<int> pageOffsets)
+            {
+                var max = Math.Min(TextualFieldBuffers.BatchSize, sortedTerms.Length);
+                var llt = _writer._transaction.LowLevelTransaction;
+                for (int i = 0; i < max; i++)
+                {
+                    var term = sortedTerms[i];
+
+                    bool isNullTerm = term.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan());
+
+                    if (isNullTerm)
+                    {
+                        buffers.Keys[i].ContainerId = GetOrCreateNullTermPostingList();
+                        llt.ReleaseCompactKey(ref buffers.Keys[i].Key);
+                        buffers.Keys[i].Key = CompactKey.NullInstance;
+                    }
+                    else
+                    {
+                        var key = buffers.Keys[i].Key ??= llt.AcquireCompactKey();
+                        buffers.Keys[i].ContainerId = -1;
+                        key.Set(term.AsSpan());
+                        key.ChangeDictionary(fieldTree.DictionaryId);
+                        key.EncodedWithCurrent(out _);
+                    }
+
+                    ref var entries = ref indexedField.Storage.GetAsRef(termsIndexes[i]);
+                    entries.Prepare(_writer._entriesAllocator);
+                }
+
+                keys = new Span<CompactTree.CompactKeyLookup>(buffers.Keys, 0, max);
+                postListIds = new Span<long>(buffers.PostListIds, 0, max);
+                pageOffsets = new Span<int>(buffers.PageOffsets, 0, max);
+
+
+            }
+
+            private long GetOrCreateNullTermPostingList()
+            {
+                // In the case where the field does not have any null values, we will create a *large* posting list (an empty one)
+                // then we'll insert data to it as if it was any other term
+                var postingList = _writer._nullEntriesPostingLists.ReadInt64(_indexedField.Name);
+
+                if (postingList != null)
+                    return postingList.Value;
+
+                long setId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._postingListContainerId, sizeof(PostingListState), out var setSpace);
+
+                // we need to account for the size of the posting lists, once a term has been switch to a posting list
+                // it will always be in this model, so we don't need to do any cleanup
+                _writer._largePostingListSet ??= _writer._transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
+                _writer._largePostingListSet.Add(setId);
+
+                ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
+                PostingList.Create(_writer._transaction.LowLevelTransaction, ref postingListState);
+                postingList = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
+                _writer._nullEntriesPostingLists.Add(_indexedField.Name, postingList.Value);
+
+                return postingList.Value;
+            }
             
-            _transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch.GetEnumerator());
+            
+
+            private void PrefetchContainerPages(ref NativeIntegersList pagesToPrefetch, Span<long> postListIds)
+            {
+                pagesToPrefetch.Clear();
+                pagesToPrefetch.EnsureCapacity(postListIds.Length);
+
+                foreach (var cur in postListIds)
+                {
+                    if (cur == -1)
+                        continue;
+                    if ((cur & (long)TermIdMask.EnsureIsSingleMask) == 0) 
+                        continue;
+                
+                    long containerId = EntryIdEncodings.GetContainerId(cur);
+                    pagesToPrefetch.Add(containerId / Voron.Global.Constants.Storage.PageSize);
+                }
+
+                pagesToPrefetch.SortAndRemoveDuplicates();
+            
+                _writer._transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch.GetEnumerator());
+            }
+
         }
         
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ref NativeList<RecordedTerm> GetEntryTerms(int termsPerEntry)
+        {
+            return ref _termsPerEntryId.ToSpan()[termsPerEntry];
+        }
+
         private void ClearEntriesForTerm()
         {
             _entriesAlreadyAdded.Clear();
@@ -2196,61 +2285,7 @@ namespace Corax
             }
         }
 
-        private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
-        {
-            var entriesForTermCount = entriesForTerm.Count;
-            var rawItems = entriesForTerm.RawItems;
-            
-            for (int i = 0; i < entriesForTermCount; i++)
-            {
-                var entry = rawItems[i];
-                
-                ref var recordedTermList = ref GetEntryTerms(entry.TermsPerEntryIndex);
-
-                if ( recordedTermList.HasCapacityFor(1) == false)
-                    recordedTermList.Grow(_entriesAllocator, 1);
-
-                ref var recordedTerm = ref recordedTermList.AddByRefUnsafe();
-
-                Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
-                
-                long recordedTermContainerId = entry.Frequency switch
-                {
-                    > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
-                           EntryIdEncodings.FrequencyQuantization(entry.Frequency) << 3 |
-                           0b100, // marker indicating that we have a term frequency here
-                    _ => termContainerId
-                };
-                
-                if (entries.Long != null)
-                {
-                    recordedTermContainerId |= 1; // marker!
-                    recordedTerm.Long = entries.Long.Value;
-
-                    // only if the double value can not be computed by casting from long, we store it 
-                    if (entries.Double != null && entries.Double.Value != recordedTerm.Long)
-                    {
-                        recordedTermContainerId |= 2; // marker!
-                        recordedTerm.Double = entries.Double.Value;
-                    }
-                }
-
-                recordedTerm.TermContainerId = recordedTermContainerId;
-            }
-        }
-
-        private void UpdateEntriesForTerm(ref NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries)
-        {
-            entriesForTerm.ResetAndEnsureCapacity(_entriesAllocator, entries.Additions.Count + entries.Updates.Count);
-            entriesForTerm.AddRangeUnsafe(entries.Additions.RawItems, entries.Additions.Count);
-            entriesForTerm.AddRangeUnsafe(entries.Updates.RawItems, entries.Updates.Count);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ref NativeList<RecordedTerm> GetEntryTerms(int termsPerEntry)
-        {
-            return ref _termsPerEntryId.ToSpan()[termsPerEntry];
-        }
+        
 
         private void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
         {
@@ -2363,6 +2398,10 @@ namespace Corax
         private long AllocatedSpaceForSmallSet(Span<byte> encoded, LowLevelTransaction llt, out Span<byte> space)
         {
             long termIdInTree = Container.Allocate(llt, _postingListContainerId, encoded.Length, out space);
+            if (termIdInTree == 4431904)
+            {
+                Console.WriteLine();
+            }
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
 
@@ -2550,7 +2589,7 @@ namespace Corax
             }
         }
 
-        private unsafe void InsertNumericFieldDoubles(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private void InsertNumericFieldDoubles(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             var fieldTree = _fieldsTree.LookupFor<DoubleLookupKey>(indexedField.NameDouble);
 
@@ -2645,7 +2684,7 @@ namespace Corax
         }
 
 
-        private unsafe void AddNewTermToSet(out long termId)
+        private void AddNewTermToSet(out long termId)
         {
             long setId = Container.Allocate(_transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
             
