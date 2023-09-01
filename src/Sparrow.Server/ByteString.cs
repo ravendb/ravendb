@@ -95,19 +95,6 @@ namespace Sparrow.Server
                 return Hashing.XXHash64.CalculateInline(Ptr, (ulong)Length);
         }
     }
-    
-    public struct ByteStringEqualityComparer : IEqualityComparer<ByteString>
-    {
-        public bool Equals(ByteString x, ByteString y)
-        {
-            return x.Match(y);
-        }
-
-        public int GetHashCode(ByteString obj)
-        {
-            return (int)Hashing.Mix(obj.GetContentHash());
-        }
-    }
 
     public unsafe struct ByteString : IEquatable<ByteString>
     {

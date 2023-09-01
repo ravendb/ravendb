@@ -8,7 +8,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
     {
         private LicenseLimitWarning()
         {
-            
+            // for deserialization
         }
 
         private LicenseLimitWarning(LicenseLimitException licenseLimit)

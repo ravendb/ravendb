@@ -1203,22 +1203,6 @@ namespace Raven.Server.ServerWide
                     get { return orig.Keys; }
                 }
 
-                public object Remove(
-                    string alias)
-                {
-                    string upper = alias.ToUpper(CultureInfo.InvariantCulture);
-                    string k = (string)keys[upper];
-
-                    if (k == null)
-                        return null;
-
-                    keys.Remove(upper);
-
-                    object o = orig[k];
-                    orig.Remove(k);
-                    return o;
-                }
-
                 public object this[
                     string alias]
                 {
@@ -1244,11 +1228,6 @@ namespace Raven.Server.ServerWide
                         keys[upper] = alias;
                         orig[alias] = value;
                     }
-                }
-
-                public ICollection Values
-                {
-                    get { return orig.Values; }
                 }
             }
 
@@ -1341,11 +1320,6 @@ namespace Raven.Server.ServerWide
                 internal CertId(AsymmetricKeyParameter pubKey)
                 {
                     _id = CreateSubjectKeyID(pubKey).GetKeyIdentifier();
-                }
-
-                internal CertId(byte[] id)
-                {
-                    _id = id;
                 }
 
                 internal byte[] Id
