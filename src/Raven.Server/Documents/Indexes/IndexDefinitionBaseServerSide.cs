@@ -418,25 +418,6 @@ namespace Raven.Server.Documents.Indexes
 
         protected abstract int ComputeRestOfHash(int hashCode);
 
-        public Stream ReadMetadataFile(StorageEnvironmentOptions options)
-        {
-            try
-            {
-                var metadata = File.ReadAllBytes(options.BasePath.Combine(MetadataFileName).FullPath);
-                var stream = new MemoryStream(metadata);
-
-                if (options.Encryption.IsEnabled)
-                {
-                    DecryptStream(options, stream);
-                }
-                return stream;
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Unable to read metadata file for index '{Name}' at {options.BasePath.Combine(MetadataFileName).FullPath}", e);
-            }
-        }
-
         protected static string ReadName(BlittableJsonReaderObject reader)
         {
             if (reader.TryGet(nameof(Name), out string name) == false || String.IsNullOrWhiteSpace(name))

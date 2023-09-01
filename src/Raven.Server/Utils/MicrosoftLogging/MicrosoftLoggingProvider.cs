@@ -12,8 +12,6 @@ namespace Raven.Server.Utils.MicrosoftLogging;
 [ProviderAlias("Sparrow")]
 public sealed class MicrosoftLoggingProvider : ILoggerProvider
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(MicrosoftLoggingProvider));
-
     public readonly LoggingSource LoggingSource;
     private readonly ConcurrentDictionary<string, SparrowLoggerWrapper> _loggers = new ConcurrentDictionary<string, SparrowLoggerWrapper>(StringComparer.Ordinal);
     private readonly MultipleUseFlag _enable = new MultipleUseFlag();

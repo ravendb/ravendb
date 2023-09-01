@@ -200,26 +200,6 @@ namespace Voron.Data.BTrees
 
         }
 
-
-        /// <summary>
-        /// This is using little endian
-        /// </summary>
-        public bool AddMax(Slice key, long value)
-        {
-            var read = Read(key);
-            if (read != null)
-            {
-                var currentValue = *(long*)read.Reader.Base;
-                if (currentValue >= value)
-                    return false;
-            }
-
-            using (DirectAdd(key, sizeof(long), out byte* ptr))
-                *(long*)ptr = value;
-
-            return true;
-        }
-
         public void Add(Slice key, byte value)
         {
             using (DirectAdd(key, sizeof(byte), out byte* ptr))
