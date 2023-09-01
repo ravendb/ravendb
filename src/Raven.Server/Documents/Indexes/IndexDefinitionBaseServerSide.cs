@@ -13,7 +13,6 @@ using Sparrow.Json;
 using Sparrow.Json.Sync;
 using Sparrow.Platform;
 using Sparrow.Server;
-using Sparrow.Server.Json.Sync;
 using Voron;
 using Voron.Impl;
 
@@ -419,15 +418,6 @@ namespace Raven.Server.Documents.Indexes
 
         protected abstract int ComputeRestOfHash(int hashCode);
 
-        public bool TryReadNameFromMetadataFile(TransactionOperationContext context, StorageEnvironmentOptions options, out string name)
-        {
-            var metadata = ReadMetadataFile(options);
-
-            var metadataJson = context.Sync.ReadForDisk(metadata, string.Empty);
-
-            return metadataJson.TryGet("Name", out name);
-        }
-
         public Stream ReadMetadataFile(StorageEnvironmentOptions options)
         {
             try
@@ -445,24 +435,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 throw new InvalidOperationException($"Unable to read metadata file for index '{Name}' at {options.BasePath.Combine(MetadataFileName).FullPath}", e);
             }
-        }
-
-        public static bool TryReadIdFromDirectory(DirectoryInfo directory, out int indexId, out string indexName)
-        {
-            var index = directory.Name.IndexOf('-');
-            var maybeId = index >= 0
-                ? directory.Name.Substring(0, index)
-                : directory.Name;
-
-            if (int.TryParse(maybeId, out indexId) == false)
-            {
-                indexId = -1;
-                indexName = null;
-                return false;
-            }
-
-            indexName = directory.Name.Substring(index + 1);
-            return true;
         }
 
         protected static string ReadName(BlittableJsonReaderObject reader)

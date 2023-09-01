@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
@@ -304,18 +303,5 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 value.Sum = sum;
             }
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private Slice GetFieldNameAsSlice(string fieldName)
-    {
-        // Slices will exists as long the transaction so we don't have to worry about memoryleak here.
-        if (_fieldNameCache.TryGetValue(fieldName, out var value) == false)
-        {
-            Slice.From(_allocator, fieldName, ByteStringType.Immutable, out value);
-            _fieldNameCache.Add(fieldName, value);
-        }
-
-        return value;
     }
 }

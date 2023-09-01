@@ -478,11 +478,6 @@ function execute(doc, args){
             }
         }
 
-        private void ThrowInvalidMethod(BlittableJsonReaderObject parameters, MethodExpression me)
-        {
-            throw new InvalidQueryException("Where clause cannot contain just an '" + me.Name + "' method", Query.QueryText, parameters);
-        }
-
         private void HandleQueryInclude(BlittableJsonReaderObject parameters)
         {
             List<string> includes = null;

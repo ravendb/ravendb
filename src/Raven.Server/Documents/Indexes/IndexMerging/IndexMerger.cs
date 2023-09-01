@@ -490,29 +490,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
             return SyntaxFactory.ConditionalExpression(condition, whenTrue, whenFalse);
         }
-        
-        internal static ExpressionSyntax StripExpressionParenthesis(ExpressionSyntax expr)
-        {
-            while (expr is ParenthesizedExpressionSyntax)
-            {
-                expr = ((ParenthesizedExpressionSyntax)expr).Expression;
-            }
 
-            return expr;
-        }
-
-        internal static SyntaxNode StripExpressionParentParenthesis(SyntaxNode expr)
-        {
-            if (expr == null)
-                return null;
-            while (expr.Parent is ParenthesizedExpressionSyntax)
-            {
-                expr = ((ParenthesizedExpressionSyntax)expr.Parent).Parent;
-            }
-
-            return expr.Parent;
-        }
-        
         private static BinaryExpressionSyntax RewriteBinaryExpression(IndexData indexData, BinaryExpressionSyntax original, out string message)
         {
             var leftSide = RewriteExpressionSyntax(indexData, original.Left, out var m1);

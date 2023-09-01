@@ -239,14 +239,6 @@ public struct CoraxBooleanItem : IQueryMatch
                $"Term: '{Term}'{Environment.NewLine}" +
                $"Operation: '{Operation}'{Environment.NewLine}";
     }
-    
-    public bool EqualsScoreFunctions(CoraxBooleanItem other)
-    {
-        if (Boosting is null && other.Boosting is null) return true;
-        if (Boosting is null || other.Boosting is null) return false;
-        
-        return Boosting.Value.AlmostEquals(other.Boosting.Value);
-    }
 
     public static bool CanBeMergedForAnd(CoraxBooleanItem lhsBq, CoraxBooleanItem rhsBq)
     {

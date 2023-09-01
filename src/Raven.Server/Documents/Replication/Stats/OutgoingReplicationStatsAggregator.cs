@@ -110,11 +110,6 @@ namespace Raven.Server.Documents.Replication.Stats
             _stats.ArtificialDocumentSkipCount++;
         }
 
-        public void RecordSystemDocumentSkip()
-        {
-            _stats.SystemDocumentSkipCount++;
-        }
-
         public void RecordChangeVectorSkip()
         {
             _stats.ChangeVectorSkipCount++;

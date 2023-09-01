@@ -37,7 +37,6 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         public bool ContainsDuplicates => (Number & Version.Duplicates) != 0;
-        public void SetDuplicates() => Number |= Version.Duplicates;
 
         public void SetLastValueDuplicate() => Number |= (Version.LastDuplicate | Version.Duplicates);
         public void ClearLastValueDuplicate() => Number &= ~Version.LastDuplicate;

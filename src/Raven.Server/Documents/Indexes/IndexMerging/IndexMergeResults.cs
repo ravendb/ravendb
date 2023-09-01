@@ -54,7 +54,6 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
     {
         public List<IndexData> ProposedForMerge = new List<IndexData>();
         public IndexData MergedData { get; set; }
-        public string IndexMergeSuggestion { get; set; }
     }
 
 }

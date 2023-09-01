@@ -7,17 +7,12 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
     internal sealed class RecursivePrefixTreeStrategyThatSupportsWithin : PrefixTreeStrategy
     {
-        private int _prefixGridScanLevel;
+        private readonly int _prefixGridScanLevel;
 
         public RecursivePrefixTreeStrategyThatSupportsWithin(SpatialPrefixTree grid, string fieldName)
             : base(grid, fieldName)
         {
             _prefixGridScanLevel = grid.GetMaxLevels() - 4;
-        }
-
-        public void SetPrefixGridScanLevel(int prefixGridScanLevel)
-        {
-            _prefixGridScanLevel = prefixGridScanLevel;
         }
 
         public override Filter MakeFilter(SpatialArgs args)

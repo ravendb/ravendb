@@ -22,8 +22,6 @@ namespace Raven.Server.Documents
 
         protected internal delegate void RefAction<T>(string databaseName, ref T configuration, JsonOperationContext context);
 
-        protected internal delegate Task<(long, object)> SetupFunc<in T>(TransactionOperationContext context, string databaseName, T json, string raftRequestId);
-
         public override void Init(RequestHandlerContext context)
         {
             Database = context.Database;

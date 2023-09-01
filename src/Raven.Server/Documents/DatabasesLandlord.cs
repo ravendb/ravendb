@@ -706,19 +706,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public ShardedDatabaseContext GetOrAddShardedDatabaseContext(StringSegment databaseName)
-        {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
-                if (databaseRecord == null)
-                    DatabaseDoesNotExistException.Throw(databaseName.ToString());
-
-                return GetOrAddShardedDatabaseContext(databaseName, databaseRecord);
-            }
-        }
-
         private ShardedDatabaseContext GetOrAddShardedDatabaseContext(StringSegment databaseName, RawDatabaseRecord databaseRecord)
         {
             if (databaseRecord.Sharding.Orchestrator.Topology.RelevantFor(_serverStore.NodeTag) == false)

@@ -211,15 +211,5 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             DisposeIndexWriter();
         }
-
-        public void AddIndexesNoOptimize(Directory[] directories, int count, IState state)
-        {
-            _indexWriter.AddIndexesNoOptimize(state, directories);
-        }
-
-        public int NumDocs(IState state)
-        {
-            return _indexWriter.NumDocs(state);
-        }
     }
 }

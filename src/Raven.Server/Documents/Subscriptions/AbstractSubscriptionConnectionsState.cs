@@ -112,21 +112,6 @@ public abstract class AbstractSubscriptionConnectionsState : IDisposable
         return rc;
     }
 
-    public static bool TryGetDocumentFromResend(ClusterOperationContext context, string database, long subscriptionId, string documentId, out string changeVector)
-    {
-        changeVector = null;
-        var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-        using (GetDatabaseAndSubscriptionAndDocumentKey(context, database, subscriptionId, documentId, out var key))
-        using (Slice.External(context.Allocator, key, out var keySlice))
-        {
-            if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
-                return false;
-
-            changeVector = reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
-            return true;
-        }
-    }
-
     public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndDocumentKey(ClusterOperationContext context, string database, long subscriptionId, string documentId, out ByteString key)
     {
         return GetSubscriptionStateKey(context, database, subscriptionId, documentId, SubscriptionType.Document, out key);

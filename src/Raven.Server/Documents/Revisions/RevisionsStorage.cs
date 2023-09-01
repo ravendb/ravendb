@@ -1187,12 +1187,6 @@ namespace Raven.Server.Documents.Revisions
             return numbers.Increment(prefixedLowerId, delta);
         }
 
-        private static void DeleteCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId)
-        {
-            var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            numbers.Delete(prefixedLowerId);
-        }
-
         public void Delete(DocumentsOperationContext context, string id, Slice lowerId, CollectionName collectionName, ChangeVector changeVector,
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
         {

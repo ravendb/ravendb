@@ -364,12 +364,6 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return (bytesUsed, charUsed);
                 }
                 
-                [DoesNotReturn]
-                private static void ThrowUnexpectedNumberOfCharacters(int offset, int charUsed, Span<byte> str)
-                {
-                    throw new InvalidOperationException($"Read unexpected number of chars {charUsed} from string: '{Encoding.UTF8.GetString(str)}' at offset: {offset}");
-                }
-
                 protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
                 {
                     return OriginalString.StringAsBytes.Slice(StringBufferOffset - NumberLength, NumberLength)

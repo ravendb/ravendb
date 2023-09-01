@@ -145,11 +145,6 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static unsafe int SingleToInt32Bits(float value)
-        {
-            return *(int*)(&value);
-        }
-
         [DoesNotReturn]
         private void ThrowInvalidOperator(OperatorType @operator)
         {

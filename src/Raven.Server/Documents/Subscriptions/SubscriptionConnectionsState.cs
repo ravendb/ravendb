@@ -25,7 +25,6 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly SubscriptionStorage _subscriptionStorage;
         public DocumentDatabase DocumentDatabase => _subscriptionStorage._db;
         private IDisposable _disposableNotificationsRegistration;
-        public string PreviouslyRecordedChangeVector;
 
         public SubscriptionConnectionsState(string databaseName, long subscriptionId, SubscriptionStorage storage) : base(storage._db.ServerStore, databaseName, subscriptionId, storage._db.DatabaseShutdown)
         {

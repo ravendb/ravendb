@@ -7,11 +7,6 @@ using Sparrow.Server.Collections;
 
 namespace Raven.Server.Documents.Replication.Stats
 {
-    public interface ILiveReplicationCollector : IDisposable
-    {
-        
-    }
-
     public sealed class LiveReplicationPulsesCollector : IDisposable
     {
         private readonly DocumentDatabase _database;

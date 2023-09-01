@@ -1,7 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.Json;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication.Stats
@@ -87,14 +85,6 @@ namespace Raven.Server.Documents.Replication.Stats
                 [nameof(SourceTag)] = SourceTag,
                 [nameof(RemoteIp)] = RemoteIp
             };
-        }
-
-        public static IncomingConnectionInfo FromJson(BlittableJsonReaderObject json)
-        {
-            if (json == null)
-                return null;
-
-            return JsonDeserializationServer.ReplicationIncomingConnectionInfo(json);
         }
     }
 }
