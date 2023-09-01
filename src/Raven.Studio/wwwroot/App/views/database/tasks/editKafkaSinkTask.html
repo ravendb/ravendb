@@ -172,8 +172,8 @@
                                                 <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
                                             </div>
                                             <div class="queues">
-                                                Queues:
-                                                <span class="sink-queues" title="Source Queues"
+                                                Topics:
+                                                <span class="sink-queues" title="Source Topics"
                                                       data-bind="foreach: queues, visible: queues().length">
                                                     <span data-bind="text: $data"></span>
                                                 </span>
@@ -215,7 +215,7 @@
                             <div class="flex-horizontal">
                                 <div class="flex-grow">
                                     <div class="btn-block flex-grow">
-                                        <input class="form-control dropdown-toggle" placeholder="Enter Queue Name" data-toggle="dropdown" autocomplete="off"
+                                        <input class="form-control dropdown-toggle" placeholder="Enter Topic Name" data-toggle="dropdown" autocomplete="off"
                                                data-bind="textInput: inputQueue" />
                                        
                                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: queues">
@@ -224,15 +224,15 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <button class="btn btn-info" data-bind="click: addQueue, enable: inputQueue() && canAddQueue()"><i class="icon-plus"></i> <span>Add Queue</span></button>
+                                    <button class="btn btn-info" data-bind="click: addQueue, enable: inputQueue() && canAddQueue()"><i class="icon-plus"></i> <span>Add Topic</span></button>
                                 </div>
                             </div>
                             <div data-bind="visible: queues().length" class="margin-top-sm">
-                                <label><strong>Source Queue Names:</strong></label>
+                                <label><strong>Source Topic Names:</strong></label>
                                 <ul class="well collection-list" data-bind="foreach: queues"> 
                                     <li>
                                         <div class="name" data-bind="text: $data"></div>
-                                        <a title="Remove queue" href="#" data-bind="click: $parent.removeQueue.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                        <a title="Remove topic" href="#" data-bind="click: $parent.removeQueue.bind($parent, $data)"><i class="icon-trash"></i></a>
                                     </li>
                                 </ul>
                             </div>
