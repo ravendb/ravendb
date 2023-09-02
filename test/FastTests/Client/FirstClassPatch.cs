@@ -24,6 +24,8 @@ namespace FastTests.Client
             public Stuff[] Stuff { get; set; }
             public DateTime LastLogin { get; set; }
             public int[] Numbers { get; set; }
+
+            public long Count { get; set; }
         }
 
         private class Stuff
@@ -1039,6 +1041,35 @@ namespace FastTests.Client
                     var details = doc.Details.FirstOrDefault();
                     Assert.NotNull(details);
                     Assert.Equal(newSize, details.Size);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanIncrementLong()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id = "users/1";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Count = 2_000_000_000
+                    }, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Increment<User, long>(id, x => x.Count, 1_000_000_000);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+                    Assert.Equal(3_000_000_000, user.Count);
                 }
             }
         }
