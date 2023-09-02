@@ -3079,7 +3079,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, token);
+            var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, token);
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: true, token);
             result.Flush();
 
