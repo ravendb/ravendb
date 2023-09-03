@@ -287,15 +287,24 @@ export function BackupsPage(props: BackupsPageProps) {
                                 icon="about"
                                 color="info"
                                 heading="About this view"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                             >
                                 <p>
                                     <strong>Backups</strong> save your data at a specific point in time and allow you to
-                                    restore your database from that point.
+                                    restore your database to that point.
                                 </p>
                                 <p>
-                                    This Studio view enables you to create ongoing periodic backup tasks, as well as
-                                    one-time manual backups, for a particular database.
+                                    This view enables creating:
+                                    <ul>
+                                        <li className="margin-bottom-xs margin-top-xs">
+                                            <strong>Manual Backup</strong><br />
+                                            Create a one-time backup for this database.
+                                        </li>
+                                        <li>
+                                            <strong>Periodic Backups</strong><br />
+                                            Define an ongoing-task that will automatically create periodic backups for this database at the defined schedule.  
+                                        </li>
+                                    </ul>
                                 </p>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>

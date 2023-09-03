@@ -3,6 +3,7 @@ import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIn
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
+import {Icon} from "components/common/Icon";
 
 export function EditPeriodicBackupTaskInfoHub() {
     const licenseType = useAppSelector(licenseSelectors.licenseType);
@@ -17,8 +18,30 @@ export function EditPeriodicBackupTaskInfoHub() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    This is periodic backup task edit view
+                    Define an ongoing-task that will automatically create periodic backups for this database at the defined <strong>schedule</strong>.
                 </p>
+                <p>
+                    Configuration options available:
+                    <ul>
+                        <li>Customize the backup type (Backup or Snapshot)</li>
+                        <li>Select full and/or incremental backups</li>
+                        <li>Set the backups retention period</li>
+                        <li>Specify destinations, where the backup files will be stored</li>
+                        <li>Opt for backup data encryption to enhance data security</li>
+                    </ul>
+                </p>
+                <p>
+                    In addition:
+                    <ul>
+                        <li>The task state can be disabled as needed</li>
+                        <li>You can define a specific node to handle this task</li>
+                    </ul>
+                </p>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href="https://ravendb.net/l/GMBYOH/6.0/Csharp" target="_blank">
+                    <Icon icon="newtab" /> Docs - Backups
+                </a>
             </AccordionItemWrapper>
             {licenseType === "Community" && (
                 <AccordionLicenseNotIncluded
