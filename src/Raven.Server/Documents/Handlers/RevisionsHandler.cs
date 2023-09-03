@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
                 RevisionsCollectionConfiguration revisionsForConflictsConfig;
                 using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    revisionsForConflictsConfig = rawRecord?.RevisionsForConflicts;
+                    revisionsForConflictsConfig = rawRecord?.RevisionsForConflicts ?? Database.DocumentsStorage?.RevisionsStorage?.ConflictConfiguration?.Default;
                 }
 
                 if (revisionsForConflictsConfig != null)
