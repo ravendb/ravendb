@@ -28,6 +28,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Voron.Data.Tables.Table;
+using static Raven.Server.NotificationCenter.Revisions;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Revisions
@@ -103,7 +104,8 @@ namespace Raven.Server.Documents.Revisions
             {
                 Default = new RevisionsCollectionConfiguration
                 {
-                    MinimumRevisionAgeToKeep = TimeSpan.FromDays(45),
+                    MinimumRevisionsToKeep = 1024,
+                    MaximumRevisionsToDeleteUponDocumentUpdate = 10 * 1024,
                     Disabled = false
                 }
             };
@@ -648,12 +650,15 @@ namespace Raven.Server.Documents.Revisions
 
 
             IEnumerable<Document> revisionsToDelete;
+            var conflicted = false;
 
             if (configuration == ConflictConfiguration.Default
                      || configuration == ZeroConfiguration) // conflict revisions config
             {
                 revisionsToDelete = GetRevisionsForConflict(context, table, lowerIdPrefix,
                     nonPersistentFlags, skipForceCreated, result.PreviousCount, documentDeleted, result);
+
+                conflicted = true;
             }
             else if (documentDeleted && configuration.PurgeOnDelete) // doc is deleted or came from delete *and* configuration.PurgeOnDelete is true
             {
@@ -667,9 +672,23 @@ namespace Raven.Server.Documents.Revisions
             }
 
             var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result);
-
             IncrementCountOfRevisions(context, lowerIdPrefix, -deleted);
             result.Remaining = result.PreviousCount - deleted;
+
+            if (conflicted &&
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration)==false &&
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)==false &&
+                deleted > 0)
+            {
+                var lowerId = lowerIdPrefix.ToString();
+                lowerId = lowerId.Substring(0, lowerId.Length - 1); // cut the prefix last char (SpecialChars.RecordSeparator)
+                var reason = ExceedingReason.MinimumRevisionsToKeep;
+                if (ConflictConfiguration.Default.MinimumRevisionAgeToKeep.HasValue)
+                    reason = ExceedingReason.MinimumRevisionAgeToKeep;
+
+                _database.NotificationCenter.Revisions.Add(new ConflictInfo(id: lowerId, reason, deleted: deleted, time: _database.Time.GetUtcNow()));
+            }
+
             return result;
         }
 

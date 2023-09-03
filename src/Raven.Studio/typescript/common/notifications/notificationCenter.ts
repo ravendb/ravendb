@@ -41,6 +41,7 @@ import slowSqlDetails = require("viewmodels/common/notificationCenter/detailView
 import indexingReferencesDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingReferencesDetails");
 import slowIoDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowIoDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
+import conflictExceededDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/conflictExceededDetails");
 import hugeDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/hugeDocumentsDetails");
 import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
 import etlTransformOrLoadErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails");
@@ -171,6 +172,7 @@ class notificationCenter {
             indexingReferencesDetails,
             slowIoDetails,
             pagingDetails,
+            conflictExceededDetails,
             requestLatencyDetails,
             hugeDocumentsDetails,
             
