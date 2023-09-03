@@ -17,7 +17,18 @@ export function EditServerWideExternalReplicationInfoHub() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    This is server-wide external replication task edit view
+                    Defining a <strong>Server-Wide External-Replication task</strong> will create an ongoing External-Replication task for each database in your cluster.
+                    <ul className="margin-top-xs">
+                        <li>You can select specific databases to exclude from the task.</li>
+                        <li>The configurations set in the Server-Wide task will be applied to the corresponding ongoing task created per database.</li>
+                    </ul>
+                </p>
+                <p>
+                    The <strong>connection string</strong> used in each corresponding database task will be composed of:
+                    <ul className="margin-top-xs">
+                        <li>The discovery URLs provided here.</li>
+                        <li>The target database name will be the individual source database name.</li>
+                    </ul>
                 </p>
             </AccordionItemWrapper>
             {licenseType === "Community" && (
