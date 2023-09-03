@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -27,13 +28,20 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
-            CompoundFields = new List<string[]>();
+            CompoundFieldsStrings = new List<string[]>();
+            CompoundFields = new List<Expression<Func<TReduceResult, object>>[]>();
         }
 
         /// <summary>
         /// Expert: List of compound fields that Corax can use to optimize certain queries
         /// </summary>
-        public List<string[]> CompoundFields { get; set; }
+        public List<string[]> CompoundFieldsStrings { get; set; }
+        
+        /// <summary>
+        /// Expert: List of compound fields that Corax can use to optimize certain queries
+        /// </summary>
+        public List<Expression<Func<TReduceResult, object>>[]> CompoundFields { get; set; }
+
 
         public override bool IsMapReduce => Reduce != null;
 
@@ -215,5 +223,16 @@ namespace Raven.Client.Documents.Indexes
 
             AdditionalAssemblies.Add(assembly);
         }
+
+        protected void CompoundField(string firstField, string secondField)
+        {
+            CompoundFieldsStrings.Add(new[]{firstField, secondField});
+        }
+        
+        protected void CompoundField(Expression<Func<TReduceResult, object>> first, Expression<Func<TReduceResult, object>> second)
+        {
+            CompoundFields.Add(new[]{first, second});
+        }
+
     }
 }

@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Queries.Timings
 
         public IDictionary<string, QueryTimings> Timings { get; set; }
         
-        public object QueryPlan { get; set; }
+        public IDynamicJson QueryPlan { get; set; }
 
         internal bool ShouldBeIncluded { get; set; }
 
