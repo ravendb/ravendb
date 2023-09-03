@@ -115,6 +115,9 @@ public unsafe struct NativeIntegersList : IDisposable
             return;
         Sort.Run(RawItems, Count);
         
+        // blog post explaining this
+        // https://ayende.com/blog/200065-B/optimizing-a-three-way-merge?key=67d6f65d63ba4fb79d31dfc49ae5aa1d
+        
         // The idea here is that we can do all of the process with no branches at all and make this 
         // easily predictable to the CPU
 
