@@ -114,9 +114,8 @@ public sealed unsafe class CompactKey : IDisposable
             var dictionary = _owner.GetEncodingDictionary(dictionaryId);
             int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
 
-            int currentSize = _storage.Length - _currentIdx;
-            if (maxSize > currentSize)
-                UnlikelyGrowStorage(currentSize + maxSize);
+            if (maxSize + _currentIdx + sizeof(int) > _storage.Length)
+                UnlikelyGrowStorage(_storage.Length + sizeof(int) + maxSize);
 
             int encodedStartIdx = _currentIdx;
             var encodedKey = _storage.AsSpan(encodedStartIdx + sizeof(int), maxSize);
@@ -183,11 +182,10 @@ public sealed unsafe class CompactKey : IDisposable
         int encodedKeyLength = Bits.ToBytes(encodedKeyLengthInBits);
 
         int maxSize = dictionary.GetMaxDecodingBytes(encodedKeyLength) + sizeof(int);
-        int currentSize = _storage.Length - _currentIdx;
-        if (maxSize + sizeof(int) > currentSize)
+        if (maxSize + sizeof(int) + _currentIdx > _storage.Length)
         {
             // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
-            UnlikelyGrowStorage(maxSize + currentSize + sizeof(int));
+            UnlikelyGrowStorage(maxSize + _currentKeyIdx + sizeof(int));
             encodedStartIdx = currentKeyIdx;
         }
 
@@ -226,54 +224,6 @@ public sealed unsafe class CompactKey : IDisposable
         
         StoragePool.Return(_storage); // Return old to pool.
         _storage = storage; // Update the new references.
-    }
-
-    public void Set(CompactKey key)
-    {
-        Dictionary = key.Dictionary;
-        _currentKeyIdx = key._currentKeyIdx;
-        _decodedKeyIdx = key._decodedKeyIdx;
-        _lastKeyMappingItem = key._lastKeyMappingItem;
-
-        var originalSize = key._currentIdx;
-        if (originalSize > _storage.Length)
-            UnlikelyGrowStorage(originalSize);
-
-        // Copy the key mapping and content.
-        int lastElementIdx = Math.Min(_lastKeyMappingItem, MappingTableSize - 1);
-        if (lastElementIdx >= 0)
-        {
-            int currentElementIdx = 0;
-
-            // PERF: Since we are avoiding the cost of general purpose copying, if we have the vector instruction set we should use it. 
-            if (Vector256.IsHardwareAccelerated)
-            {
-                // Find out the last element where a full vector can be copied.
-                while (currentElementIdx < lastElementIdx)
-                {
-                    Vector256.LoadUnsafe(ref key.KeyMappingCache(currentElementIdx))
-                             .StoreUnsafe(ref KeyMappingCache(currentElementIdx));
-
-                    Vector256.LoadUnsafe(ref key.KeyMappingCacheIndex(currentElementIdx))
-                             .StoreUnsafe(ref KeyMappingCacheIndex(currentElementIdx));
-                    currentElementIdx += Vector256<long>.Count;
-                }
-            }
-
-            while (currentElementIdx < lastElementIdx)
-            {
-                KeyMappingCache(currentElementIdx) = key.KeyMappingCache(currentElementIdx);
-                KeyMappingCacheIndex(currentElementIdx) = key.KeyMappingCacheIndex(currentElementIdx);
-                currentElementIdx++;
-            }
-        }
-
-        // This is the operation to set an unencoded key, therefore we need to restart everything.
-        key._storage.AsSpan(0, key._currentIdx)
-                    .CopyTo(_storage);
-        _currentIdx = key._currentIdx;
-
-        MaxLength = key.MaxLength;
     }
 
     public void Set(ReadOnlySpan<byte> key)
