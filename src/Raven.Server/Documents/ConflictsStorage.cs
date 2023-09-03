@@ -341,7 +341,6 @@ namespace Raven.Server.Documents
             if (size <= 0)
                 return NonPersistentDocumentFlags.None;
 
-            Debug.Assert(document != null, "This is not a delete conflict so we should also provide the document.");
             using (var conflictDocument = new BlittableJsonReaderObject(dataPtr, size, context))
             {
                 _documentsStorage.AttachmentsStorage.DeleteAttachmentConflicts(context, lowerId, document, conflictDocument, changeVector);

@@ -3394,6 +3394,70 @@ namespace SlowTests.Client.Attachments
             }
         }
 
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ReplicationWhenAttachmentConflictResolutionDisabledOnOneDatabase_RavenDB_20726(Options options)
+        {
+            using (var source = GetDocumentStore(options))
+            using (var destination = GetDocumentStore(options))
+            {
+                //disable conflict resolution on destination
+                await destination.Maintenance.Server.SendAsync(new ModifyConflictSolverOperation(destination.Database, null, false));
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    fooStream.Position = 0;
+                    await session.StoreAsync(new User { Name = "Foo" }, "users/1");
+                    session.Advanced.Attachments.Store("users/1", "foo.png", fooStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Foo2" }, "users/1");
+                    
+                    using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                    {
+                        fooStream.Position = 0;
+                        await session.StoreAsync(new User { Name = "Extra" }, "users/2");
+                        session.Advanced.Attachments.Store("users/2", "extra.png", fooStream, "image/png");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                await SetupReplicationAsync(source, destination);
+                
+                var conflicts = WaitUntilHasConflict(destination, "users/1", count: 2);
+                Assert.Equal(2, conflicts.Length);
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                await EnsureReplicatingAsync(source, destination);
+
+                conflicts = destination.Commands().GetConflictsFor("users/1");
+                Assert.Equal(0, conflicts.Length);
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var doc = await session.LoadAsync<User>("users/1");
+                    Assert.Null(doc);
+                    var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo.png");
+                    Assert.Null(attachment);
+
+                    //check extra doc and its attachments remained untouched
+                    doc = await session.LoadAsync<User>("users/2");
+                    Assert.NotNull(doc);
+                    attachment = await session.Advanced.Attachments.GetAsync("users/2", "extra.png");
+                    Assert.NotNull(attachment);
+                }
+            }
+        }
+
         private async Task WriteStatus(DocumentStore[] stores, string s)
         {
             Console.WriteLine(s + "\n");
