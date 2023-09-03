@@ -660,22 +660,14 @@ namespace Raven.Server.Documents.Subscriptions
                     if (currentLastNoopAckTicks != localLastNoopAckTicks)
                         return _lastNoopAckTask;
 
-                    var ackTask = DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                        SubscriptionId,
-                        SubscriptionName,
-                        nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                        SubscriptionConnection.NonExistentBatch, docsToResend: null);
+                    var ackTask = DocumentDatabase.SubscriptionStorage.SendNoopAck(SubscriptionId, SubscriptionName);
 
                     Interlocked.Exchange(ref _lastNoopAckTask, ackTask);
 
                     return ackTask;
                 }
 
-                return DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                    SubscriptionId,
-                    SubscriptionName,
-                    nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                    SubscriptionConnection.NonExistentBatch, docsToResend: null);
+                return DocumentDatabase.SubscriptionStorage.SendNoopAck(SubscriptionId, SubscriptionName);
             }
 
             return DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
