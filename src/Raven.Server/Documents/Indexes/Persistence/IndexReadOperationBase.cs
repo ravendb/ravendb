@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         {
             QueryBuilderFactories = queryBuilderFactories;
 
-            if (query != null)
+            if (query != null && (logger.IsInfoEnabled || logger.IsOperationsEnabled))
             {
                 _memoryInfo = new MemoryInfo
                 {
