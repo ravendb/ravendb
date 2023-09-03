@@ -107,7 +107,12 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Expert: List of compound fields that Corax can use to optimize certain queries
         /// </summary>
-        public List<string[]> CompoundFields { get; set; }
+        public List<string[]> CompoundFieldsStrings { get; set; }
+        
+        /// <summary>
+        /// Expert: List of compound fields that Corax can use to optimize certain queries
+        /// </summary>
+        public List<Expression<Func<TReduceResult, object>>[]> CompoundFields { get; set; }
 
         /// <summary>
         /// Index deployment mode
@@ -158,7 +163,8 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
-            CompoundFields = new List<string[]>();
+            CompoundFields = new List<Expression<Func<TReduceResult, object>>[]>();
+            CompoundFieldsStrings = new List<string[]>();
             Configuration = new IndexConfiguration();
         }
 
@@ -183,7 +189,7 @@ namespace Raven.Client.Documents.Indexes
                     OutputReduceToCollection = OutputReduceToCollection,
                     PatternForOutputReduceToCollectionReferences = PatternReferencesCollectionName,
                     PatternReferencesCollectionName = PatternReferencesCollectionName,
-                    CompoundFields = CompoundFields
+                    CompoundFields = CompoundFieldsStrings
                 };
 
                 if (PatternForOutputReduceToCollectionReferences != null)
@@ -229,6 +235,13 @@ namespace Raven.Client.Documents.Indexes
                     if (spatialOptions.ContainsKey(spatialString.Key))
                         throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
                     spatialOptions.Add(spatialString);
+                }
+
+                foreach (var compoundField in CompoundFields)
+                {
+                    CompoundFieldsStrings.Add(compoundField
+                        .Select(f => f.ToPropertyPath(conventions))
+                        .ToArray());
                 }
 
                 ApplyValues(indexDefinition, indexes, (options, value) => options.Indexing = value);

@@ -146,10 +146,8 @@ public class CompoundFieldsOnIndex : RavenTestBase
                 from u in users 
                 select new { u.Name, u.Location, u.Birthday };
 
-            CompoundFields.Add(new[] { nameof(User.Name), nameof(User.Birthday) });
-            CompoundFields.Add(new[] { nameof(User.Location), nameof(User.Name) });
+            CompoundField(x => x.Name, x => x.Birthday);
+            CompoundField(x => x.Location, x => x.Name);
         }
     }
-    
-    
 }
