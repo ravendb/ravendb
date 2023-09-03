@@ -41,7 +41,6 @@ import slowSqlDetails = require("viewmodels/common/notificationCenter/detailView
 import indexingReferencesDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingReferencesDetails");
 import slowIoDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowIoDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
-import conflictExceededDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/conflictExceededDetails");
 import hugeDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/hugeDocumentsDetails");
 import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
 import etlTransformOrLoadErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails");
@@ -60,6 +59,8 @@ import mismatchedReferenceLoadDetails
 import blockingTombstonesDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/blockingTombstonesDetails";
 import serverLimitsDetails from "viewmodels/common/notificationCenter/detailViewer/alerts/serverLimitsDetails";
+import conflictExceededDetails
+    from "viewmodels/common/notificationCenter/detailViewer/alerts/conflictExceededDetails";
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -172,7 +173,6 @@ class notificationCenter {
             indexingReferencesDetails,
             slowIoDetails,
             pagingDetails,
-            conflictExceededDetails,
             requestLatencyDetails,
             hugeDocumentsDetails,
             
@@ -182,6 +182,7 @@ class notificationCenter {
             mismatchedReferenceLoadDetails,
             blockingTombstonesDetails,
             serverLimitsDetails,
+            conflictExceededDetails,
 
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );

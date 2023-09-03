@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -675,21 +674,24 @@ namespace Raven.Server.Documents.Revisions
             IncrementCountOfRevisions(context, lowerIdPrefix, -deleted);
             result.Remaining = result.PreviousCount - deleted;
 
-            if (conflicted &&
-                nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration)==false &&
-                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)==false &&
-                deleted > 0)
+            if (ShouldAddConflictRevisionNotification(conflicted, nonPersistentFlags, deleted))
             {
-                var lowerId = lowerIdPrefix.ToString();
-                lowerId = lowerId.Substring(0, lowerId.Length - 1); // cut the prefix last char (SpecialChars.RecordSeparator)
                 var reason = ExceedingReason.MinimumRevisionsToKeep;
                 if (ConflictConfiguration.Default.MinimumRevisionAgeToKeep.HasValue)
                     reason = ExceedingReason.MinimumRevisionAgeToKeep;
 
-                _database.NotificationCenter.Revisions.Add(new ConflictInfo(id: lowerId, reason, deleted: deleted, time: _database.Time.GetUtcNow()));
+                _database.NotificationCenter.Revisions.Add(new ConflictInfo(lowerIdPrefix.ToString(), reason, deleted, _database.Time.GetUtcNow()));
             }
 
             return result;
+        }
+
+        private static bool ShouldAddConflictRevisionNotification(bool conflicted, NonPersistentDocumentFlags nonPersistentFlags, long deleted)
+        {
+            return conflicted &&
+                   nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
+                   nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) == false &&
+                   deleted > 0;
         }
 
         public void DeleteAllRevisionsFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)

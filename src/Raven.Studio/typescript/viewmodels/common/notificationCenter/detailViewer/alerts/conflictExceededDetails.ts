@@ -1,8 +1,8 @@
 ﻿import app = require("durandal/app");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import notificationCenter = require("common/notifications/notificationCenter");
-import performanceHint = require("common/notifications/models/performanceHint");
-import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
+import alert = require("common/notifications/models/alert");
+import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
@@ -16,18 +16,18 @@ type conflictExceededDetailsItemDto = {
     Time: string;
 }
 
-class conflictExceededDetails extends abstractPerformanceHintDetails {
+class conflictExceededDetails extends abstractAlertDetails {
 
-    view = require("views/common/notificationCenter/detailViewer/performanceHint/conflictExceededDetails.html");
+    view = require("views/common/notificationCenter/detailViewer/alerts/conflictExceededDetails.html");
 
     tableItems: conflictExceededDetailsItemDto[] = [];
     private gridController = ko.observable<virtualGridController<conflictExceededDetailsItemDto>>();
     private columnPreview = new columnPreviewPlugin<conflictExceededDetailsItemDto>();
 
-    constructor(hint: performanceHint, notificationCenter: notificationCenter) {
-        super(hint, notificationCenter);
+    constructor(alert: alert, notificationCenter: notificationCenter) {
+        super(alert, notificationCenter);
 
-        this.tableItems = this.mapItems(hint.details() as Raven.Server.NotificationCenter.Notifications.Details.ConflictPerformanceDetails);
+        this.tableItems = this.mapItems(alert.details() as Raven.Server.NotificationCenter.Notifications.Details.ConflictPerformanceDetails);
 
         // newest first
         this.tableItems.reverse();
@@ -90,11 +90,11 @@ class conflictExceededDetails extends abstractPerformanceHintDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof performanceHint) && notification.hintType() === "Revisions";
+        return (notification instanceof alert) && notification.alertType() === "Revisions";
     }
 
-    static showDetailsFor(hint: performanceHint, center: notificationCenter) {
-        return app.showBootstrapDialog(new conflictExceededDetails(hint, center));
+    static showDetailsFor(alert: alert, center: notificationCenter) {
+        return app.showBootstrapDialog(new conflictExceededDetails(alert, center));
     }
 }
 
