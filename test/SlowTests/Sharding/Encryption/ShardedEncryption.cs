@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Sharding;
@@ -376,10 +377,10 @@ namespace SlowTests.Sharding.Encryption
             options.ModifyDatabaseRecord += record => record.Encrypted = true;
             options.RunInMemory = false;
 
-            using (var store = Sharding.GetDocumentStore(options))
+            using (var store = GetDocumentStore(options))
             {
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                Assert.True(sharding.Shards[0].Members.Count > 0,$"No members found. {Environment.NewLine}{sharding.Shards[0]}");
+                Assert.True(sharding.Shards[0].Members.Count > 0, await AddDebugInfo(sharding.Shards[0]));
                 var nodeToAddShardTo = sharding.Shards[0].Members[0];
 
                 // add shard
@@ -491,6 +492,17 @@ namespace SlowTests.Sharding.Encryption
                     }
                 }
             }
+        }
+
+        private async Task<string> AddDebugInfo(DatabaseTopology topology)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("No members found.")
+                .AppendLine(topology.ToString())
+                .AppendLine("Cluster debug logs :");
+            await GetClusterDebugLogsAsync(sb);
+
+            return sb.ToString();
         }
     }
 }
