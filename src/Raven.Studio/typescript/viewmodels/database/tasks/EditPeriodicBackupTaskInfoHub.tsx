@@ -34,7 +34,7 @@ export function EditPeriodicBackupTaskInfoHub() {
                     In addition:
                     <ul>
                         <li>The task state can be disabled as needed</li>
-                        <li>You can define a specific node to handle this task</li>
+                        <li>You can set a responsible node to handle this task</li>
                     </ul>
                 </p>
                 <hr />
