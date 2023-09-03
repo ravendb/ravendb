@@ -146,24 +146,22 @@ namespace Raven.Server.Documents.Subscriptions
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
-        public async Task AcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+        public async Task SendNoopAck(long subscriptionId, string name)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId())
             {
-                ChangeVector = changeVector,
+                ChangeVector = nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 NodeTag = _serverStore.NodeTag,
                 HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
                 SubscriptionId = subscriptionId,
                 SubscriptionName = name,
+                BatchId = SubscriptionConnection.NonExistentBatch,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
-                BatchId = batchId,
                 DatabaseName = _db.Name,
-                DocumentsToResend = docsToResend
             };
 
             var state = _serverStore.Engine.CurrentState;
-            if (command.ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange) &&
-                (state == RachisState.Leader || state == RachisState.Follower))
+            if (state == RachisState.Leader || state == RachisState.Follower)
             {
                 // there are no changes for this subscription but we still want to check if we are the node that is responsible for this task.
                 // we can do that locally if we have a functional cluster (in a leader or follower state).
@@ -184,6 +182,25 @@ namespace Raven.Server.Documents.Subscriptions
                     return;
                 }
             }
+
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+        }
+
+        public async Task AcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+        {
+            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId())
+            {
+                ChangeVector = changeVector,
+                NodeTag = _serverStore.NodeTag,
+                HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
+                SubscriptionId = subscriptionId,
+                SubscriptionName = name,
+                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                BatchId = batchId,
+                DatabaseName = _db.Name,
+                DocumentsToResend = docsToResend
+            };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
