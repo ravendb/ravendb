@@ -38,7 +38,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         public void Update(ConflictInfo info)
         {
-            Details[info.Id] = new ActionDetails { Reason = info.Reason.ToString(), Deleted = info.Deleted, Time = info.Time };
+            Details[info.GetId()] = new ActionDetails { Reason = info.Reason.ToString(), Deleted = info.Deleted, Time = info.Time };
         }
 
         public class ActionDetails

@@ -11,7 +11,6 @@
         SlowIO,
         SqlEtl_SlowSql,
         HugeDocuments,
-        Indexing_References,
-        Revisions
+        Indexing_References
     }
 }
