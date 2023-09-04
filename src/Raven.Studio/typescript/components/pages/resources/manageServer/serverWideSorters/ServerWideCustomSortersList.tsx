@@ -11,9 +11,10 @@ import {
     RichPanelName,
     RichPanelActions,
 } from "components/common/RichPanel";
+import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
-import React from "react";
+import React, { useState } from "react";
 import { AsyncStateStatus, useAsyncCallback } from "react-async-hook";
 
 interface ServerWideCustomSortersListProps {
@@ -34,6 +35,8 @@ export default function ServerWideCustomSortersList({
     const asyncDeleteSorter = useAsyncCallback(manageServerService.deleteServerWideCustomSorter, {
         onSuccess: reload,
     });
+
+    const [nameToConfirmDelete, setNameToConfirmDelete] = useState<string>(null);
 
     const { appUrl } = useAppUrls();
 
@@ -67,9 +70,18 @@ export default function ServerWideCustomSortersList({
                                 >
                                     <Icon icon="edit" margin="m-0" />
                                 </a>
+
+                                {nameToConfirmDelete != null && (
+                                    <DeleteCustomSorterConfirm
+                                        name={nameToConfirmDelete}
+                                        onConfirm={(name) => asyncDeleteSorter.execute(name)}
+                                        toggle={() => setNameToConfirmDelete(null)}
+                                        isServerWide
+                                    />
+                                )}
                                 <ButtonWithSpinner
                                     color="danger"
-                                    onClick={() => asyncDeleteSorter.execute(sorter.Name)}
+                                    onClick={() => setNameToConfirmDelete(sorter.Name)}
                                     icon="trash"
                                     isSpinning={asyncDeleteSorter.status === "loading"}
                                 />
