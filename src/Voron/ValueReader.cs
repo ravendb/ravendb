@@ -80,6 +80,19 @@ namespace Voron
             return val;
         }
 
+        public T ReadStructure<T>()
+            where T : unmanaged
+        {
+            if (_len - _pos < sizeof (int))
+                throw new EndOfStreamException();
+            var val = *(T*) (_val + _pos);
+
+            _pos += sizeof (T);
+
+            return val;
+        }
+
+
 
         public long ReadLittleEndianInt64()
         {

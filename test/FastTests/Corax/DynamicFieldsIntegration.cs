@@ -195,7 +195,6 @@ public class DynamicFieldsIntegration : RavenTestBase
 
         await index.ExecuteAsync(store);
         Indexes.WaitForIndexing(store);
-        WaitForUserToContinueTheTest(store);
         return store;
     }
 

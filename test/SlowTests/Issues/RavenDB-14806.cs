@@ -41,7 +41,7 @@ public class RavenDB_14806 : RavenTestBase
                     SortOrder = c.SortOrder,
                     Description = c.Description
                 });
-
+WaitForUserToContinueTheTest(store);
             var result = await query.ToListAsync();
             Assert.Equal(1, result.Count);
         }

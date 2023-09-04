@@ -26,7 +26,7 @@ namespace FastTests.Issues
         }
         
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Test(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -36,9 +36,10 @@ namespace FastTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Person(), "people/1");
-                    session.Advanced.WaitForIndexesAfterSaveChanges();
                     session.SaveChanges();
                 }
+                
+                Indexes.WaitForIndexing(store);
 
 
                 using (var session = store.OpenSession())
@@ -46,11 +47,11 @@ namespace FastTests.Issues
                     session.Delete("people/1");
                     session.SaveChanges();
                 }
-
+                Indexes.WaitForIndexing(store);
+                
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Person());
-                    session.Advanced.WaitForIndexesAfterSaveChanges();
                     session.SaveChanges();
                 }
 

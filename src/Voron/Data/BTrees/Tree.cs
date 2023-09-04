@@ -199,6 +199,20 @@ namespace Voron.Data.BTrees
             return *(int*)read.Reader.Base;
 
         }
+        
+        /// <summary>
+        /// This is using little endian
+        /// </summary>
+        public T? ReadStructure<T>(Slice key)
+            where T : unmanaged
+        {
+            var read = Read(key);
+            if (read == null) 
+                return null;
+            Debug.Assert(read.Reader.Length == sizeof(T));
+            return *(T*)read.Reader.Base;
+
+        }
 
         public void Add(Slice key, byte value)
         {

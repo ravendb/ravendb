@@ -76,7 +76,7 @@ namespace Corax.Utils;
 public unsafe struct EntryTermsReader
 {
     private readonly LowLevelTransaction _llt;
-    private readonly NativeList<long> _rootPages;
+    private readonly HashSet<long> _nullTermsMarkers;
     private readonly long _dicId;
     private byte* _cur;
     private readonly byte* _end, _start;
@@ -98,10 +98,10 @@ public unsafe struct EntryTermsReader
     public bool IsNull;
 
     //rootPages has to be sorted.
-    public EntryTermsReader(LowLevelTransaction llt, in NativeList<long> rootPages, byte* cur, int size, long dicId)
+    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, byte* cur, int size, long dicId)
     {
         _llt = llt;
-        _rootPages = rootPages;
+        _nullTermsMarkers = nullTermsMarkers;
         _start = _cur;
         _cur = cur;
         _start = cur;
@@ -227,16 +227,14 @@ public unsafe struct EntryTermsReader
             TermId = (termContainerId >> 8) & ~0b111;
         }
 
-        if ((TermId % Voron.Global.Constants.Storage.PageSize) == 0 && _rootPages.ToSpan().BinarySearch(TermId / Voron.Global.Constants.Storage.PageSize) >= 0) // null value
-        {
-            IsNull = true;
-            FieldRootPage = TermId / Voron.Global.Constants.Storage.PageSize;
-            return;
-        }
+        IsNull = _nullTermsMarkers.Contains(TermId);
         
         Container.Get(_llt, TermId, out var termItem);
         FieldRootPage = termItem.PageLevelMetadata;
-        TermsReader.Set(Current, termItem, _dicId);
+        if (IsNull == false)
+        {
+            TermsReader.Set(Current, termItem, _dicId);
+        }
 
         HasNumeric = (termContainerId & 0b1) != 0;
         if (HasNumeric)

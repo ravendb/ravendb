@@ -33,9 +33,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
 
     private readonly IndexFieldsMapping _fieldMapping;
-    private NativeList<long> _rootPages;
+    private HashSet<long> _nullTermsMarkers;
     private Tree _persistedDynamicTreeAnalyzer;
     private long? _numberOfEntries;
+    public bool _nullTermsMarkersLoaded;
 
     /// <summary>
     /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
@@ -62,6 +63,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private long _dictionaryId;
     private Lookup<Int64LookupKey> _entryIdToLocation;
     public FieldsCache FieldCache;
+    private bool _nullPostingListLoaded;
 
     public long MaxMemoizationSizeInBytes = 128 * 1024 * 1024;
 
@@ -114,11 +116,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
-        if (_rootPages.Count == 0)
-            InitializeRootPages();
+        if (_nullTermsMarkersLoaded == false)
+        {
+            _nullTermsMarkersLoaded = true;
+            InitializeNullTermsMarkers();
+        }
         
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, _rootPages, item.Address, item.Length, _dictionaryId);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, item.Address, item.Length, _dictionaryId);
     }
 
 
@@ -405,8 +410,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     
     public void Dispose()
     {
-        _rootPages.Dispose(Allocator);
-        
         if (_ownsTransaction)
             _transaction?.Dispose();
 
@@ -452,9 +455,24 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId)
     {
-        _nullPostingList ??= _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
-        postingListId = _nullPostingList?.ReadInt64(field.FieldName) ?? -1;
-        return postingListId != -1;
+        InitNullPostingList();
+        var result = _nullPostingList?.ReadStructure<(long PostingListId,long TermContainerId)>(field.FieldName);
+        if (result == null)
+        {
+            postingListId = -1;
+            return false;
+        }
+        postingListId = result.Value.PostingListId;
+        return true;
+    }
+
+    private void InitNullPostingList()
+    {
+        if (_nullPostingListLoaded == false)
+        {
+            _nullPostingListLoaded = true;
+            _nullPostingList = _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -464,28 +482,31 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new IncludeNullMatch<TInner>(this, inner, field, forward);
     }
     
-    private void InitializeRootPages()
+    private void InitializeNullTermsMarkers()
     {
-        _rootPages = new NativeList<long>();
-        var it = _fieldsTree.Iterate(prefetch: false);
-        _rootPages.Initialize(Allocator, _fieldMapping.Count);
-        
-        if (it.Seek(Slices.BeforeAllKeys))
-        {
-            do
-            {
-                var state = (LookupState*)it.CreateReaderForCurrent().Base;
-                if (state->RootObjectType == RootObjectType.Lookup)
-                {
-                    _rootPages.EnsureCapacityFor(Allocator, 1);
-                    _rootPages.AddByRefUnsafe() = state->RootPage;
-                }
-            } while (it.MoveNext());
-        }
+        _nullTermsMarkers = new HashSet<long>();
+        InitNullPostingList();
+        if (_nullPostingList == null)
+            return;
 
-        _rootPages.Sort();
+        LoadNullTermMarkers(_nullPostingList, _nullTermsMarkers);
     }
-    
+
+    public static void LoadNullTermMarkers(Tree nullPostingList, HashSet<long> nullTermsMarkers)
+    {
+        using (var it = nullPostingList.Iterate(prefetch: false))
+        {
+            if (it.Seek(Slices.BeforeAllKeys))
+            {
+                do
+                {
+                    (_, long nullTermId) = it.CreateReaderForCurrent().ReadStructure<(long, long)>();
+                    nullTermsMarkers.Add(nullTermId);
+                } while (it.MoveNext());
+            }
+        }
+    }
+
     public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
     {
         var pageToField = new Dictionary<long, string>();
