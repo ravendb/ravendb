@@ -65,7 +65,7 @@ export default function ServerWideCustomSortersList({
                         {!isReadOnly && (
                             <RichPanelActions>
                                 <a
-                                    href={appUrl.forEditServerWideCustomAnalyzer(sorter.Name)}
+                                    href={appUrl.forEditServerWideCustomSorter(sorter.Name)}
                                     className="btn btn-secondary"
                                 >
                                     <Icon icon="edit" margin="m-0" />

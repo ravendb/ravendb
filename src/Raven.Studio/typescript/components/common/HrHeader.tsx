@@ -8,7 +8,7 @@ interface HrHeaderProps {
     children?: ReactNode | ReactNode[];
     right?: ReactNode | ReactNode[];
     className?: string;
-    count?: ReactNode | ReactNode[];
+    count?: number;
 }
 
 export function HrHeader(props: HrHeaderProps) {
@@ -21,8 +21,8 @@ export function HrHeader(props: HrHeaderProps) {
                     {children}
                 </h5>
             )}
-            {count !== 0 && (
-                <Badge pill className="me-3" color={"secondary"}>
+            {count > 0 && (
+                <Badge pill className="me-3" color="secondary">
                     {count}
                 </Badge>
             )}

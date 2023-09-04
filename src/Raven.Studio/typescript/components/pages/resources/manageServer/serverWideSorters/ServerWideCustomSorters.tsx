@@ -35,7 +35,7 @@ export default function ServerWideCustomSorters() {
                     <Col>
                         <AboutViewHeading title="Server-Wide Sorters" icon="server-wide-custom-sorters" />
                         <a
-                            href={appUrl.forEditServerWideCustomAnalyzer()}
+                            href={appUrl.forEditServerWideCustomSorter()}
                             className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
                         >
                             <Icon icon="plus" />

@@ -69,7 +69,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                         )}
                         <HrHeader
                             right={
-                                <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
+                                <a href="https://ravendb.net/l/VWCQPI/6.0" target="_blank">
                                     <Icon icon="link" />
                                     Analyzers tutorial
                                 </a>

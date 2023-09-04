@@ -11,7 +11,7 @@ export default {
 } satisfies Meta<typeof FeatureNotAvailable>;
 
 export const Default: StoryObj<typeof FeatureNotAvailable> = {
-    name: "Sharded Not Available",
+    name: "Feature Not Available",
     render: () => {
         return (
             <FeatureNotAvailable>
