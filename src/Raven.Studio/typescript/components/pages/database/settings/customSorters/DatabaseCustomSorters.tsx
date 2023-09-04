@@ -27,6 +27,7 @@ import ServerWideCustomSortersList from "components/pages/resources/manageServer
 import { NonShardedViewProps } from "components/models/common";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 todo("Limits", "Damian", "Get limit from license selector");
@@ -38,6 +39,9 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db), [db]);
 
     const { appUrl } = useAppUrls();
+
+    const isDatabaseAdmin =
+        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
     const communityServerWideLimit = 5; // TODO get from license selector
@@ -67,13 +71,15 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                 <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
-                        <a
-                            href={appUrl.forEditCustomSorter(db)}
-                            className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
-                        >
-                            <Icon icon="plus" />
-                            Add a custom sorter
-                        </a>
+                        {isDatabaseAdmin && (
+                            <a
+                                href={appUrl.forEditCustomSorter(db)}
+                                className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                            >
+                                <Icon icon="plus" />
+                                Add a custom sorter
+                            </a>
+                        )}
                         <HrHeader
                             right={
                                 <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
@@ -98,6 +104,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                             forEditLink={(name) => appUrl.forEditCustomSorter(db, name)}
                             deleteCustomSorter={(name) => databasesService.deleteCustomSorter(db, name)}
                             serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
+                            isDatabaseAdmin={isDatabaseAdmin}
                         />
 
                         <HrHeader
@@ -158,6 +165,7 @@ interface DatabaseSortersListProps {
     forEditLink: (name: string) => string;
     deleteCustomSorter: (name: string) => Promise<void>;
     serverWideSorterNames: string[];
+    isDatabaseAdmin: boolean;
 }
 
 function DatabaseSortersList({
@@ -167,6 +175,7 @@ function DatabaseSortersList({
     reload,
     deleteCustomSorter,
     serverWideSorterNames,
+    isDatabaseAdmin,
 }: DatabaseSortersListProps) {
     const asyncDeleteSorter = useAsyncCallback(deleteCustomSorter, {
         onSuccess: reload,
@@ -209,22 +218,26 @@ function DatabaseSortersList({
                             )}
                             <RichPanelActions>
                                 <a href={forEditLink(sorter.Name)} className="btn btn-secondary">
-                                    <Icon icon="edit" margin="m-0" />
+                                    <Icon icon={isDatabaseAdmin ? "edit" : "preview"} margin="m-0" />
                                 </a>
 
-                                {nameToConfirmDelete != null && (
-                                    <DeleteCustomSorterConfirm
-                                        name={nameToConfirmDelete}
-                                        onConfirm={(name) => asyncDeleteSorter.execute(name)}
-                                        toggle={() => setNameToConfirmDelete(null)}
-                                    />
+                                {isDatabaseAdmin && (
+                                    <>
+                                        {nameToConfirmDelete != null && (
+                                            <DeleteCustomSorterConfirm
+                                                name={nameToConfirmDelete}
+                                                onConfirm={(name) => asyncDeleteSorter.execute(name)}
+                                                toggle={() => setNameToConfirmDelete(null)}
+                                            />
+                                        )}
+                                        <ButtonWithSpinner
+                                            color="danger"
+                                            onClick={() => setNameToConfirmDelete(sorter.Name)}
+                                            icon="trash"
+                                            isSpinning={asyncDeleteSorter.status === "loading"}
+                                        />
+                                    </>
                                 )}
-                                <ButtonWithSpinner
-                                    color="danger"
-                                    onClick={() => setNameToConfirmDelete(sorter.Name)}
-                                    icon="trash"
-                                    isSpinning={asyncDeleteSorter.status === "loading"}
-                                />
                             </RichPanelActions>
                         </RichPanelHeader>
                     </RichPanel>
