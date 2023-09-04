@@ -2,10 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Voron.Util;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -25,6 +27,7 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Directory = System.IO.Directory;
 
 namespace RachisTests.DatabaseCluster
 {
@@ -456,8 +459,8 @@ namespace RachisTests.DatabaseCluster
                 using var session = s.OpenAsyncSession();
                 return await session.LoadAsync<TestObj>(notDelete);
             });
-
-            var r = await AssertWaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")));
+            var r = await WaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")));
+            Assert.True(r.Count == 1, AddDebugInfo(backupPath, r.Count));
             Assert.EndsWith(notDelete, r.Single().Key, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -633,7 +636,6 @@ namespace RachisTests.DatabaseCluster
             });
         }
 
-        
         private static IEnumerable<object[]>  GetMetadataStaticFields()
         {
             return typeof(Constants.Documents.Metadata)
@@ -748,6 +750,30 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
             }
+        }
+
+        private static string AddDebugInfo(string backupPath, int count)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Expected to have a single compare exchange value after restore from incremental, but got {count}");
+
+            var dir = Directory.GetDirectories(backupPath).First();
+            var files = Directory.GetFiles(dir)
+                .Where(BackupUtils.IsBackupFile)
+                .OrderBackups();
+
+            foreach (var file in files)
+            {
+                sb.AppendLine($"backup file {Path.GetFileName(file)} :");
+                using (var inputStream = File.Open(file, FileMode.Open))
+                using (var stream = new GZipStream(inputStream, CompressionMode.Decompress))
+                {
+                    var text = stream.ReadStringWithoutPrefix();
+                    sb.AppendLine(JsonConvert.SerializeObject(text)).AppendLine();
+                }
+            }
+
+            return sb.ToString();
         }
     }
 }
