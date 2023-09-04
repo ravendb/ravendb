@@ -69,7 +69,7 @@ export default function ServerWideCustomAnalyzers() {
                                 description="Get additional info on what this feature can offer you"
                                 heading="About this view"
                             >
-                                TODO
+                                This is the <strong>Server-Wide Custom Analyzers</strong> view.
                             </AccordionItemWrapper>
                             {isCommunity && (
                                 <AccordionCommunityLicenseLimited
