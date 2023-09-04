@@ -235,7 +235,6 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateElasticSearchEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateElasticSearchEtlCommand>(),
             [nameof(UpdateQueueEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueEtlCommand>(),
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
-            [nameof(UpdateQueueSinkCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkCommand>(),
             [nameof(UpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationStateCommand>(),
             [nameof(ShardedUpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<ShardedUpdateExternalReplicationStateCommand>(),
             [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),
@@ -281,7 +280,7 @@ namespace Raven.Server.ServerWide
             [nameof(SourceMigrationCleanupCommand)] = GenerateJsonDeserializationRoutine<SourceMigrationCleanupCommand>(),
             [nameof(UpdateServerPublishedUrlsCommand)] = GenerateJsonDeserializationRoutine<UpdateServerPublishedUrlsCommand>(),
             [nameof(AddQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
-            [nameof(UpdateQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
+            [nameof(UpdateQueueSinkCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkCommand>(),
             [nameof(UpdateQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkProcessStateCommand>(),
             [nameof(RemoveQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveQueueSinkProcessStateCommand>(),
         };
