@@ -11,9 +11,10 @@ import {
     RichPanelName,
     RichPanelActions,
 } from "components/common/RichPanel";
+import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
-import React from "react";
+import React, { useState } from "react";
 import { AsyncStateStatus, useAsyncCallback } from "react-async-hook";
 
 interface ServerWideCustomAnalyzersListProps {
@@ -34,6 +35,8 @@ export default function ServerWideCustomAnalyzersList({
     const asyncDeleteAnalyzer = useAsyncCallback(manageServerService.deleteServerWideCustomAnalyzer, {
         onSuccess: reload,
     });
+
+    const [nameToConfirmDelete, setNameToConfirmDelete] = useState<string>(null);
 
     const { appUrl } = useAppUrls();
 
@@ -67,9 +70,18 @@ export default function ServerWideCustomAnalyzersList({
                                 >
                                     <Icon icon="edit" margin="m-0" />
                                 </a>
+
+                                {nameToConfirmDelete != null && (
+                                    <DeleteCustomAnalyzerConfirm
+                                        name={nameToConfirmDelete}
+                                        onConfirm={(name) => asyncDeleteAnalyzer.execute(name)}
+                                        toggle={() => setNameToConfirmDelete(null)}
+                                        isServerWide
+                                    />
+                                )}
                                 <ButtonWithSpinner
                                     color="danger"
-                                    onClick={() => asyncDeleteAnalyzer.execute(analyzer.Name)}
+                                    onClick={() => setNameToConfirmDelete(analyzer.Name)}
                                     icon="trash"
                                     isSpinning={asyncDeleteAnalyzer.status === "loading"}
                                 />

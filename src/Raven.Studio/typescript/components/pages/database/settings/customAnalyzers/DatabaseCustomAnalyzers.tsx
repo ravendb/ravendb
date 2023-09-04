@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 import { Col, Row, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -25,6 +25,7 @@ import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ServerWideCustomAnalyzersList from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzersList";
 import { NonShardedViewProps } from "components/models/common";
+import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 
 todo("Limits", "Damian", "Get limit from license selector");
 
@@ -158,6 +159,8 @@ function DatabaseAnalyzersList({
         onSuccess: reload,
     });
 
+    const [nameToConfirmDelete, setNameToConfirmDelete] = useState<string>(null);
+
     if (fetchStatus === "loading") {
         return <LoadingView />;
     }
@@ -195,9 +198,17 @@ function DatabaseAnalyzersList({
                                 <a href={forEditLink(analyzer.Name)} className="btn btn-secondary">
                                     <Icon icon="edit" margin="m-0" />
                                 </a>
+
+                                {nameToConfirmDelete != null && (
+                                    <DeleteCustomAnalyzerConfirm
+                                        name={nameToConfirmDelete}
+                                        onConfirm={(name) => asyncDeleteAnalyzer.execute(name)}
+                                        toggle={() => setNameToConfirmDelete(null)}
+                                    />
+                                )}
                                 <ButtonWithSpinner
                                     color="danger"
-                                    onClick={() => asyncDeleteAnalyzer.execute(analyzer.Name)}
+                                    onClick={() => setNameToConfirmDelete(analyzer.Name)}
                                     icon="trash"
                                     isSpinning={asyncDeleteAnalyzer.status === "loading"}
                                 />

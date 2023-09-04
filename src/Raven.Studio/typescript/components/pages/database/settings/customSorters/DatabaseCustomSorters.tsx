@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 import { Col, Row, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -26,6 +26,7 @@ import { LoadingView } from "components/common/LoadingView";
 import ServerWideCustomSortersList from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSortersList";
 import { NonShardedViewProps } from "components/models/common";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
+import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 todo("Limits", "Damian", "Get limit from license selector");
@@ -171,6 +172,8 @@ function DatabaseSortersList({
         onSuccess: reload,
     });
 
+    const [nameToConfirmDelete, setNameToConfirmDelete] = useState<string>(null);
+
     if (fetchStatus === "loading") {
         return <LoadingView />;
     }
@@ -208,9 +211,17 @@ function DatabaseSortersList({
                                 <a href={forEditLink(sorter.Name)} className="btn btn-secondary">
                                     <Icon icon="edit" margin="m-0" />
                                 </a>
+
+                                {nameToConfirmDelete != null && (
+                                    <DeleteCustomSorterConfirm
+                                        name={nameToConfirmDelete}
+                                        onConfirm={(name) => asyncDeleteSorter.execute(name)}
+                                        toggle={() => setNameToConfirmDelete(null)}
+                                    />
+                                )}
                                 <ButtonWithSpinner
                                     color="danger"
-                                    onClick={() => asyncDeleteSorter.execute(sorter.Name)}
+                                    onClick={() => setNameToConfirmDelete(sorter.Name)}
                                     icon="trash"
                                     isSpinning={asyncDeleteSorter.status === "loading"}
                                 />
