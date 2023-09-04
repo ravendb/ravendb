@@ -312,15 +312,36 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 targetId="1"
                                 icon="about"
                                 color="info"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 heading="About this view"
                             >
                                 <p>
-                                    <strong>Document Revisions</strong> is a feature that allows developers to keep
-                                    track of changes made to a document over time. When a document is updated in
-                                    RavenDB, a new revision is automatically created, preserving the previous version of
-                                    the document. This is particularly useful for scenarios where historical data and
-                                    versioning are crucial.
+                                    Creating <strong>Document Revisions</strong> allows keeping track of changes made to a document over time.
+                                </p>
+                                <p>
+                                    A document revision will be created when:
+                                    <ul>
+                                        <li>Revisions are defined and enabled for the document's collection.</li>
+                                        <li>The document has been modified.</li>
+                                    </ul>
+                                </p>
+                                <p>
+                                    Define the revisions configuration in this view:
+                                    <ul>
+                                        <li>Under section DEFAULTS:<br/>
+                                            Set default revisions configuration for all non-conflicting and conflicting documents.
+                                        </li>
+                                        <li>Under section COLLECTIONS:<br/>
+                                            Set revisions configuration for specific collections, overriding the defaults.
+                                        </li>
+                                    </ul>
+                                </p>
+                                <p>
+                                    This view also provides these options:
+                                    <ul>
+                                        <li>Revert all documents to a specific point in time.</li>
+                                        <li>Enforce the current configuration on all existing revisions in the database per collection.</li>
+                                    </ul>
                                 </p>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
