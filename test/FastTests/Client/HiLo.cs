@@ -254,7 +254,9 @@ namespace FastTests.Client
                         Max = 128
                     };
                     s1.Store(hiloDoc, "Raven/Hilo/users");
-                    s1.Store(new User(), "marker/doc");
+                    s1.SaveChanges();
+
+                    s1.Store(new User(), "marker/doc$Raven/Hilo/users");
                     s1.SaveChanges();
                 }
                 using (var s2 = store2.OpenSession())
@@ -285,7 +287,7 @@ namespace FastTests.Client
             {
                 using (var session = store2.OpenSession())
                 {
-                    if (session.Load<object>("marker/doc") != null)
+                    if (session.Load<object>("marker/doc$Raven/Hilo/users") != null)
                         break;
                     Thread.Sleep(32);
                 }
