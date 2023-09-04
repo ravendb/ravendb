@@ -26,6 +26,7 @@ import { LoadingView } from "components/common/LoadingView";
 import ServerWideCustomAnalyzersList from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzersList";
 import { NonShardedViewProps } from "components/models/common";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 todo("Limits", "Damian", "Get limit from license selector");
 
@@ -36,6 +37,9 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const asyncGetDatabaseAnalyzers = useAsync(() => databasesService.getCustomAnalyzers(db), [db]);
 
     const { appUrl } = useAppUrls();
+
+    const isDatabaseAdmin =
+        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
     const communityServerWideLimit = 5; // TODO get from license selector
@@ -54,13 +58,15 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                 <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
-                        <a
-                            href={appUrl.forEditCustomAnalyzer(db)}
-                            className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
-                        >
-                            <Icon icon="plus" />
-                            Add a custom analyzer
-                        </a>
+                        {isDatabaseAdmin && (
+                            <a
+                                href={appUrl.forEditCustomAnalyzer(db)}
+                                className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                            >
+                                <Icon icon="plus" />
+                                Add a custom analyzer
+                            </a>
+                        )}
                         <HrHeader
                             right={
                                 <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
@@ -85,6 +91,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                             forEditLink={(name) => appUrl.forEditCustomAnalyzer(db, name)}
                             deleteCustomAnalyzer={(name) => databasesService.deleteCustomAnalyzer(db, name)}
                             serverWideAnalyzerNames={asyncGetServerWideAnalyzers.result?.map((x) => x.Name) ?? []}
+                            isDatabaseAdmin={isDatabaseAdmin}
                         />
 
                         <HrHeader
@@ -145,6 +152,7 @@ interface DatabaseAnalyzersListProps {
     forEditLink: (name: string) => string;
     deleteCustomAnalyzer: (name: string) => Promise<void>;
     serverWideAnalyzerNames: string[];
+    isDatabaseAdmin: boolean;
 }
 
 function DatabaseAnalyzersList({
@@ -154,6 +162,7 @@ function DatabaseAnalyzersList({
     reload,
     deleteCustomAnalyzer,
     serverWideAnalyzerNames,
+    isDatabaseAdmin,
 }: DatabaseAnalyzersListProps) {
     const asyncDeleteAnalyzer = useAsyncCallback(deleteCustomAnalyzer, {
         onSuccess: reload,
@@ -196,22 +205,26 @@ function DatabaseAnalyzersList({
                             )}
                             <RichPanelActions>
                                 <a href={forEditLink(analyzer.Name)} className="btn btn-secondary">
-                                    <Icon icon="edit" margin="m-0" />
+                                    <Icon icon={isDatabaseAdmin ? "edit" : "preview"} margin="m-0" />
                                 </a>
 
-                                {nameToConfirmDelete != null && (
-                                    <DeleteCustomAnalyzerConfirm
-                                        name={nameToConfirmDelete}
-                                        onConfirm={(name) => asyncDeleteAnalyzer.execute(name)}
-                                        toggle={() => setNameToConfirmDelete(null)}
-                                    />
+                                {isDatabaseAdmin && (
+                                    <>
+                                        {nameToConfirmDelete != null && (
+                                            <DeleteCustomAnalyzerConfirm
+                                                name={nameToConfirmDelete}
+                                                onConfirm={(name) => asyncDeleteAnalyzer.execute(name)}
+                                                toggle={() => setNameToConfirmDelete(null)}
+                                            />
+                                        )}
+                                        <ButtonWithSpinner
+                                            color="danger"
+                                            onClick={() => setNameToConfirmDelete(analyzer.Name)}
+                                            icon="trash"
+                                            isSpinning={asyncDeleteAnalyzer.status === "loading"}
+                                        />
+                                    </>
                                 )}
-                                <ButtonWithSpinner
-                                    color="danger"
-                                    onClick={() => setNameToConfirmDelete(analyzer.Name)}
-                                    icon="trash"
-                                    isSpinning={asyncDeleteAnalyzer.status === "loading"}
-                                />
                             </RichPanelActions>
                         </RichPanelHeader>
                     </RichPanel>

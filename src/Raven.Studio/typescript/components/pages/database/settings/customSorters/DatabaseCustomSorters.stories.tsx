@@ -16,7 +16,10 @@ export default {
 const db = DatabasesStubs.nonShardedClusterDatabase();
 
 function commonInit() {
+    const { accessManager } = mockStore;
     const { manageServerService } = mockServices;
+
+    accessManager.with_securityClearance("ValidUser");
 
     manageServerService.withServerWideCustomSorters();
 }
@@ -24,13 +27,35 @@ function commonInit() {
 export function NoLimits() {
     commonInit();
 
+    const { accessManager, license } = mockStore;
     const { databasesService } = mockServices;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseAdmin",
+    });
+
     databasesService.withCustomSorters([
         ...DatabasesStubs.customSorters(),
         ManageServerStubs.serverWideCustomSorters()[0],
     ]);
 
-    const { license } = mockStore;
+    license.with_Enterprise();
+
+    return <DatabaseCustomSorters db={db} />;
+}
+
+export function BelowDatabaseAdmin() {
+    commonInit();
+
+    const { accessManager, license } = mockStore;
+    const { databasesService } = mockServices;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseRead",
+    });
+
+    databasesService.withCustomSorters();
+
     license.with_Enterprise();
 
     return <DatabaseCustomSorters db={db} />;
@@ -39,10 +64,15 @@ export function NoLimits() {
 export function CommunityLimits() {
     commonInit();
 
+    const { accessManager, license } = mockStore;
     const { databasesService } = mockServices;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseAdmin",
+    });
+
     databasesService.withCustomSorters();
 
-    const { license } = mockStore;
     license.with_Community();
 
     return <DatabaseCustomSorters db={db} />;
