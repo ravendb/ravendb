@@ -1,39 +1,10 @@
-import viewModelBase = require("viewmodels/viewModelBase");
-import appUrl = require("common/appUrl");
-import getCustomSortersCommand = require("commands/database/settings/getCustomSortersCommand");
-import deleteCustomSorterCommand = require("commands/database/settings/deleteCustomSorterCommand");
-import database = require("models/resources/database");
-import columnsSelector = require("viewmodels/partial/columnsSelector");
-import documentObject = require("models/database/documents/document");
-import router = require("plugins/router");
-import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
-import queryCommand = require("commands/database/query/queryCommand");
-import queryCriteria = require("models/database/query/queryCriteria");
-import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
-import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import generalUtils = require("common/generalUtils");
-import sorterListItemModel = require("models/database/settings/sorterListItemModel");
-import accessManager = require("common/shell/accessManager");
-import rqlLanguageService = require("common/rqlLanguageService");
-import { highlight, languages } from "prismjs";
-import shardViewModelBase from "viewmodels/shardViewModelBase";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import getIndexNamesCommand from "commands/database/index/getIndexNamesCommand";
-import shardedDatabase from "models/resources/shardedDatabase";
-import shard from "models/resources/shard";
-
+/* TODO + remove customSorters.html at the end
 type testTabName = "results" | "diagnostics";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
 class customSorters extends shardViewModelBase {
 
     view = require("views/database/settings/customSorters.html");
-
-    indexes = ko.observableArray<string>();
     languageService: rqlLanguageService;
     
     canUseCustomSorters: boolean;
@@ -99,12 +70,6 @@ class customSorters extends shardViewModelBase {
             }));
     }
 
-    compositionComplete() {
-        super.compositionComplete();
-
-        $('.custom-sorters [data-toggle="tooltip"]').tooltip();
-    }
-    
     detached() {
         super.detached();
         
@@ -117,20 +82,6 @@ class customSorters extends shardViewModelBase {
             .done((results: string[]) => {
                 this.indexes(results);
             });
-    }
-    
-    private loadSorters() {
-        return new getCustomSortersCommand(this.db)
-            .execute()
-            .done(sorters => {
-                this.sorters(sorters.map(x => new sorterListItemModel(x)));
-            });
-    }
-
-    private loadServerWideSorters() {
-        return new getServerWideCustomSortersCommand()
-            .execute()
-            .done(sorters => this.serverWideSorters(sorters.map(x => new sorterListItemModel(x))));
     }
 
     goToTab(tabToUse: testTabName) {
@@ -185,21 +136,7 @@ class customSorters extends shardViewModelBase {
         const url = appUrl.forEditCustomSorter(this.db, sorter.name);
         router.navigate(url);
     }
-    
-    confirmRemoveSorter(sorter: sorterListItemModel) {
-        this.confirmationMessage("Delete Custom Sorter", 
-            `You're deleting custom sorter: <br><ul><li><strong>${generalUtils.escapeHtml(sorter.name)}</strong></li></ul>`, {
-            buttons: ["Cancel", "Delete"],
-            html: true
-        })
-            .done(result => {
-                if (result.can) {
-                    this.sorters.remove(sorter);
-                    this.deleteSorter(this.db, sorter.name);
-                }
-            })
-    }
-    
+        
     runTest(sorter: sorterListItemModel) {
         this.testResultsVisible(true);
         
@@ -286,14 +223,8 @@ class customSorters extends shardViewModelBase {
 
         this.isFirstRun = false;
     }
-    
-    private deleteSorter(db: database, name: string) {
-        return new deleteCustomSorterCommand(db, name)
-            .execute()
-            .always(() => {
-                this.loadSorters();
-            })
-    }
+
 }
 
 export = customSorters;
+*/
