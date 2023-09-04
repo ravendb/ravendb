@@ -294,10 +294,10 @@ namespace SlowTests.Client.Attachments
                 store1.Commands().Delete("users/1", null);
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User { Name = "Marker 2" }, "marker2");
+                    session.Store(new User { Name = "Marker 2" }, "users/1$marker2");
                     session.SaveChanges();
                 }
-                Assert.True(WaitForDocument(store2, "marker2"));
+                Assert.True(WaitForDocument(store2, "users/1$marker2"));
                 await AssertAttachmentCount(store2, 0);
             }
         }
