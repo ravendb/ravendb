@@ -663,14 +663,14 @@ namespace Raven.Server.Documents.Subscriptions
                     if (currentLastNoopAckTicks != localLastNoopAckTicks)
                         return _lastNoopAckTask;
 
-                    var ackTask = SendNoopAck(SubscriptionId, SubscriptionName);
+                    var ackTask = SendNoopAckAsync(SubscriptionId, SubscriptionName);
 
                     Interlocked.Exchange(ref _lastNoopAckTask, ackTask);
 
                     return ackTask;
                 }
 
-                return SendNoopAck(SubscriptionId, SubscriptionName);
+                return SendNoopAckAsync(SubscriptionId, SubscriptionName);
             }
 
             return DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
@@ -680,7 +680,7 @@ namespace Raven.Server.Documents.Subscriptions
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
         }
 
-        private async Task SendNoopAck(long subscriptionId, string name)
+        private async Task SendNoopAckAsync(long subscriptionId, string name)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_documentsStorage.DocumentDatabase.Name, RaftIdGenerator.NewId())
             {
