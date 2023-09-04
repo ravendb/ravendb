@@ -5,7 +5,7 @@ import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { useServices } from "components/hooks/useServices";
 import { useAsync } from "react-async-hook";
-import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import { todo } from "common/developmentHelper";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
@@ -72,10 +72,10 @@ export default function ServerWideCustomAnalyzers() {
                                 This is the <strong>Server-Wide Custom Analyzers</strong> view.
                             </AccordionItemWrapper>
                             {isCommunity && (
-                                <AccordionCommunityLicenseLimited
+                                <AccordionLicenseLimited
                                     targetId="licensing"
                                     featureName="Custom Analyzers"
-                                    featureIcon="custom-analyzers"
+                                    featureIcon="server-wide-custom-analyzers"
                                     description="Upgrade to a paid plan and get unlimited availability."
                                 />
                             )}

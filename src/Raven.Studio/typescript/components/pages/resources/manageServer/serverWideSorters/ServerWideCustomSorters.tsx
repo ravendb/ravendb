@@ -9,7 +9,7 @@ import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CounterBadge } from "components/common/CounterBadge";
-import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
 import { todo } from "common/developmentHelper";
@@ -72,10 +72,10 @@ export default function ServerWideCustomSorters() {
                                 This is the <strong>Server-Wide Custom Sorters</strong> view.
                             </AccordionItemWrapper>
                             {isCommunity && (
-                                <AccordionCommunityLicenseLimited
+                                <AccordionLicenseLimited
                                     targetId="licensing"
                                     featureName="Custom Sorters"
-                                    featureIcon="custom-sorters"
+                                    featureIcon="server-wide-custom-sorters"
                                     description="Upgrade to a paid plan and get unlimited availability."
                                 />
                             )}

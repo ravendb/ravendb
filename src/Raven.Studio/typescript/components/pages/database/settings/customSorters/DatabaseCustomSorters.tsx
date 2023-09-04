@@ -17,7 +17,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { AsyncStateStatus, useAsync, useAsyncCallback } from "react-async-hook";
-import AccordionCommunityLicenseLimited from "components/common/AccordionCommunityLicenseLimited";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import classNames from "classnames";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { CounterBadge } from "components/common/CounterBadge";
@@ -143,7 +143,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 This is the <strong>Custom Sorters</strong> view.
                             </AccordionItemWrapper>
                             {isCommunity && (
-                                <AccordionCommunityLicenseLimited
+                                <AccordionLicenseLimited
                                     targetId="licensing"
                                     featureName="Custom Sorters"
                                     featureIcon="custom-sorters"
