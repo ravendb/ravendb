@@ -10,6 +10,7 @@ import DocumentExpiration from "components/pages/database/settings/documentExpir
 import DocumentRevisions from "components/pages/database/settings/documentRevisions/DocumentRevisions";
 import TombstonesState from "components/pages/database/settings/tombstones/TombstonesState";
 import DatabaseCustomSorters from "components/pages/database/settings/customSorters/DatabaseCustomSorters";
+import DatabaseCustomAnalyzers from "components/pages/database/settings/customAnalyzers/DatabaseCustomAnalyzers";
 
 export = getSettingsMenuItem;
 
@@ -132,7 +133,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/customAnalyzers',
-            moduleId: require('viewmodels/database/settings/customAnalyzers'),
+            moduleId: bridgeToReact(DatabaseCustomAnalyzers, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Custom Analyzers',
             nav: true,
