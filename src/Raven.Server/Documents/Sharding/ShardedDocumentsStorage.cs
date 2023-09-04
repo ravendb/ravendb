@@ -510,7 +510,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         return scope;
     }
 
-    public override void ValidateId(Slice lowerId, DocumentChangeTypes type)
+    public override void ValidateId(DocumentsOperationContext context, Slice lowerId, DocumentChangeTypes type, DocumentFlags documentFlags = DocumentFlags.None)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "need to make sure we check that for counters/TS/etc...");
         var config = _documentDatabase.ShardingConfiguration;
@@ -520,6 +520,15 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         {
             if (_documentDatabase.ForTestingPurposes != null && _documentDatabase.ForTestingPurposes.EnableWritesToTheWrongShard)
                 return;
+
+            if (documentFlags.Contain(DocumentFlags.FromReplication))
+            {
+                // RavenDB-21104
+                // we allow writing the document to the wrong shard to avoid inconsistent data within the shard group
+                // and handle the leftovers at the end of the transaction 
+                context.Transaction.ExecuteDocumentsMigrationBeforeCommit();
+                return;
+            }
 
             throw new ShardMismatchException($"Document '{lowerId}' belongs to bucket '{bucket}' on shard #{shard}, but {type} operation was performed on shard #{_documentDatabase.ShardNumber}.");
         }
