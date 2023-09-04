@@ -896,12 +896,8 @@ namespace Corax
                 var termsPerEntrySpan = _parent._termsPerEntryId.ToSpan();
                 ref var entryTerms = ref termsPerEntrySpan[_termPerEntryIndex];
 
-                if (field.FieldRootPage == -1)
-                {
-                    _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-                    field.FieldRootPage = _parent._fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
-                }
-
+                _parent.InitializeFieldRootPage(field);
+                
                 var termId = Container.Allocate(
                                     _parent._transaction.LowLevelTransaction, 
                                     _parent._storedFieldsContainerId,
@@ -938,11 +934,7 @@ namespace Corax
 
                 _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 
-                if (field.FieldRootPage == -1)
-                {
-                    _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-                    field.FieldRootPage = _parent._fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
-                }
+                _parent.InitializeFieldRootPage(field);
                 
                 var recordedTerm = new RecordedTerm
                 (
@@ -983,6 +975,16 @@ namespace Corax
                 _buildingList = old;
             }
         }
+        
+        private void InitializeFieldRootPage(IndexedField field)
+        {
+            if (field.FieldRootPage == -1)
+            {
+                _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                field.FieldRootPage = _fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
+            }
+        }
+
 
         private readonly IndexEntryBuilder _builder;
 
@@ -1300,7 +1302,9 @@ namespace Corax
             var llt = _transaction.LowLevelTransaction;
             Page lastVisitedPage = default;
 
-            var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree, out var rootPages);
+            var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree);
+            var nullTermsMarkers = new HashSet<long>();
+            IndexSearcher.IndexSearcher.LoadNullTermMarkers(_nullEntriesPostingLists, nullTermsMarkers);
             
             long dicId = CompactTree.GetDictionaryId(llt);
 
@@ -1316,17 +1320,15 @@ namespace Corax
 
                 var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
                 
-                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, rootPages, dicId, entryToDelete, termsPerEntryIndex);
+                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, nullTermsMarkers, dicId, entryToDelete, termsPerEntryIndex);
                 Container.Delete(llt, _entriesTermsContainerId, entryTermsId);
             }
-            
-            rootPages.Dispose(_entriesAllocator);
         }
 
-        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, in NativeList<long> rootPages, long dicId,
+        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, long dicId,
             long entryToDelete, int termsPerEntryIndex)
         {
-            var reader = new EntryTermsReader(llt, rootPages, entryTerms.Address, entryTerms.Length, dicId);
+            var reader = new EntryTermsReader(llt, nullTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
@@ -1422,11 +1424,9 @@ namespace Corax
         }
 
 
-        private Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree, out NativeList<long> rootPages)
+        private Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree)
         {
             var pageToField = new Dictionary<long, IndexedField>();
-            rootPages = new NativeList<long>();
-            rootPages.Initialize(_entriesAllocator, _knownFieldsTerms.Length);
             
             var it = fieldsTree.Iterate(prefetch: false);
             if (it.Seek(Slices.BeforeAllKeys))
@@ -1434,30 +1434,25 @@ namespace Corax
                 do
                 {
                     var state = (LookupState*)it.CreateReaderForCurrent().Base;
-                    if (state->RootObjectType == RootObjectType.Lookup)
+                    if (state->RootObjectType != RootObjectType.Lookup) 
+                        continue;
+                    
+                    var found = _fieldsMapping.TryGetByFieldName(it.CurrentKey, out var field);
+                    if (found == false)
                     {
-                        var found = _fieldsMapping.TryGetByFieldName(it.CurrentKey, out var field);
-                        if (found == false)
-                        {
-                            if(it.CurrentKey.EndsWith("-D"u8) || it.CurrentKey.EndsWith("-L"u8))
-                                continue; // numeric postfix values
-                            var dynamicIndexedField = GetDynamicIndexedField(_entriesAllocator, it.CurrentKey.AsSpan());
-                            pageToField.Add(state->RootPage, dynamicIndexedField);
-                            rootPages.EnsureCapacityFor(_entriesAllocator, 1);
-                            rootPages.AddByRefUnsafe() = state->RootPage;
+                        if(it.CurrentKey.EndsWith("-D"u8) || it.CurrentKey.EndsWith("-L"u8))
+                            continue; // numeric postfix values
+                        var dynamicIndexedField = GetDynamicIndexedField(_entriesAllocator, it.CurrentKey.AsSpan());
+                        pageToField.Add(state->RootPage, dynamicIndexedField);
 
-                        }
-                        else
-                        {
-                            pageToField.Add(state->RootPage, _knownFieldsTerms[field.FieldId]);
-                            rootPages.EnsureCapacityFor(_entriesAllocator, 1);
-                            rootPages.AddByRefUnsafe() = state->RootPage;
-                        }
+                    }
+                    else
+                    {
+                        pageToField.Add(state->RootPage, _knownFieldsTerms[field.FieldId]);
                     }
                 } while (it.MoveNext());
             }
             
-            rootPages.Sort();
             return pageToField;
         }
 
@@ -1969,8 +1964,7 @@ namespace Corax
                 var firstTerm = sortedTerms[0]; // if we have null, it will always sort first
                 if (firstTerm.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan()))
                 {
-                    long postingListId = GetOrCreateNullTermPostingList();
-                    long termContainerId = _fieldTree.RootPage * Voron.Global.Constants.Storage.PageSize;
+                    (long postingListId, long termContainerId)  = GetOrCreateNullTermPostingList();
                     ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[0]);
                     var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
                     totalLengthOfTerm += ProcessSingleEntry(ref entries, ref nullLookup, isNullTerm: true,
@@ -2204,17 +2198,27 @@ namespace Corax
                 pageOffsets = new Span<int>(buffers.PageOffsets, 0, max);
             }
 
-            private long GetOrCreateNullTermPostingList()
+            private (long NullListId, long NullTermId) GetOrCreateNullTermPostingList()
             {
                 // In the case where the field does not have any null values, we will create a *large* posting list (an empty one)
                 // then we'll insert data to it as if it was any other term
-                var postingList = _writer._nullEntriesPostingLists.ReadInt64(_indexedField.Name);
+                var entry = _writer._nullEntriesPostingLists.Read(_indexedField.Name);
 
-                if (postingList != null)
-                    return postingList.Value;
+                if (entry != null)
+                {
+                    Debug.Assert(sizeof(long) * 2 == sizeof((long, long)));
+                    Debug.Assert(entry.Reader.Length == sizeof((long, long)));
+                    return *((long,long)*)entry.Reader.Base;
+                }
 
                 long setId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._postingListContainerId, sizeof(PostingListState), out var setSpace);
 
+                _writer.InitializeFieldRootPage(_indexedField);
+                
+                long nullMarkerId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._entriesTermsContainerId,
+                    1, _indexedField.FieldRootPage, out var nullBuffer);
+                nullBuffer.Clear();
+                
                 // we need to account for the size of the posting lists, once a term has been switch to a posting list
                 // it will always be in this model, so we don't need to do any cleanup
                 _writer._largePostingListSet ??= _writer._transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
@@ -2222,10 +2226,14 @@ namespace Corax
 
                 ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
                 PostingList.Create(_writer._transaction.LowLevelTransaction, ref postingListState);
-                postingList = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
-                _writer._nullEntriesPostingLists.Add(_indexedField.Name, postingList.Value);
+                var encodedPostingListId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
 
-                return postingList.Value;
+                using (_writer._nullEntriesPostingLists.DirectAdd(_indexedField.Name, sizeof((long, long)), out var p))
+                {
+                    *((long, long)*)p = (encodedPostingListId, nullMarkerId);
+                }
+
+                return (encodedPostingListId, nullMarkerId);
             }
             
             

@@ -499,8 +499,12 @@ namespace Voron.Data.Containers
             if (container.HasEnoughSpaceFor(reqSize) == false)
                 throw new VoronErrorException($"After checking for space and defrag, we ended up with not enough free space ({reqSize}) on page {container.Header.PageNumber}");
 
-            Debug.Assert(container.Header.PageLevelMetadata == -1 || container.Header.PageLevelMetadata == pageLevelMetadata);
-            container.Header.PageLevelMetadata = pageLevelMetadata;
+            Debug.Assert(container.Header.PageLevelMetadata == -1 || container.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1, 
+                "container.Header.PageLevelMetadata == -1 || container.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1");
+            if (pageLevelMetadata != -1) // we may place an entry with -1 in any page, so don't modify the page value if the caller doesn't care
+            {
+                container.Header.PageLevelMetadata = pageLevelMetadata;
+            }
             return container.Allocate(size, pos, out allocatedSpace);
         }
 
