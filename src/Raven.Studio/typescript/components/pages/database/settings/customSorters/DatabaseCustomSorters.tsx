@@ -132,7 +132,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 description="Get additional info on what this feature can offer you"
                                 heading="About this view"
                             >
-                                Umm
+                                This is the <strong>Custom Sorters</strong> view.
                             </AccordionItemWrapper>
                             {isCommunity && (
                                 <AccordionCommunityLicenseLimited

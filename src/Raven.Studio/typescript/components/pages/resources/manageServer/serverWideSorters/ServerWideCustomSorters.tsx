@@ -69,7 +69,7 @@ export default function ServerWideCustomSorters() {
                                 description="Get additional info on what this feature can offer you"
                                 heading="About this view"
                             >
-                                Umm
+                                This is the <strong>Server-Wide Custom Sorters</strong> view.
                             </AccordionItemWrapper>
                             {isCommunity && (
                                 <AccordionCommunityLicenseLimited
