@@ -264,10 +264,9 @@ namespace Raven.Server.Documents.Handlers
                             changeVector.Contains(Database.ClusterTransactionId) == false)
                         {
                             Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
-                            long? guardIndex = includeCompareExchangeValues.GetAtomicGuardIndex(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex);
-                            if (guardIndex != null)
+                            if (includeCompareExchangeValues.TryGetAtomicGuard(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex, out var guardIndex, out _))
                             {
-                                var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, Database.ClusterTransactionId, guardIndex.Value, changeVector);
+                                var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, Database.ClusterTransactionId, guardIndex, changeVector);
                                 Debug.Assert(isValid, "ChangeVector didn't have ClusterTransactionId tag but now does?!");
                                 document.ChangeVector = cv;
                             }

@@ -14,6 +14,18 @@ public class RavenDB_19629 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+    public async Task CanLoadAndSaveNonExistingDocument()
+    {
+        using var store = GetDocumentStore();
+        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+        {
+            var arava = await session.LoadAsync<User>("users/arava") ?? new User();
+            await session.StoreAsync(arava, "users/arava");
+            await session.SaveChangesAsync();
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
     public async Task CanDeleteCmpXchgValue2()
     {
         using var store = GetDocumentStore();
