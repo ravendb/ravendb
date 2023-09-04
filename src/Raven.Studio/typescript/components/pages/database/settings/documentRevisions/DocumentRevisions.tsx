@@ -345,7 +345,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 </p>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/SOMRWC/6.0/Csharp" target="_blank">
+                                <a href="https://ravendb.net/l/OFVLX8/latest" target="_blank">
                                     <Icon icon="newtab" /> Docs - Document Revisions
                                 </a>
                             </AccordionItemWrapper>

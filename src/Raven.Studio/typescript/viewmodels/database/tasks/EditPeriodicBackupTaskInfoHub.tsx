@@ -39,7 +39,7 @@ export function EditPeriodicBackupTaskInfoHub() {
                 </p>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
-                <a href="https://ravendb.net/l/GMBYOH/6.0/Csharp" target="_blank">
+                <a href="https://ravendb.net/l/GMBYOH/latest" target="_blank">
                     <Icon icon="newtab" /> Docs - Backups
                 </a>
             </AccordionItemWrapper>

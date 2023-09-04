@@ -3,6 +3,7 @@ import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIn
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
+import {Icon} from "components/common/Icon";
 
 export function EditServerWideBackupInfoHub() {
     const licenseType = useAppSelector(licenseSelectors.licenseType);
@@ -40,6 +41,11 @@ export function EditServerWideBackupInfoHub() {
                         <li>Disabling this task will disable the corresponding tasks per database.</li>
                     </ul>
                 </p>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href="https://ravendb.net/l/SXSM33/latest" target="_blank">
+                    <Icon icon="newtab" /> Docs - Server-Wide Backup Task
+                </a>
             </AccordionItemWrapper>
             {licenseType === "Community" && (
                 <AccordionLicenseNotIncluded
