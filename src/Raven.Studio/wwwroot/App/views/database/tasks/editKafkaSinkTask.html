@@ -316,7 +316,7 @@
             </ul>
         </div>
         <div class="tab-content flex-grow" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
-            <div class="tab-pane fade in active margin-bottom" id="testResultsModified">
+            <div role="tabpanel" class="tab-pane fade in active margin-bottom" id="testResultsModified">
                 <div data-bind="with: actions">
                     <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>
                 </div>
@@ -326,7 +326,7 @@
                     <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>
                 </div>
             </div>
-            <div class="tab-pane fade margin-bottom" id="testResultsDeleted">
+            <div role="tabpanel" class="tab-pane fade margin-bottom" id="testResultsDeleted">
                 <div data-bind="with: actions">
                     <div data-bind="compose: $root.patchDebugActionsDeletedView"></div>
                 </div>

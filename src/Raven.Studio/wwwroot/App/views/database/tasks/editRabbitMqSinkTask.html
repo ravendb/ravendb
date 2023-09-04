@@ -287,15 +287,15 @@
         <div class="tabs" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" data-bind="visible: testAlreadyExecuted" class="active">
-                    <a href="#testResultsLoaded" role="tab" data-toggle="tab">
-                        <i class="icon-import"></i><span>Loaded</span>
-                        <span class="label label-primary  margin-left-xxs" data-bind="text: actions.loadedCount() || ''"></span>
+                    <a href="#testResultsModified" role="tab" data-toggle="tab">
+                        <i class="icon-export"></i><span>Put</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.modifiedCount() || ''"></span>
                     </a>
                 </li>
                 <li role="presentation" data-bind="visible: testAlreadyExecuted">
-                    <a href="#testResultsModified" role="tab" data-toggle="tab">
-                        <i class="icon-export"></i><span>Modified</span>
-                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.modifiedCount() || ''"></span>
+                    <a href="#testResultsLoaded" role="tab" data-toggle="tab">
+                        <i class="icon-import"></i><span>Loaded</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.loadedCount() || ''"></span>
                     </a>
                 </li>
                 <li role="presentation" data-bind="visible: testAlreadyExecuted">
@@ -312,17 +312,17 @@
             </ul>
         </div>
         <div class="tab-content flex-grow" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
-            <div role="tabpanel" class="tab-pane fade in active" id="testResultsLoaded">
-                <div data-bind="with: actions">
-                    <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>
-                </div>
-            </div>
-            <div class="tab-pane fade margin-bottom" id="testResultsModified">
+            <div role="tabpanel" class="tab-pane fade margin-bottom in active" id="testResultsModified">
                 <div data-bind="with: actions">
                     <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>
                 </div>
             </div>
-            <div class="tab-pane fade margin-bottom" id="testResultsDeleted">
+            <div role="tabpanel" class="tab-pane fade margin-bottom" id="testResultsLoaded">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade margin-bottom" id="testResultsDeleted">
                 <div data-bind="with: actions">
                     <div data-bind="compose: $root.patchDebugActionsDeletedView"></div>
                 </div>
