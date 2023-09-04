@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -31,7 +33,6 @@ namespace Raven.Server.Documents.Sharding.Background
 
                 int bucket = -1;
                 int moveToShard = -1;
-                bool found = false;
                 using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -50,47 +51,12 @@ namespace Raven.Server.Documents.Sharding.Background
 
                         var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
 
-                        foreach (var bucketStats in bucketStatistics)
-                        {
-                            _token.ThrowIfCancellationRequested();
-
-                            if (bucketStats.Size == 0)
-                                continue;
-
-                            bucket = bucketStats.Bucket;
-
-                            // this bucket already been migrated
-                            if (configuration.BucketMigrations.ContainsKey(bucket))
-                                continue;
-
-                            if (bucketStats.NumberOfDocuments == 0)
-                            {
-                                var foundTombstone = false;
-                                foreach (var tombstone in _database.ShardedDocumentsStorage.RetrieveTombstonesByBucketFrom(context, bucket, 0))
-                                {
-                                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "handle DeletedTimeSeriesRange?");
-
-                                    if (tombstone.Flags.Contain(DocumentFlags.Artificial))
-                                        continue;
-
-                                    foundTombstone = true;
-                                }
-
-                                if (foundTombstone == false)
-                                    continue;
-                            }
-
-                            moveToShard = range.ShardNumber;
-                            found = true;
-                            break;
-                        }
-
-                        if (found)
+                        if (TryFindWrongBucket(context, configuration, range, bucketStatistics, out bucket, out moveToShard))
                             break;
                     }
                 }
 
-                if (found)
+                if (bucket != -1)
                     await MoveDocumentsToShardAsync(bucket, moveToShard);
             }
             catch (Exception e)
@@ -103,6 +69,45 @@ namespace Raven.Server.Documents.Sharding.Background
 
                 throw;
             }
+        }
+
+        private bool TryFindWrongBucket(DocumentsOperationContext context, ShardingConfiguration configuration, ShardBucketRange range,
+            IEnumerable<BucketStats> bucketStatistics, out int bucket, out int shardNumber)
+        {
+            shardNumber = range.ShardNumber;
+            bucket = -1;
+
+            foreach (var bucketStats in bucketStatistics)
+            {
+                _token.ThrowIfCancellationRequested();
+
+                if (bucketStats.Size == 0)
+                    continue;
+
+                bucket = bucketStats.Bucket;
+
+                // this bucket already been migrated
+                if (configuration.BucketMigrations.ContainsKey(bucket))
+                    continue;
+
+                if (bucketStats.NumberOfDocuments == 0)
+                {
+                    foreach (var tombstone in _database.ShardedDocumentsStorage.RetrieveTombstonesByBucketFrom(context, bucket, 0))
+                    {
+                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "handle DeletedTimeSeriesRange?");
+
+                        if (tombstone.Flags.Contain(DocumentFlags.Artificial) ||
+                            tombstone.Flags.Contain(DocumentFlags.FromResharding))
+                            continue;
+
+                        return true;
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         private async Task MoveDocumentsToShardAsync(int bucket, int moveToShard)
