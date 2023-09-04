@@ -1549,7 +1549,7 @@ namespace Raven.Server.Documents
             DocumentFlags newFlags = DocumentFlags.None)
         {
             if (newFlags.HasFlag(DocumentFlags.FromResharding) == false)
-                ValidateId(lowerId, operationType: DocumentChangeTypes.Delete);
+                ValidateId(context, lowerId, type: DocumentChangeTypes.Delete, newFlags);
 
             var local = GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
             var modifiedTicks = GetOrCreateLastModifiedTicks(lastModifiedTicks);
@@ -1774,7 +1774,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public virtual void ValidateId(Slice lowerId, DocumentChangeTypes operationType)
+        public virtual void ValidateId(DocumentsOperationContext context, Slice lowerId, DocumentChangeTypes type, DocumentFlags documentFlags = DocumentFlags.None)
         {
 
         }
