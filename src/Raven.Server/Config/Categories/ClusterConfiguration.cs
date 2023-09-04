@@ -114,7 +114,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting CompareExchangeExpiredCleanupInterval { get; set; }
 
         [Description("Excceding the allowed change vector distance between two nodes, will move the lagged node to rehab.")]
-        [DefaultValue(10_000)]
+        [DefaultValue(65536)]
         [ConfigurationEntry("Cluster.MaxChangeVectorDistance", ConfigurationEntryScope.ServerWideOnly)]
         public long MaxChangeVectorDistance { get; set; }
         
