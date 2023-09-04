@@ -251,6 +251,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                         // We need to get the actual field, not the dynamic field. 
                         int propIdx = document.Data.GetPropertyIndex(fieldDescription.FieldName);
+                        if (propIdx < 0)
+                            continue; // The property does not exist in the data object, there is nothing to highlight.
+
                         BlittableJsonReaderObject.PropertyDetails property = default;
                         document.Data.GetPropertyByIndex(propIdx, ref property);
 
