@@ -41,9 +41,9 @@ public unsafe struct MultiUnaryItem
         Any
     }
 
-    private delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> _byteComparerLeft;
-    private delegate*<long, long, bool> _longComparerLeft;
-    private delegate*<double, double, bool> _doubleComparerLeft;
+    private readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> _byteComparerLeft;
+    private readonly delegate*<long, long, bool> _longComparerLeft;
+    private readonly delegate*<double, double, bool> _doubleComparerLeft;
 
 
     private readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> _byteComparerRight;
@@ -79,33 +79,33 @@ public unsafe struct MultiUnaryItem
             {
                 case UnaryMatchOperation.LessThan:
                     byteComparerLeft = &LessThanMatchComparer.Compare;
-                    longComparerLeft = &LessThanMatchComparer.Compare<long>;
-                    doubleComparerLeft = &LessThanMatchComparer.Compare<double>;
+                    longComparerLeft = &LessThanMatchComparer.Compare;
+                    doubleComparerLeft = &LessThanMatchComparer.Compare;
                     break;
                 case UnaryMatchOperation.LessThanOrEqual:
                     byteComparerLeft = &LessThanOrEqualMatchComparer.Compare;
-                    longComparerLeft = &LessThanOrEqualMatchComparer.Compare<long>;
-                    doubleComparerLeft = &LessThanOrEqualMatchComparer.Compare<double>;
+                    longComparerLeft = &LessThanOrEqualMatchComparer.Compare;
+                    doubleComparerLeft = &LessThanOrEqualMatchComparer.Compare;
                     break;
                 case UnaryMatchOperation.GreaterThan:
                     byteComparerLeft = &GreaterThanMatchComparer.Compare;
-                    longComparerLeft = &GreaterThanMatchComparer.Compare<long>;
-                    doubleComparerLeft = &GreaterThanMatchComparer.Compare<double>;
+                    longComparerLeft = &GreaterThanMatchComparer.Compare;
+                    doubleComparerLeft = &GreaterThanMatchComparer.Compare;
                     break;
                 case UnaryMatchOperation.GreaterThanOrEqual:
                     byteComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
-                    longComparerLeft = &GreaterThanOrEqualMatchComparer.Compare<long>;
-                    doubleComparerLeft = &GreaterThanOrEqualMatchComparer.Compare<double>;
+                    longComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
+                    doubleComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
                     break;
                 case UnaryMatchOperation.NotEquals:
                     byteComparerLeft = &NotEqualsMatchComparer.Compare;
-                    longComparerLeft = &NotEqualsMatchComparer.Compare<long>;
-                    doubleComparerLeft = &NotEqualsMatchComparer.Compare<double>;
+                    longComparerLeft = &NotEqualsMatchComparer.Compare;
+                    doubleComparerLeft = &NotEqualsMatchComparer.Compare;
                     break;
                 case UnaryMatchOperation.Equals:
                     byteComparerLeft = &EqualsMatchComparer.Compare;
-                    longComparerLeft = &EqualsMatchComparer.Compare<long>;
-                    doubleComparerLeft = &EqualsMatchComparer.Compare<double>;
+                    longComparerLeft = &EqualsMatchComparer.Compare;
+                    doubleComparerLeft = &EqualsMatchComparer.Compare;
                     break;
                 case UnaryMatchOperation.Between:
                 case UnaryMatchOperation.NotBetween:
@@ -124,15 +124,15 @@ public unsafe struct MultiUnaryItem
         bool leftResult;
         if (Type == DataType.Long)
         {
-            leftResult = _longComparerLeft(LongValueLeft, CoherseValueTypeToLong(value));
+            leftResult = _longComparerLeft(LongValueLeft, CoerceValueTypeToLong(value));
             if (IsBetween)
-                return leftResult & _longComparerRight(LongValueRight, CoherseValueTypeToLong(value));
+                return leftResult & _longComparerRight(LongValueRight, CoerceValueTypeToLong(value));
             return leftResult;
         }
 
-        leftResult = _doubleComparerLeft(DoubleValueLeft, CoherseValueTypeToDouble(value));
+        leftResult = _doubleComparerLeft(DoubleValueLeft, CoerceValueTypeToDouble(value));
         if (IsBetween)
-            return leftResult & _doubleComparerRight(DoubleValueRight, CoherseValueTypeToDouble(value));
+            return leftResult & _doubleComparerRight(DoubleValueRight, CoerceValueTypeToDouble(value));
         return leftResult;
     }
 
@@ -326,7 +326,7 @@ public unsafe struct MultiUnaryItem
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long CoherseValueTypeToLong<TValueType>(TValueType value) where TValueType : unmanaged
+    private static long CoerceValueTypeToLong<TValueType>(TValueType value) where TValueType : unmanaged
     {
         if (typeof(TValueType) == typeof(long))
             return (long)(object)value;
@@ -350,7 +350,7 @@ public unsafe struct MultiUnaryItem
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static double CoherseValueTypeToDouble<TValueType>(TValueType value)
+    private static double CoerceValueTypeToDouble<TValueType>(TValueType value)
     {
         if (typeof(TValueType) == typeof(double))
             return (double)(object)value;
