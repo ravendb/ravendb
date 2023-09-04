@@ -5,9 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
@@ -660,14 +663,14 @@ namespace Raven.Server.Documents.Subscriptions
                     if (currentLastNoopAckTicks != localLastNoopAckTicks)
                         return _lastNoopAckTask;
 
-                    var ackTask = DocumentDatabase.SubscriptionStorage.SendNoopAck(SubscriptionId, SubscriptionName);
+                    var ackTask = SendNoopAck(SubscriptionId, SubscriptionName);
 
                     Interlocked.Exchange(ref _lastNoopAckTask, ackTask);
 
                     return ackTask;
                 }
 
-                return DocumentDatabase.SubscriptionStorage.SendNoopAck(SubscriptionId, SubscriptionName);
+                return SendNoopAck(SubscriptionId, SubscriptionName);
             }
 
             return DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
@@ -675,6 +678,47 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionName,
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
+        }
+
+        private async Task SendNoopAck(long subscriptionId, string name)
+        {
+            var command = new AcknowledgeSubscriptionBatchCommand(_documentsStorage.DocumentDatabase.Name, RaftIdGenerator.NewId())
+            {
+                ChangeVector = nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                NodeTag = _documentsStorage.DocumentDatabase.ServerStore.NodeTag,
+                HasHighlyAvailableTasks = _documentsStorage.DocumentDatabase.ServerStore.LicenseManager.HasHighlyAvailableTasks(),
+                SubscriptionId = subscriptionId,
+                SubscriptionName = name,
+                BatchId = SubscriptionConnection.NonExistentBatch,
+                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                DatabaseName = _documentsStorage.DocumentDatabase.Name,
+            };
+
+            var state = _documentsStorage.DocumentDatabase.ServerStore.Engine.CurrentState;
+            if (state == RachisState.Leader || state == RachisState.Follower)
+            {
+                // there are no changes for this subscription but we still want to check if we are the node that is responsible for this task.
+                // we can do that locally if we have a functional cluster (in a leader or follower state).
+
+                using (_documentsStorage.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var rawDatabaseRecord = _documentsStorage.DocumentDatabase.ServerStore.Cluster.ReadRawDatabaseRecord(context, command.DatabaseName);
+                    if (rawDatabaseRecord == null)
+                        throw new DatabaseDoesNotExistException($"Cannot set command value of type {nameof(AcknowledgeSubscriptionBatchCommand)} for database {command.DatabaseName}, because it does not exist");
+
+                    var subscription = _documentsStorage.DocumentDatabase.ServerStore.Cluster.Read(context, command.GetItemId());
+                    if (subscription == null)
+                        throw new SubscriptionDoesNotExistException($"Subscription with name '{command.SubscriptionName}' does not exist");
+
+                    var subscriptionTask = new AcknowledgeSubscriptionBatchCommand.SubscriptionTask(subscription);
+                    command.AssertSubscriptionState(rawDatabaseRecord, subscriptionTask, command.SubscriptionName);
+                    return;
+                }
+            }
+
+            var (etag, _) = await _documentsStorage.DocumentDatabase.ServerStore.SendToLeaderAsync(command);
+            await _documentsStorage.DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _documentsStorage.DocumentDatabase.ServerStore.Engine.OperationTimeout);
         }
     }
 }
