@@ -4,7 +4,8 @@ import { composeStories } from "@storybook/testing-react";
 
 import * as stories from "./IndexesPage.stories";
 
-const { EmptyView, SampleDataCluster, FaultyIndexSharded, FaultyIndexSingleNode } = composeStories(stories);
+const { EmptyView, SampleDataCluster, FaultyIndexSharded, FaultyIndexSingleNode, CommunityLimits } =
+    composeStories(stories);
 
 describe("IndexesPage", function () {
     it("can render empty view", async () => {
@@ -48,5 +49,11 @@ describe("IndexesPage", function () {
         expect(openFaultyButtons).toHaveLength(2);
 
         expect(screen.queryByText(/Set State/)).not.toBeInTheDocument();
+    });
+
+    it("can show community limits", async () => {
+        const { screen } = rtlRender(<CommunityLimits />);
+
+        expect(await screen.findByText(/maximum number of static indexes/)).toBeInTheDocument();
     });
 });

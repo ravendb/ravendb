@@ -19,8 +19,12 @@ import { Icon } from "components/common/Icon";
 import { ConfirmSwapSideBySideIndex } from "./ConfirmSwapSideBySideIndex";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import AboutViewFloating, { AccordionItemLicensing, AccordionItemWrapper } from "components/common/AboutView";
+import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { todo } from "common/developmentHelper";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 
 interface IndexesPageProps {
     db: database;
@@ -30,15 +34,6 @@ interface IndexesPageProps {
 
 export function IndexesPage(props: IndexesPageProps) {
     const { db, stale, indexName: indexToHighlight } = props;
-
-    const staticIndexServerLimit = 12 * 5; //TODO
-    const autoIndexServerLimit = 24 * 5; //TODO
-
-    const staticIndexServerCount = 52; //TODO
-    const autoIndexServerCount = 24 * 5; //TODO
-
-    const staticIndexesServerLimitStatus = getLicenseLimitReachStatus(staticIndexServerCount, staticIndexServerLimit);
-    const autoIndexesServerLimitStatus = getLicenseLimitReachStatus(autoIndexServerCount, autoIndexServerLimit);
 
     const { canReadWriteDatabase } = useAccessManager();
     const { reportEvent } = useEventsCollector();
@@ -90,6 +85,32 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const allActionContexts = ActionContextUtils.getContexts(db.getLocations());
 
+    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+
+    // TODO get from license selector
+    const autoServerLimit = 24 * 5;
+    const staticServerLimit = 12 * 5;
+    const autoDatabaseLimit = 24;
+    const staticDatabaseLimit = 12;
+
+    // TODO get from endpoint
+    const autoServerCount = 0;
+    const staticServerCount = 0;
+
+    const autoDatabaseCount = stats.indexes.filter((x) => IndexUtils.isAutoIndex(x)).length;
+    const staticDatabaseCount = stats.indexes.length - autoDatabaseCount;
+
+    const autoServerLimitStatus = getLicenseLimitReachStatus(autoServerCount, autoServerLimit);
+    const staticServerLimitStatus = getLicenseLimitReachStatus(staticServerCount, staticServerLimit);
+
+    const autoDatabaseLimitStatus = getLicenseLimitReachStatus(autoDatabaseCount, autoDatabaseLimit);
+    const staticDatabaseLimitStatus = getLicenseLimitReachStatus(staticDatabaseCount, staticDatabaseLimit);
+
+    const isNewIndexDisabled =
+        isCommunity && (staticServerLimitStatus === "limitReached" || staticDatabaseLimitStatus === "limitReached");
+
+    todo("Other", "Damian", "Move limits to separate component");
+
     if (loading) {
         return <LoadingView />;
     }
@@ -100,42 +121,84 @@ export function IndexesPage(props: IndexesPageProps) {
 
     return (
         <>
-            {staticIndexesServerLimitStatus !== "notReached" && (
-                <Alert
-                    color={staticIndexesServerLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center"
-                >
-                    Your server {staticIndexesServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                    <strong>maximum number of static indexes</strong> allowed by your license{" "}
-                    <strong>
-                        ({staticIndexServerCount}/{staticIndexServerLimit})
-                    </strong>
-                    <br /> Delete unused indexes or{" "}
-                    <strong>
-                        <a href="https://ravendb.net/l/FLDLO4" target="_blank">
-                            upgrade your license
-                        </a>
-                    </strong>
-                </Alert>
-            )}
+            {isCommunity && (
+                <>
+                    {staticServerLimitStatus !== "notReached" && (
+                        <Alert
+                            color={staticServerLimitStatus === "limitReached" ? "danger" : "warning"}
+                            className="text-center"
+                        >
+                            Your server {staticServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                            <strong>maximum number of static indexes</strong> allowed by your license{" "}
+                            <strong>
+                                ({staticServerCount}/{staticServerLimit})
+                            </strong>
+                            <br /> Delete unused indexes or{" "}
+                            <strong>
+                                <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                    upgrade your license
+                                </a>
+                            </strong>
+                        </Alert>
+                    )}
 
-            {autoIndexesServerLimitStatus !== "notReached" && (
-                <Alert
-                    color={autoIndexesServerLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center"
-                >
-                    Your server {autoIndexesServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                    <strong>maximum number of auto indexes</strong> allowed by your license{" "}
-                    <strong>
-                        ({autoIndexServerCount}/{autoIndexServerLimit})
-                    </strong>
-                    <br /> Delete unused indexes or{" "}
-                    <strong>
-                        <a href="https://ravendb.net/l/FLDLO4" target="_blank">
-                            upgrade your license
-                        </a>
-                    </strong>
-                </Alert>
+                    {autoServerLimitStatus !== "notReached" && (
+                        <Alert
+                            color={autoServerLimitStatus === "limitReached" ? "danger" : "warning"}
+                            className="text-center"
+                        >
+                            Your server {autoServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                            <strong>maximum number of auto indexes</strong> allowed by your license{" "}
+                            <strong>
+                                ({autoServerCount}/{autoServerLimit})
+                            </strong>
+                            <br /> Delete unused indexes or{" "}
+                            <strong>
+                                <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                    upgrade your license
+                                </a>
+                            </strong>
+                        </Alert>
+                    )}
+
+                    {staticDatabaseLimitStatus !== "notReached" && (
+                        <Alert
+                            color={staticDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                            className="text-center"
+                        >
+                            Your database {staticDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                            <strong>maximum number of static indexes</strong> allowed by your license{" "}
+                            <strong>
+                                ({staticDatabaseCount}/{staticDatabaseLimit})
+                            </strong>
+                            <br /> Delete unused indexes or{" "}
+                            <strong>
+                                <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                    upgrade your license
+                                </a>
+                            </strong>
+                        </Alert>
+                    )}
+
+                    {autoDatabaseLimitStatus !== "notReached" && (
+                        <Alert
+                            color={autoDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                            className="text-center"
+                        >
+                            Your database {autoDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                            <strong>maximum number of auto indexes</strong> allowed by your license{" "}
+                            <strong>
+                                ({autoDatabaseCount}/{autoDatabaseLimit})
+                            </strong>
+                            <br /> Delete unused indexes or{" "}
+                            <strong>
+                                <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                    upgrade your license
+                                </a>
+                            </strong>
+                        </Alert>
+                    )}
+                </>
             )}
             {stats.indexes.length > 0 && (
                 <StickyHeader>
@@ -145,15 +208,14 @@ export function IndexesPage(props: IndexesPageProps) {
                                 color="primary"
                                 id="NewIndexButton"
                                 href={newIndexUrl}
-                                disabled={staticIndexesServerLimitStatus === "limitReached"} //TODO Add block for local database indexes
+                                disabled={isNewIndexDisabled}
                                 className="rounded-pill px-3 pe-auto"
                             >
                                 <Icon icon="index" addon="plus" />
                                 <span>New index</span>
                             </Button>
 
-                            {staticIndexesServerLimitStatus === "limitReached" && (
-                                //TODO update message server/database
+                            {isNewIndexDisabled && (
                                 <UncontrolledPopover
                                     trigger="hover"
                                     target="NewIndexButton"
@@ -161,10 +223,12 @@ export function IndexesPage(props: IndexesPageProps) {
                                     className="bs5"
                                 >
                                     <div className="p-3 text-center">
-                                        Static index server/database license limit reached.
+                                        Static index{" "}
+                                        {staticServerLimitStatus === "limitReached" ? "server" : "database"} license
+                                        limit reached.
                                         <br /> Delete unused indexes or{" "}
                                         <strong>
-                                            <a href="https://ravendb.net/l/FLDLO4" target="_blank">
+                                            <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
                                                 upgrade your license
                                             </a>
                                         </strong>
@@ -179,70 +243,20 @@ export function IndexesPage(props: IndexesPageProps) {
                                     color="info"
                                     heading="About this view"
                                     description="Get additional info on what this feature can offer you"
-                                    targetId="1"
+                                    targetId="about-view"
                                 >
                                     <p>
-                                        <strong>Admin JS Console</strong> is a specialized feature primarily intended
-                                        for resolving server errors. It provides a direct interface to the underlying
-                                        system, granting the capacity to execute scripts for intricate server
-                                        operations.
-                                    </p>
-                                    <p>
-                                        It is predominantly intended for advanced troubleshooting and rectification
-                                        procedures executed by system administrators or RavenDB support.
-                                    </p>
-                                    <hr />
-                                    <div className="small-label mb-2">useful links</div>
-                                    <a href="https://ravendb.net/l/IBUJ7M/6.0/Csharp" target="_blank">
-                                        <Icon icon="newtab" /> Docs - Admin JS Console
-                                    </a>
-                                </AccordionItemWrapper>
-                                <AccordionItemWrapper
-                                    icon="road-cone"
-                                    color="success"
-                                    heading="Examples of use"
-                                    description="Learn how to get the most of this feature"
-                                    targetId="2"
-                                >
-                                    <p>
-                                        <strong>To set the refresh time:</strong> enter the appropriate date in the
-                                        metadata <code>@refresh</code> property.
-                                    </p>
-                                    <p>
-                                        <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
-                                        frequency specified. The actual refresh time can increase (up to) that value.
+                                        This is <strong>List of Indexes</strong> view.
                                     </p>
                                 </AccordionItemWrapper>
-                                <AccordionItemWrapper
-                                    icon="license"
-                                    color="warning"
-                                    heading="Licensing"
-                                    description="See which plans offer this and more exciting features"
-                                    targetId="3"
-                                    pill
-                                    pillText="Upgrade available"
-                                    pillIcon="star-filled"
-                                >
-                                    <AccordionItemLicensing
-                                        description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
+                                {isCommunity && (
+                                    <AccordionLicenseLimited
+                                        targetId="license-limit"
+                                        description="Upgrade to a paid plan and get unlimited availability."
                                         featureName="Document Compression"
                                         featureIcon="documents-compression"
-                                        checkedLicenses={["Professional", "Enterprise"]}
-                                    >
-                                        <p className="lead fs-4">Get your license expanded</p>
-                                        <div className="mb-3">
-                                            <Button color="primary" className="rounded-pill">
-                                                <Icon icon="notifications" />
-                                                Contact us
-                                            </Button>
-                                        </div>
-                                        <small>
-                                            <a href="#" target="_blank" className="text-muted">
-                                                See pricing plans
-                                            </a>
-                                        </small>
-                                    </AccordionItemLicensing>
-                                </AccordionItemWrapper>
+                                    />
+                                )}
                             </AboutViewFloating>
                         </Col>
                     </Row>

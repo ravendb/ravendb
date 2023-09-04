@@ -35,6 +35,8 @@ import { InputItem, InputItemLimit } from "components/models/common";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useAppSelector } from "components/store";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -42,8 +44,12 @@ type IndexEvent =
 
 export function useIndexesPage(database: database, stale: boolean) {
     //TODO: use DatabaseSharedInfo?
-    const staticIndexLimit = 12; //TODO
-    const autoIndexLimit = 24; //TODO
+
+    // TODO get from license selector
+    const staticDatabaseLimit = 12;
+    const autoDatabaseLimit = 24;
+
+    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
 
     const locations = database.getLocations();
 
@@ -569,35 +575,27 @@ export function useIndexesPage(database: database, stale: boolean) {
     };
 
     const filterByTypeOptions: InputItem<IndexType>[] = useMemo(() => {
-        let staticIndexCount = 0,
-            autoIndexCount = 0;
+        const autoIndexCount = stats.indexes.filter((x) => IndexUtils.isAutoIndex(x)).length;
+        const staticIndexCount = stats.indexes.length - autoIndexCount;
 
-        for (const index of stats.indexes) {
-            if (IndexUtils.isAutoIndex(index)) {
-                autoIndexCount++;
-            } else {
-                staticIndexCount++;
-            }
-        }
-
-        const staticIndexReachStatus = getLicenseLimitReachStatus(staticIndexCount, staticIndexLimit);
-        const autoIndexReachStatus = getLicenseLimitReachStatus(autoIndexCount, autoIndexLimit);
+        const autoIndexReachStatus = getLicenseLimitReachStatus(autoIndexCount, autoDatabaseLimit);
+        const staticIndexReachStatus = getLicenseLimitReachStatus(staticIndexCount, staticDatabaseLimit);
 
         const staticIndexInputLimit: InputItemLimit =
-            staticIndexReachStatus !== "notReached"
+            isCommunity && staticIndexReachStatus !== "notReached"
                 ? {
-                      value: staticIndexLimit,
+                      value: staticDatabaseLimit,
                       badgeColor: staticIndexReachStatus === "closeToLimit" ? "warning" : "danger",
-                      message: `Your license allows ${staticIndexLimit} Static Indexes`,
+                      message: `Your license allows ${staticDatabaseLimit} Static Indexes`,
                   }
                 : null;
 
         const autoIndexInputLimit: InputItemLimit =
-            autoIndexReachStatus !== "notReached"
+            isCommunity && autoIndexReachStatus !== "notReached"
                 ? {
-                      value: autoIndexLimit,
+                      value: autoDatabaseLimit,
                       badgeColor: autoIndexReachStatus === "closeToLimit" ? "warning" : "danger",
-                      message: `Your license allows ${autoIndexLimit} Auto Indexes`,
+                      message: `Your license allows ${autoDatabaseLimit} Auto Indexes`,
                   }
                 : null;
 
@@ -615,7 +613,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                 limit: autoIndexInputLimit,
             },
         ] satisfies InputItem<IndexType>[];
-    }, [stats.indexes]);
+    }, [isCommunity, stats.indexes]);
 
     const filterByStatusOptions: InputItem<IndexStatus>[] = useMemo(() => {
         let normal = 0,
