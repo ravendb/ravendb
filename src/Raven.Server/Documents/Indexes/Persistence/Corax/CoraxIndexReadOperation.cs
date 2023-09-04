@@ -649,6 +649,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     long i = identityTracker.RegisterDuplicates(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), token);
                     totalResults.Value += read; // important that this is *after* RegisterDuplicates
 
+                    // If we are going to just return count() then we don't care about anything else.
+                    if (query.IsCountQuery)
+                        continue;
+
                     // Now for every document that was selected. document it. 
                     for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                     {
@@ -771,14 +775,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 if (typeof(TQueryFilter) == typeof(NoQueryFilter))
                     return (TQueryFilter)(object)new NoQueryFilter();
-                else if (typeof(TQueryFilter) == typeof(HasQueryFilter))
+                if (typeof(TQueryFilter) == typeof(HasQueryFilter))
                 {
                     return (TQueryFilter)(object)new HasQueryFilter(
                         new QueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings)
                     );
                 }
-                else
-                    throw new NotSupportedException($"The type {typeof(TQueryFilter)} is not supported.");
+                
+                throw new NotSupportedException($"The type {typeof(TQueryFilter)} is not supported.");
             }
         }
 

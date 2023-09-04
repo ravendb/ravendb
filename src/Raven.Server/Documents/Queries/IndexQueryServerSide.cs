@@ -94,6 +94,9 @@ namespace Raven.Server.Documents.Queries
         [JsonDeserializationIgnore]
         public BlittableJsonReaderObject SourceQueryJson { get; set; }
 
+        [JsonDeserializationIgnore]
+        public bool IsCountQuery => Limit == 0 && Offset == 0;
+
 
         private BlittableJsonReaderObject _asJson;
 
