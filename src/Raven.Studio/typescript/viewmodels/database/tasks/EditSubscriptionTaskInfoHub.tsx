@@ -38,7 +38,7 @@ export function EditSubscriptionTaskInfoHub() {
                 </p>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
-                <a href="https://ravendb.net/l/I5TMCK/6.0/Csharp" target="_blank">
+                <a href="https://ravendb.net/l/I5TMCK/latest" target="_blank">
                     <Icon icon="newtab" /> Docs - Subscription Task
                 </a>
             </AccordionItemWrapper>
