@@ -21,7 +21,6 @@ import queueSinkSyntax from "viewmodels/database/tasks/queueSinkSyntax";
 import patchDebugActions from "viewmodels/database/patch/patchDebugActions";
 import licenseModel from "models/auth/licenseModel";
 import { EditRabbitMqSinkTaskInfoHub } from "./EditRabbitMqSinkTaskInfoHub";
- 
 
 class rabbitMqTaskTestMode {
     db: KnockoutObservable<database>;
@@ -47,6 +46,9 @@ class rabbitMqTaskTestMode {
         this.db = db;
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;
+
+        // on edit RabbitMQ view we want to show documents by default
+        this.actions.showDocumentsInModified(true);
     }
 
     initObservables() {
