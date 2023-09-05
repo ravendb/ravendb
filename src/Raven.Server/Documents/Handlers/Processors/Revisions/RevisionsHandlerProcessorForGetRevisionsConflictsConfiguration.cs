@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             using (context.OpenReadTransaction())
             using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.Database.Name))
             {
-                return rawRecord?.RevisionsForConflicts;
+                return rawRecord?.RevisionsForConflicts ?? RequestHandler.Database.DocumentsStorage.RevisionsStorage?.ConflictConfiguration?.Default;
             }
         }
     }

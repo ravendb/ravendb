@@ -270,7 +270,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(WarnIndexOutputsPerDocument));
             scripter.AddType(typeof(IndexingReferenceLoadWarning));
             scripter.AddType(typeof(QueueSinkErrorsDetails));
-            
+            scripter.AddType(typeof(ConflictPerformanceDetails));
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionStatsCollector));
@@ -368,6 +368,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RevisionsConfiguration));
             scripter.AddType(typeof(RevertRevisionsRequest));
             scripter.AddType(typeof(RevertResult));
+            scripter.AddType(typeof(EnforceRevisionsConfigurationOperation.Parameters));
             scripter.AddType(typeof(EnforceConfigurationResult));
             scripter.AddType(typeof(GetRevisionsCountOperation.DocumentRevisionsCount));
 

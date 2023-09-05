@@ -87,18 +87,25 @@ namespace Raven.Server.Documents.Includes
             _includedKeys.Add(id);
         }
 
-        public long? GetAtomicGuardIndex(string key, long maxAllowedRaftId)
+        public bool TryGetAtomicGuard(string key, long maxAllowedRaftId, out long index, out BlittableJsonReaderObject value)
         {
+            index = -1;
+            value = null;
+
             if (_serverContext == null)
                 CreateServerContext();
 
-            var value = _compareExchangeStorage.GetCompareExchangeValue(_serverContext, key);
+            var result = _compareExchangeStorage.GetCompareExchangeValue(_serverContext, key);
 
-            if (value.Index > maxAllowedRaftId)
-                return null; // we are seeing partially committed value, skip it
-            if (value.Index < 0)
-                return null;
-            return value.Index;
+            if (result.Index > maxAllowedRaftId)
+                return false; // we are seeing partially committed value, skip it
+
+            if (result.Index < 0)
+                return false;
+
+            index = result.Index;
+            value = result.Value;
+            return true;
         }
 
         internal void Materialize(long maxAllowedRaftId)
@@ -106,23 +113,17 @@ namespace Raven.Server.Documents.Includes
             if (_includedKeys == null || _includedKeys.Count == 0)
                 return;
 
-            if (_serverContext == null)
-                CreateServerContext();
-
             foreach (var includedKey in _includedKeys)
             {
                 if (string.IsNullOrEmpty(includedKey))
                     continue;
 
-                var value = _compareExchangeStorage.GetCompareExchangeValue(_serverContext, includedKey);
+                if (TryGetAtomicGuard(includedKey, maxAllowedRaftId, out var index, out var value) == false)
+                    continue;
 
-                if (value.Index > maxAllowedRaftId)
-                    continue; // we are seeing partially committed value, skip it
+                Results ??= new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 
-                if (Results == null)
-                    Results = new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
-
-                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, value.Index, value.Value));
+                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, index, value));
             }
         }
 

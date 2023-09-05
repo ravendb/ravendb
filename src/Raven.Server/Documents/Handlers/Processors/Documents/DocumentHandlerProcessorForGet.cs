@@ -101,11 +101,10 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
                     if (changeVector.Version.Contains(RequestHandler.Database.ClusterTransactionId) == false)
                     {
                         Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
-                        long? guardIndex = includeCompareExchangeValues.GetAtomicGuardIndex(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex);
-                        if (guardIndex != null)
+                        if (includeCompareExchangeValues.TryGetAtomicGuard(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex, out var index, out _))
                         {
                             var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, RequestHandler.Database.ClusterTransactionId,
-                                guardIndex.Value, changeVector);
+                                index, changeVector);
                             Debug.Assert(isValid, "ChangeVector didn't have ClusterTransactionId tag but now does?!");
                             document.ChangeVector = cv;
                         }

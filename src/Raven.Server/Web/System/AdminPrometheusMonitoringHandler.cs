@@ -95,6 +95,11 @@ namespace Raven.Server.Web.System
 
                     WriteCounterWithHelp(writer, "Server up-time", "server_uptime_seconds", serverMetrics.UpTimeInSec);
                     WriteGaugeWithHelp(writer, "Server process ID", "server_process_id", serverMetrics.ServerProcessId);
+                    
+                    var serverInfo = GetServerInfo(serverMetrics);
+                    var serializedServerInfoTags = SerializeTags(serverInfo);
+                   
+                    WriteCounterWithHelp(writer, "Server Info", "server_info", 1, serializedServerInfoTags);
 
                     // cpu
 
@@ -421,6 +426,37 @@ namespace Raven.Server.Web.System
             }
 
             return databases;
+        }
+
+        private Dictionary<string, string> GetServerInfo(ServerMetrics serverMetrics)
+        {
+            var result = new Dictionary<string, string>
+            {
+                {"server_version", serverMetrics.ServerVersion},
+                {"server_full_version", serverMetrics.ServerFullVersion},
+                {"cluster_node_tag", serverMetrics.Cluster.NodeTag},
+                {"cluster_id", serverMetrics.Cluster.Id},
+            };
+
+            if (serverMetrics.Config.ServerUrls != null)
+                result["server_urls"] = string.Join(";", serverMetrics.Config.ServerUrls);
+
+            if (serverMetrics.Config.PublicServerUrl != null)
+                result["public_server_url"] = serverMetrics.Config.PublicServerUrl;
+
+            if (serverMetrics.Config.TcpServerUrls != null)
+                result["tcp_server_urls"] = string.Join(";", serverMetrics.Config.TcpServerUrls);
+
+            if (serverMetrics.Config.PublicTcpServerUrls != null)
+                result["public_tcp_server_urls"] = string.Join(";", serverMetrics.Config.PublicTcpServerUrls);
+
+            if (serverMetrics.Certificate.WellKnownAdminCertificates != null)
+                result["well_known_admin_certificates"] = string.Join(";", serverMetrics.Certificate.WellKnownAdminCertificates);
+
+            if (serverMetrics.Certificate.WellKnownAdminIssuers != null)
+                result["well_known_admin_issuers"] = string.Join(";", serverMetrics.Certificate.WellKnownAdminIssuers);
+
+            return result;
         }
 
         private void WriteHelpAndType(StreamWriter writer, string help, string name, MetricType metricType)

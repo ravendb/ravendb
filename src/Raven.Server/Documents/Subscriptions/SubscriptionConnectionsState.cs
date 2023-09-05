@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
@@ -189,7 +191,27 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var command = GetAcknowledgeSubscriptionBatchCommand(nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 ISubscriptionConnection.NonExistentBatch, docsToResend: null);
-                
+
+            var state = _server.Engine.CurrentState;
+            if (state == RachisState.Leader || state == RachisState.Follower)
+            {
+                // there are no changes for this subscription but we still want to check if we are the node that is responsible for this task.
+                // we can do that locally if we have a functional cluster (in a leader or follower state).
+
+                using (_server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var rawDatabaseRecord = _server.Cluster.ReadRawDatabaseRecord(context, command.DatabaseName);
+                    if (rawDatabaseRecord == null)
+                        throw new DatabaseDoesNotExistException($"Cannot set command value of type {nameof(AcknowledgeSubscriptionBatchCommand)} for database {command.DatabaseName}, because it does not exist");
+
+                    var subscriptionTask = _subscriptionStorage.GetSubscriptionById(context, SubscriptionId);
+
+                    command.AssertSubscriptionState(rawDatabaseRecord, subscriptionTask, command.SubscriptionName);
+                    return;
+                }
+            }
+
             var (etag, _) = await _server.SendToLeaderAsync(command);
             await WaitForIndexNotificationAsync(etag);
         }

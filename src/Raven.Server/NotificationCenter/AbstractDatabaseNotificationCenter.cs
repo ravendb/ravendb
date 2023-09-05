@@ -11,6 +11,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     public readonly string Database;
 
     public readonly Paging Paging;
+    public readonly ConflictRevisionsExceeded ConflictRevisionsExceeded;
     public readonly TombstoneNotifications TombstoneNotifications;
     public readonly Indexing Indexing;
     public readonly RequestLatency RequestLatency;
@@ -28,6 +29,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     {
         Database = database;
         Paging = new Paging(this);
+        ConflictRevisionsExceeded = new ConflictRevisionsExceeded(this);
         TombstoneNotifications = new TombstoneNotifications(this);
         Indexing = new Indexing(this);
         RequestLatency = new RequestLatency(this);
@@ -43,6 +45,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     public override void Dispose()
     {
         Paging?.Dispose();
+        ConflictRevisionsExceeded?.Dispose();
         Indexing?.Dispose();
         RequestLatency?.Dispose();
         SlowWrites?.Dispose();
