@@ -2417,10 +2417,7 @@ namespace Corax
         private long AllocatedSpaceForSmallSet(Span<byte> encoded, LowLevelTransaction llt, out Span<byte> space)
         {
             long termIdInTree = Container.Allocate(llt, _postingListContainerId, encoded.Length, out space);
-            if (termIdInTree == 4431904)
-            {
-                Console.WriteLine();
-            }
+            
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
 
