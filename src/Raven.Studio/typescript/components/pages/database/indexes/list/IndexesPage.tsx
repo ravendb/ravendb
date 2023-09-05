@@ -204,16 +204,17 @@ export function IndexesPage(props: IndexesPageProps) {
                 <StickyHeader>
                     <Row>
                         <Col className="hstack">
-                            <Button
-                                color="primary"
-                                id="NewIndexButton"
-                                href={newIndexUrl}
-                                disabled={isNewIndexDisabled}
-                                className="rounded-pill px-3 pe-auto"
-                            >
-                                <Icon icon="index" addon="plus" />
-                                <span>New index</span>
-                            </Button>
+                            <div id="NewIndexButton">
+                                <Button
+                                    color="primary"
+                                    href={newIndexUrl}
+                                    disabled={isNewIndexDisabled}
+                                    className="rounded-pill px-3 pe-auto"
+                                >
+                                    <Icon icon="index" addon="plus" />
+                                    <span>New index</span>
+                                </Button>
+                            </div>
 
                             {isNewIndexDisabled && (
                                 <UncontrolledPopover
@@ -253,8 +254,8 @@ export function IndexesPage(props: IndexesPageProps) {
                                     <AccordionLicenseLimited
                                         targetId="license-limit"
                                         description="Upgrade to a paid plan and get unlimited availability."
-                                        featureName="Document Compression"
-                                        featureIcon="documents-compression"
+                                        featureName="List of Indexes"
+                                        featureIcon="list-of-indexes"
                                     />
                                 )}
                             </AboutViewFloating>
