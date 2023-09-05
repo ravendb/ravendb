@@ -15,7 +15,6 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import licenseModel from "models/auth/licenseModel";
 import { EditServerWideBackupInfoHub } from "./EditServerWideBackupInfoHub";
-import React from "react";
 
 class editServerWideBackup extends viewModelBase {
 

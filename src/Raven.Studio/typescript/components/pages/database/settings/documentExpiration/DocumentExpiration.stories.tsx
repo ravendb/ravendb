@@ -23,7 +23,6 @@ export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
 };
 
 export const LicenseRestricted: StoryObj<typeof DocumentExpiration> = {
-    name: "License Restricted",
     render: () => {
         const { databasesService } = mockServices;
         const { license } = mockStore;

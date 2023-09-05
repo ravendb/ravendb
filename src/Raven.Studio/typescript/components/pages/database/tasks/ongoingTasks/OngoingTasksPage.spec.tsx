@@ -4,7 +4,6 @@ import React from "react";
 import * as stories from "./OngoingTasksPage.stories";
 import { composeStories, composeStory } from "@storybook/testing-react";
 import { boundCopy } from "components/utils/common";
-import { OngoingTaskRabbitMqSinkInfo } from "components/models/tasks";
 
 const { EmptyView, FullView } = composeStories(stories);
 

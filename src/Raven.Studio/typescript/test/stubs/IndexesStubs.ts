@@ -3,7 +3,6 @@ import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import IndexUtils from "components/utils/IndexUtils";
 import CollectionStats = Raven.Client.Documents.Indexes.IndexProgress.CollectionStats;
 import IndexMergeResults = Raven.Server.Documents.Indexes.IndexMerging.IndexMergeResults;
-import moment = require("moment/moment");
 
 const statsFixture = require("../fixtures/indexes_stats.json");
 const progressFixture: { Results: IndexProgress[] } = require("../fixtures/indexes_progress.json");

@@ -1,6 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 
 class sinkScriptDefinitionPreview extends dialogViewModelBase {
 

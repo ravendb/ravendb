@@ -34,7 +34,7 @@ describe("DocumentRefresh", () => {
     });
 
     it("is limit alert visible", async () => {
-        const { screen, fireClick } = rtlRender(<LicenseRestricted />);
+        const { screen } = rtlRender(<LicenseRestricted />);
 
         const customRefreshFrequency = await screen.findByName("refreshFrequency");
         expect(customRefreshFrequency).toBeEnabled();

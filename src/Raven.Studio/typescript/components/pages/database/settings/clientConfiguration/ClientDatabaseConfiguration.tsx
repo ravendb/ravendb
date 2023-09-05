@@ -19,7 +19,7 @@ import useClientConfigurationFormController from "components/common/clientConfig
 import { tryHandleSubmit } from "components/utils/common";
 import classNames from "classnames";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
-import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
+import { RichPanel } from "components/common/RichPanel";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";

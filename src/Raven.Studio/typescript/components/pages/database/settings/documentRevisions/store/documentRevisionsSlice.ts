@@ -3,7 +3,6 @@ import { services } from "hooks/useServices";
 import database from "models/resources/database";
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
-import { RootState } from "components/store";
 import { loadStatus } from "components/models/common";
 
 export const documentRevisionsConfigNames = {
