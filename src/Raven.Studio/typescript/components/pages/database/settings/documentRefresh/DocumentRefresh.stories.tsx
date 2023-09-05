@@ -23,7 +23,6 @@ export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
 };
 
 export const LicenseRestricted: StoryObj<typeof DocumentRefresh> = {
-    name: "License Restricted",
     render: () => {
         const { databasesService } = mockServices;
         const { license } = mockStore;

@@ -34,7 +34,7 @@ describe("DocumentExpiration", () => {
     });
 
     it("is limit alert visible", async () => {
-        const { screen, fireClick } = rtlRender(<LicenseRestricted />);
+        const { screen } = rtlRender(<LicenseRestricted />);
 
         const customExpirationFrequency = await screen.findByName("deleteFrequency");
         expect(customExpirationFrequency).toBeEnabled();

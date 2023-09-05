@@ -1,11 +1,6 @@
 import React, { useEffect } from "react";
-import { Alert, Button, Card, CardBody, Col, Form, Row } from "reactstrap";
-import {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemLicensing,
-    AccordionItemWrapper,
-} from "components/common/AboutView";
+import { Alert, Card, CardBody, Col, Form, Row } from "reactstrap";
+import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";

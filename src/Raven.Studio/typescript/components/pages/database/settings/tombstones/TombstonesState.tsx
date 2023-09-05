@@ -8,7 +8,7 @@ import textColumn from "widgets/virtualGrid/columns/textColumn";
 import virtualColumn from "widgets/virtualGrid/columns/virtualColumn";
 import virtualGridController from "widgets/virtualGrid/virtualGridController";
 import SubscriptionInfo = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfo;
-import { Alert, Card } from "reactstrap";
+import { Card } from "reactstrap";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import useConfirm from "components/hooks/useConfirm";
 import { FlexGrow } from "components/common/FlexGrow";

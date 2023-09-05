@@ -1,7 +1,7 @@
 ﻿import React from "react";
 import { shardingTodo } from "common/developmentHelper";
 import { IndexStatus, IndexFilterCriteria, IndexType } from "components/models/indexes";
-import { Button, Col, Input, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { Button, Input, PopoverBody, UncontrolledPopover } from "reactstrap";
 import produce from "immer";
 import { Icon } from "components/common/Icon";
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
