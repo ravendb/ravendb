@@ -297,12 +297,15 @@ export function BackupsPage(props: BackupsPageProps) {
                                     This view enables creating:
                                     <ul>
                                         <li className="margin-bottom-xs margin-top-xs">
-                                            <strong>Manual Backup</strong><br />
+                                            <strong>Manual Backup</strong>
+                                            <br />
                                             Create a one-time backup for this database.
                                         </li>
                                         <li>
-                                            <strong>Periodic Backups</strong><br />
-                                            Define an ongoing-task that will automatically create periodic backups for this database at the defined schedule.  
+                                            <strong>Periodic Backups</strong>
+                                            <br />
+                                            Define an ongoing-task that will automatically create periodic backups for
+                                            this database at the defined schedule.
                                         </li>
                                     </ul>
                                 </p>

@@ -316,23 +316,30 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 heading="About this view"
                             >
                                 <p>
-                                    Creating <strong>Document Revisions</strong> allows keeping track of changes made to a document over time.
+                                    Creating <strong>Document Revisions</strong> allows keeping track of changes made to
+                                    a document over time.
                                 </p>
                                 <p>
                                     A document revision will be created when:
                                     <ul>
-                                        <li>Revisions are defined and enabled for the document's collection.</li>
+                                        <li>Revisions are defined and enabled for the document&apos;s collection.</li>
                                         <li>The document has been modified.</li>
                                     </ul>
                                 </p>
                                 <p>
                                     Define the revisions configuration in this view:
                                     <ul>
-                                        <li>Under section DEFAULTS:<br/>
-                                            Set default revisions configuration for all non-conflicting and conflicting documents.
+                                        <li>
+                                            Under section DEFAULTS:
+                                            <br />
+                                            Set default revisions configuration for all non-conflicting and conflicting
+                                            documents.
                                         </li>
-                                        <li>Under section COLLECTIONS:<br/>
-                                            Set revisions configuration for specific collections, overriding the defaults.
+                                        <li>
+                                            Under section COLLECTIONS:
+                                            <br />
+                                            Set revisions configuration for specific collections, overriding the
+                                            defaults.
                                         </li>
                                     </ul>
                                 </p>
@@ -340,7 +347,10 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                     This view also provides these options:
                                     <ul>
                                         <li>Revert all documents to a specific point in time.</li>
-                                        <li>Enforce the current configuration on all existing revisions in the database per collection.</li>
+                                        <li>
+                                            Enforce the current configuration on all existing revisions in the database
+                                            per collection.
+                                        </li>
                                     </ul>
                                 </p>
                                 <hr />
