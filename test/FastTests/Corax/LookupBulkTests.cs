@@ -76,7 +76,6 @@ public class LookupBulkTests : StorageTest
     [InlineDataWithRandomSeed]
     public void CanBulkUpdateAndInsertAndRemove(int seed)
     {
-        int count = 0;
         var random = new Random(214);
         var firstItems = Enumerable.Range(0, 1024)
             .Select(_ => new Int64LookupKey(random.NextInt64()))
