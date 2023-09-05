@@ -27,7 +27,7 @@ public class ServerLimitsDetails : INotificationDetails
 
     public class ServerLimitInfo : IDynamicJsonValueConvertible
     {
-        public long Current { get; set; }
+        public long Value { get; set; }
         public long Max { get; set; }
         public DateTime Date { get; set; }
         public string Limit { get; set; }
@@ -38,12 +38,12 @@ public class ServerLimitsDetails : INotificationDetails
             /* Used for deserialization */
         }
 
-        public ServerLimitInfo(string name, string limit, long current, long max, DateTime now)
+        public ServerLimitInfo(string name, string limit, long value, long max, DateTime now)
         {
             Name = name;
             Limit = limit;
             Date = now;
-            Current = current;
+            Value = value;
             Max = max;
         }
 
@@ -51,7 +51,7 @@ public class ServerLimitsDetails : INotificationDetails
         {
             return new DynamicJsonValue
             {
-                [nameof(Current)] = Current,
+                [nameof(Value)] = Value,
                 [nameof(Max)] = Max,
                 [nameof(Date)] = Date,
                 [nameof(Name)] = Name,

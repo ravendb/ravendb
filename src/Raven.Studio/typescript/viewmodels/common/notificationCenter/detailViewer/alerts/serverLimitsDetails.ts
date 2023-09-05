@@ -37,13 +37,13 @@ class serverLimitsDetails extends abstractAlertDetails {
             const limitColumn = new textColumn<ServerLimitInfo>(grid, x => x.Limit, "Limit", "20%", {
                 sortable: x => x.Limit
             });
-            const dateColumn = new textColumn<ServerLimitInfo>(grid, x => genUtils.formatUtcDateAsLocal(x.Date), "Last Warning", "30%", {
+            const dateColumn = new textColumn<ServerLimitInfo>(grid, x => genUtils.formatUtcDateAsLocal(x.Date), "Date", "30%", {
                 sortable: x => x.Date
             });
-            const currentColumn = new textColumn<ServerLimitInfo>(grid, x => x.Current, "Current", "12%");
+            const valueColumn = new textColumn<ServerLimitInfo>(grid, x => x.Value, "Value", "12%");
             const maxColumn = new textColumn<ServerLimitInfo>(grid, x => x.Max, "Max", "12%");
 
-            return [nameColumn, limitColumn, dateColumn, currentColumn, maxColumn];
+            return [dateColumn, nameColumn, limitColumn, valueColumn, maxColumn];
         });
         
         
