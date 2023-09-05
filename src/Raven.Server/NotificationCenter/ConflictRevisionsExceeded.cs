@@ -69,7 +69,7 @@ public class ConflictRevisionsExceeded
             if (_queue.IsEmpty)
                 return;
 
-            var alert = GetPagingPerformanceAlert();
+            var alert = GetConflictRevisionsPerformanceAlert();
             var details = ((ConflictPerformanceDetails)alert.Details);
             while (_queue.TryDequeue(out ConflictInfo pagingInfo))
             {
@@ -86,7 +86,7 @@ public class ConflictRevisionsExceeded
     }
 
 
-    private AlertRaised GetPagingPerformanceAlert()
+    private AlertRaised GetConflictRevisionsPerformanceAlert()
     {
         using (_notificationsStorage.Read(ConflictRevisionExceededMaxId, out NotificationTableValue ntv))
         {
