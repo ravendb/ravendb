@@ -82,11 +82,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Change.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateChangeExec { get; set; }
 
-        [Description("Deprecated. Use Security.Certificate.Load.Exec and Security.Certificate.Load.Exec.Arguments")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
-        public string CertificateExecArguments { get; set; }
-
         [Description("The command line arguments for the 'Security.Certificate.Load.Exec' command or executable.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Load.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
