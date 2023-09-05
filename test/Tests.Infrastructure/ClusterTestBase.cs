@@ -615,7 +615,18 @@ namespace Tests.Infrastructure
             string database, 
             Func<IDocumentStore, Task<T>> waitFunc)
         {
-            var stores = nodes.Select(n => new DocumentStore {Database = database, Urls = new[] {n.WebUrl}}.Initialize()).ToArray();
+            var stores = nodes.Select(n => new DocumentStore
+            {
+                Database = database, 
+                Urls = new[]
+                {
+                    n.WebUrl
+                },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize()).ToArray();
 
             using (new DisposableAction(Action))
             {
