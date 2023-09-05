@@ -88,7 +88,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 </a>
                             }
                         >
-                            Server-wide custom sorters
+                            Database custom sorters
                             {isCommunity && (
                                 <CounterBadge
                                     className="ms-2"
