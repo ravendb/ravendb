@@ -68,9 +68,9 @@ namespace Raven.Server.Monitoring
                     return;
 
                 AddAlertIfNeeded(currentLimits.MapCountCurrent, maxLimits.MapCountMax, MaxMapCountPercentThreshold, MaxMapCountNumberThreshold,
-                    LimitsReader.MaxMapCountFilePath, "Current map count");
+                    LimitsReader.MaxMapCountFilePath, "Map count");
                 AddAlertIfNeeded(currentLimits.ThreadsCurrent, maxLimits.ThreadsMax, MaxThreadsThreshold, MaxThreadsNumberThreshold, LimitsReader.ThreadsMaxFilePath,
-                    "Current threads number");
+                    "Threads number");
 
                 if (_alerts.Count > 0)
                 {
