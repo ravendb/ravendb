@@ -9,8 +9,10 @@ using FastTests.Graph;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -98,10 +100,35 @@ public class RavenDB_20423 : ReplicationTestBase
                 Assert.Equal(1, att2.Length);
                 Assert.Equal("foo.png", att2[0]["Name"].ToString());
 
-                Assert.False(revisionsMetadata[0].Keys.Contains("@attachments")); // the last revision ('Delete Revision') doesn't contain any attachments/counters/time-series.
-                Assert.False(revisionsMetadata[3].Keys.Contains("@attachments")); // the first revision was created before the attachment was stored, therefore it wont have any attachment.
+                var atKey = Raven.Client.Constants.Documents.Metadata.Attachments;
+                var cvKey = Raven.Client.Constants.Documents.Metadata.ChangeVector;
+
+                Assert.False(revisionsMetadata[0].Keys.Contains(atKey)); // the last revision ('Delete Revision') doesn't contain any attachments/counters/time-series.
+                Assert.False(revisionsMetadata[3].Keys.Contains(atKey)); // the first revision was created before the attachment was stored, therefore it wont have any attachment.
+                var db = await Databases.GetDocumentDatabaseInstanceFor(destination);
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    for (int i = 1; i <= 2; i++)
+                    {
+                        var cv = revisionsMetadata[i][cvKey].ToString();
+                        AssertAttachmntStream(context, db, id, cv);
+                    }
+                }
+
             }
         }
+    }
+
+    public void AssertAttachmntStream(DocumentsOperationContext context, DocumentDatabase db, string id, string revisionCv)
+    {
+        var lzv = context.GetLazyString(id.ToLowerInvariant());
+        var attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, AttachmentType.Revision, lzv, revisionCv).ToList();
+        Assert.True(attachments.Count == 1);
+        var attachment = attachments[0];
+        Assert.True(attachment.Size == 3);
+        var stream = db.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, attachment.Base64Hash);
+        Assert.NotNull(stream);
     }
 }
 
