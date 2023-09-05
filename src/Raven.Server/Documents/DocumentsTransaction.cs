@@ -48,16 +48,21 @@ namespace Raven.Server.Documents
 
         public override void BeforeCommit()
         {
+            if (_attachmentHashesToMaybeDelete == null)
+                return;
+
+            _context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.RemoveAttachmentStreamsWithoutReferences(_context, _attachmentHashesToMaybeDelete);
+        }
+
+        protected override void AfterCommit()
+        {
             if (_executeDocumentsMigrationBeforeCommit)
             {
                 var shardedDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(_context.DocumentDatabase);
                 shardedDatabase.DocumentsMigrator.ExecuteMoveDocumentsAsync().IgnoreUnobservedExceptions();
             }
 
-            if (_attachmentHashesToMaybeDelete == null)
-                return;
-
-            _context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.RemoveAttachmentStreamsWithoutReferences(_context, _attachmentHashesToMaybeDelete);
+            base.AfterCommit();
         }
 
         public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsOperationContext context)
@@ -182,7 +187,7 @@ namespace Raven.Server.Documents
             _attachmentHashesToMaybeDelete.Add(clone);
         }
 
-        internal void ExecuteDocumentsMigrationBeforeCommit()
+        internal void ExecuteDocumentsMigrationAfterCommit()
         {
             _executeDocumentsMigrationBeforeCommit = true;
         }
