@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Exceptions;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Rachis;
@@ -32,6 +33,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
     protected abstract ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(TBatchCommand command);
 
+    protected abstract ClusterConfiguration GetClusterConfiguration();
+
     public async ValueTask<(long Index, DynamicJsonArray Results)> ProcessAsync(JsonOperationContext context, TBatchCommand command)
     {
         ArraySegment<BatchRequestParser.CommandData> parsedCommands = GetParsedCommands(command);
@@ -40,7 +43,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         var waitForIndexThrow = RequestHandler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
         var specifiedIndexesQueryString = RequestHandler.HttpContext.Request.Query["waitForSpecificIndex"];
         
-        var disableAtomicDocumentWrites = RequestHandler.GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ?? false;
+        var disableAtomicDocumentWrites = RequestHandler.GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ?? GetClusterConfiguration().DisableAtomicDocumentWrites;
         CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
 
         ClusterTransactionCommand.ValidateCommands(parsedCommands, disableAtomicDocumentWrites);

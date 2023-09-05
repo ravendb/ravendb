@@ -1,4 +1,5 @@
 using System;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
@@ -14,6 +15,8 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
     }
 
     protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(ShardedBatchCommand command) => command.ParsedCommands;
+    
+    protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.DatabaseContext.Configuration.Cluster;
 
     protected override ClusterTransactionCommand CreateClusterTransactionCommand(
         ArraySegment<BatchRequestParser.CommandData> parsedCommands,
