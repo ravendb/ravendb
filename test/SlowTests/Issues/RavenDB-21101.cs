@@ -6,6 +6,7 @@ using FastTests.Graph;
 using FastTests.Server.Replication;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,6 +53,10 @@ public class RavenDB_21101 : ReplicationTestBase
             var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync(id);
             Assert.Equal(1024, doc1RevCount);
         }
+
+        await Task.Delay(TimeSpan.FromMinutes(1));
+        var notificationId = AlertRaised.GetKey(AlertType.ConflictRevisionsExceeded, "ConflictRevisionExceededMax");
+        Assert.True(dstDb.NotificationCenter.Exists(notificationId));
     }
 
     private void AssertDefaultConflictConfiguration(DocumentDatabase database)
