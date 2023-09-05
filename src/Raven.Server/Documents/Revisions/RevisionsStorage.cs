@@ -30,6 +30,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Revisions;
+using static Raven.Server.NotificationCenter.ConflictRevisionsExceeded;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
 
@@ -71,7 +72,8 @@ namespace Raven.Server.Documents.Revisions
             {
                 Default = new RevisionsCollectionConfiguration
                 {
-                    MinimumRevisionAgeToKeep = TimeSpan.FromDays(45),
+                    MinimumRevisionsToKeep = 1024,
+                    MaximumRevisionsToDeleteUponDocumentUpdate = 10 * 1024,
                     Disabled = false
                 }
             };
@@ -303,7 +305,7 @@ namespace Raven.Server.Documents.Revisions
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
             Debug.Assert(lastModifiedTicks != DateTime.MinValue.Ticks, "last modified ticks must be set");
-
+            
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
 
             if (collectionName == null)
@@ -320,6 +322,17 @@ namespace Raven.Server.Documents.Revisions
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
             using (Slice.From(context.Allocator, changeVector.Version, out Slice changeVectorSlice))
             {
+                if (flags.Contain(DocumentFlags.FromReplication) == false &&
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) == false &&
+                    changeVectorSlice.Size > DocumentIdWorker.MaxIdSize)
+                {
+                    // RavenDB-21047 
+                    // throw if the change vector length exceeds the maximum id length (512 bytes)
+                    // we allow it if the operation originated from smuggler/replication to avoid inconsistent data or broken replication
+                    DocumentIdWorker.ThrowDocumentIdTooBig(changeVector);
+                }
+
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);
 
@@ -553,12 +566,15 @@ namespace Raven.Server.Documents.Revisions
 
 
             IEnumerable<Document> revisionsToDelete;
+            var conflicted = false;
 
             if (configuration == ConflictConfiguration.Default
                      || configuration == ZeroConfiguration) // conflict revisions config
             {
                 revisionsToDelete = GetRevisionsForConflict(context, table, prefixSlice,
                     nonPersistentFlags, skipForceCreated, result.PreviousCount, documentDeleted, result);
+
+                conflicted = true;
             }
             else if (documentDeleted && configuration.PurgeOnDelete) // doc is deleted or came from delete *and* configuration.PurgeOnDelete is true
             {
@@ -574,8 +590,27 @@ namespace Raven.Server.Documents.Revisions
             var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete, tombstoneFlags: DocumentFlags.None);
 
             IncrementCountOfRevisions(context, prefixSlice, -deleted);
+
             result.Remaining = result.PreviousCount - deleted;
+
+            if (ShouldAddConflictRevisionNotification(conflicted, nonPersistentFlags, deleted))
+            {
+                var reason = ExceedingReason.MinimumRevisionsToKeep;
+                if (ConflictConfiguration.Default.MinimumRevisionAgeToKeep.HasValue)
+                    reason = ExceedingReason.MinimumRevisionAgeToKeep;
+
+                _database.NotificationCenter.ConflictRevisionsExceeded.Add(new ConflictInfo(prefixSlice.ToString(), reason, deleted, _database.Time.GetUtcNow()));
+            }
+
             return result;
+        }
+
+        private static bool ShouldAddConflictRevisionNotification(bool conflicted, NonPersistentDocumentFlags nonPersistentFlags, long deleted)
+        {
+            return conflicted &&
+                   nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
+                   nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) == false &&
+                   deleted > 0;
         }
 
         public void DeleteAllRevisionsFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
@@ -1018,6 +1053,7 @@ namespace Raven.Server.Documents.Revisions
 
                     if (state.ShouldDelete(revision) == false)
                     {
+                        context.Transaction.ForgetAbout(revision);
                         revision.Dispose();
                         skip++;
                         continue;
@@ -1046,6 +1082,8 @@ namespace Raven.Server.Documents.Revisions
                 {
                     if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
                         conflictCount++;
+
+                    context.Transaction.ForgetAbout(revision);
                 }
             }
 
@@ -1075,6 +1113,7 @@ namespace Raven.Server.Documents.Revisions
 
                     if (skipForceCreated && revision.Flags.Contain(DocumentFlags.ForceCreated))
                     {
+                        context.Transaction.ForgetAbout(revision);
                         revision.Dispose();
                         skip++;
                         continue;
@@ -1162,6 +1201,13 @@ namespace Raven.Server.Documents.Revisions
             if (table.VerifyKeyExists(keySlice))
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
 
+            if (changeVector.Length > DocumentIdWorker.MaxIdSize * 2)
+            {
+                // RavenDB-21047 
+                // throw if the change vector length exceeds 1024 bytes
+                DocumentIdWorker.ThrowDocumentIdTooBig(changeVector);
+            }
+       
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))

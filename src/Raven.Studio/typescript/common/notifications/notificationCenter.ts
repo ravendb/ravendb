@@ -62,6 +62,8 @@ import blockingTombstonesDetails
 import serverLimitsDetails from "viewmodels/common/notificationCenter/detailViewer/alerts/serverLimitsDetails";
 import queueSinkErrorDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/queueSinkErrorDetails";
+import conflictExceededDetails
+    from "viewmodels/common/notificationCenter/detailViewer/alerts/conflictExceededDetails";
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -185,6 +187,7 @@ class notificationCenter {
             blockingTombstonesDetails,
             queueSinkErrorDetails,
             serverLimitsDetails,
+            conflictExceededDetails,
 
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );

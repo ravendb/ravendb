@@ -18,21 +18,21 @@ namespace Raven.Server.Monitoring
 {
     public class ServerLimitsMonitor : IDisposable
     {
-        private static readonly string _source = "server-limits";
+        private const string Source = "server-limits";
 
         private static readonly TimeSpan CheckFrequency = TimeSpan.FromMinutes(5);
 
-        private static readonly float MaxMapCountPercentThreshold = 0.05f;
-        private static readonly int MaxMapCountNumberThreshold = 1024 * 10;
+        private const float MaxMapCountPercentThreshold = 0.05f;
+        private const int MaxMapCountNumberThreshold = 1024 * 10;
 
-        private static readonly float MaxThreadsThreshold = 0.05f;
-        private static readonly int MaxThreadsNumberThreshold = 1024 * 10;
+        private const float MaxThreadsThreshold = 0.05f;
+        private const int MaxThreadsNumberThreshold = 1024 * 10;
 
         private readonly ServerStore _serverStore;
         private readonly ServerNotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerLimitsMonitor>(nameof(ServerLimitsMonitor));
-        private readonly List<ServerLimitsDetails.ServerLimitInfo> _alerts = new List<ServerLimitsDetails.ServerLimitInfo>();
+        private readonly List<ServerLimitsDetails.ServerLimitInfo> _alerts = new();
         private readonly object _runLock = new();
 
         private Timer _timer;
@@ -68,15 +68,15 @@ namespace Raven.Server.Monitoring
                     return;
 
                 AddAlertIfNeeded(currentLimits.MapCountCurrent, maxLimits.MapCountMax, MaxMapCountPercentThreshold, MaxMapCountNumberThreshold,
-                    LimitsReader.MaxMapCountFilePath, "Current map count");
+                    LimitsReader.MaxMapCountFilePath, "Map count");
                 AddAlertIfNeeded(currentLimits.ThreadsCurrent, maxLimits.ThreadsMax, MaxThreadsThreshold, MaxThreadsNumberThreshold, LimitsReader.ThreadsMaxFilePath,
-                    "Current threads number");
+                    "Threads number");
 
                 if (_alerts.Count > 0)
                 {
                     ServerLimitsDetails details;
                     AlertRaised hint;
-                    var id = AlertRaised.GetKey(AlertType.ServerLimits, _source);
+                    var id = AlertRaised.GetKey(AlertType.ServerLimits, Source);
 
                     using (_notificationsStorage.Read(id, out var ntv))
                     {
@@ -97,7 +97,7 @@ namespace Raven.Server.Monitoring
                             "We have detected server is running close to OS limits",
                             AlertType.ServerLimits,
                             NotificationSeverity.Warning,
-                            _source,
+                            Source,
                             details
                         );
                     }
@@ -142,7 +142,7 @@ namespace Raven.Server.Monitoring
         {
             return string.Join(Environment.NewLine,
                 _alerts.Select(x =>
-                    $"{x.Name} current value is '{x.Current}' which is close to the OS limit '{x.Max}', please increase the limit. The parameter is defined in '{x.Limit}' file."));
+                    $"{x.Name} current value is '{x.Value}' which is close to the OS limit '{x.Max}', please increase the limit. The parameter is defined in '{x.Limit}' file."));
         }
 
         private void AddAlertIfNeeded(long current, long max, float percentThreshold, int numberThreshold, string limit, string name)

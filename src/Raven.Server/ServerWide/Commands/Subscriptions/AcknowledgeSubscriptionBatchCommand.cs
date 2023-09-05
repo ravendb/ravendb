@@ -95,7 +95,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(subscription.ToJson(), subscriptionName));
         }
 
-        private void AssertSubscriptionState(RawDatabaseRecord record, SubscriptionState subscription, string subscriptionName)
+        public void AssertSubscriptionState(RawDatabaseRecord record, SubscriptionState subscription, string subscriptionName)
         {
             var appropriateNode = AbstractSubscriptionStorage.GetSubscriptionResponsibleNodeForProgress(record, ShardName, subscription, HasHighlyAvailableTasks);
             var deletionKey = DatabaseRecord.GetKeyForDeletionInProgress(NodeTag, ShardName);
