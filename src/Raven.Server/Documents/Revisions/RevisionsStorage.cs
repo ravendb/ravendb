@@ -1174,6 +1174,7 @@ namespace Raven.Server.Documents.Revisions
 
                     if (state.ShouldDelete(revision) == false)
                     {
+                        context.Transaction.ForgetAbout(revision);
                         revision.Dispose();
                         result.Skip++;
                         continue;
@@ -1202,6 +1203,8 @@ namespace Raven.Server.Documents.Revisions
                 {
                     if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
                         conflictCount++;
+
+                    context.Transaction.ForgetAbout(revision);
                 }
             }
 
@@ -1231,6 +1234,7 @@ namespace Raven.Server.Documents.Revisions
 
                     if (skipForceCreated && revision.Flags.Contain(DocumentFlags.ForceCreated))
                     {
+                        context.Transaction.ForgetAbout(revision);
                         revision.Dispose();
                         result.Skip++;
                         continue;
