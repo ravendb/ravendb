@@ -51,8 +51,11 @@ namespace Raven.Server.Documents.Sharding.Background
 
                         var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
 
-                        if (TryFindWrongBucket(context, configuration, range, bucketStatistics, out bucket, out moveToShard))
+                        if (TryFindWrongBucket(context, configuration, bucketStatistics, out bucket))
+                        {
+                            moveToShard = range.ShardNumber;
                             break;
+                        }
                     }
                 }
 
@@ -71,12 +74,8 @@ namespace Raven.Server.Documents.Sharding.Background
             }
         }
 
-        private bool TryFindWrongBucket(DocumentsOperationContext context, ShardingConfiguration configuration, ShardBucketRange range,
-            IEnumerable<BucketStats> bucketStatistics, out int bucket, out int shardNumber)
+        private bool TryFindWrongBucket(DocumentsOperationContext context, ShardingConfiguration configuration, IEnumerable<BucketStats> bucketStatistics, out int bucket)
         {
-            shardNumber = range.ShardNumber;
-            bucket = -1;
-
             foreach (var bucketStats in bucketStatistics)
             {
                 _token.ThrowIfCancellationRequested();
@@ -96,17 +95,20 @@ namespace Raven.Server.Documents.Sharding.Background
                     {
                         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "handle DeletedTimeSeriesRange?");
 
-                        if (tombstone.Flags.Contain(DocumentFlags.Artificial) ||
+                        if (tombstone.Flags.Contain(DocumentFlags.Artificial) &&
                             tombstone.Flags.Contain(DocumentFlags.FromResharding))
                             continue;
 
                         return true;
                     }
+
+                    continue;
                 }
 
                 return true;
             }
 
+            bucket = -1;
             return false;
         }
 
