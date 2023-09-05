@@ -8,7 +8,6 @@ using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
 using Xunit;
 using Xunit.Abstractions;
-using static Raven.Server.NotificationCenter.Revisions;
 
 namespace SlowTests.Issues;
 public class RavenDB_21101 : ReplicationTestBase

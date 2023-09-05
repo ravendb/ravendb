@@ -27,7 +27,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Voron.Data.Tables.Table;
-using static Raven.Server.NotificationCenter.Revisions;
+using static Raven.Server.NotificationCenter.ConflictRevisionsExceeded;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Revisions
@@ -691,7 +691,7 @@ namespace Raven.Server.Documents.Revisions
                 if (ConflictConfiguration.Default.MinimumRevisionAgeToKeep.HasValue)
                     reason = ExceedingReason.MinimumRevisionAgeToKeep;
 
-                _database.NotificationCenter.Revisions.Add(new ConflictInfo(lowerIdPrefix.ToString(), reason, deleted, _database.Time.GetUtcNow()));
+                _database.NotificationCenter.ConflictRevisionsExceeded.Add(new ConflictInfo(lowerIdPrefix.ToString(), reason, deleted, _database.Time.GetUtcNow()));
             }
 
             return result;
