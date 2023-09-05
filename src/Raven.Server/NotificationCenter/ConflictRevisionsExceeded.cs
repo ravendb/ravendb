@@ -15,7 +15,7 @@ using System.Collections;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.NotificationCenter;
-public class Revisions
+public class ConflictRevisionsExceeded
 {
     private static readonly string ConflictRevisionExceededMaxId = "ConflictRevisionExceededMax";
 
@@ -35,7 +35,7 @@ public class Revisions
     private Timer _timer;
     private readonly Logger _logger;
 
-    public Revisions(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
+    public ConflictRevisionsExceeded(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
     {
         _notificationCenter = notificationCenter;
         _notificationsStorage = notificationsStorage;
@@ -98,7 +98,7 @@ public class Revisions
 
             return AlertRaised.Create(_database, "Excess number of Conflict Revisions",
                 "We have detected that some of the documents conflict/resolved revisions exceeded the configured value (set on the conflict revisions configuration).",
-                AlertType.Revisions, NotificationSeverity.Warning, ConflictRevisionExceededMaxId, details);
+                AlertType.ConflictRevisionsExceeded, NotificationSeverity.Warning, ConflictRevisionExceededMaxId, details);
         }
     }
 

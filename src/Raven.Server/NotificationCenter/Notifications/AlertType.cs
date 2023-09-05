@@ -85,6 +85,6 @@ namespace Raven.Server.NotificationCenter.Notifications
         BlockingTombstones,
         ServerLimits,
 
-		Revisions
+        ConflictRevisionsExceeded
     }
 }

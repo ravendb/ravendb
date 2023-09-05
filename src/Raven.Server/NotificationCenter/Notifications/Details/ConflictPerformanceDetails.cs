@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Sparrow.Json.Parsing;
-using static Raven.Server.NotificationCenter.Revisions;
+using static Raven.Server.NotificationCenter.ConflictRevisionsExceeded;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {

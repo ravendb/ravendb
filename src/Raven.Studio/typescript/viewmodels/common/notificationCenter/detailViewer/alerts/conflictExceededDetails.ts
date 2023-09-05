@@ -73,7 +73,7 @@ class conflictExceededDetails extends abstractAlertDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof alert) && notification.alertType() === "Revisions";
+        return (notification instanceof alert) && notification.alertType() === "ConflictRevisionsExceeded";
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {
