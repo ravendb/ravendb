@@ -75,7 +75,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 </a>
                             }
                         >
-                            Server-wide custom analyzers
+                            Database custom analyzers
                             {isCommunity && (
                                 <CounterBadge
                                     className="ms-2"
