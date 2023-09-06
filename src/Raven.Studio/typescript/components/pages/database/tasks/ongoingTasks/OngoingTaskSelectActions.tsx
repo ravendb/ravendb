@@ -16,9 +16,9 @@ import {
 import { OngoingTaskOperationConfirmType } from "../shared/OngoingTaskOperationConfirm";
 
 interface OngoingTaskSelectActionsProps {
-    allTasks: string[];
-    selectedTasks: string[];
-    setSelectedTasks: (x: string[]) => void;
+    allTasks: number[];
+    selectedTasks: number[];
+    setSelectedTasks: (ids: number[]) => void;
     onTaskOperation: (x: OngoingTaskOperationConfirmType) => void;
     isTogglingState: boolean;
     isDeleting: boolean;

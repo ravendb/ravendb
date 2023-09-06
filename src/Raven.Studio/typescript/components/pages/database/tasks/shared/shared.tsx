@@ -29,12 +29,12 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     db: database;
     data: T;
-    isSelected: (taskName: string) => boolean;
+    isSelected: (id: number) => boolean;
     toggleSelection: (checked: boolean, taskName: OngoingTaskSharedInfo) => void;
     onToggleDetails?: (newState: boolean) => void;
     onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
-    isDeleting: (taskName: string) => boolean;
-    isTogglingState: (taskName: string) => boolean;
+    isDeleting: (id: number) => boolean;
+    isTogglingState: (id: number) => boolean;
 }
 
 export interface ICanShowTransformationScriptPreview {
@@ -272,14 +272,14 @@ interface OperationConfirm {
 export function useOngoingTasksOperations(database: database, reload: () => void) {
     const { tasksService } = useServices();
 
-    const [togglingTaskNames, setTogglingTaskNames] = useState<string[]>([]);
-    const [deletingTaskNames, setDeletingTaskNames] = useState<string[]>([]);
+    const [togglingTaskIds, setTogglingTaskIds] = useState<number[]>([]);
+    const [deletingTaskIds, setDeletingTaskIds] = useState<number[]>([]);
 
     const [operationConfirm, setOperationConfirm] = useState<OperationConfirm>(null);
 
     const toggleOngoingTasks = async (enable: boolean, taskSharedInfos: OngoingTaskSharedInfo[]) => {
         try {
-            setTogglingTaskNames((names) => [...names, ...taskSharedInfos.map((x) => x.taskName)]);
+            setTogglingTaskIds((ids) => [...ids, ...taskSharedInfos.map((x) => x.taskId)]);
             const toggleRequests: Promise<ModifyOngoingTaskResult>[] = [];
 
             for (const task of taskSharedInfos) {
@@ -303,13 +303,13 @@ export function useOngoingTasksOperations(database: database, reload: () => void
             );
             reload();
         } finally {
-            setTogglingTaskNames((names) => names.filter((x) => !taskSharedInfos.map((x) => x.taskName).includes(x)));
+            setTogglingTaskIds((ids) => ids.filter((x) => !taskSharedInfos.map((x) => x.taskId).includes(x)));
         }
     };
 
     const deleteOngoingTasks = async (taskSharedInfos: OngoingTaskSharedInfo[]) => {
         try {
-            setDeletingTaskNames((names) => [...names, ...taskSharedInfos.map((x) => x.taskName)]);
+            setDeletingTaskIds((ids) => [...ids, ...taskSharedInfos.map((x) => x.taskId)]);
 
             const deleteRequests: Promise<ModifyOngoingTaskResult>[] = taskSharedInfos.map((task) =>
                 tasksService.deleteOngoingTask(database, task)
@@ -320,7 +320,7 @@ export function useOngoingTasksOperations(database: database, reload: () => void
             messagePublisher.reportSuccess(`${deleteRequests.length === 1 ? "Task" : "Tasks"} deleted successfully.`);
             reload();
         } finally {
-            setDeletingTaskNames((names) => names.filter((x) => !taskSharedInfos.map((x) => x.taskName).includes(x)));
+            setDeletingTaskIds((ids) => ids.filter((x) => !taskSharedInfos.map((x) => x.taskId).includes(x)));
         }
     };
 
@@ -359,9 +359,9 @@ export function useOngoingTasksOperations(database: database, reload: () => void
         onTaskOperation,
         operationConfirm,
         cancelOperationConfirm: () => setOperationConfirm(null),
-        isDeleting: (taskName: string) => deletingTaskNames.includes(taskName),
-        isTogglingState: (taskName: string) => togglingTaskNames.includes(taskName),
-        isDeletingAny: deletingTaskNames.length > 0,
-        isTogglingStateAny: togglingTaskNames.length > 0,
+        isDeleting: (id: number) => deletingTaskIds.includes(id),
+        isTogglingState: (id: number) => togglingTaskIds.includes(id),
+        isDeletingAny: deletingTaskIds.length > 0,
+        isTogglingStateAny: togglingTaskIds.length > 0,
     };
 }

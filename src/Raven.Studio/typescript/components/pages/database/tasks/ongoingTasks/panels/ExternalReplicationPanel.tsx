@@ -87,7 +87,7 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
                             <Input
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
-                                checked={isSelected(data.shared.taskName)}
+                                checked={isSelected(data.shared.taskId)}
                             />
                         </RichPanelSelect>
                     )}
@@ -99,7 +99,7 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
                         task={data}
                         canEdit={canEdit}
                         onTaskOperation={onTaskOperation}
-                        isTogglingState={isTogglingState(data.shared.taskName)}
+                        isTogglingState={isTogglingState(data.shared.taskId)}
                     />
                     <OngoingTaskActions
                         task={data}
@@ -107,7 +107,7 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
-                        isDeleting={isDeleting(data.shared.taskName)}
+                        isDeleting={isDeleting(data.shared.taskId)}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

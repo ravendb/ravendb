@@ -743,7 +743,8 @@ class genUtils {
         return Array.from(result.values());
     }
 
-    static getSelectionState(filteredNames: string[], selectedNames: string[]): SelectionState {
+    static getSelectionState<T extends string | number>(filteredNames: T[], selectedNames: T[]): SelectionState {
+
         const selectedFromFilteredCount = selectedNames.reduce((count, selectedName) => {
             if (filteredNames.includes(selectedName)) {
                 return count + 1;
