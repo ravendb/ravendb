@@ -41,14 +41,7 @@ export default function ServerWideCustomSorters() {
                             <Icon icon="plus" />
                             Add a server-wide custom sorter
                         </a>
-                        <HrHeader
-                            right={
-                                <a href="https://ravendb.net/l/LGUJH8/6.0" target="_blank">
-                                    <Icon icon="link" />
-                                    Sorters tutorial
-                                </a>
-                            }
-                        >
+                        <HrHeader>
                             Server-wide custom sorters
                             {isCommunity && (
                                 <CounterBadge className="ms-2" count={resultsCount} limit={communityLimit} />
@@ -66,10 +59,44 @@ export default function ServerWideCustomSorters() {
                                 targetId="1"
                                 icon="about"
                                 color="info"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 heading="About this view"
                             >
-                                This is the <strong>Server-Wide Custom Sorters</strong> view.
+                                <p>
+                                    A <strong>Custom Sorter</strong> allows you to define how documents will be ordered
+                                    in the query results according to your specific requirements.
+                                </p>
+                                <p>
+                                    <strong>In this view</strong>, you can add your own sorters:
+                                    <ul className="margin-top-xxs">
+                                        <li>
+                                            The custom sorters added here can be used with queries in ALL databases in
+                                            your cluster.
+                                        </li>
+                                        <li>Note: custom sorters are not supported when querying Corax indexes.</li>
+                                    </ul>
+                                </p>
+                                <p>
+                                    Provide <code>C#</code> code in the editor view, or upload from file:
+                                    <ul className="margin-top-xxs">
+                                        <li>
+                                            The sorter name must be the same as the sorter&apos;s class name in your
+                                            code.
+                                        </li>
+                                        <li>
+                                            Inherit from <code>Lucene.Net.Search.FieldComparator</code>
+                                        </li>
+                                        <li>
+                                            Code must be compilable and include all necessary <code>using</code>{" "}
+                                            statements.
+                                        </li>
+                                    </ul>
+                                </p>
+                                <hr />
+                                <div className="small-label mb-2">useful links</div>
+                                <a href="https://ravendb.net/l/LGUJH8/latest" target="_blank">
+                                    <Icon icon="newtab" /> Docs - Custom Sorters
+                                </a>
                             </AccordionItemWrapper>
                             {isCommunity && (
                                 <AccordionLicenseLimited
