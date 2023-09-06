@@ -1,10 +1,8 @@
 ﻿import database from "models/resources/database";
-import React, { ReactNode, useCallback, useEffect, useReducer, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
 import { useAccessManager } from "hooks/useAccessManager";
-import createOngoingTask from "viewmodels/database/tasks/createOngoingTask";
-import app from "durandal/app";
 import appUrl from "common/appUrl";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
@@ -41,7 +39,7 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Alert, Badge, Button, Col, Modal, ModalBody, Row, UncontrolledTooltip } from "reactstrap";
+import { Alert, Button } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
@@ -56,10 +54,12 @@ import { KafkaSinkPanel } from "components/pages/database/tasks/ongoingTasks/pan
 import { RabbitMqSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/RabbitMqSinkPanel";
 import { CounterBadge } from "components/common/CounterBadge";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
-import AboutViewFloating, { AccordionItemLicensing, AccordionItemWrapper } from "components/common/AboutView";
-import classNames = require("classnames");
-import { uniqueId } from "lodash";
+import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import { FlexGrow } from "components/common/FlexGrow";
+import OngoingTaskAddModal from "./OngoingTaskAddModal";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -68,22 +68,11 @@ interface OngoingTasksPageProps {
 export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const { database } = props;
 
-    const subscriptionsServerLimit = 3 * 5; //TODO
-    const subscriptionsServerCount = 15; //TODO
-    const subscriptionsDatabaseLimit = 3; //TODO
-
-    const subscriptionsServerLimitStatus = getLicenseLimitReachStatus(
-        subscriptionsServerLimit,
-        subscriptionsServerCount
-    );
-
-    const [newTaskModal, setNewTaskModal] = useState(false);
-    const toggleNewTaskModal = () => setNewTaskModal(!newTaskModal);
-
     const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
     const { tasksService } = useServices();
     const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
 
+    const { value: isNewTaskModalOpen, toggle: toggleIsNewTaskModalOpen } = useBoolean(false);
     const { value: progressEnabled, setTrue: startTrackingProgress } = useBoolean(false);
     const [definitionCache] = useState(() => new etlScriptDefinitionCache(database));
     const [filter, setFilter] = useState<OngoingTasksFilterCriteria>({
@@ -129,11 +118,6 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     useEffect(() => {
         reload();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [database]);
-
-    const addNewOngoingTask = useCallback(() => {
-        const addOngoingTaskView = new createOngoingTask(database);
-        app.showBootstrapDialog(addOngoingTaskView);
     }, [database]);
 
     const onEtlProgress = useCallback(
@@ -274,40 +258,95 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         isDeleting,
     };
 
+    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+
+    // TODO get form endpoint
+    const subscriptionsServerCount = 0;
+
+    const subscriptionsDatabaseCount = subscriptions.length;
+
+    // TODO get from license selector
+    const subscriptionsServerLimit = 3 * 5;
+    const subscriptionsDatabaseLimit = 3;
+
+    const subscriptionsServerLimitStatus = getLicenseLimitReachStatus(
+        subscriptionsServerCount,
+        subscriptionsServerLimit
+    );
+
+    const subscriptionsDatabaseLimitStatus = getLicenseLimitReachStatus(
+        subscriptionsDatabaseCount,
+        subscriptionsDatabaseLimit
+    );
+
     return (
         <div>
-            {subscriptionsServerLimitStatus !== "notReached" && (
-                <Alert
-                    color={subscriptionsServerLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center"
-                >
-                    Your server {subscriptionsServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                    <strong>maximum number of subscriptions</strong> allowed by your license{" "}
-                    <strong>
-                        ({subscriptionsServerCount}/{subscriptionsServerLimit})
-                    </strong>
-                    <br />
-                    <strong>
-                        <a href="https://ravendb.net/l/FLDLO4" target="_blank">
-                            Upgrade your license
-                        </a>{" "}
-                    </strong>
-                    to add more
-                </Alert>
+            {isCommunity && (
+                <>
+                    {subscriptionsServerLimitStatus !== "notReached" && (
+                        <Alert
+                            color={subscriptionsServerLimitStatus === "limitReached" ? "danger" : "warning"}
+                            className="text-center"
+                        >
+                            Your server {subscriptionsServerLimitStatus === "limitReached" ? "reached" : "is reaching"}{" "}
+                            the <strong>maximum number of subscriptions</strong> allowed by your license{" "}
+                            <strong>
+                                ({subscriptionsServerCount}/{subscriptionsServerLimit})
+                            </strong>
+                            <br />
+                            <strong>
+                                <a href="https://ravendb.net/l/FLDLO4" target="_blank">
+                                    Upgrade your license
+                                </a>{" "}
+                            </strong>
+                            to add more
+                        </Alert>
+                    )}
+
+                    {subscriptionsDatabaseLimitStatus !== "notReached" && (
+                        <Alert
+                            color={subscriptionsDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                            className="text-center"
+                        >
+                            Your database{" "}
+                            {subscriptionsDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                            <strong>maximum number of subscriptions</strong> allowed by your license{" "}
+                            <strong>
+                                ({subscriptionsDatabaseCount}/{subscriptionsDatabaseLimit})
+                            </strong>
+                            <br />
+                            <strong>
+                                <a href="https://ravendb.net/l/FLDLO4" target="_blank">
+                                    Upgrade your license
+                                </a>{" "}
+                            </strong>
+                            to add more
+                        </Alert>
+                    )}
+                </>
             )}
+
             {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>
                 <div className="hstack gap-3 flex-wrap">
                     {canReadWriteDatabase(database) && (
-                        <Button onClick={addNewOngoingTask} color="primary" className="rounded-pill">
-                            <Icon icon="ongoing-tasks" addon="plus" />
-                            Add a Database Task
-                        </Button>
+                        <>
+                            {isNewTaskModalOpen && (
+                                <OngoingTaskAddModal
+                                    db={database}
+                                    toggle={toggleIsNewTaskModalOpen}
+                                    subscriptionsDatabaseCount={subscriptionsDatabaseCount}
+                                />
+                            )}
+                            <div id="NewTaskButton">
+                                <Button onClick={toggleIsNewTaskModalOpen} color="primary" className="rounded-pill">
+                                    <Icon icon="ongoing-tasks" addon="plus" />
+                                    Add a Database Task
+                                </Button>
+                            </div>
+                        </>
                     )}
-                    <Button color="primary" className="rounded-pill" onClick={toggleNewTaskModal}>
-                        <Icon icon="ongoing-tasks" addon="plus" /> Add a Database Task (React)
-                    </Button>
 
                     <FlexGrow />
 
@@ -331,69 +370,20 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             color="info"
                             heading="About this view"
                             description="Get additional info on what this feature can offer you"
-                            targetId="1"
+                            targetId="about-view"
                         >
                             <p>
-                                <strong>Admin JS Console</strong> is a specialized feature primarily intended for
-                                resolving server errors. It provides a direct interface to the underlying system,
-                                granting the capacity to execute scripts for intricate server operations.
-                            </p>
-                            <p>
-                                It is predominantly intended for advanced troubleshooting and rectification procedures
-                                executed by system administrators or RavenDB support.
-                            </p>
-                            <hr />
-                            <div className="small-label mb-2">useful links</div>
-                            <a href="https://ravendb.net/l/IBUJ7M/6.0/Csharp" target="_blank">
-                                <Icon icon="newtab" /> Docs - Admin JS Console
-                            </a>
-                        </AccordionItemWrapper>
-                        <AccordionItemWrapper
-                            icon="road-cone"
-                            color="success"
-                            heading="Examples of use"
-                            description="Learn how to get the most of this feature"
-                            targetId="2"
-                        >
-                            <p>
-                                <strong>To set the refresh time:</strong> enter the appropriate date in the metadata{" "}
-                                <code>@refresh</code> property.
-                            </p>
-                            <p>
-                                <strong>Note:</strong> RavenDB scans which documents should be refreshed at the
-                                frequency specified. The actual refresh time can increase (up to) that value.
+                                This is <strong>Ongoing Tasks</strong> view.
                             </p>
                         </AccordionItemWrapper>
-                        <AccordionItemWrapper
-                            icon="license"
-                            color="warning"
-                            heading="Licensing"
-                            description="See which plans offer this and more exciting features"
-                            targetId="3"
-                            pill
-                            pillText="Upgrade available"
-                            pillIcon="star-filled"
-                        >
-                            <AccordionItemLicensing
-                                description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
-                                featureName="Document Compression"
-                                featureIcon="documents-compression"
-                                checkedLicenses={["Professional", "Enterprise"]}
-                            >
-                                <p className="lead fs-4">Get your license expanded</p>
-                                <div className="mb-3">
-                                    <Button color="primary" className="rounded-pill">
-                                        <Icon icon="notifications" />
-                                        Contact us
-                                    </Button>
-                                </div>
-                                <small>
-                                    <a href="#" target="_blank" className="text-muted">
-                                        See pricing plans
-                                    </a>
-                                </small>
-                            </AccordionItemLicensing>
-                        </AccordionItemWrapper>
+                        {isCommunity && (
+                            <AccordionLicenseLimited
+                                targetId="license-limit"
+                                description="Unleash the full potential and upgrade your plan."
+                                featureName="Ongoing Tasks"
+                                featureIcon="ongoing-tasks"
+                            />
+                        )}
                     </AboutViewFloating>
                 </div>
 
@@ -594,16 +584,18 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                         </div>
                     )}
 
-                    {subscriptions.length > 0 && (
+                    {subscriptionsDatabaseCount > 0 && (
                         <div key="subscriptions">
-                            <HrHeader className="subscription">
+                            <HrHeader className="subscription" count={!isCommunity ? subscriptionsDatabaseCount : null}>
                                 <Icon icon="subscription" />
                                 Subscription
-                                <CounterBadge
-                                    count={subscriptions.length}
-                                    limit={subscriptionsDatabaseLimit}
-                                    className="ms-3"
-                                />
+                                {isCommunity && (
+                                    <CounterBadge
+                                        count={subscriptionsDatabaseCount}
+                                        limit={subscriptionsDatabaseLimit}
+                                        className="ms-3"
+                                    />
+                                )}
                             </HrHeader>
 
                             {subscriptions.map((x) => {
@@ -673,221 +665,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     )}
                 </div>
             </div>
-
-            <Modal
-                isOpen={newTaskModal}
-                toggle={toggleNewTaskModal}
-                container="modalContainer"
-                contentClassName="modal-border bulge-primary"
-                className="destination-modal"
-                size="lg"
-                centered
-            >
-                <ModalBody>
-                    <div className="position-absolute m-2 end-0 top-0">
-                        <Button close onClick={toggleNewTaskModal} />
-                    </div>
-                    <div className="vstack gap-4">
-                        <div className="text-center">
-                            <Icon icon="ongoing-tasks" color="primary" addon="plus" className="fs-1" margin="m-0" />
-                        </div>
-                        <div className="text-center lead">Add a Database Task</div>
-                    </div>
-                    <HrHeader>Replication</HrHeader>
-                    <Row>
-                        <TaskItem
-                            title="Create new External Replication task"
-                            className="external-replication"
-                            disabled
-                            disableReason="Feature available in Professional and Enterprise license"
-                        >
-                            <Icon icon="external-replication" />
-                            <h4 className="mt-1 mb-0">External Replication</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Professional +
-                            </Badge>
-                        </TaskItem>
-
-                        <TaskItem
-                            title="Create new Replication Hub task"
-                            className="pull-replication-hub"
-                            disabled
-                            disableReason="Not supported in sharded databases"
-                        >
-                            <Icon icon="pull-replication-hub" />
-                            <h4 className="mt-1 mb-0">Replication Hub</h4>
-                        </TaskItem>
-                        <TaskItem
-                            title="Create new Replication Sink task"
-                            className="pull-replication-sink"
-                            disabled
-                            disableReason="Not supported in sharded databases"
-                        >
-                            <Icon icon="pull-replication-agent" />
-                            <h4 className="mt-1 mb-0">Replication Sink</h4>
-                        </TaskItem>
-                    </Row>
-                    <HrHeader>ETL (RavenDB ⇛ TARGET)</HrHeader>
-                    <Row>
-                        <TaskItem
-                            title="Create new RavenDB ETL task"
-                            className="ravendb-etl"
-                            disabled
-                            disableReason="Feature available in Professional and Enterprise license"
-                        >
-                            <Icon icon="ravendb-etl" />
-                            <h4 className="mt-1 mb-0">RavenDB ETL</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Professional +
-                            </Badge>
-                        </TaskItem>
-
-                        <TaskItem
-                            title="Create new Elasticsearch ETL task"
-                            className="elastic-etl"
-                            disabled
-                            disableReason="Feature available in Enterprise license"
-                        >
-                            <Icon icon="elastic-search-etl" />
-                            <h4 className="mt-1 mb-0">Elasticsearch ETL</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Enterprise
-                            </Badge>
-                        </TaskItem>
-
-                        <TaskItem
-                            title="Create new Kafka ETL task"
-                            className="kafka-etl"
-                            disabled
-                            disableReason="Feature available in Enterprise license"
-                        >
-                            <Icon icon="kafka-etl" />
-                            <h4 className="mt-1 mb-0">Kafka ETL</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Enterprise
-                            </Badge>
-                        </TaskItem>
-
-                        <TaskItem
-                            title="Create new SQL ETL task"
-                            className="sql-etl"
-                            disabled
-                            disableReason="Feature available in Professional and Enterprise license"
-                        >
-                            <Icon icon="sql-etl" />
-                            <h4 className="mt-1 mb-0">SQL ETL</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Professional +
-                            </Badge>
-                        </TaskItem>
-
-                        <TaskItem
-                            title="Create new OLAP ETL task"
-                            className="olap-etl"
-                            disabled
-                            disableReason="Feature available in Enterprise license"
-                        >
-                            <Icon icon="olap-etl" />
-                            <h4 className="mt-1 mb-0">OLAP ETL</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Enterprise
-                            </Badge>
-                        </TaskItem>
-
-                        <TaskItem
-                            title="Create new RabbitMQ ETL task"
-                            className="rabbitmq-etl"
-                            disabled
-                            disableReason="Feature available in Enterprise license"
-                        >
-                            <Icon icon="rabbitmq-etl" />
-                            <h4 className="mt-1 mb-0">RabbitMQ ETL</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Enterprise
-                            </Badge>
-                        </TaskItem>
-                    </Row>
-                    <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>
-                    <Row>
-                        <TaskItem
-                            title="Create new Kafka Sink task"
-                            className="kafka-sink"
-                            disabled
-                            disableReason="Feature available in Professional and Enterprise license"
-                        >
-                            <Icon icon="kafka-sink" />
-                            <h4 className="mt-1 mb-0">Kafka Sink</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Professional +
-                            </Badge>
-                        </TaskItem>
-
-                        <TaskItem
-                            title="Create new RabbitMQ Sink task"
-                            className="rabbitmq-sink"
-                            disabled
-                            disableReason="Not supported in sharded databases"
-                        >
-                            <Icon icon="rabbitmq-sink" />
-                            <h4 className="mt-1 mb-0">RabbitMQ Sink</h4>
-                        </TaskItem>
-                    </Row>
-                    <HrHeader>Backups & Subscriptions</HrHeader>
-                    <Row>
-                        <TaskItem
-                            title="Create new Backup task"
-                            className="backup"
-                            disabled
-                            disableReason="Feature available in Professional and Enterprise license"
-                        >
-                            <Icon icon="periodic-backup" />
-                            <h4 className="mt-1 mb-0">Periodic Backup</h4>
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Professional +
-                            </Badge>
-                        </TaskItem>
-
-                        <TaskItem
-                            title="Create new Subscription task"
-                            className="subscription"
-                            disabled
-                            disableReason="License limit reached"
-                        >
-                            <Icon icon="subscription" />
-                            <h4 className="mt-1 mb-0">Subscription</h4>
-                            <CounterBadge className="mt-2" count={2} limit={3} hideNotReached />
-                        </TaskItem>
-                    </Row>
-                </ModalBody>
-            </Modal>
             <div id="modalContainer" className="bs5" />
         </div>
-    );
-}
-
-interface TaskItemProps {
-    title: string;
-    className: string;
-    children: ReactNode | ReactNode[];
-    disabled?: boolean;
-    disableReason?: string | ReactNode | ReactNode[];
-}
-
-export function TaskItem(props: TaskItemProps) {
-    const { title, className, children, disabled, disableReason } = props;
-    const TaskId = "Task" + uniqueId();
-
-    return (
-        <Col xs="6" md="4" className="mb-4 justify-content-center" title={title}>
-            <a
-                href="#"
-                id={TaskId}
-                className={classNames("task-item no-decor", className, { "item-disabled": disabled })}
-            >
-                {children}
-            </a>
-            {disableReason && <UncontrolledTooltip target={TaskId}>{disableReason}</UncontrolledTooltip>}
-        </Col>
     );
 }
 
