@@ -136,7 +136,7 @@ export default function AdminJSConsole() {
                                 targetId="1"
                                 icon="about"
                                 color="info"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 heading="About this view"
                             >
                                 <p>
