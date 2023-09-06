@@ -18,7 +18,7 @@ namespace FastTests
         [Fact]
         public void ReadOnlyStreamShouldNotThrow()
         {
-            var streamWithTimeout = new StreamWithTimeout(new MyReadOnlyStream());
+                var streamWithTimeout = new StreamWithTimeout(new MyReadOnlyStream());
             streamWithTimeout.ReadTimeout = 10;
         }
 
