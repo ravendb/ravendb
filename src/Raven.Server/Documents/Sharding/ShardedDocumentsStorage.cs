@@ -526,7 +526,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 // RavenDB-21104
                 // we allow writing the document to the wrong shard to avoid inconsistent data within the shard group
                 // and handle the leftovers at the end of the transaction 
-                context.Transaction.ExecuteDocumentsMigrationBeforeCommit();
+                context.Transaction.ExecuteDocumentsMigrationAfterCommit();
                 return;
             }
 
