@@ -414,6 +414,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseRenewalResult));
             scripter.AddType(typeof(LicenseConfiguration));
             scripter.AddType(typeof(LicenseHandler.ConnectivityToLicenseServer));
+            scripter.AddType(typeof(LicenseLimitsUsage));
 
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
@@ -500,7 +501,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RavenEtlTestScriptResult));
             scripter.AddType(typeof(EtlType));
             scripter.AddType(typeof(EtlTaskPerformanceStats));
-            
+
             // ongoing tasks - Queue Sink
 
             scripter.AddType(typeof(QueueSinkTaskPerformanceStats));

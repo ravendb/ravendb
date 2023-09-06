@@ -9,13 +9,18 @@ import licenseModel from "models/auth/licenseModel";
 import { licenseActions } from "./licenseSlice";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import { collectionsTrackerActions } from "./collectionsTrackerSlice";
+import changesContext from "common/changesContext";
+import getLicenseLimitsUsage from "commands/licensing/getLicenseLimitsUsage";
+import { todo } from "common/developmentHelper";
 
 let initialized = false;
 
-function updateReduxStore() {
+function updateDatabases() {
     const dtos = databasesManager.default.databases().map((x) => x.toDto());
     globalDispatch(databaseActions.databasesLoaded(dtos));
 }
+
+const throttledUpdateDatabases = _.throttle(updateDatabases, 200);
 
 function updateReduxCollectionsTracker() {
     globalDispatch(
@@ -32,7 +37,9 @@ function updateReduxCollectionsTracker() {
     );
 }
 
-const throttledUpdateReduxStore = _.throttle(() => updateReduxStore(), 200);
+function updateLicenseLimitsUsage() {
+    new getLicenseLimitsUsage().execute().then((dto) => globalDispatch(licenseActions.limitsUsageLoaded(dto)));
+}
 
 function initRedux() {
     if (initialized) {
@@ -41,7 +48,8 @@ function initRedux() {
 
     initialized = true;
 
-    databasesManager.default.onUpdateCallback = throttledUpdateReduxStore;
+    databasesManager.default.onUpdateCallback = throttledUpdateDatabases;
+
     activeDatabaseTracker.default.database.subscribe((db) =>
         globalDispatch(databaseActions.activeDatabaseChanged(db?.name ?? null))
     );
@@ -70,10 +78,15 @@ function initRedux() {
 
     licenseModel.licenseStatus.subscribe((licenseStatus) => {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));
+
+        todo("Other", "Damian", "Call it only when the usage have changed");
+        updateLicenseLimitsUsage();
     });
 
     collectionsTracker.default.registerOnGlobalChangeVectorUpdatedHandler(updateReduxCollectionsTracker);
     collectionsTracker.default.onUpdateCallback = updateReduxCollectionsTracker;
+
+    changesContext.default.connectServerWideNotificationCenter();
 }
 
 function initYup() {

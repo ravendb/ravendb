@@ -260,9 +260,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
 
-    // TODO get form endpoint
-    const subscriptionsServerCount = 0;
-
+    const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;
     const subscriptionsDatabaseCount = subscriptions.length;
 
     const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
