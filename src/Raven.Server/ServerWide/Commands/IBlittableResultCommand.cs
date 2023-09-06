@@ -2,7 +2,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Commands;
 
-public interface IContextResultCommand
+public interface IBlittableResultCommand
 {
     public JsonOperationContext ContextToWriteResult { set; }
 
