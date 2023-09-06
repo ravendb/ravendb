@@ -87,7 +87,7 @@ export default function ServerWideCustomAnalyzers() {
                                     <ul>
                                         <li>
                                             The analyzer name must be the same as the analyzer&apos;s class name in your
-                                            code
+                                            code.
                                         </li>
                                         <li>
                                             Inherit from <code>Lucene.Net.Analysis.Analyzer</code>
