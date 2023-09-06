@@ -784,6 +784,8 @@ namespace Raven.Server.Rachis
                                         if (result != null && cmd.BlittableResultWriter != null)
                                         {
                                             cmd.BlittableResultWriter.CopyResult(result);
+                                            //The result are consumed by the `CopyResult` and the context of the result from `HasHistoryLog` is not valid outside
+                                            //so we `TrySetResult` to null to make sure no use of invalid context 
                                             result = null;
                                         }
 
