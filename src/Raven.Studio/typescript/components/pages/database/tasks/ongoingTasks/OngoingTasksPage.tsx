@@ -366,15 +366,47 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     <AboutViewFloating>
                         <AccordionItemWrapper
-                            icon="ongoing-tasks"
+                            icon="about"
                             color="info"
                             heading="About this view"
                             description="Get additional info on this feature"
                             targetId="about-view"
                         >
+                            {/*<p>Manage all ongoing-tasks in the database from this view.</p>*/}
+
                             <p>
-                                This is <strong>Ongoing Tasks</strong> view.
+                                <strong>Ongoing-tasks</strong> are work tasks assigned to the database.
+                                <ul className="margin-top-xs">
+                                    <li>
+                                        A few examples are: <br />
+                                        Executing a periodic backup of the database, replicating to another RavenDB
+                                        instance, or transferring data to external frameworks such as Kafaka, RabbitMQ,
+                                        etc.
+                                    </li>
+                                    <li className="margin-top-xxs">
+                                        Click the &quot;Add a Database Task&quot; button to view all available tasks and
+                                        select from the list.
+                                    </li>
+                                </ul>
                             </p>
+                            <p>
+                                <strong>Running in the background</strong>, each ongoing task is handled by a designated
+                                node from the Database-Group nodes.
+                                <ul className="margin-top-xs">
+                                    <li>
+                                        For each task, you can specify which node will be responsible for the task and
+                                        whether the cluster may assign a different node when that node is down.
+                                    </li>
+                                    <li className="margin-top-xxs">
+                                        If not specified, the cluster will decide which node will handle the task.
+                                    </li>
+                                </ul>
+                            </p>
+                            <hr />
+                            <div className="small-label mb-2">useful links</div>
+                            <a href="https://ravendb.net/l/K4ZTNA/latest" target="_blank">
+                                <Icon icon="newtab" /> Docs - Ongoing Tasks
+                            </a>
                         </AccordionItemWrapper>
                         {isCommunity && (
                             <AccordionLicenseLimited
