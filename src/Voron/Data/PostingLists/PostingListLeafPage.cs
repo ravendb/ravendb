@@ -245,7 +245,7 @@ public readonly unsafe struct PostingListLeafPage
         it.Init(_page.DataPointer, Header->SizeUsed);
     }
 
-    public static void Merge(
+    public static bool TryMerge(
         ByteStringContext allocator, ref FastPForDecoder fastPForDecoder,
         PostingListLeafPageHeader* dest, PostingListLeafPageHeader* first, PostingListLeafPageHeader* second)
     {
@@ -275,7 +275,12 @@ public readonly unsafe struct PostingListLeafPage
         if (mergedList.Count > 0)
         {
             reqSize = encoder.Encode(mergedList.RawItems, mergedList.Count);
-            Debug.Assert(reqSize < Constants.Storage.PageSize - PageHeader.SizeOf);
+            if (reqSize >= Constants.Storage.PageSize - PageHeader.SizeOf)
+            {
+                scope.Dispose();
+                return false;
+            }
+            
             encoder.Write(tmpPtr + PageHeader.SizeOf, Constants.Storage.PageSize - PageHeader.SizeOf);
         }
         mergedList.Dispose();
@@ -289,5 +294,7 @@ public readonly unsafe struct PostingListLeafPage
         tmp.CopyTo((byte*)dest);
         
         scope.Dispose();
+        
+        return true;
     }
 }

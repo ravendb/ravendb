@@ -445,12 +445,17 @@ namespace Voron.Data.PostingLists
                         continue;
                     }
 
-                    PostingListLeafPage.Merge(_llt.Allocator, ref decoder, leafPage.Header,
-                        parent.LastSearchPosition == 0 ? leafPage.Header : siblingHeader,
-                        parent.LastSearchPosition == 0 ? siblingHeader : leafPage.Header
-                    );
+                    // we assume that the two pages can be merged, note that they don't *have* to
+                    // we do a quick validation above, but we don't check if shared prefixes, etc are involved
+                    if (PostingListLeafPage.TryMerge(_llt.Allocator, ref decoder, leafPage.Header,
+                            parent.LastSearchPosition == 0 ? leafPage.Header : siblingHeader,
+                            parent.LastSearchPosition == 0 ? siblingHeader : leafPage.Header
+                        ))
+                    {
+                        
+                        MergeSiblingsAtParent();
+                    }
 
-                    MergeSiblingsAtParent();
                 }
             }
 
