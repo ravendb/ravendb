@@ -41,14 +41,7 @@ export default function ServerWideCustomAnalyzers() {
                             <Icon icon="plus" />
                             Add a server-wide custom analyzer
                         </a>
-                        <HrHeader
-                            right={
-                                <a href="https://ravendb.net/l/VWCQPI/6.0" target="_blank">
-                                    <Icon icon="link" />
-                                    Analyzers tutorial
-                                </a>
-                            }
-                        >
+                        <HrHeader>
                             Server-wide custom analyzers
                             {isCommunity && (
                                 <CounterBadge className="ms-2" count={resultsCount} limit={communityLimit} />
@@ -69,7 +62,43 @@ export default function ServerWideCustomAnalyzers() {
                                 description="Get additional info on what this feature can offer you"
                                 heading="About this view"
                             >
-                                This is the <strong>Server-Wide Custom Analyzers</strong> view.
+                                <p>
+                                    <strong>Analyzers</strong> are used by indexes to split the index-fields into tokens
+                                    (terms).
+                                    <br />
+                                    The analyzer defines how the field is tokenized.
+                                    <br />
+                                    When querying an index, these terms are used to define the search criteria and
+                                    filter query results.
+                                </p>
+                                <p>
+                                    <strong>In this view</strong>, you can add your own analyzers in addition to the
+                                    existing analyzers that come with RavenDB.
+                                    <ul>
+                                        <li>
+                                            The custom analyzers added here can be used by indexes in ALL databases in
+                                            your cluster.
+                                        </li>
+                                    </ul>
+                                </p>
+                                <p>
+                                    Provide <code>C#</code> code in the editor view, or upload from file.
+                                    <ul>
+                                        <li>
+                                            The analyzer name must be the same as the analyzer&apos;s class name in your
+                                            code
+                                        </li>
+                                        <li>
+                                            Code must be compilable and include all necessary <code>using</code>{" "}
+                                            statements.
+                                        </li>
+                                    </ul>
+                                </p>
+                                <hr />
+                                <div className="small-label mb-2">useful links</div>
+                                <a href="https://ravendb.net/l/VWCQPI/latest" target="_blank">
+                                    <Icon icon="newtab" /> Docs - Custom Analyzers
+                                </a>
                             </AccordionItemWrapper>
                             {isCommunity && (
                                 <AccordionLicenseLimited
