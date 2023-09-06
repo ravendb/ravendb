@@ -67,14 +67,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 Add a custom analyzer
                             </a>
                         )}
-                        <HrHeader
-                            right={
-                                <a href="https://ravendb.net/l/VWCQPI/6.0" target="_blank">
-                                    <Icon icon="link" />
-                                    Analyzers tutorial
-                                </a>
-                            }
-                        >
+                        <HrHeader>
                             Database custom analyzers
                             {isCommunity && (
                                 <CounterBadge
@@ -96,7 +89,11 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
 
                         <HrHeader
                             right={
-                                <a href={appUrl.forServerWideCustomAnalyzers()} target="_blank">
+                                <a
+                                    href={appUrl.forServerWideCustomAnalyzers()}
+                                    target="_blank"
+                                    title="Navigate to the server-wide view to edit"
+                                >
                                     <Icon icon="link" />
                                     Server-wide custom analyzers
                                 </a>
@@ -124,10 +121,49 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 targetId="1"
                                 icon="about"
                                 color="info"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 heading="About this view"
                             >
-                                This is the <strong>Custom Analyzers</strong> view.
+                                <p>
+                                    <strong>Analyzers</strong> are used by indexes to split the index-fields into tokens
+                                    (terms).
+                                    <br />
+                                    The analyzer defines how the field is tokenized.
+                                    <br />
+                                    When querying an index, these terms are used to define the search criteria and
+                                    filter query results.
+                                </p>
+                                <p>
+                                    <strong>In this view</strong>, you can add your own analyzers in addition to the
+                                    existing analyzers that come with RavenDB.
+                                    <ul>
+                                        <li>
+                                            The custom analyzers added here can be used only by indexes in this
+                                            database.
+                                        </li>
+                                        <li>
+                                            The server-wide custom analyzers listed can also be used in this database.
+                                        </li>
+                                    </ul>
+                                </p>
+                                <p>
+                                    Provide <code>C#</code> code in the editor view, or upload from file.
+                                    <ul>
+                                        <li>
+                                            The analyzer name must be the same as the analyzer&apos;s class name in your
+                                            code
+                                        </li>
+                                        <li>
+                                            Code must be compilable and include all necessary <code>using</code>{" "}
+                                            statements.
+                                        </li>
+                                    </ul>
+                                </p>
+                                <hr />
+                                <div className="small-label mb-2">useful links</div>
+                                <a href="https://ravendb.net/l/VWCQPI/latest" target="_blank">
+                                    <Icon icon="newtab" /> Docs - Custom Analyzers
+                                </a>
                             </AccordionItemWrapper>
                             {isCommunity && (
                                 <AccordionLicenseLimited
