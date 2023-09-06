@@ -92,9 +92,8 @@ export function IndexesPage(props: IndexesPageProps) {
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
-    // TODO get from endpoint
-    const autoServerCount = 0;
-    const staticServerCount = 0;
+    const autoServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterAutoIndexes;
+    const staticServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterStaticIndexes;
 
     const autoDatabaseCount = stats.indexes.filter((x) => IndexUtils.isAutoIndex(x)).length;
     const staticDatabaseCount = stats.indexes.length - autoDatabaseCount;

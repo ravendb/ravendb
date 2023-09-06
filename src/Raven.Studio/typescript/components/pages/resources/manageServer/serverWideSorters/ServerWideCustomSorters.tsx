@@ -20,7 +20,7 @@ export default function ServerWideCustomSorters() {
     const { appUrl } = useAppUrls();
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
-    const communityLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
+    const communityLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
     const isAddDisabled = asyncGetSorters.status !== "success" || (isCommunity && resultsCount === communityLimit);

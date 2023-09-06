@@ -27,8 +27,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const licenseType = useAppSelector(licenseSelectors.licenseType);
     const { appUrl } = useAppUrls();
 
-    // TODO get form endpoint
-    const subscriptionsServerCount = 0;
+    const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;
 
     const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
     const subscriptionsDatabaseLimit = useAppSelector(
