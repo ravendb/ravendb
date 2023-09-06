@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -170,6 +171,35 @@ namespace Raven.Server.Web.Studio
                     [nameof(StatusCode)] = StatusCode,
                     [nameof(Exception)] = Exception
                 };
+            }
+        }
+
+        [RavenAction("/license/limits-usage", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetLicenseLimitsUsage()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                if (ServerStore.LicenseManager.LicenseStatus.Type == LicenseType.Community)
+                {
+                    // TODO pawel
+
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(LicenseLimitsUsage.ClusterStaticIndexes)] = 0,
+                        [nameof(LicenseLimitsUsage.ClusterAutoIndexes)] = 0,
+                        [nameof(LicenseLimitsUsage.ClusterSubscriptionTasks)] = 0
+                    });
+
+                    return;
+                }
+
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(LicenseLimitsUsage.ClusterStaticIndexes)] = null,
+                    [nameof(LicenseLimitsUsage.ClusterAutoIndexes)] = null,
+                    [nameof(LicenseLimitsUsage.ClusterSubscriptionTasks)] = null
+                });
             }
         }
     }
