@@ -369,7 +369,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             icon="ongoing-tasks"
                             color="info"
                             heading="About this view"
-                            description="Get additional info on what this feature can offer you"
+                            description="Get additional info on this feature"
                             targetId="about-view"
                         >
                             <p>

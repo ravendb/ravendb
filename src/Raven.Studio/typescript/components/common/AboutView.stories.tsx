@@ -100,7 +100,7 @@ export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
                                 icon="about"
                                 color="info"
                                 heading="About this view"
-                                description="Get additional info on what this feature can offer you"
+                                description="Get additional info on this feature"
                                 targetId="1"
                             >
                                 <p>
