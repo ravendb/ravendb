@@ -59,17 +59,20 @@ namespace Voron.Impl
         { 
             if (_currentIdx < _length)
             {
-                for (int i = 0; i < _length; i++)
+                // RavenDB-20947: Since _currentIdx has always the same value of the last valid item, we should iterate until we hit it as the rest
+                // of the array may contain stale data belonging to different transactions.
+                for (int i = 0; i <= _currentIdx; i++)
                 {
                     // RavenDB-20947: This may be the case of the "Cannot add a value in a read only transaction on $Root in Read"
                     // If we don't check for 'HasValue' or that the key size is bigger than zero, we may be returning a removed
-                    // or a tree belonging to a different transaction if the array has not been properly cleaned. 
+                    // value. 
                     if (_keySizes[i] != 0)
                         yield return _values[i];
                 }
             }
             else
             {
+                // Since we had overflow, we cannot trust the LRU to contain the whole valid set. Therefore, we use the backing storage instead.
                 foreach (var value in _overflowStorage.Values)
                     yield return value;
             }
@@ -200,18 +203,7 @@ namespace Voron.Impl
                 return false;
             }
 
-            // PERF: We put this into another method call to shrink the size of TryGetValue in the cases
-            // where the inliner would decide to inline the method. Given this method will be rarely executed
-            // as if it happens, probably this data structure is not the correct answer; the inliner will 
-            // not inline this method ever. 
-            [MethodImpl(MethodImplOptions.NoInlining)]
-            bool TryGetValueFromOverflowUnlikely(out TValue value)
-            {
-                return _overflowStorage.TryGetValue(key, out value);
-            }
-
-            // If we have overflowed, then we will gonna try to find it there. 
-            return TryGetValueFromOverflowUnlikely(out value);
+            return _overflowStorage.TryGetValue(key, out value);
         }
 
         public void Clear()
@@ -226,10 +218,10 @@ namespace Voron.Impl
 
         public void Dispose()
         {
-            _perCorePools.KeySizesPool.Return(_keySizes, clearArray: true);
-            _perCorePools.KeyHashesPool.Return(_keyHashes, clearArray: true);
-            _perCorePools.KeysPool.Return(_keys, clearArray: true);
-            _perCorePools.ValuesPool.Return(_values, clearArray: true);
+            _perCorePools.KeySizesPool.Return(_keySizes);
+            _perCorePools.KeyHashesPool.Return(_keyHashes);
+            _perCorePools.KeysPool.Return(_keys);
+            _perCorePools.ValuesPool.Return(_values);
             PerCoreArrayPools.TryPush(_perCorePools);
         }
 
