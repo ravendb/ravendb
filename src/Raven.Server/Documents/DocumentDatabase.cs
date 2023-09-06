@@ -92,6 +92,7 @@ namespace Raven.Server.Documents
 
         public string DatabaseGroupId;
         public string ClusterTransactionId;
+        public SupportedFeature SupportedFeatures;
 
         public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
 
@@ -338,6 +339,8 @@ namespace Raven.Server.Documents
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
 
+                SupportedFeatures = new SupportedFeature(record);
+                
                 DatabaseGroupId ??= record!.Topology.DatabaseTopologyIdBase64;
                 ClusterTransactionId ??= record!.Topology.ClusterTransactionIdBase64;
 
@@ -2056,5 +2059,26 @@ namespace Raven.Server.Documents
         None,
         Regular,
         Deep
+    }
+
+    public class SupportedFeature
+    {
+        public readonly SupportedFeatureTypes SupportedFeatureTypes;
+
+        public SupportedFeature(DatabaseRecord databaseRecord)
+        {
+            SupportedFeatureTypes = new SupportedFeatureTypes();
+
+            if (databaseRecord.SupportedFeatures == null)
+                return;
+
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix))
+                SupportedFeatureTypes.ThrowRevisionKeyTooBigFix = true;
+        }
+    }
+
+    public class SupportedFeatureTypes
+    {
+        public bool ThrowRevisionKeyTooBigFix;
     }
 }

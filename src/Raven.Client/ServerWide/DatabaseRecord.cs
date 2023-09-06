@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -22,6 +21,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.Util;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
@@ -127,6 +127,9 @@ namespace Raven.Client.ServerWide
         public long TruncatedClusterTransactionCommandsCount;
 
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
+
+        [ForceJsonSerialization]
+        internal IReadOnlyList<string> SupportedFeatures;
 
         public void AddSorter(SorterDefinition definition)
         {
@@ -446,7 +449,7 @@ namespace Raven.Client.ServerWide
             return count;
         }
     }
-    
+
     public class IndexHistoryEntry
     {
         public IndexDefinition Definition { get; set; }
@@ -534,12 +537,12 @@ namespace Raven.Client.ServerWide
             hash = 31 * hash + CompressAllCollections.GetHashCode();
             return hash;
         }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Collections)] =  new DynamicJsonArray(Collections),
+                [nameof(Collections)] = new DynamicJsonArray(Collections),
                 [nameof(CompressAllCollections)] = CompressAllCollections,
                 [nameof(CompressRevisions)] = CompressRevisions
             };

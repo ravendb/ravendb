@@ -1219,7 +1219,7 @@ namespace Raven.Server.Documents.Replication
                                 }
 
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
-                                    rcvdChangeVector, revisionTombstone.LastModifiedTicks);
+                                    rcvdChangeVector, revisionTombstone.LastModifiedTicks, fromReplication: true);
                                 break;
 
                             case CounterReplicationItem counter:

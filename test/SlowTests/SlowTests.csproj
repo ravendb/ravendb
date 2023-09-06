@@ -47,7 +47,6 @@
     <None Remove="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
-    <None Remove="Smuggler\Data\revisionTombstonesWithBigChangeVector.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
@@ -127,6 +126,9 @@
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_9912\2.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_21263\revisionsWithLargeChangeVector-oldDatabaseVersion.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_21263\test1111-emptySupportedFeatures.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_21263\test1111-withoutSupportedFeatures.ravendbdump" />
     <EmbeddedResource Include="Data\testing.ravendbdump" />
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
@@ -138,9 +140,6 @@
     <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Revisions_3.5.35220.ravendbdump" />
-    <EmbeddedResource Include="Smuggler\Data\revisionTombstonesWithBigChangeVector.ravendbdump">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
