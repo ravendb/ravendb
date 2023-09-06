@@ -79,6 +79,7 @@ export default function ServerWideCustomAnalyzers() {
                                             The custom analyzers added here can be used by indexes in ALL databases in
                                             your cluster.
                                         </li>
+                                        <li>Note: custom analyzers are not supported by Corax indexes.</li>
                                     </ul>
                                 </p>
                                 <p>
@@ -87,6 +88,9 @@ export default function ServerWideCustomAnalyzers() {
                                         <li>
                                             The analyzer name must be the same as the analyzer&apos;s class name in your
                                             code
+                                        </li>
+                                        <li>
+                                            Inherit from <code>Lucene.Net.Analysis.Analyzer</code>
                                         </li>
                                         <li>
                                             Code must be compilable and include all necessary <code>using</code>{" "}
