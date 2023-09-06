@@ -33,7 +33,7 @@ export const licenseSlice = createSlice({
 export const licenseActions = licenseSlice.actions;
 
 function statusValue<T extends keyof LicenseStatus>(key: T) {
-    return (store: RootState) => store.license.status[key] ?? null;
+    return (store: RootState) => store.license.status?.[key] ?? null;
 }
 
 export const licenseSelectors = {
