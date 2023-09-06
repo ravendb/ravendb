@@ -69,7 +69,7 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                         <div className="text-center lead">{taskGroup.title}</div>
                         <div className="vstack gap-1 my-4">
                             {taskGroup.tasks.map((task) => (
-                                <div key={task.taskName} className="d-flex">
+                                <div key={task.taskId} className="d-flex">
                                     <div
                                         className={classNames(
                                             "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
@@ -178,7 +178,7 @@ function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTask
             const affectedTaskGrouped = tasks.reduce(
                 (accumulator: AffectedTasksGrouped, currentValue: OngoingTaskSharedInfo) => {
                     if (currentValue.taskState === "Enabled" || currentValue.taskState === "PartiallyEnabled") {
-                        accumulator.skipping.push({ ...currentValue, taskName: "Enabled" });
+                        accumulator.skipping.push({ ...currentValue, taskState: "Enabled" });
                     } else {
                         accumulator.enabling.push(currentValue);
                     }

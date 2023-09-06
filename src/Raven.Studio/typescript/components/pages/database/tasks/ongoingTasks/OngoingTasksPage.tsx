@@ -164,23 +164,23 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const getSelectedTaskShardedInfos = () =>
         [...tasks.tasks, ...tasks.subscriptions, ...tasks.replicationHubs]
-            .filter((x) => selectedTaskNames.includes(x.shared.taskName))
+            .filter((x) => selectedTaskIds.includes(x.shared.taskId))
             .map((x) => x.shared);
 
-    const filteredDatabaseTaskNames = Object.values(_.omit(filteredTasks, ["replicationHubs"]))
+    const filteredDatabaseTaskIds = Object.values(_.omit(filteredTasks, ["replicationHubs"]))
         .flat()
         .filter((x) => !x.shared.serverWide)
-        .map((x) => x.shared.taskName);
+        .map((x) => x.shared.taskId);
 
-    const [selectedTaskNames, setSelectedTaskNames] = useState<string[]>(filteredDatabaseTaskNames);
+    const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>(filteredDatabaseTaskIds);
 
     useEffect(() => {
-        const updatedSelectedTaskNames = selectedTaskNames.filter((name) => filteredDatabaseTaskNames.includes(name));
+        const updatedSelectedTaskIds = selectedTaskIds.filter((id) => filteredDatabaseTaskIds.includes(id));
 
-        if (!_.isEqual(updatedSelectedTaskNames, selectedTaskNames)) {
-            setSelectedTaskNames(updatedSelectedTaskNames);
+        if (!_.isEqual(updatedSelectedTaskIds, selectedTaskIds)) {
+            setSelectedTaskIds(updatedSelectedTaskIds);
         }
-    }, [filteredDatabaseTaskNames, selectedTaskNames]);
+    }, [filteredDatabaseTaskIds, selectedTaskIds]);
 
     const allTasksCount =
         tasks.tasks.filter((x) => x.shared.taskType !== "PullReplicationAsHub").length +
@@ -246,12 +246,12 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
         db: database,
         onTaskOperation,
-        isSelected: (taskName: string) => selectedTaskNames.includes(taskName),
+        isSelected: (id: number) => selectedTaskIds.includes(id),
         toggleSelection: (checked: boolean, taskShardedInfo: OngoingTaskSharedInfo) => {
             if (checked) {
-                setSelectedTaskNames((selectedNames) => [...selectedNames, taskShardedInfo.taskName]);
+                setSelectedTaskIds((selectedIds) => [...selectedIds, taskShardedInfo.taskId]);
             } else {
-                setSelectedTaskNames((selectedNames) => selectedNames.filter((x) => x !== taskShardedInfo.taskName));
+                setSelectedTaskIds((selectedIds) => selectedIds.filter((x) => x !== taskShardedInfo.taskId));
             }
         },
         isTogglingState,
@@ -432,9 +432,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                 {allTasksCount > 0 && isAdminAccessOrAbove(database) && (
                     <OngoingTaskSelectActions
-                        allTasks={filteredDatabaseTaskNames}
-                        selectedTasks={selectedTaskNames}
-                        setSelectedTasks={setSelectedTaskNames}
+                        allTasks={filteredDatabaseTaskIds}
+                        selectedTasks={selectedTaskIds}
+                        setSelectedTasks={setSelectedTaskIds}
                         onTaskOperation={(type) => onTaskOperation(type, getSelectedTaskShardedInfos())}
                         isTogglingState={isTogglingStateAny}
                         isDeleting={isDeletingAny}

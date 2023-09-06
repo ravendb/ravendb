@@ -59,7 +59,7 @@ export function RabbitMqSinkPanel(props: RabbitMqSinkPanelProps) {
                             <Input
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
-                                checked={isSelected(data.shared.taskName)}
+                                checked={isSelected(data.shared.taskId)}
                             />
                         </RichPanelSelect>
                     )}
@@ -71,7 +71,7 @@ export function RabbitMqSinkPanel(props: RabbitMqSinkPanelProps) {
                         task={data}
                         canEdit={canEdit}
                         onTaskOperation={onTaskOperation}
-                        isTogglingState={isTogglingState(data.shared.taskName)}
+                        isTogglingState={isTogglingState(data.shared.taskId)}
                     />
                     <OngoingTaskActions
                         task={data}
@@ -79,7 +79,7 @@ export function RabbitMqSinkPanel(props: RabbitMqSinkPanelProps) {
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
-                        isDeleting={isDeleting(data.shared.taskName)}
+                        isDeleting={isDeleting(data.shared.taskId)}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
