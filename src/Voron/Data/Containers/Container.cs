@@ -818,16 +818,17 @@ namespace Voron.Data.Containers
             txState.Additions.Add(pageNum);
         }
         
-        public static void RemoveFromAllPagesList(LowLevelTransaction llt, in Container rootContainer, long pageNum)
+        public static void RemoveFromAllPagesList(LowLevelTransaction llt, in Container rootContainer, long pageNum, long pageLevelMetadata)
         {
             var txState = llt.Transaction.GetContainerState(rootContainer._page.PageNumber);
+            
             txState.FreeListAdditions.Remove(pageNum);
             txState.FreeListRemovals.Add(pageNum);
             txState.Additions.Remove(pageNum);
             txState.Removals.Add(pageNum);
 
-            if (txState.LastFreePageByPageLevelMetadata.TryGetValue(rootContainer.Header.PageLevelMetadata, out var page) && page == pageNum)
-                txState.LastFreePageByPageLevelMetadata.Remove(rootContainer.Header.PageLevelMetadata);
+            if (txState.LastFreePageByPageLevelMetadata.TryGetValue(pageLevelMetadata, out var page) && page == pageNum)
+                txState.LastFreePageByPageLevelMetadata.Remove(pageLevelMetadata);
         }
         
         private bool HasEnoughSpaceFor(int reqSize)
@@ -901,7 +902,8 @@ namespace Voron.Data.Containers
             {
                 var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
                 rootContainer.Header.NumberOfOverflowPages -= numberOfOverflowPages;
-                RemoveFromAllPagesList(llt, rootContainer, pageNum);
+                long pageLevelMetadata = ((ContainerPageHeader*)page.Pointer)->PageLevelMetadata;
+                RemoveFromAllPagesList(llt, rootContainer, pageNum, pageLevelMetadata);
                 
                 for (var pageToRelease = pageNum; pageToRelease < pageNum + numberOfOverflowPages; ++pageToRelease)
                     llt.FreePage(pageToRelease);
@@ -951,7 +953,7 @@ namespace Voron.Data.Containers
                 }
 
                 RemoveFromFreeList(llt, rootContainer, page.PageNumber);
-                RemoveFromAllPagesList(llt, rootContainer, page.PageNumber);
+                RemoveFromAllPagesList(llt, rootContainer, page.PageNumber, container.Header.PageLevelMetadata);
                 
                 llt.FreePage(pageNum);
                 return;
