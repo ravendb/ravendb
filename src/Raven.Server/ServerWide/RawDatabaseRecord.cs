@@ -965,18 +965,50 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private int? _countOfIndexes;
+        private int? _countOfAutoIndexes;
 
-        public int CountOfIndexes
+        public int CountOfAutoIndexes
         {
             get
             {
                 if (_materializedRecord != null)
-                    return (_materializedRecord.Indexes?.Count ?? 0) + (_materializedRecord.AutoIndexes?.Count ?? 0);
+                    return (_materializedRecord.AutoIndexes?.Count ?? 0);
 
-                if (_countOfIndexes == null)
+                if (_countOfAutoIndexes == null)
                 {
-                    _countOfIndexes = 0;
+                    _countOfAutoIndexes = 0;
+                    if (_record.TryGet(nameof(DatabaseRecord.AutoIndexes), out BlittableJsonReaderObject  obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject)
+                                _countOfAutoIndexes++;
+                        }
+                    }
+                }
+
+                return _countOfAutoIndexes.Value;
+            }
+        }
+
+        private int? _countOfStaticIndexes;
+
+        public int CountOfStaticIndexes
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return (_materializedRecord.Indexes?.Count ?? 0);
+
+                if (_countOfStaticIndexes == null)
+                {
+                    _countOfStaticIndexes = 0;
                     if (_record.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -988,29 +1020,16 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             if (propertyDetails.Value is BlittableJsonReaderObject)
-                                _countOfIndexes++;
-                        }
-                    }
-
-                    if (_record.TryGet(nameof(DatabaseRecord.AutoIndexes), out obj) && obj != null)
-                    {
-                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                        for (var i = 0; i < obj.Count; i++)
-                        {
-                            obj.GetPropertyByIndex(i, ref propertyDetails);
-
-                            if (propertyDetails.Value == null)
-                                continue;
-
-                            if (propertyDetails.Value is BlittableJsonReaderObject)
-                                _countOfIndexes++;
+                                _countOfStaticIndexes++;
                         }
                     }
                 }
 
-                return _countOfIndexes.Value;
+                return _countOfStaticIndexes.Value;
             }
         }
+
+        public int CountOfIndexes => CountOfStaticIndexes + CountOfAutoIndexes;
 
         private Dictionary<string, IndexDefinition> _indexes;
 
