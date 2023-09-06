@@ -30,9 +30,10 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     // TODO get form endpoint
     const subscriptionsServerCount = 0;
 
-    // TODO get from license selector
-    const subscriptionsServerLimit = 3 * 5;
-    const subscriptionsDatabaseLimit = 3;
+    const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
+    const subscriptionsDatabaseLimit = useAppSelector(
+        licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerDatabase")
+    );
 
     const subscriptionsServerLimitStatus = getLicenseLimitReachStatus(
         subscriptionsServerCount,

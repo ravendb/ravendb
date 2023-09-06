@@ -28,8 +28,6 @@ import { NonShardedViewProps } from "components/models/common";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
-todo("Limits", "Damian", "Get limit from license selector");
-
 export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
 
@@ -42,8 +40,11 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
-    const communityServerWideLimit = 5; // TODO get from license selector
-    const communityDatabaseLimit = 1; // TODO get from license selector
+
+    const communityClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
+    const communityDatabaseLimit = useAppSelector(
+        licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerDatabase")
+    );
 
     const databaseResultsCount = asyncGetDatabaseAnalyzers.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideAnalyzers.result?.length ?? null;
@@ -104,7 +105,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 <CounterBadge
                                     className="ms-2"
                                     count={serverWideResultsCount}
-                                    limit={communityServerWideLimit}
+                                    limit={communityClusterLimit}
                                 />
                             )}
                         </HrHeader>

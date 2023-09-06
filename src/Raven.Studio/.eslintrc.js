@@ -20,7 +20,8 @@ module.exports = {
     "@typescript-eslint/no-var-requires": "off",
     "@typescript-eslint/triple-slash-reference": "off",
     "@typescript-eslint/no-explicit-any": "off",
-    "react/jsx-key": "off"
+    "react/jsx-key": "off",
+    "@typescript-eslint/prefer-namespace-keyword": "off"
   },
   "settings": {
     "react": {
