@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -51,43 +52,52 @@ namespace SlowTests.Issues
         public async Task WillDeleteOrphanedAtomicGuards_AfterRestoreFromBackup(Options options)
         {
             var (_, leader) = await CreateRaftCluster(1);
-            using var store = GetDocumentStore(new Options(options) { Server = leader, ReplicationFactor = 3 });
-
-            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            using var store = GetDocumentStore(new Options(options) {Server = leader, ReplicationFactor = 3});
+            
+            using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
             {
                 // this forces us to create an orphan!
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe"), new AtomicGuard { Id = "users/phoebe" }, 0));
-                await session.StoreAsync(new User { Name = "arava" }, "users/arava");
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe"),
+                    new AtomicGuard {Id = "users/phoebe"}, 0));
+                await session.StoreAsync(new User {Name = "arava"}, "users/arava");
                 await session.SaveChangesAsync();
             }
-
+            
+            WaitForDocument(store, "users/arava");
+            
             string tempFileName = GetTempFileName();
-
-            var op = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), tempFileName, CancellationToken.None);
-            await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-
-            // we are simulating a scenario where we took a backup midway through removing an atomic guard
-
-            using var store2 = GetDocumentStore(options, caller: store.Database + "_Restored");
-
-            op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), tempFileName, CancellationToken.None);
-            await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-
-            using (var session = store2.OpenAsyncSession(new SessionOptions
+            try
             {
-                TransactionMode = TransactionMode.ClusterWide
-            }))
+                var op = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), tempFileName, CancellationToken.None);
+                await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                
+                // we are simulating a scenario where we took a backup midway through removing an atomic guard
+
+                using var store2 = GetDocumentStore(options, caller: store.Database + "_Restored");
+
+                op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), tempFileName, CancellationToken.None);
+                await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+
+                using (var session = store2.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    var val = await store2.Operations.SendAsync(
+                        new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe")));
+                    Assert.Null(val);
+
+                    val = await store2.Operations.SendAsync(
+                        new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/arava")));
+
+                    var arava = await session.LoadAsync<User>("users/arava");
+                    var cv = session.Advanced.GetChangeVectorFor(arava);
+                    var cti = cv.ToChangeVectorList().Single(x => x.NodeTag == ChangeVectorParser.TrxnInt);
+                    var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
+                    Assert.Equal(val.Index, cti.Etag);
+                }
+            }
+            finally
             {
-                var val = await store2.Operations.SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe")));
-                Assert.Null(val);
-
-                val = await store2.Operations.SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/arava")));
-
-                var arava = await session.LoadAsync<User>("users/arava");
-                var cv = session.Advanced.GetChangeVectorFor(arava);
-                var cti = cv.ToChangeVectorList().Single(x => x.NodeTag == ChangeVectorParser.TrxnInt);
-                var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
-                Assert.Equal(val.Index, cti.Etag);
+                if (File.Exists(tempFileName))
+                    File.Delete(tempFileName);
             }
         }
 
