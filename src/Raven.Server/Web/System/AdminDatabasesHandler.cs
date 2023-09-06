@@ -461,6 +461,7 @@ namespace Raven.Server.Web.System
                 Server.ServerStore.AssignNodesToDatabase(clusterTopology, databaseRecord);
             }
 
+            databaseRecord.SupportedFeatures = new List<string> { Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix };
             databaseRecord.Topology.ClusterTransactionIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
             databaseRecord.Topology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
 
