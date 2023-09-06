@@ -138,6 +138,31 @@ export const SubscriptionTemplate = (args: {
     return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
 };
 
+export const SubscriptionsWithCommunityLimits = () => {
+    commonInit();
+
+    const { license } = mockStore;
+    license.with_Community();
+
+    const db = DatabasesStubs.shardedDatabase();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        x.OngoingTasks = [
+            TasksStubs.getSubscription(),
+            {
+                ...TasksStubs.getSubscription(),
+                TaskName: "SomeSecondSub",
+            },
+        ];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 2;
+    });
+
+    return <OngoingTasksPage database={db} />;
+};
+
 export const SubscriptionDisabled = boundCopy(SubscriptionTemplate, {
     disabled: true,
 });
