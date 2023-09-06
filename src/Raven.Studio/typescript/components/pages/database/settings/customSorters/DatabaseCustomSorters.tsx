@@ -30,7 +30,6 @@ import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCus
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
-todo("Limits", "Damian", "Get limit from license selector");
 
 export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
@@ -44,8 +43,9 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
-    const communityServerWideLimit = 5; // TODO get from license selector
-    const communityDatabaseLimit = 1; // TODO get from license selector
+
+    const communityClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
+    const communityDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
 
     const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideSorters.result?.length ?? null;
@@ -120,7 +120,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 <CounterBadge
                                     className="ms-2"
                                     count={serverWideResultsCount}
-                                    limit={communityServerWideLimit}
+                                    limit={communityClusterLimit}
                                 />
                             )}
                         </HrHeader>

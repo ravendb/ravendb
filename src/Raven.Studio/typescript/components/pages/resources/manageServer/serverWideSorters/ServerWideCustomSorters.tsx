@@ -12,9 +12,6 @@ import { CounterBadge } from "components/common/CounterBadge";
 import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
-import { todo } from "common/developmentHelper";
-
-todo("Limits", "Damian", "Get limit from license selector");
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
@@ -23,7 +20,7 @@ export default function ServerWideCustomSorters() {
     const { appUrl } = useAppUrls();
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
-    const communityLimit = 5; // TODO get from license selector
+    const communityLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
     const isAddDisabled = asyncGetSorters.status !== "success" || (isCommunity && resultsCount === communityLimit);

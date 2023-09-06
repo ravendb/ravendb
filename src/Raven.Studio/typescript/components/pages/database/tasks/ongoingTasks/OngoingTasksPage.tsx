@@ -265,9 +265,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const subscriptionsDatabaseCount = subscriptions.length;
 
-    // TODO get from license selector
-    const subscriptionsServerLimit = 3 * 5;
-    const subscriptionsDatabaseLimit = 3;
+    const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
+    const subscriptionsDatabaseLimit = useAppSelector(
+        licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerDatabase")
+    );
 
     const subscriptionsServerLimitStatus = getLicenseLimitReachStatus(
         subscriptionsServerCount,

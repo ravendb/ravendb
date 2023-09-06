@@ -6,15 +6,12 @@ import { HrHeader } from "components/common/HrHeader";
 import { useServices } from "components/hooks/useServices";
 import { useAsync } from "react-async-hook";
 import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
-import { todo } from "common/developmentHelper";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CounterBadge } from "components/common/CounterBadge";
 import classNames from "classnames";
 import AnalyzersList from "./ServerWideCustomAnalyzersList";
-
-todo("Limits", "Damian", "Get limit from license selector");
 
 export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
@@ -23,7 +20,7 @@ export default function ServerWideCustomAnalyzers() {
     const { appUrl } = useAppUrls();
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
-    const communityLimit = 5; // TODO get from license selector
+    const communityLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
     const isAddDisabled = asyncGetAnalyzers.status !== "success" || (isCommunity && resultsCount === communityLimit);

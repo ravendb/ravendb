@@ -45,9 +45,8 @@ type IndexEvent =
 export function useIndexesPage(database: database, stale: boolean) {
     //TODO: use DatabaseSharedInfo?
 
-    // TODO get from license selector
-    const staticDatabaseLimit = 12;
-    const autoDatabaseLimit = 24;
+    const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
+    const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
 

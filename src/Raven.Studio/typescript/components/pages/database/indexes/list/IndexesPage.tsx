@@ -87,11 +87,10 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
 
-    // TODO get from license selector
-    const autoServerLimit = 24 * 5;
-    const staticServerLimit = 12 * 5;
-    const autoDatabaseLimit = 24;
-    const staticDatabaseLimit = 12;
+    const autoServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerCluster"));
+    const staticServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerCluster"));
+    const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
+    const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
     // TODO get from endpoint
     const autoServerCount = 0;
