@@ -26,7 +26,7 @@ namespace Raven.Server.Documents
 
         private List<Slice> _attachmentHashesToMaybeDelete;
 
-        private bool _executeDocumentsMigrationBeforeCommit;
+        private bool _executeDocumentsMigrationAfterCommit;
 
         private bool _replaced;
 
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
 
         protected override void AfterCommit()
         {
-            if (_executeDocumentsMigrationBeforeCommit)
+            if (_executeDocumentsMigrationAfterCommit)
             {
                 var shardedDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(_context.DocumentDatabase);
                 shardedDatabase.DocumentsMigrator.ExecuteMoveDocumentsAsync().IgnoreUnobservedExceptions();
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents
 
         internal void ExecuteDocumentsMigrationAfterCommit()
         {
-            _executeDocumentsMigrationBeforeCommit = true;
+            _executeDocumentsMigrationAfterCommit = true;
         }
     }
 }
