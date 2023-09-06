@@ -407,7 +407,7 @@ namespace Raven.Server.Documents.Revisions
                 // RavenDB-21047 
                 // throw if the change vector length exceeds the maximum id length (512 bytes)
                 // we allow it if the operation originated from smuggler/replication to avoid inconsistent data or broken replication
-                DocumentIdWorker.ThrowDocumentIdTooBig(changeVector);
+                DocumentIdWorker.ThrowDocumentIdTooBig(id, changeVector);
             }
 
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
