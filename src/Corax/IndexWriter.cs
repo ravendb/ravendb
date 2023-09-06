@@ -1675,9 +1675,8 @@ namespace Corax
 
                 using (staticFieldScope.For(CommitOperation.TextualValues))
                 {
-                    var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
+                    using var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
                     inserter.InsertTextualField();
-                    inserter.Dispose();
                 }
                 
                 using (staticFieldScope.For(CommitOperation.IntegerValues))
@@ -1706,10 +1705,9 @@ namespace Corax
 
                     using (dynamicFieldScope.For(CommitOperation.TextualValues))
                     {
-                        var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
+                        using var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
                         inserter.InsertTextualField();
-                        inserter.Dispose();
-                    }
+                   }
                     using (dynamicFieldScope.For(CommitOperation.IntegerValues))
                         InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
                     
