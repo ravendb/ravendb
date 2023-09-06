@@ -1,12 +1,13 @@
 ﻿using System;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -182,14 +183,20 @@ namespace Raven.Server.Web.Studio
             {
                 if (ServerStore.LicenseManager.LicenseStatus.Type == LicenseType.Community)
                 {
-                    // TODO pawel
-
-                    context.Write(writer, new DynamicJsonValue
+                    // TODO [grisha] temporary code
+                    using (context.OpenReadTransaction())
                     {
-                        [nameof(LicenseLimitsUsage.ClusterStaticIndexes)] = 0,
-                        [nameof(LicenseLimitsUsage.ClusterAutoIndexes)] = 0,
-                        [nameof(LicenseLimitsUsage.ClusterSubscriptionTasks)] = 0
-                    });
+                        var limits = new LicenseLimitsUsage();
+
+                        foreach (var database in ServerStore.Cluster.GetAllRawDatabases(context))
+                        {
+                            limits.ClusterStaticIndexes += database.CountOfStaticIndexes;
+                            limits.ClusterAutoIndexes += database.CountOfAutoIndexes;
+                            limits.ClusterSubscriptionTasks += GetSubscriptionCount(context, database.DatabaseName);
+                        }
+
+                        context.Write(writer, limits.ToJson());
+                    }
 
                     return;
                 }
@@ -200,6 +207,17 @@ namespace Raven.Server.Web.Studio
                     [nameof(LicenseLimitsUsage.ClusterAutoIndexes)] = null,
                     [nameof(LicenseLimitsUsage.ClusterSubscriptionTasks)] = null
                 });
+            }
+
+            return;
+
+            static int GetSubscriptionCount(TransactionOperationContext context, string databaseName)
+            {
+                var count = 0;
+                foreach (var _ in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseName)))
+                    count++;
+
+                return count;
             }
         }
     }
