@@ -297,6 +297,9 @@ public unsafe struct EntryTermsReader
                     case StoredFieldType.Empty | StoredFieldType.Raw:
                         IsRaw = true;
                         goto case StoredFieldType.Empty;
+                    case StoredFieldType.None:
+                        System.Diagnostics.Debug.Assert(false, $"This should not happen, got None stored field, type is: {type}");
+                        goto case StoredFieldType.Null;
                     default:
                         throw new ArgumentOutOfRangeException(type.ToString());
                 }
