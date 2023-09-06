@@ -144,6 +144,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                         <li>
                                             The server-wide custom analyzers listed can also be used in this database.
                                         </li>
+                                        <li>Note: custom analyzers are not supported by Corax indexes.</li>
                                     </ul>
                                 </p>
                                 <p>
@@ -152,6 +153,9 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                         <li>
                                             The analyzer name must be the same as the analyzer&apos;s class name in your
                                             code
+                                        </li>
+                                        <li>
+                                            Inherit from <code>Lucene.Net.Analysis.Analyzer</code>
                                         </li>
                                         <li>
                                             Code must be compilable and include all necessary <code>using</code>{" "}
