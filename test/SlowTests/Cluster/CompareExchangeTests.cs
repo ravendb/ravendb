@@ -18,7 +18,7 @@ public class CompareExchangeTests : RavenTestBase
     {
     }
     
-    [NightlyBuildFact]
+    [Fact]
     public async Task AddOrUpdateCompareExchangeCommand_WhenCommandSentTwice_SecondAttemptShouldNotReturnNull()
     {
         var leader = GetNewServer();
