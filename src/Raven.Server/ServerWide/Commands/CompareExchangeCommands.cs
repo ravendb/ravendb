@@ -15,7 +15,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public abstract class CompareExchangeCommandBase : CommandBase, IContextResultCommand
+    public abstract class CompareExchangeCommandBase : CommandBase, IBlittableResultCommand
     {
         public string Key;
         public string Database;
@@ -186,7 +186,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        object IContextResultCommand.WriteResult(object result)
+        object IBlittableResultCommand.WriteResult(object result)
         {
             var compareExchangeResult =  result switch
             {

@@ -679,7 +679,7 @@ namespace Raven.Server.Rachis
             public CommandBase Command;
             public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
             public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
-            public CtxResultWriter CtxResultWriter { get; init; }
+            public BlittableResultWriter BlittableResultWriter { get; init; }
         }
 
         private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
@@ -688,12 +688,12 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            using var ctxResultWriter = command is IContextResultCommand crCommand ? new CtxResultWriter(crCommand.WriteResult) : null; 
+            using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null; 
             var rachisMergedCommand = new RachisMergedCommand
             {
                 Command = command,
                 Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously),
-                CtxResultWriter = ctxResultWriter
+                BlittableResultWriter = blittableResultWriter
             };
             _commandsQueue.Enqueue(rachisMergedCommand);
 
@@ -735,7 +735,7 @@ namespace Raven.Server.Rachis
                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
 
             var result = await inner;
-            return ctxResultWriter == null ? result : (result.Index, ctxResultWriter.Result);
+            return blittableResultWriter == null ? result : (result.Index, blittableResultWriter.Result);
         }
 
         private void EmptyQueue()
@@ -781,9 +781,9 @@ namespace Raven.Server.Rachis
                                     }
                                     else
                                     {
-                                        if (result != null && cmd.CtxResultWriter != null)
+                                        if (result != null && cmd.BlittableResultWriter != null)
                                         {
-                                            cmd.CtxResultWriter.CopyResult(result);
+                                            cmd.BlittableResultWriter.CopyResult(result);
                                             result = null;
                                         }
 
@@ -814,8 +814,12 @@ namespace Raven.Server.Rachis
                                 _entries[index] = state;
                             }
 
-                            if (cmd.CtxResultWriter != null)
-                                state.WriteResultAction += cmd.CtxResultWriter.CopyResult;
+                            if (cmd.BlittableResultWriter != null)
+                                //If we need to return a blittable as a result the context must be valid for each command that tries to read from it.
+                                //So we let the command provide the method to handle the write while the command is aware of its context validation status.
+                                //We can have multiple delegates if the same command was sent multiple times (multiple attempts)
+                                //https://issues.hibernatingrhinos.com/issue/RavenDB-20762
+                                state.WriteResultAction += cmd.BlittableResultWriter.CopyResult;
 
                             tasks.Add(state.TaskCompletionSource.Task);
                         }
@@ -1183,39 +1187,6 @@ namespace Raven.Server.Rachis
             public Action<object> WriteResultAction;
             public TaskCompletionSource<(long, object)> TaskCompletionSource;
             public Action<TaskCompletionSource<(long, object)>> OnNotify;
-        }
-
-        private class CtxResultWriter : IDisposable
-        {
-            private readonly Func<object, object> _writeResultFunc;
-            private readonly SingleUseFlag _invalid = new SingleUseFlag();
-
-            public object Result { private set; get; }
-            
-            public CtxResultWriter(Func<object, object> writeResultFunc)
-            {
-                _writeResultFunc = writeResultFunc;
-            }
-
-            public void CopyResult(object result)
-            {
-                lock (this)
-                {
-                    Result =  _invalid.IsRaised() 
-                        ? null : 
-                        _writeResultFunc.Invoke(result);
-                }
-            }
-
-            public void InvalidateWriter()
-            {
-                lock (this)
-                {
-                    _invalid.Raise();
-                }
-            }
-
-            public void Dispose() => InvalidateWriter();
         }
     }
 }

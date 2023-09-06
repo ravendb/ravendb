@@ -51,8 +51,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 try
                 {
                     var command = CommandBase.CreateFrom(commandJson);
-                    if (command is IContextResultCommand contextResultCommand)
-                        contextResultCommand.ContextToWriteResult = context;
+                    if (command is IBlittableResultCommand blittableResultCommand)
+                        blittableResultCommand.ContextToWriteResult = context;
                     
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(commandJson.ToString(), TrafficWatchChangeType.ClusterCommands);

@@ -6,6 +6,7 @@ using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ public class CompareExchangeTests : RavenTestBase
     {
     }
     
-    [Fact]
+    [NightlyBuildFact]
     public async Task AddOrUpdateCompareExchangeCommand_WhenCommandSentTwice_SecondAttemptShouldNotReturnNull()
     {
         var leader = GetNewServer();
