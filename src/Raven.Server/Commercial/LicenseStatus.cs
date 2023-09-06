@@ -130,7 +130,7 @@ namespace Raven.Server.Commercial
         public bool HasRavenEtl => GetValue<bool>("ravenEtl");
 
         public bool HasSqlEtl => GetValue<bool>("sqlEtl");
-        
+
         public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
 
         public bool HasPullReplicationAsHub => GetValue<bool>("pullReplicationAsHub");
@@ -175,16 +175,37 @@ namespace Raven.Server.Commercial
         public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentSubscriptions");
 
         public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
-        
+
         public bool HasQueueEtl => GetValue<bool>("queueEtl");
 
         public bool HasPowerBI => GetValue<bool>("powerBI");
 
         public bool HasPostgreSqlIntegration => GetValue<bool>("postgreSqlIntegration");
-        
+
         // todo djordje: use this when available in license
         //public bool HasQueueSink => GetValue<bool>("QueueSink");
         public bool HasQueueSink => true;
+
+        // TODO grisha
+        public int? MaxNumberOfStaticIndexesPerDatabase => Type == LicenseType.Community ? 12 : null;
+
+        public int? MaxNumberOfStaticIndexesPerCluster => Type == LicenseType.Community ? (12 * 5) : null;
+
+        public int? MaxNumberOfAutoIndexesPerDatabase => Type == LicenseType.Community ? 24 : null;
+
+        public int? MaxNumberOfAutoIndexesPerCluster => Type == LicenseType.Community ? (24 * 5) : null;
+
+        public int? MaxNumberOfSubscriptionsPerDatabase => Type == LicenseType.Community ? 3 : null;
+
+        public int? MaxNumberOfSubscriptionsPerCluster => Type == LicenseType.Community ? (3 * 5) : null;
+
+        public int? MaxNumberOfCustomSortersPerDatabase => Type == LicenseType.Community ? 1 : null;
+
+        public int? MaxNumberOfCustomSortersPerCluster => Type == LicenseType.Community ? 5 : null;
+
+        public int? MaxNumberOfCustomAnalyzersPerDatabase => Type == LicenseType.Community ? 1 : null;
+
+        public int? MaxNumberOfCustomAnalyzersPerCluster => Type == LicenseType.Community ? 5 : null;
 
         public DynamicJsonValue ToJson()
         {
@@ -234,7 +255,17 @@ namespace Raven.Server.Commercial
                 [nameof(HasQueueEtl)] = HasQueueEtl,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
-                [nameof(HasQueueSink)] = HasQueueSink
+                [nameof(HasQueueSink)] = HasQueueSink,
+                [nameof(MaxNumberOfStaticIndexesPerDatabase)] = MaxNumberOfStaticIndexesPerDatabase,
+                [nameof(MaxNumberOfStaticIndexesPerCluster)] = MaxNumberOfStaticIndexesPerCluster,
+                [nameof(MaxNumberOfAutoIndexesPerDatabase)] = MaxNumberOfAutoIndexesPerDatabase,
+                [nameof(MaxNumberOfAutoIndexesPerCluster)] = MaxNumberOfAutoIndexesPerCluster,
+                [nameof(MaxNumberOfSubscriptionsPerDatabase)] = MaxNumberOfSubscriptionsPerDatabase,
+                [nameof(MaxNumberOfSubscriptionsPerCluster)] = MaxNumberOfSubscriptionsPerCluster,
+                [nameof(MaxNumberOfCustomSortersPerDatabase)] = MaxNumberOfCustomSortersPerDatabase,
+                [nameof(MaxNumberOfCustomSortersPerCluster)] = MaxNumberOfCustomSortersPerCluster,
+                [nameof(MaxNumberOfCustomAnalyzersPerDatabase)] = MaxNumberOfCustomAnalyzersPerDatabase,
+                [nameof(MaxNumberOfCustomAnalyzersPerCluster)] = MaxNumberOfCustomAnalyzersPerCluster
             };
         }
     }
