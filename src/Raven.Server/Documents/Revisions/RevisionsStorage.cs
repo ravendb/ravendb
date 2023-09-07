@@ -400,6 +400,16 @@ namespace Raven.Server.Documents.Revisions
             Debug.Assert(changeVector != null, "Change vector must be set");
             Debug.Assert(lastModifiedTicks != DateTime.MinValue.Ticks, "last modified ticks must be set");
 
+            if (flags.Contain(DocumentFlags.FromReplication) == false &&
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                changeVector.Length > DocumentIdWorker.MaxIdSize)
+            {
+                // RavenDB-21047 
+                // throw if the change vector length exceeds the maximum id length (512 bytes)
+                // we allow it if the operation originated from replication to avoid inconsistent data or broken replication
+                DocumentIdWorker.ThrowDocumentIdTooBig(changeVector);
+            }
+            
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
 
             if (collectionName == null)
