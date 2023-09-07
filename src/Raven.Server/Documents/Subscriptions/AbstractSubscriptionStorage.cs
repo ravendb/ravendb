@@ -91,10 +91,10 @@ public abstract class AbstractSubscriptionStorage
         return GetSubscriptionByName(context, name);
     }
 
-    public static void EnsureValidArchivedBehaviorInSubscriptionState(DatabaseRecord record, ref SubscriptionState subscriptionState)
+    public static ArchivedDataProcessingBehavior HandleNullableArchivedDataProcessingBehavior(DatabaseRecord record, ArchivedDataProcessingBehavior? processingBehavior)
     {
-        if (subscriptionState.ArchivedDataProcessingBehavior is not null)
-            return;
+        if (processingBehavior is not null)
+            return processingBehavior.Value;
                     
         ArchivedDataBehaviorConfigKey ??= RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior);
 
@@ -107,7 +107,7 @@ public abstract class AbstractSubscriptionStorage
                 $"Couldn't parse '{behaviorStringFromSettings}' to {nameof(ArchivedDataProcessingBehavior)}");
         }
 
-        subscriptionState.ArchivedDataProcessingBehavior = behavior;
+        return behavior;
     }
     
     protected abstract void EnsureValidArchivedBehaviorInSubscriptionState(ref SubscriptionState subscriptionState);

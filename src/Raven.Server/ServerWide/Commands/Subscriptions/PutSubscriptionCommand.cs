@@ -29,7 +29,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public bool Disabled;
         public string MentorNode;
         public bool PinToMentorNode;
-        public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior;
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior;
 
         // for serialization
         protected PutSubscriptionCommand() { }
@@ -59,6 +59,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var baseName = SubscriptionName;
             if (SubscriptionName.Length > DocumentIdWorker.MaxIdSize)
                 throw new SubscriptionNameException($"Subscription Name is too long, must be at most {DocumentIdWorker.MaxIdSize} bytes");
+            
+            ArchivedDataProcessingBehavior = AbstractSubscriptionStorage.HandleNullableArchivedDataProcessingBehavior(record, ArchivedDataProcessingBehavior);
 
             while (tryToSetName)
             {

@@ -67,7 +67,7 @@ public partial class ShardedDatabaseContext
 
         protected override void EnsureValidArchivedBehaviorInSubscriptionState(ref SubscriptionState subscriptionState)
         {
-            EnsureValidArchivedBehaviorInSubscriptionState(_context.DatabaseRecord, ref subscriptionState);
+            subscriptionState.ArchivedDataProcessingBehavior = HandleNullableArchivedDataProcessingBehavior(_context.DatabaseRecord, subscriptionState.ArchivedDataProcessingBehavior);
         }
     }
 }

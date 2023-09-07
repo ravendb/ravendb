@@ -785,7 +785,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     reader.TryGet(nameof(SubscriptionState.ArchivedDataProcessingBehavior), out ArchivedDataProcessingBehavior? archivedDataProcessingBehavior);
                     
-                    var state = new SubscriptionState
+                    yield return new SubscriptionState
                     {
                         Query = query,
                         ChangeVectorForNextBatchStartingPoint = changeVectorForNextBatchStartingPoint,
@@ -793,15 +793,11 @@ namespace Raven.Server.Smuggler.Documents
                         SubscriptionId = subscriptionId,
                         MentorNode = mentorNode,
                         NodeTag = nodeTag,
-                        ArchivedDataProcessingBehavior = archivedDataProcessingBehavior,
+                        ArchivedDataProcessingBehavior = AbstractSubscriptionStorage.HandleNullableArchivedDataProcessingBehavior(await GetDatabaseRecordAsync(), archivedDataProcessingBehavior),
                         LastBatchAckTime = lastBatchAckTime,
                         LastClientConnectionTime = lastClientConnectionTime,
                         Disabled = disabled
                     };
-                    
-                    // 5.x backup subscriptions will not have behavior field
-                    AbstractSubscriptionStorage.EnsureValidArchivedBehaviorInSubscriptionState(await GetDatabaseRecordAsync(), ref state);
-                    yield return state;
                 }
             }
         }

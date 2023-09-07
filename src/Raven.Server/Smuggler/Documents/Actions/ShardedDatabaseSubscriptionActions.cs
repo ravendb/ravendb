@@ -19,7 +19,8 @@ public sealed class ShardedDatabaseSubscriptionActions : DatabaseSubscriptionAct
         {
             SubscriptionName = subscriptionState.SubscriptionName,
             //After restore/export , subscription will start from the start
-            InitialChangeVector = null
+            InitialChangeVector = null,
+            ArchivedDataProcessingBehavior = subscriptionState.ArchivedDataProcessingBehavior
         };
     }
 
