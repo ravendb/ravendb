@@ -25,6 +25,7 @@ using Raven.Client.Properties;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.TimeSeries;
@@ -67,6 +68,7 @@ namespace Raven.Server.Smuggler.Documents
         private DatabaseItemType _operateOnTypes;
         private readonly DatabaseSmugglerOptionsServerSide _options;
         protected readonly ByteStringContext _allocator;
+        private static ArchivedDataProcessingBehavior? DefaultArchivedDataProcessingBehaviorForSubscriptions;
 
         public StreamSource(Stream stream, JsonOperationContext context, string databaseName, DatabaseSmugglerOptionsServerSide options = null)
         {
@@ -771,13 +773,29 @@ namespace Raven.Server.Smuggler.Documents
                         reader.TryGet(nameof(SubscriptionState.LastBatchAckTime), out DateTime lastBatchAckTime) == false ||
                         reader.TryGet(nameof(SubscriptionState.LastClientConnectionTime), out DateTime lastClientConnectionTime) == false ||
                         reader.TryGet(nameof(SubscriptionState.Disabled), out bool disabled) == false ||
-                        reader.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId) == false ||
-                        reader.TryGet(nameof(SubscriptionState.ArchivedDataProcessingBehavior), out ArchivedDataProcessingBehavior archivedDataProcessingBehavior) == false)
+                        reader.TryGet(nameof(SubscriptionState.SubscriptionId), out long subscriptionId) == false)
                     {
                         _result.Subscriptions.ErroredCount++;
                         _result.AddWarning("Could not read subscriptions entry.");
 
                         continue;
+                    }
+                    
+                    // get if possible, 5.4 backups will not have this
+                    if (reader.TryGet(nameof(SubscriptionState.ArchivedDataProcessingBehavior), out ArchivedDataProcessingBehavior? archivedDataProcessingBehavior) ==
+                        false)
+                    {
+                        if (DefaultArchivedDataProcessingBehaviorForSubscriptions.HasValue == false)
+                        {
+                            if (Enum.TryParse((await GetDatabaseRecordAsync()).Settings[RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior)],
+                                    false, out ArchivedDataProcessingBehavior behavior) == false)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Failed to fetch {nameof(RavenConfiguration.Subscriptions.ArchivedDataProcessingBehavior)} from subscriptions configuration in database settings.");
+                            }
+                            DefaultArchivedDataProcessingBehaviorForSubscriptions = behavior;
+                        }
+                        archivedDataProcessingBehavior = DefaultArchivedDataProcessingBehaviorForSubscriptions.Value;
                     }
 
                     yield return new SubscriptionState()
