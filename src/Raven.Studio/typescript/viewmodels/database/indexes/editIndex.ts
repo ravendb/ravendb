@@ -176,7 +176,7 @@ class editIndex extends shardViewModelBase {
 
     formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior) {
         if (!mode) {
-            return "";
+            return "Default";
         }
         switch (mode) {
             case "ArchivedOnly":
@@ -662,7 +662,6 @@ class editIndex extends shardViewModelBase {
             indexDef.collectionNameForReferenceDocuments,
             indexDef.additionalSources,
             indexDef.additionalAssemblies,
-            indexDef.specifyArchivedDataProcessingBehavior,
             indexDef.archivedDataProcessingBehavior,
             hasAnyDirtyField,
             hasAnyDirtyConfiguration,

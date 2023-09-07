@@ -389,43 +389,45 @@
                                 </li>
                                 <li>
                                     <div class="margin-top-xs">
-                                        Turn this toggle on to override the default behavior.<br />
                                         When querying the index, results will be based only on data from documents that were included in the indexing process.
                                     </div>
                                 </li>
                             </ul>
                         </div>
                         <div class="flex-horizontal">
-                            <div class="toggle">
-                                <input id="toggleDataArchival" type="checkbox" data-bind="checked: editedIndex().specifyArchivedDataProcessingBehavior,
-                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
-                                <label for="toggleDataArchival" class="control-label">
-                                    Override default behavior
-                                </label>
-                            </div>
-                            <div data-bind="visible: editedIndex().specifyArchivedDataProcessingBehavior">
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                        <span data-bind="text: $root.formatArchivedDataProcessingBehavior(editedIndex().archivedDataProcessingBehavior())"></span> <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li>
-                                            <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ExcludeArchived')">
-                                                <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ExcludeArchived')"></span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'IncludeArchived')">
-                                                <span data-bind="text: $root.formatArchivedDataProcessingBehavior('IncludeArchived')"></span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ArchivedOnly')">
-                                                <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ArchivedOnly')"></span>
-                                            </a>
-                                        </li>
-                                    </ul>
+                            <div>
+                                <div class="form-group">
+                                    <label class="control-label">Processing Behavior</label>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                            <span data-bind="text: $root.formatArchivedDataProcessingBehavior(editedIndex().archivedDataProcessingBehavior())"></span> <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, null)">
+                                                    <span data-bind="text: $root.formatArchivedDataProcessingBehavior(null)"></span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ExcludeArchived')">
+                                                    <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ExcludeArchived')"></span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'IncludeArchived')">
+                                                    <span data-bind="text: $root.formatArchivedDataProcessingBehavior('IncludeArchived')"></span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#" data-bind="click: editedIndex().archivedDataProcessingBehavior.bind(editedIndex().archivedDataProcessingBehavior, 'ArchivedOnly')">
+                                                    <span data-bind="text: $root.formatArchivedDataProcessingBehavior('ArchivedOnly')"></span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
+                                
+                                
                             </div>
                             <div class="text-info bg-info small padding-xxs" data-bind="visible: editedIndex().specifyArchivedDataProcessingBehavior">
                                 <span data-bind="text: $root.textForArchivedDataProcessingBehavior(editedIndex().archivedDataProcessingBehavior())"></span>
