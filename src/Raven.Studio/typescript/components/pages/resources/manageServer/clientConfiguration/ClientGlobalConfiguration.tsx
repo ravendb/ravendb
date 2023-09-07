@@ -297,20 +297,18 @@ export default function ClientGlobalConfiguration() {
                                 description="Get additional info on this feature"
                                 targetId="1"
                             >
-                                <p>
-                                    <ul>
-                                        <li className="margin-bottom-xs">
-                                            This is the <strong>Server-wide Client-Configuration</strong> view.
-                                            <br />
-                                            The available client-configuration options will apply server-wide to all
-                                            databases.
-                                        </li>
-                                        <li>
-                                            These values can be customized per database in the Database
-                                            Client-Configuration view.
-                                        </li>
-                                    </ul>
-                                </p>
+                                <ul>
+                                    <li className="margin-bottom-xs">
+                                        This is the <strong>Server-wide Client-Configuration</strong> view.
+                                        <br />
+                                        The available client-configuration options will apply server-wide to all
+                                        databases.
+                                    </li>
+                                    <li>
+                                        These values can be customized per database in the Database Client-Configuration
+                                        view.
+                                    </li>
+                                </ul>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href="https://ravendb.net/l/TS7SGF/6.0/Csharp" target="_blank">
