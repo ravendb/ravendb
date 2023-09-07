@@ -64,5 +64,10 @@ public partial class ShardedDatabaseContext
             // for sharded database there is no concurrent subscription
             return DropSubscriptionConnections(subscriptionId, ex);
         }
+
+        protected override void EnsureValidArchivedBehaviorInSubscriptionState(ref SubscriptionState subscriptionState)
+        {
+            EnsureValidArchivedBehaviorInSubscriptionState(_context.DatabaseRecord, ref subscriptionState);
+        }
     }
 }

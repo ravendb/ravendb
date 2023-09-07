@@ -3,12 +3,15 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using JetBrains.Annotations;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -20,6 +23,9 @@ namespace Raven.Server.Documents.Subscriptions;
 
 public abstract class AbstractSubscriptionStorage
 {
+    [CanBeNull]
+    private static string ArchivedDataBehaviorConfigKey;
+
     protected readonly ServerStore _serverStore;
     protected string _databaseName;
     protected readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
@@ -85,11 +91,34 @@ public abstract class AbstractSubscriptionStorage
         return GetSubscriptionByName(context, name);
     }
 
+    public static void EnsureValidArchivedBehaviorInSubscriptionState(DatabaseRecord record, ref SubscriptionState subscriptionState)
+    {
+        if (subscriptionState.ArchivedDataProcessingBehavior is not null)
+            return;
+                    
+        ArchivedDataBehaviorConfigKey ??= RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior);
+
+        var behaviorStringFromSettings = record.Settings[ArchivedDataBehaviorConfigKey] ?? throw new InvalidOperationException(
+            $"Couldn't find the value under '{ArchivedDataBehaviorConfigKey}' key in '{record.DatabaseName}' database configuration.");
+        
+        if (Enum.TryParse(behaviorStringFromSettings, false, out ArchivedDataProcessingBehavior behavior) == false)
+        {
+            throw new InvalidOperationException(
+                $"Couldn't parse '{behaviorStringFromSettings}' to {nameof(ArchivedDataProcessingBehavior)}");
+        }
+
+        subscriptionState.ArchivedDataProcessingBehavior = behavior;
+    }
+    
+    protected abstract void EnsureValidArchivedBehaviorInSubscriptionState(ref SubscriptionState subscriptionState);
+    
     public SubscriptionState GetSubscriptionByName(ClusterOperationContext context, string taskName)
     {
 #pragma warning disable CS0618
-        return _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
+        var state = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
+        EnsureValidArchivedBehaviorInSubscriptionState(ref state);
 #pragma warning restore CS0618
+        return state;
     }
 
     public long GetAllSubscriptionsCount()
