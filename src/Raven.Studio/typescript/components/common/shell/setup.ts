@@ -10,8 +10,8 @@ import { licenseActions } from "./licenseSlice";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import { collectionsTrackerActions } from "./collectionsTrackerSlice";
 import changesContext from "common/changesContext";
-import getLicenseLimitsUsage from "commands/licensing/getLicenseLimitsUsage";
 import { todo } from "common/developmentHelper";
+import { services } from "hooks/useServices";
 
 let initialized = false;
 
@@ -38,7 +38,7 @@ function updateReduxCollectionsTracker() {
 }
 
 function updateLicenseLimitsUsage() {
-    new getLicenseLimitsUsage().execute().then((dto) => globalDispatch(licenseActions.limitsUsageLoaded(dto)));
+    services.licenseService.getLimitsUsage().then((dto) => globalDispatch(licenseActions.limitsUsageLoaded(dto)));
 }
 
 function initRedux() {

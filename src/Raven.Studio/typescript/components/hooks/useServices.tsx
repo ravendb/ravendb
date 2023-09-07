@@ -4,12 +4,14 @@ import DatabasesService from "../services/DatabasesService";
 import * as React from "react";
 import TasksService from "../services/TasksService";
 import ManageServerService from "components/services/ManageServerService";
+import LicenseService from "components/services/LicenseService";
 
 export interface ServicesContextDto {
     indexesService: IndexesService;
     databasesService: DatabasesService;
     tasksService: TasksService;
     manageServerService: ManageServerService;
+    licenseService: LicenseService;
 }
 
 export let services = {
@@ -17,6 +19,7 @@ export let services = {
     databasesService: new DatabasesService(),
     tasksService: new TasksService(),
     manageServerService: new ManageServerService(),
+    licenseService: new LicenseService(),
 };
 
 export function configureMockServices(overloads: typeof services) {

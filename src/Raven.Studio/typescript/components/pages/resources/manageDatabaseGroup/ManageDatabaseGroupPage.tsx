@@ -5,8 +5,6 @@ import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { useServices } from "hooks/useServices";
 import database from "models/resources/database";
-import { useLicenseStatus } from "hooks/useLicenseStatus";
-import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
 import { useAccessManager } from "hooks/useAccessManager";
 import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/partials/NodeGroup";
 import { OrchestratorsGroup } from "components/pages/resources/manageDatabaseGroup/partials/OrchestratorsGroup";
@@ -20,17 +18,18 @@ import { ShardedDatabaseSharedInfo } from "components/models/databases";
 import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
 }
 
 function getDynamicDatabaseDistributionWarning(
-    licenseStatus: LicenseStatus,
+    hasDynamicNodesDistribution: boolean,
     encryptedDatabase: boolean,
     nodesCount: number
 ) {
-    if (!licenseStatus.HasDynamicNodesDistribution) {
+    if (!hasDynamicNodesDistribution) {
         return "Your current license doesn't include the dynamic nodes distribution feature.";
     }
 
@@ -49,7 +48,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     const { db } = props;
 
     const { databasesService } = useServices();
-    const { status: licenseStatus } = useLicenseStatus();
+    const hasDynamicNodesDistribution = useAppSelector(licenseSelectors.statusValue("HasDynamicNodesDistribution"));
 
     const { isOperatorOrAbove } = useAccessManager();
 
@@ -73,7 +72,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     }, [dynamicDatabaseDistribution, toggleDynamicDatabaseDistribution, databasesService, db]);
 
     const dynamicDatabaseDistributionWarning = getDynamicDatabaseDistributionWarning(
-        licenseStatus,
+        hasDynamicNodesDistribution,
         dbSharedInfo.encrypted,
         dbSharedInfo.nodes.length
     );
