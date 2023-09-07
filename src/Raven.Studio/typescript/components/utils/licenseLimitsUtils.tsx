@@ -5,15 +5,17 @@ function calculateThreshold(limit: number): number {
 }
 
 export function getLicenseLimitReachStatus(count: number, limit: number): LicenseLimitReachStatus {
-    if (limit >= 0) {
-        if (count >= limit) {
-            return "limitReached";
-        } else if (count >= calculateThreshold(limit)) {
-            return "closeToLimit";
-        } else {
-            return "notReached";
-        }
-    } else {
-        return "notReached"; // Unlimited
+    if (!count || !limit) {
+        return "notReached";
     }
+
+    if (count >= limit) {
+        return "limitReached";
+    }
+
+    if (count >= calculateThreshold(limit)) {
+        return "closeToLimit";
+    }
+
+    return "notReached";
 }
