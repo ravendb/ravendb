@@ -1207,7 +1207,7 @@ namespace Raven.Server.Documents.Indexes
                     Slice.From(ctx, "EntriesCount", ByteStringType.Immutable, out EntriesCount);
                     Slice.From(ctx, "Time", ByteStringType.Immutable, out TimeSlice);
                     Slice.From(ctx, nameof(Client.Documents.Indexes.SearchEngineType), ByteStringType.Immutable, out SearchEngineType);
-                    Slice.From(ctx, "ArchivedDataProcessingBehavior", ByteStringType.Immutable, out ArchivedDataProcessingBehaviorSlice);
+                    Slice.From(ctx, nameof(ArchivedDataProcessingBehavior), ByteStringType.Immutable, out ArchivedDataProcessingBehaviorSlice);
                 }
             }
         }
