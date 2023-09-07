@@ -221,7 +221,17 @@ namespace Voron.Impl
             _perCorePools.KeySizesPool.Return(_keySizes);
             _perCorePools.KeyHashesPool.Return(_keyHashes);
             _perCorePools.KeysPool.Return(_keys);
+
+            // If we are holding references, then we will clear the portion of the values array
+            // that it is in use.
+            if (RuntimeHelpers.IsReferenceOrContainsReferences<TValue>())
+            {
+                int valuesLength = Math.Min(_currentIdx, _length - 1) + 1;
+                if (valuesLength >= 0)
+                    _values.AsSpan(0, valuesLength).Clear();
+            }
             _perCorePools.ValuesPool.Return(_values);
+
             PerCoreArrayPools.TryPush(_perCorePools);
         }
 
