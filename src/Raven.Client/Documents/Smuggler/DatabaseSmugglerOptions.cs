@@ -67,7 +67,7 @@ namespace Raven.Client.Documents.Smuggler
             MaxStepsForTransformScript = DefaultMaxStepsForTransformScript;
             IncludeExpired = true;
             IncludeArtificial = false;
-            IncludeArchived = false;
+            IncludeArchived = true;
             Collections = new List<string>();
         }
 
