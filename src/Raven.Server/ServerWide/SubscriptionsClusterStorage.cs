@@ -1,9 +1,7 @@
 ﻿using System;
-using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Config;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -13,8 +11,6 @@ namespace Raven.Server.ServerWide;
 public sealed class SubscriptionsClusterStorage
 {
     private readonly ClusterStateMachine _cluster;
-
-    private static ArchivedDataProcessingBehavior? ArchivedDataBehaviorFromDbConfiguration;
 
     public SubscriptionsClusterStorage(ClusterStateMachine cluster)
     {
@@ -31,21 +27,6 @@ public sealed class SubscriptionsClusterStorage
 
         var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
         
-        if (subscriptionState.ArchivedDataProcessingBehavior.HasValue)
-            return subscriptionState;
-        
-        // persisted state from v5.x
-        if (ArchivedDataBehaviorFromDbConfiguration.HasValue == false) 
-        { 
-            if(Enum.TryParse(_cluster.ReadDatabase(context, databaseName).Settings[RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior)], false, out ArchivedDataProcessingBehavior behavior) == false)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to fetch {nameof(RavenConfiguration.Subscriptions.ArchivedDataProcessingBehavior)} from subscriptions configuration in database settings.");
-            }
-            ArchivedDataBehaviorFromDbConfiguration = behavior;
-        }
-
-        subscriptionState.ArchivedDataProcessingBehavior = ArchivedDataBehaviorFromDbConfiguration.Value; 
         return subscriptionState;     
     }
 

@@ -487,6 +487,7 @@ namespace Raven.Server.Documents.Subscriptions
 #pragma warning disable CS0618
                 var subscription = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseName, name);
 #pragma warning restore CS0618
+                AbstractSubscriptionStorage.EnsureValidArchivedBehaviorInSubscriptionState(ServerStore.Cluster.ReadDatabase(context, DatabaseName), ref subscription);
 
                 var whoseTaskIsIt = _subscriptions.GetSubscriptionResponsibleNode(context, subscription);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(ServerStore.NodeTag))

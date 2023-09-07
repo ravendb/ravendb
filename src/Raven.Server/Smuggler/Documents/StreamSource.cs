@@ -4,13 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -25,9 +25,9 @@ using Raven.Client.Properties;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.Util;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -49,6 +49,9 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class StreamSource : ISmugglerSource, IDisposable
     {
+        [CanBeNull]
+        private static string SubscriptionsArchivedDataProcessingBehaviorConfigKey;
+
         private readonly PeepingTomStream _peepingTomStream;
         private readonly JsonOperationContext _context;
         private readonly Logger _log;
@@ -68,8 +71,7 @@ namespace Raven.Server.Smuggler.Documents
         private DatabaseItemType _operateOnTypes;
         private readonly DatabaseSmugglerOptionsServerSide _options;
         protected readonly ByteStringContext _allocator;
-        private static ArchivedDataProcessingBehavior? DefaultArchivedDataProcessingBehaviorForSubscriptions;
-
+        
         public StreamSource(Stream stream, JsonOperationContext context, string databaseName, DatabaseSmugglerOptionsServerSide options = null)
         {
             _peepingTomStream = new PeepingTomStream(stream, context);
@@ -780,25 +782,10 @@ namespace Raven.Server.Smuggler.Documents
 
                         continue;
                     }
-                    
-                    // get if possible, 5.4 backups will not have this
-                    if (reader.TryGet(nameof(SubscriptionState.ArchivedDataProcessingBehavior), out ArchivedDataProcessingBehavior? archivedDataProcessingBehavior) ==
-                        false)
-                    {
-                        if (DefaultArchivedDataProcessingBehaviorForSubscriptions.HasValue == false)
-                        {
-                            if (Enum.TryParse((await GetDatabaseRecordAsync()).Settings[RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior)],
-                                    false, out ArchivedDataProcessingBehavior behavior) == false)
-                            {
-                                throw new InvalidOperationException(
-                                    $"Failed to fetch {nameof(RavenConfiguration.Subscriptions.ArchivedDataProcessingBehavior)} from subscriptions configuration in database settings.");
-                            }
-                            DefaultArchivedDataProcessingBehaviorForSubscriptions = behavior;
-                        }
-                        archivedDataProcessingBehavior = DefaultArchivedDataProcessingBehaviorForSubscriptions.Value;
-                    }
 
-                    yield return new SubscriptionState()
+                    reader.TryGet(nameof(SubscriptionState.ArchivedDataProcessingBehavior), out ArchivedDataProcessingBehavior? archivedDataProcessingBehavior);
+                    
+                    var state = new SubscriptionState
                     {
                         Query = query,
                         ChangeVectorForNextBatchStartingPoint = changeVectorForNextBatchStartingPoint,
@@ -811,6 +798,10 @@ namespace Raven.Server.Smuggler.Documents
                         LastClientConnectionTime = lastClientConnectionTime,
                         Disabled = disabled
                     };
+                    
+                    // 5.x backup subscriptions will not have behavior field
+                    AbstractSubscriptionStorage.EnsureValidArchivedBehaviorInSubscriptionState(await GetDatabaseRecordAsync(), ref state);
+                    yield return state;
                 }
             }
         }
