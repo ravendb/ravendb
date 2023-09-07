@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
@@ -122,11 +122,16 @@ public abstract class IndexOperationBase : IDisposable
         
         if (query.Metadata.OrderBy is not null || query.Metadata.IsDistinct)
         {
-            if (numberOfEntries > MaxBufferSizeForCorax)
+            // If the number of entries is expected to be bigger than the default buffer size, lets
+            // just request the max buffer size instead.
+            if (numberOfEntries > DefaultBufferSizeForCorax)
                 return MaxBufferSizeForCorax;
-            
-            return DefaultBufferSizeForCorax;
         }
+
+        // Since we will need to evaluate the query completely anyways, it is preferable to err on the
+        // side of using extra memory to avoid repeated work. 
+        if (query.SkipStatistics == false || query.IsCountQuery)
+            return MaxBufferSizeForCorax;
         
         if (pageSize <= 0 && numberOfEntries < DefaultBufferSizeForCorax)
             return DefaultBufferSizeForCorax;
