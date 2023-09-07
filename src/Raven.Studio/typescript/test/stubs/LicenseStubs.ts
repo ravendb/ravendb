@@ -1,6 +1,7 @@
 ﻿import moment from "moment";
 import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
 import LicenseType = Raven.Server.Commercial.LicenseType;
+import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
 
 export class LicenseStubs {
     static getStatus(licenseType: LicenseType): LicenseStatus {
@@ -100,6 +101,26 @@ export class LicenseStubs {
     }
 
     static community(): LicenseStatus {
-        return LicenseStubs.getStatus("Community");
+        return {
+            ...LicenseStubs.getStatus("Community"),
+            MaxNumberOfStaticIndexesPerDatabase: 12,
+            MaxNumberOfStaticIndexesPerCluster: 12 * 5,
+            MaxNumberOfAutoIndexesPerDatabase: 24,
+            MaxNumberOfAutoIndexesPerCluster: 24 * 5,
+            MaxNumberOfSubscriptionsPerDatabase: 3,
+            MaxNumberOfSubscriptionsPerCluster: 3 * 5,
+            MaxNumberOfCustomSortersPerDatabase: 1,
+            MaxNumberOfCustomSortersPerCluster: 5,
+            MaxNumberOfCustomAnalyzersPerDatabase: 1,
+            MaxNumberOfCustomAnalyzersPerCluster: 5,
+        };
+    }
+
+    static limitsUsage(): LicenseLimitsUsage {
+        return {
+            ClusterAutoIndexes: 20,
+            ClusterStaticIndexes: 58,
+            ClusterSubscriptionTasks: 14,
+        };
     }
 }
