@@ -186,7 +186,12 @@ namespace Raven.Server.Web.Studio
                     // TODO [grisha] temporary code
                     using (context.OpenReadTransaction())
                     {
-                        var limits = new LicenseLimitsUsage();
+                        var limits = new LicenseLimitsUsage
+                        {
+                            ClusterAutoIndexes = 0,
+                            ClusterStaticIndexes = 0,
+                            ClusterSubscriptionTasks = 0
+                        };
 
                         foreach (var database in ServerStore.Cluster.GetAllRawDatabases(context))
                         {
