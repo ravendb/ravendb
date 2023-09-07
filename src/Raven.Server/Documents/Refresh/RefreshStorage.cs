@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Refresh
                     throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
                 }
 
-                if (HasPassed(metadata, currentTime) == false)
+                if (HasPassed(metadata, currentTime, MetadataPropertyName) == false)
                     return;
 
                 // remove the @refresh tag
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Refresh
                     id = conflict.Id;
                         
                     if (conflict.Doc.TryGetMetadata(out var metadata) &&
-                        HasPassed(metadata, currentTime))
+                        HasPassed(metadata, currentTime, MetadataPropertyName))
                         continue;
 
                     allExpired = false;

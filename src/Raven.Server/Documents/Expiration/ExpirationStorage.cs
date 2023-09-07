@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Expiration
                         throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
                     }
                     
-                    if (HasPassed(metadata, currentTime) == false) 
+                    if (HasPassed(metadata, currentTime, MetadataPropertyName) == false) 
                         return;
                     
                     Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Expiration
                     id = conflict.Id;
                         
                     if (conflict.Doc.TryGetMetadata(out var metadata) &&
-                        HasPassed(metadata, currentTime))
+                        HasPassed(metadata, currentTime, MetadataPropertyName))
                         continue;
 
                     allExpired = false;

@@ -26,7 +26,7 @@ public sealed class DataArchivalStorage(DocumentDatabase database, Transaction t
                 throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
             }
                 
-            if (HasPassed(metadata, currentTime) == false) 
+            if (HasPassed(metadata, currentTime, MetadataPropertyName) == false) 
                 return;
 
             // Add archived flag, remove archive timestamp, add document flag
