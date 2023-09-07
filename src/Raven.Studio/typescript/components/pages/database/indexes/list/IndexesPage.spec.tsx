@@ -54,6 +54,7 @@ describe("IndexesPage", function () {
     it("can show community limits", async () => {
         const { screen } = rtlRender(<CommunityLimits />);
 
-        expect(await screen.findByText(/maximum number of static indexes/)).toBeInTheDocument();
+        expect(await screen.findByText(/Your server is reaching/)).toBeInTheDocument();
+        expect(screen.getByText(/Your database is reaching/)).toBeInTheDocument();
     });
 });

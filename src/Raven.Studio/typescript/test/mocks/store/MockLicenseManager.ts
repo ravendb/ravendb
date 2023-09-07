@@ -10,4 +10,8 @@ export class MockLicenseManager {
     with_Community() {
         globalDispatch(licenseActions.statusLoaded(LicenseStubs.community()));
     }
+
+    with_LimitsUsage() {
+        globalDispatch(licenseActions.limitsUsageLoaded(LicenseStubs.limitsUsage()));
+    }
 }
