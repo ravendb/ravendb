@@ -575,20 +575,18 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 description="Get additional info on this feature"
                                 targetId="1"
                             >
-                                <p>
-                                    <ul>
-                                        <li className="margin-bottom-xs">
-                                            This is the <strong>Database Client-Configuration</strong> view.
-                                            <br />
-                                            The values set in this view will apply only to this database.
-                                        </li>
-                                        <li>
-                                            If the Server-wide Client-Configuration view has any values set, then this
-                                            view provides the option to override the Server-wide configuration and
-                                            customize specific values for this database.
-                                        </li>
-                                    </ul>
-                                </p>
+                                <ul>
+                                    <li className="margin-bottom-xs">
+                                        This is the <strong>Database Client-Configuration</strong> view.
+                                        <br />
+                                        The values set in this view will apply only to this database.
+                                    </li>
+                                    <li>
+                                        If the Server-wide Client-Configuration view has any values set, then this view
+                                        provides the option to override the Server-wide configuration and customize
+                                        specific values for this database.
+                                    </li>
+                                </ul>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href="https://ravendb.net/l/TS7SGF/6.0/Csharp" target="_blank">
