@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -266,7 +267,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings, fullBackupFrequency: null, incrementalBackupFrequency: "0 */6 * * *");
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -279,7 +280,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var backupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 string lastFileToRestore;
-                using (var client = new RavenAwsS3Client(s3Settings, DefaultConfiguration))
+                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                using (var client = new RavenAwsS3Client(s3Settings, DefaultConfiguration, cancellationToken: cts.Token))
                 {
                     var fullBackupPath = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
                     lastFileToRestore = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails.Last().FullPath;
@@ -475,7 +477,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                using (var s3Client = new RavenAwsS3Client(s3Settings, DefaultConfiguration))
+                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                using (var s3Client = new RavenAwsS3Client(s3Settings, DefaultConfiguration, cancellationToken: cts.Token))
                 {
                     var cloudObjects = s3Client.ListObjects($"{s3Settings.RemoteFolderName}/{_remoteFolderName}/", string.Empty, false, includeFolders: true);
                     var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();

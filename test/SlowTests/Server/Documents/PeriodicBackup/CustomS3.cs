@@ -1,4 +1,6 @@
-﻿using Raven.Server.Documents.PeriodicBackup.Aws;
+﻿using System;
+using System.Threading;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 using SlowTests.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Xunit;
@@ -22,7 +24,8 @@ public class CustomS3 : RestoreFromS3
         settings.CustomServerUrl = customUrl;
         settings.AwsRegionName = customRegion;
 
-        using (var client = new RavenAwsS3Client(settings, DefaultConfiguration))
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+        using (var client = new RavenAwsS3Client(settings, DefaultConfiguration, cancellationToken: cts.Token))
         {
             Assert.StartsWith(customUrl, client.Config.ServiceURL);
             Assert.Equal(customRegion, client.Config.AuthenticationRegion);

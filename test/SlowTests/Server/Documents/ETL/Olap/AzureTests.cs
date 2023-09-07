@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Parquet;
@@ -87,7 +88,8 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -153,7 +155,8 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -322,7 +325,8 @@ loadToOrders(partitionBy(key), orderData);
                     SetupAzureEtl(store, script, settings);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -355,7 +359,8 @@ loadToOrders(partitionBy(key), orderData);
                     }
 
                     //sales
-                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -471,7 +476,8 @@ loadToOrders(partitionBy(['order_date', key]),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListBlobsAsync(prefix, string.Empty, false);
@@ -530,7 +536,8 @@ loadToOrders(noPartition(),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
 
@@ -666,7 +673,8 @@ loadToOrders(partitionBy(
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
-                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var cloudObjects = await client.ListBlobsAsync(prefix, delimiter: "/", listFolders: true);
                         var list = cloudObjects.List.ToList();
@@ -790,7 +798,8 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -889,7 +898,8 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
             try
             {
-                using (var client = RavenAzureClient.Create(azureSettings, EtlTestBase.DefaultBackupConfiguration))
+                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                using (var client = RavenAzureClient.Create(azureSettings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                 {
                     var result = await client.ListBlobsAsync(prefix, delimiter, listFolder);
                     List<string> filesToDelete;

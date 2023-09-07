@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -239,33 +240,34 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
             return new AsyncDisposable(async () =>
             {
-            var settings = GetGoogleCloudSettings();
-            if (settings == null)
-                return;
+                var settings = GetGoogleCloudSettings();
+                if (settings == null)
+                    return;
 
-            try
-            {
-                using (var client = new RavenGoogleCloudClient(settings, DefaultConfiguration))
+                try
                 {
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, DefaultConfiguration, cancellationToken: cts.Token))
+                    {
                         var cloudObjects = await client.ListObjectsAsync(settings.RemoteFolderName);
 
-                    foreach (var cloudObject in cloudObjects)
-                    {
-                        try
+                        foreach (var cloudObject in cloudObjects)
                         {
+                            try
+                            {
                                 await client.DeleteObjectAsync(cloudObject.Name);
-                        }
-                        catch (Exception)
-                        {
-                            // ignored
+                            }
+                            catch (Exception)
+                            {
+                                // ignored
+                            }
                         }
                     }
                 }
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
+                catch (Exception)
+                {
+                    // ignored
+                }
             });
         }
     }
