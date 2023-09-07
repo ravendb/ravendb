@@ -15,6 +15,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public EditDataArchivalCommand()
         {
+            // for deserialization
         }
 
         public EditDataArchivalCommand(DataArchivalConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
