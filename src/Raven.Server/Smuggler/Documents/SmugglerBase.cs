@@ -614,8 +614,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     
                     if (_options.IncludeArchived == false && // skip archived tombstones - we don't track archived data
-                        tombstone.Flags.Contain(DocumentFlags.Archived) &&
-                        tombstone.Flags.Contain(DocumentFlags.FromResharding) == false)
+                        tombstone.Flags.Contain(DocumentFlags.Archived))
                     {
                         continue;
                     }
