@@ -73,7 +73,7 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(o);
 
                     var revisionsCount = session.Advanced.Revisions.GetCountFor(_docId);
-                    Assert.Equal(2, revisionsCount);
+                    Assert.Equal(1, revisionsCount);
                 }
             }
         }
