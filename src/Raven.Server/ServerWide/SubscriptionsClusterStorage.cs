@@ -13,6 +13,9 @@ namespace Raven.Server.ServerWide;
 public sealed class SubscriptionsClusterStorage
 {
     private readonly ClusterStateMachine _cluster;
+
+    private static ArchivedDataProcessingBehavior? ArchivedDataBehaviorFromDbConfiguration;
+
     public SubscriptionsClusterStorage(ClusterStateMachine cluster)
     {
         _cluster = cluster;
@@ -32,14 +35,18 @@ public sealed class SubscriptionsClusterStorage
             return subscriptionState;
         
         // persisted state from v5.x
-        if(Enum.TryParse(_cluster.ReadDatabase(context, databaseName).Settings[RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior)], false,
-               out ArchivedDataProcessingBehavior archivedDataProcessingBehavior) == false)
-        {
-            throw new InvalidOperationException(
-                $"Failed to fetch {nameof(RavenConfiguration.Subscriptions.ArchivedDataProcessingBehavior)} from subscriptions configuration in database settings.");
+        if (ArchivedDataBehaviorFromDbConfiguration.HasValue == false) 
+        { 
+            if(Enum.TryParse(_cluster.ReadDatabase(context, databaseName).Settings[RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior)], false, out ArchivedDataProcessingBehavior behavior) == false)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to fetch {nameof(RavenConfiguration.Subscriptions.ArchivedDataProcessingBehavior)} from subscriptions configuration in database settings.");
+            }
+            ArchivedDataBehaviorFromDbConfiguration = behavior;
         }
-        subscriptionState.ArchivedDataProcessingBehavior = archivedDataProcessingBehavior;
-        return subscriptionState;
+
+        subscriptionState.ArchivedDataProcessingBehavior = ArchivedDataBehaviorFromDbConfiguration; 
+        return subscriptionState;     
     }
 
     [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
