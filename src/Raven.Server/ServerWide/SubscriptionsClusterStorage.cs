@@ -45,7 +45,7 @@ public sealed class SubscriptionsClusterStorage
             ArchivedDataBehaviorFromDbConfiguration = behavior;
         }
 
-        subscriptionState.ArchivedDataProcessingBehavior = ArchivedDataBehaviorFromDbConfiguration; 
+        subscriptionState.ArchivedDataProcessingBehavior = ArchivedDataBehaviorFromDbConfiguration.Value; 
         return subscriptionState;     
     }
 
