@@ -2725,7 +2725,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                var fullBackupOpId = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastOperationId;
+                var fullBackupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
+                var fullBackupOpId = fullBackupStatus.LastOperationId;
                 Assert.NotNull(fullBackupOpId);
 
                 using (var session = store.OpenAsyncSession())
@@ -2748,7 +2749,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 Assert.NotNull(status.LastOperationId);
-                Assert.NotEqual(fullBackupOpId, status.LastOperationId);
+                Assert.True(fullBackupOpId != status.LastOperationId, AddDebugInfo(fullBackupStatus, status));
 
                 // to have a different count of docs in databases
                 using (var session = store.OpenAsyncSession())
@@ -3713,7 +3714,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             });
         }
 
-
         public IDocumentStore RestoreAndGetStore(IDocumentStore store, string backupPath, out IDisposable releaseDatabase, TimeSpan? timeout = null)
         {
             var restoredDatabaseName = GetDatabaseName();
@@ -3730,6 +3730,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 CreateDatabase = false,
                 DeleteDatabaseOnDispose = true
             });
+        }
+
+        private static string AddDebugInfo(PeriodicBackupStatus fullBackupStatus, PeriodicBackupStatus incrementalBackupStatus)
+        {
+            var sb = new StringBuilder()
+                .AppendLine($"full and incremental backup statuses have the same 'LastOperationId' = {fullBackupStatus.LastOperationId}")
+                .AppendLine("full backup status:")
+                .AppendLine(JsonConvert.SerializeObject(fullBackupStatus))
+                .AppendLine()
+                .AppendLine("incremental backup status:")
+                .AppendLine(JsonConvert.SerializeObject(incrementalBackupStatus));
+            return sb.ToString();
         }
     }
 }
