@@ -59,7 +59,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert, Skip = "RavenDB-21078")]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public async Task StartStoreInTheMiddleOfAnHeartbeat()
         {
             ManualResetEvent mre = new ManualResetEvent(false);
@@ -73,10 +73,11 @@ namespace SlowTests.Issues
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _writeTimeout;
 
                 var bulk = store.BulkInsert(bulkInsertOptions);
-
+                var check = false;
                 bulkInsertOptions.ForTestingPurposesOnly().OnSendHeartBeat_DoBulkStore = () =>
                 {
                     Task.Run(() => bulk.Store(new User { Name = "Daniel" }, "users/1"));
+                    check = true;
                 };
 
                 await Task.Delay(_delay);
@@ -86,6 +87,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
+                    if (user == null)
+                    {
+                        Assert.True	(check);
+                    }
                     Assert.NotNull(user);
                     Assert.Equal("Daniel", user.Name);
                 }
