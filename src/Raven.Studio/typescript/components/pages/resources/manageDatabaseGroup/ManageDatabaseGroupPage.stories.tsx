@@ -3,10 +3,10 @@ import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
 import React from "react";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import licenseModel from "models/auth/licenseModel";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
 import { mockStore } from "test/mocks/store/MockStore";
+import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
     title: "Pages/Manage Database Group",
@@ -15,15 +15,14 @@ export default {
 } as ComponentMeta<typeof ManageDatabaseGroupPage>;
 
 function commonInit() {
-    const { accessManager } = mockStore;
+    const { licenseService } = mockServices;
+    licenseService.withLimitsUsage();
+
+    const { accessManager, license, cluster } = mockStore;
+
     accessManager.with_securityClearance("ClusterAdmin");
-
-    const { cluster } = mockStore;
+    license.with_Enterprise();
     cluster.with_Single();
-
-    licenseModel.licenseStatus({
-        HasDynamicNodesDistribution: true,
-    } as any);
 }
 
 export const SingleNode: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
