@@ -88,7 +88,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("The default deployment mode for auto indexes")]
         [DefaultValue(IndexDeploymentMode.Parallel)]
-        [IndexUpdateType(IndexUpdateType.Reset)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Auto.DeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexDeploymentMode AutoIndexDeploymentMode { get; protected set; }
         
