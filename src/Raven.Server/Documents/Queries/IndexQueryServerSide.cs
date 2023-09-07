@@ -97,6 +97,12 @@ namespace Raven.Server.Documents.Queries
         [JsonDeserializationIgnore]
         public bool IsCountQuery => Limit == 0 && Offset == 0;
 
+        // The ability to skip statistics will eventually have to be implemented at the client, when that is done
+        // this property should be modified to account for that. 
+        // https://issues.hibernatingrhinos.com/issue/RavenDB-21266
+        [JsonDeserializationIgnore]
+        public bool SkipStatistics => false;
+
 
         private BlittableJsonReaderObject _asJson;
 

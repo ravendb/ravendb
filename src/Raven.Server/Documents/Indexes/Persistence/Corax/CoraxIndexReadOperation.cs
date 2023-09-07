@@ -653,6 +653,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (query.IsCountQuery)
                         continue;
 
+                    // In the case that we no longer has any more documents to process but we are not allowed to skip the
+                    // statistics, then we need to keep filling buffers and counting elements.
+                    if (docsToLoad <= 0 && query.SkipStatistics == false)
+                        continue;
+
                     // Now for every document that was selected. document it. 
                     for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                     {
@@ -730,8 +735,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                     }
 
-                    // No need to continue filling buffers as there are no more docs to load.
-                    if (docsToLoad <= 0)
+                    // No need to continue filling buffers as there are no more docs to load and we are skipping statistics anyways.
+                    if (query.SkipStatistics && docsToLoad <= 0)
                         break;
                 }
 
