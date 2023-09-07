@@ -145,7 +145,7 @@ class editSubscriptionTask extends shardViewModelBase {
             {
                 content:
                     `<div class="margin-bottom-sm margin-top-sm margin-left-xs">
-                         <div class="margin-bottom-xs">Turn this toggle on to override the default behavior.<br />
+                         <div class="margin-bottom-xs">
                               Available options:
                          </div>
                          <ul class="small">
@@ -365,7 +365,7 @@ class editSubscriptionTask extends shardViewModelBase {
 
     formatArchivedDataProcessingBehavior(mode: Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior) {
         if (!mode) {
-            return "";
+            return "Default";
         }
         switch (mode) {
             case "ArchivedOnly":

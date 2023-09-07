@@ -16,8 +16,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null);
 
-    specifyArchivedDataProcessingBehavior = ko.observable<boolean>(false);
-    archivedDataProcessingBehavior = ko.observable<Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior>("IncludeArchived");
+    archivedDataProcessingBehavior = ko.observable<Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior>(null);
 
     validationGroup: KnockoutValidationGroup; 
     
@@ -46,7 +45,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             this.startingChangeVector,
             this.setStartingPoint,
             this.changeVectorForNextBatchStartingPoint,
-            this.specifyArchivedDataProcessingBehavior,
             this.archivedDataProcessingBehavior,
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
@@ -93,8 +91,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
         this.setStartingPoint(false);
 
-        this.specifyArchivedDataProcessingBehavior(!!dto.ArchivedDataProcessingBehavior);
-        this.archivedDataProcessingBehavior(dto.ArchivedDataProcessingBehavior ?? "ExcludeArchived");
+        this.archivedDataProcessingBehavior(dto.ArchivedDataProcessingBehavior);
     }
 
     private serializeChangeVector() {
@@ -124,7 +121,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             PinToMentorNode: this.pinMentorNode(),
             ChangeVector: this.serializeChangeVector(),
             Disabled: this.taskState() === "Disabled",
-            ArchivedDataProcessingBehavior: this.specifyArchivedDataProcessingBehavior() ? this.archivedDataProcessingBehavior() : undefined,
+            ArchivedDataProcessingBehavior: this.archivedDataProcessingBehavior(),
         }
     }
 
@@ -147,12 +144,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                     },
                     message: "Please enter change vector"
                 }]
-        });
-
-        this.archivedDataProcessingBehavior.extend({
-            required: {
-                onlyIf: () =>this.specifyArchivedDataProcessingBehavior()
-            }
         });
 
         this.validationGroup = ko.validatedObservable({
