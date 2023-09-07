@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations.DataArchival
 
         public ConfigureDataArchivalOperation(DataArchivalConfiguration configuration)
         {
-            _configuration = configuration;
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         public RavenCommand<ConfigureDataArchivalOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
