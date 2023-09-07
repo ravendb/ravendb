@@ -99,11 +99,6 @@ namespace Raven.Client.Documents.Subscriptions
         {
             return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}subscriptions/";
         }
-
-        public SubscriptionState()
-        {
-            
-        }
     }
 
     internal sealed class SubscriptionStateWithNodeDetails : SubscriptionState
