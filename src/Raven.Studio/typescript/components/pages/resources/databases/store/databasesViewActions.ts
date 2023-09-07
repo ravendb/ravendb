@@ -90,19 +90,8 @@ export const syncDatabaseDetails = (): AppThunk<UnsubscribeListener> => (dispatc
     return dispatch(
         addAppListener({
             actionCreator: databasesSlice.actions.databasesLoaded,
-            effect: (action, api) => {
-                const state = api.getState();
-                const existingData = state.databasesView.databaseDetailedInfo.ids;
-
-                const needsRefresh = action.payload.some((db) => {
-                    const locations = DatabaseUtils.getLocations(db);
-                    const ids = locations.map((l) => databasesViewSliceInternal.selectDatabaseInfoId(db.name, l));
-                    return ids.some((id) => !existingData.includes(id));
-                });
-
-                if (needsRefresh) {
-                    api.dispatch(throttledReloadDatabaseDetails);
-                }
+            effect: (_, api) => {
+                api.dispatch(throttledReloadDatabaseDetails);
             },
         })
     );
