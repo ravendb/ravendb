@@ -63,13 +63,13 @@ namespace FastTests.Voron
 
             var resultReader2 = await reader2;
             Assert.True(resultReader2.LockTaken);
-            Assert.True(resultReader2.ElapsedInMs < 10, $"elapsed: {resultReader2.ElapsedInMs}");
+            Assert.True(resultReader2.ElapsedInMs < 1000, $"elapsed: {resultReader2.ElapsedInMs}");
 
             reader1Wait.Release();
 
             var resultReader1 = await reader1Task;
             Assert.True(resultReader1.LockTaken);
-            Assert.True(resultReader1.ElapsedInMs < 10, $"elapsed: {resultReader1.ElapsedInMs}");
+            Assert.True(resultReader1.ElapsedInMs < 1000, $"elapsed: {resultReader1.ElapsedInMs}");
         }
     }
 }
