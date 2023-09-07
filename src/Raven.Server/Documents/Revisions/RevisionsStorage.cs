@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -1201,13 +1202,6 @@ namespace Raven.Server.Documents.Revisions
             if (table.VerifyKeyExists(keySlice))
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
 
-            if (changeVector.Length > DocumentIdWorker.MaxIdSize * 2)
-            {
-                // RavenDB-21047 
-                // throw if the change vector length exceeds 1024 bytes
-                DocumentIdWorker.ThrowDocumentIdTooBig(changeVector);
-            }
-       
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))

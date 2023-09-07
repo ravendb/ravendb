@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Parquet;
@@ -85,7 +86,8 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListObjectsAsync(prefix);
@@ -149,7 +151,8 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
 
@@ -316,7 +319,8 @@ loadToOrders(partitionBy(key), orderData);
                     SetupGoogleCloudOlapEtl(store, script, settings);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListObjectsAsync(prefix);
@@ -348,7 +352,8 @@ loadToOrders(partitionBy(key), orderData);
                         }
                     }
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
                         var cloudObjects = await client.ListObjectsAsync(prefix);
@@ -464,7 +469,8 @@ loadToOrders(partitionBy(['order_date', key]),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListObjectsAsync(prefix);
@@ -523,7 +529,8 @@ loadToOrders(noPartition(),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
 
@@ -656,7 +663,8 @@ loadToOrders(partitionBy(
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
                         var cloudObjects = await client.ListObjectsAsync(prefix);
@@ -731,7 +739,8 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
                         var cloudObjects = await client.ListObjectsAsync(prefix);
@@ -835,7 +844,8 @@ for (var i = 0; i < this.Lines.length; i++){
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                    using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListObjectsAsync(prefix);
@@ -923,7 +933,8 @@ for (var i = 0; i < this.Lines.length; i++){
 
             try
             {
-                using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration))
+                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
                 {
                     var all = await client.ListObjectsAsync(prefix: settings.RemoteFolderName);
                     foreach (var obj in all)
