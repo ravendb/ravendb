@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
+using System.Text;
 using Corax.Analyzers;
 using Corax.Mappings;
 using Corax.Pipeline;
@@ -20,6 +21,7 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
+using Voron.Data.PostingLists;
 using Voron.Impl;
 using Voron.Util;
 using InvalidOperationException = System.InvalidOperationException;
@@ -125,9 +127,29 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
         return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, item.Address, item.Length, _dictionaryId);
     }
+    
+    internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref NativeUnmanagedList<Slice> terms)
+    {
+        if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
+        {
+            terms.Add(Constants.EmptyStringSlice);
+            return;
+        }
+
+        if (term.SequenceEqual(Constants.NullValueCharSpan.Span))
+        {
+            terms.Add(Constants.NullValueSlice);
+            return;
+        }
+        
+        using var _ = Allocator.Allocate(Encodings.Utf8.GetByteCount(term), out Span<byte> termBuffer);
+        var byteCount = Encodings.Utf8.GetBytes(term, termBuffer);
+
+        ApplyAnalyzerMultiTerms(binding, termBuffer[..byteCount], ref terms);
+    }
 
 
-    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, ReadOnlySpan<char> term, bool canReturnEmptySlice = false)
+    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, ReadOnlySpan<char> term)
     {
         if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
             return Constants.EmptyStringSlice;
@@ -138,7 +160,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         using var _ = Allocator.Allocate(Encodings.Utf8.GetByteCount(term), out Span<byte> termBuffer);
         var byteCount = Encodings.Utf8.GetBytes(term, termBuffer);
         
-        ApplyAnalyzer(binding, termBuffer.Slice(0, byteCount), out var encodedTerm, canReturnEmptySlice);
+        ApplyAnalyzer(binding, termBuffer.Slice(0, byteCount), out var encodedTerm);
         return encodedTerm;
     }
 
@@ -146,7 +168,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
     //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
     [SkipLocalsInit]
-    public Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, string term, bool canReturnEmptySlice = false)
+    public Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, string term)
     {
         if (term is null)
             return Constants.NullValueSlice; // unary match
@@ -163,19 +185,37 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (term == Constants.NullValue)
             return Constants.NullValueSlice;
 
-        ApplyAnalyzer(binding, Encodings.Utf8.GetBytes(term), out var encodedTerm, canReturnEmptySlice);
+        ApplyAnalyzer(binding, Encodings.Utf8.GetBytes(term), out var encodedTerm);
         return encodedTerm;
     }
 
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value, bool allowToBeEmpty = false)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
     {
         using (Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced))
         {
-            return ApplyAnalyzer(originalTermSliced, fieldId, out value, allowToBeEmpty);
+            return ApplyAnalyzer(originalTermSliced, fieldId, out value);
         }
     }
+    
+    internal void ApplyAnalyzerMultiTerms(in FieldMetadata binding, ReadOnlySpan<byte> originalTerm, ref NativeUnmanagedList<Slice> terms)
+    {
+        Analyzer analyzer = binding.Analyzer;
+        if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
+        {
+            analyzer = _fieldMapping.DefaultAnalyzer;
+        }
+        else if (binding.Mode is FieldIndexingMode.Exact || analyzer is null)
+        {
+            using var _ = Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Mutable, out var originalTermSliced);
+            originalTerm.CopyTo(originalTermSliced.ToSpan());
+            terms.Add(new Slice(originalTermSliced)); 
+            return;
+        }
 
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(FieldMetadata binding, ReadOnlySpan<byte> originalTerm, out Slice value, bool allowToBeEmpty = false)
+        AnalyzeMultipleTerms(analyzer, originalTerm, ref terms);
+    }
+
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(FieldMetadata binding, ReadOnlySpan<byte> originalTerm, out Slice value)
     {
         Analyzer analyzer = binding.Analyzer;
         if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
@@ -194,10 +234,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             }
         }
 
-        return AnalyzeTerm(analyzer, originalTerm, out value, allowToBeEmpty);
+        return AnalyzeTerm(analyzer, originalTerm, out value);
     }
 
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value, bool allowToBeEmpty = false)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
         Analyzer analyzer = null;
         IndexFieldBinding binding = null;
@@ -221,17 +261,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             ? Analyzer.CreateLowercaseAnalyzer(this.Allocator) // lowercase only when search is used in non-full-text-search match 
             : binding.Analyzer!;
 
-        return AnalyzeTerm(analyzer, originalTerm, out value, allowToBeEmpty);
+        return AnalyzeTerm(analyzer, originalTerm, out value);
     }
 
     [SkipLocalsInit]
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value, bool allowToBeEmpty = false)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
     {
-        return ApplyAnalyzer(originalTerm.AsSpan(), fieldId, out value, allowToBeEmpty);
+        return ApplyAnalyzer(originalTerm.AsSpan(), fieldId, out value);
     }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value, bool allowToBeEmpty = false)
+    private void AnalyzeMultipleTerms(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, ref NativeUnmanagedList<Slice> terms)
     {
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 
@@ -244,8 +284,33 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         Span<byte> bufferSpan = buffer.AsSpan();
         Span<Token> tokensSpan = tokens.AsSpan();
         analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
-        if (allowToBeEmpty == false && tokensSpan.Length != 1) 
-            Debug.Assert(tokensSpan.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
+        for (int i = 0; i < tokensSpan.Length; i++)
+        {
+            var token = bufferSpan.Slice(tokensSpan[i].Offset, (int)tokensSpan[i].Length);
+            _ = IndexWriter.CreateNormalizedTerm(Allocator, token, out var value);
+            terms.Add(value);
+        }
+
+        Analyzer.TokensPool.Return(tokens);
+        Analyzer.BufferPool.Return(buffer);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
+    {
+        analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
+
+        Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
+        Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024, "Analyzer wants to create too much tokens.");
+
+        var buffer = Analyzer.BufferPool.Rent(outputSize);
+        var tokens = Analyzer.TokensPool.Rent(tokenSize);
+
+        Span<byte> bufferSpan = buffer.AsSpan();
+        Span<Token> tokensSpan = tokens.AsSpan();
+        analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
+        if (tokensSpan.Length != 1)
+            throw new NotSupportedException($"Analyzer turned term: {Encoding.UTF8.GetString(originalTerm)} into multiple terms ({tokens.Length}), which is not allowed in this case.");
         var disposable =IndexWriter.CreateNormalizedTerm(Allocator, bufferSpan, out value);
 
         Analyzer.TokensPool.Return(tokens);

@@ -142,7 +142,7 @@ public struct CoraxBooleanItem : IQueryMatch
             return new Slice(bs);
         }
 
-        var term = _indexSearcher.EncodeAndApplyAnalyzer(Field, TermAsString, true).AsSpan();
+        var term = _indexSearcher.EncodeAndApplyAnalyzer(Field, TermAsString).AsSpan();
         _indexSearcher.Allocator.Allocate(term.Length, out var output);
 
         term.CopyTo(output.ToSpan());
