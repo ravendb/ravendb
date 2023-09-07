@@ -23,8 +23,8 @@ public abstract unsafe class AbstractBackgroundWorkStorage
     protected readonly DocumentDatabase Database;
     protected readonly DocumentsStorage DocumentsStorage;
     protected readonly Logger Logger;
+    protected readonly string MetadataPropertyName;
     private readonly string _treeName;
-    private readonly string _metadataPropertyName;
 
     protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, Logger logger, string treeName, string metadataPropertyName)
     {
@@ -34,7 +34,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         Database = database;
         DocumentsStorage = Database.DocumentsStorage;
         _treeName = treeName;
-        _metadataPropertyName = metadataPropertyName;
+        MetadataPropertyName = metadataPropertyName;
     }
 
     public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
@@ -110,7 +110,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                                 {
                                     if (document == null ||
                                         document.TryGetMetadata(out var metadata) == false ||
-                                        HasPassed(metadata, options.CurrentTime) ==
+                                        HasPassed(metadata, options.CurrentTime, MetadataPropertyName) ==
                                         false)
                                     {
                                         docsToProcess.Add((clonedId, null));
@@ -177,23 +177,6 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         return currentTime >= date;
     }
     
-    
-    protected bool HasPassed(BlittableJsonReaderObject metadata, DateTime currentTime)
-    {
-        if (metadata.TryGet(_metadataPropertyName, out LazyStringValue dateFromMetadata) == false) 
-            return false;
-        
-        if (LazyStringParser.TryParseDateTime(dateFromMetadata.Buffer, dateFromMetadata.Length, out DateTime date, out _, properlyParseThreeDigitsMilliseconds: true) != LazyStringParser.Result.DateTime)
-            if (DateTime.TryParseExact(dateFromMetadata.ToString(CultureInfo.InvariantCulture), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                    DateTimeStyles.RoundtripKind, out date) == false)
-                return false;
-        
-        if (date.Kind != DateTimeKind.Utc) 
-            date = date.ToUniversalTime();
-                
-        return currentTime >= date;
-    }
-
     protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime);
 
     public int ProcessDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> docsToProcess, DateTime currentTime)
