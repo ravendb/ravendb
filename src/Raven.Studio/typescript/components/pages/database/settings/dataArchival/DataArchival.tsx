@@ -22,6 +22,9 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormInput, FormSwitch } from "components/common/Form";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 
 export default function DataArchival({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -37,6 +40,8 @@ export default function DataArchival({ db }: NonShardedViewProps) {
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
     const { isAdminAccessOrAbove } = useAccessManager();
+
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     useEffect(() => {
         if (!formValues.isArchiveFrequencyEnabled && formValues.archiveFrequency !== null) {
@@ -83,7 +88,11 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                 <Row className="gy-sm">
                     <Col>
                         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
-                            <AboutViewHeading title="Data Archival" icon="data-archival" />
+                            <AboutViewHeading
+                                title="Data Archival"
+                                icon="data-archival"
+                                badgeText={licenseType !== "Enterprise" ? "Enterprise" : null}
+                            />
                             <ButtonWithSpinner
                                 type="submit"
                                 color="primary"
@@ -94,7 +103,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                             >
                                 Save
                             </ButtonWithSpinner>
-                            <Col>
+                            <Col className={licenseType !== "Enterprise" ? "item-disabled pe-none" : ""}>
                                 <Card>
                                     <CardBody>
                                         <div className="vstack gap-2">
@@ -175,6 +184,14 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Data Archival
                                 </a>
                             </AccordionItemWrapper>
+                            {licenseType === "Community" && (
+                                <AccordionLicenseNotIncluded
+                                    targetId="licensing"
+                                    featureName="Data Archival"
+                                    featureIcon="data-archival"
+                                    checkedLicenses={["Enterprise"]}
+                                />
+                            )}
                         </AboutViewAnchored>
                     </Col>
                 </Row>
