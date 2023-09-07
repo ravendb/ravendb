@@ -1585,10 +1585,10 @@ namespace Raven.Server.Smuggler.Documents
                             newEtag = _database.DocumentsStorage.GenerateNextEtag();
                             tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
                             databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, tombstone.ChangeVector);
-                            AddTrxnIfNeeded(context, tombstone.LowerId, ref tombstone.ChangeVector);
                             switch (tombstone.Type)
                             {
                                 case Tombstone.TombstoneType.Document:
+                                    AddTrxnIfNeeded(context, tombstone.LowerId, ref tombstone.ChangeVector);
                                     _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, tombstone.LastModified.Ticks, tombstone.ChangeVector, new CollectionName(tombstone.Collection), documentFlags: tombstone.Flags);
                                     break;
 
