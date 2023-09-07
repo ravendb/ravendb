@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -81,6 +82,16 @@ public abstract class AbstractIndexCreateController
 
             if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
                 OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
+        }
+        
+        if (definition.SourceType != IndexSourceType.Documents)
+        {
+            if (definition.ArchivedDataProcessingBehavior != null && definition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.IncludeArchived)
+            {
+                throw new ArgumentException(
+                    $"{nameof(ArchivedDataProcessingBehavior)} other than '{ArchivedDataProcessingBehavior.IncludeArchived}' can be set only for document indexes,  not for indexes with {nameof(IndexSourceType)} '{definition.SourceType}' .");
+            }
+            definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived;
         }
     }
 

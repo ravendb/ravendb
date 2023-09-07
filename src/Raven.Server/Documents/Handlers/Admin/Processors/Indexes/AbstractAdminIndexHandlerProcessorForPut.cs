@@ -80,17 +80,6 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                         $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                 }
 
-                if (indexDefinition.SourceType != IndexSourceType.Documents)
-                {
-                    if (indexDefinition.ArchivedDataProcessingBehavior != null && indexDefinition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.IncludeArchived)
-                    {
-                        throw new ArgumentException(
-                            $"{nameof(ArchivedDataProcessingBehavior)} other than '{ArchivedDataProcessingBehavior.IncludeArchived}' can be set only for document indexes,  not for indexes with {nameof(IndexSourceType)} '{indexDefinition.SourceType}' .");
-                    }
-                    indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived;
-                }
-                    
-
                 var processor = GetIndexCreateProcessor();
 
                 var index = await processor.CreateIndexAsync(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
