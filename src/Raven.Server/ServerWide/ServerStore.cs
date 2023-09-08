@@ -132,6 +132,7 @@ namespace Raven.Server.ServerWide
         public readonly ServerDashboardNotifications ServerDashboardNotifications;
         public readonly ThreadsInfoNotifications ThreadsInfoNotifications;
         public readonly LicenseManager LicenseManager;
+        public readonly LatestVersionCheck LatestVersionCheck;
         public readonly FeedbackSender FeedbackSender;
         public readonly StorageSpaceMonitor StorageSpaceMonitor;
         public readonly ServerLimitsMonitor ServerLimitsMonitor;
@@ -187,6 +188,8 @@ namespace Raven.Server.ServerWide
                         : TimeSpan.FromDays(2)));
 
             LicenseManager = new LicenseManager(this);
+
+            LatestVersionCheck = new LatestVersionCheck(this);
 
             FeedbackSender = new FeedbackSender();
 
@@ -819,7 +822,7 @@ namespace Raven.Server.ServerWide
             AnalyzerCompilationCache.Instance.AddServerWideItems(this);
 
             LicenseManager.Initialize(_env, ContextPool);
-            LatestVersionCheck.Instance.Check(this);
+            LatestVersionCheck.Initialize();
 
             ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup, LicenseManager);
 

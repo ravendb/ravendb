@@ -491,6 +491,7 @@ namespace FastTests
                 configuration.Server.Name = ServerName;
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
+                configuration.Updates.BackgroundChecksDisabled = true;
 
                 if (hasRunInMemory == false)
                     configuration.Core.RunInMemory = options.RunInMemory ?? true;

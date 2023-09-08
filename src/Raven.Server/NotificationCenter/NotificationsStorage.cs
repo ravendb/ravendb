@@ -383,6 +383,7 @@ namespace Raven.Server.NotificationCenter
                             && o is BlittableJsonReaderObject newVersionDetailsJson)
                         {
                             var value = JsonDeserializationServer.LatestVersionCheckVersionInfo(newVersionDetailsJson);
+                            //TODO: make it also based on the LatestVersion
                             delete = value.BuildNumber <= buildNumber;
                         }
                     }

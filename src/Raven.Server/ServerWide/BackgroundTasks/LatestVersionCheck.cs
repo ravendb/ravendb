@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Config.Categories;
 using Sparrow.Logging;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -16,60 +13,36 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 {
     public class LatestVersionCheck
     {
+        private readonly ServerStore _serverStore;
         private const string ApiRavenDbNet = "https://api.ravendb.net";
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(LatestVersionCheck).FullName);
-
-        public static LatestVersionCheck Instance = new LatestVersionCheck();
 
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
         private VersionInfo _lastRetrievedVersionInfo;
 
-        private AlertRaised _alert;
-
         private Timer _timer;
 
         private string _releaseChannel;
-
-        private readonly ConcurrentSet<WeakReference<ServerStore>> _serverStores = new ConcurrentSet<WeakReference<ServerStore>>();
 
         private static readonly RavenHttpClient ApiRavenDbClient = new()
         {
             BaseAddress = new Uri(ApiRavenDbNet)
         };
 
-        private LatestVersionCheck()
+        public LatestVersionCheck(ServerStore serverStore)
         {
+            _serverStore = serverStore;
         }
 
-        public void Initialize(UpdatesConfiguration configuration)
+        public void Initialize()
         {
-            if (configuration.BackgroundChecksDisabled)
+            if (_serverStore.Configuration.Updates.BackgroundChecksDisabled)
                 return;
 
-            if (_timer != null)
-                return;
-
-            lock (_locker)
-            {
-                if (_timer != null)
-                    return;
-
-                _releaseChannel = configuration.Channel.ToString();
-                _timer = new Timer(async state => await PerformAsync(), null, (int)TimeSpan.FromMinutes(5).TotalMilliseconds, (int)TimeSpan.FromHours(12).TotalMilliseconds);
-            }
-        }
-
-        public void Check(ServerStore serverStore)
-        {
-            _serverStores.Add(new WeakReference<ServerStore>(serverStore));
-
-            var alert = _alert;
-            if (alert == null)
-                return;
-
-            serverStore.NotificationCenter.Add(_alert);
+            _releaseChannel = _serverStore.Configuration.Updates.Channel.ToString();
+            _timer = new Timer(async state => await PerformAsync(), null, (int)TimeSpan.FromMinutes(5).TotalMilliseconds, (int)TimeSpan.FromHours(12).TotalMilliseconds);
         }
 
         public VersionInfo GetLastRetrievedVersionUpdatesInfo()
@@ -87,8 +60,13 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                 if (buildNumber == ServerVersion.DevBuildNumber)
                     return;
 
-                var stream = await ApiRavenDbClient.GetStreamAsync(
-                    $"/api/v2/versions/latest?channel={_releaseChannel}&build={buildNumber}");
+                var url = $"/api/v2/versions/latest?channel={_releaseChannel}&build={buildNumber}";
+                var licenseStatus = _serverStore.LicenseManager.LicenseStatus;
+                var licenseId = licenseStatus.Id;
+                if (licenseId != null)
+                    url += $"&licenseId={licenseId}";
+
+                var stream = await ApiRavenDbClient.GetStreamAsync(url);
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -99,11 +77,11 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     {
                         var severityInfo = DetermineSeverity(latestVersionInfo);
 
-                        _alert = AlertRaised.Create(null, "RavenDB update available", $"Version {latestVersionInfo.Version} is available",
+                        var alert = AlertRaised.Create(null, "RavenDB update available", $"Version {latestVersionInfo.Version} is available",
                             AlertType.Server_NewVersionAvailable, severityInfo,
-                            details: new NewVersionAvailableDetails(latestVersionInfo));
+                            details: new NewVersionAvailableDetails(latestVersionInfo, licenseStatus));
 
-                        AddAlertToNotificationCenter();
+                        AddAlertToNotificationCenter(alert);
                     }
 
                     _lastRetrievedVersionInfo = latestVersionInfo;
@@ -120,26 +98,16 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             }
         }
 
-        private void AddAlertToNotificationCenter()
+        private void AddAlertToNotificationCenter(AlertRaised alert)
         {
-            foreach (var weak in _serverStores)
+            try
             {
-
-                if (weak.TryGetTarget(out ServerStore serverStore) == false || serverStore == null || serverStore.Disposed)
-                {
-                    _serverStores.TryRemove(weak);
-                    continue;
-                }
-
-                try
-                {
-                    serverStore.NotificationCenter.Add(_alert);
-                }
-                catch (Exception err)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Error adding latest version alert to notification center.", err);
-                }
+                _serverStore.NotificationCenter.Add(alert);
+            }
+            catch (Exception err)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Error adding latest version alert to notification center.", err);
             }
         }
 
@@ -171,7 +139,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     [nameof(BuildType)] = BuildType,
                     [nameof(PublishedAt)] = PublishedAt,
                     [nameof(UpdateSeverity)] = UpdateSeverity,
-                    [nameof(LatestVersion)] = LatestVersion.ToJson()
+                    [nameof(LatestVersion)] = LatestVersion?.ToJson()
                 };
             }
         }

@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System
             var shouldRefresh = GetBoolValueQueryString("refresh", required: false) ?? false;
             if (shouldRefresh && IsLatestVersionCheckThrottled() == false)
             {
-                await LatestVersionCheck.Instance.PerformAsync();
+                await ServerStore.LatestVersionCheck.PerformAsync();
                 _lastRunAt = SystemTime.UtcNow;
             }
 
@@ -81,7 +81,7 @@ namespace Raven.Server.Web.System
 
         private async Task WriteVersionUpdatesInfo()
         {
-            var versionUpdatesInfo = LatestVersionCheck.Instance.GetLastRetrievedVersionUpdatesInfo();
+            var versionUpdatesInfo = ServerStore.LatestVersionCheck.GetLastRetrievedVersionUpdatesInfo();
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

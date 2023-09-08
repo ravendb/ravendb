@@ -117,8 +117,6 @@ namespace Raven.Server
 
             MultiSourceNuGetFetcher.Instance.Initialize(configuration.Indexing.NuGetPackagesPath, configuration.Indexing.NuGetPackageSourceUrl, configuration.Indexing.NuGetAllowPreleasePackages);
 
-            LatestVersionCheck.Instance.Initialize(configuration.Updates);
-
             if (Logger.IsOperationsEnabled)
                 Logger.Operations(RavenCli.GetInfoText());
 
