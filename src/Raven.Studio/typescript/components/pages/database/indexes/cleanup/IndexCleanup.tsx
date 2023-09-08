@@ -33,7 +33,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
     const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
     const { appUrl } = useAppUrls();
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     if (asyncFetchStats.status === "not-requested" || asyncFetchStats.status === "loading") {
         return <LoadingView />;
@@ -52,7 +52,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                             <AboutViewHeading
                                 icon="index-cleanup"
                                 title="Index Cleanup"
-                                badgeText={licenseType === "Community" ? "Professional +" : undefined}
+                                badgeText={isProfessionalOrAbove ? null : "Professional +"}
                             />
 
                             <FlexGrow />
@@ -75,17 +75,16 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                         in your application.
                                     </p>
                                 </AccordionItemWrapper>
-                                {licenseType === "Community" && (
-                                    <AccordionLicenseNotIncluded
-                                        targetId="licensing"
-                                        featureName="Index Cleanup"
-                                        featureIcon="index-cleanup"
-                                        checkedLicenses={["Professional", "Enterprise"]}
-                                    />
-                                )}
+                                <AccordionLicenseNotIncluded
+                                    targetId="licensing"
+                                    featureName="Index Cleanup"
+                                    featureIcon="index-cleanup"
+                                    checkedLicenses={["Professional", "Enterprise"]}
+                                    isLimited={!isProfessionalOrAbove}
+                                />
                             </AboutViewFloating>
                         </div>
-                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
+                        <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
                             <Nav className="card-tabs gap-3 card-tabs">
                                 <NavItem>
                                     <Card

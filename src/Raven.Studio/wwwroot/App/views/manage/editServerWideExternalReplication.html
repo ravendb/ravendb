@@ -4,7 +4,7 @@
             <div class="flex-horizontal gap-2">
                 <i class="icon-server-wide-replication"></i>
                 <h2 data-bind="text: $root.isAddingNewExternalReplicationTask() ? `New Server-Wide External Replication` : `Edit Server-Wide External Replication`" class="mb-0"></h2>
-                <span class="badge license-restricted-badge" data-bind="if: $root.licenseType === 'Community'">Professional +</span>
+                <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
             </div>
             <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
         </div>
@@ -18,7 +18,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                     <div class="panel-body" data-bind="with: editedTask">
                         <div class="form-group margin-top" data-bind="validationElement: taskName">
                             <label for="taskName" class="control-label">Task Name</label>

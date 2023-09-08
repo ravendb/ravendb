@@ -6,7 +6,7 @@ import licenseModel from "models/auth/licenseModel";
 
 class createServerWideTask extends dialogViewModelBase {
 
-    licenseType = licenseModel.licenseType();
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
 
     view = require("views/manage/createServerWideTask.html");
 

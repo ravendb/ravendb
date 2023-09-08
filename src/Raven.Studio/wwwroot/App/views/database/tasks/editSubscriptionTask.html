@@ -62,7 +62,7 @@
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
                                 <div class="help-block" data-bind="validationMessage: query"></div>
                             </div>
-                            <div data-bind="if: $root.licenseType === 'Community'" >
+                            <div data-bind="if: !$root.isProfessionalOrAbove" >
                                 <div class="alert alert-warning alert-dismissible show margin-top-sm" role="alert">
                                     <button type="button" class="close btn-lg" data-dismiss="alert" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>

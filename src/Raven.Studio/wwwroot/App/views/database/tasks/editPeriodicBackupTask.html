@@ -4,7 +4,7 @@
             <i class="icon-periodic-backup" data-bind="visible: backupOperation === 'periodic'"></i>
             <i class="icon-backup" data-bind="visible: backupOperation === 'manual'"></i>
             <h2 data-bind="text: $root.titleForView" class="mb-0"></h2>
-            <span class="badge license-restricted-badge" data-bind="if: backupOperation === 'periodic' && licenseType === 'Community'">Professional +</span>
+            <span class="badge license-restricted-badge" data-bind="if: backupOperation === 'periodic' && !isProfessionalOrAbove">Professional +</span>
         </div>
         <div data-bind="if: backupOperation === 'periodic'">
             <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
@@ -18,7 +18,7 @@
             <i class="icon-cancel"></i><span>Cancel</span>
         </button>
     </div>
-    <div data-bind="css: { 'pe-none item-disabled': licenseType === 'Community' && backupOperation === 'periodic' }">
+    <div data-bind="css: { 'pe-none item-disabled': !isProfessionalOrAbove && backupOperation === 'periodic' }">
         <div class="panel">
             <div class="padding">
                 <div class="row margin-bottom" data-bind="validationElement: name, if: backupOperation === 'periodic'">

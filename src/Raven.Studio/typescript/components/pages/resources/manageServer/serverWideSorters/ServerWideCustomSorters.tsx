@@ -19,11 +19,12 @@ export default function ServerWideCustomSorters() {
 
     const { appUrl } = useAppUrls();
 
-    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const communityLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
-    const isAddDisabled = asyncGetSorters.status !== "success" || (isCommunity && resultsCount === communityLimit);
+    const isAddDisabled =
+        asyncGetSorters.status !== "success" || (!isProfessionalOrAbove && resultsCount === communityLimit);
 
     return (
         <div className="content-margin">
@@ -40,7 +41,7 @@ export default function ServerWideCustomSorters() {
                         </a>
                         <HrHeader>
                             Server-wide custom sorters
-                            {isCommunity && (
+                            {!isProfessionalOrAbove && (
                                 <CounterBadge className="ms-2" count={resultsCount} limit={communityLimit} />
                             )}
                         </HrHeader>
@@ -95,14 +96,13 @@ export default function ServerWideCustomSorters() {
                                     <Icon icon="newtab" /> Docs - Custom Sorters
                                 </a>
                             </AccordionItemWrapper>
-                            {isCommunity && (
-                                <AccordionLicenseLimited
-                                    targetId="licensing"
-                                    featureName="Custom Sorters"
-                                    featureIcon="server-wide-custom-sorters"
-                                    description="Upgrade to a paid plan and get unlimited availability."
-                                />
-                            )}
+                            <AccordionLicenseLimited
+                                targetId="licensing"
+                                featureName="Custom Sorters"
+                                featureIcon="server-wide-custom-sorters"
+                                description="Upgrade to a paid plan and get unlimited availability."
+                                isLimited={!isProfessionalOrAbove}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>

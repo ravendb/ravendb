@@ -4,7 +4,7 @@
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
             <div class="d-flex align-items-center gap-2">
                 <h3 class="modal-title">Choose a Server-Wide Task</h3>
-                <span class="badge license-restricted-badge" data-bind="if: $root.licenseType === 'Community'">Professional +</span>
+                <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
             </div>
         </div>
         <div class="modal-body">

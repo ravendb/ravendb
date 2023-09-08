@@ -13,6 +13,9 @@ export default {
 } satisfies Meta<typeof IndexCleanup>;
 
 export const EmptyView: Story<typeof IndexCleanup> = () => {
+    const { license } = mockStore;
+    license.with_Enterprise();
+
     const { indexesService } = mockServices;
 
     indexesService.withGetStats([]);
@@ -25,6 +28,9 @@ export const EmptyView: Story<typeof IndexCleanup> = () => {
 };
 
 export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
+    const { license } = mockStore;
+    license.with_Enterprise();
+
     const { indexesService } = mockServices;
 
     indexesService.withGetStats();
@@ -34,13 +40,13 @@ export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
 };
 
 export const LicenseRestricted: Story<typeof IndexCleanup> = () => {
-    const { indexesService } = mockServices;
-
     const { license } = mockStore;
+    license.with_Community();
+
+    const { indexesService } = mockServices;
 
     indexesService.withGetStats();
     indexesService.withGetIndexMergeSuggestions();
-    license.with_Community();
 
     return <IndexCleanup db={DatabasesStubs.nonShardedClusterDatabase()} />;
 };

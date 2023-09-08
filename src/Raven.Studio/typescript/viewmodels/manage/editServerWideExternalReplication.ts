@@ -24,7 +24,7 @@ class editServerWideExternalReplication extends viewModelBase {
     editedTask = ko.observable<serverWideExternalReplicationEditModel>();
     isAddingNewExternalReplicationTask = ko.observable<boolean>(true);
 
-    licenseType = licenseModel.licenseType();
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
 
     connectionStringForTest = ko.observable<connectionStringRavenEtlModel>();
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();

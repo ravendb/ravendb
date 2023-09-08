@@ -60,7 +60,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();
@@ -202,7 +202,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                                         dispatch(documentRevisionsActions.addConfig(config)),
                                                 })
                                             }
-                                            disabled={licenseType === "Community"}
+                                            disabled={!isProfessionalOrAbove}
                                         >
                                             <Icon icon="plus" />
                                             Add new
@@ -358,32 +358,31 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Revisions
                                 </a>
                             </AccordionItemWrapper>
-                            {licenseType === "Community" && (
-                                <AccordionLicenseLimited
-                                    targetId="licensing"
-                                    featureName="Document Revisions"
-                                    featureIcon="revisions"
-                                    description={
-                                        <div>
-                                            <span>Your Community license has following limits:</span>
-                                            <div className="vstack gap-1 my-3 text-warning">
-                                                <small>
-                                                    <Icon icon="default" />
-                                                    Defaults policy can&apos;t be set up
-                                                </small>
-                                                <small>
-                                                    <Icon icon="documents" />
-                                                    Max 2 revisions to keep
-                                                </small>
-                                                <small>
-                                                    <Icon icon="clock" /> Max 45 days retention time
-                                                </small>
-                                            </div>
-                                            <span>Upgrade to a paid plan and get unlimited availability.</span>
+                            <AccordionLicenseLimited
+                                targetId="licensing"
+                                featureName="Document Revisions"
+                                featureIcon="revisions"
+                                isLimited={!isProfessionalOrAbove}
+                                description={
+                                    <div>
+                                        <span>Your Community license has following limits:</span>
+                                        <div className="vstack gap-1 my-3 text-warning">
+                                            <small>
+                                                <Icon icon="default" />
+                                                Defaults policy can&apos;t be set up
+                                            </small>
+                                            <small>
+                                                <Icon icon="documents" />
+                                                Max 2 revisions to keep
+                                            </small>
+                                            <small>
+                                                <Icon icon="clock" /> Max 45 days retention time
+                                            </small>
                                         </div>
-                                    }
-                                />
-                            )}
+                                        <span>Upgrade to a paid plan and get unlimited availability.</span>
+                                    </div>
+                                }
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>

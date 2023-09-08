@@ -38,7 +38,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const frequencyLimit = 129600;
 
     useEffect(() => {
@@ -98,7 +98,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                 icon="save"
                                 disabled={
                                     !formState.isDirty ||
-                                    (licenseType === "Community" &&
+                                    (!isProfessionalOrAbove &&
                                         formValues.isDeleteFrequencyEnabled &&
                                         formValues.deleteFrequency < frequencyLimit)
                                 }
@@ -133,13 +133,11 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                                         formState.isSubmitting || !formValues.isDeleteFrequencyEnabled
                                                     }
                                                     placeholder={
-                                                        licenseType === "Community"
-                                                            ? "Default (129600)"
-                                                            : "Default (60)"
+                                                        isProfessionalOrAbove ? "Default (60)" : "Default (129600)"
                                                     }
                                                     addonText="seconds"
                                                 />
-                                                {licenseType === "Community" &&
+                                                {!isProfessionalOrAbove &&
                                                     formValues.isDeleteFrequencyEnabled &&
                                                     formValues.deleteFrequency < frequencyLimit && (
                                                         <Alert color="warning" className="mt-3">
@@ -183,14 +181,13 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Expiration
                                 </a>
                             </AccordionItemWrapper>
-                            {licenseType === "Community" && (
-                                <AccordionLicenseLimited
-                                    description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
-                                    targetId="licensing"
-                                    featureName="Document Expiration"
-                                    featureIcon="document-expiration"
-                                />
-                            )}
+                            <AccordionLicenseLimited
+                                description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
+                                targetId="licensing"
+                                featureName="Document Expiration"
+                                featureIcon="document-expiration"
+                                isLimited={!isProfessionalOrAbove}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>

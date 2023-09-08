@@ -6,7 +6,7 @@ import React from "react";
 import {Icon} from "components/common/Icon";
 
 export function EditSubscriptionTaskInfoHub() {
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     return (
         <AboutViewFloating>
@@ -42,14 +42,13 @@ export function EditSubscriptionTaskInfoHub() {
                     <Icon icon="newtab" /> Docs - Subscription Task
                 </a>
             </AccordionItemWrapper>
-            {licenseType === "Community" && (
-                <AccordionLicenseLimited
-                    description="Your Community license does not include Subscriptions Revisions. Upgrade to a paid plan and get unlimited availability."
-                    targetId="licensing"
-                    featureName="Subscriptions"
-                    featureIcon="subscription"
-                />
-            )}
+            <AccordionLicenseLimited
+                description="Your Community license does not include Subscriptions Revisions. Upgrade to a paid plan and get unlimited availability."
+                targetId="licensing"
+                featureName="Subscriptions"
+                featureIcon="subscription"
+                isLimited={!isProfessionalOrAbove}
+            />
         </AboutViewFloating>
     );
 }

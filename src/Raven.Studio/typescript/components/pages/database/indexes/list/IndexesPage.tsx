@@ -85,7 +85,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const allActionContexts = ActionContextUtils.getContexts(db.getLocations());
 
-    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     const autoServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerCluster"));
     const staticServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerCluster"));
@@ -105,7 +105,8 @@ export function IndexesPage(props: IndexesPageProps) {
     const staticDatabaseLimitStatus = getLicenseLimitReachStatus(staticDatabaseCount, staticDatabaseLimit);
 
     const isNewIndexDisabled =
-        isCommunity && (staticServerLimitStatus === "limitReached" || staticDatabaseLimitStatus === "limitReached");
+        !isProfessionalOrAbove &&
+        (staticServerLimitStatus === "limitReached" || staticDatabaseLimitStatus === "limitReached");
 
     todo("Other", "Damian", "Move limits to separate component");
 
@@ -119,7 +120,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
     return (
         <>
-            {isCommunity && (
+            {!isProfessionalOrAbove && (
                 <>
                     {staticServerLimitStatus !== "notReached" && (
                         <Alert
@@ -276,14 +277,13 @@ export function IndexesPage(props: IndexesPageProps) {
                                         <Icon icon="newtab" /> Docs - Indexes List View
                                     </a>
                                 </AccordionItemWrapper>
-                                {isCommunity && (
-                                    <AccordionLicenseLimited
-                                        targetId="license-limit"
-                                        description="Upgrade to a paid plan and get unlimited availability."
-                                        featureName="List of Indexes"
-                                        featureIcon="list-of-indexes"
-                                    />
-                                )}
+                                <AccordionLicenseLimited
+                                    targetId="license-limit"
+                                    description="Upgrade to a paid plan and get unlimited availability."
+                                    featureName="List of Indexes"
+                                    featureIcon="list-of-indexes"
+                                    isLimited={!isProfessionalOrAbove}
+                                />
                             </AboutViewFloating>
                         </Col>
                     </Row>

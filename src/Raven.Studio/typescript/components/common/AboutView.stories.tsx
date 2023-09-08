@@ -76,6 +76,7 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                 featureName="Document Compression"
                                 featureIcon="documents-compression"
                                 checkedLicenses={["Professional", "Enterprise"]}
+                                isLimited
                             />
                         </AboutViewFloating>
                     </Col>

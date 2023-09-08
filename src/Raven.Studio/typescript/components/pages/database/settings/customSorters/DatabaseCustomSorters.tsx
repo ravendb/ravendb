@@ -42,7 +42,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     const communityClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
     const communityDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
@@ -52,7 +52,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
 
     const isAddDisabled =
         asyncGetDatabaseSorters.status !== "success" ||
-        (isCommunity && databaseResultsCount === communityDatabaseLimit);
+        (!isProfessionalOrAbove && databaseResultsCount === communityDatabaseLimit);
 
     if (db.isSharded()) {
         return (
@@ -82,7 +82,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                         )}
                         <HrHeader>
                             Database custom sorters
-                            {isCommunity && (
+                            {!isProfessionalOrAbove && (
                                 <CounterBadge
                                     className="ms-2"
                                     count={databaseResultsCount}
@@ -109,7 +109,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                             }
                         >
                             Server-wide custom sorters
-                            {isCommunity && (
+                            {!isProfessionalOrAbove && (
                                 <CounterBadge
                                     className="ms-2"
                                     count={serverWideResultsCount}
@@ -174,14 +174,13 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Custom Sorters
                                 </a>
                             </AccordionItemWrapper>
-                            {isCommunity && (
-                                <AccordionLicenseLimited
-                                    targetId="licensing"
-                                    featureName="Custom Sorters"
-                                    featureIcon="custom-sorters"
-                                    description="Upgrade to a paid plan and get unlimited availability."
-                                />
-                            )}
+                            <AccordionLicenseLimited
+                                targetId="licensing"
+                                featureName="Custom Sorters"
+                                featureIcon="custom-sorters"
+                                description="Upgrade to a paid plan and get unlimited availability."
+                                isLimited={!isProfessionalOrAbove}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>

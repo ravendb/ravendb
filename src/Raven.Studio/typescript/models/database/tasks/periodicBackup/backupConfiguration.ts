@@ -30,7 +30,7 @@ abstract class backupConfiguration {
     anyBackupTypeIsDirty: KnockoutComputed<boolean>;
     snapshot = ko.observable<snapshot>();
 
-    licenseType = licenseModel.licenseType();
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
     
     mentorNode = ko.observable<string>();
     

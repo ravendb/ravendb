@@ -5,7 +5,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 
 export function EditRabbitMqSinkTaskInfoHub() {
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     return (
         <AboutViewFloating>
@@ -39,14 +39,13 @@ export function EditRabbitMqSinkTaskInfoHub() {
                     </ul>
                 </p>
             </AccordionItemWrapper>
-            {licenseType === "Community" && (
-                <AccordionLicenseNotIncluded
-                    targetId="licensing"
-                    featureName="RabbitMQ Sink"
-                    featureIcon="rabbitmq-sink"
-                    checkedLicenses={["Professional", "Enterprise"]}
-                />
-            )}
+            <AccordionLicenseNotIncluded
+                targetId="licensing"
+                featureName="RabbitMQ Sink"
+                featureIcon="rabbitmq-sink"
+                checkedLicenses={["Professional", "Enterprise"]}
+                isLimited={!isProfessionalOrAbove}
+            />
         </AboutViewFloating>
     );
 }
