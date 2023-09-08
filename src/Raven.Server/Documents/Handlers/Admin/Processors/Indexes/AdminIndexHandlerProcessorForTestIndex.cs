@@ -76,7 +76,7 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
             var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, RequestHandler.Database.QueryMetadataCache, tracker);
 
             if (indexQueryServerSide.Metadata.IndexName != testIndexName)
-                throw new BadRequestException($"Expected '{testIndexName}' as index name in query, but could not find it.");
+                throw new BadRequestException($"Expected {providedIndexName} as index name in query, but could not find it.");
                 
             using (var index = RequestHandler.Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context, maxDocumentsPerIndex))
             {
