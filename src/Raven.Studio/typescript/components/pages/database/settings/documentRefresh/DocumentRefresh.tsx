@@ -37,9 +37,10 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const frequencyLimit = 129600;
 
+    // TODO kalczur check
     useEffect(() => {
         if (!formValues.isRefreshFrequencyEnabled && formValues.refreshFrequency !== null) {
             setValue("refreshFrequency", null, { shouldValidate: true });
@@ -47,7 +48,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
         if (!formValues.isDocumentRefreshEnabled && formValues.isRefreshFrequencyEnabled) {
             setValue("isRefreshFrequencyEnabled", false, { shouldValidate: true });
         }
-        if (licenseType === "Community" && !formValues.isRefreshFrequencyEnabled) {
+        if (!isProfessionalOrAbove && !formValues.isRefreshFrequencyEnabled) {
             setValue("refreshFrequency", null, { shouldValidate: true });
         }
     }, [
@@ -55,7 +56,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
         formValues.isRefreshFrequencyEnabled,
         formValues.refreshFrequency,
         setValue,
-        licenseType,
+        isProfessionalOrAbove,
     ]);
 
     const onSave: SubmitHandler<DocumentRefreshFormData> = async (formData) => {
@@ -96,7 +97,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 icon="save"
                                 disabled={
                                     !formState.isDirty ||
-                                    (licenseType === "Community" &&
+                                    (!isProfessionalOrAbove &&
                                         formValues.isRefreshFrequencyEnabled &&
                                         formValues.refreshFrequency < frequencyLimit)
                                 }
@@ -134,13 +135,11 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                                         formState.isSubmitting || !formValues.isRefreshFrequencyEnabled
                                                     }
                                                     placeholder={
-                                                        licenseType === "Community"
-                                                            ? "Default (129600)"
-                                                            : "Default (60)"
+                                                        isProfessionalOrAbove ? "Default (60)" : "Default (129600)"
                                                     }
                                                     addonText="seconds"
                                                 />
-                                                {licenseType === "Community" &&
+                                                {!isProfessionalOrAbove &&
                                                     formValues.isRefreshFrequencyEnabled &&
                                                     formValues.refreshFrequency < frequencyLimit && (
                                                         <Alert color="warning" className="mt-3">
@@ -190,14 +189,13 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Refresh
                                 </a>
                             </AccordionItemWrapper>
-                            {licenseType === "Community" && (
-                                <AccordionLicenseLimited
-                                    description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
-                                    targetId="licensing"
-                                    featureName="Document Refresh"
-                                    featureIcon="expos-refresh"
-                                />
-                            )}
+                            <AccordionLicenseLimited
+                                description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
+                                targetId="licensing"
+                                featureName="Document Refresh"
+                                featureIcon="expos-refresh"
+                                isLimited={!isProfessionalOrAbove}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>

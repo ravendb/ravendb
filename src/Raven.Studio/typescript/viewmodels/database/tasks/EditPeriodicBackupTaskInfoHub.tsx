@@ -6,7 +6,7 @@ import React from "react";
 import {Icon} from "components/common/Icon";
 
 export function EditPeriodicBackupTaskInfoHub() {
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     return (
         <AboutViewFloating>
@@ -43,14 +43,13 @@ export function EditPeriodicBackupTaskInfoHub() {
                     <Icon icon="newtab" /> Docs - Backups
                 </a>
             </AccordionItemWrapper>
-            {licenseType === "Community" && (
-                <AccordionLicenseNotIncluded
-                    targetId="licensing"
-                    featureName="Periodic Backups"
-                    featureIcon="periodic-backup"
-                    checkedLicenses={["Professional", "Enterprise"]}
-                />
-            )}
+            <AccordionLicenseNotIncluded
+                targetId="licensing"
+                featureName="Periodic Backups"
+                featureIcon="periodic-backup"
+                checkedLicenses={["Professional", "Enterprise"]}
+                isLimited={!isProfessionalOrAbove}
+            />
         </AboutViewFloating>
     );
 }

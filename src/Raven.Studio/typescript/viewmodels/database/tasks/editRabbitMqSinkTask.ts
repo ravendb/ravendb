@@ -103,7 +103,7 @@ class editRabbitMqSinkTask extends viewModelBase {
     patchDebugActionsModifiedView = require("views/database/patch/patchDebugActionsModified.html");
     patchDebugActionsDeletedView = require("views/database/patch/patchDebugActionsDeleted.html");
 
-    licenseType = licenseModel.licenseType();
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
 
     static readonly scriptNamePrefix = "Script_";
 

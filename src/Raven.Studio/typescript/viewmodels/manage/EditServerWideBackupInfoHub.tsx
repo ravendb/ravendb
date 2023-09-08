@@ -6,7 +6,7 @@ import React from "react";
 import {Icon} from "components/common/Icon";
 
 export function EditServerWideBackupInfoHub() {
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     return (
         <AboutViewFloating>
@@ -47,14 +47,13 @@ export function EditServerWideBackupInfoHub() {
                     <Icon icon="newtab" /> Docs - Server-Wide Backup Task
                 </a>
             </AccordionItemWrapper>
-            {licenseType === "Community" && (
-                <AccordionLicenseNotIncluded
-                    targetId="licensing"
-                    featureName="Server-Wide Backups"
-                    featureIcon="server-wide-backup"
-                    checkedLicenses={["Professional", "Enterprise"]}
-                />
-            )}
+            <AccordionLicenseNotIncluded
+                targetId="licensing"
+                featureName="Server-Wide Backups"
+                featureIcon="server-wide-backup"
+                checkedLicenses={["Professional", "Enterprise"]}
+                isLimited={!isProfessionalOrAbove}
+            />
         </AboutViewFloating>
     );
 }

@@ -258,7 +258,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         isDeleting,
     };
 
-    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;
     const subscriptionsDatabaseCount = subscriptions.length;
@@ -280,7 +280,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     return (
         <div>
-            {isCommunity && (
+            {!isProfessionalOrAbove && (
                 <>
                     {subscriptionsServerLimitStatus !== "notReached" && (
                         <Alert
@@ -407,14 +407,13 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                 <Icon icon="newtab" /> Docs - Ongoing Tasks
                             </a>
                         </AccordionItemWrapper>
-                        {isCommunity && (
-                            <AccordionLicenseLimited
-                                targetId="license-limit"
-                                description="Unleash the full potential and upgrade your plan."
-                                featureName="Ongoing Tasks"
-                                featureIcon="ongoing-tasks"
-                            />
-                        )}
+                        <AccordionLicenseLimited
+                            targetId="license-limit"
+                            description="Unleash the full potential and upgrade your plan."
+                            featureName="Ongoing Tasks"
+                            featureIcon="ongoing-tasks"
+                            isLimited={!isProfessionalOrAbove}
+                        />
                     </AboutViewFloating>
                 </div>
 
@@ -617,10 +616,13 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                     {subscriptionsDatabaseCount > 0 && (
                         <div key="subscriptions">
-                            <HrHeader className="subscription" count={!isCommunity ? subscriptionsDatabaseCount : null}>
+                            <HrHeader
+                                className="subscription"
+                                count={isProfessionalOrAbove ? subscriptionsDatabaseCount : null}
+                            >
                                 <Icon icon="subscription" />
                                 Subscription
-                                {isCommunity && (
+                                {!isProfessionalOrAbove && (
                                     <CounterBadge
                                         count={subscriptionsDatabaseCount}
                                         limit={subscriptionsDatabaseLimit}

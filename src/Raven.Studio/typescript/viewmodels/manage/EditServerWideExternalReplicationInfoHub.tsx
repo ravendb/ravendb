@@ -5,7 +5,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 
 export function EditServerWideExternalReplicationInfoHub() {
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     return (
         <AboutViewFloating>
@@ -31,14 +31,13 @@ export function EditServerWideExternalReplicationInfoHub() {
                     </ul>
                 </p>
             </AccordionItemWrapper>
-            {licenseType === "Community" && (
-                <AccordionLicenseNotIncluded
-                    targetId="licensing"
-                    featureName="Server-Wide External Replication"
-                    featureIcon="server-wide-replication"
-                    checkedLicenses={["Professional", "Enterprise"]}
-                />
-            )}
+            <AccordionLicenseNotIncluded
+                targetId="licensing"
+                featureName="Server-Wide External Replication"
+                featureIcon="server-wide-replication"
+                checkedLicenses={["Professional", "Enterprise"]}
+                isLimited={!isProfessionalOrAbove}
+            />
         </AboutViewFloating>
     );
 }

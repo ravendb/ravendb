@@ -46,7 +46,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
     useDirtyFlag(formState.isDirty);
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;
@@ -98,7 +98,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <AboutViewHeading
                             icon="database-client-configuration"
                             title="Client Configuration"
-                            badgeText={licenseType === "Community" ? "Professional +" : undefined}
+                            badgeText={isProfessionalOrAbove ? null : "Professional +"}
                         />
                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
                             <div>
@@ -125,7 +125,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 </small>
                             )}
                         </div>
-                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
+                        <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
                             {globalConfig && (
                                 <div className="mt-4 mb-3">
                                     <div className="hstack justify-content-center">
@@ -593,14 +593,13 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     <Icon icon="newtab" /> Docs - Client Configuration
                                 </a>
                             </AccordionItemWrapper>
-                            {licenseType === "Community" && (
-                                <AccordionLicenseNotIncluded
-                                    targetId="licensing"
-                                    featureName="Client Configuration"
-                                    featureIcon="database-client-configuration"
-                                    checkedLicenses={["Professional", "Enterprise"]}
-                                />
-                            )}
+                            <AccordionLicenseNotIncluded
+                                targetId="licensing"
+                                featureName="Client Configuration"
+                                featureIcon="database-client-configuration"
+                                checkedLicenses={["Professional", "Enterprise"]}
+                                isLimited={!isProfessionalOrAbove}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>

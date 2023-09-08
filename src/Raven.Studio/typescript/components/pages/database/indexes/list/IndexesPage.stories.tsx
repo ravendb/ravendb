@@ -15,8 +15,9 @@ export default {
 } as ComponentMeta<typeof IndexesPage>;
 
 function commonInit() {
-    const { accessManager } = mockStore;
+    const { accessManager, license } = mockStore;
     accessManager.with_securityClearance("ClusterAdmin");
+    license.with_Enterprise();
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }

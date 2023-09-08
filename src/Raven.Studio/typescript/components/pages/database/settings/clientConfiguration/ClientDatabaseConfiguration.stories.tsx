@@ -13,10 +13,11 @@ export default {
 } as ComponentMeta<typeof ClientDatabaseConfiguration>;
 
 function commonInit() {
-    const { accessManager } = mockStore;
+    const { accessManager, license } = mockStore;
     const { manageServerService } = mockServices;
 
     accessManager.with_securityClearance("ClusterAdmin");
+    license.with_Enterprise();
     manageServerService.withGetDatabaseClientConfiguration();
 }
 

@@ -3,7 +3,7 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-kafka-sink"></i>
             <h2 data-bind="text: $root.isAddingNewKafkaSinkTask() ? `New Kafka Sink` : `Edit Kafka Sink`" class="mb-0"></h2>
-            <span class="badge license-restricted-badge" data-bind="if: licenseType === 'Community'">Professional +</span>
+            <span class="badge license-restricted-badge" data-bind="if: !isProfessionalOrAbove">Professional +</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: infoHubView"></div>
     </div>
@@ -18,7 +18,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': licenseType === 'Community' }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !isProfessionalOrAbove }">
                     <div class="panel-body" data-bind="with: editedKafkaSink">
                         <div class="form-group margin-top">
                             <label for="taskName" class="control-label">Task Name</label>
@@ -144,7 +144,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': licenseType === 'Community' }">
+                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !isProfessionalOrAbove }">
                     <div class="flex-row margin-top">
                         <h3>Scripts</h3>
                         <button type="button" id="addNewScript" data-bind="click: addNewScript, disable: editedKafkaSink().showEditScriptArea" class="btn btn-info pull-right">
@@ -152,7 +152,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="scroll" data-bind="css: { 'pe-none item-disabled': licenseType === 'Community' }">
+                <div class="scroll" data-bind="css: { 'pe-none item-disabled': !isProfessionalOrAbove }">
                     <div class="etl-list" id="transformsList" data-bind="with: editedKafkaSink">
                         <div data-bind="if: scripts().length === 0 && !editedScriptSandbox()">
                             <div class="text-center text-muted">
@@ -193,7 +193,7 @@
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedKafkaSink()">
             <div class="flex-grow" data-bind="if: showEditScriptArea">
-                <div id="editTransform" class="panel padding" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
+                <div id="editTransform" class="panel padding" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                     <div data-bind="with: editedScriptSandbox">
                         <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
                             <label class="control-label"><strong>Name:</strong></label>
@@ -252,7 +252,7 @@
                     </div>
                 </div>
                 <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
-                    <div class="panel" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
+                    <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                         <div class="panel-body flex-form" data-bind="with: $root.test">
 
                             <label>
@@ -288,7 +288,7 @@
             <i class="icon-info icon-xl"></i>
             Enter <strong>Message</strong> used for test and click <strong>Test</strong> button
         </div>
-        <div class="tabs" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
+        <div class="tabs" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" data-bind="visible: testAlreadyExecuted" class="active">
                     <a href="#testResultsModified" role="tab" data-toggle="tab">
@@ -315,7 +315,7 @@
                 </li>
             </ul>
         </div>
-        <div class="tab-content flex-grow" data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
+        <div class="tab-content flex-grow" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
             <div role="tabpanel" class="tab-pane fade in active margin-bottom" id="testResultsModified">
                 <div data-bind="with: actions">
                     <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>

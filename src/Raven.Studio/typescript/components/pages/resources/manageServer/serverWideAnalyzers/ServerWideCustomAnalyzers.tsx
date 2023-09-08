@@ -19,11 +19,12 @@ export default function ServerWideCustomAnalyzers() {
 
     const { appUrl } = useAppUrls();
 
-    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const communityLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
-    const isAddDisabled = asyncGetAnalyzers.status !== "success" || (isCommunity && resultsCount === communityLimit);
+    const isAddDisabled =
+        asyncGetAnalyzers.status !== "success" || (!isProfessionalOrAbove && resultsCount === communityLimit);
 
     return (
         <div className="content-margin">
@@ -40,7 +41,7 @@ export default function ServerWideCustomAnalyzers() {
                         </a>
                         <HrHeader>
                             Server-wide custom analyzers
-                            {isCommunity && (
+                            {!isProfessionalOrAbove && (
                                 <CounterBadge className="ms-2" count={resultsCount} limit={communityLimit} />
                             )}
                         </HrHeader>
@@ -101,14 +102,13 @@ export default function ServerWideCustomAnalyzers() {
                                     <Icon icon="newtab" /> Docs - Custom Analyzers
                                 </a>
                             </AccordionItemWrapper>
-                            {isCommunity && (
-                                <AccordionLicenseLimited
-                                    targetId="licensing"
-                                    featureName="Custom Analyzers"
-                                    featureIcon="server-wide-custom-analyzers"
-                                    description="Upgrade to a paid plan and get unlimited availability."
-                                />
-                            )}
+                            <AccordionLicenseLimited
+                                targetId="licensing"
+                                featureName="Custom Analyzers"
+                                featureIcon="server-wide-custom-analyzers"
+                                description="Upgrade to a paid plan and get unlimited availability."
+                                isLimited={!isProfessionalOrAbove}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>

@@ -39,7 +39,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const isCommunity = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     const communityClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
     const communityDatabaseLimit = useAppSelector(
@@ -51,7 +51,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
 
     const isAddDisabled =
         asyncGetDatabaseAnalyzers.status !== "success" ||
-        (isCommunity && databaseResultsCount === communityDatabaseLimit);
+        (!isProfessionalOrAbove && databaseResultsCount === communityDatabaseLimit);
 
     return (
         <div className="content-margin">
@@ -70,7 +70,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                         )}
                         <HrHeader>
                             Database custom analyzers
-                            {isCommunity && (
+                            {!isProfessionalOrAbove && (
                                 <CounterBadge
                                     className="ms-2"
                                     count={databaseResultsCount}
@@ -101,7 +101,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                             }
                         >
                             Server-wide custom analyzers
-                            {isCommunity && (
+                            {!isProfessionalOrAbove && (
                                 <CounterBadge
                                     className="ms-2"
                                     count={serverWideResultsCount}
@@ -170,14 +170,13 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Custom Analyzers
                                 </a>
                             </AccordionItemWrapper>
-                            {isCommunity && (
-                                <AccordionLicenseLimited
-                                    targetId="licensing"
-                                    featureName="Custom Analyzers"
-                                    featureIcon="custom-analyzers"
-                                    description="Upgrade to a paid plan and get unlimited availability."
-                                />
-                            )}
+                            <AccordionLicenseLimited
+                                targetId="licensing"
+                                featureName="Custom Analyzers"
+                                featureIcon="custom-analyzers"
+                                description="Upgrade to a paid plan and get unlimited availability."
+                                isLimited={!isProfessionalOrAbove}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>

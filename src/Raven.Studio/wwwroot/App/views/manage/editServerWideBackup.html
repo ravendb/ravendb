@@ -3,7 +3,7 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-server-wide-backup"></i>
             <h2 data-bind="text: $parent.isAddingNewBackupTask() ? `New Server-Wide Backup Task` : `Edit Server-Wide Backup Task`" class="mb-0"></h2>
-            <span class="badge license-restricted-badge" data-bind="if: $root.licenseType === 'Community'">Professional +</span>
+            <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
     </div>
@@ -16,7 +16,7 @@
             <i class="icon-cancel"></i><span>Cancel</span>
         </button>
     </div>
-    <div data-bind="css: { 'pe-none item-disabled': $root.licenseType === 'Community' }">
+    <div data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
         <div class="panel">
             <div class="padding">
                 <div class="row margin-bottom" data-bind="validationElement: name">

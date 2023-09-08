@@ -45,7 +45,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
     useDirtyFlag(formState.isDirty);
 
     const { reportEvent } = useEventsCollector();
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     const onSave: SubmitHandler<StudioDatabaseConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -74,7 +74,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                     <AboutViewHeading
                         icon="database-studio-configuration"
                         title="Studio Configuration"
-                        badgeText={licenseType === "Community" ? "Professional +" : null}
+                        badgeText={isProfessionalOrAbove ? null : "Professional +"}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <div className="d-flex align-items-center justify-content-between">
@@ -95,7 +95,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                                 </a>
                             </small>
                         </div>
-                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
+                        <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
                             <Card id="popoverContainer">
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -178,14 +178,13 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                                 <Icon icon="newtab" /> Docs - Studio Configuration
                             </a>
                         </AccordionItemWrapper>
-                        {licenseType === "Community" && (
-                            <AccordionLicenseNotIncluded
-                                targetId="licensing"
-                                featureName="Studio Configuration"
-                                featureIcon="studio-configuration"
-                                checkedLicenses={["Professional", "Enterprise"]}
-                            />
-                        )}
+                        <AccordionLicenseNotIncluded
+                            targetId="licensing"
+                            featureName="Studio Configuration"
+                            featureIcon="studio-configuration"
+                            checkedLicenses={["Professional", "Enterprise"]}
+                            isLimited={!isProfessionalOrAbove}
+                        />
                     </AboutViewAnchored>
                 </Col>
             </Row>

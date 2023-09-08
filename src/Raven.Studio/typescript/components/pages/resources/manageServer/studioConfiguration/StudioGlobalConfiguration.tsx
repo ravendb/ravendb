@@ -42,7 +42,7 @@ export default function StudioGlobalConfiguration() {
     useDirtyFlag(formState.isDirty);
 
     const { reportEvent } = useEventsCollector();
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     const onSave: SubmitHandler<StudioGlobalConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -78,7 +78,7 @@ export default function StudioGlobalConfiguration() {
                     <AboutViewHeading
                         icon="studio-configuration"
                         title="Studio Configuration"
-                        badgeText={licenseType === "Community" ? "Professional +" : null}
+                        badgeText={isProfessionalOrAbove ? null : "Professional +"}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <ButtonWithSpinner
@@ -91,7 +91,7 @@ export default function StudioGlobalConfiguration() {
                         >
                             Save
                         </ButtonWithSpinner>
-                        <div className={licenseType === "Community" ? "item-disabled pe-none" : ""}>
+                        <div className={isProfessionalOrAbove ? null : "item-disabled pe-none"}>
                             <Card id="popoverContainer">
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -202,14 +202,13 @@ export default function StudioGlobalConfiguration() {
                                 <Icon icon="newtab" /> Docs - Client Configuration
                             </a>
                         </AccordionItemWrapper>
-                        {licenseType === "Community" && (
-                            <AccordionLicenseNotIncluded
-                                targetId="licensing"
-                                featureName="Studio Configuration"
-                                featureIcon="studio-configuration"
-                                checkedLicenses={["Professional", "Enterprise"]}
-                            />
-                        )}
+                        <AccordionLicenseNotIncluded
+                            targetId="licensing"
+                            featureName="Studio Configuration"
+                            featureIcon="studio-configuration"
+                            checkedLicenses={["Professional", "Enterprise"]}
+                            isLimited={!isProfessionalOrAbove}
+                        />
                     </AboutViewAnchored>
                 </Col>
             </Row>
