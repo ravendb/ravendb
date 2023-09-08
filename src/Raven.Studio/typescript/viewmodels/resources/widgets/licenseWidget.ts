@@ -60,14 +60,14 @@ class licenseWidget extends widget {
                 const date = moment.utc(serverCertificate.NotAfter);
                 const dateFormatted = date.format("YYYY-MM-DD");
 
-                const nowPlusMonth = moment.utc().add(1, 'months');
+                const nowPlus14Days = moment.utc().add(14, 'days');
                 
                 let expirationClass = "";
 
                 if (date.isBefore()) {
                     expirationClass = "text-danger";
-                } else if (date.isAfter(nowPlusMonth)) {
-                    // valid for at least 1 month - use defaults
+                } else if (date.isAfter(nowPlus14Days)) {
+                    // valid for at least 2 weeks - use defaults
                 } else {
                     expirationClass = "text-warning";
                 }

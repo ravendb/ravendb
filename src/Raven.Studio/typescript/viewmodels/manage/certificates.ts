@@ -683,7 +683,7 @@ class certificates extends viewModelBase {
             const expirationDate = moment.utc(cert.NotAfter);
             const expirationDateFormatted = expirationDate.format("YYYY-MM-DD");
             
-            const nowPlusMonth = moment.utc().add(1, 'months');
+            const nowPlus14Days = moment.utc().add(14, 'days');
             cert.isExpired = false;
             cert.isAboutToExpire = false;
             
@@ -692,7 +692,7 @@ class certificates extends viewModelBase {
                 cert.expirationIcon = "icon-danger";
                 cert.expirationClass = "text-danger";
                 cert.isExpired = true;
-            } else if (expirationDate.isAfter(nowPlusMonth)) {
+            } else if (expirationDate.isAfter(nowPlus14Days)) {
                 cert.expirationText = expirationDateFormatted;
                 cert.expirationIcon = "icon-expiration"; 
                 cert.expirationClass = "";
