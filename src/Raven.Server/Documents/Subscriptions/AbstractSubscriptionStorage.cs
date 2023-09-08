@@ -23,9 +23,6 @@ namespace Raven.Server.Documents.Subscriptions;
 
 public abstract class AbstractSubscriptionStorage
 {
-    [CanBeNull]
-    private static string ArchivedDataBehaviorConfigKey;
-
     protected readonly ServerStore _serverStore;
     protected string _databaseName;
     protected readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
@@ -90,34 +87,20 @@ public abstract class AbstractSubscriptionStorage
 
         return GetSubscriptionByName(context, name);
     }
-
-    public static ArchivedDataProcessingBehavior HandleNullableArchivedDataProcessingBehavior(DatabaseRecord record, ArchivedDataProcessingBehavior? processingBehavior)
-    {
-        if (processingBehavior is not null)
-            return processingBehavior.Value;
-                    
-        ArchivedDataBehaviorConfigKey ??= RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior);
-
-        var behaviorStringFromSettings = record.Settings[ArchivedDataBehaviorConfigKey] ?? throw new InvalidOperationException(
-            $"Couldn't find the value under '{ArchivedDataBehaviorConfigKey}' key in '{record.DatabaseName}' database configuration.");
-        
-        if (Enum.TryParse(behaviorStringFromSettings, false, out ArchivedDataProcessingBehavior behavior) == false)
-        {
-            throw new InvalidOperationException(
-                $"Couldn't parse '{behaviorStringFromSettings}' to {nameof(ArchivedDataProcessingBehavior)}");
-        }
-
-        return behavior;
-    }
     
-    protected abstract void EnsureValidArchivedBehaviorInSubscriptionState(ref SubscriptionState subscriptionState);
+    public abstract ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior();
     
     public SubscriptionState GetSubscriptionByName(ClusterOperationContext context, string taskName)
     {
 #pragma warning disable CS0618
         var state = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
-        EnsureValidArchivedBehaviorInSubscriptionState(ref state);
 #pragma warning restore CS0618
+
+        if (state.ArchivedDataProcessingBehavior is null)
+        {
+            // from 5.x version
+            state.ArchivedDataProcessingBehavior = GetDefaultArchivedDataProcessingBehavior();
+        }
         return state;
     }
 

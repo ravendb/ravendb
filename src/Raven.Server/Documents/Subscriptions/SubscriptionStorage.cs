@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -149,9 +150,9 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        protected override void EnsureValidArchivedBehaviorInSubscriptionState(ref SubscriptionState subscriptionState)
+        public override ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior()
         {
-            subscriptionState.ArchivedDataProcessingBehavior ??= _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior;
+            return _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior;
         }
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(ClusterOperationContext context, bool history, int start, int take)

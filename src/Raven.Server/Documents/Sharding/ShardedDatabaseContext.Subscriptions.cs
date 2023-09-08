@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Subscriptions;
+﻿using Raven.Client.Documents.DataArchival;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Sharding.Subscriptions;
@@ -65,9 +66,9 @@ public partial class ShardedDatabaseContext
             return DropSubscriptionConnections(subscriptionId, ex);
         }
 
-        protected override void EnsureValidArchivedBehaviorInSubscriptionState(ref SubscriptionState subscriptionState)
+        public override ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior()
         {
-            subscriptionState.ArchivedDataProcessingBehavior = HandleNullableArchivedDataProcessingBehavior(_context.DatabaseRecord, subscriptionState.ArchivedDataProcessingBehavior);
+            return _context.Configuration.Subscriptions.ArchivedDataProcessingBehavior;
         }
     }
 }

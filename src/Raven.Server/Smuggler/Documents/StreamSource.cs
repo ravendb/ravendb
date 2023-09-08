@@ -793,7 +793,7 @@ namespace Raven.Server.Smuggler.Documents
                         SubscriptionId = subscriptionId,
                         MentorNode = mentorNode,
                         NodeTag = nodeTag,
-                        ArchivedDataProcessingBehavior = AbstractSubscriptionStorage.HandleNullableArchivedDataProcessingBehavior(await GetDatabaseRecordAsync(), archivedDataProcessingBehavior),
+                        ArchivedDataProcessingBehavior = archivedDataProcessingBehavior,
                         LastBatchAckTime = lastBatchAckTime,
                         LastClientConnectionTime = lastClientConnectionTime,
                         Disabled = disabled
