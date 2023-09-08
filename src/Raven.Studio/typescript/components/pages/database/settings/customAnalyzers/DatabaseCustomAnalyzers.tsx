@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Col, Row, UncontrolledTooltip } from "reactstrap";
+import { Col, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -51,6 +51,8 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
         asyncGetDatabaseAnalyzers.status !== "success" ||
         (!isProfessionalOrAbove && databaseResultsCount === licenseDatabaseLimit);
 
+    const isButtonPopoverVisible = isCommunity && isDatabaseAdmin && isAddDisabled;
+
     return (
         <div className="content-margin">
             <Col xxl={12}>
@@ -58,13 +60,31 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                     <Col>
                         <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
                         {isDatabaseAdmin && (
-                            <a
-                                href={appUrl.forEditCustomAnalyzer(db)}
-                                className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                            <div id="newCustomAnalyzer" className="w-fit-content">
+                                <a
+                                    href={appUrl.forEditCustomAnalyzer(db)}
+                                    className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                                >
+                                    <Icon icon="plus" />
+                                    Add a custom analyzer
+                                </a>
+                            </div>
+                        )}
+                        {isButtonPopoverVisible && (
+                            <UncontrolledPopover
+                                trigger="hover"
+                                target="newCustomAnalyzer"
+                                placement="top"
+                                className="bs5"
                             >
-                                <Icon icon="plus" />
-                                Add a custom analyzer
-                            </a>
+                                <div className="p-3 text-center">
+                                    Database has reached the maximum number of Custom Analyzers allowed per database.
+                                    <br /> Delete unused analyzers or{" "}
+                                    <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                        upgrade your license
+                                    </a>
+                                </div>
+                            </UncontrolledPopover>
                         )}
                         <HrHeader>
                             Database custom analyzers

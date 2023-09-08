@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Col, Row, UncontrolledTooltip } from "reactstrap";
+import { Col, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -54,6 +54,8 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
         asyncGetDatabaseSorters.status !== "success" ||
         (!isProfessionalOrAbove && databaseResultsCount === licenseDatabaseLimit);
 
+    const isButtonPopoverVisible = isCommunity && isDatabaseAdmin && isAddDisabled;
+
     if (db.isSharded()) {
         return (
             <FeatureNotAvailable>
@@ -72,13 +74,31 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                     <Col>
                         <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
                         {isDatabaseAdmin && (
-                            <a
-                                href={appUrl.forEditCustomSorter(db)}
-                                className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                            <div id="newCustomSorter" className="w-fit-content">
+                                <a
+                                    href={appUrl.forEditCustomSorter(db)}
+                                    className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                                >
+                                    <Icon icon="plus" />
+                                    Add a custom sorter
+                                </a>
+                            </div>
+                        )}
+                        {isButtonPopoverVisible && (
+                            <UncontrolledPopover
+                                trigger="hover"
+                                target="newCustomSorter"
+                                placement="top"
+                                className="bs5"
                             >
-                                <Icon icon="plus" />
-                                Add a custom sorter
-                            </a>
+                                <div className="p-3 text-center">
+                                    Database has reached the maximum number of Custom Sorters allowed per database.
+                                    <br /> Delete unused sorters or{" "}
+                                    <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                        upgrade your license
+                                    </a>
+                                </div>
+                            </UncontrolledPopover>
                         )}
                         <HrHeader>
                             Database custom sorters

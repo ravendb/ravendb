@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Col, Row } from "reactstrap";
+import { Col, Row, UncontrolledPopover } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -26,19 +26,39 @@ export default function ServerWideCustomAnalyzers() {
     const isAddDisabled =
         asyncGetAnalyzers.status !== "success" || (!isProfessionalOrAbove && resultsCount === licenseLimit);
 
+    const isButtonPopoverVisible = isCommunity && isAddDisabled;
+
     return (
         <div className="content-margin">
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading title="Server-Wide Analyzers" icon="server-wide-custom-analyzers" />
-                        <a
-                            href={appUrl.forEditServerWideCustomAnalyzer()}
-                            className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
-                        >
-                            <Icon icon="plus" />
-                            Add a server-wide custom analyzer
-                        </a>
+                        <div id="newServerWideCustomAnalyzer" className="w-fit-content">
+                            <a
+                                href={appUrl.forEditServerWideCustomAnalyzer()}
+                                className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                            >
+                                <Icon icon="plus" />
+                                Add a server-wide custom analyzer
+                            </a>
+                        </div>
+                        {isButtonPopoverVisible && (
+                            <UncontrolledPopover
+                                trigger="hover"
+                                target="newServerWideCustomAnalyzer"
+                                placement="top"
+                                className="bs5"
+                            >
+                                <div className="p-3 text-center">
+                                    You&apos;ve reached the maximum number of Custom Analyzers allowed per cluster.
+                                    <br /> Delete unused analyzers or{" "}
+                                    <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                        upgrade your license
+                                    </a>
+                                </div>
+                            </UncontrolledPopover>
+                        )}
                         <HrHeader>
                             Server-wide custom analyzers
                             {!isProfessionalOrAbove && (
