@@ -11,19 +11,24 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof ClientGlobalConfiguration>;
 
-export const ClientConfiguration: ComponentStory<typeof ClientGlobalConfiguration> = () => {
+function commonInit() {
     const { manageServerService } = mockServices;
-
     manageServerService.withGetGlobalClientConfiguration();
+}
+
+export const ClientConfiguration: ComponentStory<typeof ClientGlobalConfiguration> = () => {
+    commonInit();
+
+    const { license } = mockStore;
+    license.with_Enterprise();
 
     return <ClientGlobalConfiguration />;
 };
 
 export const LicenseRestricted: ComponentStory<typeof ClientGlobalConfiguration> = () => {
-    const { manageServerService } = mockServices;
-    const { license } = mockStore;
+    commonInit();
 
-    manageServerService.withGetGlobalClientConfiguration();
+    const { license } = mockStore;
     license.with_Community();
 
     return <ClientGlobalConfiguration />;

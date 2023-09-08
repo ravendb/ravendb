@@ -15,10 +15,12 @@ export default {
 const db = DatabasesStubs.nonShardedClusterDatabase();
 
 function commonInit() {
-    const { collectionsTracker, accessManager } = mockStore;
+    const { collectionsTracker, accessManager, license } = mockStore;
     const { databasesService } = mockServices;
 
     accessManager.with_securityClearance("ValidUser");
+
+    license.with_Enterprise();
 
     collectionsTracker.with_Collections();
 
@@ -50,13 +52,18 @@ export function BelowDatabaseAdmin() {
 
 export function LicenseRestricted() {
     commonInit();
-    const { accessManager } = mockStore;
-    const { license } = mockStore;
+    const { accessManager, license } = mockStore;
 
     accessManager.with_databaseAccess({
         [db.name]: "DatabaseAdmin",
     });
+
     license.with_Community();
+
+    const { databasesService } = mockServices;
+    databasesService.withRevisionsConfiguration((x: any) => {
+        x.Default = null;
+    });
 
     return <DocumentRevisions db={db} />;
 }

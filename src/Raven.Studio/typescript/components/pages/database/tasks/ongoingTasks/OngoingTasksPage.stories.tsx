@@ -29,9 +29,12 @@ export default {
 } as ComponentMeta<typeof OngoingTasksPage>;
 
 function commonInit() {
-    const { accessManager } = mockStore;
+    const { accessManager, license } = mockStore;
     const { tasksService } = mockServices;
+
     accessManager.with_securityClearance("ClusterAdmin");
+
+    license.with_Enterprise();
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 

@@ -265,7 +265,7 @@ export function BackupsPage(props: BackupsPageProps) {
 
     const backups = tasks.tasks.filter((x) => x.shared.taskType === "Backup") as OngoingTaskPeriodicBackupInfo[];
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     return (
         <div className="flex-grow-1 flex-stretch-items">
@@ -356,7 +356,7 @@ export function BackupsPage(props: BackupsPageProps) {
                         <Icon icon="manage-ongoing-tasks" />
                         <span>
                             Periodic Backup ({backups.length}){" "}
-                            {licenseType === "Community" && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                            {!isProfessionalOrAbove && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                         </span>
                     </HrHeader>
                     {canReadWriteDatabase(database) && (

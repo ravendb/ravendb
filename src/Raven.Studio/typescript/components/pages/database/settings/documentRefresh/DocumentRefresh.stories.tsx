@@ -12,11 +12,18 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentRefresh>;
 
+function commonInit() {
+    const { databasesService } = mockServices;
+    databasesService.withRefreshConfiguration();
+}
+
 export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
     name: "Document Refresh",
     render: () => {
-        const { databasesService } = mockServices;
-        databasesService.withRefreshConfiguration();
+        commonInit();
+
+        const { license } = mockStore;
+        license.with_Enterprise();
 
         return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
@@ -24,9 +31,9 @@ export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
 
 export const LicenseRestricted: StoryObj<typeof DocumentRefresh> = {
     render: () => {
-        const { databasesService } = mockServices;
+        commonInit();
+
         const { license } = mockStore;
-        databasesService.withRefreshConfiguration();
         license.with_Community();
 
         return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;

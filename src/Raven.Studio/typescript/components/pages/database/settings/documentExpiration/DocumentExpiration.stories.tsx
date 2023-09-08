@@ -12,11 +12,18 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentExpiration>;
 
+function commonInit() {
+    const { databasesService } = mockServices;
+    databasesService.withExpirationConfiguration();
+}
+
 export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
     name: "Document Expiration",
     render: () => {
-        const { databasesService } = mockServices;
-        databasesService.withExpirationConfiguration();
+        commonInit();
+
+        const { license } = mockStore;
+        license.with_Enterprise();
 
         return <DocumentExpiration db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
@@ -24,9 +31,9 @@ export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
 
 export const LicenseRestricted: StoryObj<typeof DocumentExpiration> = {
     render: () => {
-        const { databasesService } = mockServices;
+        commonInit();
+
         const { license } = mockStore;
-        databasesService.withExpirationConfiguration();
         license.with_Community();
 
         return <DocumentExpiration db={DatabasesStubs.nonShardedClusterDatabase()} />;
