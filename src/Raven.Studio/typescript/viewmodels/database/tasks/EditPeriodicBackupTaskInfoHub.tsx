@@ -20,7 +20,7 @@ export function EditPeriodicBackupTaskInfoHub() {
                 <p>
                     Define an ongoing-task that will automatically create periodic backups for this database at the defined <strong>schedule</strong>.
                 </p>
-                <p>
+                <div>
                     Configuration options available:
                     <ul>
                         <li>Customize the backup type (Backup or Snapshot)</li>
@@ -29,14 +29,14 @@ export function EditPeriodicBackupTaskInfoHub() {
                         <li>Specify destinations, where the backup files will be stored</li>
                         <li>Opt for backup data encryption to enhance data security</li>
                     </ul>
-                </p>
-                <p>
+                </div>
+                <div>
                     In addition:
                     <ul>
                         <li>The task state can be disabled as needed</li>
                         <li>You can set a responsible node to handle this task</li>
                     </ul>
-                </p>
+                </div>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
                 <a href="https://ravendb.net/l/GMBYOH/latest" target="_blank">

@@ -62,9 +62,11 @@ export default function ServerWideCustomSorters() {
                             >
                                 <p>
                                     A <strong>Custom Sorter</strong> allows you to define how documents will be ordered
-                                    in the query results according to your specific requirements.
+                                    in the query results
+                                    <br />
+                                    according to your specific requirements.
                                 </p>
-                                <p>
+                                <div>
                                     <strong>In this view</strong>, you can add your own sorters:
                                     <ul className="margin-top-xxs">
                                         <li>
@@ -73,8 +75,8 @@ export default function ServerWideCustomSorters() {
                                         </li>
                                         <li>Note: custom sorters are not supported when querying Corax indexes.</li>
                                     </ul>
-                                </p>
-                                <p>
+                                </div>
+                                <div>
                                     Provide <code>C#</code> code in the editor view, or upload from file:
                                     <ul className="margin-top-xxs">
                                         <li>
@@ -89,7 +91,7 @@ export default function ServerWideCustomSorters() {
                                             statements.
                                         </li>
                                     </ul>
-                                </p>
+                                </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href="https://ravendb.net/l/LGUJH8/latest" target="_blank">

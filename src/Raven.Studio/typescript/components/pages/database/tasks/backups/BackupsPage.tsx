@@ -293,22 +293,22 @@ export function BackupsPage(props: BackupsPageProps) {
                                     <strong>Backups</strong> save your data at a specific point in time and allow you to
                                     restore your database to that point.
                                 </p>
-                                <p>
+                                <div>
                                     This view enables creating:
                                     <ul>
-                                        <li className="margin-bottom-xs margin-top-xs">
+                                        <li className="margin-top-xxs">
                                             <strong>Manual Backup</strong>
                                             <br />
                                             Create a one-time backup for this database.
                                         </li>
-                                        <li>
+                                        <li className="margin-top-xxs">
                                             <strong>Periodic Backups</strong>
                                             <br />
                                             Define an ongoing-task that will automatically create periodic backups for
                                             this database at the defined schedule.
                                         </li>
                                     </ul>
-                                </p>
+                                </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href="https://ravendb.net/l/GMBYOH/latest" target="_blank">

@@ -371,11 +371,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             description="Get additional info on this feature"
                             targetId="about-view"
                         >
-                            {/*<p>Manage all ongoing-tasks in the database from this view.</p>*/}
-
-                            <p>
+                            <div>
                                 <strong>Ongoing-tasks</strong> are work tasks assigned to the database.
-                                <ul className="margin-top-xs">
+                                <ul className="margin-top-xxs">
                                     <li>
                                         A few examples are: <br />
                                         Executing a periodic backup of the database, replicating to another RavenDB
@@ -387,11 +385,11 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         select from the list.
                                     </li>
                                 </ul>
-                            </p>
-                            <p>
+                            </div>
+                            <div>
                                 <strong>Running in the background</strong>, each ongoing task is handled by a designated
                                 node from the Database-Group nodes.
-                                <ul className="margin-top-xs">
+                                <ul className="margin-top-xxs">
                                     <li>
                                         For each task, you can specify which node will be responsible for the task and
                                         whether the cluster may assign a different node when that node is down.
@@ -400,7 +398,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         If not specified, the cluster will decide which node will handle the task.
                                     </li>
                                 </ul>
-                            </p>
+                            </div>
                             <hr />
                             <div className="small-label mb-2">useful links</div>
                             <a href="https://ravendb.net/l/K4ZTNA/latest" target="_blank">

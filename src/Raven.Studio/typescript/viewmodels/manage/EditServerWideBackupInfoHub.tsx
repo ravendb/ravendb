@@ -17,30 +17,30 @@ export function EditServerWideBackupInfoHub() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
-                <p>
+                <div>
                     Defining a <strong>Server-Wide backup task</strong> will create an ongoing periodic backup task for each database in your cluster.
-                    <ul className="margin-top-xs">
+                    <ul className="margin-top-xxs">
                         <li>You can select specific databases to exclude from the task.</li>
                         <li>The configurations set in the Server-Wide task will be applied to the corresponding ongoing backup task created per database.</li>
                     </ul>
-                </p>
-                <p>
+                </div>
+                <div>
                     Configuration options available:
-                    <ul className="margin-top-xs">
+                    <ul className="margin-top-xxs">
                         <li>Customize the backup type (Backup or Snapshot)</li>
                         <li>Select full and/or incremental backups</li>
                         <li>Set the backups retention period</li>
                         <li>Specify destinations, where the backup files will be stored</li>
                         <li>Opt for backup data encryption to enhance data security</li>
                     </ul>
-                </p>
-                <p>
+                </div>
+                <div>
                     In addition:
-                    <ul className="margin-top-xs">
+                    <ul className="margin-top-xxs">
                         <li>You can set a responsible node to handle this task.</li>
                         <li>Disabling this task will disable the corresponding tasks per database.</li>
                     </ul>
-                </p>
+                </div>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
                 <a href="https://ravendb.net/l/SXSM33/latest" target="_blank">

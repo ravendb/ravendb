@@ -318,14 +318,14 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                     Creating <strong>Document Revisions</strong> allows keeping track of changes made to
                                     a document over time.
                                 </p>
-                                <p>
+                                <div>
                                     A document revision will be created when:
                                     <ul>
                                         <li>Revisions are defined and enabled for the document&apos;s collection.</li>
                                         <li>The document has been modified.</li>
                                     </ul>
-                                </p>
-                                <p>
+                                </div>
+                                <div>
                                     Define the revisions configuration in this view:
                                     <ul>
                                         <li>
@@ -341,8 +341,8 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                             defaults.
                                         </li>
                                     </ul>
-                                </p>
-                                <p>
+                                </div>
+                                <div>
                                     This view also provides these options:
                                     <ul>
                                         <li>Revert all documents to a specific point in time.</li>
@@ -351,7 +351,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                             per collection.
                                         </li>
                                     </ul>
-                                </p>
+                                </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href="https://ravendb.net/l/OFVLX8/latest" target="_blank">
