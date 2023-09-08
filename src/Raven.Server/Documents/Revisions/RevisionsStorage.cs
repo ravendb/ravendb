@@ -323,17 +323,6 @@ namespace Raven.Server.Documents.Revisions
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
             using (Slice.From(context.Allocator, changeVector.Version, out Slice changeVectorSlice))
             {
-                if (flags.Contain(DocumentFlags.FromReplication) == false &&
-                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
-                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) == false &&
-                    changeVectorSlice.Size > DocumentIdWorker.MaxIdSize)
-                {
-                    // RavenDB-21047 
-                    // throw if the change vector length exceeds the maximum id length (512 bytes)
-                    // we allow it if the operation originated from smuggler/replication to avoid inconsistent data or broken replication
-                    DocumentIdWorker.ThrowDocumentIdTooBig(changeVector);
-                }
-
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);
 
