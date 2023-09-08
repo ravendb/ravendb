@@ -20,11 +20,11 @@ export default function ServerWideCustomSorters() {
     const { appUrl } = useAppUrls();
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
-    const communityLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
+    const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
     const isAddDisabled =
-        asyncGetSorters.status !== "success" || (!isProfessionalOrAbove && resultsCount === communityLimit);
+        asyncGetSorters.status !== "success" || (!isProfessionalOrAbove && resultsCount === licenseLimit);
 
     return (
         <div className="content-margin">
@@ -42,7 +42,7 @@ export default function ServerWideCustomSorters() {
                         <HrHeader>
                             Server-wide custom sorters
                             {!isProfessionalOrAbove && (
-                                <CounterBadge className="ms-2" count={resultsCount} limit={communityLimit} />
+                                <CounterBadge className="ms-2" count={resultsCount} limit={licenseLimit} />
                             )}
                         </HrHeader>
                         <SortersList

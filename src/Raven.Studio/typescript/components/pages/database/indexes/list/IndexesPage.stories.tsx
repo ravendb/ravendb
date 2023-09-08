@@ -160,7 +160,7 @@ export const FaultyIndexSharded: ComponentStory<typeof IndexesPage> = () => {
     return <IndexesPage db={db} />;
 };
 
-export const CommunityLimits: ComponentStory<typeof IndexesPage> = () => {
+export const LicenseLimits: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.shardedDatabase();
     const { license } = mockStore;
 

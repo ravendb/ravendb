@@ -43,9 +43,11 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     );
 
     const getDisableReasonForSharded = (): string => {
-        if (isSharded) {
-            return "Not supported in sharded databases";
+        if (!isSharded) {
+            return null;
         }
+
+        return "Not supported in sharded databases";
     };
 
     const isSubscriptionDisabled =
