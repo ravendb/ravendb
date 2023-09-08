@@ -86,7 +86,17 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public int Version => GetValue<int?>("version") ?? -1;
+        public object Version
+        {
+            get
+            {
+                var version = GetValue<string>("version");
+                if (version != null)
+                    return version;
+
+                return GetValue<int>("version");
+            }
+        }
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
@@ -196,7 +206,7 @@ namespace Raven.Server.Commercial
                 [nameof(ErrorMessage)] = ErrorMessage,
 
                 [nameof(Type)] = Type.ToString(),
-                [nameof(Version)] = Version.ToString(),
+                [nameof(Version)] = Version,
                 [nameof(Expiration)] = Expiration,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxCores)] = MaxCores,
