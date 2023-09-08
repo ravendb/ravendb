@@ -16,20 +16,20 @@ export function EditServerWideExternalReplicationInfoHub() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
-                <p>
+                <div>
                     Defining a <strong>Server-Wide External-Replication task</strong> will create an ongoing External-Replication task for each database in your cluster.
                     <ul className="margin-top-xs">
                         <li>You can select specific databases to exclude from the task.</li>
                         <li>The configurations set in the Server-Wide task will be applied to the corresponding ongoing task created per database.</li>
                     </ul>
-                </p>
-                <p>
+                </div>
+                <div className="margin-top-sm">
                     The <strong>connection string</strong> used in each corresponding database task will be composed of:
                     <ul className="margin-top-xs">
                         <li>The discovery URLs provided here.</li>
                         <li>The target database name will be the individual source database name.</li>
                     </ul>
-                </p>
+                </div>
             </AccordionItemWrapper>
             {licenseType === "Community" && (
                 <AccordionLicenseNotIncluded

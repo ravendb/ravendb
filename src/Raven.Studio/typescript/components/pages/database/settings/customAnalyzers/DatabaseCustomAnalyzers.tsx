@@ -134,7 +134,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                     When querying an index, these terms are used to define the search criteria and
                                     filter query results.
                                 </p>
-                                <p>
+                                <div>
                                     <strong>In this view</strong>, you can add your own analyzers in addition to the
                                     existing analyzers that come with RavenDB.
                                     <ul>
@@ -147,8 +147,8 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                         </li>
                                         <li>Note: custom analyzers are not supported by Corax indexes.</li>
                                     </ul>
-                                </p>
-                                <p>
+                                </div>
+                                <div>
                                     Provide <code>C#</code> code in the editor view, or upload from file.
                                     <ul>
                                         <li>
@@ -163,7 +163,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                             statements.
                                         </li>
                                     </ul>
-                                </p>
+                                </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href="https://ravendb.net/l/VWCQPI/latest" target="_blank">

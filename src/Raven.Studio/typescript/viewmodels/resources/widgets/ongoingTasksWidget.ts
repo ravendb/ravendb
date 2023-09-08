@@ -260,6 +260,10 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "KafkaQueueEtl";
             case "RabbitMqEtlCount":
                 return "RabbitQueueEtl";
+            case "KafkaSinkCount":
+                return "KafkaQueueSink";
+            case "RabbitMqSinkCount":
+                return "RabbitQueueSink";
             case "PeriodicBackupCount":
                 return "Backup";
             case "SubscriptionCount":

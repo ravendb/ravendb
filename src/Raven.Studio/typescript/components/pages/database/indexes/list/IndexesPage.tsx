@@ -249,23 +249,20 @@ export function IndexesPage(props: IndexesPageProps) {
                                         <br />
                                         The indexes are grouped based on their associated collections.
                                     </p>
-                                    <p>
-                                        <ul>
-                                            <li>
-                                                <strong>Detailed information</strong> for each index is provided such
-                                                as:
-                                                <br />
-                                                the index type and data source, its current state, staleness status, the
-                                                number of index-entries, etc.
-                                            </li>
-                                            <li className="margin-top-xs">
-                                                <strong>Various actions</strong> can be performed such as:
-                                                <br />
-                                                create a new index, modify existing, delete, restart, disable or pause
-                                                indexing, set index priority, and more.
-                                            </li>
-                                        </ul>
-                                    </p>
+                                    <ul>
+                                        <li>
+                                            <strong>Detailed information</strong> for each index is provided such as:
+                                            <br />
+                                            the index type and data source, its current state, staleness status, the
+                                            number of index-entries, etc.
+                                        </li>
+                                        <li className="margin-top-xs">
+                                            <strong>Various actions</strong> can be performed such as:
+                                            <br />
+                                            create a new index, modify existing, delete, restart, disable or pause
+                                            indexing, set index priority, and more.
+                                        </li>
+                                    </ul>
                                     <hr />
                                     <div className="small-label mb-2">useful links</div>
                                     <a href="https://ravendb.net/l/8VWNHJ/latest" target="_blank">

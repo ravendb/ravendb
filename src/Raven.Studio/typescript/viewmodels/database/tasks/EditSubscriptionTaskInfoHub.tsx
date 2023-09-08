@@ -30,12 +30,10 @@ export function EditSubscriptionTaskInfoHub() {
                     Documents are sent to the client in <strong>batches</strong>.<br />
                     The client processes a batch and receives the next one only after acknowledging the batch was processed.
                 </p>
-                <p>
-                    <ul>
-                        <li>The <strong>starting point</strong> from where to send the matching documents can be configured.</li>
-                        <li>You can <strong>test the subscription</strong> in this view to preview sample document results that will be sent.</li>
-                    </ul>
-                </p>
+                <ul>
+                    <li>The <strong>starting point</strong> from where to send the matching documents can be configured.</li>
+                    <li>You can <strong>test the subscription</strong> in this view to preview sample document results that will be sent.</li>
+                </ul>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
                 <a href="https://ravendb.net/l/I5TMCK/latest" target="_blank">
