@@ -93,7 +93,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const asyncEnforceRevisionsConfiguration = useAsyncCallback(async () => {
         const dto = await databasesService.enforceRevisionsConfiguration(db);
 
-        shardingTodo("ANY", "openDetailsForOperationById() does not work for sharded db");
         notificationCenter.instance.openDetailsForOperationById(db, dto.OperationId);
     });
 

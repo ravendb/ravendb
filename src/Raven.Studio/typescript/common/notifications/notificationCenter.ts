@@ -504,7 +504,8 @@ class notificationCenter {
                 this.openDetails(this.getOperationById(db, operationId));
             });
 
-            this.monitorOperation(db, operationId, () => showDialog());
+            this.monitorOperation(db, operationId, showDialog)
+                .always(showDialog);
         }
     }
 
