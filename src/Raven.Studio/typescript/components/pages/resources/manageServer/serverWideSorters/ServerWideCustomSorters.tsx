@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Col, Row } from "reactstrap";
+import { Col, Row, UncontrolledPopover } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -25,19 +25,39 @@ export default function ServerWideCustomSorters() {
     const resultsCount = asyncGetSorters.result?.length ?? null;
     const isAddDisabled = asyncGetSorters.status !== "success" || (isCommunity && resultsCount === communityLimit);
 
+    const isButtonPopoverVisible = isCommunity && isAddDisabled;
+
     return (
         <div className="content-margin">
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading title="Server-Wide Sorters" icon="server-wide-custom-sorters" />
-                        <a
-                            href={appUrl.forEditServerWideCustomSorter()}
-                            className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
-                        >
-                            <Icon icon="plus" />
-                            Add a server-wide custom sorter
-                        </a>
+                        <div id="newServerWideCustomSorter" className="w-fit-content">
+                            <a
+                                href={appUrl.forEditServerWideCustomSorter()}
+                                className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                            >
+                                <Icon icon="plus" />
+                                Add a server-wide custom sorter
+                            </a>
+                        </div>
+                        {isButtonPopoverVisible && (
+                            <UncontrolledPopover
+                                trigger="hover"
+                                target="newServerWideCustomSorter"
+                                placement="top"
+                                className="bs5"
+                            >
+                                <div className="p-3 text-center">
+                                    You&apos;ve reached the maximum number of Custom Sorters allowed per cluster.
+                                    <br /> Delete unused sorters or{" "}
+                                    <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                        upgrade your license
+                                    </a>
+                                </div>
+                            </UncontrolledPopover>
+                        )}
                         <HrHeader>
                             Server-wide custom sorters
                             {isCommunity && (
