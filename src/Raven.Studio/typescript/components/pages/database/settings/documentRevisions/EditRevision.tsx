@@ -95,10 +95,10 @@ export default function EditRevision(props: EditRevisionProps) {
         genUtils.timeSpanToSeconds(originalConfig.MinimumRevisionAgeToKeep) - formValues.minimumRevisionAgeToKeep >
             revisionsByAgeDelta;
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     const disableSubmitButton =
-        (licenseType === "Community" && formValues.minimumRevisionAgeToKeep > revisionsByAgeCommunityLimit) ||
+        (!isProfessionalOrAbove && formValues.minimumRevisionAgeToKeep > revisionsByAgeCommunityLimit) ||
         formValues.minimumRevisionsToKeep > revisionsToKeepCommunityLimit;
 
     return (
@@ -134,7 +134,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                 />
                                 {isRevisionsToKeepLimitWarning && <LimitWarning limit={revisionsDelta} />}
                             </InputGroup>
-                            {licenseType === "Community" && formValues.minimumRevisionsToKeep > 2 ? (
+                            {!isProfessionalOrAbove && formValues.minimumRevisionsToKeep > 2 ? (
                                 <Alert color="warning" className="mb-2">
                                     <Icon icon="warning" />
                                     Your Community license allows max 2 revisions to keep
@@ -153,7 +153,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                 showDays
                                 showSeconds
                             />
-                            {licenseType === "Community" &&
+                            {!isProfessionalOrAbove &&
                             formValues.minimumRevisionAgeToKeep > revisionsByAgeCommunityLimit ? (
                                 <Alert color="warning" className="my-2">
                                     <Icon icon="warning" />

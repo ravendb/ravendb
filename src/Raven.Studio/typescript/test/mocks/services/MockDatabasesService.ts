@@ -75,7 +75,7 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getTombstonesState, dto, DatabasesStubs.tombstonesState());
     }
 
-    withRevisionsConfiguration(dto?: RevisionsConfiguration) {
+    withRevisionsConfiguration(dto?: MockedValue<RevisionsConfiguration>) {
         return this.mockResolvedValue(
             this.mocks.getRevisionsConfiguration,
             dto,

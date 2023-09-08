@@ -11,8 +11,6 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
-const notSupportedInShardedDb = "Not supported in sharded databases";
-
 interface OngoingTaskAddModalProps {
     db: database;
     subscriptionsDatabaseCount: number;
@@ -24,7 +22,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
     const isSharded = db.isSharded();
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const { appUrl } = useAppUrls();
 
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;
@@ -44,32 +42,14 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
         subscriptionsDatabaseLimit
     );
 
-    const isNotEnterprise = licenseType !== "Enterprise";
-    const isNotProfessionalAndEnterprise = licenseType !== "Professional" && licenseType !== "Enterprise";
-
     const getDisableReasonForSharded = (): string => {
         if (isSharded) {
-            return notSupportedInShardedDb;
-        }
-    };
-
-    const getDisableReasonForShardedBelowEnterprise = (): string => {
-        if (isSharded) {
-            return notSupportedInShardedDb;
-        }
-        if (licenseType !== "Enterprise") {
-            return "Feature available in Enterprise license";
-        }
-    };
-
-    const getDisableReasonForBelowProfessional = (): string => {
-        if (licenseType !== "Professional" && licenseType !== "Enterprise") {
-            return "Feature available in Professional and Enterprise license";
+            return "Not supported in sharded databases";
         }
     };
 
     const isSubscriptionDisabled =
-        licenseType === "Community" &&
+        !isProfessionalOrAbove &&
         (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
 
     const getSubscriptionDisableReason = (): string => {
@@ -109,16 +89,12 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         href={appUrl.forEditExternalReplication(db)}
                         className="external-replication"
                         target="ExternalReplication"
-                        disabled={isNotProfessionalAndEnterprise}
-                        disableReason={getDisableReasonForBelowProfessional()}
                     >
                         <Icon icon="external-replication" />
                         <h4 className="mt-1 mb-0">External Replication</h4>
-                        {isNotProfessionalAndEnterprise && (
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Professional +
-                            </Badge>
-                        )}
+                        <Badge className="about-view-title-badge mt-2" color="faded-primary">
+                            Professional +
+                        </Badge>
                     </TaskItem>
 
                     <TaskItem
@@ -217,16 +193,12 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         href={appUrl.forEditKafkaSink(db)}
                         className="kafka-sink"
                         target="KafkaSink"
-                        disabled={isSharded || isNotEnterprise}
-                        disableReason={getDisableReasonForShardedBelowEnterprise()}
                     >
                         <Icon icon="kafka-sink" />
                         <h4 className="mt-1 mb-0">Kafka Sink</h4>
-                        {isNotEnterprise && (
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Enterprise
-                            </Badge>
-                        )}
+                        <Badge className="about-view-title-badge mt-2" color="faded-primary">
+                            Enterprise
+                        </Badge>
                     </TaskItem>
 
                     <TaskItem
@@ -234,16 +206,12 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         href={appUrl.forEditRabbitMqSink(db)}
                         className="rabbitmq-sink"
                         target="RabbitMqSink"
-                        disabled={isSharded || isNotEnterprise}
-                        disableReason={getDisableReasonForShardedBelowEnterprise()}
                     >
                         <Icon icon="rabbitmq-sink" />
                         <h4 className="mt-1 mb-0">RabbitMQ Sink</h4>
-                        {isNotEnterprise && (
-                            <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                                Enterprise
-                            </Badge>
-                        )}
+                        <Badge className="about-view-title-badge mt-2" color="faded-primary">
+                            Enterprise
+                        </Badge>
                     </TaskItem>
                 </Row>
                 <HrHeader>Backups & Subscriptions</HrHeader>
@@ -268,7 +236,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="subscription" />
                         <h4 className="mt-1 mb-0">Subscription</h4>
-                        {licenseType === "Community" && (
+                        {!isProfessionalOrAbove && (
                             <CounterBadge
                                 className="mt-2"
                                 count={subscriptionsDatabaseCount}
@@ -314,7 +282,7 @@ function TaskItem(props: TaskItemProps) {
                     {children}
                 </a>
             )}
-            {disabled && disableReason && <UncontrolledTooltip target={target}>{disableReason}</UncontrolledTooltip>}
+            {disableReason && <UncontrolledTooltip target={target}>{disableReason}</UncontrolledTooltip>}
         </Col>
     );
 }
