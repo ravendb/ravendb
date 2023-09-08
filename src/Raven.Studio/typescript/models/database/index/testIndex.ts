@@ -18,6 +18,8 @@ import aceEditorBindingHandler from "common/bindingHelpers/aceEditorBindingHandl
 type testTabName = "queryResults" | "indexEntries" | "mapResults" | "reduceResults";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
+const unnamedIndexQuery = `from index "<TestIndexName>"`;
+
 class testIndex {
     spinners = {
         testing: ko.observable<boolean>(false)
@@ -28,9 +30,7 @@ class testIndex {
 
     testTimeLimit = ko.observable<number>();
     testScanLimit = ko.observable<number>(10_000);
-
-    specifyQuery = ko.observable<boolean>(false);
-    query = ko.observable<string>(`from index "<TestIndexName>"`);
+    query = ko.observable<string>(unnamedIndexQuery);
 
     gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
@@ -58,6 +58,10 @@ class testIndex {
         this.dbProvider = dbProvider;
         this.indexDefinitionProvider = indexDefinitionProvider;
 
+        if (indexDefinitionProvider().name()) {
+            this.query(`from index "${indexDefinitionProvider().name()}"`)
+        }
+
         aceEditorBindingHandler.install();
 
         this.languageService = new rqlLanguageService(dbProvider(), ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
@@ -75,7 +79,7 @@ class testIndex {
         return {
             IndexDefinition: this.indexDefinitionProvider().toDto(),
             WaitForNonStaleResultsTimeoutInSec: this.testTimeLimit() ?? 15,
-            Query: this.specifyQuery() ? this.query() : null,
+            Query: this.query(),
             QueryParameters: null,
             MaxDocumentsToProcess: this.testScanLimit() ?? 10_000
         }

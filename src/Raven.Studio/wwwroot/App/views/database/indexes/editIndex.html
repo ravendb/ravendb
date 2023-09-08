@@ -512,16 +512,12 @@
                         <div>
                             <div class="flex-horizontal margin-bottom-sm">
                                 <h3 class="nomargin padding-left-sm">Query</h3>
-                                <div class="toggle padding-left-md" data-bind="with: testIndex">
-                                    <input id="toggleEncryption" type="checkbox" data-bind="checked: specifyQuery">
-                                    <label for="toggleEncryption" class="text-warning">Override</label>
-                                </div>
                                 <div class="flex-grow"></div>
                                 <button class="btn btn-link margin-right" data-bind="click: toggleTestResults"><i class="icon-chevron-down"></i></button>
                             </div>
                             <div data-bind="with: testIndex"> 
                                 <pre class="form-control query-source" placeholder="Enter transform script"
-                                        data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: languageService.complete, readOnly: !specifyQuery()}, validationOptions: { errorsAsTitle: false }, validationElement: query, css: {'disabled': !specifyQuery()}" style="height: 160px;">
+                                        data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: languageService.complete}, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
                                 </pre>
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
                                     <div class="help-block" data-bind="validationMessage: query"></div>
