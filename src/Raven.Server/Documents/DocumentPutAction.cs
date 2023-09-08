@@ -130,10 +130,7 @@ namespace Raven.Server.Documents
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
                 
-                var table = context.Transaction.InnerTransaction.OpenTable(
-                    (newFlags & DocumentFlags.Archived) == DocumentFlags.Archived
-                        ? _documentDatabase.DocumentsStorage.CompressedDocsSchema
-                        : _documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
+                var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);
                 if (knownNewId == false)
