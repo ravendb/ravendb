@@ -20,11 +20,11 @@ export default function ServerWideCustomAnalyzers() {
     const { appUrl } = useAppUrls();
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
-    const communityLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
+    const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
     const isAddDisabled =
-        asyncGetAnalyzers.status !== "success" || (!isProfessionalOrAbove && resultsCount === communityLimit);
+        asyncGetAnalyzers.status !== "success" || (!isProfessionalOrAbove && resultsCount === licenseLimit);
 
     return (
         <div className="content-margin">
@@ -42,7 +42,7 @@ export default function ServerWideCustomAnalyzers() {
                         <HrHeader>
                             Server-wide custom analyzers
                             {!isProfessionalOrAbove && (
-                                <CounterBadge className="ms-2" count={resultsCount} limit={communityLimit} />
+                                <CounterBadge className="ms-2" count={resultsCount} limit={licenseLimit} />
                             )}
                         </HrHeader>
                         <AnalyzersList

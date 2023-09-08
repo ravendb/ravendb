@@ -41,17 +41,15 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
-    const communityClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
-    const communityDatabaseLimit = useAppSelector(
-        licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerDatabase")
-    );
+    const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
+    const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerDatabase"));
 
     const databaseResultsCount = asyncGetDatabaseAnalyzers.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideAnalyzers.result?.length ?? null;
 
     const isAddDisabled =
         asyncGetDatabaseAnalyzers.status !== "success" ||
-        (!isProfessionalOrAbove && databaseResultsCount === communityDatabaseLimit);
+        (!isProfessionalOrAbove && databaseResultsCount === licenseDatabaseLimit);
 
     return (
         <div className="content-margin">
@@ -74,7 +72,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 <CounterBadge
                                     className="ms-2"
                                     count={databaseResultsCount}
-                                    limit={communityDatabaseLimit}
+                                    limit={licenseDatabaseLimit}
                                 />
                             )}
                         </HrHeader>
@@ -105,7 +103,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 <CounterBadge
                                     className="ms-2"
                                     count={serverWideResultsCount}
-                                    limit={communityClusterLimit}
+                                    limit={licenseClusterLimit}
                                 />
                             )}
                         </HrHeader>

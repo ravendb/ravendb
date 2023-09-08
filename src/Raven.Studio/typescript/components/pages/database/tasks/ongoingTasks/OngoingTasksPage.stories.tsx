@@ -141,7 +141,7 @@ export const SubscriptionTemplate = (args: {
     return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
 };
 
-export const SubscriptionsWithCommunityLimits = () => {
+export const SubscriptionsWithLicenseLimits = () => {
     commonInit();
 
     const { license } = mockStore;

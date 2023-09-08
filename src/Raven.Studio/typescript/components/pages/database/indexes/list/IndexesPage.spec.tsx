@@ -4,8 +4,13 @@ import { composeStories } from "@storybook/testing-react";
 
 import * as stories from "./IndexesPage.stories";
 
-const { EmptyView, SampleDataCluster, FaultyIndexSharded, FaultyIndexSingleNode, CommunityLimits } =
-    composeStories(stories);
+const {
+    EmptyView,
+    SampleDataCluster,
+    FaultyIndexSharded,
+    FaultyIndexSingleNode,
+    LicenseLimits: CommunityLimits,
+} = composeStories(stories);
 
 describe("IndexesPage", function () {
     it("can render empty view", async () => {

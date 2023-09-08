@@ -44,15 +44,15 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
-    const communityClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
-    const communityDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
+    const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
+    const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
 
     const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideSorters.result?.length ?? null;
 
     const isAddDisabled =
         asyncGetDatabaseSorters.status !== "success" ||
-        (!isProfessionalOrAbove && databaseResultsCount === communityDatabaseLimit);
+        (!isProfessionalOrAbove && databaseResultsCount === licenseDatabaseLimit);
 
     if (db.isSharded()) {
         return (
@@ -86,7 +86,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 <CounterBadge
                                     className="ms-2"
                                     count={databaseResultsCount}
-                                    limit={communityDatabaseLimit}
+                                    limit={licenseDatabaseLimit}
                                 />
                             )}
                         </HrHeader>
@@ -113,7 +113,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 <CounterBadge
                                     className="ms-2"
                                     count={serverWideResultsCount}
-                                    limit={communityClusterLimit}
+                                    limit={licenseClusterLimit}
                                 />
                             )}
                         </HrHeader>
