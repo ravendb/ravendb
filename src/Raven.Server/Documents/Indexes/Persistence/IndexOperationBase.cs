@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
@@ -56,48 +56,26 @@ public abstract class IndexOperationBase : IDisposable
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Issuing query on index {_indexName} for: {metadata.Query}");
 
-            // RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
+            IDisposable releaseServerContext = null;
+            IDisposable closeServerTransaction = null;
+            TransactionOperationContext serverContext = null;
+
             try
             {
-                //_persistence._a
-                //searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
-                //searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
-                //{
-                //    Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.PublicName, query.Query, currentAnalyzer);
-                //    if (newAnalyzer != currentAnalyzer)
-                //    {
-                //        DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
-                //    }
-                //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
-                //});
-
-                IDisposable releaseServerContext = null;
-                IDisposable closeServerTransaction = null;
-                TransactionOperationContext serverContext = null;
-
-                try
+                if (metadata.HasCmpXchg)
                 {
-                    if (metadata.HasCmpXchg)
-                    {
-                        releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
-                        closeServerTransaction = serverContext.OpenReadTransaction();
-                    }
+                    releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
+                    closeServerTransaction = serverContext.OpenReadTransaction();
+                }
 
-                    using (closeServerTransaction)
-                        documentQuery = LuceneQueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, _index, parameters, analyzer, factories);
-                }
-                finally
-                {
-                    releaseServerContext?.Dispose();
-                }
+                using (closeServerTransaction)
+                    documentQuery = LuceneQueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, _index, parameters, analyzer, factories);
             }
             finally
             {
-                //DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
+                releaseServerContext?.Dispose();
             }
         }
-
-        //var afterTriggers = ApplyIndexTriggers(documentQuery);
 
         return documentQuery;
     }

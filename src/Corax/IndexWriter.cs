@@ -617,7 +617,6 @@ namespace Corax
             private int _termPerEntryIndex;
             public bool Active;
             private int _buildingList;
-            private Tree _fieldsTree;
 
             public long EntryId => _entryId;
 
@@ -932,8 +931,6 @@ namespace Corax
             {
                 ref var entryTerms = ref _parent.GetEntryTerms(_termPerEntryIndex);
 
-                _fieldsTree ??= _parent._transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-                
                 _parent.InitializeFieldRootPage(field);
                 
                 var recordedTerm = new RecordedTerm
