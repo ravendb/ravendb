@@ -318,6 +318,7 @@ namespace Raven.Client.Documents.Indexes
                 DeploymentMode = DeploymentMode,
                 CompoundFieldsStrings = CompoundFieldsStrings,
                 CompoundFields = CompoundFields,
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
             }.ToIndexDefinition(Conventions);
 
             return indexDefinition;

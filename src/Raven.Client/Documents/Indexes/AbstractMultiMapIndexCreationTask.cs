@@ -97,7 +97,8 @@ namespace Raven.Client.Documents.Indexes
                 State = State,
                 DeploymentMode = DeploymentMode,
                 CompoundFields = CompoundFields,
-                CompoundFieldsStrings = CompoundFieldsStrings
+                CompoundFieldsStrings = CompoundFieldsStrings,
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
             }.ToIndexDefinition(Conventions, validateMap: false);
 
             foreach (var map in _maps.Select(generateMap => generateMap()))

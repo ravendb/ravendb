@@ -1315,4 +1315,67 @@ User: counter.DocumentId
         }
     }
     
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task CanIndexOnlyArchivedDocuments_IndexBuilder(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            // Spin up the index
+            const string indexName = "BuilderMapIndex";
+            var indexDefinition = new IndexDefinitionBuilder<Company, Company>
+            {
+                Map = companies => from company in companies where company.Name == "Company Name" select new {company.Name},
+            }.ToIndexDefinition(store.Conventions);
+            indexDefinition.Name = indexName;
+            indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly;
+            store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
+            await Indexes.WaitForIndexingAsync(store);
+            
+            
+            // Insert document with archive time before activating the archival
+            var company = new Company {Name = "Company Name"};
+            var retires = SystemTime.UtcNow.AddMinutes(5);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                var metadata = session.Advanced.GetMetadataFor(company);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await session.SaveChangesAsync();
+            }
+
+            // Make sure that the company is skipped while indexing
+            using (var session = store.OpenAsyncSession())
+            {
+                await Indexes.WaitForIndexingAsync(store);
+                var companies = await session.Query<Company>(indexName).ToListAsync();
+                Assert.Equal(0, companies.Count);
+            }
+
+            // Activate the archival
+            await SetupDataArchival(store);
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var archivedCompany = await session.LoadAsync<Company>(company.Id);
+                var metadata = session.Advanced.GetMetadataFor(archivedCompany);
+                Assert.DoesNotContain(Constants.Documents.Metadata.ArchiveAt, metadata.Keys);
+                Assert.Contains(Constants.Documents.Metadata.Collection, metadata.Keys);
+                Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
+                Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
+                
+                await Indexes.WaitForIndexingAsync(store);
+                // Make sure that the company is not skipped anymore while indexing
+                var companies = await session.Query<Company>(indexName).ToListAsync();
+                Assert.Equal(1, companies.Count);
+            }
+        }
+    }
+    
+    
 }

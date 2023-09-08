@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Extensions;
@@ -418,6 +419,7 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         /// <value>The map.</value>
         public Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
 
         public IndexDefinitionBuilder(string indexName = null) : base(indexName)
         {
@@ -428,7 +430,9 @@ namespace Raven.Client.Documents.Indexes
             if (Map == null && validateMap)
                 throw new InvalidOperationException(string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", _indexName));
 
-            return base.ToIndexDefinition(conventions, validateMap);
+            var definition = base.ToIndexDefinition(conventions, validateMap);
+            definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
+            return definition;
         }
 
         protected override void ToIndexDefinition(IndexDefinition indexDefinition, DocumentConventions conventions)
@@ -445,6 +449,7 @@ namespace Raven.Client.Documents.Indexes
                     translateIdentityProperty: true);
 
             indexDefinition.Maps.Add(map);
+            indexDefinition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
         }
 
         private string GetQuerySource(DocumentConventions conventions)
