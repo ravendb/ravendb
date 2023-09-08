@@ -487,10 +487,12 @@ namespace Raven.Server.Documents.Subscriptions
 #pragma warning disable CS0618
                 var subscription = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseName, name);
 #pragma warning restore CS0618
-                
-                subscription.ArchivedDataProcessingBehavior =
-                    AbstractSubscriptionStorage.HandleNullableArchivedDataProcessingBehavior(ServerStore.Cluster.ReadDatabase(context, DatabaseName),
-                        subscription.ArchivedDataProcessingBehavior);
+
+                if (subscription.ArchivedDataProcessingBehavior is null)
+                {
+                    // from 5.x version
+                    subscription.ArchivedDataProcessingBehavior = _subscriptions.GetDefaultArchivedDataProcessingBehavior();  
+                }
 
                 var whoseTaskIsIt = _subscriptions.GetSubscriptionResponsibleNode(context, subscription);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(ServerStore.NodeTag))
