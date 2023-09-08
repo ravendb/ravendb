@@ -40,7 +40,6 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const frequencyLimit = 129600;
 
-    // TODO kalczur check
     useEffect(() => {
         if (!formValues.isRefreshFrequencyEnabled && formValues.refreshFrequency !== null) {
             setValue("refreshFrequency", null, { shouldValidate: true });
@@ -48,15 +47,11 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
         if (!formValues.isDocumentRefreshEnabled && formValues.isRefreshFrequencyEnabled) {
             setValue("isRefreshFrequencyEnabled", false, { shouldValidate: true });
         }
-        if (!isProfessionalOrAbove && !formValues.isRefreshFrequencyEnabled) {
-            setValue("refreshFrequency", null, { shouldValidate: true });
-        }
     }, [
         formValues.isDocumentRefreshEnabled,
         formValues.isRefreshFrequencyEnabled,
         formValues.refreshFrequency,
         setValue,
-        isProfessionalOrAbove,
     ]);
 
     const onSave: SubmitHandler<DocumentRefreshFormData> = async (formData) => {
