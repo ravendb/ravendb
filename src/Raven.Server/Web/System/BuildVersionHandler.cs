@@ -17,7 +17,6 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Web.System
 {
@@ -91,7 +90,8 @@ namespace Raven.Server.Web.System
                     {
                         [nameof(LatestVersionCheck.VersionInfo.Version)] = versionUpdatesInfo?.Version,
                         [nameof(LatestVersionCheck.VersionInfo.PublishedAt)] = versionUpdatesInfo?.PublishedAt,
-                        [nameof(LatestVersionCheck.VersionInfo.BuildNumber)] = versionUpdatesInfo?.BuildNumber
+                        [nameof(LatestVersionCheck.VersionInfo.BuildNumber)] = versionUpdatesInfo?.BuildNumber,
+                        [nameof(LatestVersionCheck.VersionInfo.LatestVersion)] = versionUpdatesInfo?.LatestVersion?.ToJson()
                     });
                 }
             }

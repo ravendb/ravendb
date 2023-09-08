@@ -160,6 +160,8 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
             public string UpdateSeverity { get; set; }
 
+            public LatestVersion LatestVersion { get; set; }
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue(GetType())
@@ -168,7 +170,24 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     [nameof(BuildNumber)] = BuildNumber,
                     [nameof(BuildType)] = BuildType,
                     [nameof(PublishedAt)] = PublishedAt,
-                    [nameof(UpdateSeverity)] = UpdateSeverity
+                    [nameof(UpdateSeverity)] = UpdateSeverity,
+                    [nameof(LatestVersion)] = LatestVersion.ToJson()
+                };
+            }
+        }
+
+        public class LatestVersion
+        {
+            public string Version { get; set; }
+
+            public string CanUpgrade { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue(GetType())
+                {
+                    [nameof(Version)] = Version,
+                    [nameof(CanUpgrade)] = CanUpgrade
                 };
             }
         }
