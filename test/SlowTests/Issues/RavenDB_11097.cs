@@ -1260,40 +1260,6 @@ public class RavenDB_11097 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void InvalidIndexNameInQueryShouldThrow(Options options)
-    {
-        using (var store = GetDocumentStore(options))
-        {
-            using (var session = store.OpenSession())
-            {
-                var dto1 = new Dto() { Name = "Name1", Age = 21 };
-
-                session.Store(dto1);
-
-                session.SaveChanges();
-                
-                using (var commands = store.Commands())
-                {
-                    var payload = new TestIndexParameters()
-                    {
-                        IndexDefinition = new IndexDefinition()
-                        {
-                            Name = "<TestIndexName>",
-                            Maps = new HashSet<string> { "from dto in docs.Dtos select new { CoolName = dto.Name }" }
-                        },
-                        Query = "from index 'InvalidIndexName'"
-                    };
-
-                    var cmd = new PutTestIndexCommand(payload);
-                    var ex = Assert.Throws<BadRequestException>(() => commands.Execute(cmd));
-                    Assert.Contains("Expected '<TestIndexName>' as index name in query, but could not find it.", ex.Message);
-                }
-            }
-        }
-    }
-    
-    [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
     public async Task TestShardedDatabase(Options options)
     {

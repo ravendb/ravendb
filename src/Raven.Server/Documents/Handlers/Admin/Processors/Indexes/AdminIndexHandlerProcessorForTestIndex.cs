@@ -38,9 +38,9 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
 
             const int documentsPerIndexUpperLimit = 10_000;
             const int documentsPerIndexLowerLimit = 1;
+            
+            const string defaultTestIndexName = "<TestIndexName>";
 
-            const string testIndexName = "<TestIndexName>";
-                
             if (testIndexParameters.IndexDefinition is null)
                 throw new BadRequestException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");
 
@@ -51,16 +51,21 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
             {
                 // C# index without admin authorization
                 if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature && feature.CanAccess(RequestHandler.Database.Name, requireAdmin: true, requireWrite: true) == false)
-                    throw new UnauthorizedAccessException($"Testing C# indexes requires admin privileges.");
+                    throw new UnauthorizedAccessException("Testing C# indexes requires admin privileges.");
             }
 
-            var temporaryIndexName = Guid.NewGuid().ToString("N");
-                
-            testIndexDefinition.Name = temporaryIndexName;
+            var providedIndexName = testIndexDefinition.Name;
 
-            query ??= $"from index '{testIndexName}'";
-                
-            query = query.Replace(testIndexName, temporaryIndexName);
+            if (string.IsNullOrEmpty(providedIndexName))
+                providedIndexName = defaultTestIndexName;
+            
+            query ??= $"from index \"{providedIndexName}\"";
+            
+            var testIndexName = Guid.NewGuid().ToString("N");
+            
+            query = query.Replace(providedIndexName, testIndexName);
+            
+            testIndexDefinition.Name = testIndexName;
                 
             var djv = new DynamicJsonValue() { [nameof(IndexQueryServerSide.Query)] = query, [nameof(IndexQueryServerSide.QueryParameters)] = queryParameters };
 
@@ -70,7 +75,7 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
                 
             var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, RequestHandler.Database.QueryMetadataCache, tracker);
 
-            if (indexQueryServerSide.Metadata.IndexName != temporaryIndexName)
+            if (indexQueryServerSide.Metadata.IndexName != testIndexName)
                 throw new BadRequestException($"Expected '{testIndexName}' as index name in query, but could not find it.");
                 
             using (var index = RequestHandler.Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context, maxDocumentsPerIndex))
