@@ -64,8 +64,7 @@ class editIndex extends shardViewModelBase {
     editedIndex = ko.observable<indexDefinition>();
     isAutoIndex = ko.observable<boolean>(false);
     
-    testIndex = new testIndex(() => this.db, () => this.editedIndex());
-
+    testIndex: KnockoutComputed<testIndex>;
     originalIndexName: string;
     isSaveEnabled: KnockoutComputed<boolean>;
     saveInProgress = ko.observable<boolean>(false);
@@ -155,7 +154,7 @@ class editIndex extends shardViewModelBase {
     detached() {
         super.detached();
         
-        this.testIndex.dispose();
+        this.testIndex().dispose();
     }
 
     textForArchivedDataProcessingBehavior(mode: Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior) {
@@ -209,6 +208,8 @@ class editIndex extends shardViewModelBase {
                 this.updateIndexFields();
             });
         });
+
+        this.testIndex = ko.pureComputed(() => new testIndex(() => this.db, this.editedIndex));
 
         this.canEditIndexName = ko.pureComputed(() => {
             return !this.isEditingExistingIndex();
@@ -426,7 +427,7 @@ class editIndex extends shardViewModelBase {
         super.compositionComplete();
         this.initFieldTooltips();
         
-        this.testIndex.compositionComplete();
+        this.testIndex().compositionComplete();
     }
     
     private initValidation() {
@@ -547,7 +548,7 @@ class editIndex extends shardViewModelBase {
         
         // wait for animation
         setTimeout(() => {
-            this.testIndex.runTest(this.shardSelector ? this.shardSelector.location() : null);
+            this.testIndex().runTest(this.shardSelector ? this.shardSelector.location() : null);
         }, oldVisible ? 1 : 200);
     }
 
