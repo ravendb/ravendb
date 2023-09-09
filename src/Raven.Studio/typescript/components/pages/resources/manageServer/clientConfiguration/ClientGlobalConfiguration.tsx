@@ -301,8 +301,8 @@ export default function ClientGlobalConfiguration() {
                                     <li className="margin-bottom-xs">
                                         This is the <strong>Server-wide Client-Configuration</strong> view.
                                         <br />
-                                        The available client-configuration options will apply server-wide to all
-                                        databases.
+                                        The available client-configuration options will apply to any client that
+                                        communicates with any database in the cluster.
                                     </li>
                                     <li>
                                         These values can be customized per database in the Database Client-Configuration

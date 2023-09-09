@@ -579,12 +579,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     <li className="margin-bottom-xs">
                                         This is the <strong>Database Client-Configuration</strong> view.
                                         <br />
-                                        The values set in this view will apply only to this database.
+                                        The values set in this view will apply to any client communicating with this
+                                        database.
                                     </li>
                                     <li>
-                                        If the Server-wide Client-Configuration view has any values set, then this view
-                                        provides the option to override the Server-wide configuration and customize
-                                        specific values for this database.
+                                        If the Server-wide Client-Configuration view has any values set,
+                                        <br /> then this view provides the option to override the Server-wide
+                                        configuration
+                                        <br /> and customize specific values for this database.
                                     </li>
                                 </ul>
                                 <hr />
