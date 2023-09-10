@@ -34,6 +34,8 @@ public class AsyncGuard : IDisposable
         ulong copy = cur;
         while (true)
         {
+            // If the write lock mask is set, this means that we have a writer, so we
+            // cannot take a lock, that is too late now (and forever)
             if ((copy & WriterLockMask) != 0)
                 return false; // already taken
 
@@ -81,17 +83,20 @@ public class AsyncGuard : IDisposable
         _locked = true;
         
         // first, mark all the cores as busy 
-        for (int i = 0; i<_coreMarkers.Length; i++)
+        while (true)
         {
-            while (true)
+            bool allMarked = true;
+            for (int i = 0; i < _coreMarkers.Length; i++)
             {
                 ref var cur = ref _coreMarkers[i];
                 var copy = cur;
                 Debug.Assert((copy & WriterLockMask) == 0, "(copy & WriterLockMask) == 0 - meaning we already called it?");
                 var result = Interlocked.CompareExchange(ref cur, copy | WriterLockMask, copy);
-                if (result == copy)
-                    break; // successfully updated
+                allMarked &= result == copy;
             }
+
+            if (allMarked)
+                break;
         }
 
         while (true)
