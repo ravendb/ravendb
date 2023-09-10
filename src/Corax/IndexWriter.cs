@@ -2782,5 +2782,10 @@ namespace Corax
             _indexDebugDumper.Dispose();
             _builder.Clean();
         }
+
+        public void ReduceModificationCount()
+        {
+            _numberOfModifications--;
+        }
     }
 }
