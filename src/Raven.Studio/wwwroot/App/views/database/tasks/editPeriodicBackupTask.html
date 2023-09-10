@@ -6,9 +6,12 @@
             <h2 data-bind="text: $root.titleForView" class="mb-0"></h2>
             <span class="badge license-restricted-badge" data-bind="if: backupOperation === 'periodic' && !isProfessionalOrAbove">Professional +</span>
         </div>
-        <div data-bind="if: backupOperation === 'periodic'">
-            <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
-        </div>
+        <!-- ko if: backupOperation === 'manual' -->
+        <div class="flex-end margin-right-xs" data-bind="react: $root.manualInfoHubView"></div>
+        <!-- /ko -->
+        <!-- ko if: backupOperation === 'periodic' -->
+        <div class="flex-end margin-right-xs" data-bind="react: $root.periodicInfoHubView"></div>
+        <!-- /ko -->
     </div>
     <div class="toolbar" data-bind="with: $root">
         <button data-bind="click: onSubmit, enable: dirtyFlag().isDirty" type="submit" class="btn btn-primary">
@@ -49,7 +52,14 @@
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" data-bind="foreach: backupOptions">
-                                <li><a href="#" data-bind="text: $data, click: $parent.useBackupType.bind($parent, $data)"></a></li>
+                                <li class="position-relative">
+                                    <a href="#" data-bind="css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && $data === 'Snapshot' }, click: $parent.useBackupType.bind($parent, $data)">
+                                        <span data-bind="text: $data"></span>
+                                        <!-- ko if: !$root.isProfessionalOrAbove && $data === 'Snapshot' -->
+                                        <span class="badge license-restricted-badge margin-left-xxs">Enterprise</span>
+                                        <!-- /ko -->
+                                    </a>
+                                </li>
                             </ul>
                             <div class="bg-warning padding-left-xxs" data-bind="visible: $root.db.isSharded()">
                                 <small>Snapshot is not supported in <i class="icon-sharding text-shard"></i> Sharded Databases</small>
@@ -199,14 +209,15 @@
             </div>
         </div>
         <h3 class="margin-bottom margin-bottom-xs">Encryption</h3>
-        <div class="panel" data-bind="with: encryptionSettings">
+        <div class="panel" data-bind="with: encryptionSettings, css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && backupOperation === 'manual' }">
             <div class="padding">
                 <div class="flex-horizontal" data-bind="validationElement: enabled">
-                    <div class="toggle margin-right" data-bind="validationOptions: { insertMessages: false }">
+                    <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
                         <input id="toggle-encryption" type="checkbox" data-bind="checked: enabled">
                         <label for="toggle-encryption">Encrypt backup</label>
                     </div>
-                    <span class="help-block" data-bind="validationMessage: enabled"></span>
+                    <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove && $parent.backupOperation === 'manual'">Professional +</span>
+                    <span class="help-block margin-left" data-bind="validationMessage: enabled"></span>
                 </div>
                 <div data-bind="collapse: needExplicitConsent">
                     <div class="flex-horizontal" data-bind="validationElement: allowUnencryptedBackupForEncryptedDatabase">

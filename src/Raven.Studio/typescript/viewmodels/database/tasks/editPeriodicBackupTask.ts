@@ -15,6 +15,7 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import licenseModel from "models/auth/licenseModel";
 import { EditPeriodicBackupTaskInfoHub } from "./EditPeriodicBackupTaskInfoHub";
+import { EditManualBackupTaskInfoHub } from "./EditManualBackupTaskInfoHub";
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 
@@ -28,7 +29,8 @@ class editPeriodicBackupTask extends shardViewModelBase {
     pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
-    infoHubView: ReactInKnockout<typeof EditPeriodicBackupTaskInfoHub>;
+    periodicInfoHubView: ReactInKnockout<typeof EditPeriodicBackupTaskInfoHub>;
+    manualInfoHubView: ReactInKnockout<typeof EditManualBackupTaskInfoHub>;
 
     titleForView: KnockoutComputed<string>;
     configuration = ko.observable<backupConfigurationClass>();
@@ -49,8 +51,12 @@ class editPeriodicBackupTask extends shardViewModelBase {
         
         this.titleForView = ko.pureComputed(() => this.configuration().getTitleForView(this.isAddingNewBackupTask()));
 
-        this.infoHubView = ko.pureComputed(() => ({
+        this.periodicInfoHubView = ko.pureComputed(() => ({
             component: EditPeriodicBackupTaskInfoHub
+        }));
+        
+        this.manualInfoHubView = ko.pureComputed(() => ({
+            component: EditManualBackupTaskInfoHub
         }));
     }
 

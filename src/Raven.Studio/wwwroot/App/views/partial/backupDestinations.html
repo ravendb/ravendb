@@ -85,7 +85,7 @@
             </div>
         </div>
     </div>
-    <div class="panel" data-bind="with: s3Settings">
+    <div class="panel" data-bind="with: s3Settings, css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && backupOperation === 'manual' }">
         <div class="padding">
             <div class="flex-horizontal">
                 <div class="toggle">
@@ -95,6 +95,7 @@
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('AmazonS3')">
                     <small><i class="icon-info"></i></small>
                 </div>
+                <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove && $parent.backupOperation === 'manual'">Professional +</span>
             </div>
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6">
@@ -137,7 +138,7 @@
         <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
-    <div class="panel" data-bind="with: azureSettings">
+    <div class="panel" data-bind="with: azureSettings, css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && backupOperation === 'manual' }">
         <div class="padding">
             <div class="flex-horizontal">
                 <div class="toggle">
@@ -147,6 +148,7 @@
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('Azure')">
                     <small><i class="icon-info"></i></small>
                 </div>
+                <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove && $parent.backupOperation === 'manual'">Professional +</span>
             </div>
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6">
@@ -179,7 +181,7 @@
         <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
-    <div class="panel" data-bind="with: googleCloudSettings">
+    <div class="panel" data-bind="with: googleCloudSettings, css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && backupOperation === 'manual' }">
         <div class="padding">
             <div class="flex-horizontal">
                 <div class="toggle">
@@ -189,6 +191,7 @@
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('GoogleCloud')">
                     <small><i class="icon-info"></i></small>
                 </div>
+                <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove && $parent.backupOperation === 'manual'">Professional +</span>
             </div>
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6">
@@ -221,7 +224,7 @@
         <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
-    <div class="panel" data-bind="with: glacierSettings">
+    <div class="panel" data-bind="with: glacierSettings, css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && backupOperation === 'manual' }">
         <div class="padding">
             <div class="flex-horizontal">
                 <div class="toggle">
@@ -231,6 +234,7 @@
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('AmazonGlacier')">
                     <small><i class="icon-info"></i></small>
                 </div>
+                <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove && $parent.backupOperation === 'manual'">Professional +</span>
             </div>
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6">
@@ -263,7 +267,7 @@
         <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
-    <div class="panel" data-bind="with: ftpSettings">
+    <div class="panel" data-bind="with: ftpSettings, css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && backupOperation === 'manual' }">
         <div class="padding">
             <div class="flex-horizontal">
                 <div class="toggle">
@@ -273,6 +277,7 @@
                 <div class="text-warning js-option-disabled" data-bind="visible: !$root.isBackupOptionAvailable('FTP')">
                     <small><i class="icon-info"></i></small>
                 </div>
+                <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove && $parent.backupOperation === 'manual'">Professional +</span>
             </div>
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6">
