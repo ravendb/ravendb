@@ -500,7 +500,6 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(UpdateExternalReplicationStateCommand):
                     case nameof(ShardedUpdateExternalReplicationStateCommand):
-                    case nameof(PutSubscriptionCommand):
                     case nameof(PutShardedSubscriptionCommand):
                     case nameof(DeleteSubscriptionCommand):
                     case nameof(UpdateEtlProcessStateCommand):
@@ -512,14 +511,16 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveQueueSinkProcessStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
 
-                        //TODO
-                        /*var maxNumberOfSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
-                        if (maxNumberOfSubscriptionsPerDatabase != null && maxNumberOfSubscriptionsPerDatabase >= 0 && maxNumberOfSubscriptionsPerDatabase > databaseRecord.ExternalReplications.Count)
-                        {
-                            throw new LicenseLimitException($"The maximum number of external replications cannot exceed the limit of: {maxNumberOfExternalReplications}");
-                        }*/
                         if (result != null)
                             leader?.SetStateOf(index, result);
+                        break;
+
+
+                    case nameof(PutSubscriptionCommand):
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out _, onCommandExecuted: (items, databaseName) =>
+                        {
+                            AssertSubscriptionsLicenseLimits(serverStore, items, databaseName, context);
+                        });
                         break;
 
                     case nameof(DelayBackupCommand):
@@ -1491,7 +1492,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
+        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result, Action<Table, string> onCommandExecuted = null)
         {
             UpdateValueForDatabaseCommand updateCommand = null;
             Exception exception = null;
@@ -1509,10 +1510,7 @@ namespace Raven.Server.ServerWide
                     updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
                 }
 
-                if (type == nameof(PutSubscriptionCommand))
-                {
-                    AssertSubscriptionsLicenseLimits(serverStore, items, updateCommand.DatabaseName, context);
-                }
+                onCommandExecuted?.Invoke(items, updateCommand.DatabaseName);
             }
             catch (Exception e)
             {
@@ -2756,7 +2754,7 @@ namespace Raven.Server.ServerWide
 
                 using (Slice.From(context.Allocator, subscriptionPrefix, out Slice loweredPrefix))
                 {
-                    foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                    foreach (var _ in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                     {
                         count++;
                     }
