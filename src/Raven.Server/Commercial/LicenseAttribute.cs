@@ -58,5 +58,5 @@ public enum LicenseAttribute
     MaxNumberOfCustomAnalyzersPerCluster,
     Tracking,
     KafkaRabbitMQSink,
-    DataArchival //TODO
+    DataArchival
 }
