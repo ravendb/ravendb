@@ -4,6 +4,7 @@ namespace Voron.Data.Lookups;
 
 public interface ILookupKey
 {
+    void Reset();
     long ToLong();
 
     static abstract T FromLong<T>(long l);

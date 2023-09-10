@@ -52,6 +52,11 @@ public sealed partial class CompactTree : IPrepareForCommit
             Key = null;
         }
 
+        public void Reset()
+        {
+            ContainerId = -1;
+        }
+
         public long ToLong()
         {
             return ContainerId;
@@ -403,7 +408,12 @@ public sealed partial class CompactTree : IPrepareForCommit
         compactKey.Initialize(_inner.Llt);
         compactKey.Set(key);
         compactKey.ChangeDictionary(_inner.State.DictionaryId);
-        return _inner.TryRemove(new CompactKeyLookup(compactKey), out oldValue);
+        return TryRemove(new CompactKeyLookup(compactKey), out oldValue);
+    }
+    
+    public bool TryRemove(CompactKeyLookup key, out long oldValue)
+    {
+        return _inner.TryRemove(key, out oldValue);
     }
 
     public bool TryRemoveExistingValue(ref CompactKeyLookup key, out long oldValue)
@@ -444,6 +454,12 @@ public sealed partial class CompactTree : IPrepareForCommit
     
     public int BulkUpdateStart(Span<CompactKeyLookup> keys, Span<long> values, Span<int> offsets, out long pageNum)
     {
+        #if DEBUG
+        for (int i = 0; i < keys.Length; i++)
+        {
+            Debug.Assert(keys[i].ContainerId == -1, "keys[i].ContainerId == -1");
+        }
+        #endif
         var read = _inner.BulkUpdateStart(keys, values, offsets, out pageNum);
         for (int i = 0; i < read; i++)
         {

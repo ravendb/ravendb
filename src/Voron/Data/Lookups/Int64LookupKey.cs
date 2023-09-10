@@ -6,7 +6,12 @@ namespace Voron.Data.Lookups;
 public struct Int64LookupKey : ILookupKey
 {
     public long Value;
-    
+
+    public void Reset()
+    {
+        
+    }
+
     public long ToLong()
     {
         return Value;
