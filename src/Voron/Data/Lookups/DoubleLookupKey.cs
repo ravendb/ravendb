@@ -6,7 +6,12 @@ namespace Voron.Data.Lookups;
 public struct DoubleLookupKey : ILookupKey
 {
     public double Value;
-    
+
+    public void Reset()
+    {
+        
+    }
+
     public long ToLong()
     {
         return BitConverter.DoubleToInt64Bits(Value);

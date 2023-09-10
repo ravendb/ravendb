@@ -1292,6 +1292,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     /// </summary>
     public int BulkUpdateStart(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum)
     {
+        Debug.Assert(keys.IsEmpty == false);
         // here we find the right page to start
         TryGetNextValue(ref keys[0], out values[0]);
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
@@ -1303,10 +1304,13 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         for (; index < keys.Length; index++)
         {
             ref var curKey = ref keys[index];
-            if (limit != null)
+            if (limit != null) // we have to use nullable because the value isn't directly comparable (term id, double,
             {
                 if (curKey.CompareTo(this, limit.Value) >= 0)
+                {
+                    curKey.Reset(); // we don't want to retain any knowledge of this 
                     break; // hit the limits of the page...
+                }
             }
             var pos = state.LastSearchPosition;
             if (pos < 0)

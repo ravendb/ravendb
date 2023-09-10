@@ -1956,7 +1956,6 @@ namespace Corax
             {
                 long totalLengthOfTerm = 0;
                 _buffers.PrepareTerms(_indexedField, out var sortedTerms, out var termsOffsets);
-                var processed = 0;
                 Debug.Assert(sortedTerms.Length > 0, "sortedTerms.Length > 0 (checked by the caller)");
 
                 var firstTerm = sortedTerms[0]; // if we have null, it will always sort first
@@ -1975,10 +1974,6 @@ namespace Corax
                 
                 while (true)
                 {
-                    sortedTerms = sortedTerms[processed..];
-                    termsOffsets = termsOffsets[processed..];
-                    processed = 0;
-
                     if (sortedTerms.IsEmpty)
                         break;
 
@@ -2009,13 +2004,20 @@ namespace Corax
                                 sortedTerms[idx], postListIds[idx],
                                 keys[idx].ContainerId, pageOffsets[idx]);
 
-                            processed++;
                             // if the tree structure changed, the bulk insert details are wrong
                             // and will need to restart the operation with a new BulkUpdateStart
                             if (treeChanged.Changed)
                             {
                                 // next time, we start from the _next_ key, not the current one
                                 idx++;
+                                for (int j = idx; j < read; j++)
+                                {
+                                    // Reset the known container id, since we modified the tree structure.
+                                    // The issue is that we may have a term id that was remembered by a separator key
+                                    // and we'll lose that after a page merge, so we'll have a reference to a deleted key
+                                    // see: RavenDB-21272
+                                    keys[j].ContainerId = -1;
+                                }
                                 break;
                             }
                         }
@@ -2024,6 +2026,8 @@ namespace Corax
                         postListIds = postListIds[idx..];
                         pageOffsets = pageOffsets[idx..];
                         entriesOffsets = entriesOffsets[idx..];
+                        sortedTerms = sortedTerms[idx..];
+                        termsOffsets = termsOffsets[idx..];
                     }
                 }
 
