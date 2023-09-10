@@ -82,8 +82,8 @@ function ManualBackup(props: ManualBackupProps) {
 
     if (model.status === "loading" || model.status === "idle") {
         return (
-            <div className="manual-backup">
-                <Spinner />
+            <div className="manual-backup d-flex justify-content-center">
+                <Spinner className="spinner-gradient" />
             </div>
         );
     }
