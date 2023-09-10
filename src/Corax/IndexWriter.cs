@@ -2280,7 +2280,7 @@ namespace Corax
             {
                 Sort.Run(_entriesForTermsRemovalsBuffer.RawItems, _entriesForTermsRemovalsBuffer.Count);
                 entriesToTerms.InitializeCursorState();
-                for (int i = 0; i < _entriesForTermsAdditionsBuffer.Count; i++)
+                for (int i = 0; i < _entriesForTermsRemovalsBuffer.Count; i++)
                 {
                     Int64LookupKey key = _entriesForTermsRemovalsBuffer.RawItems[i];
                     if (entriesToTerms.TryGetNextValue(ref key, out _))
