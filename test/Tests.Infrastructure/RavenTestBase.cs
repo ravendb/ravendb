@@ -401,7 +401,9 @@ namespace FastTests
             }
             catch (AllTopologyNodesDownException)
             {
-
+            }
+            catch (ConcurrencyException)
+            {
             }
             catch (Exception e)
             {
