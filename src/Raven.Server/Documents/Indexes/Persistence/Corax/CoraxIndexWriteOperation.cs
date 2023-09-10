@@ -88,10 +88,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             using (Stats.AddStats.Start())
             {
-                stats.RecordIndexingOutput();
-                if(_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
+                if (_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
+                {
+                    stats.RecordIndexingOutput();
                     return;
-                Delete(key, stats);
+                }
+               _indexWriter.ReduceModificationCount();
+               Delete(key, stats);
             }
         }
 
@@ -103,8 +106,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             using (Stats.AddStats.Start())
             {
-                _converter.SetDocument(key, sourceDocumentId, document, indexContext, builder);
-                stats.RecordIndexingOutput();
+                if (_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
+                    stats.RecordIndexingOutput();
+                else
+                    _indexWriter.ReduceModificationCount();
             }
         }
 
