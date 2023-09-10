@@ -206,7 +206,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
         else if (binding.Mode is FieldIndexingMode.Exact || analyzer is null)
         {
-            using var _ = Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Mutable, out var originalTermSliced);
+            Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Mutable, out var originalTermSliced);
             originalTerm.CopyTo(originalTermSliced.ToSpan());
             terms.Add(new Slice(originalTermSliced)); 
             return;
