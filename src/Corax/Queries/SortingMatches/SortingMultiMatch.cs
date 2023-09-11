@@ -37,7 +37,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private NativeUnmanagedList<float> _scoresResults;
     
     public long TotalResults;
-    public bool DoNotSortResults() => throw new NotSupportedException();
+    public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();
 
     public SortingMultiMatch(IndexSearcher.IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1, in CancellationToken token = default)
     {

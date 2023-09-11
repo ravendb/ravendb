@@ -28,12 +28,16 @@ namespace Corax.Queries
 
         private bool _doNotSortResults;
 
-        public bool DoNotSortResults()
-        {
-            _doNotSortResults = true;
-            return true;
-        }
 
+        public SkipSortingResult AttemptToSkipSorting()
+        {
+            var r = _inner.AttemptToSkipSorting();
+            // if inner requires sorting, so do we
+            _doNotSortResults = r != SkipSortingResult.SortingIsRequired &&
+                                // for spatial, we get them in 
+                                _inner is not SpatialMatch.SpatialMatch;
+            return r;
+        }
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
 

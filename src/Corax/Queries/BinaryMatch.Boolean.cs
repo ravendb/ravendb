@@ -47,7 +47,7 @@ namespace Corax.Queries
                     
                     // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
                     // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                    if (match._doNotSortResults == false && iterations >= 1 || inner is SpatialMatch.SpatialMatch)
+                    if (match._doNotSortResults == false && iterations >= 1)
                     {
                         if (totalResults > 0)
                         {

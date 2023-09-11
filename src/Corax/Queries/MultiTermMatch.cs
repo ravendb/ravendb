@@ -35,8 +35,9 @@ namespace Corax.Queries
         private Bm25Relevance[] _frequenciesHolder;
         private int _currentFreqIdx;
 
-        //In case of streaming we cannot sort the results since the order will not be persisted. This is possible only in case when MTM is not in Binary AST and single document has only 1 term.
-        private bool _doNotSortResultsDueToStreaming;
+        //In case of streaming we cannot sort the results since the order will not be persisted. This is possible only in case when MulitTermMAtch
+        //is not in Binary AST and single document has only 1 term.
+        private readonly bool _doNotSortResultsDueToStreaming;
 
         private int FrequenciesHolderSize => _frequenciesHolder?.Length ?? 0;
 
@@ -49,10 +50,9 @@ namespace Corax.Queries
         public bool IsBoosting => _isBoosting;
         public long Count => _totalResults;
 
-        public bool DoNotSortResults()
+        public SkipSortingResult AttemptToSkipSorting()
         {
-            _doNotSortResults = true;
-            return true;
+            return SkipSortingResult.SortingIsRequired;
         }
 
         public QueryCountConfidence Confidence => _confidence;
@@ -335,7 +335,7 @@ namespace Corax.Queries
             End:
             if (_doNotSortResultsDueToStreaming == false && _doNotSortResults == false && requiresSort && count > 1)
             {
-                count = Sorting.SortAndRemoveDuplicates(buffer[0..count]);
+                count = Sorting.SortAndRemoveDuplicates(buffer[..count]);
             }
             _totalResults += count;
             return count;

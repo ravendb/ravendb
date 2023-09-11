@@ -15,9 +15,11 @@ namespace Corax.Queries
 
         public bool IsBoosting => _inner.IsBoosting;
         public long Count => _inner.Count;
-        public bool DoNotSortResults()
+
+        public SkipSortingResult AttemptToSkipSorting()
         {
-            return _inner.DoNotSortResults();
+             _inner.SkipSortingResults();
+             return SkipSortingResult.WillSkipSorting;
         }
 
         public QueryCountConfidence Confidence => _inner.Confidence;
