@@ -120,7 +120,7 @@ class licenseModel {
         return licenseModel.licenseStatus()?.Type ?? null;
     });
 
-    static isEnterprise = ko.pureComputed(() => {
+    static isEnterpriseOrDeveloper = ko.pureComputed(() => {
         const type = licenseModel.licenseType();
 
         if (type === "Enterprise" || type === "Developer") {
@@ -131,7 +131,7 @@ class licenseModel {
     });
 
     static isProfessionalOrAbove = ko.pureComputed(() => {
-        if (licenseModel.isEnterprise() || licenseModel.licenseType() === "Professional") {
+        if (licenseModel.isEnterpriseOrDeveloper() || licenseModel.licenseType() === "Professional") {
             return true;
         }
 
