@@ -95,7 +95,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             {
                 if (compoundField.Length != 2)
                 {
-                    throw new NotSupportedException("CompoundField must have exactly 2 elements, but got: " + string.Join(",", compoundField));
+                    throw new NotSupportedInCoraxException("CompoundField must have exactly 2 elements, but got: " + string.Join(",", compoundField));
                 }
             }
         }
@@ -359,7 +359,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 builder.WriteNull(fieldId, path);
                 break;
             case ValueType.BoostedValue:
-                throw new NotSupportedException("Boosting in index is not supported by Corax. You can do it during querying or change index type into Lucene.");
+                throw new NotSupportedInCoraxException("Boosting in index is not supported by Corax. You can do it during querying or change index type into Lucene.");
             case ValueType.EmptyString:
                 builder.Write(fieldId, path, ReadOnlySpan<byte>.Empty);
                 break;
@@ -376,7 +376,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.Stream:
                 throw new NotImplementedInCoraxException($"Streams are not implemented in Corax yet");
             case ValueType.Lucene:
-                throw new NotSupportedException("The Lucene value type is not supported by Corax. You can change index type into Lucene.");
+                throw new NotSupportedInCoraxException("The Lucene value type is not supported by Corax. You can change index type into Lucene.");
             default:
                 throw new NotSupportedException(valueType + " is not a supported type for indexing");
         }
@@ -469,7 +469,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             exceptionMessage =
                 $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported. You should consider querying on individual fields of that object.";
         }
-        throw new NotSupportedException(exceptionMessage);
+        throw new NotSupportedInCoraxException(exceptionMessage);
     }
     
     public override void Dispose()
