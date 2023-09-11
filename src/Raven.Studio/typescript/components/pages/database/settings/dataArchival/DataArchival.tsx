@@ -41,7 +41,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
     const { reportEvent } = useEventsCollector();
     const { isAdminAccessOrAbove } = useAccessManager();
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
 
     useEffect(() => {
         if (!formValues.isArchiveFrequencyEnabled && formValues.archiveFrequency !== null) {
@@ -91,7 +91,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                             <AboutViewHeading
                                 title="Data Archival"
                                 icon="data-archival"
-                                badgeText={licenseType !== "Enterprise" ? "Enterprise" : null}
+                                badgeText={isEnterpriseOrDeveloper ? null : "Enterprise"}
                             />
                             <ButtonWithSpinner
                                 type="submit"
@@ -103,7 +103,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                             >
                                 Save
                             </ButtonWithSpinner>
-                            <Col className={licenseType !== "Enterprise" ? "item-disabled pe-none" : ""}>
+                            <Col className={isEnterpriseOrDeveloper ? "" : "item-disabled pe-none"}>
                                 <Card>
                                     <CardBody>
                                         <div className="vstack gap-2">
@@ -184,14 +184,13 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Data Archival
                                 </a>
                             </AccordionItemWrapper>
-                            {licenseType === "Community" && (
-                                <AccordionLicenseNotIncluded
-                                    targetId="licensing"
-                                    featureName="Data Archival"
-                                    featureIcon="data-archival"
-                                    checkedLicenses={["Enterprise"]}
-                                />
-                            )}
+                            <AccordionLicenseNotIncluded
+                                targetId="licensing"
+                                featureName="Data Archival"
+                                featureIcon="data-archival"
+                                checkedLicenses={["Enterprise"]}
+                                isLimited={!isEnterpriseOrDeveloper}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>
