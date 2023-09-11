@@ -64,26 +64,20 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
                 return TryAddItem(cbi);
             case CoraxAndQueries mao:
                 // We popup inner boosting to this
-                if (EqualsScoreFunctions(mao))
-                    mao.Boosting = null;
-                else
-                    return false;
-                
+                if (EqualsScoreFunctions(mao) == false)
+                    return false; 
+                mao.Boosting = null;
                 itemToAdd = mao.Materialize();
                 _hasBinary |= mao.HasBinary;
                 break;
             case BoostingMatch boostingMatch:
-                if (Boosting.HasValue && Boosting.Value.AlmostEquals(boostingMatch.BoostFactor))
-                    (_complexMatches ??= new()).Add(itemToAdd);
-                else
+                if (Boosting.HasValue == false || 
+                    Boosting.Value.AlmostEquals(boostingMatch.BoostFactor) == false)
                     return false;
                 break;
-                
-            default:
-                    (_complexMatches ??= new()).Add(itemToAdd);
-                break;
         }
-        
+
+        (_complexMatches ??= new List<IQueryMatch>()).Add(itemToAdd);
         return true;
     }
 
