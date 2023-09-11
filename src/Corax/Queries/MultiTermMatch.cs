@@ -29,7 +29,6 @@ namespace Corax.Queries
         private long _readTerms, _totalResults;
         private readonly long _maxNumberOfTerms;
         private long _current;
-        private bool _doNotSortResults;
         private QueryCountConfidence _confidence;
 
         private Bm25Relevance[] _frequenciesHolder;
@@ -226,7 +225,7 @@ namespace Corax.Queries
                         }
                     }
 
-                    if (match is {_doNotSortResultsDueToStreaming: false, _doNotSortResults: false} && postingListCalls > 1)
+                    if (match is {_doNotSortResultsDueToStreaming: false} && postingListCalls > 1)
                         currentIdx = Sorting.SortAndRemoveDuplicates(sortedIds[0..currentIdx]);
 
                     return currentIdx;
@@ -333,7 +332,7 @@ namespace Corax.Queries
             _current = count != 0 ? buffer[count - 1] : QueryMatch.Invalid;
 
             End:
-            if (_doNotSortResultsDueToStreaming == false && _doNotSortResults == false && requiresSort && count > 1)
+            if (_doNotSortResultsDueToStreaming == false &&  requiresSort && count > 1)
             {
                 count = Sorting.SortAndRemoveDuplicates(buffer[..count]);
             }
