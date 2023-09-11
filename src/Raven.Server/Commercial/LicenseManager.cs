@@ -433,6 +433,13 @@ namespace Raven.Server.Commercial
                 }
             }
 
+            if (licenseStatus.Version.Major < 6)
+            {
+                // TODO: TRY TO UPDATE from the WEB
+                throw new LicenseLimitException($"Your license version is {licenseStatus.Version}. " +
+                                                $"You must upgrade your license before you install it on v6.x.");
+            }
+
             ThrowIfCannotActivateLicense(licenseStatus);
 
             try

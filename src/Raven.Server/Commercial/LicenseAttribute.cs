@@ -47,8 +47,6 @@ public enum LicenseAttribute
     PeriodicBackup,
     MaxNumberOfSubscriptionsPerDatabase,
     MaxNumberOfSubscriptionsPerCluster,
-    MaxNumberOfExternalReplicationsPerDatabase,
-    MaxNumberOfExternalReplicationsPerCluster,
     MinCheckPeriodForExpirationAndRefreshInHours,
     ClientConfiguration,
     StudioConfiguration,
