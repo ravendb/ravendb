@@ -49,9 +49,6 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class StreamSource : ISmugglerSource, IDisposable
     {
-        [CanBeNull]
-        private static string SubscriptionsArchivedDataProcessingBehaviorConfigKey;
-
         private readonly PeepingTomStream _peepingTomStream;
         private readonly JsonOperationContext _context;
         private readonly Logger _log;
