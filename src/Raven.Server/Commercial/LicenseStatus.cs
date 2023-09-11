@@ -207,6 +207,10 @@ namespace Raven.Server.Commercial
 
         public int? MaxNumberOfCustomAnalyzersPerCluster => Type == LicenseType.Community ? 5 : null;
 
+        public int? MaxNumberOfRevisionsToKeep => Type == LicenseType.Community ? 2 : null;
+
+        public int? MaxNumberOfRevisionsByAgeToKeep => Type == LicenseType.Community ? 3888000 : null;
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -265,7 +269,9 @@ namespace Raven.Server.Commercial
                 [nameof(MaxNumberOfCustomSortersPerDatabase)] = MaxNumberOfCustomSortersPerDatabase,
                 [nameof(MaxNumberOfCustomSortersPerCluster)] = MaxNumberOfCustomSortersPerCluster,
                 [nameof(MaxNumberOfCustomAnalyzersPerDatabase)] = MaxNumberOfCustomAnalyzersPerDatabase,
-                [nameof(MaxNumberOfCustomAnalyzersPerCluster)] = MaxNumberOfCustomAnalyzersPerCluster
+                [nameof(MaxNumberOfCustomAnalyzersPerCluster)] = MaxNumberOfCustomAnalyzersPerCluster,
+                [nameof(MaxNumberOfRevisionsToKeep)] = MaxNumberOfRevisionsToKeep,
+                [nameof(MaxNumberOfRevisionsByAgeToKeep)] = MaxNumberOfRevisionsByAgeToKeep
             };
         }
     }
