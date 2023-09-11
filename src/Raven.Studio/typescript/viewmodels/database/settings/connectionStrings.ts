@@ -20,6 +20,8 @@ import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testP
 import popoverUtils = require("common/popoverUtils");
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import TaskUtils from "components/utils/TaskUtils";
+import licenseModel from "models/auth/licenseModel";
+import { ConnectionStringsInfoHub } from "viewmodels/database/settings/ConnectionStringsInfoHub";
 
 class connectionStrings extends viewModelBase {
 
@@ -42,6 +44,11 @@ class connectionStrings extends viewModelBase {
     elasticSearchEtlConnectionStringsNames = ko.observableArray<string>([]);
     kafkaConnectionStringsNames = ko.observableArray<string>([]);
     rabbitMqConnectionStringsNames = ko.observableArray<string>([]);
+
+    infoHubView: ReactInKnockout<typeof ConnectionStringsInfoHub>;
+
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
     
     // Mapping from { connection string } to { taskId, taskName, taskType }
     connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: StudioTaskType }>> = {};
@@ -72,6 +79,9 @@ class connectionStrings extends viewModelBase {
                                    "confirmDelete", "isConnectionStringInUse", 
                                    "onTestConnectionRaven", "onTestConnectionElasticSearch", "onTestConnectionKafka", "onTestConnectionRabbitMq", "testCredentials");
         this.initObservables();
+        this.infoHubView = ko.pureComputed(() => ({
+            component: ConnectionStringsInfoHub
+        }));
     }
     
     private initObservables() {
