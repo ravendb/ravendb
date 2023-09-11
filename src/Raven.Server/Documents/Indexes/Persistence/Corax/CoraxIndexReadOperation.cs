@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
 
                             if (tokensDictionary.TryGetValue(key, out var existingHighlights))
-                                throw new NotSupportedException("Multiple highlightings for the same field and group key are not supported.");
+                                throw new NotSupportedInCoraxException("Multiple highlightings for the same field and group key are not supported.");
 
                             tokensDictionary[key] = fragments.ToArray();
                         }
@@ -1270,9 +1270,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var position = query.Start;
 
             if (query.Metadata.IsDistinct)
-                throw new NotSupportedException("We don't support Distinct in \"Show Raw Entry\" of Index.");
+                throw new NotSupportedInCoraxException("We don't support Distinct in \"Show Raw Entry\" of Index.");
             if (query.Metadata.FilterScript != null)
-                throw new NotSupportedException(
+                throw new NotSupportedInCoraxException(
                     "Filter isn't supported in Raw Index View.");
 
             var take = pageSize + position;

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Amazon.SimpleNotificationService.Model;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -105,7 +106,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             {
                 var fields = CompoundFields[i];
                 if (fields.Length != 2)
-                    throw new NotSupportedException("Currently compound indexes are only supporting exactly 2 fields");
+                    throw new NotSupportedInCoraxException("Currently compound indexes are only supporting exactly 2 fields");
                 
                 var firstValueLen = AppendFieldValue(fields[0], 0);
                 var totalLen = AppendFieldValue(fields[1], firstValueLen);

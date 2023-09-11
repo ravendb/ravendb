@@ -11,6 +11,7 @@ using Corax.Queries.Meta;
 using Corax.Queries.SortingMatches.Meta;
 using Corax.Utils;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -1037,7 +1038,7 @@ public static class CoraxQueryBuilder
 
         if (proximity.HasValue)
         {
-            throw new NotSupportedException($"{nameof(Corax)} doesn't support proximity over search() method");
+            throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support proximity over search() method");
         }
 
         CoraxConstants.Search.Operator @operator = CoraxConstants.Search.Operator.Or;
@@ -1359,7 +1360,7 @@ public static class CoraxQueryBuilder
             switch (orderingType)
             {
                 case OrderByFieldType.Custom:
-                    throw new NotSupportedException($"{nameof(Corax)} doesn't support Custom OrderBy.");
+                    throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support Custom OrderBy.");
                 case OrderByFieldType.AlphaNumeric:
                     sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric);
                     continue;
