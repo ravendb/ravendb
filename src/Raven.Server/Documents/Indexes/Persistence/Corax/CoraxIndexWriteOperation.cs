@@ -93,8 +93,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     stats.RecordIndexingOutput();
                     return;
                 }
-               _indexWriter.ReduceModificationCount();
-               Delete(key, stats);
+                Delete(key, stats);
             }
         }
 
