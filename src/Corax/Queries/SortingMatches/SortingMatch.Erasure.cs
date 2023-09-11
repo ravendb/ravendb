@@ -23,8 +23,7 @@ namespace Corax.Queries.SortingMatches
         public long TotalResults => _functionTable.TotalResultsFunc(ref this);
 
         public long Count => throw new NotSupportedException();
-
-        public bool DoNotSortResults() => _inner.DoNotSortResults();
+        public SkipSortingResult AttemptToSkipSorting() => _inner.AttemptToSkipSorting();
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
 

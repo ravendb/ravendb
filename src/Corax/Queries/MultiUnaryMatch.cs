@@ -378,9 +378,10 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
     }
 
     public long Count { get; }
-    public bool DoNotSortResults()
+
+    public SkipSortingResult AttemptToSkipSorting()
     {
-        return _inner.DoNotSortResults();
+        return _inner.AttemptToSkipSorting();
     }
 
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;

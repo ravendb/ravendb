@@ -38,9 +38,9 @@ namespace Corax.Queries
         public string Term;
 #endif
 
-        public bool DoNotSortResults()
+        public SkipSortingResult AttemptToSkipSorting()
         {
-            return false;// we already return results in sorted order
+            return SkipSortingResult.ResultsNativelySorted;
         }
 
         public QueryCountConfidence Confidence => QueryCountConfidence.High;

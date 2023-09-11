@@ -22,11 +22,11 @@ namespace Corax.Queries.SortingMatches
 
         public long Count => throw new NotSupportedException();
 
-        public bool DoNotSortResults() => _inner.DoNotSortResults();
-
         public QueryCountConfidence Confidence => throw new NotSupportedException();
 
         public bool IsBoosting => _inner.IsBoosting;
+
+        public SkipSortingResult AttemptToSkipSorting() => _inner.AttemptToSkipSorting();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)

@@ -24,10 +24,7 @@ namespace Corax.Queries
 
         public long Count => _functionTable.CountFunc(ref this);
 
-        public bool DoNotSortResults()
-        {
-            return _inner.DoNotSortResults();
-        }
+        public SkipSortingResult AttemptToSkipSorting() => _inner.AttemptToSkipSorting();
 
         public QueryCountConfidence Confidence => _inner.Confidence;
 

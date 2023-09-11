@@ -30,18 +30,23 @@ namespace Corax.Queries
         private ByteString _bufferHolder;
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _bufferScope;
         
-        private bool _doNotSortResults;
-        private bool _sortingRequired;
+        private SortMode _sortMode;
 
+        private enum SortMode
+        {
+            Default,
+            Required,
+            Skip
+        }
+        
         public void SortingRequired()
         {
-            _sortingRequired = true;
+            _sortMode = SortMode.Required;
         }
 
-        public bool DoNotSortResults()
+        public void SkipSortingResults()
         {
-            _doNotSortResults = true;
-            return true;
+            _sortMode = SortMode.Skip;
         }
 
         public MemoizationMatchProvider(IndexSearcher.IndexSearcher indexSearcher, in TInner inner)
@@ -86,8 +91,14 @@ namespace Corax.Queries
             int iterations = 0; 
 
             // Some inners can _tell_ us that they are already returning data in sorted order
-            if (_inner.DoNotSortResults() == false)
-                _doNotSortResults = true;
+            var skipSorting = _inner.AttemptToSkipSorting();
+            _sortMode = skipSorting switch
+            {
+                SkipSortingResult.ResultsNativelySorted => SortMode.Skip,
+                SkipSortingResult.WillSkipSorting => SortMode.Skip,
+                SkipSortingResult.SortingIsRequired => SortMode.Required,
+                _ => throw new ArgumentOutOfRangeException(skipSorting.ToString())
+            };
             
             int count = 0;
             while (true)
@@ -115,8 +126,8 @@ namespace Corax.Queries
             End:
             // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
             // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-            if (_doNotSortResults == false && iterations > 1 && count > 1 || 
-                _sortingRequired)
+            if (_sortMode ==SortMode.Required ||
+                iterations > 1 && count > 1 && _sortMode != SortMode.Skip)
             {
                 // We need to sort and remove duplicates.
                 count = Sorting.SortAndRemoveDuplicates(Buffer[..count]);

@@ -42,10 +42,7 @@ namespace Corax.Queries
 
         public long Count => _inner.Count;
 
-        public bool DoNotSortResults()
-        {
-            return _inner.DoNotSortResults();
-        }
+        public SkipSortingResult AttemptToSkipSorting() => _inner.AttemptToSkipSorting();
 
         public QueryCountConfidence Confidence => _inner.Confidence;
 

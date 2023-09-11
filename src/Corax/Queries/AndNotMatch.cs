@@ -35,10 +35,12 @@ namespace Corax.Queries
 
         private bool _doNotSortResults;
 
-        public bool DoNotSortResults()
+        public SkipSortingResult AttemptToSkipSorting()
         {
-            _doNotSortResults = true;
-            return true;
+            var r = _inner.AttemptToSkipSorting();
+            // if the inner requires sorting, we also require it
+            _doNotSortResults = r != SkipSortingResult.SortingIsRequired;
+            return r;
         }
 
         public QueryCountConfidence Confidence => _confidence;

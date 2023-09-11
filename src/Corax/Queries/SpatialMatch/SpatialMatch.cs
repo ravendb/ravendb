@@ -72,10 +72,10 @@ public sealed class SpatialMatch : IQueryMatch
     }
 
     public long Count => long.MaxValue;
-    public bool DoNotSortResults() => true;
 
+    public SkipSortingResult AttemptToSkipSorting() => SkipSortingResult.WillSkipSorting;
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
-    public bool IsBoosting { get; }
+    public bool IsBoosting => false;
 
     public int Fill(Span<long> matches)
     {

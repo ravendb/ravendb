@@ -40,7 +40,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     
     private SortingDataTransfer _sortingDataTransfer;
     public long TotalResults;
-    public bool DoNotSortResults() => throw new NotSupportedException();
+    public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();
 
     public SortingMatch(IndexSearcher.IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
     {

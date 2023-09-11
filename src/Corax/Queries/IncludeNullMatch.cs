@@ -27,9 +27,10 @@ where TInner : IQueryMatch
     private TInner _inner;
     
     public long Count { get; }
-    public bool DoNotSortResults()
+
+    public SkipSortingResult AttemptToSkipSorting()
     {
-        return true;
+        return SkipSortingResult.WillSkipSorting;
     }
 
     public QueryCountConfidence Confidence { get; }

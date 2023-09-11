@@ -53,9 +53,9 @@ namespace Corax.Queries
         public long Count => _totalResults;
         public long Current => _current;
 
-        public bool DoNotSortResults()
+        public SkipSortingResult AttemptToSkipSorting()
         {
-            return _inner.DoNotSortResults();
+            return _inner.AttemptToSkipSorting();
         }
 
         public QueryCountConfidence Confidence => _confidence;

@@ -14,11 +14,12 @@ namespace Corax.Queries
         private readonly long _count;
         private Lookup<Int64LookupKey>.ForwardIterator _entriesPagesIt;
 
-        public bool DoNotSortResults()
+        public SkipSortingResult AttemptToSkipSorting()
         {
-            return false; //we are already returning in sorted order
+            //we are already returning in sorted order
+            return SkipSortingResult.ResultsNativelySorted;
         }
-        
+
         public AllEntriesMatch(IndexSearcher.IndexSearcher searcher, Transaction tx)
         {
             _count = searcher.NumberOfEntries;
