@@ -34,7 +34,7 @@ namespace Corax.Queries
         private Bm25Relevance[] _frequenciesHolder;
         private int _currentFreqIdx;
 
-        //In case of streaming we cannot sort the results since the order will not be persisted. This is possible only in case when MulitTermMAtch
+        //In case of streaming we cannot sort the results since the order will not be persisted. This is possible only in case when MultiTermMatch
         //is not in Binary AST and single document has only 1 term.
         private readonly bool _doNotSortResultsDueToStreaming;
 
