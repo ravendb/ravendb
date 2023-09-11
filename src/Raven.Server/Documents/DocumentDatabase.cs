@@ -387,6 +387,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
 
+                SetIds(record);
                 OnDatabaseRecordChanged(record);
 
                 ReplicationLoader = CreateReplicationLoader();
