@@ -113,6 +113,8 @@ export class LicenseStubs {
             MaxNumberOfCustomSortersPerCluster: 5,
             MaxNumberOfCustomAnalyzersPerDatabase: 1,
             MaxNumberOfCustomAnalyzersPerCluster: 5,
+            MaxNumberOfRevisionsToKeep: 2,
+            MaxNumberOfRevisionsByAgeToKeep: 3888000,
         };
     }
 
