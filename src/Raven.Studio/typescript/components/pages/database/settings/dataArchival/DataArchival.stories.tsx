@@ -24,7 +24,6 @@ export const DefaultDataArchival: StoryObj<typeof DataArchival> = {
 };
 
 export const LicenseRestricted: StoryObj<typeof DataArchival> = {
-    name: "License Restricted",
     render: () => {
         const { databasesService } = mockServices;
         const { license } = mockStore;
