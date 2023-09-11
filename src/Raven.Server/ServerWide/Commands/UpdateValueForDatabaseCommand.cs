@@ -98,7 +98,6 @@ namespace Raven.Server.ServerWide.Commands
 
             return djv;
         }
-    }
 
         protected enum UpdatedValueActionType
         {
