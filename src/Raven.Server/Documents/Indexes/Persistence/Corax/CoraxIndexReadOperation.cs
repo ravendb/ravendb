@@ -435,16 +435,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             public bool ShouldIncludeIdentity<TProjection>(ref TProjection hasProjection, UnmanagedSpan identity)
                 where TProjection : struct, IHasProjection
             {
-                if (hasProjection.IsProjection && _alreadySeenDocumentKeysInPreviousPage.Contains(identity))
-                    return false;
-
-                if (hasProjection.IsProjection == false)
-                {
-                    if (_alreadySeenDocumentKeysInPreviousPage.Add(identity) == false)
-                        return false;
-                }
-
-                return true;
+                return hasProjection.IsProjection || _alreadySeenDocumentKeysInPreviousPage.Add(identity);
             }
 
             public bool ShouldIncludeDocument<TProjection>(ref TProjection hasProjection, Document doc)
@@ -635,28 +626,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             break;
                     }
                 }
-                
-                while (true)
+
+                // We don't need to do any processing for the query beyond counting if we are getting a count.
+                while (query.IsCountQuery == false)
                 {
                     token.ThrowIfCancellationRequested();
 
                     // We look for items that was haven't seen before in the case of paging. 
                     int read = queryMatch.Fill(ids);
                     if (read == 0)
-                        break;
+                        goto Done;
 
                     // If we are going to skip, we've better do it knowing how many we have passed. 
                     long i = identityTracker.RegisterDuplicates(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), token);
                     totalResults.Value += read; // important that this is *after* RegisterDuplicates
-
-                    // If we are going to just return count() then we don't care about anything else.
-                    if (query.IsCountQuery)
-                        continue;
-
-                    // In the case that we no longer has any more documents to process but we are not allowed to skip the
-                    // statistics, then we need to keep filling buffers and counting elements.
-                    if (docsToLoad <= 0 && query.SkipStatistics == false)
-                        continue;
 
                     // Now for every document that was selected. document it. 
                     for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
@@ -682,7 +665,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                         // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                         // actual data and apply the rest of the filters. 
-                    Include:
+                        Include:
                         EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
                         var key = _documentIdReader.GetTermFor(ids[i]);
                         float? documentScore = sortingData.IncludeScores ? sortingData.ScoresBuffer[i] : null;
@@ -736,9 +719,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
 
                     // No need to continue filling buffers as there are no more docs to load and we are skipping statistics anyways.
-                    if (query.SkipStatistics && docsToLoad <= 0)
+                    if (docsToLoad <= 0)
                         break;
                 }
+
+
+                // If we are going to just return count() then we don't care about anything else than memoize the results.
+                if (query.IsCountQuery || query.SkipStatistics == false)
+                {
+                    var results = new MemoizationMatchProvider<IQueryMatch>(IndexSearcher, queryMatch);
+                    totalResults.Value += results.FillAndRetrieve().Length;
+                }
+
+                Done:
 
                 QueryPool.Return(ids);
                 if (sortingData.IncludeScores)
