@@ -583,10 +583,29 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         database.
                                     </li>
                                     <li>
-                                        If the Server-wide Client-Configuration view has any values set,
+                                        If the <strong>Server-wide Client-Configuration</strong> view has any values
+                                        set,
                                         <br /> then this view provides the option to override the Server-wide
-                                        configuration
+                                        Client-Configuration
                                         <br /> and customize specific values for this database.
+                                    </li>
+                                </ul>
+                                <hr />
+                                <ul>
+                                    <li className="margin-bottom-xs">
+                                        Setting the Client-Configuration on the server from this view will{" "}
+                                        <strong>override</strong> the client&apos;s existing settings, which were
+                                        initially set by your client code.
+                                    </li>
+                                    <li className="margin-bottom-xs">
+                                        When the server&apos;s Client-Configuration is modified, the running client will
+                                        receive the updated settings the next time it makes a request to the server.
+                                    </li>
+                                    <li>
+                                        This enables administrators to{" "}
+                                        <strong>dynamically control the client behavior</strong> even after it has
+                                        started running. E.g. manage load balancing of client requests on the fly in
+                                        response to changing system demands.
                                     </li>
                                 </ul>
                                 <hr />
