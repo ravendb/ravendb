@@ -25,7 +25,7 @@ export function CounterBadge(props: CounterBadgeProps) {
                     <Badge
                         pill
                         color={limitReachStatus === "limitReached" ? "danger" : "warning"}
-                        className={classNames("text-dark", className)}
+                        className={classNames("counter-badge text-dark", className)}
                         id={badgeId}
                     >
                         {count} / {limit}

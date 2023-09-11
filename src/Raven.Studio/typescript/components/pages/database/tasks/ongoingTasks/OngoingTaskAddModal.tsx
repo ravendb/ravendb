@@ -23,6 +23,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const isSharded = db.isSharded();
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
     const { appUrl } = useAppUrls();
 
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;
@@ -78,14 +79,14 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                 <div className="position-absolute m-2 end-0 top-0">
                     <Button close onClick={toggle} />
                 </div>
-                <div className="vstack gap-4">
+                <div className="hstack gap-3 mb-4">
                     <div className="text-center">
                         <Icon icon="ongoing-tasks" color="primary" addon="plus" className="fs-1" margin="m-0" />
                     </div>
                     <div className="text-center lead">Add a Database Task</div>
                 </div>
                 <HrHeader>Replication</HrHeader>
-                <Row>
+                <Row className="gy-sm">
                     <TaskItem
                         title="Create new External Replication task"
                         href={appUrl.forEditExternalReplication(db)}
@@ -94,9 +95,11 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="external-replication" />
                         <h4 className="mt-1 mb-0">External Replication</h4>
-                        <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                            Professional +
-                        </Badge>
+                        {!isProfessionalOrAbove && (
+                            <Badge className="license-restricted-badge" pill color="faded-primary">
+                                Professional +
+                            </Badge>
+                        )}
                     </TaskItem>
 
                     <TaskItem
@@ -123,7 +126,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     </TaskItem>
                 </Row>
                 <HrHeader>ETL (RavenDB ⇛ TARGET)</HrHeader>
-                <Row>
+                <Row className="gy-sm">
                     <TaskItem
                         title="Create new RavenDB ETL task"
                         href={appUrl.forEditRavenEtl(db)}
@@ -189,18 +192,22 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     </TaskItem>
                 </Row>
                 <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>
-                <Row>
+                <Row className="gy-sm">
                     <TaskItem
                         title="Create new Kafka Sink task"
                         href={appUrl.forEditKafkaSink(db)}
                         className="kafka-sink"
                         target="KafkaSink"
+                        disabled={isSharded}
+                        disableReason={getDisableReasonForSharded()}
                     >
                         <Icon icon="kafka-sink" />
                         <h4 className="mt-1 mb-0">Kafka Sink</h4>
-                        <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                            Enterprise
-                        </Badge>
+                        {!isEnterpriseOrDeveloper && (
+                            <Badge className="license-restricted-badge" pill color="faded-primary">
+                                Enterprise
+                            </Badge>
+                        )}
                     </TaskItem>
 
                     <TaskItem
@@ -208,16 +215,20 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         href={appUrl.forEditRabbitMqSink(db)}
                         className="rabbitmq-sink"
                         target="RabbitMqSink"
+                        disabled={isSharded}
+                        disableReason={getDisableReasonForSharded()}
                     >
                         <Icon icon="rabbitmq-sink" />
                         <h4 className="mt-1 mb-0">RabbitMQ Sink</h4>
-                        <Badge className="about-view-title-badge mt-2" color="faded-primary">
-                            Enterprise
-                        </Badge>
+                        {!isEnterpriseOrDeveloper && (
+                            <Badge className="license-restricted-badge" pill color="faded-primary">
+                                Enterprise
+                            </Badge>
+                        )}
                     </TaskItem>
                 </Row>
                 <HrHeader>Backups & Subscriptions</HrHeader>
-                <Row>
+                <Row className="gy-sm">
                     <TaskItem
                         title="Create new Backup task"
                         href={appUrl.forEditPeriodicBackupTask(db)}
@@ -240,7 +251,6 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         <h4 className="mt-1 mb-0">Subscription</h4>
                         {!isProfessionalOrAbove && (
                             <CounterBadge
-                                className="mt-2"
                                 count={subscriptionsDatabaseCount}
                                 limit={subscriptionsDatabaseLimit}
                                 hideNotReached
@@ -269,7 +279,7 @@ function TaskItem(props: TaskItemProps) {
     const { reportEvent } = useEventsCollector();
 
     return (
-        <Col xs="6" md="4" className="mb-4 justify-content-center" title={title}>
+        <Col xs="6" md="4" className="justify-content-center" title={title}>
             {disabled ? (
                 <div id={target} className={classNames("task-item", className, { "item-disabled": disabled })}>
                     {children}
