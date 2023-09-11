@@ -10,6 +10,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -367,7 +368,13 @@ namespace SlowTests.Sharding.Encryption
         [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task ShouldNotRemoveSecretKeyFromNodeThatStillHasShards()
         {
-            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "2"
+            };
+
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true, customSettings: customSettings);
             Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
