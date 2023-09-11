@@ -5,6 +5,8 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import getDocumentsCompressionConfigurationCommand = require("commands/database/documents/getDocumentsCompressionConfigurationCommand");
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import licenseModel from "models/auth/licenseModel";
+import { DocumentCompressionInfoHub } from "viewmodels/database/settings/DocumentCompressionInfoHub";
 
 class documentsCompression extends shardViewModelBase {
 
@@ -26,12 +28,20 @@ class documentsCompression extends shardViewModelBase {
     };
 
     storageReportUrl: KnockoutComputed<string>;
+
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    
+    infoHubView: ReactInKnockout<typeof DocumentCompressionInfoHub>;
     
     constructor(db: database) {
         super(db);
         
         this.bindToCurrentInstance("saveChanges", "addCollection", "removeCollection", "addAllCollections", "addWithBlink");
         this.initObservables();
+        
+        this.infoHubView = ko.pureComputed(() => ({
+            component: DocumentCompressionInfoHub
+        }));
     }
     
     initObservables() {
