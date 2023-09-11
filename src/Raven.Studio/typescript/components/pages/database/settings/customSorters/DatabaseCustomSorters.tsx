@@ -28,6 +28,7 @@ import { NonShardedViewProps } from "components/models/common";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
@@ -50,11 +51,9 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideSorters.result?.length ?? null;
 
-    const isAddDisabled =
-        asyncGetDatabaseSorters.status !== "success" ||
-        (!isProfessionalOrAbove && databaseResultsCount === licenseDatabaseLimit);
-
-    const isButtonPopoverVisible = isCommunity && isDatabaseAdmin && isAddDisabled;
+    const isLimitExceeded =
+        !isProfessionalOrAbove &&
+        getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit) === "limitReached";
 
     if (db.isSharded()) {
         return (
@@ -74,32 +73,36 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                     <Col>
                         <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
                         {isDatabaseAdmin && (
-                            <div id="newCustomSorter" className="w-fit-content">
-                                <a
-                                    href={appUrl.forEditCustomSorter(db)}
-                                    className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
-                                >
-                                    <Icon icon="plus" />
-                                    Add a custom sorter
-                                </a>
-                            </div>
-                        )}
-                        {isButtonPopoverVisible && (
-                            <UncontrolledPopover
-                                trigger="hover"
-                                target="newCustomSorter"
-                                placement="top"
-                                className="bs5"
-                            >
-                                <div className="p-3 text-center">
-                                    Database has reached the maximum number of Custom Sorters allowed per database.
-                                    <br /> Delete unused sorters or{" "}
-                                    <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
-                                        upgrade your license
+                            <>
+                                <div id="newCustomSorter" className="w-fit-content">
+                                    <a
+                                        href={appUrl.forEditCustomSorter(db)}
+                                        className={classNames("btn btn-primary mb-3", { disabled: isLimitExceeded })}
+                                    >
+                                        <Icon icon="plus" />
+                                        Add a custom sorter
                                     </a>
                                 </div>
-                            </UncontrolledPopover>
+                                {isLimitExceeded && (
+                                    <UncontrolledPopover
+                                        trigger="hover"
+                                        target="newCustomSorter"
+                                        placement="top"
+                                        className="bs5"
+                                    >
+                                        <div className="p-3 text-center">
+                                            Database has reached the maximum number of Custom Sorters allowed per
+                                            database.
+                                            <br /> Delete unused sorters or{" "}
+                                            <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                                upgrade your license
+                                            </a>
+                                        </div>
+                                    </UncontrolledPopover>
+                                )}
+                            </>
                         )}
+
                         <HrHeader>
                             Database custom sorters
                             {!isProfessionalOrAbove && (
