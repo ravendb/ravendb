@@ -409,15 +409,6 @@ namespace Raven.Server.Documents
             throw new ArgumentException(
                 $"Revision change vector cannot exceed {MaxIdSize} bytes, but the change vector was {Encoding.GetByteCount(changeVector)} bytes. " +
                 $"The invalid change vector for revision '{id}' is '{changeVector}'.{Environment.NewLine}" +
-                $"## Symptoms{Environment.NewLine}On Raven version 5.4.110 and later got ThrowDocumentIdTooBig exception when trying to save a document.{Environment.NewLine}" +
-                $"The exception is thrown when we actually try to save a revision for that document.{Environment.NewLine}## Why do I get it{Environment.NewLine}" +
-                $"We keep documents and revisions in BTrees, those trees have an internal limitation of key size.{Environment.NewLine}" +
-                $"This exception is to safeguard against having a key which is too big.{Environment.NewLine}" +
-                $"We had an issue when one of the places didn't guard for big keys, which got fixed in this PR https://github.com/ravendb/ravendb/pull/17100{Environment.NewLine}" +
-                $"The key for a revision is the change vector, so if your change vector is too big, you will get this exception.{Environment.NewLine}" +
-                $"## How to fix it{Environment.NewLine}You need to reduce your change vector, by adding unused database IDs to the UnusedDatabaseIds list via the studio.{Environment.NewLine}" +
-                $"Be aware of:{Environment.NewLine}- not adding database IDs that are used!{Environment.NewLine}- if you have an external replication, do not add IDs that are used in the destination.{Environment.NewLine}" +
-                $"- if you have an external replication, add the unused IDs on the destination first.{Environment.NewLine}" +
                 $"For more details visit https://ravendb.net/l/ZH9AK4/5.4.{Environment.NewLine}",
                 nameof(changeVector));
         }
