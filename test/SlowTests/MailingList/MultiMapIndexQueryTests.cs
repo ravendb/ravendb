@@ -101,7 +101,7 @@ namespace SlowTests.MailingList
                 await session.SaveChangesAsync();
             }
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
         }
 
         private class Article
