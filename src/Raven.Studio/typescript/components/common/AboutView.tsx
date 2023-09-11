@@ -57,7 +57,7 @@ const AboutViewFloating = (props: AboutViewProps) => {
 
     return (
         <div className={classNames(className)}>
-            <Button id={aboutViewId} color="secondary" className="hub-btn">
+            <Button id={aboutViewId} color="secondary" className="hub-btn" type="button">
                 Info Hub
             </Button>
 
