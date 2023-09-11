@@ -28,8 +28,6 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
-const revisionsToKeepCommunityLimit = 2;
-const revisionsByAgeCommunityLimit = 3888000; // 45 days
 
 export type EditRevisionConfigType = "collectionSpecific" | keyof typeof documentRevisionsConfigNames;
 export type EditRevisionTaskType = "edit" | "new";
@@ -96,10 +94,16 @@ export default function EditRevision(props: EditRevisionProps) {
             revisionsByAgeDelta;
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const revisionsToKeepLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsToKeep"));
+    const revisionsByAgeLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsByAgeToKeep"));
 
-    const disableSubmitButton =
-        (!isProfessionalOrAbove && formValues.minimumRevisionAgeToKeep > revisionsByAgeCommunityLimit) ||
-        formValues.minimumRevisionsToKeep > revisionsToKeepCommunityLimit;
+    const isDefaultConflicts = config?.Name === documentRevisionsConfigNames.defaultConflicts;
+
+    const isLimitExceeded =
+        !isDefaultConflicts &&
+        !isProfessionalOrAbove &&
+        (formValues.minimumRevisionAgeToKeep > revisionsByAgeLimit ||
+            formValues.minimumRevisionsToKeep > revisionsToKeepLimit);
 
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info">
@@ -134,10 +138,12 @@ export default function EditRevision(props: EditRevisionProps) {
                                 />
                                 {isRevisionsToKeepLimitWarning && <LimitWarning limit={revisionsDelta} />}
                             </InputGroup>
-                            {!isProfessionalOrAbove && formValues.minimumRevisionsToKeep > 2 ? (
+                            {!isDefaultConflicts &&
+                            !isProfessionalOrAbove &&
+                            formValues.minimumRevisionsToKeep > revisionsToKeepLimit ? (
                                 <Alert color="warning" className="mb-2">
                                     <Icon icon="warning" />
-                                    Your Community license allows max 2 revisions to keep
+                                    Your license allows max {revisionsToKeepLimit} revisions to keep
                                 </Alert>
                             ) : null}
                         </div>
@@ -153,11 +159,13 @@ export default function EditRevision(props: EditRevisionProps) {
                                 showDays
                                 showSeconds
                             />
-                            {!isProfessionalOrAbove &&
-                            formValues.minimumRevisionAgeToKeep > revisionsByAgeCommunityLimit ? (
+                            {!isDefaultConflicts &&
+                            !isProfessionalOrAbove &&
+                            formValues.minimumRevisionAgeToKeep > revisionsByAgeLimit ? (
                                 <Alert color="warning" className="my-2">
                                     <Icon icon="warning" />
-                                    Your Community license allows max 45 days retention time
+                                    Your license allows max{" "}
+                                    {generalUtils.formatTimeSpan(revisionsByAgeLimit * 1000, true)} retention time
                                 </Alert>
                             ) : null}
                             {isRevisionsToKeepByAgeLimitWarning && (
@@ -244,7 +252,12 @@ export default function EditRevision(props: EditRevisionProps) {
                     <Button type="button" color="secondary" onClick={toggle}>
                         Cancel
                     </Button>
-                    <Button type="submit" color="success" disabled={disableSubmitButton} title="Add this configuration">
+                    <Button
+                        type="submit"
+                        color="success"
+                        disabled={!formState.isValid || isLimitExceeded}
+                        title="Add this configuration"
+                    >
                         <Icon icon={getSubmitIcon(taskType)} />
                         {_.startCase(taskType)} config
                     </Button>
