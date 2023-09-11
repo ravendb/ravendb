@@ -10,7 +10,7 @@ import EditRevision, {
     EditRevisionTaskType,
 } from "components/pages/database/settings/documentRevisions/EditRevision";
 import EnforceConfiguration from "components/pages/database/settings/documentRevisions/EnforceConfiguration";
-import { todo, shardingTodo } from "common/developmentHelper";
+import { todo } from "common/developmentHelper";
 import { NonShardedViewProps } from "components/models/common";
 import { LoadingView } from "components/common/LoadingView";
 import { DocumentRevisionsConfig, documentRevisionsActions } from "./store/documentRevisionsSlice";
@@ -189,24 +189,35 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                             <HrHeader
                                 right={
                                     isDatabaseAdmin && !defaultDocumentsConfig ? (
-                                        <Button
-                                            color="info"
-                                            size="sm"
-                                            className="rounded-pill"
-                                            title="Create a default revision configuration for all (non-conflicting) documents"
-                                            onClick={() =>
-                                                onEditRevision({
-                                                    taskType: "new",
-                                                    configType: "defaultDocument",
-                                                    onConfirm: (config) =>
-                                                        dispatch(documentRevisionsActions.addConfig(config)),
-                                                })
-                                            }
-                                            disabled={!isProfessionalOrAbove}
-                                        >
-                                            <Icon icon="plus" />
-                                            Add new
-                                        </Button>
+                                        <>
+                                            <div id="add-default-config-button">
+                                                <Button
+                                                    color="info"
+                                                    size="sm"
+                                                    className="rounded-pill"
+                                                    title="Create a default revision configuration for all (non-conflicting) documents"
+                                                    onClick={() =>
+                                                        onEditRevision({
+                                                            taskType: "new",
+                                                            configType: "defaultDocument",
+                                                            onConfirm: (config) =>
+                                                                dispatch(documentRevisionsActions.addConfig(config)),
+                                                        })
+                                                    }
+                                                    disabled={!isProfessionalOrAbove}
+                                                >
+                                                    <Icon icon="plus" />
+                                                    Add new
+                                                </Button>
+                                            </div>
+                                            {!isProfessionalOrAbove && (
+                                                <UncontrolledTooltip target="add-default-config-button">
+                                                    <div className="p-3">
+                                                        Your license does not allow you to set up default policy.
+                                                    </div>
+                                                </UncontrolledTooltip>
+                                            )}
+                                        </>
                                     ) : null
                                 }
                             >
