@@ -70,13 +70,11 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
-using static Raven.Server.Documents.Indexes.MapReduce.ReduceKeyProcessor;
-using static Raven.Server.ServerWide.Commands.DeleteServerWideTaskCommand;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.ServerWide
 {
-    public sealed class ClusterStateMachine : RachisStateMachine
+    public sealed partial class ClusterStateMachine : RachisStateMachine
     {
         private readonly Logger _clusterAuditLog = LoggingSource.AuditLog.GetLogger("ClusterStateMachine", "Audit");
 
@@ -2725,12 +2723,18 @@ namespace Raven.Server.ServerWide
             var maxSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
             if (maxSubscriptionsPerDatabase != null && maxSubscriptionsPerDatabase >= 0 && maxSubscriptionsPerDatabase < GetSubscriptionsCountForDatabase(databaseName))
             {
+                if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                    return;
+
                 throw new LicenseLimitException($"The maximum number of subscriptions per database cannot exceed the limit of: {maxSubscriptionsPerDatabase}");
             }
 
             var maxSubscriptionsPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerCluster;
             if (maxSubscriptionsPerCluster != null && maxSubscriptionsPerCluster >= 0 && maxSubscriptionsPerCluster < GetSubscriptionsCount())
             {
+                if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                    return;
+
                 throw new LicenseLimitException($"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
             }
 
@@ -2764,7 +2768,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
+        private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
         {
             switch (type)
             {
@@ -2773,12 +2777,18 @@ namespace Raven.Server.ServerWide
                     var maxStaticIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
                     if (maxStaticIndexesPerDatabase != null && maxStaticIndexesPerDatabase >= 0 && maxStaticIndexesPerDatabase < databaseRecord.Indexes.Count)
                     {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
                         throw new LicenseLimitException($"The maximum number of static indexes per database cannot exceed the limit of: {maxStaticIndexesPerDatabase}");
                     }
 
                     var maxStaticIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerCluster;
                     if (maxStaticIndexesPerCluster != null && maxStaticIndexesPerCluster >= 0 && maxStaticIndexesPerCluster < GetTotal(TotalType.StaticIndex))
                     {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
                         throw new LicenseLimitException($"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
                     }
                     break;
@@ -2787,27 +2797,19 @@ namespace Raven.Server.ServerWide
                     var maxAutoIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerDatabase;
                     if (maxAutoIndexesPerDatabase != null && maxAutoIndexesPerDatabase >= 0 && maxAutoIndexesPerDatabase < databaseRecord.AutoIndexes.Count)
                     {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
                         throw new LicenseLimitException($"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
                     }
 
                     var maxAutoIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerCluster;
                     if (maxAutoIndexesPerCluster != null && maxAutoIndexesPerCluster >= 0 && maxAutoIndexesPerCluster < GetTotal(TotalType.AutoIndex))
                     {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
                         throw new LicenseLimitException($"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
-                    }
-                    break;
-
-                case nameof(UpdateExternalReplicationCommand):
-                    var maxExternalReplicationsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfExternalReplicationsPerDatabase;
-                    if (maxExternalReplicationsPerDatabase != null && maxExternalReplicationsPerDatabase >= 0 && maxExternalReplicationsPerDatabase > databaseRecord.ExternalReplications.Count)
-                    {
-                        throw new LicenseLimitException($"The maximum number of external replications per database cannot exceed the limit of: {maxExternalReplicationsPerDatabase}");
-                    }
-
-                    var maxExternalReplicationsPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfExternalReplicationsPerCluster;
-                    if (maxExternalReplicationsPerCluster != null && maxExternalReplicationsPerCluster >= 0 && maxExternalReplicationsPerCluster > GetTotal(TotalType.ExternalReplication))
-                    {
-                        throw new LicenseLimitException($"The maximum number of external replications per cluster cannot exceed the limit of: {maxExternalReplicationsPerCluster}");
                     }
                     break;
 
@@ -2815,12 +2817,18 @@ namespace Raven.Server.ServerWide
                     var maxCustomSortersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
                     if (maxCustomSortersPerDatabase != null && maxCustomSortersPerDatabase >= 0 && maxCustomSortersPerDatabase > databaseRecord.Sorters.Count)
                     {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
                         throw new LicenseLimitException($"The maximum number of custom sorters per database cannot exceed the limit of: {maxCustomSortersPerDatabase}");
                     }
 
                     var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
                     if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0 && maxCustomSortersPerCluster > GetTotal(TotalType.CustomSorters))
                     {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
                         throw new LicenseLimitException($"The maximum number of custom sorters per cluster cannot exceed the limit of: {maxCustomSortersPerCluster}");
                     }
                     break;
@@ -2829,12 +2837,18 @@ namespace Raven.Server.ServerWide
                     var maxAnalyzersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerDatabase;
                     if (maxAnalyzersPerDatabase != null && maxAnalyzersPerDatabase >= 0 && maxAnalyzersPerDatabase > databaseRecord.Sorters.Count)
                     {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
                         throw new LicenseLimitException($"The maximum number of analyzers per database cannot exceed the limit of: {maxAnalyzersPerDatabase}");
                     }
 
                     var maxAnalyzersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
                     if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0 && maxAnalyzersPerCluster > GetTotal(TotalType.Analyzers))
                     {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
                         throw new LicenseLimitException($"The maximum number of analyzers per cluster cannot exceed the limit of: {maxAnalyzersPerCluster}");
                     }
                     break;
@@ -2860,10 +2874,6 @@ namespace Raven.Server.ServerWide
                                 if (record.TryGet(nameof(DatabaseRecord.AutoIndexes), out obj) && obj != null)
                                     total += obj.Count;
                                 break;
-                            case TotalType.ExternalReplication:
-                                if (record.TryGet(nameof(DatabaseRecord.ExternalReplications), out obj) && obj != null)
-                                    total += obj.Count;
-                                break;
                             case TotalType.CustomSorters:
                                 if (record.TryGet(nameof(DatabaseRecord.Sorters), out obj) && obj != null)
                                     total += obj.Count;
@@ -2882,11 +2892,40 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private bool CanAssertLicenseLimits(ClusterOperationContext context, int minBuildVersion)
+        {
+            var licenseLimitsBlittable = Read(context, ServerStore.LicenseLimitsStorageKey);
+            if (licenseLimitsBlittable == null)
+                return false;
+
+            var licenseLimits = JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
+            if (licenseLimits.NodeLicenseDetails == null)
+                return false;
+
+            var clusterTopology = _parent.GetTopology(context);
+
+            foreach (var clusterNode in clusterTopology.Members.Union(clusterTopology.Watchers).Union(clusterTopology.Promotables))
+            {
+                if (licenseLimits.NodeLicenseDetails.ContainsKey(clusterNode.Key) == false)
+                    return false;
+            }
+
+            foreach (var limit in licenseLimits.NodeLicenseDetails)
+            {
+                if (limit.Value.BuildInfo == null)
+                    return false;
+
+                if (limit.Value.BuildInfo.BuildVersion < minBuildVersion)
+                    return false;
+            }
+
+            return true;
+        }
+
         private enum TotalType
         {
             StaticIndex,
             AutoIndex,
-            ExternalReplication,
             CustomSorters,
             Analyzers
         }
