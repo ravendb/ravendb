@@ -301,12 +301,30 @@ export default function ClientGlobalConfiguration() {
                                     <li className="margin-bottom-xs">
                                         This is the <strong>Server-wide Client-Configuration</strong> view.
                                         <br />
-                                        The available client-configuration options will apply to any client that
+                                        The available Client-Configuration options will apply to any client that
                                         communicates with any database in the cluster.
                                     </li>
                                     <li>
-                                        These values can be customized per database in the Database Client-Configuration
-                                        view.
+                                        These values can be customized per database in the{" "}
+                                        <strong>Database Client-Configuration</strong> view.
+                                    </li>
+                                </ul>
+                                <hr />
+                                <ul>
+                                    <li className="margin-bottom-xs">
+                                        Setting the Client-Configuration on the server from this view will{" "}
+                                        <strong>override</strong> the client&apos;s existing settings, which were
+                                        initially set by your client code.
+                                    </li>
+                                    <li className="margin-bottom-xs">
+                                        When the server&apos;s Client-Configuration is modified, the running client will
+                                        receive the updated settings the next time it makes a request to the server.
+                                    </li>
+                                    <li>
+                                        This enables administrators to{" "}
+                                        <strong>dynamically control the client behavior</strong> even after it has
+                                        started running. E.g. manage load balancing of client requests on the fly in
+                                        response to changing system demands.
                                     </li>
                                 </ul>
                                 <hr />
