@@ -27,6 +27,7 @@ import ServerWideCustomAnalyzersList from "components/pages/resources/manageServ
 import { NonShardedViewProps } from "components/models/common";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
 export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
@@ -47,11 +48,9 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const databaseResultsCount = asyncGetDatabaseAnalyzers.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideAnalyzers.result?.length ?? null;
 
-    const isAddDisabled =
-        asyncGetDatabaseAnalyzers.status !== "success" ||
-        (!isProfessionalOrAbove && databaseResultsCount === licenseDatabaseLimit);
-
-    const isButtonPopoverVisible = isCommunity && isDatabaseAdmin && isAddDisabled;
+    const isLimitExceeded =
+        !isProfessionalOrAbove &&
+        getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit) === "limitReached";
 
     return (
         <div className="content-margin">
@@ -60,32 +59,36 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                     <Col>
                         <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
                         {isDatabaseAdmin && (
-                            <div id="newCustomAnalyzer" className="w-fit-content">
-                                <a
-                                    href={appUrl.forEditCustomAnalyzer(db)}
-                                    className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
-                                >
-                                    <Icon icon="plus" />
-                                    Add a custom analyzer
-                                </a>
-                            </div>
-                        )}
-                        {isButtonPopoverVisible && (
-                            <UncontrolledPopover
-                                trigger="hover"
-                                target="newCustomAnalyzer"
-                                placement="top"
-                                className="bs5"
-                            >
-                                <div className="p-3 text-center">
-                                    Database has reached the maximum number of Custom Analyzers allowed per database.
-                                    <br /> Delete unused analyzers or{" "}
-                                    <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
-                                        upgrade your license
+                            <>
+                                <div id="newCustomAnalyzer" className="w-fit-content">
+                                    <a
+                                        href={appUrl.forEditCustomAnalyzer(db)}
+                                        className={classNames("btn btn-primary mb-3", { disabled: isLimitExceeded })}
+                                    >
+                                        <Icon icon="plus" />
+                                        Add a custom analyzer
                                     </a>
                                 </div>
-                            </UncontrolledPopover>
+                                {isLimitExceeded && (
+                                    <UncontrolledPopover
+                                        trigger="hover"
+                                        target="newCustomAnalyzer"
+                                        placement="top"
+                                        className="bs5"
+                                    >
+                                        <div className="p-3 text-center">
+                                            Database has reached the maximum number of Custom Analyzers allowed per
+                                            database.
+                                            <br /> Delete unused analyzers or{" "}
+                                            <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                                upgrade your license
+                                            </a>
+                                        </div>
+                                    </UncontrolledPopover>
+                                )}
+                            </>
                         )}
+
                         <HrHeader>
                             Database custom analyzers
                             {!isProfessionalOrAbove && (

@@ -12,6 +12,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CounterBadge } from "components/common/CounterBadge";
 import classNames from "classnames";
 import AnalyzersList from "./ServerWideCustomAnalyzersList";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
 export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
@@ -23,10 +24,9 @@ export default function ServerWideCustomAnalyzers() {
     const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
-    const isAddDisabled =
-        asyncGetAnalyzers.status !== "success" || (!isProfessionalOrAbove && resultsCount === licenseLimit);
 
-    const isButtonPopoverVisible = isCommunity && isAddDisabled;
+    const isLimitExceeded =
+        !isProfessionalOrAbove && getLicenseLimitReachStatus(resultsCount, licenseLimit) === "limitReached";
 
     return (
         <div className="content-margin">
@@ -37,13 +37,13 @@ export default function ServerWideCustomAnalyzers() {
                         <div id="newServerWideCustomAnalyzer" className="w-fit-content">
                             <a
                                 href={appUrl.forEditServerWideCustomAnalyzer()}
-                                className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                                className={classNames("btn btn-primary mb-3", { disabled: isLimitExceeded })}
                             >
                                 <Icon icon="plus" />
                                 Add a server-wide custom analyzer
                             </a>
                         </div>
-                        {isButtonPopoverVisible && (
+                        {isLimitExceeded && (
                             <UncontrolledPopover
                                 trigger="hover"
                                 target="newServerWideCustomAnalyzer"

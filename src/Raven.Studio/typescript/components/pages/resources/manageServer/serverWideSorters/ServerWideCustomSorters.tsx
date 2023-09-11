@@ -12,6 +12,7 @@ import { CounterBadge } from "components/common/CounterBadge";
 import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
@@ -23,10 +24,9 @@ export default function ServerWideCustomSorters() {
     const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
-    const isAddDisabled =
-        asyncGetSorters.status !== "success" || (!isProfessionalOrAbove && resultsCount === licenseLimit);
 
-    const isButtonPopoverVisible = isCommunity && isAddDisabled;
+    const isLimitExceeded =
+        !isProfessionalOrAbove && getLicenseLimitReachStatus(resultsCount, licenseLimit) === "limitReached";
 
     return (
         <div className="content-margin">
@@ -37,13 +37,13 @@ export default function ServerWideCustomSorters() {
                         <div id="newServerWideCustomSorter" className="w-fit-content">
                             <a
                                 href={appUrl.forEditServerWideCustomSorter()}
-                                className={classNames("btn btn-primary mb-3", { disabled: isAddDisabled })}
+                                className={classNames("btn btn-primary mb-3", { disabled: isLimitExceeded })}
                             >
                                 <Icon icon="plus" />
                                 Add a server-wide custom sorter
                             </a>
                         </div>
-                        {isButtonPopoverVisible && (
+                        {isLimitExceeded && (
                             <UncontrolledPopover
                                 trigger="hover"
                                 target="newServerWideCustomSorter"
