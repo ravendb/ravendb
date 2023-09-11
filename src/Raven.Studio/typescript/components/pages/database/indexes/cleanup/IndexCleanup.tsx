@@ -12,7 +12,11 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import AboutViewFloating, { AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
+import AboutViewFloating, {
+    AboutViewAnchored,
+    AboutViewHeading,
+    AccordionItemWrapper,
+} from "components/common/AboutView";
 import { FlexGrow } from "components/common/FlexGrow";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -56,7 +60,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                             />
 
                             <FlexGrow />
-                            <AboutViewFloating>
+                            <AboutViewFloating defaultOpen={!isProfessionalOrAbove}>
                                 <AccordionItemWrapper
                                     targetId="about"
                                     icon="about"
@@ -75,13 +79,18 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                         in your application.
                                     </p>
                                 </AccordionItemWrapper>
-                                <AccordionLicenseNotIncluded
-                                    targetId="licensing"
-                                    featureName="Index Cleanup"
-                                    featureIcon="index-cleanup"
-                                    checkedLicenses={["Professional", "Enterprise"]}
-                                    isLimited={!isProfessionalOrAbove}
-                                />
+                                <AboutViewAnchored
+                                    className="mt-3"
+                                    defaultOpen={isProfessionalOrAbove ? null : "licensing"}
+                                >
+                                    <AccordionLicenseNotIncluded
+                                        targetId="licensing"
+                                        featureName="Index Cleanup"
+                                        featureIcon="index-cleanup"
+                                        checkedLicenses={["Professional", "Enterprise"]}
+                                        isLimited={!isProfessionalOrAbove}
+                                    />
+                                </AboutViewAnchored>
                             </AboutViewFloating>
                         </div>
                         <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>

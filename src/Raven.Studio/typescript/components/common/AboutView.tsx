@@ -1,4 +1,4 @@
-﻿import React, { ReactNode } from "react";
+﻿import React, { ReactNode, useEffect, useState } from "react";
 import "./AboutView.scss";
 import {
     AccordionBody,
@@ -11,14 +11,15 @@ import {
     UncontrolledPopover,
 } from "reactstrap";
 import classNames from "classnames";
-import useId from "components/hooks/useId";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
+import { todo } from "common/developmentHelper";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
     className?: string;
+    defaultOpen?: boolean;
 }
 
 interface AboutViewHeadingProps {
@@ -42,28 +43,38 @@ const AboutViewHeading = (props: AboutViewHeadingProps) => {
     );
 };
 
-const AboutViewFloating = (props: AboutViewProps) => {
-    const { children, className } = props;
+const aboutViewId = "about-view";
 
-    const popoverId = useId("aboutView");
+const AboutViewFloating = (props: AboutViewProps) => {
+    const { children, className, defaultOpen } = props;
+
+    const [target, setTarget] = useState<string>(null);
+
+    // If defaultOpen is true, the target cannot be found. To fix this, the render is conditional
+    useEffect(() => {
+        setTarget(aboutViewId);
+    }, []);
 
     return (
         <div className={classNames(className)}>
-            <Button color="secondary" id={popoverId} className="hub-btn">
+            <Button id={aboutViewId} color="secondary" className="hub-btn">
                 Info Hub
             </Button>
 
-            <UncontrolledPopover
-                placement="bottom"
-                target={popoverId}
-                trigger="legacy"
-                className="bs5 about-view-dropdown"
-                offset={[-215, 10]}
-            >
-                <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion">
-                    <PopoverBody>{children}</PopoverBody>
-                </UncontrolledAccordion>
-            </UncontrolledPopover>
+            {target && (
+                <UncontrolledPopover
+                    placement="bottom"
+                    target={target}
+                    trigger="legacy"
+                    className="bs5 about-view-dropdown"
+                    offset={[-215, 10]}
+                    defaultOpen={defaultOpen}
+                >
+                    <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion">
+                        <PopoverBody>{children}</PopoverBody>
+                    </UncontrolledAccordion>
+                </UncontrolledPopover>
+            )}
         </div>
     );
 };
@@ -104,12 +115,16 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
     );
 };
 
-const AboutViewAnchored = (props: AboutViewProps) => {
+const AboutViewAnchored = (props: Omit<AboutViewProps, "defaultOpen"> & { defaultOpen: string | string[] }) => {
     const { children, className } = props;
+
+    todo("Feature", "Damian", "Once there is a new info hub view, consider changing defaultOpen");
+
+    const defaultOpen = props.defaultOpen !== null ? "licensing" : null;
 
     return (
         <div className={classNames(className)}>
-            <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion" defaultOpen={["licensing"]}>
+            <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion" defaultOpen={defaultOpen}>
                 {children}
             </UncontrolledAccordion>
         </div>
