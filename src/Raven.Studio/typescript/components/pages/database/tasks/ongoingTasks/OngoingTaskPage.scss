@@ -55,13 +55,26 @@
         border-radius: sizes.$gutter-xxs;
         height: 100%;
         text-align: center;
+        position: relative;
 
         h4 {
             color: inherit;
         }
 
+        .license-restricted-badge {
+            position: absolute;
+            top: sizes.$gutter-xxs;
+            right: sizes.$gutter-xxs;
+        }
+
+        .counter-badge {
+            position: absolute;
+            top: sizes.$gutter-xxs;
+            left: sizes.$gutter-xxs;
+        }
+
         i {
-            font-size: 48px;
+            font-size: 36px;
             line-height: 1em;
         }
         transition: background-color 0.5s sizes.$global-easing, color 0.1s !important;
