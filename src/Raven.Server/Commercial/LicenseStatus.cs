@@ -99,8 +99,13 @@ namespace Raven.Server.Commercial
                 if (version != null)
                     return new Version(version);
 
-                var intVersion = GetValue<int>(LicenseAttribute.Version);
-                return new Version((intVersion / 10).ToString());
+                var intVersion = GetValue<int?>(LicenseAttribute.Version);
+                if (intVersion == null)
+                    return null;
+
+                var major = intVersion.Value / 10;
+                var minor = intVersion.Value % 10;
+                return new Version(major, minor);
             }
         }
 
@@ -212,6 +217,8 @@ namespace Raven.Server.Commercial
 
         public bool HasDataArchival => Enabled(LicenseAttribute.DataArchival);
 
+        public bool HasSubscriptionRevisions => Enabled(LicenseAttribute.SubscriptionRevisions);
+
         public int? MaxNumberOfStaticIndexesPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfStaticIndexesPerDatabase, agplValue: 12);
 
         public int? MaxNumberOfStaticIndexesPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfStaticIndexesPerCluster, agplValue: 12 * 5);
@@ -250,7 +257,7 @@ namespace Raven.Server.Commercial
                 [nameof(ErrorMessage)] = ErrorMessage,
 
                 [nameof(Type)] = Type.ToString(),
-                [nameof(Version)] = Version.ToString(),
+                [nameof(Version)] = Version?.ToString(),
                 [nameof(Expiration)] = Expiration,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxCores)] = MaxCores,
