@@ -4,10 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using NuGet.Packaging;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -856,6 +858,61 @@ namespace SlowTests.Sharding
 
                 Assert.Equal(1, record.Sharding.Shards[2].Count);
                 Assert.Contains(record.Sharding.Shards[2].AllNodes, n => n == "A");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task PromoteOnCatchingUpEvenWhenIndexIsStale()
+        {
+            var clusterSize = 3;
+            var (nodes , leader) = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 3, orchestratorReplicationFactor: 3);
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                leader.ServerStore.Sharding.ManualMigration = true;	
+                await store.ExecuteIndexAsync(new UsersByName());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.StoreAsync(new User(), "users/2");
+                    await session.StoreAsync(new User(), "users/3");
+                    await session.StoreAsync(new User(), "users/4");
+                    await session.SaveChangesAsync();
+                }
+
+                await leader.ServerStore.Sharding.StartBucketMigration(store.Database, 123, 2, RaftIdGenerator.NewId());
+                
+                // ensure we can promote after deletion
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    session.Delete("users/4");
+                    session.Delete("users/3");
+                    session.Delete("users/2");
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+                var topology = record.Sharding.Shards[0];
+                topology.Members.Remove("A");
+                topology.Rehabs.Add("A");
+                topology.DemotionReasons.Add("A", "test");
+
+                await store.Maintenance.Server.SendAsync(new ModifyDatabaseTopologyOperation(store.Database, shardNumber: 0, topology));
+
+                await Cluster.WaitForAllNodesToBeMembersAsync(store);
+            }
+        }
+        
+        private class UsersByName : AbstractIndexCreationTask<User>
+        {
+            public UsersByName()
+            {
+                Map = usersCollection => from user in usersCollection
+                    select new { user.Name };
             }
         }
     }

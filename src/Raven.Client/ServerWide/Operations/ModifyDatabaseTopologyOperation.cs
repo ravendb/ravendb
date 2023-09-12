@@ -25,6 +25,11 @@ namespace Raven.Client.ServerWide.Operations
             _databaseName = databaseName;
         }
 
+        public ModifyDatabaseTopologyOperation(string databaseName, int shardNumber, DatabaseTopology databaseTopology) : this(databaseName, databaseTopology)
+        {
+            _databaseName = ClientShardHelper.ToShardName(databaseName, shardNumber);
+        }
+
         public RavenCommand<ModifyDatabaseTopologyResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new ModifyDatabaseTopologyCommand(conventions, _databaseName, _databaseTopology);

@@ -283,6 +283,14 @@ namespace Raven.Server.ServerWide.Maintenance
                                     using (context.OpenReadTransaction())
                                     {
                                         bucketReport.LastChangeVector = shardedInstance.ShardedDocumentsStorage.GetMergedChangeVectorInBucket(context, currentMigration.Bucket);
+                                       
+                                        var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(context, currentMigration.Bucket);
+                                        if (stats != null)
+                                        {
+                                            bucketReport.NumberOfDocuments = stats.NumberOfDocuments;
+                                            bucketReport.Size = stats.Size;
+                                            bucketReport.LastAccess = stats.LastModified;
+                                        }
                                     }
 
                                     report.ReportPerBucket[currentMigration.Bucket] = bucketReport;

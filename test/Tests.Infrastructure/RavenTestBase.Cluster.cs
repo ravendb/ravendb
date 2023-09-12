@@ -84,6 +84,7 @@ public partial class RavenTestBase
 
         public async Task WaitForAllNodesToBeMembersAsync(IDocumentStore store, string databaseName = null, CancellationToken token = default)
         {
+            using var _ = GetOrCreateCancellationToken(ref token);
             while (true)
             {
                 token.ThrowIfCancellationRequested();
@@ -111,8 +112,19 @@ public partial class RavenTestBase
             }
         }
 
+        public IDisposable GetOrCreateCancellationToken(ref CancellationToken token)
+        {
+            if (token.CanBeCanceled)
+                return null;
+
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            token = cts.Token;
+            return cts;
+        }
+
         public async Task WaitForNodeToBeRehabAsync(IDocumentStore store, string node, string databaseName = null, CancellationToken token = default)
         {
+            using var _ = GetOrCreateCancellationToken(ref token);
             while (true)
             {
                 token.ThrowIfCancellationRequested();

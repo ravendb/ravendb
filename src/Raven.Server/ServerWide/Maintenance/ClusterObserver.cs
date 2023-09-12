@@ -918,6 +918,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 return RawDatabase.Settings;
             }
 
+            public bool HasActiveMigrations()
+            {
+                if (RawDatabase.IsSharded == false)
+                    return false;
+
+                return RawDatabase.Sharding.HasActiveMigrations();
+            }
+
             public DatabaseStatusReport GetCurrentDatabaseReport(string node)
             {
                 if (Current.TryGetValue(node, out var report) == false)
