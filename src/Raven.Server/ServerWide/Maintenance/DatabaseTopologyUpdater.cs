@@ -718,9 +718,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 return (false, null);
             }
-            
+
+            var databaseEtag = -1L;
+            if (state.HasActiveMigrations() == false)
+            {
+                // if resharding is active skip - index staleness will not prevent it from being promoted
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "This only a workaround until RavenDB-21327 will be fixed properly");
+                databaseEtag = promotablePrevDbStats.LastEtag;
+            }
+
             var indexesCaughtUp = CheckIndexProgress(
-                promotablePrevDbStats.LastEtag,
+                databaseEtag,
                 promotablePrevDbStats.LastIndexStats,
                 promotableDbStats.LastIndexStats,
                 mentorCurrDbStats.LastIndexStats,
@@ -1025,7 +1033,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var lastIndexEtag = currentIndexStats.LastIndexedEtag;
                 if (lastPrevEtag > lastIndexEtag)
                 {
-                    reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}' and not up-to-date (prev: {lastPrevEtag:#,#;;0}, current: {lastIndexEtag:#,#;;0}).";
+                    reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}' and not up-to-date (prev database etag: {lastPrevEtag:#,#;;0}, current indexed etag: {lastIndexEtag:#,#;;0}).";
                     return false;
                 }
             }

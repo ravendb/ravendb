@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival;
 
-public class DataArchivalShardingTests(ITestOutputHelper output) : ClusterTestBase(output)
+public class DataArchivalShardingTests : ClusterTestBase
 {
     [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Sharding)]
     public async Task ShouldArchiveDocsForSharding()
@@ -105,5 +105,9 @@ public class DataArchivalShardingTests(ITestOutputHelper output) : ClusterTestBa
                 }
             }
         }
+    }
+
+    public DataArchivalShardingTests(ITestOutputHelper output) : base(output)
+    {
     }
 }

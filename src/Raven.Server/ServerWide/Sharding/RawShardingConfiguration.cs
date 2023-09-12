@@ -84,6 +84,17 @@ public sealed class RawShardingConfiguration
         }
     }
 
+    public bool HasActiveMigrations()
+    {
+        foreach (var m in BucketMigrations)
+        {
+            if (m.Value.IsActive)
+                return true;
+        }
+
+        return false;
+    }
+
     private Dictionary<int, DatabaseTopology> _shards;
 
     public Dictionary<int, DatabaseTopology> Shards
