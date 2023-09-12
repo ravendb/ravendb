@@ -85,19 +85,22 @@
     .license-info {
         flex-grow: 1;
         height: 100%;
+        background-color: var(--panel-bg-1);
     }
 
     .license-properties-container {
-        background-color: @panel-bg-2;
+        background-color: var(--panel-bg-1);
         flex-grow: 1;
         height: 250px;
         overflow-y: scroll;
+        border-bottom: 1px solid var(--border-color-light);
     }
 
     .support-info {
         flex-grow: 1;
         width: 460px;
         height: 100%;
+        background-color: var(--panel-bg-1);
     }
 
     .about-properties-container {
@@ -128,7 +131,10 @@
 
     .license-id-container {
         margin-bottom: 1px;
-        background-color: @panel-bg-2;
+        background-color: var(--panel-bg-1);
+        border: 1px solid var(--border-color-light);
+        border-left: none;
+        border-right: none;
     }
 
     .license-actions {
@@ -185,7 +191,7 @@
             }
 
             .icon-cancel {
-                color: fadeout(@gray-base, 30%);
+                color: var(--well-bg);
             }
         }
     }
@@ -231,7 +237,7 @@
 
         &.community {
             .community {
-                background-color: @panel-bg-2;
+                background-color: @bg-faded-primary;
 
                 &.top-row {
                     box-shadow: 0 -3px 0 @brand-success-light;
@@ -241,7 +247,7 @@
 
         &.professional {
             .professional {
-                background-color: @panel-bg-2;
+                background-color: @bg-faded-primary;
 
                 &.top-row {
                     box-shadow: 0 -3px 0 @brand-success-light;
@@ -251,7 +257,7 @@
 
         &.production {
             .production {
-                background-color: @panel-bg-2;
+                background-color: @bg-faded-primary;
 
                 &.top-row {
                     box-shadow: 0 -3px 0 @brand-success-light;
