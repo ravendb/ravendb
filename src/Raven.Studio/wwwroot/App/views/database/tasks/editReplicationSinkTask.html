@@ -25,7 +25,7 @@
                         <input type="file" id="configurationFilePicker" 
                                data-bind="event: { change: _.partial($root.onConfigurationFileSelected, $element) }" tabindex="-1" accept=".json" />
                     </div>
-                    <label for="configurationFilePicker" class="btn btn-default" data-bind="visible: !canDefineCertificates, css: { 'pe-none disabled': !$root.isProfessionalOrAbove }">
+                    <label for="configurationFilePicker" class="btn btn-default" data-bind="visible: !canDefineCertificates, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                         <i class="icon-import"></i><span>Import configuration from Hub</span>
                     </label>
                 </div>
