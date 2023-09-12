@@ -51,6 +51,7 @@ namespace FastTests.Client.Indexing
                     }, "query/parameters"))
                     {
                         SkipDuplicateChecking = q.SkipDuplicateChecking,
+                        SkipStatistics = q.SkipStatistics,
                         WaitForNonStaleResults = q.WaitForNonStaleResults,
                         WaitForNonStaleResultsTimeout = q.WaitForNonStaleResultsTimeout
                     };
