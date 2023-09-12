@@ -1,5 +1,13 @@
 <div class="content-margin edit-raven-etl-task edit-ongoing-task" data-bind="css: { 'test-mode': enableTestArea }">
-    <div class="row flex-row absolute-fill">
+    <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+        <div class="flex-horizontal gap-2">
+            <i class="icon-ravendb-etl"></i>
+            <h2 data-bind="text: $root.isAddingNewRavenEtlTask() ? `New RavenDB ETL` : `Edit RavenDB ETL`" class="mb-0"></h2>
+            <span class="badge license-restricted-badge" data-bind="if: !isProfessionalOrAbove">Professional +</span>
+        </div>
+        <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
+    </div>
+    <div class="row flex-row">
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <form class="flex-form" data-bind="submit: saveRavenEtl" autocomplete="off">
                 <div class="flex-header">
@@ -10,9 +18,8 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                     <div class="panel-body" data-bind="with: editedRavenEtl">
-                        <h3 data-bind="text: $parent.isAddingNewRavenEtlTask() ? `New RavenDB ETL` : `Edit RavenDB ETL`"></h3>
                         <div class="form-group margin-top">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
@@ -178,7 +185,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex-header">
+                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                     <div class="flex-row margin-top">
                         <h3>Transform Scripts</h3>
                         <button type="button" id="addNewScript" data-bind="click: addNewTransformation, disable: editedRavenEtl().showEditTransformationArea" class="btn btn-info pull-right">
@@ -186,7 +193,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="scroll">
+                <div class="scroll" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                     <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
                         <div data-bind="if: transformationScripts().length === 0 && !editedTransformationScriptSandbox()">
                             <div class="text-center text-muted">
@@ -225,12 +232,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="panel-addon" data-bind="visible: $root.usingHttps">
+                <div class="panel-addon" data-bind="visible: $root.usingHttps, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                     <div data-bind="compose: $root.certificateUploadInfoForOngoingTasks"></div>
                 </div>
             </form>
         </div>
-        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl()">
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl(), css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
             <div class="flex-grow" data-bind="if: showEditTransformationArea">
                 <div id="editTransform" class="panel padding">
                     <div data-bind="with: editedTransformationScriptSandbox">
@@ -362,7 +369,7 @@
             </div>
         </div>
     </div>
-    <div class="test-container flex-grow flex-vertical" data-bind="with: test">
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
         <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
             <i class="icon-info icon-xl"></i>
             Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.

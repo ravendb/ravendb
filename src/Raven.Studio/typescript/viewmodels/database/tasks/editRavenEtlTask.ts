@@ -23,6 +23,8 @@ import testRavenEtlCommand = require("commands/database/tasks/testRavenEtlComman
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import licenseModel from "models/auth/licenseModel";
+import { EditRavenEtlInfoHub } from "viewmodels/database/tasks/EditRavenEtlInfoHub";
 
 type resultItem = {
     header: string;
@@ -208,6 +210,9 @@ class editRavenEtlTask extends shardViewModelBase {
     usingHttps = location.protocol === "https:";
     certificatesUrl = appUrl.forCertificates();
 
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    infoHubView: ReactInKnockout<typeof EditRavenEtlInfoHub>;
+
     constructor(db: database) {
         super(db);
         
@@ -215,6 +220,9 @@ class editRavenEtlTask extends shardViewModelBase {
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript",
                                    "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
                                    "toggleTestArea", "toggleAdvancedArea", "setState");
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditRavenEtlInfoHub
+        }))
     }
 
     activate(args: any) {
