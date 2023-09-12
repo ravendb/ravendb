@@ -5,7 +5,6 @@ import IconName from "typings/server/icons";
 import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface AccordionLicenseNotIncludedProps {
-    targetId: string;
     featureName: string;
     featureIcon: IconName;
     checkedLicenses: string[];
@@ -13,7 +12,7 @@ interface AccordionLicenseNotIncludedProps {
 }
 
 export default function AccordionLicenseNotIncluded(props: AccordionLicenseNotIncludedProps) {
-    const { targetId, featureName, featureIcon, checkedLicenses, isLimited } = props;
+    const { featureName, featureIcon, checkedLicenses, isLimited } = props;
 
     const contactLink = useRavenLink({ hash: "ARVCC3", isDocs: false });
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
@@ -24,10 +23,10 @@ export default function AccordionLicenseNotIncluded(props: AccordionLicenseNotIn
             color={isLimited ? "warning" : "success"}
             heading="Licensing"
             description="See which plans offer this and more exciting features"
-            targetId={targetId}
             pill={isLimited}
             pillText={isLimited ? "Upgrade available" : null}
             pillIcon={isLimited ? "upgrade-arrow" : null}
+            id="licensing"
         >
             <AccordionItemLicensing
                 description={

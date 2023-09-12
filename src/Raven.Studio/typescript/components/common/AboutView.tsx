@@ -15,6 +15,7 @@ import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
 import { todo } from "common/developmentHelper";
+import { uniqueId } from "lodash";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
@@ -71,7 +72,7 @@ const AboutViewFloating = (props: AboutViewProps) => {
                     defaultOpen={defaultOpen}
                 >
                     <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion">
-                        <PopoverBody>{children}</PopoverBody>
+                        <PopoverBody className="p-1">{children}</PopoverBody>
                     </UncontrolledAccordion>
                 </UncontrolledPopover>
             )}
@@ -80,7 +81,6 @@ const AboutViewFloating = (props: AboutViewProps) => {
 };
 
 interface AccordionItemWrapperProps {
-    targetId: string;
     icon: IconName;
     color: TextColor;
     heading: string;
@@ -89,10 +89,12 @@ interface AccordionItemWrapperProps {
     pill?: boolean;
     pillText?: string;
     pillIcon?: IconName;
+    id?: string;
 }
 
 const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
-    const { targetId, icon, color, heading, description, children, pill, pillText, pillIcon } = props;
+    const { id, icon, color, heading, description, children, pill, pillText, pillIcon } = props;
+    const targetId = id ? id : uniqueId();
     return (
         <AccordionItem className={classNames("rounded-3", `box-shadow-${color}`, "panel-bg-1")}>
             <AccordionHeader targetId={targetId}>
