@@ -35,6 +35,13 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
+            if (query.SkipStatistics)
+            {
+                writer.WritePropertyName(nameof(query.SkipStatistics));
+                writer.WriteBool(query.SkipStatistics);
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(query.QueryParameters));
             if (query.QueryParameters != null)
                 writer.WriteObject(conventions.Serialization.DefaultConverter.ToBlittable(query.QueryParameters, context));

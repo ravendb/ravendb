@@ -28,6 +28,7 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(Query);
                 hasher.Write(WaitForNonStaleResults);
                 hasher.Write(SkipDuplicateChecking);
+                hasher.Write(SkipStatistics);
                 hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
                 hasher.Write(QueryParameters, conventions, serializer);
 
@@ -64,6 +65,8 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public bool SkipDuplicateChecking { get; set; }
 
+        public bool SkipStatistics { get; set; }
+
         public virtual bool Equals(IndexQuery<T> other)
         {
             if (ReferenceEquals(null, other))
@@ -72,7 +75,8 @@ namespace Raven.Client.Documents.Queries
                 return true;
 
             return base.Equals(other) &&
-                   SkipDuplicateChecking == other.SkipDuplicateChecking;
+                   SkipDuplicateChecking == other.SkipDuplicateChecking &&
+                   SkipStatistics == other.SkipStatistics;
         }
 
         public override bool Equals(object obj)
@@ -90,6 +94,7 @@ namespace Raven.Client.Documents.Queries
             {
                 var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
+                hashCode = (hashCode * 397) ^ (SkipStatistics ? 1 : 0);
                 return hashCode;
             }
         }
