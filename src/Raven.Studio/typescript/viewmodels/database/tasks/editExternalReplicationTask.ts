@@ -11,6 +11,8 @@ import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import licenseModel from "models/auth/licenseModel";
+import { EditExternalReplicationInfoHub } from "viewmodels/database/tasks/EditExternalReplicationInfoHub";
 class editExternalReplicationTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editExternalReplicationTask.html");
@@ -43,11 +45,18 @@ class editExternalReplicationTask extends shardViewModelBase {
 
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
+    
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    infoHubView: ReactInKnockout<typeof EditExternalReplicationInfoHub>
 
     constructor(db: database) {
         super(db);
         
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "setState");
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditExternalReplicationInfoHub
+        }))
     }
 
     activate(args: any) { 
