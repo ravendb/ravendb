@@ -4,9 +4,11 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
 import {Icon} from "components/common/Icon";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export function EditSubscriptionTaskInfoHub() {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const subscriptionTasksDocsLink = useRavenLink({ hash: "I5TMCK" });
 
     return (
         <AboutViewFloating>
@@ -36,7 +38,7 @@ export function EditSubscriptionTaskInfoHub() {
                 </ul>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
-                <a href="https://ravendb.net/l/I5TMCK/latest" target="_blank">
+                <a href={subscriptionTasksDocsLink} target="_blank">
                     <Icon icon="newtab" /> Docs - Subscription Task
                 </a>
             </AccordionItemWrapper>

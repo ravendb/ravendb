@@ -2,6 +2,7 @@ import React from "react";
 import { AccordionItemWrapper, AccordionItemLicensing } from "./AboutView";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface AccordionLicenseNotIncludedProps {
     targetId: string;
@@ -13,6 +14,9 @@ interface AccordionLicenseNotIncludedProps {
 
 export default function AccordionLicenseNotIncluded(props: AccordionLicenseNotIncludedProps) {
     const { targetId, featureName, featureIcon, checkedLicenses, isLimited } = props;
+
+    const contactLink = useRavenLink({ hash: "ARVCC3", isDocs: false });
+    const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
     return (
         <AccordionItemWrapper
@@ -39,17 +43,13 @@ export default function AccordionLicenseNotIncluded(props: AccordionLicenseNotIn
                     <>
                         <p className="lead fs-4">Get your license expanded</p>
                         <div className="mb-3">
-                            <a
-                                href="https://ravendb.net/contact"
-                                target="_blank"
-                                className="btn btn-primary rounded-pill"
-                            >
+                            <a href={contactLink} target="_blank" className="btn btn-primary rounded-pill">
                                 <Icon icon="notifications" />
                                 Contact us
                             </a>
                         </div>
                         <small>
-                            <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
+                            <a href={buyLink} target="_blank" className="text-muted">
                                 See pricing plans
                             </a>
                         </small>

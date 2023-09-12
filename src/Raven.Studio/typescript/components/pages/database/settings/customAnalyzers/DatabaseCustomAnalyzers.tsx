@@ -28,6 +28,7 @@ import { NonShardedViewProps } from "components/models/common";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
@@ -36,6 +37,8 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const asyncGetDatabaseAnalyzers = useAsync(() => databasesService.getCustomAnalyzers(db), [db]);
 
     const { appUrl } = useAppUrls();
+    const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
 
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
@@ -80,7 +83,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                             Database has reached the maximum number of Custom Analyzers allowed per
                                             database.
                                             <br /> Delete unused analyzers or{" "}
-                                            <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                            <a href={upgradeLicenseLink} target="_blank">
                                                 upgrade your license
                                             </a>
                                         </div>
@@ -187,7 +190,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/VWCQPI/latest" target="_blank">
+                                <a href={customAnalyzersDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Custom Analyzers
                                 </a>
                             </AccordionItemWrapper>

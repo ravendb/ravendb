@@ -21,6 +21,7 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function ClientGlobalConfiguration() {
     const { manageServerService } = useServices();
@@ -32,6 +33,9 @@ export default function ClientGlobalConfiguration() {
         defaultValues: async () =>
             ClientConfigurationUtils.mapToFormData(await asyncGetGlobalClientConfiguration.execute(), true),
     });
+
+    const loadBalancingDocsLink = useRavenLink({ hash: "GYJ8JA" });
+    const clientConfigurationDocsLink = useRavenLink({ hash: "TS7SGF" });
 
     const popovers = useClientConfigurationPopovers();
     const formValues = useClientConfigurationFormController(control, setValue, true);
@@ -153,7 +157,7 @@ export default function ClientGlobalConfiguration() {
                             <div className="d-flex justify-content-between mt-4 position-relative">
                                 <h4>Load Balancing Client Requests</h4>
                                 <small title="Navigate to the documentation" className="position-absolute end-0">
-                                    <a href="https://ravendb.net/l/GYJ8JA/latest/csharp" target="_blank">
+                                    <a href={loadBalancingDocsLink} target="_blank">
                                         <Icon icon="link" /> Load balancing tutorial
                                     </a>
                                 </small>
@@ -329,7 +333,7 @@ export default function ClientGlobalConfiguration() {
                                 </ul>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/TS7SGF/6.0/Csharp" target="_blank">
+                                <a href={clientConfigurationDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Client Configuration
                                 </a>
                             </AccordionItemWrapper>

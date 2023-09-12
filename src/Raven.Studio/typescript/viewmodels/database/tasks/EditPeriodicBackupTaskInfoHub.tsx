@@ -4,9 +4,11 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
 import {Icon} from "components/common/Icon";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export function EditPeriodicBackupTaskInfoHub() {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const backupsDocsLink = useRavenLink({ hash: "GMBYOH" });
 
     return (
         <AboutViewFloating>
@@ -39,7 +41,7 @@ export function EditPeriodicBackupTaskInfoHub() {
                 </div>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
-                <a href="https://ravendb.net/l/GMBYOH/latest" target="_blank">
+                <a href={backupsDocsLink} target="_blank">
                     <Icon icon="newtab" /> Docs - Backups
                 </a>
             </AccordionItemWrapper>

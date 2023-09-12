@@ -29,6 +29,7 @@ import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
@@ -39,6 +40,8 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db), [db]);
 
     const { appUrl } = useAppUrls();
+    const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
 
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
@@ -94,7 +97,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                             Database has reached the maximum number of Custom Sorters allowed per
                                             database.
                                             <br /> Delete unused sorters or{" "}
-                                            <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                            <a href={upgradeLicenseLink} target="_blank">
                                                 upgrade your license
                                             </a>
                                         </div>
@@ -194,7 +197,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/LGUJH8/latest" target="_blank">
+                                <a href={customSortersDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Custom Sorters
                                 </a>
                             </AccordionItemWrapper>

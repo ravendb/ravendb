@@ -19,6 +19,7 @@ import "./AdminJsConsole.scss";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
 import RunScriptButton from "components/common/RunScriptButton";
 import useBoolean from "components/hooks/useBoolean";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 const serverTargetValue = "Server";
 
@@ -34,6 +35,8 @@ export default function AdminJSConsole() {
     const allDatabaseNames = allDatabases.flatMap((db) =>
         db.sharded ? (db as ShardedDatabaseSharedInfo).shards.map((x) => x.name) : [db.name]
     );
+
+    const adminJsConsoleDocsLink = useRavenLink({ hash: "IBUJ7M" });
 
     const allTargets: SelectOption<string>[] = [
         {
@@ -150,7 +153,7 @@ export default function AdminJSConsole() {
                                 </p>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/IBUJ7M/6.0/Csharp" target="_blank">
+                                <a href={adminJsConsoleDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Admin JS Console
                                 </a>
                             </AccordionItemWrapper>

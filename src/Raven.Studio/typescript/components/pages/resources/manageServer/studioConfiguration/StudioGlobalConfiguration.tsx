@@ -20,6 +20,7 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function StudioGlobalConfiguration() {
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
@@ -40,6 +41,8 @@ export default function StudioGlobalConfiguration() {
     });
 
     useDirtyFlag(formState.isDirty);
+
+    const clientConfigurationDocsLink = useRavenLink({ hash: "TS7SGF" });
 
     const { reportEvent } = useEventsCollector();
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
@@ -198,7 +201,7 @@ export default function StudioGlobalConfiguration() {
                             </p>
                             <hr />
                             <div className="small-label mb-2">useful links</div>
-                            <a href="https://ravendb.net/l/TS7SGF/6.0/Csharp" target="_blank">
+                            <a href={clientConfigurationDocsLink} target="_blank">
                                 <Icon icon="newtab" /> Docs - Client Configuration
                             </a>
                         </AccordionItemWrapper>

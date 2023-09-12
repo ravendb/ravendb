@@ -3,6 +3,7 @@ import { Button, PopoverBody, UncontrolledPopover } from "reactstrap";
 import useId from "hooks/useId";
 import { Icon } from "./Icon";
 import classNames from "classnames";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface LicenseRestrictionsProps {
     children: ReactNode | ReactNode[];
@@ -14,7 +15,10 @@ interface LicenseRestrictionsProps {
 
 export function LicenseRestrictions(props: LicenseRestrictionsProps): JSX.Element {
     const { children, isAvailable, featureName, message, className } = props;
+
     const containerId = useId("Info");
+    const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+
     if (!isAvailable) {
         return (
             <>
@@ -35,7 +39,7 @@ export function LicenseRestrictions(props: LicenseRestrictionsProps): JSX.Elemen
                                 Current license doesn&apos;t include {featureName ?? "this feature"}.<br />
                                 <div className="text-center mt-1">
                                     <Button
-                                        href="https://ravendb.net/buy"
+                                        href={buyLink}
                                         target="_blank"
                                         color="primary"
                                         size="xs"

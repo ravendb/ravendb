@@ -20,6 +20,7 @@ import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expirat
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -37,6 +38,8 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
     useDirtyFlag(formState.isDirty);
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
+
+    const documentExpirationDocsLink = useRavenLink({ hash: "XBFEKZ" });
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const frequencyLimit = 129600;
@@ -179,7 +182,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/XBFEKZ/6.0/Csharp" target="_blank">
+                                <a href={documentExpirationDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Document Expiration
                                 </a>
                             </AccordionItemWrapper>

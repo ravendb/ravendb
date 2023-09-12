@@ -33,6 +33,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -65,6 +66,8 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();
     const { forCurrentDatabase: urls } = useAppUrls();
+
+    const documentRevisionsDocsLink = useRavenLink({ hash: "OFVLX8" });
 
     useEffect(() => {
         dispatch(documentRevisionsActions.fetchConfigs(db));
@@ -365,7 +368,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/OFVLX8/latest" target="_blank">
+                                <a href={documentRevisionsDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Document Revisions
                                 </a>
                             </AccordionItemWrapper>
