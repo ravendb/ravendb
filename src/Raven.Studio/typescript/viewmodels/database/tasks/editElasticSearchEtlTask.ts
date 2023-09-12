@@ -25,6 +25,8 @@ import ongoingTaskElasticSearchTransformationModel = require("models/database/ta
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import licenseModel from "models/auth/licenseModel";
+import { EditElasticSearchEtlInfoHub } from "viewmodels/database/tasks/EditElasticSearchEtlInfoHub";
 class elasticSearchTaskTestMode {
 
     documentId = ko.observable<string>();
@@ -205,6 +207,9 @@ class editElasticSearchEtlTask extends shardViewModelBase {
 
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringElasticSearchEtlModel>();
+    
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    infoHubView: ReactInKnockout<typeof EditElasticSearchEtlInfoHub>;
 
     constructor(db: database) {
         super(db);
@@ -222,6 +227,9 @@ class editElasticSearchEtlTask extends shardViewModelBase {
             "setState");
 
         aceEditorBindingHandler.install();
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditElasticSearchEtlInfoHub
+        }))
     }
 
     activate(args: any) {

@@ -1,5 +1,13 @@
 <div class="content-margin edit-elastic-search-task edit-ongoing-task" data-bind="css: { 'test-mode': enableTestArea }">
-    <div class="row flex-row absolute-fill">
+    <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+        <div class="flex-horizontal gap-2">
+            <i class="icon-elastic-search-etl"></i>
+            <h2 data-bind="text: $root.isAddingNewElasticSearchEtlTask() ? 'New Elasticsearch ETL' : 'Edit Elasticsearch ETL'" class="mb-0"></h2>
+            <span class="badge license-restricted-badge" data-bind="if: !isEnterpriseOrDeveloper">Enterprise</span>
+        </div>
+        <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
+    </div>
+    <div class="row flex-row">
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <form class="flex-form" data-bind="submit: saveElasticSearchEtl" autocomplete="off">
                 <div class="flex-header">
@@ -10,10 +18,9 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
                     <div data-bind="with: editedElasticSearchEtl">
                         <div class="panel-body">
-                            <h3 data-bind="text: $parent.isAddingNewElasticSearchEtlTask() ? 'New Elasticsearch ETL' : 'Edit Elasticsearch ETL'"></h3>
                             <div class="form-group margin-top" data-bind="validationElement: taskName">
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
@@ -122,11 +129,11 @@
                     </div>
                 </div>
             </form>
-            <div class="flex-horizontal flex-header margin-top">
+            <div class="flex-horizontal flex-header margin-top" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
                 <div class="flex-grow"><h3>Elasticsearch Indexes</h3></div>
                 <div><button type="button" class="btn btn-info" data-bind="click: addNewElasticSearchIndex, disable: showEditElasticSearchIndexArea()"><i class="icon-plus"></i><span>Add Index</span></button></div>
             </div>
-            <div class="elastic-search-indexes-list margin-bottom">
+            <div class="elastic-search-indexes-list margin-bottom" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
                 <!-- Elastic index edit area -->
                 <div class="panel" data-bind="visible: showEditElasticSearchIndexArea()">
                     <div class="padding padding-sm flex-horizontal item" data-bind="with: editedElasticSearchIndexSandbox()">
@@ -175,7 +182,7 @@
                     </div>
                 </div>
             </div>
-            <div class="flex-horizontal flex-header">
+            <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
                     <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea">
@@ -184,7 +191,7 @@
                 </div> 
             </div>
             <!-- The transformation scripts -->
-            <div class="etl-list" data-bind="with: editedElasticSearchEtl">
+            <div class="etl-list" data-bind="with: editedElasticSearchEtl, css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
                 <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
                     <i class="icon-lg icon-empty-set"></i>
                     <h3 class="margin-top margin-top-sm"
@@ -225,7 +232,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox()">
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
             <div class="flex-grow">
                 <div class="panel padding" data-bind="if: $root.showEditTransformationArea">
                     <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
@@ -343,7 +350,7 @@
             </div>
         </div>
     </div>
-    <div class="test-container flex-grow flex-vertical" data-bind="with: test">
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
         <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
             <i class="icon-info icon-xl"></i>
             Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button
