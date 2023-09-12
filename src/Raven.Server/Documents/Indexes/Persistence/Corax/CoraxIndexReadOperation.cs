@@ -628,7 +628,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
 
                 // We don't need to do any processing for the query beyond counting if we are getting a count.
-                while (query.IsCountQuery == false)
+                while (query.IsCountQuery == false || typeof(TDistinct) == typeof(HasDistinct))
                 {
                     token.ThrowIfCancellationRequested();
 
@@ -662,6 +662,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             skippedResults.Value++;
                             continue;
                         }
+
+                        if (typeof(TDistinct) == typeof(HasDistinct) && query.IsCountQuery)
+                            continue;
 
                         // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                         // actual data and apply the rest of the filters. 
