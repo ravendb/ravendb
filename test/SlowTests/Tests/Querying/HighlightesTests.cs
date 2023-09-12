@@ -121,7 +121,47 @@ namespace SlowTests.Tests.Querying
                     highlights.AddRange(slugHighlighting.GetFragments(docId));
                     highlights.AddRange(contentHighlighting.GetFragments(docId));
 
-                    Assert.Equal(1, highlights.Count);                    
+                    Assert.Equal(1, highlights.Count);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData("session", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        public void TryHighlightNonField(Options options, string q)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new EventsItem
+                    {
+                        Slug = "ravendb-indexes-explained",
+                        Title = "RavenDB indexes explained",
+                        Content = "Itamar Syn-Hershko: Afraid of Map/Reduce? In this session, core RavenDB developer Itamar Syn-Hershko will walk through the RavenDB indexing process, grok it and much more.",
+                    });
+                    session.SaveChanges();
+                }
+
+                new ContentSearchIndex().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var highlightingOptions = new HighlightingOptions
+                    {
+                        PreTags = new[] { "<span style='background: yellow'>" },
+                        PostTags = new[] { "</span>" }
+                    };
+
+                    var results = session.Advanced.DocumentQuery<ISearchable>("ContentSearchIndex")
+                        .WaitForNonStaleResults()
+                        .Highlight("NonTitle", 128, 2, highlightingOptions, out Highlightings titleHighlighting)
+                        .Search("Slug", q).Boost(15)
+                        .Search("Title", q).Boost(12)
+                        .Search("Content", q)
+                        .ToArray();
+
+                    Assert.Equal(1, results.Length);
                 }
             }
         }
