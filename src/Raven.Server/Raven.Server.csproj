@@ -152,14 +152,14 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.202" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.200.31" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.203.6" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.202.5" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.200.36" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.203.11" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.17.0" />
-    <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.7.0" />
-    <PackageReference Include="CloudNative.CloudEvents" Version="2.7.0" />
-    <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.7.0" />
-    <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.7.0" />
+    <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.7.1" />
+    <PackageReference Include="CloudNative.CloudEvents" Version="2.7.1" />
+    <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.7.1" />
+    <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.7.1" />
     <PackageReference Include="Confluent.Kafka" Version="2.2.0" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
@@ -193,7 +193,7 @@
     <PackageReference Include="NuGet.PackageManagement" Version="6.7.0" />
     <PackageReference Include="NuGet.Protocol" Version="6.7.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.110" />
-    <PackageReference Include="Parquet.Net" Version="4.15.0" />
+    <PackageReference Include="Parquet.Net" Version="4.16.4" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.5.0" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
