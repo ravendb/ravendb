@@ -23,21 +23,12 @@ namespace Corax.Queries
         private readonly IndexSearcher.IndexSearcher _indexSearcher;
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
+        private readonly SkipSortingResult _skipSortingResult;
         private readonly CancellationToken _token;
+        private readonly SkipSortingResult _innerSkipSorting;
+        private readonly SkipSortingResult _outerSkipSorting;
 
-
-        private bool _doNotSortResults;
-
-
-        public SkipSortingResult AttemptToSkipSorting()
-        {
-            var r = _inner.AttemptToSkipSorting();
-            // if inner requires sorting, so do we
-            _doNotSortResults = r != SkipSortingResult.SortingIsRequired &&
-                                // for spatial, we get them in 
-                                _inner is not SpatialMatch.SpatialMatch;
-            return r;
-        }
+        public SkipSortingResult AttemptToSkipSorting() => _skipSortingResult;
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
 
@@ -53,6 +44,7 @@ namespace Corax.Queries
             delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> inspectionFunc,
             long totalResults,
             QueryCountConfidence confidence,
+            SkipSortingResult skipSortingResult,
             in CancellationToken token)
         {
             _indexSearcher = indexSearcher;
@@ -65,8 +57,12 @@ namespace Corax.Queries
             _inner = inner;
             _outer = outer;
             _confidence = confidence;
+            _skipSortingResult = skipSortingResult;
             _token = token;
             _ctx = indexSearcher.Allocator;
+
+            _innerSkipSorting = _inner.AttemptToSkipSorting();
+            _outerSkipSorting = _outer.AttemptToSkipSorting();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

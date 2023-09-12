@@ -6,7 +6,7 @@ using Corax.Queries.Meta;
 namespace Corax.Queries
 {    
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe struct MemoizationMatch<TInner> : IQueryMatch
+    public struct MemoizationMatch<TInner> : IQueryMatch
         where TInner : IQueryMatch
     {
         private MemoizationMatchProvider<TInner> _inner;
