@@ -518,7 +518,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutSubscriptionCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, out _, onCommandExecuted: (items, updateValueCommand) =>
                         {
-                            AssertSubscriptionsLicenseLimits(serverStore, items, updateValueCommand, context);
+                            AssertSubscriptionsLicenseLimits(serverStore, items, (PutSubscriptionCommand)updateValueCommand, context);
                         });
                         break;
 

@@ -253,6 +253,7 @@ namespace Raven.Server.Commercial
                 [nameof(LicensedTo)] = LicensedTo,
                 [nameof(Status)] = Status,
                 [nameof(Expired)] = Expired,
+                [nameof(UpgradeRequired)] = UpgradeRequired,
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
