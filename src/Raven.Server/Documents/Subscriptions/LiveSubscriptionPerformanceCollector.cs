@@ -66,12 +66,6 @@ namespace Raven.Server.Documents.Subscriptions
                     {
                         var connectionAggregators =
                             new List<SubscriptionConnectionStatsAggregator>();
-
-                        // add history aggregators
-                        connectionAggregators.AddRange(subscriptionConnections.RecentConnections.Select(x => x.LastConnectionStats));
-                        connectionAggregators.AddRange(subscriptionConnections.RecentRejectedConnections.Select(x => x.LastConnectionStats));
-                        connectionAggregators.AddRange(subscriptionConnections.PendingConnections.Select(x => x.LastConnectionStats));
-
                         foreach (var currentConnection in subscriptionConnections.GetConnections())
                         {
                             // add inProgress aggregator
@@ -85,6 +79,11 @@ namespace Raven.Server.Documents.Subscriptions
                                 subscriptionItem.ConnectionPerformance = connectionPerformance.ToArray();
                             }
                         }
+
+                        // add history aggregators
+                        connectionAggregators.AddRange(subscriptionConnections.RecentConnections.Select(x => x.GetPerformanceStats()));
+                        connectionAggregators.AddRange(subscriptionConnections.RecentRejectedConnections.Select(x => x.GetPerformanceStats()));
+                        connectionAggregators.AddRange(subscriptionConnections.PendingConnections.Select(x => x.GetPerformanceStats()));
                     }
                 }
 
@@ -103,11 +102,11 @@ namespace Raven.Server.Documents.Subscriptions
                         // add batches history for previous connections
                         foreach (var recentConnection in subscriptionConnections.RecentConnections)
                         {
-                            batchesAggregators.AddRange(recentConnection.LastBatchesStats);
+                            batchesAggregators.AddRange(recentConnection.GetBatchesPerformanceStats());
                         }
                         foreach (var recentRejectedConnection in subscriptionConnections.RecentRejectedConnections)
                         {
-                            batchesAggregators.AddRange(recentRejectedConnection.LastBatchesStats);
+                            batchesAggregators.AddRange(recentRejectedConnection.GetBatchesPerformanceStats());
                         }
                         // add batch stats to results
                         var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.SubscriptionId);
@@ -183,9 +182,9 @@ namespace Raven.Server.Documents.Subscriptions
                             }
                             
                             // ... and for any pending connections (waiting for free, etc)
-                            foreach (SubscriptionConnectionInfo pendingConnection in subscriptionConnections.PendingConnections)
+                            foreach (SubscriptionConnection pendingConnection in subscriptionConnections.PendingConnections)
                             {
-                                var pendingConnectionStats = pendingConnection.LastConnectionStats;
+                                var pendingConnectionStats = pendingConnection.GetPerformanceStats();
                                 if (connectionsAggregators.Contains(pendingConnectionStats) == false)
                                 {
                                     connectionsAggregators.Add(pendingConnectionStats);
@@ -286,7 +285,7 @@ namespace Raven.Server.Documents.Subscriptions
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var subscription = Database.SubscriptionStorage.GetSubscription(context, null, subscriptionName, history: false);
+                var subscription = Database.SubscriptionStorage.GetSubscription(context, null, subscriptionName, true);
                 _perSubscriptionConnectionStats.TryAdd(subscriptionName, new SubscriptionAndPerformanceConnectionStatsList(subscription));
                 
                 if (_perSubscriptionBatchStats.ContainsKey(subscriptionName))
