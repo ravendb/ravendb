@@ -91,7 +91,11 @@ public sealed unsafe class CoraxIndexedEntriesReader : IDisposable
             }
             else if (entryReader.IsRaw)
             {
-                SetValue(fieldName, new BlittableJsonReaderObject(span.Address, span.Length, _ctx));
+                // span.Length == 0 may be set if we stored an empty array (List | Raw | Empty) is marked
+                if (span.Length > 0)
+                {
+                    SetValue(fieldName, new BlittableJsonReaderObject(span.Address, span.Length, _ctx));
+                }
             }
             else
             {
@@ -117,6 +121,7 @@ public sealed unsafe class CoraxIndexedEntriesReader : IDisposable
             if (doc.TryGetValue(name, out var existing) == false)
             {
                 doc[name] = new List<object>();
+                return;
             }
 
             if (existing is List<object>)

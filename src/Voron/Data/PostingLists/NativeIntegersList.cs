@@ -127,7 +127,8 @@ public unsafe struct NativeIntegersList : IDisposable
 
         var bufferPtr = outputBufferPtr;
         var bufferEndPtr = bufferPtr + Count - 1;
-        Debug.Assert((*bufferPtr & 1) == 0);
+        Debug.Assert((*bufferPtr & 1) == 0,
+            "Removal as first item means that we have an orphaned removal, not supposed to happen!");
         while (bufferPtr < bufferEndPtr)
         {
             // here we check equality without caring if this is removal or not, skipping moving
