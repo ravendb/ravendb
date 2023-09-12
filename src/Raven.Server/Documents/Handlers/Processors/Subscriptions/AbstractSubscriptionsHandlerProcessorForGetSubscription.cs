@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
@@ -68,28 +69,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 [nameof(SubscriptionState.ArchivedDataProcessingBehavior)] = state.ArchivedDataProcessingBehavior
             };
 
-            if (state is SubscriptionStorage.SubscriptionGeneralDataAndStats stateAndStats)
+            if (state is SubscriptionGeneralDataAndStats stateAndStats)
             {
-                json["Connection"] = GetSubscriptionConnectionJson(stateAndStats.Connection);
-                json["Connections"] = GetSubscriptionConnectionsJson(stateAndStats.Connections);
-                json["RecentConnections"] = stateAndStats.RecentConnections?.Select(r => new DynamicJsonValue()
-                {
-                    ["State"] = new DynamicJsonValue()
-                    {
-                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                        ["Query"] = r.SubscriptionState.Query
-                    },
-                    ["Connection"] = GetSubscriptionConnectionJson(r)
-                });
-                json["FailedConnections"] = stateAndStats.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
-                {
-                    ["State"] = new DynamicJsonValue()
-                    {
-                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                        ["Query"] = r.SubscriptionState.Query
-                    },
-                    ["Connection"] = GetSubscriptionConnectionJson(r)
-                });
+                json[nameof(SubscriptionGeneralDataAndStats.Connections)] = GetSubscriptionConnectionsJson(stateAndStats.Connections);
+                json[nameof(SubscriptionGeneralDataAndStats.RecentConnections)] = stateAndStats.RecentConnections == null
+                    ? Array.Empty<SubscriptionConnectionInfo>()
+                    : stateAndStats.RecentConnections.Select(r => r.ToJson());
+                json[nameof(SubscriptionGeneralDataAndStats.RecentRejectedConnections)] = stateAndStats.RecentRejectedConnections == null
+                    ? Array.Empty<SubscriptionConnectionInfo>()
+                    : stateAndStats.RecentRejectedConnections.Select(r => r.ToJson());
+                json[nameof(SubscriptionGeneralDataAndStats.CurrentPendingConnections)] = stateAndStats.CurrentPendingConnections == null
+                    ? Array.Empty<SubscriptionConnectionInfo>()
+                    : stateAndStats.CurrentPendingConnections.Select(r => r.ToJson());
             }
 
             return json;

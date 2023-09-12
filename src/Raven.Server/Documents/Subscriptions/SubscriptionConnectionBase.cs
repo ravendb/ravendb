@@ -31,6 +31,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron.Global;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -38,6 +39,7 @@ namespace Raven.Server.Documents.Subscriptions
         where TIncludesCommand : AbstractIncludesCommand
     {
         private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
+        private static readonly int MaxBufferCapacityInBytes = 2 * Constants.Size.Megabyte;
         private static readonly StringSegment DataSegment = new("Data");
         private static readonly StringSegment ExceptionSegment = new("Exception");
 
@@ -191,6 +193,13 @@ namespace Raven.Server.Documents.Subscriptions
                         state.NotifyHasMoreDocs();
 
                     AssertCloseWhenNoDocsLeft();
+
+                    // we might wait for new documents for a long times, lets reduce the stream capacity
+                    if (_buffer.Capacity > MaxBufferCapacityInBytes)
+                    {
+                        Debug.Assert(_buffer.Length <= MaxBufferCapacityInBytes, $"{_buffer.Length} <= {MaxBufferCapacityInBytes}");
+                        _buffer.Capacity = MaxBufferCapacityInBytes;
+                    }
 
                     if (await WaitForChangedDocsAsync(state))
                         return;
@@ -384,6 +393,8 @@ namespace Raven.Server.Documents.Subscriptions
                 // ignored
             }
         }
+
+        public abstract SubscriptionConnectionInfo CreateConnectionInfo();
 
         protected virtual async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state)
         {
@@ -1087,6 +1098,15 @@ namespace Raven.Server.Documents.Subscriptions
                     }
                 }
                 catch
+                {
+                    // ignored
+                }
+
+                try
+                {
+                    _buffer.Dispose();
+                }
+                catch (Exception)
                 {
                     // ignored
                 }

@@ -205,12 +205,12 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
 
     public bool IsConcurrent => _connections.FirstOrDefault()?.Strategy == SubscriptionOpeningStrategy.Concurrent;
 
-    private readonly ConcurrentSet<TSubscriptionConnection> _pendingConnections = new();
-    private readonly ConcurrentQueue<TSubscriptionConnection> _recentConnections = new();
-    private readonly ConcurrentQueue<TSubscriptionConnection> _rejectedConnections = new();
-    public IEnumerable<TSubscriptionConnection> RecentConnections => _recentConnections;
-    public IEnumerable<TSubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
-    public ConcurrentSet<TSubscriptionConnection> PendingConnections => _pendingConnections;
+    private readonly ConcurrentSet<SubscriptionConnectionInfo> _pendingConnections = new();
+    private readonly ConcurrentQueue<SubscriptionConnectionInfo> _recentConnections = new();
+    private readonly ConcurrentQueue<SubscriptionConnectionInfo> _rejectedConnections = new();
+    public IEnumerable<SubscriptionConnectionInfo> RecentConnections => _recentConnections;
+    public IEnumerable<SubscriptionConnectionInfo> RecentRejectedConnections => _rejectedConnections;
+    public IEnumerable<SubscriptionConnectionInfo> PendingConnections => _pendingConnections;
 
 
     private readonly SemaphoreSlim _subscriptionActivelyWorkingLock;
@@ -245,7 +245,8 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
         var random = new Random();
         var registerConnectionDuration = Stopwatch.StartNew();
 
-        PendingConnections.Add(connection);
+        var info = connection.CreateConnectionInfo();
+        _pendingConnections.Add(info);
         connection.RecordConnectionInfo();
 
         try
@@ -279,7 +280,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
         }
         finally
         {
-            PendingConnections.TryRemove(connection);
+            _pendingConnections.TryRemove(info);
         }
     }
 
@@ -380,9 +381,10 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
             {
                 while (_recentConnections.Count > _maxConcurrentConnections + 10)
                 {
-                    _recentConnections.TryDequeue(out TSubscriptionConnection _);
+                    _recentConnections.TryDequeue(out SubscriptionConnectionInfo _);
                 }
-                _recentConnections.Enqueue(incomingConnection);
+
+                _recentConnections.Enqueue(incomingConnection.CreateConnectionInfo());
                 DropSingleConnection(incomingConnection);
             });
         }
@@ -494,9 +496,9 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
 
         while (_rejectedConnections.Count > 10)
         {
-            _rejectedConnections.TryDequeue(out TSubscriptionConnection _);
+            _rejectedConnections.TryDequeue(out SubscriptionConnectionInfo _);
         }
-        _rejectedConnections.Enqueue(connection);
+        _rejectedConnections.Enqueue(connection.CreateConnectionInfo());
     }
 
     private void CancelSingleConnection(TSubscriptionConnection connection, SubscriptionException ex)
@@ -505,7 +507,6 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
         {
             connection.ConnectionException = ex;
             connection.CancellationTokenSource.Cancel();
-            RegisterRejectedConnection(connection, ex);
         }
         catch
         {
@@ -522,7 +523,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
         }
     }
 
-    public TSubscriptionConnection MostRecentEndedConnection()
+    public SubscriptionConnectionInfo MostRecentEndedConnection()
     {
         if (_recentConnections.TryPeek(out var recentConnection))
             return recentConnection;

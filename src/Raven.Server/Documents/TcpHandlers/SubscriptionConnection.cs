@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Esprima;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -444,6 +445,24 @@ namespace Raven.Server.Documents.TcpHandlers
         protected override void GatherIncludesForDocument(DatabaseIncludesCommandImpl includeDocuments, Document document)
         {
             includeDocuments?.GatherIncludesForDocument(document);
+        }
+
+        public override SubscriptionConnectionInfo CreateConnectionInfo()
+        {
+            return new SubscriptionConnectionInfo()
+            {
+                ClientUri = ClientUri,
+                Query = State.Query,
+                LatestChangeVector = State.LastChangeVectorSent,
+                ConnectionException = ConnectionException,
+                RecentSubscriptionStatuses = RecentSubscriptionStatuses.ToList(),
+                Date = SystemTime.UtcNow,
+                Strategy = Strategy,
+                TcpConnectionStats = TcpConnection.GetConnectionStats(),
+                LastConnectionStats = Stats.LastConnectionStats,
+                LastBatchesStats = Stats.GetBatchesPerformanceStats,
+                ArchivedDataProcessingBehavior = SubscriptionState.ArchivedDataProcessingBehavior
+            };
         }
 
         protected override StatusMessageDetails GetStatusMessageDetails()
