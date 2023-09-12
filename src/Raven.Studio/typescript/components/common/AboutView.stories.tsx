@@ -34,7 +34,6 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                 color="info"
                                 heading="About this view"
                                 description="haha"
-                                targetId="1"
                             >
                                 <Col>
                                     <p>
@@ -59,7 +58,6 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                 color="success"
                                 heading="Examples of use"
                                 description="Learn how to get the most of this feature"
-                                targetId="2"
                             >
                                 <p>
                                     <strong>To set the refresh time:</strong> enter the appropriate date in the metadata{" "}
@@ -71,8 +69,15 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                                 </p>
                                 <Code code={codeExample} language="javascript" />
                             </AccordionItemWrapper>
+                            <AccordionItemWrapper
+                                icon="road-cone"
+                                color="success"
+                                heading="Examples of use"
+                                description="Learn how to get the most of this feature"
+                            >
+                                Test
+                            </AccordionItemWrapper>
                             <AccordionLicenseNotIncluded
-                                targetId="licensing"
                                 featureName="Document Compression"
                                 featureIcon="documents-compression"
                                 checkedLicenses={["Professional", "Enterprise"]}
@@ -102,7 +107,6 @@ export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
                                 color="info"
                                 heading="About this view"
                                 description="Get additional info on this feature"
-                                targetId="1"
                             >
                                 <p>
                                     <strong>Admin JS Console</strong> is a specialized feature primarily intended for
@@ -124,7 +128,6 @@ export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
                                 color="success"
                                 heading="Examples of use"
                                 description="Learn how to get the most of this feature"
-                                targetId="2"
                             >
                                 <p>
                                     <strong>To set the refresh time:</strong> enter the appropriate date in the metadata{" "}
@@ -141,7 +144,6 @@ export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
                                 color="warning"
                                 heading="Licensing"
                                 description="See which plans offer this and more exciting features"
-                                targetId="3"
                                 pill
                                 pillText="Upgrade available"
                                 pillIcon="upgrade-arrow"
