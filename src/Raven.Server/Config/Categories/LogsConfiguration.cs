@@ -38,7 +38,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting? RetentionTime { get; set; }
 
-        [Description("The maximum log size after which older files will be deleted")]
+        [Description("The maximum log size after which older files will be deleted. No log files will be deleted if this configuration is not set.")]
         [DefaultValue(null)]
         [MinValue(256)]
         [SizeUnit(SizeUnit.Megabytes)]
