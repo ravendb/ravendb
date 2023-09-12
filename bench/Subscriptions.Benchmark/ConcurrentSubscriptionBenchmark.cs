@@ -74,7 +74,7 @@ namespace Subscriptions.Benchmark
                     throw new InvalidOperationException("Can't have a revision without script");
                 }
 
-                string revisions = revision ? " (Revisions = true)" : "";
+                string revisions = revision ? $" {DocumentSubscriptions.IncludeRevisionsRQL}" : "";
                 if (script)
                 {
                     SubscriptionCreationOptions subscriptionCreationParams = new SubscriptionCreationOptions

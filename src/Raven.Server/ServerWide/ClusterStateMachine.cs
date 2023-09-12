@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
@@ -515,9 +516,9 @@ namespace Raven.Server.ServerWide
 
 
                     case nameof(PutSubscriptionCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out _, onCommandExecuted: (items, databaseName) =>
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out _, onCommandExecuted: (items, updateValueCommand) =>
                         {
-                            AssertSubscriptionsLicenseLimits(serverStore, items, databaseName, context);
+                            AssertSubscriptionsLicenseLimits(serverStore, items, updateValueCommand, context);
                         });
                         break;
 
@@ -1490,7 +1491,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result, Action<Table, string> onCommandExecuted = null)
+        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result, Action<Table, UpdateValueForDatabaseCommand> onCommandExecuted = null)
         {
             UpdateValueForDatabaseCommand updateCommand = null;
             Exception exception = null;
@@ -1508,7 +1509,7 @@ namespace Raven.Server.ServerWide
                     updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
                 }
 
-                onCommandExecuted?.Invoke(items, updateCommand.DatabaseName);
+                onCommandExecuted?.Invoke(items, updateCommand);
             }
             catch (Exception e)
             {
@@ -2718,10 +2719,10 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, string databaseName, ClusterOperationContext context)
+        private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand command, ClusterOperationContext context)
         {
             var maxSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
-            if (maxSubscriptionsPerDatabase != null && maxSubscriptionsPerDatabase >= 0 && maxSubscriptionsPerDatabase < GetSubscriptionsCountForDatabase(databaseName))
+            if (maxSubscriptionsPerDatabase != null && maxSubscriptionsPerDatabase >= 0 && maxSubscriptionsPerDatabase < GetSubscriptionsCountForDatabase(command.DatabaseName))
             {
                 if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                     return;
@@ -2736,6 +2737,15 @@ namespace Raven.Server.ServerWide
                     return;
 
                 throw new LicenseLimitException($"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
+            }
+
+            if (serverStore.LicenseManager.LicenseStatus.HasSubscriptionRevisions == false &&
+                command.Query.Contains(DocumentSubscriptions.IncludeRevisionsRQL))
+            {
+                if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                    return;
+
+                throw new LicenseLimitException("Your license doesn't include the subscription revisions feature.");
             }
 
             long GetSubscriptionsCount()

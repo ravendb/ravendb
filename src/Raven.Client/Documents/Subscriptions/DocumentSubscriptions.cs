@@ -29,6 +29,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         private readonly DocumentStore _store;
         private readonly ConcurrentSet<IAsyncDisposable> _subscriptions = new ConcurrentSet<IAsyncDisposable>();
+        internal static string IncludeRevisionsRQL = "(Revisions = true)";
 
         public DocumentSubscriptions(IDocumentStore store)
         {
@@ -118,9 +119,12 @@ namespace Raven.Client.Documents.Subscriptions
                 queryBuilder.Append("from '");
                 StringExtensions.EscapeString(queryBuilder, collectionName);
                 queryBuilder.Append('\'');
-                if(includeRevisions)
-                    queryBuilder.Append(" (Revisions = true)");
-
+                if (includeRevisions)
+                {
+                    queryBuilder.Append(" ");
+                    queryBuilder.Append(IncludeRevisionsRQL);
+                }
+                
                 criteria.Query = queryBuilder.Append(" as doc").ToString();
             }
 
