@@ -319,6 +319,15 @@ namespace Raven.Server.Documents.Indexes
                         existingIndex.SetPriority(definition.Priority);
                     }
 
+                    if ((differences & IndexDefinitionCompareDifferences.State) != 0)
+                    {
+                        // this can only be set by cluster
+                        // and if local state is disabled or error
+                        // then we are ignoring this change
+                        if (existingIndex.State == IndexState.Normal || existingIndex.State == IndexState.Idle)
+                            existingIndex.SetState(definition.State);
+                    }
+
                     existingIndex.Update(definition, existingIndex.Configuration);
 
                     return null;
@@ -355,7 +364,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.Type == IndexType.AutoMap)
             {
-                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, indexDeployment, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, definition.ClusterState);
+                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, indexDeployment, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -379,7 +388,7 @@ namespace Raven.Server.Documents.Indexes
                     })
                     .ToArray();
 
-                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, indexDeployment, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, definition.ClusterState);
+                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, indexDeployment, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;

@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
-        internal ClusterState ClusterState;
+        internal readonly ClusterState ClusterState;
 
         public IndexDeploymentMode DeploymentMode { get; set; }
 
