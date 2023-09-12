@@ -730,8 +730,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 // If we are going to just return count() then we don't care about anything else than memoize the results.
                 if (query.IsCountQuery || query.SkipStatistics == false)
                 {
-                    var results = new MemoizationMatchProvider<IQueryMatch>(IndexSearcher, queryMatch);
-                    totalResults.Value += results.FillAndRetrieve().Length;
+                    int read;
+                    do
+                    {
+                        // Instead of memoizing, we just continue filling the buffer. First, because we don't need to keep the 
+                        // value or deduplicate at this stage; just to know how many potential matches we have left. Also memoizing
+                        // is not supported for SortingMatch. 
+                        read = queryMatch.Fill(ids);
+                        totalResults.Value += read;
+                    } 
+                    while (read != 0);
                 }
 
                 Done:
