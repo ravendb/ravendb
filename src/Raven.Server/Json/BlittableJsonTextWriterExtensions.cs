@@ -998,6 +998,10 @@ namespace Raven.Server.Json
             writer.WriteBool(query.SkipDuplicateChecking);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(query.SkipStatistics));
+            writer.WriteBool(query.SkipStatistics);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(query.Start));
             writer.WriteInteger(query.Start);
             writer.WriteComma();
