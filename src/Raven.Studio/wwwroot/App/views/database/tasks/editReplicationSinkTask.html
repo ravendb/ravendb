@@ -1,6 +1,14 @@
 <div class="content-margin edit-pull-replication-sink-task edit-ongoing-task">
     <form class="flex-form" data-bind="submit: saveTask" autocomplete="off">
-        <div class="row flex-row absolute-fill">
+        <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+            <div class="flex-horizontal gap-2">
+                <i class="icon-pull-replication-agent"></i>
+                <h2 data-bind="text: $root.isAddingNewTask() ? `New Replication Sink` : `Edit Replication Sink`" class="mb-0"></h2>
+                <span class="badge license-restricted-badge" data-bind="if: !isProfessionalOrAbove">Professional +</span>
+            </div>
+            <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
+        </div>
+        <div class="row flex-row">
             <div class="col-xs-12 col-lg-6 flex-vertical">
                 <div class="flex-header flex-horizontal">
                     <div>
@@ -17,13 +25,12 @@
                         <input type="file" id="configurationFilePicker" 
                                data-bind="event: { change: _.partial($root.onConfigurationFileSelected, $element) }" tabindex="-1" accept=".json" />
                     </div>
-                    <label for="configurationFilePicker" class="btn btn-default" data-bind="visible: !canDefineCertificates">
+                    <label for="configurationFilePicker" class="btn btn-default" data-bind="visible: !canDefineCertificates, css: { 'pe-none disabled': !$root.isProfessionalOrAbove }">
                         <i class="icon-import"></i><span>Import configuration from Hub</span>
                     </label>
                 </div>
-                <div class="panel">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                     <div class="panel-body" data-bind="with: editedSinkTask">
-                        <h3 data-bind="text: $parent.isAddingNewTask() ? `New Replication Sink` : `Edit Replication Sink`"></h3>
                         <div class="form-group margin-top" data-bind="validationElement: taskName">
                             <label for="taskName" class="control-label">Sink Task Name</label>
                             <div class="flex-grow">
@@ -175,7 +182,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-xs-12 col-lg-6 margin-top" data-bind="with: editedSinkTask">
+            <div class="col-xs-12 col-lg-6 margin-top" data-bind="with: editedSinkTask, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                 <div class="flex-horizontal">
                     <div class="flex-separator"></div>
                     <label for="configurationFilePicker" class="btn btn-default margin-top" data-bind="visible: $root.canDefineCertificates" title="Import configuration from the configuration file created on the Hub">
