@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using JetBrains.Annotations;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
@@ -11,7 +10,6 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -235,6 +233,9 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
                     continue;
                 }
 
+                if (subscriptionStateKvp.Value.IsSubscriptionActive() == false)
+                    continue;
+
                 SubscriptionState subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionStateRaw);
                 if (subscriptionState.Disabled)
                 {
@@ -262,8 +263,9 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
                 var whoseTaskIsIt = GetSubscriptionResponsibleNode(context, subscriptionState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
+                    var reason = string.IsNullOrEmpty(whoseTaskIsIt) ? "could not get responsible node for subscription task." : $"because it's now under node '{whoseTaskIsIt}' responsibility.";
                     DropSubscriptionConnections(id,
-                        new SubscriptionDoesNotBelongToNodeException("Subscription operation was stopped, because it's now under a different server's responsibility"));
+                        new SubscriptionDoesNotBelongToNodeException($"Subscription operation was stopped, {reason}"));
                 }
             }
         }

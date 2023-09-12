@@ -76,6 +76,7 @@ public sealed class SubscriptionStatsCollector : IDisposable
     public void Dispose()
     {
         Metrics.Dispose();
+        PendingConnectionScope?.Dispose();
         ActiveConnectionScope?.Dispose();
         ConnectionScope.Dispose();
     }

@@ -42,6 +42,9 @@ public sealed class ShardSubscriptionStorage : SubscriptionStorage
                     continue;
                 }
 
+                if (state.IsSubscriptionActive() == false)
+                    continue;
+
                 var taskState = JsonDeserializationClient.SubscriptionState(taskStateRaw);
 
                 if (SubscriptionChangeVectorHasChanges(state, taskState))
@@ -55,8 +58,10 @@ public sealed class ShardSubscriptionStorage : SubscriptionStorage
                 var whoseTaskIsIt = GetSubscriptionResponsibleNode(context, taskState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
+                    string reason = string.IsNullOrEmpty(whoseTaskIsIt) ? "could not get responsible node for subscription task." : $"because it's now under node '{whoseTaskIsIt}' responsibility.";
+
                     DropSubscriptionConnections(id,
-                        new SubscriptionDoesNotBelongToNodeException($"Shard subscription '{id}' operation was stopped, because it's now under a different server's responsibility"));
+                        new SubscriptionDoesNotBelongToNodeException($"Shard subscription '{id}' operation was stopped, {reason}"));
                     continue;
                 }
             }

@@ -6,9 +6,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Processor;
@@ -78,6 +80,24 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         protected override void GatherIncludesForDocument(OrchestratorIncludesCommandImpl includeDocuments, Document document)
         {
             // no op
+        }
+
+        public override SubscriptionConnectionInfo CreateConnectionInfo()
+        {
+            return new SubscriptionConnectionInfo()
+            {
+                ClientUri = ClientUri,
+                Query = _state.Query,
+                LatestChangeVector = _state.LastChangeVectorSent,
+                ConnectionException = ConnectionException,
+                RecentSubscriptionStatuses = RecentSubscriptionStatuses.ToList(),
+                Date = SystemTime.UtcNow,
+                Strategy = Strategy,
+                TcpConnectionStats = TcpConnection.GetConnectionStats(),
+                LastConnectionStats = Stats.LastConnectionStats,
+                LastBatchesStats = Stats.GetBatchesPerformanceStats,
+                ArchivedDataProcessingBehavior = SubscriptionState.ArchivedDataProcessingBehavior
+            };
         }
 
         protected override async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state)
