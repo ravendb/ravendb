@@ -435,9 +435,32 @@ namespace Raven.Server.Commercial
 
             if (licenseStatus.Version.Major < 6)
             {
-                // TODO: TRY TO UPDATE from the WEB
+                if (skipGettingUpdatedLicense == false)
+                {
+                    var updatedLicense = await GetUpdatedLicenseForActivation(license);
+                    if (updatedLicense != null)
+                    {
+                        await ActivateAsync(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
+                        return;
+                    }
+                }
+
+                //TODO: if (updatedLicense == null)
+                {
+                    var errorMessage =
+                        $"License already expired on: {licenseStatus.FormattedExpiration} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}.";
+                    if (licenseStatus.IsIsv)
+                    {
+                        errorMessage += $" Since this is an ISV license, you can use this license with any RavenDB version that was released prior to {licenseStatus.FormattedExpiration}";
+                    }
+
+                    throw new LicenseLimitException(errorMessage);
+                }
+
                 throw new LicenseLimitException($"Your license version is {licenseStatus.Version}. " +
                                                 $"You must upgrade your license before you install it on v6.x.");
+
+                
             }
 
             ThrowIfCannotActivateLicense(licenseStatus);
@@ -1703,18 +1726,6 @@ namespace Raven.Server.Commercial
 
             const string message = "Your current license doesn't include the encryption feature";
             throw GenerateLicenseLimit(LimitType.Encryption, message);
-        }
-        
-        public void AssertCanAddQueueSink()
-        {
-            if (IsValid(out var licenseLimit) == false)
-                throw licenseLimit;
-
-            if (LicenseStatus.HasQueueSink)
-                return;
-
-            const string message = "Your current license doesn't include the queue sink feature";
-            throw GenerateLicenseLimit(LimitType.QueueSink, message);
         }
 
         private void DismissLicenseLimit(LimitType limitType)

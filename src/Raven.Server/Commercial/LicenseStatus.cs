@@ -115,7 +115,7 @@ namespace Raven.Server.Commercial
 
         public int MaxCores => GetValue<int?>(LicenseAttribute.Cores) ?? 3;
 
-        public int? MaxCoresPerNode { get; set; }
+        public int? MaxCoresPerNode => GetValue<int?>(LicenseAttribute.MaxCoresPerNode);
 
         public int MaxClusterSize
         {
@@ -205,21 +205,25 @@ namespace Raven.Server.Commercial
 
         public bool HasPostgreSqlIntegration => Enabled(LicenseAttribute.PostgreSqlIntegration);
 
-        public bool HasQueueSink => Enabled(LicenseAttribute.KafkaRabbitMQSink);
-
-        public bool HasPeriodicBackup => Enabled(LicenseAttribute.PeriodicBackup);
-
         public bool HasServerWideTasks => Enabled(LicenseAttribute.ServerWideTasks);
-
-        public bool HasStudioConfiguration => Enabled(LicenseAttribute.StudioConfiguration);
-
-        public bool HasClientConfiguration => Enabled(LicenseAttribute.ClientConfiguration);
 
         public bool HasIndexCleanup => Enabled(LicenseAttribute.IndexCleanup);
 
+        public bool HasPeriodicBackup => Enabled(LicenseAttribute.PeriodicBackup);
+
+        public bool HasClientConfiguration => Enabled(LicenseAttribute.ClientConfiguration);
+
+        public bool HasStudioConfiguration => Enabled(LicenseAttribute.StudioConfiguration);
+
+        public bool HasQueueSink => Enabled(LicenseAttribute.KafkaRabbitMQSink);
+
         public bool HasDataArchival => Enabled(LicenseAttribute.DataArchival);
 
-        public bool HasSubscriptionRevisions => Enabled(LicenseAttribute.SubscriptionRevisions);
+        public bool HasRevisionsInSubscriptions => Enabled(LicenseAttribute.RevisionsInSubscriptions);
+
+        public bool ShardingOnTheSameNodeOnly => Enabled(LicenseAttribute.ShardingOnTheSameNodeOnly);
+
+        public bool MaxReplicationFactorForSharding => Enabled(LicenseAttribute.MaxReplicationFactorForSharding);
 
         public int? MaxNumberOfStaticIndexesPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfStaticIndexesPerDatabase, agplValue: 12);
 
@@ -253,7 +257,7 @@ namespace Raven.Server.Commercial
                 [nameof(LicensedTo)] = LicensedTo,
                 [nameof(Status)] = Status,
                 [nameof(Expired)] = Expired,
-                [nameof(UpgradeRequired)] = UpgradeRequired,
+                //TODO: [nameof(UpgradeRequired)] = UpgradeRequired,
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),

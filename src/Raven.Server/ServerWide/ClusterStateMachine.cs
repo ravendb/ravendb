@@ -33,6 +33,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -460,12 +461,12 @@ namespace Raven.Server.ServerWide
                     case nameof(AddOlapEtlCommand):
                     case nameof(AddElasticSearchEtlCommand):
                     case nameof(AddQueueEtlCommand):
-                    case nameof(AddQueueSinkCommand):
+                    case nameof(UpdateQueueEtlCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
                     case nameof(UpdateOlapEtlCommand):
                     case nameof(UpdateElasticSearchEtlCommand):
-                    case nameof(UpdateQueueEtlCommand):
+                    case nameof(AddQueueSinkCommand):
                     case nameof(UpdateQueueSinkCommand):
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
@@ -591,6 +592,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
+                        AssertServerWideTasks(serverStore);
                         break;
 
                     case nameof(DeleteServerWideBackupConfigurationCommand):
@@ -607,6 +609,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutServerWideExternalReplicationCommand):
                         var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
+                        AssertServerWideTasks(serverStore);
                         break;
 
                     case nameof(DeleteServerWideTaskCommand):
@@ -635,10 +638,12 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutClientConfigurationCommand):
+                        AssertLicenseLimits(type, serverStore, databaseRecord: null, items: null, context);
                         PutValue<ClientConfiguration>(context, type, cmd, index);
                         break;
 
                     case nameof(PutServerWideStudioConfigurationCommand):
+                        AssertLicenseLimits(type, serverStore, databaseRecord: null, items: null, context);
                         PutValue<ServerWideStudioConfiguration>(context, type, cmd, index);
                         break;
 
@@ -651,7 +656,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(AddDatabaseCommand):
-                        var addedNodes = AddDatabase(context, cmd, index, serverStore);
+                        var addedNodes = AddDatabase(context, type, cmd, index, serverStore);
                         if (addedNodes != null)
                         {
                             result = addedNodes;
@@ -754,6 +759,12 @@ namespace Raven.Server.ServerWide
                     }
                 }, null);
             }
+        }
+
+        private static void AssertServerWideTasks(ServerStore serverStore)
+        {
+            if (serverStore.LicenseManager.LicenseStatus.HasServerWideTasks == false)
+                throw new LicenseLimitException(LimitType.ServerWideTasks, "Your license doesn't support adding server wide tasks.");
         }
 
         private void ExecutePutSubscriptionBatch<T>(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
@@ -1746,7 +1757,7 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.QueueSinks)
         };
 
-        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
@@ -1789,6 +1800,7 @@ namespace Raven.Server.ServerWide
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
 
+                        AssertLicenseLimits(type, serverStore, addDatabaseCommand.Record, items, context);
                         AssertLicenseLimits(nameof(PutIndexesCommand), serverStore, addDatabaseCommand.Record, items, context);
                         AssertLicenseLimits(nameof(PutAutoIndexCommand), serverStore, addDatabaseCommand.Record, items, context);
                         AssertLicenseLimits(nameof(PutSortersCommand), serverStore, addDatabaseCommand.Record, items, context);
@@ -2739,7 +2751,7 @@ namespace Raven.Server.ServerWide
                 throw new LicenseLimitException($"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
             }
 
-            if (serverStore.LicenseManager.LicenseStatus.HasSubscriptionRevisions == false &&
+            if (serverStore.LicenseManager.LicenseStatus.HasRevisionsInSubscriptions == false &&
                 command.Query.Contains(DocumentSubscriptions.IncludeRevisionsRQL))
             {
                 if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
@@ -2782,6 +2794,42 @@ namespace Raven.Server.ServerWide
         {
             switch (type)
             {
+                case nameof(AddDatabaseCommand):
+                case nameof(UpdateTopologyCommand):
+                    if (databaseRecord.IsSharded == false)
+                        return;
+
+                    var maxReplicationFactorForSharding = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
+                    var shardingOnTheSameNode = serverStore.LicenseManager.LicenseStatus.ShardingOnTheSameNodeOnly;
+                    if (maxReplicationFactorForSharding == null && shardingOnTheSameNode == false)
+                        return;
+
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                        return;
+
+                    var nodes = new HashSet<string>();
+                    foreach (var shard in databaseRecord.Sharding.Shards)
+                    {
+                        var topology = shard.Value;
+                        if (maxReplicationFactorForSharding != null && topology.ReplicationFactor > maxReplicationFactorForSharding)
+                        {
+                            //TODO:
+                            throw new LicenseLimitException();
+                        }
+
+                        foreach (var nodeTag in topology.AllNodes)
+                        {
+                            nodes.Add(nodeTag);
+                        }
+                    }
+
+                    if (shardingOnTheSameNode && nodes.Count > 1)
+                    {
+                        //TODO: throw
+                        throw new LicenseLimitException();
+                    }
+
+                    break;
                 case nameof(PutIndexCommand):
                 case nameof(PutIndexesCommand):
                     var maxStaticIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
@@ -2861,6 +2909,52 @@ namespace Raven.Server.ServerWide
 
                         throw new LicenseLimitException($"The maximum number of analyzers per cluster cannot exceed the limit of: {maxAnalyzersPerCluster}");
                     }
+                    break;
+
+                case nameof(UpdatePeriodicBackupCommand):
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                        return;
+
+                    if (serverStore.LicenseManager.LicenseStatus.HasPeriodicBackup == false)
+                    {
+                        throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
+                    }
+
+                    break;
+
+                case nameof(PutDatabaseClientConfigurationCommand):
+                case nameof(EditDatabaseClientConfigurationCommand):
+                case nameof(PutClientConfigurationCommand):
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                        return;
+
+                    if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
+                    {
+                        throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
+                    }
+                    break;
+
+                case nameof(PutDatabaseStudioConfigurationCommand):
+                case nameof(PutServerWideStudioConfigurationCommand):
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                        return;
+
+                    if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
+                    {
+                        throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
+                    }
+                    break;
+
+                case nameof(AddQueueSinkCommand):
+                case nameof(UpdateQueueSinkCommand):
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                        return;
+
+                    if (serverStore.LicenseManager.LicenseStatus.HasQueueSink)
+                    {
+                        throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support using the queue sink feature.");
+                    }
+
                     break;
             }
 
@@ -2975,7 +3069,6 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteIndexCommand):
                 case nameof(DeleteIndexHistoryCommand):
                 case nameof(DeleteOngoingTaskCommand):
-                case nameof(EditDatabaseClientConfigurationCommand):
                 case nameof(EditExpirationCommand):
                 case nameof(EditLockModeCommand):
                 case nameof(EditPostgreSqlConfigurationCommand):
@@ -2986,6 +3079,7 @@ namespace Raven.Server.ServerWide
                 case nameof(EditTimeSeriesConfigurationCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(PutDatabaseClientConfigurationCommand):
+                case nameof(EditDatabaseClientConfigurationCommand):
                 case nameof(PutDatabaseSettingsCommand):
                 case nameof(PutDatabaseStudioConfigurationCommand):
                 case nameof(PutElasticSearchConnectionStringCommand):
