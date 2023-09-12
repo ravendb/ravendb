@@ -1,4 +1,4 @@
-﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
+﻿import AboutViewFloating, {AboutViewAnchored, AccordionItemWrapper} from "components/common/AboutView";
 import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
@@ -9,7 +9,7 @@ export function EditExternalReplicationInfoHub() {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating defaultOpen={!isProfessionalOrAbove}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -26,13 +26,18 @@ export function EditExternalReplicationInfoHub() {
                     <Icon icon="newtab" /> Docs - External Replication
                 </a>
             </AccordionItemWrapper>
-            <AccordionLicenseNotIncluded
-                targetId="licensing"
-                featureName="External Replication"
-                featureIcon="external-replication"
-                checkedLicenses={["Professional", "Enterprise"]}
-                isLimited={!isProfessionalOrAbove}
-            />
+            <AboutViewAnchored
+                className="mt-2"
+                defaultOpen={isProfessionalOrAbove ? null : "licensing"}
+            >
+                <AccordionLicenseNotIncluded
+                    targetId="licensing"
+                    featureName="External Replication"
+                    featureIcon="external-replication"
+                    checkedLicenses={["Professional", "Enterprise"]}
+                    isLimited={!isProfessionalOrAbove}
+                />
+            </AboutViewAnchored>
         </AboutViewFloating>
     );
 }
