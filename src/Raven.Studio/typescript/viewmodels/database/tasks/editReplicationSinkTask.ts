@@ -20,6 +20,8 @@ import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import licenseModel from "models/auth/licenseModel";
+import { EditReplicationSinkInfoHub } from "viewmodels/database/tasks/EditReplicationSinkInfoHub";
 
 class editReplicationSinkTask extends shardViewModelBase {
 
@@ -53,11 +55,17 @@ class editReplicationSinkTask extends shardViewModelBase {
     serverCertificateModel = ko.observable<replicationCertificateModel>();
     exportCertificateUrl = endpoints.global.adminCertificates.adminCertificatesExport;
     private readonly serverCertificateName = "Server Certificate";
+    
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    infoHubView: ReactInKnockout<typeof EditReplicationSinkInfoHub>
 
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "onConfigurationFileSelected",
                                    "certFileSelected", "removeCertificate", "downloadServerCertificate", "setState");
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditReplicationSinkInfoHub
+        }))
     }
 
     canActivate(args: any) {
