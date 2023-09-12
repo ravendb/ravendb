@@ -80,9 +80,6 @@
         &:not(.collapsed) {
             background: transparent;
             box-shadow: none;
-            .description {
-                display: none;
-            }
         }
     }
     .accordion-item {
