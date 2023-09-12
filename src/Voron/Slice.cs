@@ -34,8 +34,6 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static explicit operator Span<byte>(Slice x) => new Span<byte>(x.Content.Ptr, x.Content.Length);
 
-        public readonly ReadOnlySpan<byte> AsReadOnlySpan() => new ReadOnlySpan<byte>(Content.Ptr, Content.Length);
-
         public bool HasValue => Content.HasValue;
 
         public readonly int Size
@@ -323,9 +321,16 @@ namespace Voron
 
         public readonly Span<byte> AsSpan()
         {
-            if (Size == 0)
-                return Span<byte>.Empty;
-            return new Span<byte>(Content.Ptr, Size);
+            // From the point of view of the Slice, if the content is null the size is 0 or the empty slice. Therefore,
+            // requesting a span of an empty slice is valid to just return `Span<byte>.Empty`.
+            return Size == 0 ? Span<byte>.Empty : new Span<byte>(Content.Ptr, Size);
+        }
+
+        public readonly ReadOnlySpan<byte> AsReadOnlySpan()
+        {
+            // From the point of view of the Slice, if the content is null the size is 0 or the empty slice. Therefore,
+            // requesting a span of an empty slice is valid to just return `Span<byte>.Empty`.
+            return Size == 0 ? ReadOnlySpan<byte>.Empty : new ReadOnlySpan<byte>(Content.Ptr, Content.Length);
         }
     }
 

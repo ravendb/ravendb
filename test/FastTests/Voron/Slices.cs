@@ -1,4 +1,5 @@
-﻿using Sparrow.Server;
+﻿using Google.Protobuf.WellKnownTypes;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
 using Xunit;
@@ -32,6 +33,23 @@ namespace FastTests.Voron
             Assert.False(original.Contains(noMatch));
             Assert.True(original.Contains(original));
             Assert.False(original.Contains(multipleHits));
+        }
+
+        [Fact]
+        public void BasicSpan()
+        {
+            using ByteStringContext context = new ByteStringContext(SharedMultipleUseFlag.None);
+
+            Slice.From(context, "testing", out var original);
+            Slice.From(context, "ing", out var suffix);
+            Slice.From(context, "", out var empty);
+
+            Assert.Equal(original.Size, original.AsSpan().Length);
+            Assert.Equal(original.Size, original.AsReadOnlySpan().Length);
+            Assert.Equal(suffix.Size, suffix.AsSpan().Length);
+            Assert.Equal(suffix.Size, suffix.AsReadOnlySpan().Length);
+            Assert.Equal(empty.Size, empty.AsSpan().Length);
+            Assert.Equal(empty.Size, empty.AsReadOnlySpan().Length);
         }
     }
 }
