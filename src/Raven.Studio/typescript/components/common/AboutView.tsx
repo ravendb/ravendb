@@ -7,6 +7,7 @@ import {
     Badge,
     Button,
     PopoverBody,
+    Table,
     UncontrolledAccordion,
     UncontrolledPopover,
 } from "reactstrap";
@@ -29,6 +30,61 @@ interface AboutViewHeadingProps {
     badgeText?: string;
     marginBottom?: number;
 }
+
+type FeatureAvailabilityDataType = {
+    featureNames?: string[];
+    availabilityMatrix: ReactNode[][];
+};
+
+interface FeatureAvailabilityTableProps {
+    enabled: boolean;
+    currentLicense: Raven.Server.Commercial.LicenseType;
+    availabilityData: FeatureAvailabilityDataType;
+}
+
+const FeatureAvailabilityTable = (props: FeatureAvailabilityTableProps) => {
+    const { enabled, currentLicense, availabilityData } = props;
+    const licenseTypes: Raven.Server.Commercial.LicenseType[] = ["Community", "Professional", "Enterprise"];
+    return (
+        <div>
+            {/* 'Community' | 'Developer' | 'Enterprise' | 'Essential' | 'Invalid' | 'None' | 'Professional' | 'Reserved'; */}
+            {enabled ? "true" : "false"}
+            <br></br>
+            {currentLicense}
+
+            <Table className="feature-availability-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        {licenseTypes.map((licenseType) => (
+                            <th key={licenseType}>{licenseType}</th>
+                        ))}
+                    </tr>
+                </thead>
+                {availabilityData.featureNames.map((featureName, rowIndex) => (
+                    <tr key={featureName}>
+                        <td>{featureName}</td>
+                        {licenseTypes.map((licenseType, colIndex) => (
+                            <td key={`${featureName}-${licenseType}`}>
+                                {typeof availabilityData.availabilityMatrix[rowIndex][colIndex] === "boolean" ? (
+                                    <>
+                                        {availabilityData.availabilityMatrix[rowIndex][colIndex] === true ? (
+                                            <Icon icon="check" color="success" />
+                                        ) : (
+                                            <Icon icon="cancel" color="danger" />
+                                        )}
+                                    </>
+                                ) : (
+                                    <>{availabilityData.availabilityMatrix[rowIndex][colIndex]}</>
+                                )}
+                            </td>
+                        ))}
+                    </tr>
+                ))}
+            </Table>
+        </div>
+    );
+};
 
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
     const { title, icon, badgeText, marginBottom } = props;
@@ -184,4 +240,11 @@ const AccordionItemLicensing = (props: AccordionItemLicensingProps) => {
 };
 
 export default AboutViewFloating;
-export { AboutViewFloating, AboutViewAnchored, AccordionItemLicensing, AccordionItemWrapper, AboutViewHeading };
+export {
+    AboutViewFloating,
+    AboutViewAnchored,
+    AccordionItemLicensing,
+    AccordionItemWrapper,
+    AboutViewHeading,
+    FeatureAvailabilityTable,
+};

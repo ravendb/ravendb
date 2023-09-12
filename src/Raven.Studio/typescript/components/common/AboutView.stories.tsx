@@ -7,28 +7,45 @@ import {
     AccordionItemWrapper,
     AccordionItemLicensing,
     AboutViewHeading,
+    FeatureAvailabilityTable,
 } from "./AboutView";
 import { Button, Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
 import Code from "./Code";
 import AccordionLicenseNotIncluded from "./AccordionLicenseNotIncluded";
+import { boundCopy } from "components/utils/common";
+import { success, warning } from "toastr";
 
 export default {
     title: "Bits/AboutView",
     component: AboutViewFloating,
     decorators: [withStorybookContexts, withBootstrap5],
+    argTypes: {
+        defaultOpen: {
+            control: {
+                type: "boolean",
+            },
+        },
+        featureAvailable: {
+            control: {
+                type: "boolean",
+            },
+        },
+    },
 } as ComponentMeta<typeof AboutViewFloating>;
 
-export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
+const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean }) => {
     return (
         <div className="content-margin">
             <Col xxl={12}>
                 <Row>
                     <Col>
                         <AboutViewHeading title="Section title" icon="zombie" badgeText="Professional" />
+                        default open: {args.defaultOpen ? "true" : "false"} / feature available:{" "}
+                        {args.defaultOpen ? "true" : "false"}
                     </Col>
                     <Col sm={"auto"}>
-                        <AboutViewFloating>
+                        <AboutViewFloating defaultOpen={args.defaultOpen}>
                             <AccordionItemWrapper
                                 icon="zombie"
                                 color="info"
@@ -71,11 +88,22 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
                             </AccordionItemWrapper>
                             <AccordionItemWrapper
                                 icon="road-cone"
-                                color="success"
+                                color={args.featureAvailable ? "success" : "warning"}
                                 heading="Examples of use"
                                 description="Learn how to get the most of this feature"
                             >
-                                Test
+                                <FeatureAvailabilityTable
+                                    enabled={true}
+                                    currentLicense="Developer"
+                                    availabilityData={{
+                                        featureNames: ["Feature 1", "Feature 2", "Feature 3"],
+                                        availabilityMatrix: [
+                                            [false, true, true],
+                                            ["min 36", <Icon icon="infinity" />, <Icon icon="infinity" />],
+                                            ["Yes", "No", "Maybe"],
+                                        ],
+                                    }}
+                                ></FeatureAvailabilityTable>
                             </AccordionItemWrapper>
                             <AccordionLicenseNotIncluded
                                 featureName="Document Compression"
@@ -91,7 +119,7 @@ export const FloatingButton: ComponentStory<typeof AboutViewFloating> = () => {
     );
 };
 
-export const AnchoredHub: ComponentStory<typeof AboutViewAnchored> = () => {
+const AnchoredHub = (args: { featureAvailable: boolean }) => {
     return (
         <div className="content-margin">
             <Col xxl={12}>
@@ -183,3 +211,12 @@ const codeExample = `{
         "@refresh": "2023-07-16T08:00:00.0000000Z"
     }
 }`;
+
+export const Floating = boundCopy(FloatingButton, {
+    defaultOpen: true,
+    featureAvailable: true,
+});
+
+export const Anchored = boundCopy(AnchoredHub, {
+    featureAvailable: true,
+});
