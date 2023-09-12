@@ -115,7 +115,7 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
     );
 };
 
-const AboutViewAnchored = (props: Omit<AboutViewProps, "defaultOpen"> & { defaultOpen: string | string[] }) => {
+const AboutViewAnchored = (props: Omit<AboutViewProps, "defaultOpen"> & { defaultOpen?: string | string[] }) => {
     const { children, className } = props;
 
     todo("Feature", "Damian", "Once there is a new info hub view, consider changing defaultOpen");
