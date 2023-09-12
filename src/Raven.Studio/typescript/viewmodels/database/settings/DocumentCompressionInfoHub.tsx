@@ -1,4 +1,4 @@
-﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
+﻿import AboutViewFloating, {AboutViewAnchored, AccordionItemWrapper} from "components/common/AboutView";
 import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
@@ -9,7 +9,7 @@ export function DocumentCompressionInfoHub() {
     const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating  defaultOpen={!isEnterpriseOrDeveloper}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -26,13 +26,18 @@ export function DocumentCompressionInfoHub() {
                     <Icon icon="newtab" /> Docs - Document Compression
                 </a>
             </AccordionItemWrapper>
-            <AccordionLicenseNotIncluded
-                targetId="licensing"
-                featureName="Document Compression"
-                featureIcon="documents-compression"
-                checkedLicenses={["Enterprise"]}
-                isLimited={!isEnterpriseOrDeveloper}
-            />
+            <AboutViewAnchored
+                className="mt-2"
+                defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}
+            >
+                <AccordionLicenseNotIncluded
+                    targetId="licensing"
+                    featureName="Document Compression"
+                    featureIcon="documents-compression"
+                    checkedLicenses={["Enterprise"]}
+                    isLimited={!isEnterpriseOrDeveloper}
+                />
+            </AboutViewAnchored>
         </AboutViewFloating>
     );
 }
