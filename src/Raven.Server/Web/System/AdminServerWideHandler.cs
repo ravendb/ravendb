@@ -51,9 +51,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/server-wide/backup", "PUT", AuthorizationStatus.ClusterAdmin)]
         public async Task PutServerWideBackupConfigurationCommand()
         {
-            if (ServerStore.LicenseManager.LicenseStatus.HasServerWideTasks == false)
-                throw new LicenseLimitException("Your license doesn't support adding server wide tasks.");
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
@@ -89,9 +86,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/server-wide/external-replication", "PUT", AuthorizationStatus.ClusterAdmin)]
         public async Task PutServerWideExternalReplicationCommand()
         {
-            if (ServerStore.LicenseManager.LicenseStatus.HasServerWideTasks == false)
-                throw new LicenseLimitException("Your license doesn't support adding server wide tasks");
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-external-replication-configuration");

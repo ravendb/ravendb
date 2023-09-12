@@ -33,11 +33,6 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutStudioConfiguration()
         {
-            if (ServerStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
-            {
-                throw new LicenseLimitException("Your license doesn't support adding the studio configuration.");
-            }
-
             using (var processor = new AdminConfigurationHandlerProcessorForPutStudioConfiguration(this))
                 await processor.ExecuteAsync();
         }
@@ -45,11 +40,6 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/configuration/client", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutClientConfiguration()
         {
-            if (ServerStore.LicenseManager.LicenseStatus.HasClientConfiguration)
-            {
-                throw new LicenseLimitException("Your license doesn't support adding the client configuration.");
-            }
-
             using (var processor = new AdminConfigurationHandlerProcessorForPutClientConfiguration(this))
                 await processor.ExecuteAsync();
         }

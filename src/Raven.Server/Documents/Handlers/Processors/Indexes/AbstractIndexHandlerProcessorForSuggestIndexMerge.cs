@@ -17,7 +17,7 @@ internal abstract class AbstractIndexHandlerProcessorForSuggestIndexMerge<TReque
     {
         if (requestHandler.ServerStore.LicenseManager.LicenseStatus.HasIndexCleanup)
         {
-            throw new LicenseLimitException("Your license doesn't include the index suggestions feature.");
+            throw new LicenseLimitException(LimitType.IndexCleanup, "Your license doesn't include the index suggestions feature.");
         }
     }
 

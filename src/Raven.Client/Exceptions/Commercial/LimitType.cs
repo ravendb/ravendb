@@ -94,7 +94,28 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("TCP Data Compression")]
         TcpDataCompression,
         
+        [Description("Server Wide Tasks")]
+        ServerWideTasks,
+
+        [Description("Index Cleanup")]
+        IndexCleanup,
+
+        [Description("Periodic Backup")]
+        PeriodicBackup,
+
+        [Description("Client Configuration")]
+        ClientConfiguration,
+
+        [Description("Studio Configuration")]
+        StudioConfiguration,
+
         [Description("Queue Sink")]
         QueueSink,
+
+        [Description("Data Archival")]
+        DataArchival,
+
+        [Description("Data Archival")]
+        RevisionsInSubscriptions,
     }
 }

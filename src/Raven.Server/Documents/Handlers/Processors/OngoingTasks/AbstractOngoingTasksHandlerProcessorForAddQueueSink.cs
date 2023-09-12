@@ -62,7 +62,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected virtual void AssertCanAddOrUpdateQueueSink(ref BlittableJsonReaderObject etlConfiguration)
         {
-            RequestHandler.ServerStore.LicenseManager.AssertCanAddQueueSink();
         }
     }
 }
