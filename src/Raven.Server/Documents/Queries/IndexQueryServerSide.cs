@@ -280,6 +280,9 @@ namespace Raven.Server.Documents.Queries
                             case "skipDuplicateChecking":
                                 result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
                                 break;
+                            case "skipStatistics":
+                                result.SkipStatistics = bool.Parse(item.Value[0]);
+                                break;
                             case "projectionBehavior":
                                 result.ProjectionBehavior = Enum.Parse<ProjectionBehavior>(item.Value[0], ignoreCase: true);
                                 break;
