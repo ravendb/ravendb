@@ -88,17 +88,19 @@ namespace Corax.Queries
             _bufferScope = _ctx.Allocate(bufferSize * sizeof(long), out _bufferHolder);
 
             var bufferState = Buffer;
-            int iterations = 0; 
 
             // Some inners can _tell_ us that they are already returning data in sorted order
             var skipSorting = _inner.AttemptToSkipSorting();
-            _sortMode = skipSorting switch
+            if (_sortMode == SortMode.Default)
             {
-                SkipSortingResult.ResultsNativelySorted => SortMode.Skip,
-                SkipSortingResult.WillSkipSorting => SortMode.Skip,
-                SkipSortingResult.SortingIsRequired => SortMode.Required,
-                _ => throw new ArgumentOutOfRangeException(skipSorting.ToString())
-            };
+                _sortMode = skipSorting switch
+                {
+                    SkipSortingResult.ResultsNativelySorted => SortMode.Skip,// if the inner already sorted, we don't need
+                    SkipSortingResult.WillSkipSorting => SortMode.Required, // if the inner skipped sorting, we have to
+                    SkipSortingResult.SortingIsRequired => SortMode.Required,
+                    _ => throw new ArgumentOutOfRangeException(skipSorting.ToString())
+                };
+            }
             
             int count = 0;
             while (true)
@@ -106,9 +108,6 @@ namespace Corax.Queries
                 var read = _inner.Fill(bufferState);
                 if (read == 0)
                     goto End;
-
-                // We will use multiple rounds to get the whole buffer.
-                iterations++;
 
                 // We haven't finished and probably we will need to expand the temporary buffer.
                 int bufferUsedItems = count + read;
@@ -126,8 +125,7 @@ namespace Corax.Queries
             End:
             // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
             // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-            if (_sortMode ==SortMode.Required ||
-                iterations > 1 && count > 1 && _sortMode != SortMode.Skip)
+            if (_sortMode == SortMode.Required)
             {
                 // We need to sort and remove duplicates.
                 count = Sorting.SortAndRemoveDuplicates(Buffer[..count]);

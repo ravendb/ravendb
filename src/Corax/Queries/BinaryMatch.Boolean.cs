@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Corax.Queries.Meta;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.VxSort;
 
 namespace Corax.Queries
 {
@@ -24,7 +25,6 @@ namespace Corax.Queries
                 while (true)
                 {
                     int totalResults = 0;
-                    int iterations = 0;
 
                     // PERF: An alternative implementation would be to perform OR in place. The upside is that every improvement on
                     //       OR would impact everywhere this happens, but the vectorized Sort may also tip the balance here. Another
@@ -40,14 +40,13 @@ namespace Corax.Queries
                             break;
 
                         totalResults += results;
-                        iterations++;
 
                         resultsSpan = resultsSpan.Slice(results);
                     }
                     
                     // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
                     // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                    if (match._doNotSortResults == false && iterations >= 1)
+                    if (match._innerSkipSorting != SkipSortingResult.ResultsNativelySorted)
                     {
                         if (totalResults > 0)
                         {
@@ -121,7 +120,9 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, token);
+            return new BinaryMatch<TInner, TOuter>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence,
+                // For AND, we have to sort the results so we can merge them, so the results are properly sorted by entry id order when they come out
+                SkipSortingResult.ResultsNativelySorted, token);
         }
 
         public static BinaryMatch<TInner, TOuter> YieldOr(IndexSearcher.IndexSearcher indexSearcher, in TInner inner, in TOuter outer, in CancellationToken token)
@@ -320,7 +321,12 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(indexSearcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence, token);
+            return new BinaryMatch<TInner, TOuter>(indexSearcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence,
+                // For OR, assume (Name = 'Mario' or endsWith(Name, 'o') 
+                // We get Mario from the left, and get Arlo, Enzo and Nico from the right in one Fill()
+                // and in the next, we get nothing from the left and Mario from the right. 
+                // We _cannot_ ensure sorting for OR
+                SkipSortingResult.SortingIsRequired, token);
         }
     }
 }
