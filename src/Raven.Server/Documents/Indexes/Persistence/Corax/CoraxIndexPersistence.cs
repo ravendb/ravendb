@@ -15,6 +15,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Impl;
+using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -138,17 +139,17 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
         {
             indexContext.PersistentContext.LongLivedTransactions = true;
             queryContext.SetLongLivedTransactions(true);
-            queryContext.OpenReadTransaction();
 
+            using var readTx = queryContext.OpenReadTransaction();
             using var tx = indexContext.OpenWriteTransaction();
             
             // We are creating a new converter because converters get tied through their accessors to the structure, and since on Map-Reduce indexes
             // we only care about the map and not the reduce hilarity can ensure when properties do not share the type. 
             var converter = CreateConverter(_index);
             converter.IgnoreComplexObjectsDuringIndex = true; // for training, we don't care
-            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, token,
+            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token,
                 _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
-            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext, _index.Collections, token,
+            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token,
                 Math.Max(100, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation / 10));
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
