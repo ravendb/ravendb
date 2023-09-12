@@ -13,12 +13,15 @@ import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
     const asyncGetSorters = useAsync(manageServerService.getServerWideCustomSorters, []);
 
     const { appUrl } = useAppUrls();
+    const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
@@ -53,7 +56,7 @@ export default function ServerWideCustomSorters() {
                                 <div className="p-3 text-center">
                                     You&apos;ve reached the maximum number of Custom Sorters allowed per cluster.
                                     <br /> Delete unused sorters or{" "}
-                                    <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                    <a href={upgradeLicenseLink} target="_blank">
                                         upgrade your license
                                     </a>
                                 </div>
@@ -114,7 +117,7 @@ export default function ServerWideCustomSorters() {
                                 </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/LGUJH8/latest" target="_blank">
+                                <a href={customSortersDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Custom Sorters
                                 </a>
                             </AccordionItemWrapper>

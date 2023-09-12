@@ -4,9 +4,11 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
 import {Icon} from "components/common/Icon";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export function EditServerWideBackupInfoHub() {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const backupTasksDocsLink = useRavenLink({ hash: "SXSM33" });
 
     return (
         <AboutViewFloating>
@@ -43,7 +45,7 @@ export function EditServerWideBackupInfoHub() {
                 </div>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
-                <a href="https://ravendb.net/l/SXSM33/latest" target="_blank">
+                <a href={backupTasksDocsLink} target="_blank">
                     <Icon icon="newtab" /> Docs - Server-Wide Backup Task
                 </a>
             </AccordionItemWrapper>

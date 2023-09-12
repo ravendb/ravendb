@@ -21,8 +21,9 @@ export function useRavenLink(props: UseRavenLinkProps): string {
     const { hash, lang } = props;
 
     const clientVersion = useAppSelector(clusterSelectors.clientVersion);
-    const version = props.version ?? clientVersion;
+
     const isDocs = props.isDocs ?? true;
+    const version = props.version ?? clientVersion;
 
     let link = `https://ravendb.net/l/${hash}`;
 

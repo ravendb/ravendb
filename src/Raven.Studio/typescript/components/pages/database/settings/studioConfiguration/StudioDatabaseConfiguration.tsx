@@ -22,6 +22,7 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -43,6 +44,8 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
     });
 
     useDirtyFlag(formState.isDirty);
+
+    const studioConfigurationDocsLink = useRavenLink({ hash: "HIR1VP" });
 
     const { reportEvent } = useEventsCollector();
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
@@ -174,7 +177,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                             </p>
                             <hr />
                             <div className="small-label mb-2">useful links</div>
-                            <a href="https://ravendb.net/l/HIR1VP/6.0/Csharp" target="_blank">
+                            <a href={studioConfigurationDocsLink} target="_blank">
                                 <Icon icon="newtab" /> Docs - Studio Configuration
                             </a>
                         </AccordionItemWrapper>

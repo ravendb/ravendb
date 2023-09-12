@@ -12,6 +12,7 @@ import Code from "components/common/Code";
 import { LoadError } from "components/common/LoadError";
 import SmokeSvg from "./CreateSampleDataSmoke";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface CreateSampleDataProps {
     db: database;
@@ -21,6 +22,8 @@ function CreateSampleData({ db }: CreateSampleDataProps) {
     const { tasksService } = useServices();
 
     const { value: isCodeSampleOpen, toggle: toggleCodeSample } = useBoolean(false);
+
+    const docsLink = useRavenLink({ hash: "SUTS29" });
 
     const asyncFetchCollectionsStats = useAsync(() => tasksService.fetchCollectionsStats(db), []);
     const asyncGetSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(db), []);
@@ -42,7 +45,7 @@ function CreateSampleData({ db }: CreateSampleDataProps) {
                         </p>
                         <p className="small">
                             The{" "}
-                            <a href="https://ravendb.net/docs" target="_blank">
+                            <a href={docsLink} target="_blank">
                                 RavenDB documentation
                             </a>{" "}
                             includes numerous examples that are based on this sample data. This is a simple and

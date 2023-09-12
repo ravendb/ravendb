@@ -25,6 +25,7 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -45,6 +46,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     });
 
     useDirtyFlag(formState.isDirty);
+
+    const loadBalancingLink = useRavenLink({ hash: "GYJ8JA" });
+    const clientConfigurationLink = useRavenLink({ hash: "TS7SGF" });
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
@@ -306,7 +310,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             >
                                 <h5 className={globalConfig && "text-center"}>Load Balancing Client Requests</h5>
                                 <small title="Navigate to the documentation" className="position-absolute end-0">
-                                    <a href="https://ravendb.net/l/GYJ8JA/latest/csharp" target="_blank">
+                                    <a href={loadBalancingLink} target="_blank">
                                         <Icon icon="link" /> Load balancing tutorial
                                     </a>
                                 </small>
@@ -610,7 +614,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 </ul>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/TS7SGF/6.0/Csharp" target="_blank">
+                                <a href={clientConfigurationLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Client Configuration
                                 </a>
                             </AccordionItemWrapper>

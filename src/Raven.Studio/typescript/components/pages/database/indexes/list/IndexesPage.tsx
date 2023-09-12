@@ -25,6 +25,7 @@ import { todo } from "common/developmentHelper";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface IndexesPageProps {
     db: database;
@@ -87,6 +88,10 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
+    const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const overviewDocsLink = useRavenLink({ hash: "8VWNHJ" });
+    const listDocsLink = useRavenLink({ hash: "7HOOEA" });
+
     const autoServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerCluster"));
     const staticServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerCluster"));
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
@@ -134,7 +139,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </strong>
                             <br /> Delete unused indexes or{" "}
                             <strong>
-                                <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                <a href={upgradeLicenseLink} target="_blank">
                                     upgrade your license
                                 </a>
                             </strong>
@@ -153,7 +158,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </strong>
                             <br /> Delete unused indexes or{" "}
                             <strong>
-                                <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                <a href={upgradeLicenseLink} target="_blank">
                                     upgrade your license
                                 </a>
                             </strong>
@@ -172,7 +177,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </strong>
                             <br /> Delete unused indexes or{" "}
                             <strong>
-                                <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                <a href={upgradeLicenseLink} target="_blank">
                                     upgrade your license
                                 </a>
                             </strong>
@@ -191,7 +196,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </strong>
                             <br /> Delete unused indexes or{" "}
                             <strong>
-                                <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                <a href={upgradeLicenseLink} target="_blank">
                                     upgrade your license
                                 </a>
                             </strong>
@@ -228,7 +233,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                         limit reached.
                                         <br /> Delete unused indexes or{" "}
                                         <strong>
-                                            <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                            <a href={upgradeLicenseLink} target="_blank">
                                                 upgrade your license
                                             </a>
                                         </strong>
@@ -266,11 +271,11 @@ export function IndexesPage(props: IndexesPageProps) {
                                     </ul>
                                     <hr />
                                     <div className="small-label mb-2">useful links</div>
-                                    <a href="https://ravendb.net/l/8VWNHJ/latest" target="_blank">
+                                    <a href={overviewDocsLink} target="_blank">
                                         <Icon icon="newtab" /> Docs - Indexes Overview
                                     </a>
                                     <br />
-                                    <a href="https://ravendb.net/l/7HOOEA/latest" target="_blank">
+                                    <a href={listDocsLink} target="_blank">
                                         <Icon icon="newtab" /> Docs - Indexes List View
                                     </a>
                                 </AccordionItemWrapper>

@@ -60,6 +60,7 @@ import OngoingTaskAddModal from "./OngoingTaskAddModal";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -79,6 +80,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         searchText: "",
         types: [],
     });
+
+    const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const ongoingTasksDocsLink = useRavenLink({ hash: "K4ZTNA" });
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
@@ -294,7 +298,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             </strong>
                             <br />
                             <strong>
-                                <a href="https://ravendb.net/l/FLDLO4" target="_blank">
+                                <a href={upgradeLicenseLink} target="_blank">
                                     Upgrade your license
                                 </a>{" "}
                             </strong>
@@ -315,7 +319,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             </strong>
                             <br />
                             <strong>
-                                <a href="https://ravendb.net/l/FLDLO4" target="_blank">
+                                <a href={upgradeLicenseLink} target="_blank">
                                     Upgrade your license
                                 </a>{" "}
                             </strong>
@@ -401,7 +405,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                             </div>
                             <hr />
                             <div className="small-label mb-2">useful links</div>
-                            <a href="https://ravendb.net/l/K4ZTNA/latest" target="_blank">
+                            <a href={ongoingTasksDocsLink} target="_blank">
                                 <Icon icon="newtab" /> Docs - Ongoing Tasks
                             </a>
                         </AccordionItemWrapper>

@@ -20,6 +20,7 @@ import { LoadError } from "components/common/LoadError";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -36,6 +37,8 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
     useDirtyFlag(formState.isDirty);
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
+
+    const documentRefreshDocsLink = useRavenLink({ hash: "1PKUYJ" });
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const frequencyLimit = 129600;
@@ -180,7 +183,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/1PKUYJ/6.0/Csharp" target="_blank">
+                                <a href={documentRefreshDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Document Refresh
                                 </a>
                             </AccordionItemWrapper>

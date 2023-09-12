@@ -26,6 +26,7 @@ import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -150,6 +151,8 @@ export function BackupsPage(props: BackupsPageProps) {
         status: "idle",
         data: null,
     });
+
+    const backupDocsLink = useRavenLink({ hash: "GMBYOH" });
 
     const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
 
@@ -311,7 +314,7 @@ export function BackupsPage(props: BackupsPageProps) {
                                 </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/GMBYOH/latest" target="_blank">
+                                <a href={backupDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Backups
                                 </a>
                             </AccordionItemWrapper>

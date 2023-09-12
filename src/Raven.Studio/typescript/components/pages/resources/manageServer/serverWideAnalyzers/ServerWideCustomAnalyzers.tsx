@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Col, Row, UncontrolledPopover } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -13,12 +13,15 @@ import { CounterBadge } from "components/common/CounterBadge";
 import classNames from "classnames";
 import AnalyzersList from "./ServerWideCustomAnalyzersList";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
     const asyncGetAnalyzers = useAsync(manageServerService.getServerWideCustomAnalyzers, []);
 
     const { appUrl } = useAppUrls();
+    const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
@@ -53,7 +56,7 @@ export default function ServerWideCustomAnalyzers() {
                                 <div className="p-3 text-center">
                                     You&apos;ve reached the maximum number of Custom Analyzers allowed per cluster.
                                     <br /> Delete unused analyzers or{" "}
-                                    <a href="https://ravendb.net/l/FLDLO4/6.0" target="_blank">
+                                    <a href={upgradeLicenseLink} target="_blank">
                                         upgrade your license
                                     </a>
                                 </div>
@@ -118,7 +121,7 @@ export default function ServerWideCustomAnalyzers() {
                                 </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/VWCQPI/latest" target="_blank">
+                                <a href={customAnalyzersDocsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Custom Analyzers
                                 </a>
                             </AccordionItemWrapper>
