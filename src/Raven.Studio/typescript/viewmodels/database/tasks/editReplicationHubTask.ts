@@ -27,6 +27,8 @@ import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import licenseModel from "models/auth/licenseModel";
+import { EditReplicationHubInfoHub } from "viewmodels/database/tasks/EditReplicationHubInfoHub";
 
 class editReplicationHubTask extends shardViewModelBase {
 
@@ -52,6 +54,10 @@ class editReplicationHubTask extends shardViewModelBase {
         generateCertificate: ko.observable<boolean>(false)
     };
 
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+
+    infoHubView: ReactInKnockout<typeof EditReplicationHubInfoHub>;
+
     allReplicationAccessItems = ko.observableArray<replicationAccessHubModel>([]);
     visibleReplicationAccessItems: KnockoutComputed<Array<replicationAccessHubModel>>;
     filteredReplicationAccessItems: KnockoutComputed<Array<replicationAccessHubModel>>;
@@ -71,6 +77,9 @@ class editReplicationHubTask extends shardViewModelBase {
                                    "addNewReplicationAccess", "editReplicationAccessItem", 
                                    "cloneReplicationAccessItem","deleteReplicationAccessItem",
                                    "saveReplicationHubTask", "saveReplicationAccessItem", "loadMoreAccessItems", "setState");
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditReplicationHubInfoHub
+        }))
     }
 
     activate(args: any) {
