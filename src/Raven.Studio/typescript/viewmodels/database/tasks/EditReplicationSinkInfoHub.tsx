@@ -22,7 +22,7 @@ export function EditReplicationSinkInfoHub() {
                 </p>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
-                <a href="https://ravendb.net/l/GMBYOH/latest" target="_blank">
+                <a href="https://ravendb.net/l/MMUKGD/latest" target="_blank">
                     <Icon icon="newtab" /> Docs - Replication Sink
                 </a>
             </AccordionItemWrapper>
