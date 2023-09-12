@@ -9,6 +9,7 @@ export interface ClusterNode {
 interface ClusterState {
     localNodeTag: string;
     nodes: EntityState<ClusterNode>;
+    clientVersion: string;
 }
 
 const clusterNodesAdapter = createEntityAdapter<ClusterNode>({
@@ -29,6 +30,7 @@ const selectLocalNodeTag = (store: RootState) => store.cluster.localNodeTag;
 const initialState: ClusterState = {
     localNodeTag: "A",
     nodes: clusterNodesAdapter.getInitialState(),
+    clientVersion: null,
 };
 
 export const clusterSlice = createSlice({
@@ -42,13 +44,13 @@ export const clusterSlice = createSlice({
         localNodeTagLoaded: (state, action: PayloadAction<string>) => {
             state.localNodeTag = action.payload;
         },
+        clientVersionLoaded: (state, { payload: version }: PayloadAction<string>) => {
+            state.clientVersion = version;
+        },
     },
 });
 
-export const clusterActions = {
-    nodesLoaded: clusterSlice.actions.nodesLoaded,
-    localNodeTagLoaded: clusterSlice.actions.localNodeTagLoaded,
-};
+export const clusterActions = clusterSlice.actions;
 
 export const clusterSelectors = {
     allNodes: selectAllNodes,
@@ -56,4 +58,5 @@ export const clusterSelectors = {
     nodeByTag: selectNodeByTag,
     localNode: selectLocalNode,
     localNodeTag: selectLocalNodeTag,
+    clientVersion: (store: RootState) => store.cluster.clientVersion,
 };

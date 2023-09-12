@@ -12,6 +12,7 @@ import { collectionsTrackerActions } from "./collectionsTrackerSlice";
 import changesContext from "common/changesContext";
 import { todo } from "common/developmentHelper";
 import { services } from "hooks/useServices";
+import viewModelBase from "viewmodels/viewModelBase";
 
 let initialized = false;
 
@@ -75,6 +76,8 @@ function initRedux() {
         onClusterTopologyChanged();
         topology.nodes.subscribe(onClusterTopologyChanged);
     });
+
+    viewModelBase.clientVersion.subscribe((version) => globalDispatch(clusterActions.clientVersionLoaded(version)));
 
     licenseModel.licenseStatus.subscribe((licenseStatus) => {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));
