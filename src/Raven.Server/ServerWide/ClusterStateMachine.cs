@@ -313,6 +313,28 @@ namespace Raven.Server.ServerWide
             });
         }
 
+        private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new List<string>
+        {
+            nameof(PutIndexesCommand),
+            nameof(PutAutoIndexCommand),
+            nameof(PutSortersCommand),
+            nameof(PutSortersCommand),
+            nameof(PutAnalyzersCommand),
+            nameof(PutIndexCommand),
+            nameof(PutIndexesCommand),
+            nameof(PutAutoIndexCommand),
+            nameof(EditRevisionsConfigurationCommand),
+            nameof(EditExpirationCommand),
+            nameof(EditRefreshCommand),
+            nameof(PutSortersCommand),
+            nameof(PutAnalyzersCommand),
+            nameof(PutDatabaseClientConfigurationCommand),
+            nameof(EditDatabaseClientConfigurationCommand),
+            nameof(PutClientConfigurationCommand),
+            nameof(PutDatabaseStudioConfigurationCommand),
+            nameof(PutServerWideStudioConfigurationCommand)
+        };
+
         public long LastNotifiedIndex => Interlocked.Read(ref _rachisLogIndexNotifications.LastModifiedIndex);
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
@@ -1801,10 +1823,11 @@ namespace Raven.Server.ServerWide
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
 
                         AssertLicenseLimits(type, serverStore, addDatabaseCommand.Record, items, context);
-                        AssertLicenseLimits(nameof(PutIndexesCommand), serverStore, addDatabaseCommand.Record, items, context);
-                        AssertLicenseLimits(nameof(PutAutoIndexCommand), serverStore, addDatabaseCommand.Record, items, context);
-                        AssertLicenseLimits(nameof(PutSortersCommand), serverStore, addDatabaseCommand.Record, items, context);
-                        AssertLicenseLimits(nameof(PutAnalyzersCommand), serverStore, addDatabaseCommand.Record, items, context);
+
+                        foreach (var command in _licenseLimitsCommandsForCreateDatabase)
+                        {
+                            AssertLicenseLimits(command, serverStore, addDatabaseCommand.Record, items, context);
+                        }
 
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
                         if (addDatabaseCommand.Record.IsSharded == false)
@@ -2990,10 +3013,10 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case nameof(UpdatePeriodicBackupCommand):
-                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                    if (serverStore.LicenseManager.LicenseStatus.HasPeriodicBackup)
                         return;
 
-                    if (serverStore.LicenseManager.LicenseStatus.HasPeriodicBackup)
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                         return;
 
                     throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
@@ -3001,33 +3024,42 @@ namespace Raven.Server.ServerWide
                 case nameof(PutDatabaseClientConfigurationCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
                 case nameof(PutClientConfigurationCommand):
-                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                    if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
                         return;
 
-                    if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                         return;
                     
                     throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
 
                 case nameof(PutDatabaseStudioConfigurationCommand):
                 case nameof(PutServerWideStudioConfigurationCommand):
-                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                    if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
                         return;
 
-                    if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                         return;
 
                     throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
 
                 case nameof(AddQueueSinkCommand):
                 case nameof(UpdateQueueSinkCommand):
-                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
-                        return;
-
                     if (serverStore.LicenseManager.LicenseStatus.HasQueueSink)
                         return;
 
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                        return;
+
                     throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
+
+                case nameof(EditDataArchivalCommand):
+                    if (serverStore.LicenseManager.LicenseStatus.HasDataArchival)
+                        return;
+
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                        return;
+
+                    throw new LicenseLimitException(LimitType.DataArchival, "Your license doesn't support using the data archival feature.");
             }
 
             long GetTotal(TotalType resultType)
