@@ -18,11 +18,15 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival;
 
-public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase(output)
+public class DataArchivalSmugglerTests : RavenTestBase
 {
+    public DataArchivalSmugglerTests(ITestOutputHelper output) : base(output)
+    {
+    }
+
     private async Task SetupDataArchival(IDocumentStore store)
     {
-        var config = new DataArchivalConfiguration {Disabled = false, ArchiveFrequencyInSec = 100};
+        var config = new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 };
 
         await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
     }
@@ -33,7 +37,7 @@ public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase
         using (var store = GetDocumentStore())
         {
             // Insert document with archive time before activating the archival
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             var retires = SystemTime.UtcNow.AddMinutes(5);
             using (var session = store.OpenAsyncSession())
             {
@@ -42,7 +46,7 @@ public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase
                 metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                 await session.SaveChangesAsync();
             }
-            
+
             // Activate the archival
             await SetupDataArchival(store);
 
@@ -50,21 +54,21 @@ public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
-            
+
 
             var toFileWithArchived = Path.Combine(NewDataPath(), "export_with_archived.ravendbdump");
             var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeArchived = true }, toFileWithArchived);
             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
-            
-            var toFileWithoutArchived= Path.Combine(NewDataPath(), "export_with_archived.ravendbdump");
-            operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeArchived = false}, toFileWithoutArchived);
+
+            var toFileWithoutArchived = Path.Combine(NewDataPath(), "export_with_archived.ravendbdump");
+            operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeArchived = false }, toFileWithoutArchived);
             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
-                        
-            
+
+
             var importOptionsWithArchived = new DatabaseSmugglerImportOptions { IncludeArchived = true };
             var importOptionsWithoutArchived = new DatabaseSmugglerImportOptions { IncludeArchived = false };
-            
-            
+
+
             // export - include, import - include
             using (var innerStore = GetDocumentStore())
             {
@@ -76,8 +80,8 @@ public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase
                     Assert.NotNull(session.Load<Company>(company.Id));
                 }
             }
-            
-            
+
+
             // export - don't include, import - include
             using (var innerStore = GetDocumentStore())
             {
@@ -89,8 +93,8 @@ public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase
                     Assert.Null(session.Load<Company>(company.Id));
                 }
             }
-            
-            
+
+
             // export - include, import - don't include
             using (var innerStore = GetDocumentStore())
             {
@@ -103,9 +107,9 @@ public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase
                 }
             }
         }
-            
+
     }
-    
+
     [Fact]
     public async Task Backup_And_Restore_ArchivedDocuments()
     {
@@ -115,7 +119,7 @@ public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase
         {
             using (var session = store.OpenAsyncSession())
             {
-                var user = new User {Name = "OG IT", Id = "users/1"};
+                var user = new User { Name = "OG IT", Id = "users/1" };
                 await session.StoreAsync(user, "users/1");
                 var retires = SystemTime.UtcNow.AddMinutes(5);
                 var metadata = session.Advanced.GetMetadataFor(user);
@@ -155,5 +159,5 @@ public class DataArchivalSmugglerTests(ITestOutputHelper output) : RavenTestBase
             }
         }
     }
-     
+
 }

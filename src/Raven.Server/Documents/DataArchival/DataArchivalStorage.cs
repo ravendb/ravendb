@@ -10,10 +10,15 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.DataArchival;
 
-public sealed class DataArchivalStorage(DocumentDatabase database, Transaction tx) : AbstractBackgroundWorkStorage(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name),
-    DocumentsByArchiveAtDateTime, Constants.Documents.Metadata.ArchiveAt)
+public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
 {
     private const string DocumentsByArchiveAtDateTime = "DocumentsByArchiveAtDateTime";
+
+    public DataArchivalStorage(DocumentDatabase database, Transaction tx)
+        : base(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByArchiveAtDateTime, Constants.Documents.Metadata.ArchiveAt)
+    {
+    }
+
     protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
     {
         if (id == null)
@@ -25,8 +30,8 @@ public sealed class DataArchivalStorage(DocumentDatabase database, Transaction t
             {
                 throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
             }
-                
-            if (HasPassed(metadata, currentTime, MetadataPropertyName) == false) 
+
+            if (HasPassed(metadata, currentTime, MetadataPropertyName) == false)
                 return;
 
             // Add archived flag, remove archive timestamp, add document flag
@@ -34,7 +39,7 @@ public sealed class DataArchivalStorage(DocumentDatabase database, Transaction t
             metadata.Modifications[Constants.Documents.Metadata.Archived] = true;
             metadata.Modifications.Remove(Constants.Documents.Metadata.ArchiveAt);
             doc.Flags |= DocumentFlags.Archived;
-                
+
 
             using (var updated = context.ReadObject(doc.Data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {

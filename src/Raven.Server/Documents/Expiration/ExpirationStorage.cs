@@ -11,9 +11,14 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Expiration
 {
-    public sealed class ExpirationStorage(DocumentDatabase database, Transaction tx) : AbstractBackgroundWorkStorage(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByExpiration, Constants.Documents.Metadata.Expires)
+    public sealed class ExpirationStorage : AbstractBackgroundWorkStorage
     {
         private const string DocumentsByExpiration = "DocumentsByExpiration";
+
+        public ExpirationStorage(DocumentDatabase database, Transaction tx)
+            : base(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByExpiration, Constants.Documents.Metadata.Expires)
+        {
+        }
 
         protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
         {
@@ -25,10 +30,10 @@ namespace Raven.Server.Documents.Expiration
                     {
                         throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
                     }
-                    
-                    if (HasPassed(metadata, currentTime, MetadataPropertyName) == false) 
+
+                    if (HasPassed(metadata, currentTime, MetadataPropertyName) == false)
                         return;
-                    
+
                     Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
                 }
             }
@@ -38,7 +43,7 @@ namespace Raven.Server.Documents.Expiration
                     Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
             }
         }
-        
+
         protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref List<(Slice LowerId, string Id)> expiredDocs)
         {
             if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
@@ -57,16 +62,16 @@ namespace Raven.Server.Documents.Expiration
             string id = null;
             var allExpired = true;
             var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, clonedId);
-            
+
             if (conflicts.Count <= 0)
                 return (true, null);
-            
+
             foreach (var conflict in conflicts)
             {
                 using (conflict)
                 {
                     id = conflict.Id;
-                        
+
                     if (conflict.Doc.TryGetMetadata(out var metadata) &&
                         HasPassed(metadata, currentTime, MetadataPropertyName))
                         continue;

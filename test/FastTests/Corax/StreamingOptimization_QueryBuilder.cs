@@ -34,8 +34,12 @@ namespace FastTests.Corax;
 // b) In case of multiple terms per document -> assert if optimization doesn't happened
 
 
-public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : RavenTestBase(output)
+public class StreamingOptimization_QueryBuilder : RavenTestBase
 {
+    public StreamingOptimization_QueryBuilder(ITestOutputHelper output) : base(output)
+    {
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)] // TermMatch and asc order on same field with same type => can optimize
@@ -269,7 +273,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             .WhereStartsWith(p => p.Name, "mac")
             .OrderBy(x => x.Name)
             .GetIndexQuery());
-    
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -287,7 +291,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             .WhereStartsWith(p => p.Name, "mac")
             .OrderBy(x => x.Name, OrderingType.Long)
             .GetIndexQuery());
-    
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -395,7 +399,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             .WhereEquals(i => i.First, 10)
             .OrderBy(x => x.Name)
             .GetIndexQuery());
-    
+
     [Theory]
     [MemberData(nameof(RangesTests))]
     public async Task RangeTests(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
@@ -404,25 +408,25 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             {
                 var query = session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>();
 
-                query = leftInclusive 
-                    ? query.WhereGreaterThanOrEqual(i => i.First, -10D) 
+                query = leftInclusive
+                    ? query.WhereGreaterThanOrEqual(i => i.First, -10D)
                     : query.WhereGreaterThan(i => i.First, -10D);
 
                 query.AndAlso();
-                
-                query = rightInclusive 
-                    ? query.WhereLessThanOrEqual(i => i.First, 10D) 
+
+                query = rightInclusive
+                    ? query.WhereLessThanOrEqual(i => i.First, 10D)
                     : query.WhereLessThan(i => i.First, 110D);
 
-                query = ascending 
-                    ? query.OrderBy(i => i.First) 
+                query = ascending
+                    ? query.OrderBy(i => i.First)
                     : query.OrderByDescending(i => i.First);
 
                 return query.GetIndexQuery();
             }
         );
     }
-    
+
     [Theory]
     [MemberData(nameof(RangesTests))]
     public async Task RangeTestsCannotApplyStreaming(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
@@ -431,20 +435,20 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             {
                 var query = session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>();
 
-                query = leftInclusive 
-                    ? query.WhereGreaterThanOrEqual(i => i.First, -10D) 
+                query = leftInclusive
+                    ? query.WhereGreaterThanOrEqual(i => i.First, -10D)
                     : query.WhereGreaterThan(i => i.First, -10D);
 
                 query.AndAlso();
-                
-                query = rightInclusive 
-                    ? query.WhereLessThanOrEqual(i => i.First, 10D) 
+
+                query = rightInclusive
+                    ? query.WhereLessThanOrEqual(i => i.First, 10D)
                     : query.WhereLessThan(i => i.First, 110D);
 
                 query.AndAlso().WhereEquals(i => i.Second, 0.0D);
-                
-                query = ascending 
-                    ? query.OrderBy(i => i.First) 
+
+                query = ascending
+                    ? query.OrderBy(i => i.First)
                     : query.OrderByDescending(i => i.First);
 
                 return query.GetIndexQuery();
@@ -454,15 +458,15 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
 
     public static IEnumerable<object[]> RangesTests()
     {
-        var boolean = new bool[] {false, true};
+        var boolean = new bool[] { false, true };
 
         foreach (var hasMultipleValues in boolean)
-        foreach (var leftInclusive in boolean)
-        foreach (var rightInclusive in boolean)
-        foreach (var isAscending in boolean)
-        {
-            yield return new object[] {hasMultipleValues, leftInclusive, rightInclusive, isAscending};
-        }
+            foreach (var leftInclusive in boolean)
+                foreach (var rightInclusive in boolean)
+                    foreach (var isAscending in boolean)
+                    {
+                        yield return new object[] { hasMultipleValues, leftInclusive, rightInclusive, isAscending };
+                    }
     }
 
     private Task TestQueryBuilder<TExpectedForSingleValues>(bool hasMultipleValues, Func<IAsyncDocumentSession, IndexQuery> query)
@@ -470,7 +474,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         return TestQueryBuilder<TExpectedForSingleValues, DtoIndexSingleValues>(this, hasMultipleValues, query);
     }
 
-    public static async Task TestQueryBuilder<TExpectedForSingleValues, TIndex>(RavenTestBase self, bool hasMultipleValues, Func<IAsyncDocumentSession, IndexQuery> query) 
+    public static async Task TestQueryBuilder<TExpectedForSingleValues, TIndex>(RavenTestBase self, bool hasMultipleValues, Func<IAsyncDocumentSession, IndexQuery> query)
         where TIndex : AbstractIndexCreationTask, new()
     {
         var (store, index, mapping, factories) = await GetDatabaseWithIndex<TIndex>(self);
@@ -511,14 +515,14 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
 
         return (store, indexInstance, converter?.GetKnownFieldsForWriter(), factories);
     }
-    
+
     private record Dto(string Name, double First, double Second);
 
     private class DtoIndexSingleValues : AbstractIndexCreationTask<Dto>
     {
         public DtoIndexSingleValues()
         {
-            Map = dtos => dtos.Select(e => new {e.Name, First = e.First, Second = e.Second});
+            Map = dtos => dtos.Select(e => new { e.Name, First = e.First, Second = e.Second });
         }
     }
 
@@ -528,9 +532,9 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         {
             Map = dtos => dtos.Select(e => new
             {
-                Name = new string[] {e.Name, e.Name.Reverse().ToString()},
-                First = new double[] {e.First, 1.0 / e.First},
-                Second = new double[] {e.Second, 1.0 / e.Second}
+                Name = new string[] { e.Name, e.Name.Reverse().ToString() },
+                First = new double[] { e.First, 1.0 / e.First },
+                Second = new double[] { e.Second, 1.0 / e.Second }
             });
         }
     }
