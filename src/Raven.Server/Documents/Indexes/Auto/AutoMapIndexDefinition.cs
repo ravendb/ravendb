@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     internal sealed class AutoMapIndexDefinition : AutoIndexDefinitionBaseServerSide
     {
-        public AutoMapIndexDefinition(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode,
+        internal AutoMapIndexDefinition(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode,
             IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(indexName, collection, fields, deploymentMode, clusterState, indexVersion)
         {

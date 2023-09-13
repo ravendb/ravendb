@@ -81,7 +81,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
         {
-            SetPriority(definition.Priority);
+            bool startIndex = UpdateIndexState(definition, true);
+            if (startIndex && Status != IndexRunningStatus.Running)
+                Start();
         }
 
         public override void SetState(IndexState state, bool inMemoryOnly = false, bool ignoreWriteError = false)
