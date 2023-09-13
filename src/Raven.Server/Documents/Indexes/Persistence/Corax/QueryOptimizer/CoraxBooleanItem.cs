@@ -162,7 +162,7 @@ public struct CoraxBooleanItem : IQueryMatch
             };
                 
             if (Operation is UnaryMatchOperation.NotEquals)
-                match = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(Field), match);
+                match = _indexSearcher.AndNot(_indexSearcher.AllEntries(), match);
                 
             return match;
         }

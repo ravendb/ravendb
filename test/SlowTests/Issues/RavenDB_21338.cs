@@ -53,7 +53,7 @@ public class RavenDB_21338 : RavenTestBase
             s.SaveChanges();
         }
         Indexes.WaitForIndexing(store);
-WaitForUserToContinueTheTest(store);
+
         using (var s = store.OpenSession())
         {
             Item item = s.Load<Item>("items/1");
