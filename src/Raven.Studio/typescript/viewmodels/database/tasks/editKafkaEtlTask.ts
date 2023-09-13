@@ -24,6 +24,9 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import document = require("models/database/documents/document");
 import { highlight, languages } from "prismjs";
+import licenseModel from "models/auth/licenseModel";
+import { EditKafkaEtlInfoHub } from "viewmodels/database/tasks/EditKafkaEtlInfoHub";
+
 class kafkaTaskTestMode {
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
@@ -203,6 +206,9 @@ class editKafkaEtlTask extends viewModelBase {
         return db ? db.isSharded() : false;
     });
 
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    infoHubView: ReactInKnockout<typeof EditKafkaEtlInfoHub>;
+
     constructor() {
         super();
         
@@ -210,6 +216,9 @@ class editKafkaEtlTask extends viewModelBase {
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionKafka", "removeTransformationScript",
                                    "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
                                    "toggleTestArea", "toggleAdvancedArea", "setState");
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditKafkaEtlInfoHub
+        }))
     }
 
     activate(args: any) {
