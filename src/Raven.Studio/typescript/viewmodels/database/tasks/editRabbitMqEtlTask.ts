@@ -24,6 +24,9 @@ import testQueueEtlCommand = require("commands/database/tasks/testQueueEtlComman
 import document = require("models/database/documents/document");
 import popoverUtils = require("common/popoverUtils");
 import { highlight, languages } from "prismjs";
+import licenseModel from "models/auth/licenseModel";
+import { EditRabbitMqEtlInfoHub } from "viewmodels/database/tasks/EditRabbitMqEtlInfoHub";
+
 class rabbitMqTaskTestMode {
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
@@ -197,6 +200,9 @@ class editRabbitMqEtlTask extends viewModelBase {
         return db ? db.isSharded() : false;
     });
     
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    infoHubView: ReactInKnockout<typeof EditRabbitMqEtlInfoHub>;
+    
     constructor() {
         super();
         
@@ -204,6 +210,9 @@ class editRabbitMqEtlTask extends viewModelBase {
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRabbitMq", "removeTransformationScript",
                                    "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
                                    "toggleTestArea", "toggleAdvancedArea", "setState");
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditRabbitMqEtlInfoHub
+        }))
     }
 
     activate(args: any) {
