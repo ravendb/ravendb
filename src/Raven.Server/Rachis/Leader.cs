@@ -35,6 +35,7 @@ namespace Raven.Server.Rachis
     {
         private TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
+        private readonly string _threadName;
 
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
 
@@ -84,6 +85,7 @@ namespace Raven.Server.Rachis
             Term = term;
             _engine = engine;
             PeersVersion[engine.Tag] = ClusterCommandsVersionManager.MyCommandsVersion;
+            _threadName = $"Consensus Leader - {_engine.Tag} in term {Term}";
         }
 
         private MultipleUseFlag _running = new MultipleUseFlag();
@@ -106,7 +108,7 @@ namespace Raven.Server.Rachis
 
             _leaderLongRunningWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null,
-                    ThreadNames.ForConsensusLeader($"Consensus Leader - {_engine.Tag} in term {Term}", _engine.Tag, Term));
+                    ThreadNames.ForConsensusLeader(_threadName, _engine.Tag, Term));
         }
 
         private int _steppedDown;
@@ -297,6 +299,8 @@ namespace Raven.Server.Rachis
         {
             try
             {
+                ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, _threadName, _engine.Log);
+
                 var handles = new WaitHandle[]
                 {
                     _newEntry,
