@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
 
                     var product1 = session
-                        .Load<Product>("products/1-A", builder => builder.IncludeDocuments(x => x.Supplier));
+                        .Load<Product>("products/1-A");
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -80,7 +80,7 @@ namespace SlowTests.Issues
                     Assert.False(session.Advanced.IsLoaded(supplier.Id));
 
                     var product2 = session
-                        .Load<Product>("products/1-A", builder => builder.IncludeDocuments(x => x.Supplier));
+                        .Load<Product>("products/1-A");
 
                     Assert.NotEqual(product1, product2);
                 }
@@ -131,7 +131,6 @@ namespace SlowTests.Issues
 
                     var products = session
                         .Query<Product>()
-                        .Include(x => x.Supplier)
                         .ToList();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -153,7 +152,6 @@ namespace SlowTests.Issues
 
                     products = session
                         .Query<Product>()
-                        .Include(x => x.Supplier)
                         .ToList();
 
                     Assert.Equal(1, products.Count);
