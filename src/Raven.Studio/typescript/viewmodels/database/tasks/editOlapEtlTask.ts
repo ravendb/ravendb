@@ -31,6 +31,9 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import licenseModel from "models/auth/licenseModel";
+import { EditOlapEtlInfoHub } from "viewmodels/database/tasks/EditOlapEtlInfoHub";
+
 class partitionTable {
     key: string;
     private dto: Raven.Server.Documents.ETL.Providers.OLAP.Test.OlapEtlTestScriptResult.PartitionItems;
@@ -264,6 +267,9 @@ class editOlapEtlTask extends shardViewModelBase {
 
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>(); // needed for olap local destination in connection string
 
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    infoHubView: ReactInKnockout<typeof EditOlapEtlInfoHub>;
+    
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("useConnectionString",
@@ -280,6 +286,9 @@ class editOlapEtlTask extends shardViewModelBase {
                                    "setState");
 
         aceEditorBindingHandler.install();
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditOlapEtlInfoHub
+        }))
     }
 
     activate(args: any) {
