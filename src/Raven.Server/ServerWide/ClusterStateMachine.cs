@@ -2799,7 +2799,7 @@ namespace Raven.Server.ServerWide
                     if (databaseRecord.IsSharded == false)
                         return;
 
-                    var maxReplicationFactorForSharding = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
+                    var maxReplicationFactorForSharding = serverStore.LicenseManager.LicenseStatus.MaxReplicationFactorForSharding;
                     var shardingOnTheSameNode = serverStore.LicenseManager.LicenseStatus.ShardingOnTheSameNodeOnly;
                     if (maxReplicationFactorForSharding == null && shardingOnTheSameNode == false)
                         return;
@@ -2871,6 +2871,34 @@ namespace Raven.Server.ServerWide
                     }
                     break;
 
+                case nameof(EditExpirationCommand):
+                    var minPeriodForExpirationInHours = serverStore.LicenseManager.LicenseStatus.MinPeriodForExpirationInHours;
+                    if (databaseRecord.Expiration != null && databaseRecord.Expiration.Disabled == false &&
+                        minPeriodForExpirationInHours != null && minPeriodForExpirationInHours * 60 * 60 > databaseRecord.Expiration.DeleteFrequencyInSec)
+                    {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
+                        //TODO: throw
+                        throw new LicenseLimitException();
+                    }
+
+                    break;
+
+                case nameof(EditRefreshCommand):
+                    var minPeriodForRefreshInHours = serverStore.LicenseManager.LicenseStatus.MinPeriodForRefreshInHours;
+                    if (databaseRecord.Refresh != null && databaseRecord.Refresh.Disabled == false &&
+                        minPeriodForRefreshInHours != null && minPeriodForRefreshInHours * 60 * 60 > databaseRecord.Refresh.RefreshFrequencyInSec)
+                    {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                            return;
+
+                        //TODO: throw
+                        throw new LicenseLimitException();
+                    }
+
+                    break;
+
                 case nameof(PutSortersCommand):
                     var maxCustomSortersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
                     if (maxCustomSortersPerDatabase != null && maxCustomSortersPerDatabase >= 0 && maxCustomSortersPerDatabase > databaseRecord.Sorters.Count)
@@ -2882,8 +2910,12 @@ namespace Raven.Server.ServerWide
                     }
 
                     var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
-                    if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0 && maxCustomSortersPerCluster > GetTotal(TotalType.CustomSorters))
+                    if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0)
                     {
+                        var totalSorters = GetTotal(TotalType.CustomSorters); //TODO: add server wide sorters
+                        if (totalSorters <= maxCustomSortersPerCluster)
+                            return;
+
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
@@ -2902,8 +2934,12 @@ namespace Raven.Server.ServerWide
                     }
 
                     var maxAnalyzersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
-                    if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0 && maxAnalyzersPerCluster > GetTotal(TotalType.Analyzers))
+                    if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0 )
                     {
+                        var totalAnalyzers = GetTotal(TotalType.Analyzers); //TODO: add server wide analyzers
+                        if (totalAnalyzers <= maxAnalyzersPerCluster)
+                            return;
+
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
@@ -2915,12 +2951,10 @@ namespace Raven.Server.ServerWide
                     if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                         return;
 
-                    if (serverStore.LicenseManager.LicenseStatus.HasPeriodicBackup == false)
-                    {
-                        throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
-                    }
+                    if (serverStore.LicenseManager.LicenseStatus.HasPeriodicBackup)
+                        return;
 
-                    break;
+                    throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
 
                 case nameof(PutDatabaseClientConfigurationCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
@@ -2929,10 +2963,9 @@ namespace Raven.Server.ServerWide
                         return;
 
                     if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
-                    {
-                        throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
-                    }
-                    break;
+                        return;
+                    
+                    throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
 
                 case nameof(PutDatabaseStudioConfigurationCommand):
                 case nameof(PutServerWideStudioConfigurationCommand):
@@ -2951,11 +2984,9 @@ namespace Raven.Server.ServerWide
                         return;
 
                     if (serverStore.LicenseManager.LicenseStatus.HasQueueSink)
-                    {
-                        throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support using the queue sink feature.");
-                    }
+                        return;
 
-                    break;
+                    throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
             }
 
             long GetTotal(TotalType resultType)
