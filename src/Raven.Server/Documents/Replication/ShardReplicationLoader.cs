@@ -108,13 +108,15 @@ public sealed class ShardReplicationLoader : ReplicationLoader
 
             // can happened if all nodes are in Rehab
             if (destNode == null)
+            {
+                toRemove.Add(migrationHandler.BucketMigrationNode);
                 continue;
+            }
 
             var source = newRecord.Topology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
             if (_server.NodeTag != source || migrationHandler.Destination.Url != _clusterTopology.GetUrlFromTag(destNode))
             {
                 toRemove.Add(migrationHandler.BucketMigrationNode);
-                continue;
             }
 
             // even if the status is ownership transferred we will keep the connection open to send any left overs if needed
@@ -138,7 +140,6 @@ public sealed class ShardReplicationLoader : ReplicationLoader
 
                 if (current == null)
                 {
-
                     var destTopology = GetTopologyForShard(process.DestinationShard);
                     var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
 
