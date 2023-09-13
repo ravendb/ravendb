@@ -104,7 +104,7 @@ class editKafkaSinkTask extends viewModelBase {
     patchDebugActionsModifiedView = require("views/database/patch/patchDebugActionsModified.html");
     patchDebugActionsDeletedView = require("views/database/patch/patchDebugActionsDeleted.html");
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
     
     static readonly scriptNamePrefix = "Script_";
 
