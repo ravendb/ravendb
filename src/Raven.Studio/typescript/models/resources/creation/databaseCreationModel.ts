@@ -571,7 +571,7 @@ class databaseCreationModel {
                 Shards: shards,
                 Orchestrator: {
                     Topology: {
-                        Members: orchestrators
+                        Members: orchestrators[0] === "?" ? null : orchestrators
                     }
                 }
             } : null
