@@ -46,7 +46,30 @@ public class KafkaEtl : QueueEtl<KafkaItem>
 
             try
             {
-                producer.InitTransactions(TimeSpan.FromSeconds(60));
+                var retries = 3;
+
+                do
+                {
+                    try
+                    {
+                        producer.InitTransactions(Database.Configuration.Etl.KafkaInitTransactionsTimeout.AsTimeSpan);
+                        break;
+                    }
+                    catch (KafkaRetriableException e)
+                    {
+                        if (--retries > 0)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                            {
+                                Logger.Operations($"ETL process: {Name}. Failed to init transactions for the producer instance. Retries: {retries}", e);
+                            }
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+                } while (true);
             }
             catch (Exception e)
             {
