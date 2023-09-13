@@ -409,13 +409,6 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                 <Icon icon="newtab" /> Docs - Ongoing Tasks
                             </a>
                         </AccordionItemWrapper>
-                        <AccordionLicenseLimited
-                            targetId="license-limit"
-                            description="Unleash the full potential and upgrade your plan."
-                            featureName="Ongoing Tasks"
-                            featureIcon="ongoing-tasks"
-                            isLimited={!isProfessionalOrAbove}
-                        />
                     </AboutViewFloating>
                 </div>
 
