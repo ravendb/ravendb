@@ -43,13 +43,14 @@ public enum LicenseAttribute
     PeriodicBackup,
     ClientConfiguration,
     StudioConfiguration,
-    KafkaRabbitMQSink,
+    QueueSink,
     DataArchival,
     RevisionsInSubscriptions,
     ShardingOnTheSameNodeOnly,
     MaxCoresPerNode,
+    MinPeriodForExpirationInHours,
+    MinPeriodForRefreshInHours,
     MaxReplicationFactorForSharding,
-    MinCheckPeriodForExpirationAndRefreshInHours,
     MaxNumberOfStaticIndexesPerDatabase,
     MaxNumberOfStaticIndexesPerCluster,
     MaxNumberOfAutoIndexesPerDatabase,
@@ -59,5 +60,5 @@ public enum LicenseAttribute
     MaxNumberOfCustomSortersPerDatabase,
     MaxNumberOfCustomSortersPerCluster,
     MaxNumberOfCustomAnalyzersPerDatabase,
-    MaxNumberOfCustomAnalyzersPerCluster,
+    MaxNumberOfCustomAnalyzersPerCluster
 }

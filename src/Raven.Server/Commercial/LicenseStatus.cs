@@ -109,6 +109,23 @@ namespace Raven.Server.Commercial
             }
         }
 
+        public bool UpgradeRequired
+        {
+            get
+            {
+                if (Type != LicenseType.Community)
+                    return false;
+
+                if (Version == null)
+                    return false;
+
+                if (System.Version.TryParse(RavenVersionAttribute.Instance.Version, out var currentVersion) == false)
+                    return false;
+
+                return Version > currentVersion;
+            }
+        }
+
         public DateTime? Expiration => GetValue<DateTime?>(LicenseAttribute.Expiration);
 
         public int MaxMemory => GetValue<int?>(LicenseAttribute.Memory) ?? 6;
@@ -215,7 +232,7 @@ namespace Raven.Server.Commercial
 
         public bool HasStudioConfiguration => Enabled(LicenseAttribute.StudioConfiguration);
 
-        public bool HasQueueSink => Enabled(LicenseAttribute.KafkaRabbitMQSink);
+        public bool HasQueueSink => Enabled(LicenseAttribute.QueueSink);
 
         public bool HasDataArchival => Enabled(LicenseAttribute.DataArchival);
 
@@ -223,7 +240,11 @@ namespace Raven.Server.Commercial
 
         public bool ShardingOnTheSameNodeOnly => Enabled(LicenseAttribute.ShardingOnTheSameNodeOnly);
 
-        public bool MaxReplicationFactorForSharding => Enabled(LicenseAttribute.MaxReplicationFactorForSharding);
+        public int? MinPeriodForExpirationInHours => GetValue<int?>(LicenseAttribute.MinPeriodForExpirationInHours, agplValue: 36);
+        
+        public int? MinPeriodForRefreshInHours => GetValue<int?>(LicenseAttribute.MinPeriodForRefreshInHours, agplValue: 36);
+
+        public int? MaxReplicationFactorForSharding => GetValue<int?>(LicenseAttribute.MaxReplicationFactorForSharding, agplValue: 1);
 
         public int? MaxNumberOfStaticIndexesPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfStaticIndexesPerDatabase, agplValue: 12);
 
@@ -257,7 +278,7 @@ namespace Raven.Server.Commercial
                 [nameof(LicensedTo)] = LicensedTo,
                 [nameof(Status)] = Status,
                 [nameof(Expired)] = Expired,
-                //TODO: [nameof(UpgradeRequired)] = UpgradeRequired,
+                [nameof(UpgradeRequired)] = UpgradeRequired,
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
