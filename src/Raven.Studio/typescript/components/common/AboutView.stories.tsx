@@ -1,5 +1,5 @@
 import React from "react";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { ComponentMeta } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import {
     AboutViewFloating,
@@ -8,13 +8,13 @@ import {
     AccordionItemLicensing,
     AboutViewHeading,
     FeatureAvailabilityTable,
+    FeatureAvailabilityData,
 } from "./AboutView";
 import { Button, Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
 import Code from "./Code";
 import AccordionLicenseNotIncluded from "./AccordionLicenseNotIncluded";
 import { boundCopy } from "components/utils/common";
-import { success, warning } from "toastr";
 
 export default {
     title: "Bits/AboutView",
@@ -33,6 +33,15 @@ export default {
         },
     },
 } as ComponentMeta<typeof AboutViewFloating>;
+
+const availabilityData: FeatureAvailabilityData = {
+    featureNames: ["Feature 1", "Feature 2", "Feature 3"],
+    availabilityMatrix: [
+        [false, true, true],
+        ["min 36", <Icon icon="infinity" />, <Icon icon="infinity" />],
+        ["Yes", "No", "Maybe"],
+    ],
+};
 
 const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean }) => {
     return (
@@ -93,17 +102,10 @@ const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean 
                                 description="Learn how to get the most of this feature"
                             >
                                 <FeatureAvailabilityTable
-                                    enabled={true}
+                                    enabled={args.featureAvailable}
                                     currentLicense="Developer"
-                                    availabilityData={{
-                                        featureNames: ["Feature 1", "Feature 2", "Feature 3"],
-                                        availabilityMatrix: [
-                                            [false, true, true],
-                                            ["min 36", <Icon icon="infinity" />, <Icon icon="infinity" />],
-                                            ["Yes", "No", "Maybe"],
-                                        ],
-                                    }}
-                                ></FeatureAvailabilityTable>
+                                    availabilityData={availabilityData}
+                                />
                             </AccordionItemWrapper>
                             <AccordionLicenseNotIncluded
                                 featureName="Document Compression"
