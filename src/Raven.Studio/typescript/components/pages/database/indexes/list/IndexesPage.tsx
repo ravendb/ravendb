@@ -92,26 +92,26 @@ export function IndexesPage(props: IndexesPageProps) {
     const overviewDocsLink = useRavenLink({ hash: "8VWNHJ" });
     const listDocsLink = useRavenLink({ hash: "7HOOEA" });
 
-    const autoServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerCluster"));
-    const staticServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerCluster"));
+    const autoClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerCluster"));
+    const staticClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerCluster"));
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
-    const autoServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterAutoIndexes;
-    const staticServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterStaticIndexes;
+    const autoClusterCount = useAppSelector(licenseSelectors.limitsUsage).ClusterAutoIndexes;
+    const staticClusterCount = useAppSelector(licenseSelectors.limitsUsage).ClusterStaticIndexes;
 
     const autoDatabaseCount = stats.indexes.filter((x) => IndexUtils.isAutoIndex(x)).length;
     const staticDatabaseCount = stats.indexes.length - autoDatabaseCount;
 
-    const autoServerLimitStatus = getLicenseLimitReachStatus(autoServerCount, autoServerLimit);
-    const staticServerLimitStatus = getLicenseLimitReachStatus(staticServerCount, staticServerLimit);
+    const autoClusterLimitStatus = getLicenseLimitReachStatus(autoClusterCount, autoClusterLimit);
+    const staticClusterLimitStatus = getLicenseLimitReachStatus(staticClusterCount, staticClusterLimit);
 
     const autoDatabaseLimitStatus = getLicenseLimitReachStatus(autoDatabaseCount, autoDatabaseLimit);
     const staticDatabaseLimitStatus = getLicenseLimitReachStatus(staticDatabaseCount, staticDatabaseLimit);
 
     const isNewIndexDisabled =
         !isProfessionalOrAbove &&
-        (staticServerLimitStatus === "limitReached" || staticDatabaseLimitStatus === "limitReached");
+        (staticClusterLimitStatus === "limitReached" || staticDatabaseLimitStatus === "limitReached");
 
     todo("Other", "Damian", "Move limits to separate component");
 
@@ -127,15 +127,15 @@ export function IndexesPage(props: IndexesPageProps) {
         <>
             {!isProfessionalOrAbove && (
                 <>
-                    {staticServerLimitStatus !== "notReached" && (
+                    {staticClusterLimitStatus !== "notReached" && (
                         <Alert
-                            color={staticServerLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center"
+                            color={staticClusterLimitStatus === "limitReached" ? "danger" : "warning"}
+                            className="text-center mb-3"
                         >
-                            Your server {staticServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                            <strong>maximum number of static indexes</strong> allowed by your license{" "}
+                            Cluster {staticClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                            <strong>maximum number of static indexes</strong> allowed per cluster by your license{" "}
                             <strong>
-                                ({staticServerCount}/{staticServerLimit})
+                                ({staticClusterCount}/{staticClusterLimit})
                             </strong>
                             <br /> Delete unused indexes or{" "}
                             <strong>
@@ -146,15 +146,15 @@ export function IndexesPage(props: IndexesPageProps) {
                         </Alert>
                     )}
 
-                    {autoServerLimitStatus !== "notReached" && (
+                    {autoClusterLimitStatus !== "notReached" && (
                         <Alert
-                            color={autoServerLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center"
+                            color={autoClusterLimitStatus === "limitReached" ? "danger" : "warning"}
+                            className="text-center mb-3"
                         >
-                            Your server {autoServerLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                            <strong>maximum number of auto indexes</strong> allowed by your license{" "}
+                            Cluster {autoClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                            <strong>maximum number of auto indexes</strong> allowed per cluster by your license{" "}
                             <strong>
-                                ({autoServerCount}/{autoServerLimit})
+                                ({autoClusterCount}/{autoClusterLimit})
                             </strong>
                             <br /> Delete unused indexes or{" "}
                             <strong>
@@ -168,10 +168,10 @@ export function IndexesPage(props: IndexesPageProps) {
                     {staticDatabaseLimitStatus !== "notReached" && (
                         <Alert
                             color={staticDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center"
+                            className="text-center mb-3"
                         >
-                            Your database {staticDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                            <strong>maximum number of static indexes</strong> allowed by your license{" "}
+                            Database {staticDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                            <strong>maximum number of static indexes</strong> allowed per database by your license{" "}
                             <strong>
                                 ({staticDatabaseCount}/{staticDatabaseLimit})
                             </strong>
@@ -187,10 +187,10 @@ export function IndexesPage(props: IndexesPageProps) {
                     {autoDatabaseLimitStatus !== "notReached" && (
                         <Alert
                             color={autoDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center"
+                            className="text-center mb-3"
                         >
-                            Your database {autoDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                            <strong>maximum number of auto indexes</strong> allowed by your license{" "}
+                            Database {autoDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                            <strong>maximum number of auto indexes</strong> allowed per database by your license{" "}
                             <strong>
                                 ({autoDatabaseCount}/{autoDatabaseLimit})
                             </strong>
@@ -228,10 +228,12 @@ export function IndexesPage(props: IndexesPageProps) {
                                     className="bs5"
                                 >
                                     <div className="p-3 text-center">
-                                        Static index{" "}
-                                        {staticServerLimitStatus === "limitReached" ? "server" : "database"} license
-                                        limit reached.
-                                        <br /> Delete unused indexes or{" "}
+                                        {staticClusterLimitStatus === "limitReached" ? "Cluster" : "Database"} has
+                                        reached the maximum number of static indexes allowed per{" "}
+                                        {staticClusterLimitStatus === "limitReached" ? "cluster" : "database"} by your
+                                        license.
+                                        <br />
+                                        Delete unused indexes or{" "}
                                         <strong>
                                             <a href={upgradeLicenseLink} target="_blank">
                                                 upgrade your license
