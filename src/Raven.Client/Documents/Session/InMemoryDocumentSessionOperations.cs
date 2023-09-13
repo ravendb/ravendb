@@ -2607,9 +2607,17 @@ more responsive application.
             if (name.Contains('@'))
                 throw new InvalidDataException("Time Series from type Rollup cannot be Incremental");
         }
+
+        internal void AssertNoIncludesInNonTrackingSession()
+        {
+            if (NoTracking == false)
+                return;
+
+            throw new InvalidOperationException("This session does not track any entities, because of that registering includes is forbidden to avoid false expectations when later load operations are performed on those and no requests are being sent to the server. Please avoid any 'Include' operations during non-tracking session actions like load or query.");
+        }
     }
 
-    internal struct AsyncTaskHolder : IDisposable
+    internal readonly struct AsyncTaskHolder : IDisposable
     {
         private readonly InMemoryDocumentSessionOperations _session;
 

@@ -60,39 +60,62 @@ namespace Raven.Client.Documents.Session.Operations
 
         public LoadOperation WithIncludes(string[] includes)
         {
-            _includes = includes;
+            if (includes is { Length: > 0 })
+            {
+                _session.AssertNoIncludesInNonTrackingSession();
+                _includes = includes;
+            }
+
             return this;
         }
 
         public LoadOperation WithCompareExchange(string[] compareExchangeValues)
         {
-            _compareExchangeValuesToInclude = compareExchangeValues;
+            if (compareExchangeValues is { Length: > 0 })
+            {
+                _session.AssertNoIncludesInNonTrackingSession();
+                _compareExchangeValuesToInclude = compareExchangeValues;
+            }
+
             return this;
         }
 
         public LoadOperation WithCounters(string[] counters)
         {
-            if (counters != null)
+            if (counters is { Length: > 0 })
+            {
+                _session.AssertNoIncludesInNonTrackingSession();
                 _countersToInclude = counters;
+            }
+
             return this;
         }
 
         public LoadOperation WithRevisions(string[] revisionsByChangeVector)
         {
-            if (revisionsByChangeVector != null)
+            if (revisionsByChangeVector is { Length: > 0 })
+            {
+                _session.AssertNoIncludesInNonTrackingSession();
                 _revisionsToIncludeByChangeVector = revisionsByChangeVector;
+            }
+
             return this;
         }
 
         public LoadOperation WithRevisions(DateTime? revisionByDateTimeBefore)
         {
             if (revisionByDateTimeBefore != null)
+            {
+                _session.AssertNoIncludesInNonTrackingSession();
                 _revisionsToIncludeByDateTimeBefore = revisionByDateTimeBefore;
+            }
+
             return this;
         }
 
         public LoadOperation WithAllCounters()
         {
+            _session.AssertNoIncludesInNonTrackingSession();
             _includeAllCounters = true;
             return this;
         }
@@ -100,7 +123,11 @@ namespace Raven.Client.Documents.Session.Operations
         public LoadOperation WithTimeSeries(IEnumerable<AbstractTimeSeriesRange> timeseries)
         {
             if (timeseries != null)
+            {
+                _session.AssertNoIncludesInNonTrackingSession();
                 _timeSeriesToInclude = timeseries;
+            }
+
             return this;
         }
 
