@@ -25,6 +25,8 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import popoverUtils = require("common/popoverUtils");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import licenseModel from "models/auth/licenseModel";
+import { EditSqlEtlInfoHub } from "viewmodels/database/tasks/EditSqlEtlInfoHub";
 
 class sqlTaskTestMode {
     
@@ -212,7 +214,10 @@ class editSqlEtlTask extends shardViewModelBase {
     showEditSqlTableArea: KnockoutComputed<boolean>;
 
     createNewConnectionString = ko.observable<boolean>(false);
-    newConnectionString = ko.observable<connectionStringSqlEtlModel>(); 
+    newConnectionString = ko.observable<connectionStringSqlEtlModel>();
+    
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    infoHubView: ReactInKnockout<typeof EditSqlEtlInfoHub>;
 
     constructor(db: database) {
         super(db);
@@ -231,6 +236,9 @@ class editSqlEtlTask extends shardViewModelBase {
                                    "setState");
 
         aceEditorBindingHandler.install();
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditSqlEtlInfoHub
+        }))
     }
 
     activate(args: any) {
