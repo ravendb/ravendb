@@ -1354,7 +1354,7 @@ namespace Corax
                           // We dont want to reclaim the term name
                     }
                     ref var nullTerm = ref field.Storage.GetAsRef(nullTermLocation);
-                    nullTerm.Removal(_entriesAllocator, entryToDelete, reader.Frequency);
+                    nullTerm.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
                     continue;
                 }
                 
