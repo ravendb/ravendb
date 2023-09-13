@@ -115,7 +115,28 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Data Archival")]
         DataArchival,
 
-        [Description("Data Archival")]
-        RevisionsInSubscriptions,
+        [Description("Sharding")]
+        Sharding,
+
+        [Description("Subscriptions")]
+        Subscriptions,
+
+        [Description("Revisions Configuration")]
+        RevisionsConfiguration,
+
+        [Description("Expiration")]
+        Expiration,
+
+        [Description("Refresh")]
+        Refresh,
+
+        [Description("Indexes")]
+        Indexes,
+
+        [Description("Custom Sorters")]
+        CustomSorters,
+
+        [Description("Custom Analyzers")]
+        CustomAnalyzers
     }
 }

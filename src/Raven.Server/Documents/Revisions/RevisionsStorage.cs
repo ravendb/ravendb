@@ -124,8 +124,7 @@ namespace Raven.Server.Documents.Revisions
                     ConflictConfiguration.Default = dbRecord.RevisionsForConflicts;
 
                 var revisions = dbRecord.Revisions;
-                if (revisions == null ||
-                    (revisions.Default == null && revisions.Collections.Count == 0))
+                if (revisions == null || (revisions.Default == null && revisions.Collections.Count == 0))
                 {
                     Configuration = null;
                     return;
