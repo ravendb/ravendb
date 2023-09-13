@@ -238,7 +238,13 @@ namespace Raven.Server.Commercial
 
         public bool HasRevisionsInSubscriptions => Enabled(LicenseAttribute.RevisionsInSubscriptions);
 
-        public bool ShardingOnTheSameNodeOnly => Enabled(LicenseAttribute.ShardingOnTheSameNodeOnly);
+        public bool HasMultiNodeSharding => Enabled(LicenseAttribute.MultiNodeSharding);
+
+        public bool CanSetupDefaultRevisionsConfiguration => Enabled(LicenseAttribute.SetupDefaultRevisionsConfiguration);
+
+        public int? MaxNumberOfRevisionsToKeep => GetValue<int?>(LicenseAttribute.MaxNumberOfRevisionsToKeep, agplValue: 2);
+
+        public int? MaxNumberOfRevisionAgeToKeepInDays => GetValue<int?>(LicenseAttribute.MaxNumberOfRevisionAgeToKeepInDays, agplValue: 45);
 
         public int? MinPeriodForExpirationInHours => GetValue<int?>(LicenseAttribute.MinPeriodForExpirationInHours, agplValue: 36);
         
@@ -266,10 +272,6 @@ namespace Raven.Server.Commercial
 
         public int? MaxNumberOfCustomAnalyzersPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomAnalyzersPerCluster, agplValue: 5);
 
-        public int? MaxNumberOfRevisionsToKeep => Type == LicenseType.Community ? 2 : null;
-
-        public int? MaxNumberOfRevisionsByAgeToKeep => Type == LicenseType.Community ? 3888000 : null;
-
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -283,7 +285,6 @@ namespace Raven.Server.Commercial
                 [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
                 [nameof(ErrorMessage)] = ErrorMessage,
-
                 [nameof(Type)] = Type.ToString(),
                 [nameof(Version)] = Version?.ToString(),
                 [nameof(Expiration)] = Expiration,
@@ -320,7 +321,20 @@ namespace Raven.Server.Commercial
                 [nameof(HasQueueEtl)] = HasQueueEtl,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
+                [nameof(HasServerWideTasks)] = HasServerWideTasks,
+                [nameof(HasIndexCleanup)] = HasIndexCleanup,
+                [nameof(HasPeriodicBackup)] = HasPeriodicBackup,
+                [nameof(HasClientConfiguration)] = HasClientConfiguration,
+                [nameof(HasStudioConfiguration)] = HasStudioConfiguration,
                 [nameof(HasQueueSink)] = HasQueueSink,
+                [nameof(HasDataArchival)] = HasDataArchival,
+                [nameof(HasRevisionsInSubscriptions)] = HasRevisionsInSubscriptions,
+                [nameof(HasMultiNodeSharding)] = HasMultiNodeSharding,
+                [nameof(MaxNumberOfRevisionsToKeep)] = MaxNumberOfRevisionsToKeep,
+                [nameof(MaxNumberOfRevisionAgeToKeepInDays)] = MaxNumberOfRevisionAgeToKeepInDays,
+                [nameof(MinPeriodForExpirationInHours)] = MaxNumberOfRevisionAgeToKeepInDays,
+                [nameof(MinPeriodForRefreshInHours)] = MinPeriodForRefreshInHours,
+                [nameof(MaxReplicationFactorForSharding)] = MaxReplicationFactorForSharding,
                 [nameof(MaxNumberOfStaticIndexesPerDatabase)] = MaxNumberOfStaticIndexesPerDatabase,
                 [nameof(MaxNumberOfStaticIndexesPerCluster)] = MaxNumberOfStaticIndexesPerCluster,
                 [nameof(MaxNumberOfAutoIndexesPerDatabase)] = MaxNumberOfAutoIndexesPerDatabase,
@@ -331,8 +345,6 @@ namespace Raven.Server.Commercial
                 [nameof(MaxNumberOfCustomSortersPerCluster)] = MaxNumberOfCustomSortersPerCluster,
                 [nameof(MaxNumberOfCustomAnalyzersPerDatabase)] = MaxNumberOfCustomAnalyzersPerDatabase,
                 [nameof(MaxNumberOfCustomAnalyzersPerCluster)] = MaxNumberOfCustomAnalyzersPerCluster,
-                [nameof(MaxNumberOfRevisionsToKeep)] = MaxNumberOfRevisionsToKeep,
-                [nameof(MaxNumberOfRevisionsByAgeToKeep)] = MaxNumberOfRevisionsByAgeToKeep
             };
         }
     }

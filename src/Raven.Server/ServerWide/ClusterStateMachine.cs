@@ -2739,7 +2739,7 @@ namespace Raven.Server.ServerWide
                 if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                     return;
 
-                throw new LicenseLimitException($"The maximum number of subscriptions per database cannot exceed the limit of: {maxSubscriptionsPerDatabase}");
+                throw new LicenseLimitException(LimitType.Subscriptions, $"The maximum number of subscriptions per database cannot exceed the limit of: {maxSubscriptionsPerDatabase}");
             }
 
             var maxSubscriptionsPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerCluster;
@@ -2748,7 +2748,7 @@ namespace Raven.Server.ServerWide
                 if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                     return;
 
-                throw new LicenseLimitException($"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
+                throw new LicenseLimitException(LimitType.Subscriptions, $"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
             }
 
             if (serverStore.LicenseManager.LicenseStatus.HasRevisionsInSubscriptions == false &&
@@ -2757,7 +2757,7 @@ namespace Raven.Server.ServerWide
                 if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                     return;
 
-                throw new LicenseLimitException("Your license doesn't include the subscription revisions feature.");
+                throw new LicenseLimitException(LimitType.Subscriptions, "Your license doesn't include the subscription revisions feature.");
             }
 
             long GetSubscriptionsCount()
@@ -2800,8 +2800,8 @@ namespace Raven.Server.ServerWide
                         return;
 
                     var maxReplicationFactorForSharding = serverStore.LicenseManager.LicenseStatus.MaxReplicationFactorForSharding;
-                    var shardingOnTheSameNode = serverStore.LicenseManager.LicenseStatus.ShardingOnTheSameNodeOnly;
-                    if (maxReplicationFactorForSharding == null && shardingOnTheSameNode == false)
+                    var multiNodeSharding = serverStore.LicenseManager.LicenseStatus.HasMultiNodeSharding;
+                    if (maxReplicationFactorForSharding == null && multiNodeSharding)
                         return;
 
                     if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
@@ -2813,8 +2813,7 @@ namespace Raven.Server.ServerWide
                         var topology = shard.Value;
                         if (maxReplicationFactorForSharding != null && topology.ReplicationFactor > maxReplicationFactorForSharding)
                         {
-                            //TODO:
-                            throw new LicenseLimitException();
+                            throw new LicenseLimitException(LimitType.Sharding, $"Your license doesn't allow to use a replication factor of more than {topology.ReplicationFactor} for sharding");
                         }
 
                         foreach (var nodeTag in topology.AllNodes)
@@ -2823,10 +2822,9 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    if (shardingOnTheSameNode && nodes.Count > 1)
+                    if (multiNodeSharding == false && nodes.Count > 1)
                     {
-                        //TODO: throw
-                        throw new LicenseLimitException();
+                        throw new LicenseLimitException(LimitType.Sharding, $"Your license allows to create a sharded database only on a single node while you tried to create it on nodes {string.Join(", ", nodes)}");
                     }
 
                     break;
@@ -2838,7 +2836,7 @@ namespace Raven.Server.ServerWide
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        throw new LicenseLimitException($"The maximum number of static indexes per database cannot exceed the limit of: {maxStaticIndexesPerDatabase}");
+                        throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of static indexes per database cannot exceed the limit of: {maxStaticIndexesPerDatabase}");
                     }
 
                     var maxStaticIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerCluster;
@@ -2847,7 +2845,7 @@ namespace Raven.Server.ServerWide
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        throw new LicenseLimitException($"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
+                        throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
                     }
                     break;
 
@@ -2858,7 +2856,7 @@ namespace Raven.Server.ServerWide
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        throw new LicenseLimitException($"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+                        throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
                     }
 
                     var maxAutoIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerCluster;
@@ -2867,8 +2865,54 @@ namespace Raven.Server.ServerWide
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        throw new LicenseLimitException($"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+                        throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
                     }
+                    break;
+
+                case nameof(EditRevisionsConfigurationCommand):
+                    var maxRevisionsToKeep = serverStore.LicenseManager.LicenseStatus.MaxNumberOfRevisionsToKeep;
+                    var maxRevisionAgeToKeepInDays = serverStore.LicenseManager.LicenseStatus.MaxNumberOfRevisionAgeToKeepInDays;
+                    if (serverStore.LicenseManager.LicenseStatus.CanSetupDefaultRevisionsConfiguration &&
+                        maxRevisionsToKeep == null && maxRevisionAgeToKeepInDays == null)
+                        return;
+
+                    if (databaseRecord.Revisions.Default == null && 
+                        (databaseRecord.Revisions.Collections == null || databaseRecord.Revisions.Collections.Count == 0))
+                        return;
+
+                    if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
+                        return;
+
+                    if (serverStore.LicenseManager.LicenseStatus.CanSetupDefaultRevisionsConfiguration == false &&
+                        databaseRecord.Revisions.Default != null)
+                    {
+                        throw new LicenseLimitException(LimitType.RevisionsConfiguration, "Your license doesn't allow the creation of a default configuration for revisions.");
+                    }
+
+                    if (databaseRecord.Revisions.Collections != null)
+                    {
+                        foreach (var revisionPerCollectionConfiguration in databaseRecord.Revisions.Collections)
+                        {
+                            if (revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep != null &&
+                                maxRevisionsToKeep != null &&
+                                revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep > maxRevisionsToKeep)
+                            {
+                                throw new LicenseLimitException(LimitType.RevisionsConfiguration, 
+                                    $"The defined minimum revisions keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep}' " +
+                                    $" exceeds the licensed one '{maxRevisionsToKeep}'");
+                            }
+
+                            if (revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep != null &&
+                                maxRevisionAgeToKeepInDays != null &&
+                                revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep.Value.TotalDays > maxRevisionAgeToKeepInDays)
+                            {
+                                throw new LicenseLimitException(LimitType.RevisionsConfiguration, 
+                                    $"The defined minimum revisions age to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep}' " +
+                                    $" exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
+                            }
+                        }
+                    }
+
                     break;
 
                 case nameof(EditExpirationCommand):
@@ -2879,8 +2923,7 @@ namespace Raven.Server.ServerWide
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        //TODO: throw
-                        throw new LicenseLimitException();
+                        throw new LicenseLimitException(LimitType.Expiration, "Your license doesn't allow modifying the expiration configuration");
                     }
 
                     break;
@@ -2893,8 +2936,7 @@ namespace Raven.Server.ServerWide
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        //TODO: throw
-                        throw new LicenseLimitException();
+                        throw new LicenseLimitException(LimitType.Refresh, $"Your license doesn't allow modifying the refresh configuration");
                     }
 
                     break;
@@ -2906,20 +2948,20 @@ namespace Raven.Server.ServerWide
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        throw new LicenseLimitException($"The maximum number of custom sorters per database cannot exceed the limit of: {maxCustomSortersPerDatabase}");
+                        throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per database cannot exceed the limit of: {maxCustomSortersPerDatabase}");
                     }
 
                     var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
                     if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0)
                     {
-                        var totalSorters = GetTotal(TotalType.CustomSorters); //TODO: add server wide sorters
+                        var totalSorters = GetTotal(TotalType.CustomSorters); //TODO: add server wide sorters count
                         if (totalSorters <= maxCustomSortersPerCluster)
                             return;
 
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        throw new LicenseLimitException($"The maximum number of custom sorters per cluster cannot exceed the limit of: {maxCustomSortersPerCluster}");
+                        throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per cluster cannot exceed the limit of: {maxCustomSortersPerCluster}");
                     }
                     break;
 
@@ -2930,20 +2972,20 @@ namespace Raven.Server.ServerWide
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        throw new LicenseLimitException($"The maximum number of analyzers per database cannot exceed the limit of: {maxAnalyzersPerDatabase}");
+                        throw new LicenseLimitException(LimitType.CustomAnalyzers, $"The maximum number of analyzers per database cannot exceed the limit of: {maxAnalyzersPerDatabase}");
                     }
 
                     var maxAnalyzersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
                     if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0 )
                     {
-                        var totalAnalyzers = GetTotal(TotalType.Analyzers); //TODO: add server wide analyzers
+                        var totalAnalyzers = GetTotal(TotalType.Analyzers); //TODO: add server wide analyzers count
                         if (totalAnalyzers <= maxAnalyzersPerCluster)
                             return;
 
                         if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
                             return;
 
-                        throw new LicenseLimitException($"The maximum number of analyzers per cluster cannot exceed the limit of: {maxAnalyzersPerCluster}");
+                        throw new LicenseLimitException(LimitType.CustomAnalyzers, $"The maximum number of analyzers per cluster cannot exceed the limit of: {maxAnalyzersPerCluster}");
                     }
                     break;
 
@@ -2973,10 +3015,9 @@ namespace Raven.Server.ServerWide
                         return;
 
                     if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
-                    {
-                        throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
-                    }
-                    break;
+                        return;
+
+                    throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
 
                 case nameof(AddQueueSinkCommand):
                 case nameof(UpdateQueueSinkCommand):
