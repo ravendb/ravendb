@@ -5,7 +5,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 
 export function EditKafkaSinkTaskInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
 
     return (
         <AboutViewFloating>
@@ -41,8 +41,8 @@ export function EditKafkaSinkTaskInfoHub() {
                 targetId="licensing"
                 featureName="Kafka Sink"
                 featureIcon="kafka-sink"
-                checkedLicenses={["Professional", "Enterprise"]}
-                isLimited={!isProfessionalOrAbove}
+                checkedLicenses={[ "Enterprise"]}
+                isLimited={!isEnterpriseOrDeveloper}
             />
         </AboutViewFloating>
     );

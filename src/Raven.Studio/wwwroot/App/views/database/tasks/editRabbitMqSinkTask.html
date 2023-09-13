@@ -3,7 +3,7 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-rabbitmq-sink"></i>
             <h2 data-bind="text: $root.isAddingNewRabbitMqSinkTask() ? `New RabbitMQ Sink` : `Edit RabbitMQ Sink`" class="mb-0"></h2>
-            <span class="badge license-restricted-badge" data-bind="if: !isProfessionalOrAbove">Professional +</span>
+            <span class="badge license-restricted-badge" data-bind="if: !isEnterpriseOrDeveloper">Enterprise</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: infoHubView"></div>
     </div>
@@ -18,7 +18,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': !isProfessionalOrAbove }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !isEnterpriseOrDeveloper }">
                     <div class="panel-body" data-bind="with: editedRabbitMqSink">
                         <div class="form-group margin-top">
                             <label for="taskName" class="control-label">Task Name</label>
@@ -140,7 +140,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !isProfessionalOrAbove }">
+                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !isEnterpriseOrDeveloper }">
                     <div class="flex-row margin-top">
                         <h3>Scripts</h3>
                         <button type="button" id="addNewScript" data-bind="click: addNewScript, disable: editedRabbitMqSink().showEditScriptArea" class="btn btn-info pull-right">
@@ -148,7 +148,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="scroll" data-bind="css: { 'pe-none item-disabled': !isProfessionalOrAbove }">
+                <div class="scroll" data-bind="css: { 'pe-none item-disabled': !isEnterpriseOrDeveloper }">
                     <div class="etl-list" id="transformsList" data-bind="with: editedRabbitMqSink">
                         <div data-bind="if: scripts().length === 0 && !editedScriptSandbox()">
                             <div class="text-center text-muted">
@@ -189,7 +189,7 @@
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRabbitMqSink()">
             <div class="flex-grow" data-bind="if: showEditScriptArea">
-                <div id="editTransform" class="panel padding" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                <div id="editTransform" class="panel padding" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
                     <div data-bind="with: editedScriptSandbox">
                         <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
                             <label class="control-label"><strong>Name:</strong></label>
@@ -248,7 +248,7 @@
                     </div>
                 </div>
                 <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
-                    <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                    <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
                         <div class="panel-body flex-form" data-bind="with: $root.test">
 
                             <label>
@@ -284,7 +284,7 @@
             <i class="icon-info icon-xl"></i>
             Enter <strong>Message</strong> used for test and click <strong>Test</strong> button
         </div>
-        <div class="tabs" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+        <div class="tabs" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" data-bind="visible: testAlreadyExecuted" class="active">
                     <a href="#testResultsModified" role="tab" data-toggle="tab">
@@ -311,7 +311,7 @@
                 </li>
             </ul>
         </div>
-        <div class="tab-content flex-grow" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+        <div class="tab-content flex-grow" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
             <div role="tabpanel" class="tab-pane fade margin-bottom in active" id="testResultsModified">
                 <div data-bind="with: actions">
                     <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>

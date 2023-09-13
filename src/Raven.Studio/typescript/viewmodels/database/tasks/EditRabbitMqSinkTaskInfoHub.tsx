@@ -5,7 +5,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 
 export function EditRabbitMqSinkTaskInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
 
     return (
         <AboutViewFloating>
@@ -41,8 +41,8 @@ export function EditRabbitMqSinkTaskInfoHub() {
                 targetId="licensing"
                 featureName="RabbitMQ Sink"
                 featureIcon="rabbitmq-sink"
-                checkedLicenses={["Professional", "Enterprise"]}
-                isLimited={!isProfessionalOrAbove}
+                checkedLicenses={["Enterprise"]}
+                isLimited={!isEnterpriseOrDeveloper}
             />
         </AboutViewFloating>
     );
