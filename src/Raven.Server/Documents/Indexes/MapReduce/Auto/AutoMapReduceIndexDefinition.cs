@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public List<string> GroupByFieldNames { get; }
 
-        public AutoMapReduceIndexDefinition(string indexName, string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, List<string> groupByFieldNames, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
+        internal AutoMapReduceIndexDefinition(string indexName, string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, List<string> groupByFieldNames, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState = null, long? indexVersion = null)
             : base(indexName, collection, mapFields, deploymentMode, clusterState, indexVersion)
         {
             OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();

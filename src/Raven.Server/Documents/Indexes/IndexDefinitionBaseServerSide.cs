@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes
 
         public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
 
-        internal readonly IndexDefinitionClusterState ClusterState;
+        internal IndexDefinitionClusterState ClusterState;
 
         public IndexDeploymentMode DeploymentMode { get; set; }
 

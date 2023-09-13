@@ -40,8 +40,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
         {
-            SetLock(definition.LockMode);
-            SetPriority(definition.Priority);
+            bool startIndex = UpdateIndexState(definition, true);
+            if (startIndex && Status != IndexRunningStatus.Running)
+                Start();
         }
 
         public override void SetState(IndexState state, bool inMemoryOnly = false, bool ignoreWriteError = false)
