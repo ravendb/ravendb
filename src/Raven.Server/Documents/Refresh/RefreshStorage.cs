@@ -13,9 +13,15 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Refresh
 {
-    public sealed class RefreshStorage(DocumentDatabase database, Transaction tx) : AbstractBackgroundWorkStorage(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
+    public sealed class RefreshStorage : AbstractBackgroundWorkStorage
     {
         private const string DocumentsByRefresh = "DocumentsByRefresh";
+
+        public RefreshStorage(DocumentDatabase database, Transaction tx) 
+            : base(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
+        {
+        }
+
         protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
         {
             using (var doc = Database.DocumentsStorage.Get(context, lowerId, throwOnConflict: false))

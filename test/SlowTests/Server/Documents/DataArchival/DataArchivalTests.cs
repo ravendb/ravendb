@@ -30,11 +30,15 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival
 {
-    public class DataArchivalTests(ITestOutputHelper output) : RavenTestBase(output)
+    public class DataArchivalTests : RavenTestBase
     {
+        public DataArchivalTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private async Task SetupDataArchival(DocumentStore store)
         {
-            var config = new DataArchivalConfiguration {Disabled = false, ArchiveFrequencyInSec = 100};
+            var config = new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 };
 
             await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
         }
@@ -47,7 +51,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 using (var session = store.OpenAsyncSession())
                 {
                     var archiveDateTime = SystemTime.UtcNow.AddMinutes(5);
-                    var company = new Company {Name = "Company Name"};
+                    var company = new Company { Name = "Company Name" };
                     await session.StoreAsync(company);
                     var metadata = session.Advanced.GetMetadataFor(company);
                     metadata[Constants.Documents.Metadata.ArchiveAt] = archiveDateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
@@ -59,17 +63,17 @@ namespace SlowTests.Server.Documents.DataArchival
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    
+
                     DatabaseTopology topology;
                     string nodeTag;
-                    
+
                     using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                     using (serverContext.OpenReadTransaction())
                     {
                         topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
                         nodeTag = database.ServerStore.NodeTag;
                     }
-                    
+
                     var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
 
                     var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, out _, CancellationToken.None);
@@ -77,7 +81,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 }
             }
         }
-        
+
         [Fact]
         public async Task WillArchiveAllDocumentsToBeArchivedInSingleRun_EvenWhenMoreThanBatchSize()
         {
@@ -103,8 +107,8 @@ namespace SlowTests.Server.Documents.DataArchival
                     using (var session = store.OpenAsyncSession())
                     {
 
-                        Company company = new() {Name = "Company Name"};
-                        Company company1 = new() {Name = "Company Name"};
+                        Company company = new() { Name = "Company Name" };
+                        Company company1 = new() { Name = "Company Name" };
                         await session.StoreAsync(company);
                         var metadataFromDoc = session.Advanced.GetMetadataFor(company);
                         metadataFromDoc[Constants.Documents.Metadata.ArchiveAt] = metadata[Constants.Documents.Metadata.ArchiveAt];
@@ -115,33 +119,33 @@ namespace SlowTests.Server.Documents.DataArchival
                         await session.SaveChangesAsync();
                     }
                 }
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    var companies = await session.Query<Company>().Where(x=>x.Name == "Company Name").ToListAsync();
+                    var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                     Assert.Equal(6400, companies.Count);
                 }
-                
-                 // Activate the archival
+
+                // Activate the archival
                 await SetupDataArchival(store);
-    
+
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var documentsArchiver = database.DataArchivist;
                 await documentsArchiver.ArchiveDocs();
-                
+
                 await Indexes.WaitForIndexingAsync(store);
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     WaitForUserToContinueTheTest(store);
-                    var companies = await session.Query<Company>().Where(x=>x.Name == "Company Name").ToListAsync();
+                    var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                     Assert.Equal(0, companies.Count);
                 }
-            }       
+            }
         }
 
-        
+
 
         [Fact]
         public async Task ShouldImportTask()
@@ -171,7 +175,7 @@ namespace SlowTests.Server.Documents.DataArchival
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var company = new Company {Name = "Company Name"};
+                    var company = new Company { Name = "Company Name" };
                     await session.StoreAsync(company);
                     var metadata = session.Advanced.GetMetadataFor(company);
                     metadata[Constants.Documents.Metadata.ArchiveAt] = "tomorrow";
@@ -181,7 +185,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 }
             }
         }
-        
-        
+
+
     }
 }

@@ -1,27 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
 namespace Raven.Server.Documents.DataArchival;
 
-internal class ArchiveDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, string Id)>> toArchive, DocumentDatabase database, DateTime currentTime)
-    : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+internal class ArchiveDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
 {
+    private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _toArchive;
+    private readonly DocumentDatabase _database;
+    private readonly DateTime _currentTime;
+
     public int ArchivedDocsCount;
+
+    public ArchiveDocumentsCommand([NotNull] Dictionary<Slice, List<(Slice LowerId, string Id)>> toArchive, [NotNull] DocumentDatabase database, DateTime currentTime)
+    {
+        _toArchive = toArchive ?? throw new ArgumentNullException(nameof(toArchive));
+        _database = database ?? throw new ArgumentNullException(nameof(database));
+        _currentTime = currentTime;
+    }
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        ArchivedDocsCount = database.DocumentsStorage.DataArchivalStorage.ProcessDocuments(context, toArchive, currentTime);
+        ArchivedDocsCount = _database.DocumentsStorage.DataArchivalStorage.ProcessDocuments(context, _toArchive, _currentTime);
         return ArchivedDocsCount;
     }
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ArchiveDocumentsCommand> ToDto(DocumentsOperationContext context)
     {
-        var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[toArchive.Count];
+        var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[_toArchive.Count];
         var i = 0;
-        foreach (var item in toArchive)
+        foreach (var item in _toArchive)
         {
             keyValuePairs[i] = item;
             i++;
@@ -30,7 +41,7 @@ internal class ArchiveDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, st
         return new ArchiveDocumentsCommandDto 
         {
             ToArchive = keyValuePairs,
-            CurrentTime = currentTime
+            CurrentTime = _currentTime
         };
     }
 }
