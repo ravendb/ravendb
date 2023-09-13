@@ -51,6 +51,7 @@ import getIndexesDefinitionsCommand = require("commands/database/index/getIndexe
 import testIndex = require("models/database/index/testIndex");
 import inlineShardSelector from "viewmodels/common/sharding/inlineShardSelector";
 import assertUnreachable from "components/utils/assertUnreachable";
+import licenseModel from "models/auth/licenseModel";
 
 class editIndex extends shardViewModelBase {
     
@@ -121,6 +122,8 @@ class editIndex extends shardViewModelBase {
     
     readonly shardSelector: inlineShardSelector;
 
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    
     constructor(db: database) {
         super(db);
 
