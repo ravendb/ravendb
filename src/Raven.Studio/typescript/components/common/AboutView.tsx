@@ -31,15 +31,15 @@ interface AboutViewHeadingProps {
     marginBottom?: number;
 }
 
-type FeatureAvailabilityDataType = {
+export interface FeatureAvailabilityData {
     featureNames?: string[];
     availabilityMatrix: ReactNode[][];
-};
+}
 
 interface FeatureAvailabilityTableProps {
     enabled: boolean;
     currentLicense: Raven.Server.Commercial.LicenseType;
-    availabilityData: FeatureAvailabilityDataType;
+    availabilityData: FeatureAvailabilityData;
 }
 
 const FeatureAvailabilityTable = (props: FeatureAvailabilityTableProps) => {
