@@ -31,6 +31,11 @@ namespace FastTests.Corax.Bugs
             await Indexes.WaitForIndexingAsync(store);
             using var session = store.OpenAsyncSession();
             Assert.Equal(10_000, await session.Advanced.AsyncDocumentQuery<Dto, Index>().WhereExists(x => x.Name).CountAsync());
+
+            var results = await session.Advanced.AsyncDocumentQuery<Dto, Index>().Statistics(out var stats).WhereExists(x => x.Name).Take(10).ToListAsync();
+
+            Assert.Equal(10_000, stats.TotalResults);
+            Assert.Equal(10, results.Count);
         }
 
         private sealed record Dto(string Name, long Num, string Id = null);
