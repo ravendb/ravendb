@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
         /// <param name = "path">The path.</param>
         public void Include(string path)
         {
-            TheSession.AssertNoIncludesInNonTrackingSession();
+            TheSession?.AssertNoIncludesInNonTrackingSession();
 
             DocumentIncludes.Add(path);
         }
@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Session
 
             if (includes.DocumentsToInclude is { Count: > 0 })
             {
-                TheSession.AssertNoIncludesInNonTrackingSession();
+                TheSession?.AssertNoIncludesInNonTrackingSession();
 
                 foreach (var doc in includes.DocumentsToInclude)
                 {
@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Session
             
             if (includes.CompareExchangeValuesToInclude is { Count: > 0 })
             {
-                TheSession.AssertNoIncludesInNonTrackingSession();
+                TheSession?.AssertNoIncludesInNonTrackingSession();
 
                 CompareExchangeValueIncludesTokens = new List<CompareExchangeValueIncludesToken>();
 
@@ -91,7 +91,7 @@ namespace Raven.Client.Documents.Session
             if (countersToIncludeByDocId?.Count > 0 == false)
                 return;
 
-            TheSession.AssertNoIncludesInNonTrackingSession();
+            TheSession?.AssertNoIncludesInNonTrackingSession();
 
             CounterIncludesTokens = new List<CounterIncludesToken>();
             _includesAlias = alias;
@@ -119,7 +119,7 @@ namespace Raven.Client.Documents.Session
             if (timeSeriesToInclude?.Count > 0 == false)
                 return;
 
-            TheSession.AssertNoIncludesInNonTrackingSession();
+            TheSession?.AssertNoIncludesInNonTrackingSession();
 
             TimeSeriesIncludesTokens = new List<TimeSeriesIncludesToken>();
             _includesAlias ??= alias;
@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Session
         
         private void IncludeRevisions(DateTime dateTime)
         {
-            TheSession.AssertNoIncludesInNonTrackingSession();
+            TheSession?.AssertNoIncludesInNonTrackingSession();
 
             RevisionsIncludesTokens ??= new List<RevisionIncludesToken>();
             RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(dateTime));
@@ -146,7 +146,7 @@ namespace Raven.Client.Documents.Session
             if (revisionsToIncludeByChangeVector == null || revisionsToIncludeByChangeVector.Count == 0)
                 return;
 
-            TheSession.AssertNoIncludesInNonTrackingSession();
+            TheSession?.AssertNoIncludesInNonTrackingSession();
 
             RevisionsIncludesTokens ??= new List<RevisionIncludesToken>();
             foreach (var changeVector in revisionsToIncludeByChangeVector)
