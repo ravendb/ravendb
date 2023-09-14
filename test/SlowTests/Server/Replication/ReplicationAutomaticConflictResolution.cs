@@ -474,6 +474,12 @@ return out;
 
                 Assert.True(WaitForDocument(third, "marker2$users/1"));
 
+                using (var session = first.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.Null(user);
+                }
+
                 await EnsureNoReplicationLoopAsync(first, options.DatabaseMode);
                 await EnsureNoReplicationLoopAsync(second, options.DatabaseMode);
                 await EnsureNoReplicationLoopAsync(third, options.DatabaseMode);
