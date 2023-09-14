@@ -1695,7 +1695,7 @@ namespace Raven.Server.Documents
                             DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data, flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
                                 localChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
                         }
-                        flags |= DocumentFlags.HasRevisions;
+                        newFlags |= DocumentFlags.HasRevisions;
                         revisionsStorage.Delete(context, id, lowerId, collectionName, tombstoneChangeVector,
                             modifiedTicks, nonPersistentFlags, newFlags);
                     }

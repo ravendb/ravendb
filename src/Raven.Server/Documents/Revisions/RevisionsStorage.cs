@@ -821,7 +821,7 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 maxEtagDeleted = Math.Max(maxEtagDeleted, lastRevisionToDelete.Etag);
-                DeleteRevisionFromTable(context, table, writeTables, lastRevisionToDelete, collectionName, changeVector, lastModifiedTicks);
+                DeleteRevisionFromTable(context, table, writeTables, lastRevisionToDelete, collectionName, changeVector, lastModifiedTicks, tombstoneFlags);
 
                 deleted++;
                 lastRevisionToDelete = revision;
@@ -839,7 +839,7 @@ namespace Raven.Server.Documents.Revisions
                 if (skipLast == false)
                 {
                     maxEtagDeleted = Math.Max(maxEtagDeleted, lastRevisionToDelete.Etag);
-                    DeleteRevisionFromTable(context, table, writeTables, lastRevisionToDelete, collectionName, changeVector, lastModifiedTicks);
+                    DeleteRevisionFromTable(context, table, writeTables, lastRevisionToDelete, collectionName, changeVector, lastModifiedTicks, tombstoneFlags);
                     deleted++;
                 }
             }
@@ -864,16 +864,16 @@ namespace Raven.Server.Documents.Revisions
 
         private void DeleteRevisionFromTable(DocumentsOperationContext context, Table table, Dictionary<string, Table> writeTables,
             Document revision, CollectionName collectionName,
-            ChangeVector changeVector, long lastModifiedTicks)
+            ChangeVector changeVector, long lastModifiedTicks, DocumentFlags flags)
         {
             using (DocumentIdWorker.GetSliceFromId(context, revision.LowerId, out var prefixSlice))
             using (CreateRevisionTombstoneKeySlice(context, prefixSlice, revision.ChangeVector, out var changeVectorSlice, out var keySlice))
             {
-                CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
+                CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks, flags);
 
                 if (revision.Flags.Contain(DocumentFlags.HasAttachments))
                 {
-                    _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                    _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks, flags);
                 }
 
                 Table writeTable = null;
