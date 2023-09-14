@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Kafka;
 using Confluent.Kafka;
@@ -46,29 +47,32 @@ public class KafkaEtl : QueueEtl<KafkaItem>
 
             try
             {
-                var retries = 3;
+                var sw = Stopwatch.StartNew();
 
                 do
                 {
                     try
                     {
-                        producer.InitTransactions(Database.Configuration.Etl.KafkaInitTransactionsTimeout.AsTimeSpan);
+                        producer.InitTransactions(TimeSpan.FromSeconds(10)); // let's wait up to 10 second so we can check if cancellation was requested meanwhile
                         break;
                     }
                     catch (KafkaRetriableException e)
                     {
-                        if (--retries > 0)
+                        if (sw.Elapsed < Database.Configuration.Etl.KafkaInitTransactionsTimeout.AsTimeSpan)
                         {
-                            if (Logger.IsOperationsEnabled)
-                            {
-                                Logger.Operations($"ETL process: {Name}. Failed to init transactions for the producer instance. Retries: {retries}", e);
-                            }
+                            // let it retry up to configured timeout
+
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"ETL process: {Name}. Failed to init transactions for the producer instance. Already waited: {sw.Elapsed}", e);
                         }
                         else
                         {
                             throw;
                         }
                     }
+
+                    CancellationToken.ThrowIfCancellationRequested();
+
                 } while (true);
             }
             catch (Exception e)
@@ -80,10 +84,8 @@ public class KafkaEtl : QueueEtl<KafkaItem>
                              $"- transaction.state.log.replication.factor: 1 {Environment.NewLine}" +
                              "- transaction.state.log.min.isr: 1";
 
-                if (Logger.IsOperationsEnabled)
-                {
+                if (Logger.IsOperationsEnabled) 
                     Logger.Operations(msg, e);
-                }
 
                 throw new QueueLoadException(msg, e);
             }
