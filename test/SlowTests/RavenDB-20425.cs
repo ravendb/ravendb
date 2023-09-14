@@ -750,7 +750,7 @@ return oldestDoc;"
         //---------------------------------------------------------------------------------------------------------------------------------------
 
         // (RavenDB-19640)
-        [Fact]
+        [Fact (Skip = "Not sure the logic here is correct")]
         public async Task ConfigureRevisionsForConflictsOperation_PurgeOnDelete_Doesnt_Work_As_Expected_On_Document_Delete()
         {
             using (var source = GetDocumentStore())

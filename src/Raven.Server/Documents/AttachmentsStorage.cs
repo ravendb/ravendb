@@ -250,7 +250,7 @@ namespace Raven.Server.Documents
                                         {
                                             var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
                                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks);
+                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None);
                                         }
                                     }
                                 }
@@ -1224,7 +1224,7 @@ namespace Raven.Server.Documents
                     attachmentEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
                 }
 
-                CreateTombstone(context, key, attachmentEtag, changeVector, lastModifiedTicks);
+                CreateTombstone(context, key, attachmentEtag, changeVector, lastModifiedTicks, flags: DocumentFlags.None);
                 return;
             }
 
@@ -1246,7 +1246,7 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks);
+                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None);
             }
 
             table.Delete(tvr.Id);
@@ -1254,7 +1254,7 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash,
-            string changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+            string changeVector, long lastModifiedTicks, DocumentFlags flags)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
 
@@ -1270,7 +1270,7 @@ namespace Raven.Server.Documents
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag,
-            string changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+            string changeVector, long lastModifiedTicks, DocumentFlags flags)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
