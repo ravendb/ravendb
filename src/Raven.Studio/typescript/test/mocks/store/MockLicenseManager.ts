@@ -3,6 +3,12 @@ import { licenseActions } from "components/common/shell/licenseSlice";
 import { LicenseStubs } from "test/stubs/LicenseStubs";
 
 export class MockLicenseManager {
+    with_None() {
+        globalDispatch(licenseActions.statusLoaded(LicenseStubs.none()));
+    }
+    with_Essential() {
+        globalDispatch(licenseActions.statusLoaded(LicenseStubs.essential()));
+    }
     with_Enterprise() {
         globalDispatch(licenseActions.statusLoaded(LicenseStubs.enterprise()));
     }

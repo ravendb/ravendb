@@ -1,6 +1,12 @@
 ﻿import React, { useEffect, useState } from "react";
-import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
-import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
+import { Alert, Button, Col, Row, UncontrolledTooltip } from "reactstrap";
+import {
+    AboutViewAnchored,
+    AboutViewHeading,
+    AccordionItemWrapper,
+    FeatureAvailabilityData,
+    FeatureAvailabilityTable,
+} from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -62,6 +68,8 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();
@@ -320,7 +328,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                         </div>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -372,7 +380,16 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Revisions
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionLicenseLimited
+                            <AccordionItemWrapper
+                                icon="license"
+                                color={isProfessionalOrAbove ? "success" : "warning"}
+                                heading="Licensing"
+                                description="See which plans offer this and more exciting features"
+                                targetId="licensing"
+                            >
+                                <FeatureAvailabilityTable availabilityData={availabilityData} />
+                            </AccordionItemWrapper>
+                            {/* <AccordionLicenseLimited
                                 targetId="licensing"
                                 featureName="Document Revisions"
                                 featureIcon="revisions"
@@ -396,7 +413,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                         <span>Upgrade to a paid plan and get unlimited availability.</span>
                                     </div>
                                 }
-                            />
+                            /> */}
                         </AboutViewAnchored>
                     </Col>
                 </Row>
@@ -410,3 +427,39 @@ function mapToDto(
 ): Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration {
     return config ? _.omit(config, "Name") : null;
 }
+
+const availabilityData: FeatureAvailabilityData[] = [
+    {
+        featureName: (
+            <>
+                <Icon icon="default" />
+                Default Policy
+            </>
+        ),
+        community: false,
+        professional: true,
+        enterprise: true,
+    },
+    {
+        featureName: (
+            <>
+                <Icon icon="revisions" />
+                Revisions
+            </>
+        ),
+        community: "max 2",
+        professional: Infinity,
+        enterprise: Infinity,
+    },
+    {
+        featureName: (
+            <>
+                <Icon icon="clock" />
+                Retention time (days)
+            </>
+        ),
+        community: "max 45",
+        professional: Infinity,
+        enterprise: Infinity,
+    },
+];

@@ -55,11 +55,18 @@ const availabilityData: FeatureAvailabilityData[] = [
         professional: "Maybe",
     },
 ];
+const availabilityDataSimple: FeatureAvailabilityData[] = [
+    {
+        community: false,
+        enterprise: true,
+        professional: true,
+    },
+];
 
 const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean }) => {
     const { license } = mockStore;
 
-    license.with_Developer();
+    license.with_Essential();
 
     return (
         <div className="content-margin">
@@ -113,20 +120,22 @@ const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean 
                                 <Code code={codeExample} language="javascript" />
                             </AccordionItemWrapper>
                             <AccordionItemWrapper
-                                icon="road-cone"
+                                icon="license"
                                 color={args.featureAvailable ? "success" : "warning"}
-                                heading="Examples of use"
+                                heading="Licensing"
                                 description="Learn how to get the most of this feature"
                                 targetId="licensing"
                             >
                                 <FeatureAvailabilityTable availabilityData={availabilityData} />
+                                <hr />
+                                <FeatureAvailabilityTable availabilityData={availabilityDataSimple} />
                             </AccordionItemWrapper>
-                            <AccordionLicenseNotIncluded
+                            {/* <AccordionLicenseNotIncluded
                                 featureName="Document Compression"
                                 featureIcon="documents-compression"
                                 checkedLicenses={["Professional", "Enterprise"]}
                                 isLimited
-                            />
+                            /> */}
                         </AboutViewFloating>
                     </Col>
                 </Row>
