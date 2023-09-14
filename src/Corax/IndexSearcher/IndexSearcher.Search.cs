@@ -4,6 +4,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Corax.Analyzers;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
@@ -25,7 +26,11 @@ public partial class IndexSearcher
             : field.Analyzer;
 
         field = field.ChangeAnalyzer(field.Mode, searchAnalyzer);
-        
+
+        using var analyzer = field.Analyzer.IsExactAnalyzer ? 
+            Analyzer.CreateDefaultAnalyzer(Allocator) : 
+            Analyzer.CreateLowercaseAnalyzer(Allocator);
+
         IQueryMatch searchQuery = null;
 
         List<Slice> termMatches = null;
@@ -46,48 +51,40 @@ public partial class IndexSearcher
 
                 var termReadyToAnalyze = value.Slice(startIncrement, value.Length - startIncrement + lengthIncrement);
 
-                var terms = new NativeUnmanagedList<Slice>(Allocator, 8);
-                EncodeAndApplyAnalyzerForMultipleTerms(field, termReadyToAnalyze, ref terms);
-                var termsSpan = terms.Items;
-                for (int i = 0; i < termsSpan.Length; i++)
+                Slice analyzedTerm = EncodeAndApplyAnalyzer(field, analyzer, termReadyToAnalyze);
+                if (analyzedTerm.Size == 0)
+                    continue; //skip empty results
+
+                if (termType is Constants.Search.SearchMatchOptions.TermMatch)
                 {
-                    var analyzedTerm = termsSpan[i];
-                    if (analyzedTerm.Size == 0)
-                        continue; //skip empty results
-            
-                    if (termType is Constants.Search.SearchMatchOptions.TermMatch)
-                    {
-                        termMatches ??= new();
-                        termMatches.Add(analyzedTerm);
-                        continue;
-                    }
-            
-                    var query = termType switch
-                    {
-                        Constants.Search.SearchMatchOptions.TermMatch => throw new InvalidDataException($"{nameof(TermMatch)} is handled in different part of evaluator. This is a bug."),
-                        Constants.Search.SearchMatchOptions.StartsWith => StartWithQuery(field, analyzedTerm, token: cancellationToken),
-                        Constants.Search.SearchMatchOptions.EndsWith => EndsWithQuery(field, analyzedTerm, token: cancellationToken),
-                        Constants.Search.SearchMatchOptions.Contains => ContainsQuery(field, analyzedTerm, token: cancellationToken),
-                        _ => throw new ArgumentOutOfRangeException()
-                    };
-
-                    if (searchQuery is null)
-                    {
-                        searchQuery = query;
-                        continue;
-                    }
-            
-                    searchQuery = @operator switch
-                    {
-                        Constants.Search.Operator.Or => Or<IQueryMatch, MultiTermMatch>(searchQuery, query, token: cancellationToken),
-                        Constants.Search.Operator.And => And<IQueryMatch, MultiTermMatch>(searchQuery, query, token: cancellationToken),
-                        _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
-                    };
+                    termMatches ??= new();
+                    termMatches.Add(analyzedTerm);
+                    continue;
                 }
-                terms.Dispose();
-            }
 
-            
+                var query = termType switch
+                {
+                    Constants.Search.SearchMatchOptions.TermMatch => throw new InvalidDataException(
+                        $"{nameof(TermMatch)} is handled in different part of evaluator. This is a bug."),
+                    Constants.Search.SearchMatchOptions.StartsWith => StartWithQuery(field, analyzedTerm, token: cancellationToken),
+                    Constants.Search.SearchMatchOptions.EndsWith => EndsWithQuery(field, analyzedTerm, token: cancellationToken),
+                    Constants.Search.SearchMatchOptions.Contains => ContainsQuery(field, analyzedTerm, token: cancellationToken),
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+
+                if (searchQuery is null)
+                {
+                    searchQuery = query;
+                    continue;
+                }
+
+                searchQuery = @operator switch
+                {
+                    Constants.Search.Operator.Or => Or<IQueryMatch, MultiTermMatch>(searchQuery, query, token: cancellationToken),
+                    Constants.Search.Operator.And => And<IQueryMatch, MultiTermMatch>(searchQuery, query, token: cancellationToken),
+                    _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
+                };
+            }
         }
 
         if (termMatches?.Count > 0)

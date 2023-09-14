@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 
         public override string ToString()
         {
-            return "PerFieldAnalyzerWrapper(" + string.Join(",", _analyzerMap.Select(x => x.Key + " -> " + x.Value)) + ", default=" + _defaultAnalyzer + ")";
+            return "Raven's PerFieldAnalyzerWrapper(" + string.Join(",", _analyzerMap.Select(x => x.Key + " -> " + x.Value)) + ", default=" + _defaultAnalyzer + ")";
         }
 
         public override void Dispose()

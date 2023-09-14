@@ -26,6 +26,7 @@ public partial class IndexSearcher
         {
             termKey = _fieldsTree.Llt.AcquireCompactKey();
             termKey.Set(term.AsReadOnlySpan());
+            termKey.ChangeDictionary(terms.DictionaryId);
         }
         else
         {
@@ -37,6 +38,7 @@ public partial class IndexSearcher
         {
             seekKey = _fieldsTree.Llt.AcquireCompactKey();
             seekKey.Set(seekTerm.AsReadOnlySpan());
+            seekKey.ChangeDictionary(terms.DictionaryId);
         }
         
         return MultiTermMatch.Create(new MultiTermMatch<TTermProvider>(this, field, _transaction.Allocator, 
