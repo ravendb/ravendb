@@ -2787,7 +2787,7 @@ namespace Raven.Server
                 ea.Execute(() => ServerMaintenanceTimer?.Dispose());
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
                 ea.Execute(() => _cpuCreditsMonitoring?.Join(int.MaxValue));
-                ea.Execute(() => CpuUsageCalculator.Dispose());
+                ea.Execute(() => CpuUsageCalculator?.Dispose());
 
                 if (SkipCertificateDispose == false)
                     ea.Execute(() => Certificate?.Dispose());
