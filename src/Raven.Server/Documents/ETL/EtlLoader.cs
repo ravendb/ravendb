@@ -608,7 +608,7 @@ namespace Raven.Server.Documents.ETL
                             {
                                 var diff = kafkaEtl.Configuration.Compare(config);
 
-                                if (diff == EtlConfigurationCompareDifferences.None && kafkaEtl.Configuration.Equals(config))
+                                if (diff == EtlConfigurationCompareDifferences.None)
                                 {
                                     existing = config;
                                     break;
@@ -631,7 +631,7 @@ namespace Raven.Server.Documents.ETL
                             {
                                 var diff = rabbitMqEtl.Configuration.Compare(config);
 
-                                if (diff == EtlConfigurationCompareDifferences.None && rabbitMqEtl.Configuration.Equals(config))
+                                if (diff == EtlConfigurationCompareDifferences.None)
                                 {
                                     existing = config;
                                     break;
