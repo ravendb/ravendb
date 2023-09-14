@@ -17,7 +17,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("The path to the license file for RavenDB, default for license.json")]
         [ReadOnlyPath]
-        [DefaultValue("c:\\work\\license.json")]
+        [DefaultValue("license.json")]
         [ConfigurationEntry("License.Path", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting LicensePath { get; set; }
 
