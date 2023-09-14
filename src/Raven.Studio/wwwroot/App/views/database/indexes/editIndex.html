@@ -228,7 +228,7 @@
                         <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
                             <i class="icon-admin-logs"></i><span>Fields</span>
                             <span class="label label-primary margin-left margin-left-sm"
-                                  data-bind="text: editedIndex().numberOfFields() + !!editedIndex().defaultFieldOptions() || undefined"></span>
+                                  data-bind="text: editedIndex().numberOfFields() + editedIndex().numberOfCompoundFields() + !!editedIndex().defaultFieldOptions() || undefined"></span>
                         </a>
                     </li>
                     <li role="presentation" id="configurationTab">
@@ -267,9 +267,15 @@
                             <button class="btn btn-default" data-bind="click: addField, requiredAccess: 'DatabaseReadWrite'">
                                 <i class="icon-plus"></i><span>Add field</span>
                             </button>
+                            <div class="js-add-compound-field-btn">
+                                <button class="btn btn-default margin-left-xs" data-bind="click: addCompoundField, enable: canUseCompoundFields, requiredAccess: 'DatabaseReadWrite'">
+                                    <i class="icon-plus"></i><span>Add compound field</span>
+                                </button>
+                            </div>
                             <button class="btn btn-info margin-left-xs" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions(), requiredAccess: 'DatabaseReadWrite'">
                                 <i class="icon-plus"></i><span>Add default field options</span>
                             </button>
+                            
                             <span class="has-error margin-left margin-left-sm" data-bind="visible: editedIndex().hasDuplicateFieldsNames()">
                                 <span class="help-block"><i class="icon-warning"></i> Fields contain duplicate names</span>
                             </span>
@@ -277,13 +283,29 @@
                         <div class="panel panel-info" data-bind="with: editedIndex().defaultFieldOptions">
                             <div data-bind="template: { name: 'field-template'}"></div>
                         </div>
+                        <div data-bind="visible: effectiveSearchEngine() !== 'Corax' && editedIndex().compoundFields().length > 0">
+                            <div class="bg-warning inline-block padding-xs small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;All defined <code>Compound fields</code> will be ignored for <code>Lucene</code> search engine.
+                                <button class="btn btn-primary btn-sm margin-left-sm" data-bind="click: _.partial(searchEngineConfiguration, 'Corax')">Change to Corax</button>
+                            </div>
+                        </div>
                         <div data-bind="foreach: editedIndex().fields">
                             <div class="panel">
                                 <hr>
                                 <div data-bind="template: { name: 'field-template'}"></div>
                             </div>
                         </div>
-                        <div class="text-center text-muted" data-bind="visible: !editedIndex().numberOfFields() && !editedIndex().defaultFieldOptions()">
+                        <div class="margin-bottom-xs" data-bind="visible: editedIndex().compoundFields().length > 0">
+                            <hr />
+                            <h3>Compound fields</h3>
+                        </div>
+                        <div data-bind="foreach: editedIndex().compoundFields">
+                            <div class="panel">
+                                <div data-bind="template: { name: 'compound-field-template'}"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center text-muted" data-bind="visible: !editedIndex().numberOfFields() && !editedIndex().numberOfCompoundFields() && !editedIndex().defaultFieldOptions()">
                             <i class="icon-lg icon-empty-set"></i>
                             <h2 class="margin-top margin-top-sm">No fields added</h2>
                         </div>
@@ -789,6 +811,43 @@
     </div>
 </script>
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+<script type="text/html" id="compound-field-template">
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-xs-8 col-sm-6 col-xl-3">
+                <div class="form-group" data-bind="validationElement: field1">
+                    <input class="form-control" placeholder="First field name" data-bind="textInput: field1, attr: { id: 'compoundFieldName_first_' + $index() }" />
+                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#compoundFieldName_first_' + $index(), foreach: $root.createCompoundFieldNameAutocompleter(field1)">
+                        <li role="presentation" data-bind="click: $parent.field1.bind($parent, $data)">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span data-bind="text: $data"></span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right">
+                <button class="btn btn-danger" title="Remove this field from the index" data-bind="click: _.partial($root.removeCompoundField, $data)">
+                    <i class="icon-trash"></i>
+                </button>
+            </div>
+            <div class="col-xs-8 col-sm-6 col-xl-3">
+                <div class="form-group" data-bind="validationElement: field2">
+                    <input class="form-control" placeholder="Second field name" data-bind="textInput: field2, attr: { id: 'compoundFieldName_second_' + $index() }" />
+                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#compoundFieldName_second_' + $index(), foreach: $root.createCompoundFieldNameAutocompleter(field2)">
+                        <li role="presentation" data-bind="click: $parent.field2.bind($parent, $data)">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span data-bind="text: $data"></span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
 
 <script type="text/html" id="field-template">
     <div class="panel-body">
