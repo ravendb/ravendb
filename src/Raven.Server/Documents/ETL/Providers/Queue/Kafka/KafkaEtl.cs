@@ -73,6 +73,8 @@ public class KafkaEtl : QueueEtl<KafkaItem>
             }
             catch (Exception e)
             {
+                producer.Dispose();
+
                 string msg = $" ETL process: {Name}. Failed to initialize transactions for the producer instance. " +
                              $"If you are using a single node Kafka cluster then the following settings might be required:{Environment.NewLine}" +
                              $"- transaction.state.log.replication.factor: 1 {Environment.NewLine}" +
