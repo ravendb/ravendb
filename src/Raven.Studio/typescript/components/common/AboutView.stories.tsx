@@ -15,6 +15,7 @@ import { Icon } from "./Icon";
 import Code from "./Code";
 import AccordionLicenseNotIncluded from "./AccordionLicenseNotIncluded";
 import { boundCopy } from "components/utils/common";
+import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Bits/AboutView",
@@ -34,16 +35,32 @@ export default {
     },
 } as ComponentMeta<typeof AboutViewFloating>;
 
-const availabilityData: FeatureAvailabilityData = {
-    featureNames: ["Feature 1", "Feature 2", "Feature 3"],
-    availabilityMatrix: [
-        [false, true, true],
-        ["min 36", <Icon icon="infinity" />, <Icon icon="infinity" />],
-        ["Yes", "No", "Maybe"],
-    ],
-};
+const availabilityData: FeatureAvailabilityData[] = [
+    {
+        featureName: "Future 1",
+        community: false,
+        enterprise: true,
+        professional: true,
+    },
+    {
+        featureName: "Future 2",
+        community: "min 36",
+        enterprise: Infinity,
+        professional: Infinity,
+    },
+    {
+        featureName: "Future 3",
+        community: "Yes",
+        enterprise: "No",
+        professional: "Maybe",
+    },
+];
 
 const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean }) => {
+    const { license } = mockStore;
+
+    license.with_Developer();
+
     return (
         <div className="content-margin">
             <Col xxl={12}>
@@ -100,12 +117,9 @@ const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean 
                                 color={args.featureAvailable ? "success" : "warning"}
                                 heading="Examples of use"
                                 description="Learn how to get the most of this feature"
+                                targetId="licensing"
                             >
-                                <FeatureAvailabilityTable
-                                    enabled={args.featureAvailable}
-                                    currentLicense="Developer"
-                                    availabilityData={availabilityData}
-                                />
+                                <FeatureAvailabilityTable availabilityData={availabilityData} />
                             </AccordionItemWrapper>
                             <AccordionLicenseNotIncluded
                                 featureName="Document Compression"

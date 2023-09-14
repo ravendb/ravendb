@@ -100,6 +100,10 @@ export class LicenseStubs {
         return LicenseStubs.getStatus("Enterprise");
     }
 
+    static developer(): LicenseStatus {
+        return LicenseStubs.getStatus("Developer");
+    }
+
     static community(): LicenseStatus {
         return {
             ...LicenseStubs.getStatus("Community"),

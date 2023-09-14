@@ -26,7 +26,7 @@ export default function AccordionLicenseNotIncluded(props: AccordionLicenseNotIn
             pill={isLimited}
             pillText={isLimited ? "Upgrade available" : null}
             pillIcon={isLimited ? "upgrade-arrow" : null}
-            id="licensing"
+            targetId="licensing"
         >
             <AccordionItemLicensing
                 description={
