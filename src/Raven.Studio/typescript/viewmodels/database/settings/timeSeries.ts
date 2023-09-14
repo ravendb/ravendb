@@ -9,6 +9,7 @@ import getTimeSeriesConfigurationCommand = require("commands/database/documents/
 import timeSeriesConfigurationEntry = require("models/database/documents/timeSeriesConfigurationEntry");
 import popoverUtils = require("common/popoverUtils");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import licenseModel from "models/auth/licenseModel";
 
 class timeSeries extends shardViewModelBase {
 
@@ -28,6 +29,8 @@ class timeSeries extends shardViewModelBase {
     spinners = {
         save: ko.observable<boolean>(false)
     };
+
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
 
     constructor(db: database) {
         super(db);
