@@ -147,16 +147,14 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             // we only care about the map and not the reduce hilarity can ensure when properties do not share the type. 
             var converter = CreateConverter(_index);
             converter.IgnoreComplexObjectsDuringIndex = true; // for training, we don't care
-            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token,
-                _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
-            var testEnumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token,
-                Math.Max(100, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation / 10));
+            
+            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
             var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);
             var defaultDictionary = new PersistentDictionary(llt.GetPage(defaultDictionaryId));
 
-            PersistentDictionary.ReplaceIfBetter(llt, enumerator, testEnumerator, defaultDictionary);
+            PersistentDictionary.Create(llt, enumerator);
             tx.Commit();
         }
     }

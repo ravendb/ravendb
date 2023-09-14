@@ -111,54 +111,13 @@ namespace Voron.Data.CompactTrees
             return pageNumber;
         }
 
-        public static PersistentDictionary ReplaceIfBetter<TKeys1, TKeys2>(LowLevelTransaction llt, TKeys1 trainEnumerator, TKeys2 testEnumerator, PersistentDictionary previousDictionary = null)
+        public static PersistentDictionary Create<TKeys1>(LowLevelTransaction llt, TKeys1 trainEnumerator)
             where TKeys1 : struct, IReadOnlySpanEnumerator
-            where TKeys2 : struct, IReadOnlySpanEnumerator
         {
             var encoderState = new AdaptiveMemoryEncoderState();
             using var encoder = new HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>>(new Encoder3Gram<AdaptiveMemoryEncoderState>(encoderState));
             encoder.Train(trainEnumerator, MaxDictionaryEntriesForTraining);                
             
-            var encodeBuffer = ArrayPool<byte>.Shared.Rent(Constants.Storage.PageSize);
-
-            int incumbentSize = 0;
-            int successorSize = 0;
-            var auxEncodeBuffer = encodeBuffer.AsSpan();
-            while (testEnumerator.MoveNext(out var testValue))
-            {
-                if (testValue.Length > encodeBuffer.Length / 2)
-                {
-                    ArrayPool<byte>.Shared.Return(encodeBuffer);
-                    encodeBuffer = ArrayPool<byte>.Shared.Rent(testValue.Length * 2);
-                    auxEncodeBuffer = encodeBuffer.AsSpan();
-                }
-
-                incumbentSize += previousDictionary._encoder.Encode(testValue, auxEncodeBuffer);
-                successorSize += encoder.Encode(testValue, auxEncodeBuffer);
-            }
-
-            // If the new dictionary is not at least 5% better, we return the current dictionary.             
-            if (incumbentSize < successorSize * 1.05)
-                return previousDictionary;
-
-            if (previousDictionary != null)
-            {
-                var previousDictionaryPage = llt.GetPage(previousDictionary.DictionaryId);
-                if (previousDictionaryPage.IsOverflow == false)
-                {
-                    llt.FreePage(previousDictionary.DictionaryId);
-                }
-                else
-                {
-                    var overflowPageNumber = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(previousDictionaryPage.OverflowSize);
-                    for (long pageToRelease = previousDictionary.DictionaryId; pageToRelease < previousDictionary.DictionaryId + overflowPageNumber; ++pageToRelease)
-                    {
-                        llt.FreePage(pageToRelease);
-                    }
-                }
-                
-            }
-
             int requiredSize = Encoder3Gram<AdaptiveMemoryEncoderState>.GetDictionarySize(encoderState);
             int requiredTotalSize = requiredSize + PersistentDictionaryHeader.SizeOf;
             var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(requiredTotalSize);
