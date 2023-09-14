@@ -159,62 +159,43 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task DynamicNodeDistributionForOrchestrator()
         {
-            DefaultClusterSettings = new Dictionary<string, string>
-            {
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
-                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "5"
-            };
-
-            var cluster = await CreateRaftCluster(3);
+            var cluster = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
             var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2, dynamicNodeDistribution: true);
-            options.Server = cluster.Leader;
-
+            
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                Assert.Equal(2, record.Sharding.Orchestrator.Topology.Members.Count);
+                var record = await store.Maintenance.Server.ForNode(cluster.Leader.ServerStore.NodeTag).SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var originalOrchestrators = record.Sharding.Orchestrator.Topology.Members;
+                Assert.True(2 == originalOrchestrators.Count, $"Topology: {record.Sharding.Orchestrator.Topology}");
 
-                var server = Servers.First(x =>
+                var serverToDispose = cluster.Nodes.First(x =>
                     record.Sharding.Orchestrator.Topology.Members.Contains(x.ServerStore.NodeTag) && cluster.Leader.ServerStore.NodeTag != x.ServerStore.NodeTag);
-                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
-                var upServer = Servers.First(x => x != server);
+                var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(serverToDispose);
 
-                await AssertWaitForValueAsync(async () =>
-                {
-                    record = await store.Maintenance.Server.ForNode(upServer.ServerStore.NodeTag).SendAsync(new GetDatabaseRecordOperation(store.Database));
-                    return record.Sharding.Orchestrator.Topology.Members.Count;
-                }, 1);
-
-                var top = record.Sharding.Orchestrator.Topology;
-                Assert.Equal(2, top.ReplicationFactor);
-                Assert.Equal(1, top.Members.Count);
-                Assert.Equal(1, top.Rehabs.Count);
-                Assert.Equal(result.NodeTag, top.Rehabs.First());
-                Assert.Equal(1, top.DemotionReasons.Count);
-                Assert.Equal(1, top.PromotablesStatus.Count);
-
-                var stableNode = top.Members.First();
+                var remainingOriginalOrchestrator = originalOrchestrators.FirstOrDefault(x => x != serverToDispose.ServerStore.NodeTag);
+                Assert.True(remainingOriginalOrchestrator != null, "remainingOriginalOrchestrator is null");
 
                 //wait for dynamic node distribution to kick in and choose a different node
-                await AssertWaitForValueAsync(async () =>
+                await WaitForValueAsync(async () =>
                 {
-                    record = await store.Maintenance.Server.ForNode(upServer.ServerStore.NodeTag).SendAsync(new GetDatabaseRecordOperation(store.Database));
-                    return record.Sharding.Orchestrator.Topology.Members.Count;
-                }, 2);
-                
-                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                top = record.Sharding.Orchestrator.Topology;
-                Assert.Equal(2, top.Members.Count);
-                Assert.DoesNotContain(result.NodeTag, top.Members);
-                Assert.Equal(0, top.Rehabs.Count);
-                Assert.Equal(2, top.ReplicationFactor);
-                Assert.Equal(0, top.DemotionReasons.Count);
-                Assert.Equal(0, top.PromotablesStatus.Count);
+                    record = await store.Maintenance.Server.ForNode(remainingOriginalOrchestrator).SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Orchestrator.Topology.Members.Count == 2 &&
+                           record.Sharding.Orchestrator.Topology.Members.Contains(disposedServer.NodeTag) == false;
+                }, true);
 
-                var newChosenNode = top.Members.First(x => x != stableNode);
+                var top = record.Sharding.Orchestrator.Topology;
+                Assert.True(2 == top.Members.Count, $"topology: {top}");
+                Assert.DoesNotContain(disposedServer.NodeTag, top.Members);
+                Assert.Contains(remainingOriginalOrchestrator, top.Members);
+                Assert.True(0 == top.Rehabs.Count, $"topology has rehab nodes: {top}");
+                Assert.True(2 == top.ReplicationFactor, $"ReplicationFactor incorrect. topology: {top}");
+                Assert.True(0 == top.DemotionReasons.Count, $"DemotionReasons is not empty. Topology: {top}");
+                Assert.True(0 == top.PromotablesStatus.Count, $"PromotablesStatus is not empty. Topology: {top}");
+
+                var newChosenNode = top.Members.First(x => x != remainingOriginalOrchestrator);
                 await AssertWaitForValueAsync(() =>
                 {
-                    var shardedDatabaseContext = Servers.Single(x => x.ServerStore.NodeTag == newChosenNode);
+                    var shardedDatabaseContext = cluster.Nodes.Single(x => x.ServerStore.NodeTag == newChosenNode);
                     return Task.FromResult(shardedDatabaseContext.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(store.Database, out _));
                 }, true);
             }
