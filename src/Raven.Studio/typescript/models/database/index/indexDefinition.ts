@@ -5,6 +5,7 @@ import additionalAssembly = require("models/database/index/additionalAssemblyMod
 import configurationItem = require("models/database/index/configurationItem");
 import validateNameCommand = require("commands/resources/validateNameCommand");
 import generalUtils = require("common/generalUtils");
+import compoundField from "models/database/index/compoundField";
 
 class mapItem {
     map = ko.observable<string>();
@@ -37,6 +38,7 @@ class indexDefinition {
     //isTestIndex = ko.observable<boolean>(false);
     
     fields = ko.observableArray<indexFieldOptions>();
+    compoundFields = ko.observableArray<compoundField>([]);
     hasDuplicateFieldsNames: KnockoutComputed<boolean>;
     
     additionalSources = ko.observableArray<additionalSource>();
@@ -57,6 +59,7 @@ class indexDefinition {
 
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
+    numberOfCompoundFields = ko.pureComputed(() => this.compoundFields().length);
 
     configuration = ko.observableArray<configurationItem>();
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
@@ -91,6 +94,12 @@ class indexDefinition {
 
         this.fields(_.map(dto.Fields, (fieldDto, indexName) =>
             new indexFieldOptions(indexName, fieldDto, this.hasReduce, this.searchEngine, indexFieldOptions.defaultFieldOptions(this.hasReduce, this.searchEngine))));
+        
+        if (dto.CompoundFields) {
+            this.compoundFields(dto.CompoundFields.map(compoundField.fromDto));
+        } else {
+            this.compoundFields([]);
+        }
         
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
         if (defaultFieldOptions) {
@@ -203,7 +212,8 @@ class indexDefinition {
             reduceOutputCollectionName: this.reduceOutputCollectionName,
             patternForReferencesToReduceOutputCollection: this.patternForReferencesToReduceOutputCollection,
             collectionNameForReferenceDocuments: this.collectionNameForReferenceDocuments,
-            fields: this.fields
+            fields: this.fields,
+            compoundFields: this.compoundFields,
         });
     }
     
@@ -319,7 +329,8 @@ class indexDefinition {
                                                 this.collectionNameForReferenceDocuments() : null,
             AdditionalSources: this.additionalSourceToDto(),
             AdditionalAssemblies: this.additionalAssemblies().map(assembly => assembly.toDto()),
-            CompoundFields: []
+            CompoundFields: 
+                this.compoundFields().length ? this.compoundFields().map(f => [f.field1(), f.field2()]) : null
         }
     }
 

@@ -52,6 +52,7 @@ import testIndex = require("models/database/index/testIndex");
 import inlineShardSelector from "viewmodels/common/sharding/inlineShardSelector";
 import assertUnreachable from "components/utils/assertUnreachable";
 import licenseModel from "models/auth/licenseModel";
+import compoundField from "models/database/index/compoundField";
 
 class editIndex extends shardViewModelBase {
     
@@ -72,6 +73,7 @@ class editIndex extends shardViewModelBase {
     indexAutoCompleter: indexAceAutoCompleteProvider;
     nameChanged: KnockoutComputed<boolean>;
     canEditIndexName: KnockoutComputed<boolean>;
+    canUseCompoundFields: KnockoutComputed<boolean>;
 
     fieldNames = ko.observableArray<string>([]);
     indexNameHasFocus = ko.observable<boolean>(false);
@@ -114,6 +116,7 @@ class editIndex extends shardViewModelBase {
     searchEngineConfiguration = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
 
     inheritSearchEngineText: KnockoutComputed<string>;
+    effectiveSearchEngine: KnockoutComputed<Raven.Client.Documents.Indexes.SearchEngineType>;
     effectiveSearchEngineText: KnockoutComputed<string>;
     
     canOptimizeIndex = ko.observable<boolean>(false);
@@ -129,8 +132,10 @@ class editIndex extends shardViewModelBase {
 
         this.bindToCurrentInstance("removeMap",
             "removeField",
+            "removeCompoundField",
             "runTest",
             "createFieldNameAutocompleter",
+            "createCompoundFieldNameAutocompleter",
             "removeConfigurationOption",
             "formatIndex",
             "deleteAdditionalSource",
@@ -217,6 +222,14 @@ class editIndex extends shardViewModelBase {
         this.canEditIndexName = ko.pureComputed(() => {
             return !this.isEditingExistingIndex();
         });
+        
+        this.canUseCompoundFields = ko.pureComputed(() => {
+            if (this.searchEngineConfiguration()) {
+                return this.searchEngineConfiguration() === "Corax";
+            }
+            
+            return this.defaultSearchEngine() === "Corax";
+        });
 
         this.nameChanged = ko.pureComputed(() => {
             const newName = this.editedIndex().name();
@@ -264,10 +277,18 @@ class editIndex extends shardViewModelBase {
             return `Inherit (${engine})`;
         });
 
+        this.effectiveSearchEngine = ko.pureComputed(() => {
+            if (this.searchEngineConfiguration()) {
+                return this.searchEngineConfiguration();
+            }
+            
+            return this.defaultSearchEngine();
+        })
+        
         this.effectiveSearchEngineText = ko.pureComputed(() => {
             if (this.searchEngineConfiguration()) {
                 return this.searchEngineConfiguration();
-    }
+            }
 
             return this.inheritSearchEngineText();
         });
@@ -429,6 +450,17 @@ class editIndex extends shardViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.initFieldTooltips();
+
+        const $body = $("body");
+        
+        this.registerDisposableDelegateHandler($body, "click", ".js-change-to-corax", (event: JQueryEventObject) => {
+            this.searchEngineConfiguration("Corax");
+            messagePublisher.reportSuccess("Changed Index search engine to Corax");
+            
+            $(".popover").popover("hide");
+            
+            event.preventDefault();
+        })
         
         this.testIndex().compositionComplete();
     }
@@ -637,6 +669,16 @@ class editIndex extends shardViewModelBase {
             return anyDirty;
         });
 
+        const hasAnyDirtyCompoundField = ko.pureComputed(() => {
+            let anyDirty = false;
+            indexDef.compoundFields().forEach(field => {
+                if (field.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                }
+            });
+            return anyDirty;
+        });
+
         const hasDefaultFieldOptions = ko.pureComputed(() => !!indexDef.defaultFieldOptions());
         const hasAnyDirtyDefaultFieldOptions = ko.pureComputed(() => {
            return hasDefaultFieldOptions() && indexDef.defaultFieldOptions().dirtyFlag().isDirty();
@@ -658,6 +700,7 @@ class editIndex extends shardViewModelBase {
             indexDef.maps, 
             indexDef.reduce, 
             indexDef.numberOfFields,
+            indexDef.numberOfCompoundFields,
             indexDef.numberOfConfigurationFields,
             indexDef.outputReduceToCollection,
             indexDef.createReferencesToResultsCollection,
@@ -668,6 +711,7 @@ class editIndex extends shardViewModelBase {
             indexDef.additionalAssemblies,
             indexDef.archivedDataProcessingBehavior,
             hasAnyDirtyField,
+            hasAnyDirtyCompoundField,
             hasAnyDirtyConfiguration,
             hasDefaultFieldOptions,
             hasAnyDirtyDefaultFieldOptions,
@@ -752,10 +796,19 @@ class editIndex extends shardViewModelBase {
         }
     }
 
+    removeCompoundField(field: compoundField) {
+        eventsCollector.default.reportEvent("index", "remove-compound-field");
+        this.editedIndex().compoundFields.remove(field);
+    }
+
     addDefaultField() {
         eventsCollector.default.reportEvent("index", "add-field");
         this.editedIndex().addDefaultField();
         this.initFieldTooltips();
+    }
+
+    addCompoundField() {
+        this.editedIndex().compoundFields.push(new compoundField());
     }
 
     addConfigurationOption() {
@@ -796,6 +849,19 @@ class editIndex extends shardViewModelBase {
                 return filteredFieldNames.filter(x => x.toLowerCase().includes(name.toLowerCase()));
             } else {
                 return filteredFieldNames;
+            }
+        });
+    }
+
+    createCompoundFieldNameAutocompleter(field: KnockoutObservable<string>): KnockoutComputed<string[]> {
+        return ko.pureComputed(() => {
+            const fieldNames = this.fieldNames();
+            const name = field();
+            
+            if (name) {
+                return fieldNames.filter(x => x.toLowerCase().includes(name.toLowerCase()));
+            } else {
+                return fieldNames;
             }
         });
     }
@@ -854,6 +920,13 @@ class editIndex extends shardViewModelBase {
                 }
             }
         });
+        
+        editedIndex.compoundFields().forEach(field => {
+            if (!this.isValid(field.validationGroup)) {
+                valid = false;
+                fieldsTabInvalid = true;
+            }
+        })
         
         if (editedIndex.defaultFieldOptions()) {
             if (!this.isValid(editedIndex.defaultFieldOptions().validationGroup)) {
@@ -1153,6 +1226,13 @@ class editIndex extends shardViewModelBase {
 
     private initFieldTooltips() {
         this.setupDisableReasons();
+        
+        popoverUtils.longWithHover($(".js-add-compound-field-btn"), {
+            content: () => this.canUseCompoundFields() ? "" : `Compound fields are only available for Corax Search Engine. 
+                    <a class="btn btn-primary js-change-to-corax" href="#">Change to Corax</a>`,
+            html: true,
+            placement: "top"
+        });
 
         popoverUtils.longWithHover($(".js-store-field-info"), 
             {
