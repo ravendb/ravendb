@@ -17,6 +17,9 @@ import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
 import { todo } from "common/developmentHelper";
 import { uniqueId } from "lodash";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "./shell/licenseSlice";
+import "./FeatureAvailabilityTable.scss";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
@@ -32,59 +35,90 @@ interface AboutViewHeadingProps {
 }
 
 export interface FeatureAvailabilityData {
-    featureNames?: string[];
-    availabilityMatrix: ReactNode[][];
+    featureName?: ReactNode;
+    community: boolean | number | string;
+    professional: boolean | number | string;
+    enterprise: boolean | number | string;
 }
 
 interface FeatureAvailabilityTableProps {
-    enabled: boolean;
-    currentLicense: Raven.Server.Commercial.LicenseType;
-    availabilityData: FeatureAvailabilityData;
+    availabilityData: FeatureAvailabilityData[];
 }
 
 const FeatureAvailabilityTable = (props: FeatureAvailabilityTableProps) => {
-    const { enabled, currentLicense, availabilityData } = props;
-    const licenseTypes: Raven.Server.Commercial.LicenseType[] = ["Community", "Professional", "Enterprise"];
-    return (
-        <div>
-            {/* 'Community' | 'Developer' | 'Enterprise' | 'Essential' | 'Invalid' | 'None' | 'Professional' | 'Reserved'; */}
-            {enabled ? "true" : "false"}
-            <br></br>
-            {currentLicense}
+    const { availabilityData } = props;
 
-            <Table className="feature-availability-table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        {licenseTypes.map((licenseType) => (
-                            <th key={licenseType}>{licenseType}</th>
-                        ))}
-                    </tr>
-                </thead>
-                {availabilityData.featureNames.map((featureName, rowIndex) => (
-                    <tr key={featureName}>
-                        <td>{featureName}</td>
-                        {licenseTypes.map((licenseType, colIndex) => (
-                            <td key={`${featureName}-${licenseType}`}>
-                                {typeof availabilityData.availabilityMatrix[rowIndex][colIndex] === "boolean" ? (
-                                    <>
-                                        {availabilityData.availabilityMatrix[rowIndex][colIndex] === true ? (
-                                            <Icon icon="check" color="success" />
-                                        ) : (
-                                            <Icon icon="cancel" color="danger" />
-                                        )}
-                                    </>
-                                ) : (
-                                    <>{availabilityData.availabilityMatrix[rowIndex][colIndex]}</>
-                                )}
+    const currentLicense = useAppSelector(licenseSelectors.licenseType);
+
+    const licenseTypes: Raven.Server.Commercial.LicenseType[] = ["Community", "Professional", "Enterprise"];
+
+    if (currentLicense === "Developer") {
+        licenseTypes.push("Developer");
+    }
+
+    return (
+        <Table className="feature-availability-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    {licenseTypes.map((licenseType) => {
+                        if (currentLicense === "Essential" && licenseType === "Community") {
+                            return (
+                                <th key="Essential" className="current">
+                                    Essential
+                                </th>
+                            );
+                        }
+                        return (
+                            <th key={licenseType} className={classNames({ current: currentLicense === licenseType })}>
+                                {licenseType}
+                            </th>
+                        );
+                    })}
+                </tr>
+            </thead>
+            <tbody>
+                {availabilityData.map((data, idx) => (
+                    <tr key={idx}>
+                        <td>{data.featureName}</td>
+                        <td
+                            className={classNames({
+                                current: currentLicense === "Community" || currentLicense === "Essential",
+                            })}
+                        >
+                            {formatAvailabilityValue(data.community)}
+                        </td>
+                        <td className={classNames({ current: currentLicense === "Professional" })}>
+                            {formatAvailabilityValue(data.professional)}
+                        </td>
+                        <td className={classNames({ current: currentLicense === "Enterprise" })}>
+                            {formatAvailabilityValue(data.enterprise)}
+                        </td>
+                        {currentLicense === "Developer" && (
+                            <td className={classNames({ current: currentLicense === "Developer" })}>
+                                {formatAvailabilityValue(data.enterprise)}
                             </td>
-                        ))}
+                        )}
                     </tr>
                 ))}
-            </Table>
-        </div>
+            </tbody>
+        </Table>
     );
 };
+
+function formatAvailabilityValue(value: boolean | number | string): ReactNode {
+    if (value === true) {
+        return <Icon icon="check" color="success" />;
+    }
+    if (value === false) {
+        return <Icon icon="cancel" color="danger" />;
+    }
+    if (value === Infinity) {
+        return <Icon icon="infinity" />;
+    }
+
+    return value;
+}
 
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
     const { title, icon, badgeText, marginBottom } = props;
@@ -104,7 +138,6 @@ const aboutViewId = "about-view";
 
 const AboutViewFloating = (props: AboutViewProps) => {
     const { children, className, defaultOpen } = props;
-
     const [target, setTarget] = useState<string>(null);
 
     // If defaultOpen is true, the target cannot be found. To fix this, the render is conditional
@@ -127,9 +160,9 @@ const AboutViewFloating = (props: AboutViewProps) => {
                     offset={[-215, 10]}
                     defaultOpen={defaultOpen}
                 >
-                    <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion">
-                        <PopoverBody className="p-1">{children}</PopoverBody>
-                    </UncontrolledAccordion>
+                    <PopoverBody className="p-1">
+                        <AboutViewAnchored defaultOpen={defaultOpen ? "licensing" : null}>{children}</AboutViewAnchored>
+                    </PopoverBody>
                 </UncontrolledPopover>
             )}
         </div>
@@ -145,12 +178,12 @@ interface AccordionItemWrapperProps {
     pill?: boolean;
     pillText?: string;
     pillIcon?: IconName;
-    id?: string;
+    targetId?: string;
 }
 
 const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
-    const { id, icon, color, heading, description, children, pill, pillText, pillIcon } = props;
-    const targetId = id ? id : uniqueId();
+    const { icon, color, heading, description, children, pill, pillText, pillIcon } = props;
+    const targetId = props.targetId ?? uniqueId();
     return (
         <AccordionItem className={classNames("rounded-3", `box-shadow-${color}`, "panel-bg-1")}>
             <AccordionHeader targetId={targetId}>
@@ -174,11 +207,9 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
 };
 
 const AboutViewAnchored = (props: Omit<AboutViewProps, "defaultOpen"> & { defaultOpen?: string | string[] }) => {
-    const { children, className } = props;
+    const { children, className, defaultOpen } = props;
 
     todo("Feature", "Damian", "Once there is a new info hub view, consider changing defaultOpen");
-
-    const defaultOpen = props.defaultOpen !== null ? "licensing" : null;
 
     return (
         <div className={classNames(className)}>
