@@ -588,7 +588,7 @@ namespace FastTests.Server.Documents
 
         public override void Dispose()
         {
-            _disposeDatabase.Dispose();
+            _disposeDatabase?.Dispose();
             base.Dispose();
         }
     }
