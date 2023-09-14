@@ -26,6 +26,7 @@ import moment = require("moment");
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import getAdminStatsCommand from "commands/resources/getAdminStatsCommand";
 import assertUnreachable from "components/utils/assertUnreachable";
+import licenseModel from "models/auth/licenseModel";
 
 type certificatesSortMode = "default" |
     "byNameAsc" |
@@ -116,6 +117,8 @@ class certificates extends viewModelBase {
     sortModeText: KnockoutComputed<string>;
 
     deleteExistingCertificate = ko.observable<boolean>(false);
+    
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
     
     constructor() {
         super();
