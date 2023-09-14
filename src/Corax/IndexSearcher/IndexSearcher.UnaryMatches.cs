@@ -23,7 +23,7 @@ public partial class IndexSearcher
         }
         else if (typeof(TValueType) == typeof(Slice))
         {
-            ApplyAnalyzer(field, (Slice)(object)term, out var slice);
+            ApplyAnalyzer(field, field.Analyzer, (Slice)(object)term, out var slice);
             return BuildUnaryMatch(in set, field, slice, @operation, take, token);
         }
         else if (typeof(TValueType) == typeof(TermQueryItem[]))
@@ -54,8 +54,8 @@ public partial class IndexSearcher
         }
         else if (typeof(TValueType) == typeof(Slice))
         {
-            ApplyAnalyzer(field, (Slice)(object)leftValue, out var leftValueSlice);
-            ApplyAnalyzer(field, (Slice)(object)rightValue, out var rightValueSlice);
+            ApplyAnalyzer(field, field.Analyzer, (Slice)(object)leftValue, out var leftValueSlice);
+            ApplyAnalyzer(field, field.Analyzer, (Slice)(object)rightValue, out var rightValueSlice);
 
             return BuildBetween(in set, field, leftValueSlice, rightValueSlice, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual, isNegated, take, token);
         }
@@ -77,8 +77,8 @@ public partial class IndexSearcher
         }
         else if (typeof(TValueType) == typeof(Slice))
         {
-            ApplyAnalyzer(field, (Slice)(object)leftValue, out var leftValueSlice);
-            ApplyAnalyzer(field, (Slice)(object)rightValue, out var rightValueSlice);
+            ApplyAnalyzer(field, field.Analyzer,(Slice)(object)leftValue, out var leftValueSlice);
+            ApplyAnalyzer(field, field.Analyzer, (Slice)(object)rightValue, out var rightValueSlice);
 
             return BuildBetween(in set, field, leftValueSlice, rightValueSlice, leftSide, rightSide, isNegated, take, token);
         }

@@ -185,10 +185,7 @@ public static class CoraxIndexingHelpers
             if (analyzerType == typeof(LowerCaseKeywordAnalyzer))
                 return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(LowerCaseTransformer));
 
-            if (analyzerType.IsSubclassOf(typeof(LuceneAnalyzer)))
-                return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
-
-            return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+            return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
         }
 
         CoraxAnalyzer CreateKeywordAnalyzer(ByteStringContext context, string fieldName, Type analyzerType)
@@ -196,21 +193,15 @@ public static class CoraxIndexingHelpers
             if (analyzerType == typeof(KeywordAnalyzer))
                 return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(ExactTransformer));
 
-            if (analyzerType.IsSubclassOf(typeof(LuceneAnalyzer)))
-                return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
-            
-            return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+            return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
         }
 
         CoraxAnalyzer CreateStandardAnalyzer(ByteStringContext context, string fieldName, Type analyzerType)
         {
             if (analyzerType == typeof(RavenStandardAnalyzer))
                 return LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29));    
-
-            if (analyzerType.IsSubclassOf(typeof(LuceneAnalyzer)))
-                return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
             
-            return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+            return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
         }
     }
 }

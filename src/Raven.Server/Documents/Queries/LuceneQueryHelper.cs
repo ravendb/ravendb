@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -166,6 +168,7 @@ namespace Raven.Server.Documents.Queries
             return new TermQuery(new Term(fieldName, term)) { Boost = boost.Value };
         }
 
+        private static ThreadLocal<LowerCaseKeywordAnalyzer> WildcardAnalyzer = new ThreadLocal<LowerCaseKeywordAnalyzer>(() => new());
         public static Query AnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer, float? boost = null, float? similarity = null)
         {
             if (type != LuceneTermType.String && type != LuceneTermType.Prefix && type != LuceneTermType.WildCard)
@@ -174,12 +177,21 @@ namespace Raven.Server.Documents.Queries
             if (boost.HasValue == false)
                 boost = 1;
 
-            if (type == LuceneTermType.WildCard)
+            if (type is LuceneTermType.Prefix or LuceneTermType.WildCard)
             {
-                return new WildcardQuery(GetAnalyzedWildcardTerm(fieldName, term, analyzer))
+                var analyzerToUser = analyzer switch
                 {
-                    Boost = boost.Value
+                    LuceneRavenPerFieldAnalyzerWrapper wrapper => wrapper.GetAnalyzer(fieldName),
+                    _ => analyzer
                 };
+                if (analyzerToUser is not KeywordAnalyzer)
+                {
+                    // here we force a lower case keyword analyzer to ensure proper behavior
+                    // https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb
+                    analyzer = WildcardAnalyzer.Value;
+                }
+
+                Debug.Assert(analyzer != null);
             }
 
             var tokenStream = analyzer.ReusableTokenStream(fieldName, new StringReader(term));
@@ -191,28 +203,20 @@ namespace Raven.Server.Documents.Queries
                 terms.Add(attribute.Term);
             }
 
-            if (type == LuceneTermType.Prefix)
+            switch (type)
             {
-                if (terms.Count != 0)
+                case LuceneTermType.Prefix:
                 {
-                    var first = terms[0];
-                    var actualTerm = first[first.Length - 1] == AsteriskChar ? first.Substring(0, first.Length - 1) : first;
-                    return new PrefixQuery(new Term(fieldName, actualTerm)) { Boost = boost.Value };
-                }
-                // if the term that we are trying to prefix has been removed entirely by the analyzer, then we are going
-                // to cheat a bit, and check for both the term in as specified and the term in lower case format so we can
-                // find it regardless of casing
-                var removeStar = term.Substring(0, term.Length - 1);
-                var booleanQuery = new BooleanQuery
-                {
-                    Clauses =
+                    return new PrefixQuery(new Term(fieldName, terms[0].TrimEnd(AsteriskChar)))
                     {
-                        new BooleanClause(new PrefixQuery(new Term(fieldName, removeStar)), Occur.SHOULD),
-                        new BooleanClause(new PrefixQuery(new Term(fieldName, removeStar.ToLowerInvariant())), Occur.SHOULD)
-                    },
-                    Boost = boost.Value
-                };
-                return booleanQuery;
+                        Boost = boost.Value
+                    };
+                }
+                case LuceneTermType.WildCard:
+                    return new WildcardQuery(new Term(fieldName, terms[0]))
+                    {
+                        Boost = boost.Value
+                    };
             }
 
             if (terms.Count == 1)
@@ -267,67 +271,6 @@ namespace Raven.Server.Documents.Queries
                     }
             }
         }
-
-        private static Term GetAnalyzedWildcardTerm(string fieldName, string term, Analyzer analyzer)
-        {
-            var reader = new StringReader(term);
-            var tokenStream = analyzer.ReusableTokenStream(fieldName, reader);
-            var terms = new List<string>();
-            while (tokenStream.IncrementToken())
-            {
-                var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
-                terms.Add(attribute.Term);
-            }
-
-            if (terms.Count == 0)
-            {
-                return new Term(fieldName, term);
-            }
-
-            var sb = new StringBuilder();
-            int expectedLength;
-            if (terms.Count == 1)
-            {
-                var firstTerm = terms[0];
-                if (term.StartsWith(Asterisk) && !firstTerm.StartsWith(Asterisk))
-                    sb.Append(Asterisk);
-
-                sb.Append(firstTerm);
-                if (term.EndsWith(Asterisk) && !firstTerm.EndsWith(Asterisk))
-                    sb.Append(Asterisk);
-
-                var res = sb.ToString();
-                expectedLength = res.Length;
-                Debug.Assert(expectedLength == term.Length,
-                    @"if analyzer changes length of term and removes wildcards after processing it,
-there is no way to know where to put the wildcard character back after the analysis.
-This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
-                return new Term(fieldName, res);
-            }
-
-            foreach (var currentTerm in terms)
-            {
-                if (sb.Length < term.Length)
-                {
-                    var c = term[sb.Length];
-                    if (c == '?' || c == AsteriskChar)
-                    {
-                        sb.Append(c);
-                    }
-                }
-                sb.Append(currentTerm);
-            }
-
-            var analyzedTermString = sb.ToString();
-            expectedLength = analyzedTermString.Length;
-            Debug.Assert(expectedLength == term.Length,
-                @"if analyzer changes length of term and removes wildcards after processing it,
-there is no way to know where to put the wildcard character back after the analysis.
-This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
-
-            return new Term(fieldName, analyzedTermString);
-        }
-
 
         private static Query CreateRange(Index index, string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue,
             LuceneTermType maxValueType, bool inclusiveMax, bool exact)

@@ -13,8 +13,7 @@ namespace Corax.Analyzers
     {
         public static Analyzer CreateDefaultAnalyzer(ByteStringContext context) => Create(context, default(KeywordTokenizer), default(ExactTransformer));
         public static Analyzer CreateLowercaseAnalyzer(ByteStringContext context) => Create(context, default(KeywordTokenizer), default(LowerCaseTransformer));
-
-
+        
         // PERF: This is a hack in order to deal with RavenDB-19597. The ArrayPool creates contention under high requests environments.
         // There are 2 ways to avoid this contention, one is to avoid using it altogether and the other one is separating the pools from
         // the actual executing thread. While the correct approach would be to amp-up the usage of shared buffers (which would make) this
@@ -31,6 +30,8 @@ namespace Corax.Analyzers
                 return _bufferPool;
             }
         }
+
+        public bool IsExactAnalyzer;
 
         public static ArrayPool<Token> TokensPool
         {
@@ -75,6 +76,8 @@ namespace Corax.Analyzers
             float tokenBufferMultiplier = 1;
             foreach( var transformer in transformers)
             {
+                IsExactAnalyzer = transformer is ExactTransformer;
+                
                 if (transformer.BufferSpaceMultiplier > 1)
                     sourceBufferMultiplier *= transformer.BufferSpaceMultiplier;
                 if (transformer.TokenSpaceMultiplier > 1)
