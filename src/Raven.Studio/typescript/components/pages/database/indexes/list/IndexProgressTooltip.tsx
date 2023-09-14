@@ -32,9 +32,9 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
     if (nodeInfo.status === "failure") {
         return (
             <PopoverWithHover target={target} placement="top">
-                <div className="text-danger flex-horizontal">
+                <div className="text-warning flex-horizontal p-3">
                     <div className="flex-start text-warning">
-                        <Icon icon="warning" margin="m-0" />
+                        <Icon icon="warning" />
                     </div>
                     <div>
                         <div>Unable to load index status:</div>

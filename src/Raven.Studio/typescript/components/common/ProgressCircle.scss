@@ -84,6 +84,16 @@
         }
     }
 
+    &.warning {
+        .state-desc {
+            color: colors.$text-muted-color;
+        }
+
+        .state-indicator {
+            background-color: colors.$warning;
+        }
+    }
+
     &.running {
         .state-desc {
             color: colors.$text-muted-color;
@@ -98,7 +108,7 @@
         }
 
         .state-indicator {
-            background-color: colors.$panel-bg-1-var;
+            background-color: colors.$well-bg-var;
 
             i {
                 color: colors.$progress-color;
