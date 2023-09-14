@@ -481,10 +481,11 @@
                                                        data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index() }" />
                                                 <label class="text-warning" data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
                                             </div>
-                                            <div class="radio radio-default radio-inline">
+                                            <div class="radio radio-default radio-inline" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                                                 <input type="radio" value="Read"
                                                        data-bind="checked: accessLevel, attr: { id: 'accessLevel_r_' + $index() }" />
                                                 <label class='text-danger' data-bind="attr: { for: 'accessLevel_r_' + $index() }"> Read </label>
+                                                <span class="badge license-restricted-badge margin-bottom-xxs margin-left-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
                                             </div>
                                         </div>
                                         <a href="#" data-bind="click: _.partial($root.deletePermission, $data)" title="Delete this database permission">
