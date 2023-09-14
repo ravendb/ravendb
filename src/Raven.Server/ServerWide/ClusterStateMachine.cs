@@ -313,7 +313,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new List<string>
+        private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
         {
             nameof(PutIndexesCommand),
             nameof(PutAutoIndexCommand),
@@ -2893,14 +2893,17 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case nameof(EditRevisionsConfigurationCommand):
+                    if (databaseRecord.Revisions == null)
+                        return;
+
+                    if (databaseRecord.Revisions.Default == null &&
+                        (databaseRecord.Revisions.Collections == null || databaseRecord.Revisions.Collections.Count == 0))
+                        return;
+
                     var maxRevisionsToKeep = serverStore.LicenseManager.LicenseStatus.MaxNumberOfRevisionsToKeep;
                     var maxRevisionAgeToKeepInDays = serverStore.LicenseManager.LicenseStatus.MaxNumberOfRevisionAgeToKeepInDays;
                     if (serverStore.LicenseManager.LicenseStatus.CanSetupDefaultRevisionsConfiguration &&
                         maxRevisionsToKeep == null && maxRevisionAgeToKeepInDays == null)
-                        return;
-
-                    if (databaseRecord.Revisions.Default == null && 
-                        (databaseRecord.Revisions.Collections == null || databaseRecord.Revisions.Collections.Count == 0))
                         return;
 
                     if (CanAssertLicenseLimits(context, minBuildVersion: 60_000) == false)
