@@ -28,9 +28,10 @@
                                     <i data-bind="attr: { 'class' : validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
-                            <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: !alwaysEnabled">
+                            <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: !alwaysEnabled, css: { 'pe-none item-disabled': $data.id === 'encryption' && !$root.isEnterpriseOrDeveloper }">
                                 <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }, disable: disableToggle">
                                 <label data-bind="text: name, attr: { 'for': 'section_' + $index() }"></label>
+                                <span class="badge license-restricted-badge align-self-center margin-right-xs" data-bind="if: $data.id === 'encryption' && !$root.isEnterpriseOrDeveloper">Enterprise</span>
                                 <button type="button" class="btn pull-right btn-toggle"
                                         data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }, disable: disableToggle() && !enabled()">
                                     <i data-bind="attr: { 'class' : enabled() && validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>

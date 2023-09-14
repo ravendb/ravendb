@@ -59,6 +59,7 @@ class createDatabase extends dialogViewModelBase {
 
     licenseType = licenseModel.licenseType();
     isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
 
     databaseLocationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
     databaseLocationInfoToDisplay: KnockoutComputed<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult[]>;
