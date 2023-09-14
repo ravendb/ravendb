@@ -74,7 +74,7 @@ namespace SlowTests
 
 
         //---------------------------------------------------------------------------------------------------------------------------------------
-        
+
         // Right Behavior
         [Theory]
         [InlineData(ChangingType.EnforceConfiguration)] // Works
@@ -118,7 +118,7 @@ namespace SlowTests
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                if(type==ChangingType.EnforceConfiguration)
+                if (type == ChangingType.EnforceConfiguration)
                     Assert.Equal(0, doc1RevCount); // EnforceConfig: 0
                 if (type == ChangingType.UpdateDocument)
                     Assert.Equal(2, doc1RevCount); // UpdateDocument: 2 (user should use "enforce config" for delete the redundent revisions)
@@ -255,7 +255,7 @@ namespace SlowTests
                 Assert.Equal(3, doc1RevCount); // Old, New, Delete
             }
         }
-        
+
 
         [Fact]
         public async Task DeleteDocWithRevisions_ThenAddPurgeOnDeleteConfig_EnforceConfig_ShouldDeleteTheRevisionsOfTheDeletedDoc()
@@ -362,7 +362,7 @@ namespace SlowTests
         //---------------------------------------------------------------------------------------------------------------------------------------
 
         // regular\manual (non-conflicted) revisions shouldnt obey the conflicted-config!
-        [Fact] 
+        [Fact]
         public async Task ForceCreatedRevisions_ShouldntObeyToConflictedRevisions()
         {
             using var src = GetDocumentStore();
@@ -402,9 +402,9 @@ namespace SlowTests
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
                 Assert.Equal(12, doc1RevCount); // GOT 12 INSTEAD OF 13,Because 1 Revision which is force created (in the future will be with force-created flag)
-                                                                // got a "Conflicted" to its flag
-                                                                // IN ANOTHER TEST: WHAT SHOULD WE DO WITH FORCE-CREATED WHICH IS ALSO CONFLICTED, WHEN ENFORCE TRYING
-                                                                //                  TO DELETE IT WHEN YOU HAVE ONLY CONFLICTED CONFIG AND YOU SHOULDNT DELETE FORCE-CREATED. ?
+                                                // got a "Conflicted" to its flag
+                                                // IN ANOTHER TEST: WHAT SHOULD WE DO WITH FORCE-CREATED WHICH IS ALSO CONFLICTED, WHEN ENFORCE TRYING
+                                                //                  TO DELETE IT WHEN YOU HAVE ONLY CONFLICTED CONFIG AND YOU SHOULDNT DELETE FORCE-CREATED. ?
             }
         }
 
@@ -416,14 +416,14 @@ namespace SlowTests
             using var src = GetDocumentStore();
             using var dst = GetDocumentStore(
                 new Options()
-            {
-                ModifyDatabaseRecord = record =>
                 {
-                    record.ConflictSolverConfig = new ConflictSolver
+                    ModifyDatabaseRecord = record =>
                     {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        record.ConflictSolverConfig = new ConflictSolver
                         {
+                            ResolveToLatest = false,
+                            ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                            {
                             {
                                 "Users", new ScriptResolver()
                                 {
@@ -438,10 +438,10 @@ for (var i = 0; i < docs.length; i++) {
 return oldestDoc;"
                                 }
                             }
-                        }
-                    };
-                }
-            });
+                            }
+                        };
+                    }
+                });
 
             var dbSrc = await Databases.GetDocumentDatabaseInstanceFor(src);
             var dbDst = await Databases.GetDocumentDatabaseInstanceFor(dst);
@@ -667,7 +667,7 @@ return oldestDoc;"
             using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                if(deleteAlsoForceCreated)
+                if (deleteAlsoForceCreated)
                     Assert.Equal(2, doc1RevCount);
                 else
                     Assert.Equal(12, doc1RevCount);
@@ -675,7 +675,7 @@ return oldestDoc;"
 
         }
 
-        [Theory (Skip = "Until RavenDB-20823")]
+        [Theory]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Include_ForceCreated_AlwaysOn_EnforceConfig_InCaseOf_PurgeOnDelete(bool deleteAlsoForceCreated)
@@ -732,13 +732,13 @@ return oldestDoc;"
                 PurgeOnDelete = true
             };
             await RevisionsHelper.SetupConflictedRevisionsAsync(dst, Server.ServerStore, configuration: dstConfig);
-            
+
             await EnforceConfiguration(dst, deleteAlsoForceCreated);
 
             using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                if(deleteAlsoForceCreated)
+                if (deleteAlsoForceCreated)
                     Assert.Equal(0, doc1RevCount);
                 else
                     Assert.Equal(11, doc1RevCount); // 10 ForceCreated, 1 Deleted
@@ -833,7 +833,7 @@ return oldestDoc;"
 
             await EnforceConfiguration(dst);
             // WaitForUserToContinueTheTest(dst);
-            
+
             using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
@@ -844,7 +844,7 @@ return oldestDoc;"
 
 
         [Theory]
-        [InlineData(false,false)]
+        [InlineData(false, false)]
         [InlineData(false, true)]
         [InlineData(true, false)]
         [InlineData(true, true)]
@@ -947,7 +947,7 @@ return oldestDoc;"
 
         //-----------------------------------------------------------------------------------------------------------------------------------------
 
-        [Theory (Skip = "Until RavenDB-20823")]
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DocWithRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete(bool disableConfiguration)
@@ -1008,7 +1008,7 @@ return oldestDoc;"
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount); 
+                Assert.Equal(3, doc1RevCount);
 
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
                 Assert.Equal(3, revisionsMetadata.Count);
@@ -1028,7 +1028,7 @@ return oldestDoc;"
              */
         }
 
-        [Fact (Skip = "Until RavenDB-20823")]
+        [Fact]
         public async Task DocWithForceCreatedRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete()
         {
             using var store = GetDocumentStore();
@@ -1058,7 +1058,7 @@ return oldestDoc;"
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount); 
+                Assert.Equal(3, doc1RevCount);
 
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
                 Assert.Equal(3, revisionsMetadata.Count);
@@ -1068,7 +1068,7 @@ return oldestDoc;"
 
         //-----------------------------------------------------------------------------------------------------------------------------------------
 
-        [Fact (Skip = "Until RavenDB-20823")]
+        [Fact]
         public async Task RevivedDocumentShouldHaveTheRevisionsOfTheDeletedDoc()
         {
             using var store = GetDocumentStore();
@@ -1112,7 +1112,7 @@ return oldestDoc;"
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount); 
+                Assert.Equal(3, doc1RevCount);
 
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
                 Assert.Equal(3, revisionsMetadata.Count);
@@ -1130,7 +1130,7 @@ return oldestDoc;"
             {
                 var doc = await session.LoadAsync<User>("Docs/1");
                 var metadata = session.Advanced.GetMetadataFor(doc);
-                Assert.Contains(DocumentFlags.HasRevisions.ToString(),metadata.GetString(Constants.Documents.Metadata.Flags));
+                Assert.Contains(DocumentFlags.HasRevisions.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
                 Assert.Equal(3, doc1RevCount);

@@ -52,7 +52,8 @@ namespace Raven.Server.Documents.Revisions
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var result = new DeleteOldRevisionsResult();
                 var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate: null, skipForceCreated: false, result);
-                var deleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToDelete, tombstoneFlags: DocumentFlags.FromResharding | DocumentFlags.Artificial);
+                var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
+                var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete, result, tombstoneFlags: DocumentFlags.FromResharding | DocumentFlags.Artificial);
                 IncrementCountOfRevisions(context, prefixSlice, -deleted);
             }
         }
