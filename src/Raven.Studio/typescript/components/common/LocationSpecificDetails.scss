@@ -14,9 +14,10 @@
         flex-direction: column;
         align-items: center;
         padding: sizes.$gutter-xs sizes.$gutter-xs;
-        margin-right: 1px;
+        border-right: 1px solid colors.$border-color-light-var;
         background-color: colors.$panel-header-bg-var;
         border-top-left-radius: sizes.$gutter-xs;
+        border-bottom-left-radius: sizes.$gutter-xs;
         min-width: 135px;
 
         & > div:first-of-type {
@@ -45,6 +46,7 @@
     .details {
         line-height: 1em;
         border-top-right-radius: sizes.$gutter-xs;
+        border-bottom-right-radius: sizes.$gutter-xs;
         background-color: colors.$panel-header-bg-var;
         display: flex;
         flex-direction: column;

@@ -191,78 +191,109 @@ function calculateOverallProgress(index: IndexSharedInfo) {
     return processed / total;
 }
 
+function checkConditions(index: IndexSharedInfo) {
+    return {
+        everyFailure: index.nodesInfo.every((x) => x.status === "failure"),
+        everyFaulty: index.nodesInfo.every((x) => x.details?.faulty),
+        everyErrors: index.nodesInfo.every((x) => x.details?.state === "Error"),
+        everyDisabled: index.nodesInfo.every((x) => x.details?.status === "Disabled"),
+        everyPaused: index.nodesInfo.every((x) => x.details?.status === "Paused"),
+        everyPending: index.nodesInfo.every((x) => x.details?.status === "Pending"),
+        someFailure: index.nodesInfo.some((x) => x.status === "failure"),
+        someErrors: index.nodesInfo.some((x) => x.details?.state === "Error"),
+        someFaulty: index.nodesInfo.some((x) => x.details?.faulty),
+        someDisabled: index.nodesInfo.some((x) => x.details?.status === "Disabled"),
+        somePaused: index.nodesInfo.some((x) => x.details?.status === "Paused"),
+        somePending: index.nodesInfo.some((x) => x.details?.status === "Pending"),
+        someStale: index.nodesInfo.some((x) => x.details?.stale),
+    };
+}
+
 function getState(index: IndexSharedInfo) {
-    if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details?.state === "Error")) {
+    const conditions = checkConditions(index);
+
+    if (conditions.someFaulty || conditions.someErrors) {
         return "failed";
     }
-    if (
-        index.nodesInfo.some(
-            (x) =>
-                x.details?.status === "Disabled" ||
-                x.details?.status === "Paused" ||
-                x.details?.status === "Pending" ||
-                x.details?.stale
-        )
-    ) {
+    if (conditions.someFailure) {
+        return "warning";
+    }
+    if (conditions.someDisabled || conditions.somePaused || conditions.somePending || conditions.someStale) {
         return "running";
     }
     return "success";
 }
 
 function getIcon(index: IndexSharedInfo): IconName {
-    if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details?.state === "Error")) {
+    const conditions = checkConditions(index);
+
+    if (conditions.someFailure && conditions.someErrors) {
         return "cancel";
     }
-    if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
+    if (conditions.someFaulty || conditions.someErrors) {
+        return "cancel";
+    }
+    if (conditions.someFailure) {
+        return "warning";
+    }
+    if (conditions.someDisabled) {
         return iconForState("Disabled");
     }
-    if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
+    if (conditions.somePaused) {
         return iconForState("Paused");
     }
-    if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
+    if (conditions.somePending) {
         return iconForState("Pending");
     }
-    if (index.nodesInfo.some((x) => x.details?.stale)) {
+    if (conditions.someStale) {
         return null;
     }
     return "check";
 }
 
 function getStateText(index: IndexSharedInfo): string {
-    if (index.nodesInfo.some((x) => x.status === "failure")) {
-        return "Load errors";
-    }
-    if (index.nodesInfo.every((x) => x.details?.faulty)) {
-        return "Faulty";
-    }
-    if (index.nodesInfo.some((x) => x.details?.faulty)) {
-        return "Some faulty";
-    }
-    if (index.nodesInfo.every((x) => x.details?.state === "Error")) {
+    const conditions = checkConditions(index);
+
+    if (conditions.someFailure && conditions.someErrors) {
         return "Errors";
     }
-    if (index.nodesInfo.some((x) => x.details?.state === "Error")) {
+    if (conditions.everyFailure) {
+        return "Load errors";
+    }
+    if (conditions.someFailure) {
+        return "Some load errors";
+    }
+    if (conditions.everyFaulty) {
+        return "Faulty";
+    }
+    if (conditions.someFaulty) {
+        return "Some faulty";
+    }
+    if (conditions.everyErrors) {
+        return "Errors";
+    }
+    if (conditions.someErrors) {
         return "Some errored";
     }
-    if (index.nodesInfo.every((x) => x.details?.status === "Disabled")) {
+    if (conditions.everyDisabled) {
         return "Disabled";
     }
-    if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
+    if (conditions.someDisabled) {
         return "Some disabled";
     }
-    if (index.nodesInfo.every((x) => x.details?.status === "Paused")) {
+    if (conditions.everyPaused) {
         return "Paused";
     }
-    if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
+    if (conditions.somePaused) {
         return "Some paused";
     }
-    if (index.nodesInfo.every((x) => x.details?.status === "Pending")) {
+    if (conditions.everyPending) {
         return "Pending";
     }
-    if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
+    if (conditions.somePending) {
         return "Some pending";
     }
-    if (index.nodesInfo.some((x) => x.details?.stale)) {
+    if (conditions.someStale) {
         return "Running";
     }
     return "Up to date";

@@ -1,7 +1,7 @@
 ﻿import classNames from "classnames";
 
 export interface ProgressCircleProps {
-    state: "success" | "failed" | "running";
+    state: "success" | "failed" | "running" | "warning";
     children?: ReactNode;
     icon?: IconName;
     progress?: number;
