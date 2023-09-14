@@ -1,5 +1,70 @@
+@use "Content/scss/bs5variables";
+
 .feature-availability-table {
-    .current {
-        border: 2px solid red;
+    $table-border-radius: bs5variables.$border-radius-md;
+    //border: bs5variables.$border-width solid bs5variables.$border-color-light;
+    border-radius: $table-border-radius;
+    text-align: center;
+
+    --license-color: var(--bs-secondary);
+
+    .developer {
+        --license-color: var(--license-developer);
+    }
+    .community {
+        --license-color: var(--license-community);
+    }
+    .professional {
+        --license-color: var(--license-professional);
+    }
+    .enterprise {
+        --license-color: var(--license-enterprise);
+    }
+
+    table {
+        border-collapse: unset;
+
+        th,
+        td {
+            border: 0;
+        }
+
+        thead {
+            th.current {
+                border: bs5variables.$border-width solid var(--license-color);
+                border-bottom: none;
+            }
+        }
+        tbody {
+            .current {
+                border: bs5variables.$border-width solid var(--license-color);
+                border-top: 0;
+                border-bottom: 0;
+            }
+
+            th {
+                font-size: bs5variables.$font-size-xs;
+                font-weight: normal;
+                border-bottom: 0;
+                text-align: left;
+            }
+
+            tr.current-indicator-row {
+                td,
+                th {
+                    border-bottom: 0;
+                    &:first-of-type {
+                        border-radius: 0 0 0 $table-border-radius;
+                    }
+                    &:last-of-type {
+                        border-radius: 0 0 $table-border-radius 0;
+                    }
+
+                    &.current {
+                        border-bottom: bs5variables.$border-width solid var(--license-color);
+                    }
+                }
+            }
+        }
     }
 }

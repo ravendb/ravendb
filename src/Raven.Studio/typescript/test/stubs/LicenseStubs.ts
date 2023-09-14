@@ -104,6 +104,42 @@ export class LicenseStubs {
         return LicenseStubs.getStatus("Developer");
     }
 
+    static none(): LicenseStatus {
+        return {
+            ...LicenseStubs.getStatus("None"),
+            MaxNumberOfStaticIndexesPerDatabase: 12,
+            MaxNumberOfStaticIndexesPerCluster: 12 * 5,
+            MaxNumberOfAutoIndexesPerDatabase: 24,
+            MaxNumberOfAutoIndexesPerCluster: 24 * 5,
+            MaxNumberOfSubscriptionsPerDatabase: 3,
+            MaxNumberOfSubscriptionsPerCluster: 3 * 5,
+            MaxNumberOfCustomSortersPerDatabase: 1,
+            MaxNumberOfCustomSortersPerCluster: 5,
+            MaxNumberOfCustomAnalyzersPerDatabase: 1,
+            MaxNumberOfCustomAnalyzersPerCluster: 5,
+            MaxNumberOfRevisionsToKeep: 2,
+            MaxNumberOfRevisionsByAgeToKeep: 3888000,
+        };
+    }
+
+    static essential(): LicenseStatus {
+        return {
+            ...LicenseStubs.getStatus("Essential"),
+            MaxNumberOfStaticIndexesPerDatabase: 12,
+            MaxNumberOfStaticIndexesPerCluster: 12 * 5,
+            MaxNumberOfAutoIndexesPerDatabase: 24,
+            MaxNumberOfAutoIndexesPerCluster: 24 * 5,
+            MaxNumberOfSubscriptionsPerDatabase: 3,
+            MaxNumberOfSubscriptionsPerCluster: 3 * 5,
+            MaxNumberOfCustomSortersPerDatabase: 1,
+            MaxNumberOfCustomSortersPerCluster: 5,
+            MaxNumberOfCustomAnalyzersPerDatabase: 1,
+            MaxNumberOfCustomAnalyzersPerCluster: 5,
+            MaxNumberOfRevisionsToKeep: 2,
+            MaxNumberOfRevisionsByAgeToKeep: 3888000,
+        };
+    }
+
     static community(): LicenseStatus {
         return {
             ...LicenseStubs.getStatus("Community"),

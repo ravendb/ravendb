@@ -14,6 +14,12 @@
 
     --hover-filter: #{$hover-filter};
     --shadow-color: #{to-rgb($shadow-color)};
+
+    --license-developer: #c7ff6b;
+    --license-cloud: #{$brand-cloud};
+    --license-community: #{$color-4};
+    --license-professional: #{$color-4-2};
+    --license-enterprise: #{$color-5};
 }
 
 .modal-content,

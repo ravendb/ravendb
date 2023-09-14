@@ -16,6 +16,8 @@ import AboutViewFloating, {
     AboutViewAnchored,
     AboutViewHeading,
     AccordionItemWrapper,
+    FeatureAvailabilityData,
+    FeatureAvailabilityTable,
 } from "components/common/AboutView";
 import { FlexGrow } from "components/common/FlexGrow";
 import { useAppSelector } from "components/store";
@@ -79,18 +81,18 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                         in your application.
                                     </p>
                                 </AccordionItemWrapper>
-                                <AboutViewAnchored
-                                    className="mt-3"
-                                    defaultOpen={isProfessionalOrAbove ? null : "licensing"}
+                                <AccordionItemWrapper
+                                    icon="license"
+                                    color={isProfessionalOrAbove ? "success" : "warning"}
+                                    heading="Licensing"
+                                    description="See which plans offer this and more exciting features"
+                                    targetId="licensing"
                                 >
-                                    <AccordionLicenseNotIncluded
-                                        targetId="licensing"
-                                        featureName="Index Cleanup"
-                                        featureIcon="index-cleanup"
-                                        checkedLicenses={["Professional", "Enterprise"]}
-                                        isLimited={!isProfessionalOrAbove}
-                                    />
-                                </AboutViewAnchored>
+                                    <h4 className="text-center">
+                                        <Icon icon="index-cleanup" /> Index Cleanup
+                                    </h4>
+                                    <FeatureAvailabilityTable availabilityData={availabilityData} />
+                                </AccordionItemWrapper>
                             </AboutViewFloating>
                         </div>
                         <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
@@ -647,3 +649,11 @@ const formatDate = (date: Date) => {
         </>
     );
 };
+
+const availabilityData: FeatureAvailabilityData[] = [
+    {
+        community: false,
+        professional: true,
+        enterprise: true,
+    },
+];

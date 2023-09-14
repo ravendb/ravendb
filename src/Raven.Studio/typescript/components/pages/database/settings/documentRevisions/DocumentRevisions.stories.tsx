@@ -67,3 +67,57 @@ export function LicenseRestricted() {
 
     return <DocumentRevisions db={db} />;
 }
+
+export function Dev() {
+    commonInit();
+    const { accessManager, license } = mockStore;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseAdmin",
+    });
+
+    license.with_Developer();
+
+    const { databasesService } = mockServices;
+    databasesService.withRevisionsConfiguration((x: any) => {
+        x.Default = null;
+    });
+
+    return <DocumentRevisions db={db} />;
+}
+
+export function Essential() {
+    commonInit();
+    const { accessManager, license } = mockStore;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseAdmin",
+    });
+
+    license.with_Essential();
+
+    const { databasesService } = mockServices;
+    databasesService.withRevisionsConfiguration((x: any) => {
+        x.Default = null;
+    });
+
+    return <DocumentRevisions db={db} />;
+}
+
+export function NoLicense() {
+    commonInit();
+    const { accessManager, license } = mockStore;
+
+    accessManager.with_databaseAccess({
+        [db.name]: "DatabaseAdmin",
+    });
+
+    license.with_None();
+
+    const { databasesService } = mockServices;
+    databasesService.withRevisionsConfiguration((x: any) => {
+        x.Default = null;
+    });
+
+    return <DocumentRevisions db={db} />;
+}
