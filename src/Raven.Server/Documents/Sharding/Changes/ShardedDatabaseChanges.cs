@@ -22,13 +22,15 @@ internal sealed class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDa
         _server = server;
     }
 
-    protected override ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
+    protected override ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor) => CreateClientWebSocket(_server, requestExecutor);
+
+    public static ClientWebSocket CreateClientWebSocket(ServerStore server, RequestExecutor requestExecutor)
     {
         var clientWebSocket = new ClientWebSocket();
         if (requestExecutor.Certificate != null)
         {
             clientWebSocket.Options.ClientCertificates.Add(requestExecutor.Certificate);
-            clientWebSocket.Options.RemoteCertificateValidationCallback = _server.Sharding.ShardingCustomValidationCallback;
+            clientWebSocket.Options.RemoteCertificateValidationCallback = server.Sharding.ShardingCustomValidationCallback;
         }
 
         return clientWebSocket;

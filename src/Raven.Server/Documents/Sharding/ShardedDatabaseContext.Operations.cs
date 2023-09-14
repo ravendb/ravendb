@@ -6,6 +6,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Sharding.Changes;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -143,6 +144,6 @@ public partial class ShardedDatabaseContext
             }
         }
 
-        internal DatabaseChanges GetChanges(ShardedDatabaseIdentifier key) => _changes.GetOrAdd(key, k => new DatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(k.ShardNumber), ShardHelper.ToShardName(_context.DatabaseName, k.ShardNumber), onDispose: null, k.NodeTag));
+        internal DatabaseChanges GetChanges(ShardedDatabaseIdentifier key) => _changes.GetOrAdd(key, k => new DatabaseChangesForShard(_context.ServerStore, _context.ShardExecutor.GetRequestExecutorAt(k.ShardNumber), ShardHelper.ToShardName(_context.DatabaseName, k.ShardNumber), onDispose: null, k.NodeTag));
     }
 }
