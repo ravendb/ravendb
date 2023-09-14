@@ -74,9 +74,10 @@ namespace Corax.Analyzers
             
             float sourceBufferMultiplier = 1;
             float tokenBufferMultiplier = 1;
+            IsExactAnalyzer = transformers.Length > 0;
             foreach( var transformer in transformers)
             {
-                IsExactAnalyzer = transformer is ExactTransformer;
+                IsExactAnalyzer &= transformer is ExactTransformer;
                 
                 if (transformer.BufferSpaceMultiplier > 1)
                     sourceBufferMultiplier *= transformer.BufferSpaceMultiplier;
