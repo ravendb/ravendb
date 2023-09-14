@@ -20,6 +20,26 @@ public unsafe struct MultiUnaryItem
      */
     public FieldMetadata Binding;
     public DataType Type;
+
+    public string RightAsString()
+    {
+        return Type switch
+        {
+            DataType.Double => DoubleValueRight.ToString(CultureInfo.InvariantCulture),
+            DataType.Long => LongValueRight.ToString(CultureInfo.InvariantCulture),
+            DataType.Slice => SliceValueRight.ToString()
+        };
+    }
+    
+    public string LeftAsString()
+    {
+        return Type switch
+        {
+            DataType.Double => DoubleValueLeft.ToString(CultureInfo.InvariantCulture),
+            DataType.Long => LongValueLeft.ToString(CultureInfo.InvariantCulture),
+            DataType.Slice => SliceValueLeft.ToString()
+        };
+    }
     internal Slice SliceValueLeft;
     internal long LongValueLeft;
     internal double DoubleValueLeft;
@@ -49,6 +69,8 @@ public unsafe struct MultiUnaryItem
     private readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> _byteComparerRight;
     private readonly delegate*<long, long, bool> _longComparerRight;
     private readonly delegate*<double, double, bool> _doubleComparerRight;
+    private readonly delegate*<bool,bool> _compareNullLeft, _compareNullRight;
+    private readonly bool _leftIsNull, _rightIsNull;
 
     private MultiUnaryItem(FieldMetadata binding, DataType dataType, bool isBetween, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
     {
@@ -67,45 +89,59 @@ public unsafe struct MultiUnaryItem
         LeftSideOperation = leftOperation;
         RightSideOperation = rightOperation;
 
-        SelectComparers(leftOperation, out _byteComparerLeft, out _longComparerLeft, out _doubleComparerLeft);
-        SelectComparers(rightOperation, out _byteComparerRight, out _longComparerRight, out _doubleComparerRight);
+        SelectComparers(leftOperation, out _byteComparerLeft, out _longComparerLeft, out _doubleComparerLeft, out _compareNullLeft);
+        SelectComparers(rightOperation, out _byteComparerRight, out _longComparerRight, out _doubleComparerRight, out _compareNullRight);
 
         void SelectComparers(UnaryMatchOperation operation, 
             out delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> byteComparerLeft,
             out delegate*<long, long, bool> longComparerLeft,
-            out delegate*<double, double, bool> doubleComparerLeft)
+            out delegate*<double, double, bool> doubleComparerLeft,
+            out delegate*<bool, bool> compareNull)
         {
+            static bool AlwaysFalse(bool _) => false;
+            static bool AlwaysTrue(bool _) => true;
+            
+            static bool FalseUnlessNull(bool isNull) => isNull;
+            static bool TrueUnlessNull(bool isNull) => isNull == false;
+
+
             switch (operation)
             {
                 case UnaryMatchOperation.LessThan:
                     byteComparerLeft = &LessThanMatchComparer.Compare;
                     longComparerLeft = &LessThanMatchComparer.Compare;
                     doubleComparerLeft = &LessThanMatchComparer.Compare;
+                    compareNull = &TrueUnlessNull;
                     break;
                 case UnaryMatchOperation.LessThanOrEqual:
                     byteComparerLeft = &LessThanOrEqualMatchComparer.Compare;
                     longComparerLeft = &LessThanOrEqualMatchComparer.Compare;
                     doubleComparerLeft = &LessThanOrEqualMatchComparer.Compare;
+                    compareNull = &AlwaysTrue;
                     break;
                 case UnaryMatchOperation.GreaterThan:
                     byteComparerLeft = &GreaterThanMatchComparer.Compare;
                     longComparerLeft = &GreaterThanMatchComparer.Compare;
                     doubleComparerLeft = &GreaterThanMatchComparer.Compare;
+                    compareNull = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.GreaterThanOrEqual:
                     byteComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
                     longComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
                     doubleComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
+                    compareNull = &FalseUnlessNull;
                     break;
                 case UnaryMatchOperation.NotEquals:
                     byteComparerLeft = &NotEqualsMatchComparer.Compare;
                     longComparerLeft = &NotEqualsMatchComparer.Compare;
                     doubleComparerLeft = &NotEqualsMatchComparer.Compare;
+                    compareNull = &TrueUnlessNull;
                     break;
                 case UnaryMatchOperation.Equals:
                     byteComparerLeft = &EqualsMatchComparer.Compare;
                     longComparerLeft = &EqualsMatchComparer.Compare;
                     doubleComparerLeft = &EqualsMatchComparer.Compare;
+                    compareNull = &FalseUnlessNull;
                     break;
                 case UnaryMatchOperation.Between:
                 case UnaryMatchOperation.NotBetween:
@@ -118,27 +154,38 @@ public unsafe struct MultiUnaryItem
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool CompareNumerical<T>(T value)
-        where T : unmanaged
+    public bool CompareNumerical(in EntryTermsReader it)
     {
+        if (it.IsNull)
+        {
+            return _compareNullLeft(_leftIsNull) && 
+                   (IsBetween == false || _compareNullRight(_rightIsNull));
+        }
         bool leftResult;
         if (Type == DataType.Long)
         {
-            leftResult = _longComparerLeft(LongValueLeft, CoerceValueTypeToLong(value));
+            leftResult = _longComparerLeft(LongValueLeft, it.CurrentLong);
             if (IsBetween)
-                return leftResult & _longComparerRight(LongValueRight, CoerceValueTypeToLong(value));
+                return leftResult & _longComparerRight(LongValueRight, it.CurrentLong);
             return leftResult;
         }
 
-        leftResult = _doubleComparerLeft(DoubleValueLeft, CoerceValueTypeToDouble(value));
+        leftResult = _doubleComparerLeft(DoubleValueLeft, it.CurrentDouble);
         if (IsBetween)
-            return leftResult & _doubleComparerRight(DoubleValueRight, CoerceValueTypeToDouble(value));
+            return leftResult & _doubleComparerRight(DoubleValueRight, it.CurrentDouble);
         return leftResult;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool CompareLiteral(ReadOnlySpan<byte> value)
+    public bool CompareLiteral(in EntryTermsReader it)
     {
+        if (it.IsNull)
+        {
+            return _compareNullLeft(_leftIsNull) && 
+                   (IsBetween == false || _compareNullRight(_rightIsNull));
+        }
+        
+        ReadOnlySpan<byte> value = it.Current.Decoded();
         var leftResult = _byteComparerLeft(SliceValueLeft.AsSpan(), value);
         return IsBetween
             ? leftResult & _byteComparerRight(SliceValueRight.AsSpan(), value)
@@ -147,6 +194,7 @@ public unsafe struct MultiUnaryItem
 
     public MultiUnaryItem(IndexSearcher.IndexSearcher searcher, FieldMetadata binding, string value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
     {
+        _leftIsNull = value == null;
         SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, value);
     }
 
@@ -163,6 +211,9 @@ public unsafe struct MultiUnaryItem
     public MultiUnaryItem(IndexSearcher.IndexSearcher searcher, FieldMetadata binding, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
         : this(binding, DataType.Slice, true, leftOperation, rightOperation)
     {
+        _rightIsNull = rightValue == null;
+        _leftIsNull = leftValue == null;
+
         SliceValueRight = searcher.EncodeAndApplyAnalyzer(binding, rightValue);
         SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, leftValue);
     }
@@ -324,41 +375,6 @@ public unsafe struct MultiUnaryItem
             throw new InvalidCastException(ErrorMessage);
         }
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long CoerceValueTypeToLong<TValueType>(TValueType value) where TValueType : unmanaged
-    {
-        if (typeof(TValueType) == typeof(long))
-            return (long)(object)value;
-        if (typeof(TValueType) == typeof(ulong))
-            return (long)(ulong)(object)value;
-        if (typeof(TValueType) == typeof(int))
-            return (long)(int)(object)value;
-        if (typeof(TValueType) == typeof(uint))
-            return (long)(uint)(object)value;
-        if (typeof(TValueType) == typeof(short))
-            return (long)(short)(object)value;
-        if (typeof(TValueType) == typeof(ushort))
-            return (long)(ushort)(object)value;
-        if (typeof(TValueType) == typeof(byte))
-            return (long)(byte)(object)value;
-        if (typeof(TValueType) == typeof(sbyte))
-            return (long)(sbyte)(object)value;
-
-        throw new NotSupportedException($"Type '{typeof(TValueType).Name} is not supported. Only long, ulong, int, uint, double and float are supported.");
-    }
-
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static double CoerceValueTypeToDouble<TValueType>(TValueType value)
-    {
-        if (typeof(TValueType) == typeof(double))
-            return (double)(object)value;
-        if (typeof(TValueType) == typeof(float))
-            return (double)(float)(object)value;
-
-        throw new NotSupportedException($"Type '{typeof(TValueType).Name} is not supported. Only long, ulong, int, uint, double and float are supported.");
-    }
 }
 
 public struct MultiUnaryMatch<TInner> : IQueryMatch
@@ -445,13 +461,12 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
         }
 
         return currentIdx;
-        
-        bool IsAcceptedForIterator(MultiUnaryItem comparer, in EntryTermsReader iterator) => (iterator.IsNull, comparer.Type) switch
+
+        bool IsAcceptedForIterator(MultiUnaryItem comparer, in EntryTermsReader iterator) => comparer.Type switch
         {
-            (true, _) => comparer.CompareLiteral(Constants.NullValueSlice),
-            (_, MultiUnaryItem.DataType.Slice) => comparer.CompareLiteral(iterator.Current.Decoded()),
-            (_, MultiUnaryItem.DataType.Long) => comparer.CompareNumerical(iterator.CurrentLong),
-            (_, MultiUnaryItem.DataType.Double) => comparer.CompareNumerical(iterator.CurrentDouble),
+            MultiUnaryItem.DataType.Slice => comparer.CompareLiteral(iterator),
+            MultiUnaryItem.DataType.Long => comparer.CompareNumerical(iterator), 
+            MultiUnaryItem.DataType.Double => comparer.CompareNumerical(iterator),
             _ => throw new ArgumentOutOfRangeException(comparer.Type.ToString())
         };
     }
@@ -484,38 +499,20 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        var dict = new Dictionary<string, string>() {{nameof(Count), $"Unknown"}};
+        var dict = new Dictionary<string, string>()
+        {
+            {nameof(Count), $"Unknown"}
+        };
 
         for (int index = 0; index < _comparers.Length; index++)
         {
             MultiUnaryItem comparer = _comparers[index];
-            var prefix = $"Comparer no. {index}";
-            dict.Add($"{prefix} Mode", comparer.Mode.ToString());
-            dict.Add($"{prefix} Type", comparer.Type.ToString());
-            dict.Add($"{prefix} IsBetween", comparer.IsBetween.ToString());
-            dict.Add($"{prefix} LeftComparer", comparer.LeftSideOperation.ToString());
-            if(comparer.IsBetween)
-                dict.Add($"{prefix} RightComparer", comparer.RightSideOperation.ToString());
-                
-            
-            switch (comparer.Type)
-            {
-                case MultiUnaryItem.DataType.Long:
-                    dict.Add($"{prefix} LeftValue", comparer.LongValueLeft.ToString(CultureInfo.InvariantCulture));
-                    if (comparer.IsBetween)
-                        dict.Add($"{prefix} RightValue", comparer.LongValueRight.ToString(CultureInfo.InvariantCulture));
-                    break;
-                case MultiUnaryItem.DataType.Double:
-                    dict.Add($"{prefix} LeftValue", comparer.DoubleValueLeft.ToString(CultureInfo.InvariantCulture));
-                    if (comparer.IsBetween)
-                        dict.Add($"{prefix} RightValue", comparer.DoubleValueRight.ToString(CultureInfo.InvariantCulture));
-                    break;
-                default:
-                    dict.Add($"{prefix} LeftValue", comparer.SliceValueLeft.ToString());
-                    if (comparer.IsBetween)
-                        dict.Add($"{prefix} RightValue", comparer.SliceValueRight.ToString());
-                    break;
-            }
+            var text = $"{comparer.Mode} ({comparer.Type}) {comparer.LeftSideOperation} ({comparer.LeftAsString()})";
+
+            if (comparer.IsBetween)
+                text += $" BETWEEN {comparer.RightSideOperation} ({comparer.RightAsString()})";
+
+            dict[index.ToString()] = text;
         }
 
         return new QueryInspectionNode($"{nameof(MultiUnaryMatch<TInner>)}",
