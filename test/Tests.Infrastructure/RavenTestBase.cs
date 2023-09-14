@@ -13,7 +13,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -282,6 +284,36 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
+                        if (options.SearchEngineMode == RavenSearchEngineMode.Corax && options.DatabaseMode == RavenDatabaseMode.Single)
+                        {
+                            var database = GetDatabase(store.Database).Result;
+
+                            if (database.IndexStore.GetIndexes().All(x => x.State == IndexState.Normal))
+                            {
+                                var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "from @all_docs" }));
+                                var result = operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+                                
+                                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(30), allowErrors: true);
+                                
+                                if (database.IndexStore.GetIndexes().Any(x => x.State == IndexState.Error))
+                                {
+                                    StringBuilder sb = new StringBuilder();
+                                    sb.AppendLine("---CORAX DEBUG---");
+                                    sb.AppendLine($"Database {store.Database}");
+
+                                    sb.Append("Errored indexes: ");
+
+                                    foreach (var erroredIndex in database.IndexStore.GetIndexes().Where(x => x.State == IndexState.Error))
+                                    {
+                                        sb.Append($"{erroredIndex.Name} ");
+                                    }
+                                    
+                                    Output.WriteLine(sb.ToString());
+                                    Console.WriteLine(sb.ToString());
+                                }
+                            }
+                        }
+                        
                         var realException = Context.GetException();
                         try
                         {
