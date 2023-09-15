@@ -50,20 +50,20 @@ export function withBootstrap5(storyFn: any) {
 export const licenseArgType = {
     control: {
         type: "select",
-        options: [
-            "None",
-            "Community",
-            "Essential",
-            "Professional",
-            "Enterprise",
-            "Developer",
-        ] satisfies Raven.Server.Commercial.LicenseType[],
     },
+    options: [
+        "None",
+        "Community",
+        "Essential",
+        "Professional",
+        "Enterprise",
+        "Developer",
+    ] satisfies Raven.Server.Commercial.LicenseType[],
 };
 
 export const databaseAccessArgType = {
     control: {
         type: "select",
-        options: ["DatabaseAdmin", "DatabaseRead", "DatabaseReadWrite"] satisfies databaseAccessLevel[],
     },
+    options: ["DatabaseAdmin", "DatabaseRead", "DatabaseReadWrite"] satisfies databaseAccessLevel[],
 };
