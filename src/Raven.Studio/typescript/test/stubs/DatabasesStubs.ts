@@ -344,13 +344,7 @@ export class DatabasesStubs {
 
     static revisionsConfiguration(): RevisionsConfiguration {
         return {
-            Default: {
-                Disabled: false,
-                MinimumRevisionsToKeep: 9,
-                MinimumRevisionAgeToKeep: "55.20:14:44",
-                PurgeOnDelete: true,
-                MaximumRevisionsToDeleteUponDocumentUpdate: 120,
-            },
+            Default: null,
             Collections: {
                 Categories: {
                     Disabled: true,

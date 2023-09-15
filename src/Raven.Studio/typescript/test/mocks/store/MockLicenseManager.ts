@@ -3,22 +3,8 @@ import { licenseActions } from "components/common/shell/licenseSlice";
 import { LicenseStubs } from "test/stubs/LicenseStubs";
 
 export class MockLicenseManager {
-    with_None() {
-        globalDispatch(licenseActions.statusLoaded(LicenseStubs.none()));
-    }
-    with_Essential() {
-        globalDispatch(licenseActions.statusLoaded(LicenseStubs.essential()));
-    }
-    with_Enterprise() {
-        globalDispatch(licenseActions.statusLoaded(LicenseStubs.enterprise()));
-    }
-
-    with_Community() {
-        globalDispatch(licenseActions.statusLoaded(LicenseStubs.community()));
-    }
-
-    with_Developer() {
-        globalDispatch(licenseActions.statusLoaded(LicenseStubs.developer()));
+    with_License(override?: Partial<Raven.Server.Commercial.LicenseStatus>) {
+        globalDispatch(licenseActions.statusLoaded({ ...LicenseStubs.getStatus(), ...override }));
     }
 
     with_LimitsUsage() {

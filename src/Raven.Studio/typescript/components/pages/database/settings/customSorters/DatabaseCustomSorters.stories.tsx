@@ -39,7 +39,7 @@ export function NoLimits() {
         ManageServerStubs.serverWideCustomSorters()[0],
     ]);
 
-    license.with_Enterprise();
+    license.with_License();
 
     return <DatabaseCustomSorters db={db} />;
 }
@@ -56,7 +56,7 @@ export function BelowDatabaseAdmin() {
 
     databasesService.withCustomSorters();
 
-    license.with_Enterprise();
+    license.with_License();
 
     return <DatabaseCustomSorters db={db} />;
 }
@@ -73,7 +73,7 @@ export function CommunityLimits() {
 
     databasesService.withCustomSorters();
 
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     return <DatabaseCustomSorters db={db} />;
 }

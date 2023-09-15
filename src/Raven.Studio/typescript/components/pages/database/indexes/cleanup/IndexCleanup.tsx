@@ -652,8 +652,8 @@ const formatDate = (date: Date) => {
 
 const availabilityData: FeatureAvailabilityData[] = [
     {
-        community: false,
-        professional: true,
-        enterprise: true,
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
     },
 ];

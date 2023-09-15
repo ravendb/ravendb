@@ -1,12 +1,6 @@
 ﻿import React, { useEffect, useState } from "react";
-import { Alert, Button, Col, Row, UncontrolledTooltip } from "reactstrap";
-import {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemWrapper,
-    FeatureAvailabilityData,
-    FeatureAvailabilityTable,
-} from "components/common/AboutView";
+import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
+import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -38,8 +32,8 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import { FeatureAvailabilityData, FeatureAvailabilitySummary } from "components/common/FeatureAvailabilitySummary";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -68,8 +62,19 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
     const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+
+    // TODO that is only for presentation !!!
+    const hasDefaultPolicy = true; // useAppSelector(licenseSelectors.statusValue("HasDefaultPolicy"));
+    // TODO that is only for presentation !!!
+    const availabilityData = getLicenseAvailabilityData({
+        isCloud,
+        overrideDefaultPolicy: {
+            licenseType,
+            value: hasDefaultPolicy,
+        },
+    });
 
     useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();
@@ -387,33 +392,8 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 description="See which plans offer this and more exciting features"
                                 targetId="licensing"
                             >
-                                <FeatureAvailabilityTable availabilityData={availabilityData} />
+                                <FeatureAvailabilitySummary data={availabilityData} />
                             </AccordionItemWrapper>
-                            {/* <AccordionLicenseLimited
-                                targetId="licensing"
-                                featureName="Document Revisions"
-                                featureIcon="revisions"
-                                isLimited={!isProfessionalOrAbove}
-                                description={
-                                    <div>
-                                        <span>Your Community license has following limits:</span>
-                                        <div className="vstack gap-1 my-3 text-warning">
-                                            <small>
-                                                <Icon icon="default" />
-                                                Defaults policy can&apos;t be set up
-                                            </small>
-                                            <small>
-                                                <Icon icon="documents" />
-                                                Max 2 revisions to keep
-                                            </small>
-                                            <small>
-                                                <Icon icon="clock" /> Max 45 days retention time
-                                            </small>
-                                        </div>
-                                        <span>Upgrade to a paid plan and get unlimited availability.</span>
-                                    </div>
-                                }
-                            /> */}
                         </AboutViewAnchored>
                     </Col>
                 </Row>
@@ -428,38 +408,69 @@ function mapToDto(
     return config ? _.omit(config, "Name") : null;
 }
 
-const availabilityData: FeatureAvailabilityData[] = [
-    {
-        featureName: (
-            <>
-                <Icon icon="default" />
-                Default Policy
-            </>
-        ),
-        community: false,
-        professional: true,
-        enterprise: true,
-    },
-    {
-        featureName: (
-            <>
-                <Icon icon="revisions" />
-                Revisions
-            </>
-        ),
-        community: "max 2",
-        professional: Infinity,
-        enterprise: Infinity,
-    },
-    {
-        featureName: (
-            <>
-                <Icon icon="clock" />
-                Retention time (days)
-            </>
-        ),
-        community: "max 45",
-        professional: Infinity,
-        enterprise: Infinity,
-    },
-];
+interface GetLicenseAvailabilityDataProps {
+    isCloud: boolean;
+    overrideDefaultPolicy: {
+        licenseType: Raven.Server.Commercial.LicenseType;
+        value: string | number | boolean;
+    };
+}
+
+type LicenseAvailabilityType = "community" | "professional" | "enterprise";
+
+function getLicenseAvailabilityType(licenseType: Raven.Server.Commercial.LicenseType): LicenseAvailabilityType {
+    switch (licenseType) {
+        case "Essential":
+        case "Community":
+            return "community";
+        case "Professional":
+            return "professional";
+        case "Enterprise":
+            return "enterprise";
+        default:
+            return null;
+    }
+}
+// TODO that is only for presentation !!!
+// TODO that is only for presentation !!!
+function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): FeatureAvailabilityData[] {
+    const { isCloud, overrideDefaultPolicy } = props;
+
+    const featureAvailabilityData: FeatureAvailabilityData[] = [
+        {
+            featureName: "Default Policy",
+            featureIcon: "default",
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Max revisions",
+            featureIcon: "revisions",
+            community: { value: 2 },
+            professional: { value: Infinity },
+            enterprise: { value: Infinity },
+        },
+        {
+            featureName: "Max revision days",
+            featureIcon: "clock",
+            community: { value: isCloud ? 38 : 45 },
+            professional: { value: Infinity },
+            enterprise: { value: Infinity },
+        },
+    ];
+
+    const type = getLicenseAvailabilityType(overrideDefaultPolicy.licenseType);
+
+    if (!type) {
+        return featureAvailabilityData;
+    }
+
+    const defaultPolicyData = featureAvailabilityData[0][type];
+
+    if (defaultPolicyData.value !== overrideDefaultPolicy.value) {
+        defaultPolicyData.overwrittenValue = overrideDefaultPolicy.value;
+    }
+
+    return featureAvailabilityData;
+}

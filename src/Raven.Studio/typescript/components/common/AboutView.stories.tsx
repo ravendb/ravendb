@@ -1,72 +1,52 @@
 import React from "react";
 import { ComponentMeta } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import {
-    AboutViewFloating,
-    AboutViewAnchored,
-    AccordionItemWrapper,
-    AccordionItemLicensing,
-    AboutViewHeading,
-    FeatureAvailabilityTable,
-    FeatureAvailabilityData,
-} from "./AboutView";
-import { Button, Col, Row } from "reactstrap";
+import { AboutViewFloating, AboutViewAnchored, AccordionItemWrapper, AboutViewHeading } from "./AboutView";
+import { Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
 import Code from "./Code";
-import AccordionLicenseNotIncluded from "./AccordionLicenseNotIncluded";
 import { boundCopy } from "components/utils/common";
 import { mockStore } from "test/mocks/store/MockStore";
+import { FeatureAvailabilityData, FeatureAvailabilitySummary } from "./FeatureAvailabilitySummary";
 
 export default {
     title: "Bits/AboutView",
     component: AboutViewFloating,
     decorators: [withStorybookContexts, withBootstrap5],
-    argTypes: {
-        defaultOpen: {
-            control: {
-                type: "boolean",
-            },
-        },
-        featureAvailable: {
-            control: {
-                type: "boolean",
-            },
-        },
-    },
 } as ComponentMeta<typeof AboutViewFloating>;
 
 const availabilityData: FeatureAvailabilityData[] = [
     {
         featureName: "Future 1",
-        community: false,
-        enterprise: true,
-        professional: true,
+        community: { value: false },
+        enterprise: { value: true },
+        professional: { value: true },
     },
     {
         featureName: "Future 2",
-        community: "min 36",
-        enterprise: Infinity,
-        professional: Infinity,
+        community: { value: "min 36" },
+        enterprise: { value: Infinity },
+        professional: { value: Infinity },
     },
     {
         featureName: "Future 3",
-        community: "Yes",
-        enterprise: "No",
-        professional: "Maybe",
+        community: { value: "Yes" },
+        enterprise: { value: "No" },
+        professional: { value: "Maybe" },
     },
 ];
 const availabilityDataSimple: FeatureAvailabilityData[] = [
     {
-        community: false,
-        enterprise: true,
-        professional: true,
+        community: { value: false },
+        enterprise: { value: true },
+        professional: { value: true },
     },
 ];
 
 const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean }) => {
     const { license } = mockStore;
 
-    license.with_Essential();
+    license.with_License();
 
     return (
         <div className="content-margin">
@@ -126,16 +106,8 @@ const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean 
                                 description="Learn how to get the most of this feature"
                                 targetId="licensing"
                             >
-                                <FeatureAvailabilityTable availabilityData={availabilityData} />
-                                <hr />
-                                <FeatureAvailabilityTable availabilityData={availabilityDataSimple} />
+                                <FeatureAvailabilitySummary data={availabilityData} />
                             </AccordionItemWrapper>
-                            {/* <AccordionLicenseNotIncluded
-                                featureName="Document Compression"
-                                featureIcon="documents-compression"
-                                checkedLicenses={["Professional", "Enterprise"]}
-                                isLimited
-                            /> */}
                         </AboutViewFloating>
                     </Col>
                 </Row>
@@ -145,6 +117,9 @@ const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean 
 };
 
 const AnchoredHub = (args: { featureAvailable: boolean }) => {
+    const { license } = mockStore;
+    license.with_License({ Type: "Community" });
+
     return (
         <div className="content-margin">
             <Col xxl={12}>
@@ -194,32 +169,12 @@ const AnchoredHub = (args: { featureAvailable: boolean }) => {
                             </AccordionItemWrapper>
                             <AccordionItemWrapper
                                 icon="license"
-                                color="warning"
+                                color={args.featureAvailable ? "success" : "warning"}
                                 heading="Licensing"
-                                description="See which plans offer this and more exciting features"
-                                pill
-                                pillText="Upgrade available"
-                                pillIcon="upgrade-arrow"
+                                description="Learn how to get the most of this feature"
+                                targetId="licensing"
                             >
-                                <AccordionItemLicensing
-                                    description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
-                                    featureName="Document Compression"
-                                    featureIcon="documents-compression"
-                                    checkedLicenses={["Professional", "Enterprise"]}
-                                >
-                                    <p className="lead fs-4">Get your license expanded</p>
-                                    <div className="mb-3">
-                                        <Button color="primary" className="rounded-pill">
-                                            <Icon icon="notifications" />
-                                            Contact us
-                                        </Button>
-                                    </div>
-                                    <small>
-                                        <a href="#" target="_blank" className="text-muted">
-                                            See pricing plans
-                                        </a>
-                                    </small>
-                                </AccordionItemLicensing>
+                                <FeatureAvailabilitySummary data={availabilityDataSimple} />
                             </AccordionItemWrapper>
                         </AboutViewAnchored>
                     </Col>
