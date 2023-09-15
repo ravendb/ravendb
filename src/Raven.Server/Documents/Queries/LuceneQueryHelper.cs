@@ -10,6 +10,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -179,18 +180,22 @@ namespace Raven.Server.Documents.Queries
 
             if (type is LuceneTermType.Prefix or LuceneTermType.WildCard)
             {
-                var analyzerToUser = analyzer switch
+                var analyzerToUse = analyzer switch
                 {
                     LuceneRavenPerFieldAnalyzerWrapper wrapper => wrapper.GetAnalyzer(fieldName),
                     _ => analyzer
                 };
-                if (analyzerToUser is not KeywordAnalyzer)
+                analyzer = analyzerToUse switch
                 {
+                    KeywordAnalyzer keywordAnalyzer => keywordAnalyzer,
                     // here we force a lower case keyword analyzer to ensure proper behavior
                     // https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb
-                    analyzer = WildcardAnalyzer.Value;
-                }
-
+                    RavenStandardAnalyzer or NGramAnalyzer => WildcardAnalyzer.Value,
+                    LowerCaseKeywordAnalyzer or CollationAnalyzer => analyzer,
+                    // if the user has a custom analyzer, we'll use that, and they can deal with any surprises
+                    // in wildcard queries
+                    _ => analyzer
+                };
                 Debug.Assert(analyzer != null);
             }
 

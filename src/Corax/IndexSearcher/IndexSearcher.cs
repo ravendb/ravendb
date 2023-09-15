@@ -128,6 +128,68 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, item.Address, item.Length, _dictionaryId);
     }
     
+    internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref NativeUnmanagedList<Slice> terms)
+    {
+        if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
+        {
+            terms.Add(Constants.EmptyStringSlice);
+            return;
+        }
+
+        if (term.SequenceEqual(Constants.NullValueCharSpan.Span))
+        {
+            terms.Add(Constants.NullValueSlice);
+            return;
+        }
+
+        using var _ = Allocator.Allocate(Encodings.Utf8.GetByteCount(term), out Span<byte> termBuffer);
+        var byteCount = Encodings.Utf8.GetBytes(term, termBuffer);
+
+        ApplyAnalyzerMultiTerms(binding, termBuffer[..byteCount], ref terms);
+    }
+
+    internal void ApplyAnalyzerMultiTerms(in FieldMetadata binding, ReadOnlySpan<byte> originalTerm, ref NativeUnmanagedList<Slice> terms)
+    {
+        Analyzer analyzer = binding.Analyzer;
+        if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
+        {
+            analyzer = _fieldMapping.DefaultAnalyzer;
+        }
+        else if (binding.Mode is FieldIndexingMode.Exact || analyzer is null)
+        {
+            Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Mutable, out var originalTermSliced);
+            originalTerm.CopyTo(originalTermSliced.ToSpan());
+            terms.Add(new Slice(originalTermSliced)); 
+            return;
+        }
+
+        AnalyzeMultipleTerms(analyzer, originalTerm, ref terms);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AnalyzeMultipleTerms(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, ref NativeUnmanagedList<Slice> terms)
+    {
+        analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
+
+        Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
+        Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024, "Analyzer wants to create too much tokens.");
+
+        var buffer = Analyzer.BufferPool.Rent(outputSize);
+        var tokens = Analyzer.TokensPool.Rent(tokenSize);
+
+        Span<byte> bufferSpan = buffer.AsSpan();
+        Span<Token> tokensSpan = tokens.AsSpan();
+        analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
+        for (int i = 0; i < tokensSpan.Length; i++)
+        {
+            var token = bufferSpan.Slice(tokensSpan[i].Offset, (int)tokensSpan[i].Length);
+            _ = IndexWriter.CreateNormalizedTerm(Allocator, token, out var value);
+            terms.Add(value);
+        }
+
+        Analyzer.TokensPool.Return(tokens);
+        Analyzer.BufferPool.Return(buffer);
+    }
     internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<char> term)
     {
         if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
