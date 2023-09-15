@@ -27,7 +27,8 @@ public unsafe struct MultiUnaryItem
         {
             DataType.Double => DoubleValueRight.ToString(CultureInfo.InvariantCulture),
             DataType.Long => LongValueRight.ToString(CultureInfo.InvariantCulture),
-            DataType.Slice => SliceValueRight.ToString()
+            DataType.Slice => SliceValueRight.ToString(),
+            _ => throw new ArgumentOutOfRangeException(Type.ToString())
         };
     }
     
@@ -37,7 +38,8 @@ public unsafe struct MultiUnaryItem
         {
             DataType.Double => DoubleValueLeft.ToString(CultureInfo.InvariantCulture),
             DataType.Long => LongValueLeft.ToString(CultureInfo.InvariantCulture),
-            DataType.Slice => SliceValueLeft.ToString()
+            DataType.Slice => SliceValueLeft.ToString(),
+            _ => throw new ArgumentOutOfRangeException(Type.ToString())
         };
     }
     internal Slice SliceValueLeft;
