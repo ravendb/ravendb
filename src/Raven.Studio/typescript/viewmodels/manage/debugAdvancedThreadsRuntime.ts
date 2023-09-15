@@ -112,7 +112,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                         sortable: x => x.CpuUsage,
                         defaultSortOrder: "desc"
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.UnmanagedAllocationsInBytes ? generalUtils.formatBytesToSize(x.UnmanagedAllocationsInBytes, 2) : "N/A", "Unmanged Allocations", "10%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.UnmanagedAllocationsInBytes ? generalUtils.formatBytesToSize(x.UnmanagedAllocationsInBytes, 2) : "N/A", "Unmanaged Allocations", "10%", {
                         sortable: x => x.UnmanagedAllocationsInBytes ?? 0,
                         defaultSortOrder: "desc",
                     }),

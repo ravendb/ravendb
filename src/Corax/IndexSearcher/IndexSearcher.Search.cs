@@ -27,10 +27,7 @@ public partial class IndexSearcher
 
         field = field.ChangeAnalyzer(field.Mode, searchAnalyzer);
 
-        using var analyzer = field.Analyzer.IsExactAnalyzer ? 
-            Analyzer.CreateDefaultAnalyzer(Allocator) : 
-            Analyzer.CreateLowercaseAnalyzer(Allocator);
-
+        Analyzer wildcardAnalyzer = null;
         IQueryMatch searchQuery = null;
 
         List<Slice> termMatches = null;
@@ -40,28 +37,36 @@ public partial class IndexSearcher
             {
                 var value = word.AsSpan(token.Offset, (int)token.Length);
                 var termType = GetTermType(value);
-                (int startIncrement, int lengthIncrement) = termType switch
+                (int startIncrement, int lengthIncrement, Analyzer analyzer) = termType switch
                 {
-                    Constants.Search.SearchMatchOptions.StartsWith => (0, -1),
-                    Constants.Search.SearchMatchOptions.EndsWith => (1, 0),
-                    Constants.Search.SearchMatchOptions.Contains => (1, -1),
-                    Constants.Search.SearchMatchOptions.TermMatch => (0, 0),
+                    Constants.Search.SearchMatchOptions.StartsWith => (0, -1, CreateWildcardAnalyzer(field, ref wildcardAnalyzer)),
+                    Constants.Search.SearchMatchOptions.EndsWith => (1, 0, CreateWildcardAnalyzer(field, ref wildcardAnalyzer)),
+                    Constants.Search.SearchMatchOptions.Contains => (1, -1, CreateWildcardAnalyzer(field, ref wildcardAnalyzer)),
+                    Constants.Search.SearchMatchOptions.TermMatch => (0, 0, searchAnalyzer),
                     _ => throw new InvalidExpressionException("Unknown flag inside Search match.")
                 };
 
                 var termReadyToAnalyze = value.Slice(startIncrement, value.Length - startIncrement + lengthIncrement);
 
-                Slice analyzedTerm = EncodeAndApplyAnalyzer(field, analyzer, termReadyToAnalyze);
-                if (analyzedTerm.Size == 0)
-                    continue; //skip empty results
-
+              
                 if (termType is Constants.Search.SearchMatchOptions.TermMatch)
                 {
                     termMatches ??= new();
-                    termMatches.Add(analyzedTerm);
+                    var terms = new NativeUnmanagedList<Slice>(Allocator, 8);
+                    EncodeAndApplyAnalyzerForMultipleTerms(field, termReadyToAnalyze, ref terms);
+                    var termsSpan = terms.Items;
+                    foreach (var term in termsSpan)
+                    {
+                        if (term.Size == 0)
+                            continue; //skip empty results
+                        termMatches.Add(term);
+                    }
                     continue;
                 }
 
+                Slice analyzedTerm = EncodeAndApplyAnalyzer(field, analyzer, termReadyToAnalyze);
+                if (analyzedTerm.Size == 0)
+                    continue; //skip empty results
                 var query = termType switch
                 {
                     Constants.Search.SearchMatchOptions.TermMatch => throw new InvalidDataException(
@@ -115,6 +120,8 @@ public partial class IndexSearcher
             if (field.Analyzer == null && field.IsDynamic == false)
                 throw new InvalidOperationException($"{nameof(SearchQuery)} requires analyzer.");
         }
+        
+        wildcardAnalyzer?.Dispose();
 
         return searchQuery ?? TermMatch.CreateEmpty(this, Allocator);
         
@@ -163,5 +170,14 @@ public partial class IndexSearcher
             } 
         }
         
+    }
+
+    private Analyzer CreateWildcardAnalyzer(in FieldMetadata field, ref Analyzer analyzer)
+    {
+        if (analyzer != null)
+            return analyzer;
+        var a = field.Analyzer.IsExactAnalyzer ? Analyzer.CreateDefaultAnalyzer(Allocator) : Analyzer.CreateLowercaseAnalyzer(Allocator);
+        analyzer = a;
+        return a;
     }
 }

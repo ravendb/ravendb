@@ -1704,7 +1704,7 @@ namespace Corax
                     {
                         using var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
                         inserter.InsertTextualField();
-                   }
+                    }
                     using (dynamicFieldScope.For(CommitOperation.IntegerValues))
                         InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
                     
