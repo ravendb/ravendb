@@ -8,6 +8,7 @@ import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "./Icon";
 import "./FeatureAvailabilitySummary.scss";
+import { AccordionItemWrapper } from "./AboutView";
 
 type AvailabilityValue = boolean | number | string;
 
@@ -204,5 +205,22 @@ function formatAvailabilityValue(data: ValueData): ReactNode {
                 Default value for your license is {data.value.toString()}.
             </UncontrolledTooltip>
         </>
+    );
+}
+
+export default function FeatureAvailabilitySummaryWrapper({
+    isUnlimited,
+    data,
+}: FeatureAvailabilitySummaryProps & { isUnlimited: boolean }) {
+    return (
+        <AccordionItemWrapper
+            icon="license"
+            color={isUnlimited ? "success" : "warning"}
+            heading="Licensing"
+            description="See which plans offer this and more exciting features"
+            targetId="licensing"
+        >
+            <FeatureAvailabilitySummary data={data} />
+        </AccordionItemWrapper>
     );
 }

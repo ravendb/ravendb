@@ -14,13 +14,12 @@ import classNames from "classnames";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
-import { todo } from "common/developmentHelper";
 import { uniqueId } from "lodash";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
     className?: string;
-    defaultOpen?: boolean;
+    defaultOpen?: "licensing" | (string & NonNullable<unknown>) | string[];
 }
 
 interface AboutViewHeadingProps {
@@ -68,7 +67,7 @@ const AboutViewFloating = (props: AboutViewProps) => {
                     trigger="legacy"
                     className="bs5 about-view-dropdown"
                     offset={[-215, 10]}
-                    defaultOpen={defaultOpen}
+                    defaultOpen={!!defaultOpen}
                 >
                     <PopoverBody className="p-1">
                         <AboutViewAnchored defaultOpen={defaultOpen ? "licensing" : null}>{children}</AboutViewAnchored>
@@ -116,7 +115,7 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
     );
 };
 
-const AboutViewAnchored = (props: Omit<AboutViewProps, "defaultOpen"> & { defaultOpen?: string | string[] }) => {
+const AboutViewAnchored = (props: AboutViewProps) => {
     const { children, className } = props;
 
     // UncontrolledAccordion works incorrectly if we do not provide an array

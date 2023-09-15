@@ -23,6 +23,8 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -162,7 +164,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                     </Form>
                 </Col>
                 <Col sm={12} md={4}>
-                    <AboutViewAnchored>
+                    <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                         <AccordionItemWrapper
                             icon="about"
                             color="info"
@@ -181,12 +183,9 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                                 <Icon icon="newtab" /> Docs - Studio Configuration
                             </a>
                         </AccordionItemWrapper>
-                        <AccordionLicenseNotIncluded
-                            targetId="licensing"
-                            featureName="Studio Configuration"
-                            featureIcon="studio-configuration"
-                            checkedLicenses={["Professional", "Enterprise"]}
-                            isLimited={!isProfessionalOrAbove}
+                        <FeatureAvailabilitySummaryWrapper
+                            isUnlimited={isProfessionalOrAbove}
+                            data={featureAvailabilityProfessionalOrAbove}
                         />
                     </AboutViewAnchored>
                 </Col>

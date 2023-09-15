@@ -25,6 +25,8 @@ import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
 
 export default function DataArchival({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -143,7 +145,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="about"
                                 icon="about"
@@ -184,12 +186,9 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Data Archival
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionLicenseNotIncluded
-                                targetId="licensing"
-                                featureName="Data Archival"
-                                featureIcon="data-archival"
-                                checkedLicenses={["Enterprise"]}
-                                isLimited={!isEnterpriseOrDeveloper}
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={isEnterpriseOrDeveloper}
+                                data={featureAvailabilityEnterprise}
                             />
                         </AboutViewAnchored>
                     </Col>

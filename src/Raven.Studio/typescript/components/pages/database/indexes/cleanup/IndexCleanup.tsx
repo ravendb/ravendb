@@ -12,17 +12,12 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import AboutViewFloating, {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemWrapper,
-    FeatureAvailabilityData,
-    FeatureAvailabilityTable,
-} from "components/common/AboutView";
+import AboutViewFloating, { AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { FlexGrow } from "components/common/FlexGrow";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
@@ -62,7 +57,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                             />
 
                             <FlexGrow />
-                            <AboutViewFloating defaultOpen={!isProfessionalOrAbove}>
+                            <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                                 <AccordionItemWrapper
                                     targetId="about"
                                     icon="about"
@@ -81,18 +76,10 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                         in your application.
                                     </p>
                                 </AccordionItemWrapper>
-                                <AccordionItemWrapper
-                                    icon="license"
-                                    color={isProfessionalOrAbove ? "success" : "warning"}
-                                    heading="Licensing"
-                                    description="See which plans offer this and more exciting features"
-                                    targetId="licensing"
-                                >
-                                    <h4 className="text-center">
-                                        <Icon icon="index-cleanup" /> Index Cleanup
-                                    </h4>
-                                    <FeatureAvailabilityTable availabilityData={availabilityData} />
-                                </AccordionItemWrapper>
+                                <FeatureAvailabilitySummaryWrapper
+                                    isUnlimited={isProfessionalOrAbove}
+                                    data={featureAvailabilityProfessionalOrAbove}
+                                />
                             </AboutViewFloating>
                         </div>
                         <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
@@ -649,11 +636,3 @@ const formatDate = (date: Date) => {
         </>
     );
 };
-
-const availabilityData: FeatureAvailabilityData[] = [
-    {
-        community: { value: false },
-        professional: { value: true },
-        enterprise: { value: true },
-    },
-];

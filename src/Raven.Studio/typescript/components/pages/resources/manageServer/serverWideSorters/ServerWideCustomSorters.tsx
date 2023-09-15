@@ -9,11 +9,13 @@ import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CounterBadge } from "components/common/CounterBadge";
-import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
@@ -75,7 +77,7 @@ export default function ServerWideCustomSorters() {
                         />
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -121,12 +123,9 @@ export default function ServerWideCustomSorters() {
                                     <Icon icon="newtab" /> Docs - Custom Sorters
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionLicenseLimited
-                                targetId="licensing"
-                                featureName="Custom Sorters"
-                                featureIcon="server-wide-custom-sorters"
-                                description="Upgrade to a paid plan and get unlimited availability."
-                                isLimited={!isProfessionalOrAbove}
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={isProfessionalOrAbove}
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>
@@ -135,3 +134,12 @@ export default function ServerWideCustomSorters() {
         </div>
     );
 }
+
+export const featureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Sorters limit",
+        community: { value: 5 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];
