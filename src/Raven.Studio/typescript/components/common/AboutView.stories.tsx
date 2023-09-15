@@ -1,6 +1,6 @@
 import React from "react";
 import { ComponentMeta } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { withStorybookContexts, withBootstrap5, licenseArgType } from "test/storybookTestUtils";
 import { AboutViewFloating, AboutViewAnchored, AccordionItemWrapper, AboutViewHeading } from "./AboutView";
 import { Col, Row } from "reactstrap";
 import { Icon } from "./Icon";
@@ -8,45 +8,38 @@ import Code from "./Code";
 import { boundCopy } from "components/utils/common";
 import { mockStore } from "test/mocks/store/MockStore";
 import { FeatureAvailabilityData, FeatureAvailabilitySummary } from "./FeatureAvailabilitySummary";
+import { getLicenseAvailabilityType } from "components/utils/licenseLimitsUtils";
 
 export default {
     title: "Bits/AboutView",
     component: AboutViewFloating,
     decorators: [withStorybookContexts, withBootstrap5],
+    argTypes: {
+        licenseType: licenseArgType,
+    },
 } as ComponentMeta<typeof AboutViewFloating>;
 
-const availabilityData: FeatureAvailabilityData[] = [
-    {
-        featureName: "Future 1",
-        community: { value: false },
-        enterprise: { value: true },
-        professional: { value: true },
-    },
-    {
-        featureName: "Future 2",
-        community: { value: "min 36" },
-        enterprise: { value: Infinity },
-        professional: { value: Infinity },
-    },
-    {
-        featureName: "Future 3",
-        community: { value: "Yes" },
-        enterprise: { value: "No" },
-        professional: { value: "Maybe" },
-    },
-];
-const availabilityDataSimple: FeatureAvailabilityData[] = [
-    {
-        community: { value: false },
-        enterprise: { value: true },
-        professional: { value: true },
-    },
-];
+interface FloatingButtonProps {
+    licenseType: Raven.Server.Commercial.LicenseType;
+    isCloud: boolean;
+    isEnabled: boolean;
+}
 
-const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean }) => {
+const FloatingButton = ({ isCloud, licenseType, isEnabled }: FloatingButtonProps) => {
     const { license } = mockStore;
 
-    license.with_License();
+    license.with_License({
+        Type: licenseType,
+        IsCloud: isCloud,
+    });
+
+    const availabilityData = getLicenseAvailabilityData({
+        isCloud,
+        overrideDefaultPolicy: {
+            licenseType,
+            value: true,
+        },
+    });
 
     return (
         <div className="content-margin">
@@ -54,11 +47,10 @@ const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean 
                 <Row>
                     <Col>
                         <AboutViewHeading title="Section title" icon="zombie" badgeText="Professional" />
-                        default open: {args.defaultOpen ? "true" : "false"} / feature available:{" "}
-                        {args.defaultOpen ? "true" : "false"}
+                        default open: {isEnabled ? "true" : "false"} / feature available: {isEnabled ? "true" : "false"}
                     </Col>
                     <Col sm={"auto"}>
-                        <AboutViewFloating defaultOpen={args.defaultOpen ? "licensing" : null}>
+                        <AboutViewFloating defaultOpen={isEnabled ? null : "licensing"}>
                             <AccordionItemWrapper
                                 icon="zombie"
                                 color="info"
@@ -101,7 +93,7 @@ const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean 
                             </AccordionItemWrapper>
                             <AccordionItemWrapper
                                 icon="license"
-                                color={args.featureAvailable ? "success" : "warning"}
+                                color={isEnabled ? "success" : "warning"}
                                 heading="Licensing"
                                 description="Learn how to get the most of this feature"
                                 targetId="licensing"
@@ -193,10 +185,69 @@ const codeExample = `{
 }`;
 
 export const Floating = boundCopy(FloatingButton, {
-    defaultOpen: true,
-    featureAvailable: true,
+    licenseType: "Community",
+    isCloud: false,
+    isEnabled: false,
 });
 
 export const Anchored = boundCopy(AnchoredHub, {
     featureAvailable: true,
 });
+
+interface GetLicenseAvailabilityDataProps {
+    isCloud: boolean;
+    overrideDefaultPolicy: {
+        licenseType: Raven.Server.Commercial.LicenseType;
+        value: boolean;
+    };
+}
+
+function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): FeatureAvailabilityData[] {
+    const { isCloud, overrideDefaultPolicy } = props;
+
+    const featureAvailabilityData: FeatureAvailabilityData[] = [
+        {
+            featureName: "Default Policy",
+            featureIcon: "default",
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Max revisions",
+            featureIcon: "revisions",
+            community: { value: 2 },
+            professional: { value: Infinity },
+            enterprise: { value: Infinity },
+        },
+        {
+            featureName: "Max revision days",
+            featureIcon: "clock",
+            community: { value: isCloud ? 38 : 45 },
+            professional: { value: Infinity },
+            enterprise: { value: Infinity },
+        },
+    ];
+
+    const type = getLicenseAvailabilityType(overrideDefaultPolicy.licenseType);
+
+    if (!type) {
+        return featureAvailabilityData;
+    }
+
+    const defaultPolicyData = featureAvailabilityData[0][type];
+
+    if (defaultPolicyData.value !== overrideDefaultPolicy.value) {
+        defaultPolicyData.overwrittenValue = overrideDefaultPolicy.value;
+    }
+
+    return featureAvailabilityData;
+}
+
+const availabilityDataSimple: FeatureAvailabilityData[] = [
+    {
+        community: { value: false },
+        enterprise: { value: true },
+        professional: { value: true },
+    },
+];
