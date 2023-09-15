@@ -19,7 +19,7 @@ function commonInit() {
     const { licenseService } = mockServices;
 
     accessManager.with_securityClearance("ClusterAdmin");
-    license.with_Enterprise();
+    license.with_License();
 
     licenseService.withLimitsUsage();
 
@@ -171,7 +171,7 @@ export const LicenseLimits: ComponentStory<typeof IndexesPage> = () => {
     commonInit();
     configureDifferentIndexStates();
 
-    license.with_Community();
+    license.with_License({ Type: "Community" });
     license.with_LimitsUsage();
 
     return <IndexesPage db={db} />;

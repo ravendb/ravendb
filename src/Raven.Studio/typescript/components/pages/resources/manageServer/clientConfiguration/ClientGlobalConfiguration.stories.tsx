@@ -20,7 +20,7 @@ export const ClientConfiguration: ComponentStory<typeof ClientGlobalConfiguratio
     commonInit();
 
     const { license } = mockStore;
-    license.with_Enterprise();
+    license.with_License();
 
     return <ClientGlobalConfiguration />;
 };
@@ -29,7 +29,7 @@ export const LicenseRestricted: ComponentStory<typeof ClientGlobalConfiguration>
     commonInit();
 
     const { license } = mockStore;
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     return <ClientGlobalConfiguration />;
 };

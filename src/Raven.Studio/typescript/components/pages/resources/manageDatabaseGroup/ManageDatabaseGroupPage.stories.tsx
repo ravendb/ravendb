@@ -21,7 +21,7 @@ function commonInit() {
     const { accessManager, license, cluster } = mockStore;
 
     accessManager.with_securityClearance("ClusterAdmin");
-    license.with_Enterprise();
+    license.with_License();
     cluster.with_Single();
 }
 

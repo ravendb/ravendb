@@ -39,7 +39,7 @@ export function NoLimits() {
         ManageServerStubs.serverWideCustomAnalyzers()[0],
     ]);
 
-    license.with_Enterprise();
+    license.with_License();
 
     return <DatabaseCustomAnalyzers db={db} />;
 }
@@ -56,7 +56,7 @@ export function BelowDatabaseAdmin() {
 
     databasesService.withCustomAnalyzers();
 
-    license.with_Enterprise();
+    license.with_License();
 
     return <DatabaseCustomAnalyzers db={db} />;
 }
@@ -73,7 +73,7 @@ export function CommunityLimits() {
 
     databasesService.withCustomAnalyzers();
 
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     return <DatabaseCustomAnalyzers db={db} />;
 }

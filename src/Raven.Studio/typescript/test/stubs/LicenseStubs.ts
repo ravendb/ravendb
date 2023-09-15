@@ -1,14 +1,13 @@
 ﻿import moment from "moment";
 import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
-import LicenseType = Raven.Server.Commercial.LicenseType;
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
 
 export class LicenseStubs {
-    static getStatus(licenseType: LicenseType): LicenseStatus {
+    static getStatus(): LicenseStatus {
         return {
-            Type: licenseType,
+            Type: "Enterprise",
             Id: "15887ae5-f9c6-4bc8-badf-77ed3d31a42f",
-            LicensedTo: "Studio Stubs - " + licenseType,
+            LicensedTo: "Studio Stubs",
             Status: "Commercial",
             Expired: false,
             FirstServerStartDate: moment()
@@ -93,56 +92,6 @@ export class LicenseStubs {
             HasPowerBI: true,
             HasPostgreSqlIntegration: true,
             HasQueueSink: true,
-        };
-    }
-
-    static enterprise(): LicenseStatus {
-        return LicenseStubs.getStatus("Enterprise");
-    }
-
-    static developer(): LicenseStatus {
-        return LicenseStubs.getStatus("Developer");
-    }
-
-    static none(): LicenseStatus {
-        return {
-            ...LicenseStubs.getStatus("None"),
-            MaxNumberOfStaticIndexesPerDatabase: 12,
-            MaxNumberOfStaticIndexesPerCluster: 12 * 5,
-            MaxNumberOfAutoIndexesPerDatabase: 24,
-            MaxNumberOfAutoIndexesPerCluster: 24 * 5,
-            MaxNumberOfSubscriptionsPerDatabase: 3,
-            MaxNumberOfSubscriptionsPerCluster: 3 * 5,
-            MaxNumberOfCustomSortersPerDatabase: 1,
-            MaxNumberOfCustomSortersPerCluster: 5,
-            MaxNumberOfCustomAnalyzersPerDatabase: 1,
-            MaxNumberOfCustomAnalyzersPerCluster: 5,
-            MaxNumberOfRevisionsToKeep: 2,
-            MaxNumberOfRevisionsByAgeToKeep: 3888000,
-        };
-    }
-
-    static essential(): LicenseStatus {
-        return {
-            ...LicenseStubs.getStatus("Essential"),
-            MaxNumberOfStaticIndexesPerDatabase: 12,
-            MaxNumberOfStaticIndexesPerCluster: 12 * 5,
-            MaxNumberOfAutoIndexesPerDatabase: 24,
-            MaxNumberOfAutoIndexesPerCluster: 24 * 5,
-            MaxNumberOfSubscriptionsPerDatabase: 3,
-            MaxNumberOfSubscriptionsPerCluster: 3 * 5,
-            MaxNumberOfCustomSortersPerDatabase: 1,
-            MaxNumberOfCustomSortersPerCluster: 5,
-            MaxNumberOfCustomAnalyzersPerDatabase: 1,
-            MaxNumberOfCustomAnalyzersPerCluster: 5,
-            MaxNumberOfRevisionsToKeep: 2,
-            MaxNumberOfRevisionsByAgeToKeep: 3888000,
-        };
-    }
-
-    static community(): LicenseStatus {
-        return {
-            ...LicenseStubs.getStatus("Community"),
             MaxNumberOfStaticIndexesPerDatabase: 12,
             MaxNumberOfStaticIndexesPerCluster: 12 * 5,
             MaxNumberOfAutoIndexesPerDatabase: 24,

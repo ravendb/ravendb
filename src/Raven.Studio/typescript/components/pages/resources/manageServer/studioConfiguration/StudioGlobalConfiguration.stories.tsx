@@ -12,14 +12,14 @@ export default {
 
 export const StudioConfiguration: ComponentStory<typeof StudioGlobalConfiguration> = () => {
     const { license } = mockStore;
-    license.with_Enterprise();
+    license.with_License();
 
     return <StudioGlobalConfiguration />;
 };
 
 export const LicenseRestricted: ComponentStory<typeof StudioGlobalConfiguration> = () => {
     const { license } = mockStore;
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     return <StudioGlobalConfiguration />;
 };

@@ -34,7 +34,7 @@ function commonInit() {
 
     accessManager.with_securityClearance("ClusterAdmin");
 
-    license.with_Enterprise();
+    license.with_License();
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
@@ -146,7 +146,7 @@ export const SubscriptionsWithLicenseLimits = () => {
     commonInit();
 
     const { license } = mockStore;
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     const db = DatabasesStubs.shardedDatabase();
 

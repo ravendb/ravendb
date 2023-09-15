@@ -13,14 +13,14 @@ export default {
 
 export const StudioConfiguration: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
     const { license } = mockStore;
-    license.with_Enterprise();
+    license.with_License();
 
     return <StudioDatabaseConfiguration db={DatabasesStubs.nonShardedClusterDatabase()} />;
 };
 
 export const LicenseRestricted: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
     const { license } = mockStore;
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     return <StudioDatabaseConfiguration db={DatabasesStubs.nonShardedClusterDatabase()} />;
 };

@@ -14,7 +14,7 @@ export default {
 
 export const EmptyView: Story<typeof IndexCleanup> = () => {
     const { license } = mockStore;
-    license.with_Enterprise();
+    license.with_License();
 
     const { indexesService } = mockServices;
 
@@ -29,7 +29,7 @@ export const EmptyView: Story<typeof IndexCleanup> = () => {
 
 export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
     const { license } = mockStore;
-    license.with_Enterprise();
+    license.with_License();
 
     const { indexesService } = mockServices;
 
@@ -41,7 +41,7 @@ export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
 
 export const LicenseRestricted: Story<typeof IndexCleanup> = () => {
     const { license } = mockStore;
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     const { indexesService } = mockServices;
 

@@ -21,7 +21,7 @@ export function NoLimits() {
     commonInit();
 
     const { license } = mockStore;
-    license.with_Enterprise();
+    license.with_License();
 
     return <ServerWideCustomSorters />;
 }
@@ -30,7 +30,7 @@ export function CommunityLimits() {
     commonInit();
 
     const { license } = mockStore;
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     return <ServerWideCustomSorters />;
 }

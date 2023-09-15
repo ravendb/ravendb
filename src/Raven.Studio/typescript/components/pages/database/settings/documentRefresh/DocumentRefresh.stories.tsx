@@ -23,7 +23,7 @@ export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
         commonInit();
 
         const { license } = mockStore;
-        license.with_Enterprise();
+        license.with_License();
 
         return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
@@ -34,7 +34,7 @@ export const LicenseRestricted: StoryObj<typeof DocumentRefresh> = {
         commonInit();
 
         const { license } = mockStore;
-        license.with_Community();
+        license.with_License({ Type: "Community" });
 
         return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },

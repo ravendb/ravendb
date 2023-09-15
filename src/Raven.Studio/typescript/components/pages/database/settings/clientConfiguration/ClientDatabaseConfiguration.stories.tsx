@@ -17,7 +17,7 @@ function commonInit() {
     const { manageServerService } = mockServices;
 
     accessManager.with_securityClearance("ClusterAdmin");
-    license.with_Enterprise();
+    license.with_License();
     manageServerService.withGetDatabaseClientConfiguration();
 }
 
@@ -45,7 +45,7 @@ export const LicenseRestricted: ComponentStory<typeof ClientDatabaseConfiguratio
     const { manageServerService } = mockServices;
     const { license } = mockStore;
     manageServerService.withGetGlobalClientConfiguration();
-    license.with_Community();
+    license.with_License({ Type: "Community" });
 
     return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
 };
