@@ -37,24 +37,39 @@ namespace Raven.Server.Config.Categories
             QueryClauseCacheSize = PlatformDetails.Is32Bits ? new Size(32, SizeUnit.Megabytes) : (MemoryInformation.TotalPhysicalMemory / 10);
             MaximumSizePerSegment = new Size(PlatformDetails.Is32Bits ? 128 : 1024, SizeUnit.Megabytes);
             LargeSegmentSizeToMerge = new Size(PlatformDetails.Is32Bits ? 16 : 32, SizeUnit.Megabytes);
-            MaxAllocationsAtDictionaryTraining = new Size(PlatformDetails.Is32Bits ? 128 : 2048, SizeUnit.Megabytes);
 
             var totalMem = MemoryInformation.TotalPhysicalMemory;
 
             Size defaultEncryptedTransactionSizeLimit;
-
+            Size defaultMaxAllocationsAtDictionaryTraining;
             if (PlatformDetails.Is32Bits || _root.Storage.ForceUsing32BitsPager || totalMem <= new Size(1, SizeUnit.Gigabytes))
+            {
                 defaultEncryptedTransactionSizeLimit = new Size(96, SizeUnit.Megabytes);
+                defaultMaxAllocationsAtDictionaryTraining = new Size(128, SizeUnit.Megabytes);
+            }
             else if (totalMem <= new Size(4, SizeUnit.Gigabytes))
+            {
                 defaultEncryptedTransactionSizeLimit = new Size(128, SizeUnit.Megabytes);
+                defaultMaxAllocationsAtDictionaryTraining = new Size(256, SizeUnit.Megabytes);
+            }
             else if (totalMem <= new Size(16, SizeUnit.Gigabytes))
+            {
                 defaultEncryptedTransactionSizeLimit = new Size(256, SizeUnit.Megabytes);
+                defaultMaxAllocationsAtDictionaryTraining = new Size(512, SizeUnit.Megabytes);
+            }
             else if (totalMem <= new Size(64, SizeUnit.Gigabytes))
+            {
                 defaultEncryptedTransactionSizeLimit = new Size(512, SizeUnit.Megabytes);
+                defaultMaxAllocationsAtDictionaryTraining = new Size(1024, SizeUnit.Megabytes);
+            }
             else
+            {
                 defaultEncryptedTransactionSizeLimit = new Size(1024, SizeUnit.Megabytes);
-
+                defaultMaxAllocationsAtDictionaryTraining = new Size(2048, SizeUnit.Megabytes);
+            }
+            
             EncryptedTransactionSizeLimit = defaultEncryptedTransactionSizeLimit;
+            MaxAllocationsAtDictionaryTraining = defaultMaxAllocationsAtDictionaryTraining;
         }
 
         [DefaultValue(false)]
