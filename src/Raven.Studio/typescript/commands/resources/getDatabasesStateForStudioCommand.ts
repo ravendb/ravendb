@@ -17,8 +17,7 @@ class getDatabasesStateForStudioCommand extends commandBase {
             nodeTag: this.nodeTag
         }
 
-        return this.query<StudioDatabasesResponse>(url, args)
-            .fail((response: JQueryXHR) => this.reportError("Failed to load databases state", response.responseText, response.statusText));
+        return this.query<StudioDatabasesResponse>(url, args);
     }
 }
 
