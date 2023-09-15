@@ -80,7 +80,7 @@ namespace SlowTests.Bugs.Indexing
                 }
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
-                Assert.NotEqual(errorsCount, 0);
+                Assert.NotEqual(0, errorsCount);
             }
         }
 
