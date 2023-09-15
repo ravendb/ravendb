@@ -1,5 +1,4 @@
-﻿import AboutViewFloating, { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
