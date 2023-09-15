@@ -117,13 +117,14 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
 };
 
 const AboutViewAnchored = (props: Omit<AboutViewProps, "defaultOpen"> & { defaultOpen?: string | string[] }) => {
-    const { children, className, defaultOpen } = props;
+    const { children, className } = props;
 
-    todo("Feature", "Damian", "Once there is a new info hub view, consider changing defaultOpen");
+    // UncontrolledAccordion works incorrectly if we do not provide an array
+    const defaultOpen = Array.isArray(props.defaultOpen) ? props.defaultOpen : [props.defaultOpen];
 
     return (
         <div className={classNames(className)}>
-            <UncontrolledAccordion flush stayOpen className="bs5 about-view-accordion" defaultOpen={defaultOpen}>
+            <UncontrolledAccordion className="bs5 about-view-accordion" flush stayOpen defaultOpen={defaultOpen}>
                 {children}
             </UncontrolledAccordion>
         </div>
