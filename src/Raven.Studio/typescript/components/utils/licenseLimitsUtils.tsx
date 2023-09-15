@@ -22,7 +22,7 @@ export function getLicenseLimitReachStatus(count: number, limit: number): Licens
     return "notReached";
 }
 
-type LicenseAvailabilityType = "community" | "professional" | "enterprise";
+export type LicenseAvailabilityType = "community" | "professional" | "enterprise";
 
 // Method prepared for future use
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
