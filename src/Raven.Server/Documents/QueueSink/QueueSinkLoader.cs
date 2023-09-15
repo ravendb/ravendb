@@ -301,7 +301,7 @@ public class QueueSinkLoader : IDisposable
             {
                 var diff = process.Configuration.Compare(config);
 
-                if (diff == QueueSinkConfigurationCompareDifferences.None && process.Configuration.Equals(config))
+                if (diff == QueueSinkConfigurationCompareDifferences.None)
                 {
                     existing = config;
                     break;
