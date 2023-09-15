@@ -24,7 +24,6 @@ import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
 

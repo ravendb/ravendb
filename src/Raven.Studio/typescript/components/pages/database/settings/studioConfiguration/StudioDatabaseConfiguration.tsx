@@ -21,7 +21,6 @@ import { NonShardedViewProps } from "components/models/common";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";

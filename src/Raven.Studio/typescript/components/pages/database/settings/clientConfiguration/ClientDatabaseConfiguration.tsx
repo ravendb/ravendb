@@ -24,7 +24,6 @@ import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
