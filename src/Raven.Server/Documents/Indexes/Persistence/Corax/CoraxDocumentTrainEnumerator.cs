@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Unicode;
 using System.Threading;
 using Corax;
 using Corax.Analyzers;
 using Corax.Mappings;
+using Corax.Pipeline;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -24,10 +26,13 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         private int _storageIdx;
 
         private readonly byte[] _storage;
+        private readonly byte[] _words;
+        private readonly Token[] _tokens;
+        private readonly List<ArraySegment<byte>> _segments;
         private readonly Analyzer _lowercaseAnalyzer;
         private readonly IndexFieldsMapping _mapping;
 
-        public ArraySegment<byte> Buffer => new (_storage, 0, _storageIdx);
+        public List<ArraySegment<byte>> Buffer => _segments;
 
         public Builder(ByteStringContext allocator, IndexFieldsMapping mapping)
         {
@@ -37,6 +42,10 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             // RavenDB-21043: We wont process anything bigger than 4K, the most likely case is that we are processing
             // a huge document which will cost us a huge amount of allocations and monopolize the dictionary.
             _storage = new byte[4096];
+            _words = new byte[256];
+            _tokens = new Token[256];
+            _segments = new List<ArraySegment<byte>>();
+
             _storageIdx = 0;
         }
 
@@ -63,8 +72,6 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             if (_mapping.TryGetByFieldId(fieldId, out var field) == false)
                 return;
 
-            // var analyzer = field.Analyzer ?? _lowercaseAnalyzer;
-
             // Ensure that we will have enough space to write the content plus an space. 
             int startLocation = 0;
             int maxSize = Math.Min(128, value.Length);
@@ -75,15 +82,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                 startLocation = Random.Shared.Next(value.Length - maxSize);
             }
 
-            // We select only the part we are gonna use.
-            value = value.Slice(startLocation, maxSize);
-
-            // We copy from the value into the builder local storage.
-            var storageSpan = _storage.AsSpan(_storageIdx, Math.Min(value.Length + 1, _storage.Length - _storageIdx));
-            value.CopyTo(storageSpan);
-            storageSpan[^1] = (byte)' ';
-
-            _storageIdx += value.Length;
+            ProcessSelectedStream(field.Analyzer ?? _lowercaseAnalyzer, value.Slice(startLocation, maxSize));
         }
 
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
@@ -109,14 +108,36 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                 startLocation = Random.Shared.Next(value.Length - maxSize);
             }
 
-            // We select only the part we are gonna use.
-            var valueSpan = value.AsSpan().Slice(startLocation, maxSize);
-            // We copy from the value into the builder local storage.
-            var storageSpan = _storage.AsSpan(_storageIdx, Math.Min(value.Length + 1, _storage.Length - _storageIdx));
+            // We select only the part we are gonna use, we transcode into UTF8 and then process the stream.
+            Utf8.FromUtf16(value.AsSpan(startLocation, maxSize), _words, out _, out var bytesWritten);
+            ProcessSelectedStream(field.Analyzer ?? _lowercaseAnalyzer, _words.AsSpan(0, bytesWritten));
+        }
 
-            Utf8.FromUtf16(valueSpan, storageSpan, out _, out var bytesWritten);
-            storageSpan[^1] = (byte)' ';
-            _storageIdx += bytesWritten;
+        private void ProcessSelectedStream(Analyzer analyzer, ReadOnlySpan<byte> value)
+        {
+            // Execute the analyzer.
+            var wordsSpan = _words.AsSpan();
+            var tokensSpan = _tokens.AsSpan();
+            analyzer.Execute(value, ref wordsSpan, ref tokensSpan);
+
+            // We copy from the value into the builder local storage.
+            var storageSpan = _storage.AsSpan(_storageIdx);
+            foreach (var token in tokensSpan)
+            {
+                // We wont process anything that is less than a 3-gram
+                if (token.Length < 3)
+                    continue;
+
+                // We are done if there is no more space.
+                if (storageSpan.Length < token.Length)
+                    return;
+
+                wordsSpan.Slice(token.Offset, (int)token.Length)
+                    .CopyTo(_storage.AsSpan(_storageIdx, (int)token.Length));
+
+                _segments.Add(new ArraySegment<byte>(_storage, _storageIdx, (int)token.Length));
+                _storageIdx += (int)token.Length;
+            }
         }
 
         public void Write(int fieldId, ReadOnlySpan<byte> value, long longValue, double dblValue)
@@ -175,6 +196,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         public void Reset()
         {
             _storageIdx = 0;
+            _segments.Clear();
         }
     }
 
@@ -187,7 +209,6 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private readonly HashSet<string> _collections;
     private readonly int _take;
     private IEnumerator<ArraySegment<byte>> _itemsEnumerable;
-    private readonly Builder _builder;
     private readonly CancellationToken _token;
     private readonly Size _maxAllocatedMemory;
 
@@ -209,7 +230,6 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         _documentStorage = storage;
         _docsContext = docsContext;
         _collections = collections;
-        _builder = new Builder(indexContext.Allocator, _converter.GetKnownFieldsForWriter());
     }
 
     private IEnumerable<ArraySegment<byte>> GetItems()
@@ -219,6 +239,8 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         // RavenDB-21043: Track the total allocations that we will allow each collection to use. The idea is that multi-collection indexes
         // use this number to also ensure that all collections have the opportunity to give samples to the training process.
         var maxAllocatedMemoryPerCollection = _maxAllocatedMemory / _collections.Count;
+
+        var builder = new Builder(_indexContext.Allocator, _converter.GetKnownFieldsForWriter());
 
         foreach (var collection in _collections)
         {
@@ -235,12 +257,11 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
                 foreach (var result in mapResults)
                 {
-                    _builder.Reset();
-                    _converter.SetDocument(doc.LowerId, null, result, _indexContext, _builder);
+                    builder.Reset();
+                    _converter.SetDocument(doc.LowerId, null, result, _indexContext, builder);
 
-                    var buffer = _builder.Buffer;
-                    if (buffer.Count > 3)
-                        yield return _builder.Buffer;
+                    foreach (var item in builder.Buffer)
+                        yield return item;
                 }
 
                 // Check if we have already hit the threshold allocations.
