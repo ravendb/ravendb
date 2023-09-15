@@ -1,14 +1,15 @@
 ﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
+import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function EditKafkaSinkTaskInfoHub() {
     const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -37,12 +38,9 @@ export function EditKafkaSinkTaskInfoHub() {
                     </li>
                 </ul>
             </AccordionItemWrapper>
-            <AccordionLicenseNotIncluded
-                targetId="licensing"
-                featureName="Kafka Sink"
-                featureIcon="kafka-sink"
-                checkedLicenses={[ "Enterprise"]}
-                isLimited={!isEnterpriseOrDeveloper}
+            <FeatureAvailabilitySummaryWrapper
+                isUnlimited={isEnterpriseOrDeveloper}
+                data={featureAvailabilityEnterprise}
             />
         </AboutViewFloating>
     );

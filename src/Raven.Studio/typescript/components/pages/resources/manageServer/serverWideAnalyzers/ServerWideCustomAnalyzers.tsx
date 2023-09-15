@@ -5,7 +5,6 @@ import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { useServices } from "components/hooks/useServices";
 import { useAsync } from "react-async-hook";
-import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -14,6 +13,9 @@ import classNames from "classnames";
 import AnalyzersList from "./ServerWideCustomAnalyzersList";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 
 export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
@@ -75,7 +77,7 @@ export default function ServerWideCustomAnalyzers() {
                         />
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -125,12 +127,9 @@ export default function ServerWideCustomAnalyzers() {
                                     <Icon icon="newtab" /> Docs - Custom Analyzers
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionLicenseLimited
-                                targetId="licensing"
-                                featureName="Custom Analyzers"
-                                featureIcon="server-wide-custom-analyzers"
-                                description="Upgrade to a paid plan and get unlimited availability."
-                                isLimited={!isProfessionalOrAbove}
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={isProfessionalOrAbove}
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>
@@ -139,3 +138,12 @@ export default function ServerWideCustomAnalyzers() {
         </div>
     );
 }
+
+export const featureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Analyzers limit",
+        community: { value: 5 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];

@@ -19,8 +19,10 @@ import { useAsyncCallback } from "react-async-hook";
 import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 
 export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -156,7 +158,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -186,12 +188,9 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Expiration
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionLicenseLimited
-                                description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
-                                targetId="licensing"
-                                featureName="Document Expiration"
-                                featureIcon="document-expiration"
-                                isLimited={!isProfessionalOrAbove}
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={isProfessionalOrAbove}
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>
@@ -225,3 +224,12 @@ const codeExample = `{
       "@expires": "2023-07-16T08:00:00.0000000Z"
     }
 }`;
+
+export const featureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Expiration frequency limit (hours)",
+        community: { value: 36 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];

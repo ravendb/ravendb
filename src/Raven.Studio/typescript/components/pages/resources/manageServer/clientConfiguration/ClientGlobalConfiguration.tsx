@@ -20,8 +20,9 @@ import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 
 export default function ClientGlobalConfiguration() {
     const { manageServerService } = useServices();
@@ -293,7 +294,7 @@ export default function ClientGlobalConfiguration() {
                         </div>
                     </Col>
                     <Col sm={12} md={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                             <AccordionItemWrapper
                                 icon="about"
                                 color="info"
@@ -337,12 +338,9 @@ export default function ClientGlobalConfiguration() {
                                     <Icon icon="newtab" /> Docs - Client Configuration
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionLicenseNotIncluded
-                                targetId="licensing"
-                                featureName="Client Configuration"
-                                featureIcon="database-client-configuration"
-                                checkedLicenses={["Professional", "Enterprise"]}
-                                isLimited={!isProfessionalOrAbove}
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={isProfessionalOrAbove}
+                                data={featureAvailabilityProfessionalOrAbove}
                             />
                         </AboutViewAnchored>
                     </Col>

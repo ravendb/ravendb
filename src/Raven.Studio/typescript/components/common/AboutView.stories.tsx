@@ -58,7 +58,7 @@ const FloatingButton = (args: { defaultOpen: boolean; featureAvailable: boolean 
                         {args.defaultOpen ? "true" : "false"}
                     </Col>
                     <Col sm={"auto"}>
-                        <AboutViewFloating defaultOpen={args.defaultOpen}>
+                        <AboutViewFloating defaultOpen={args.defaultOpen ? "licensing" : null}>
                             <AccordionItemWrapper
                                 icon="zombie"
                                 color="info"

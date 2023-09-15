@@ -33,7 +33,9 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import { FeatureAvailabilityData, FeatureAvailabilitySummary } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -62,19 +64,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
-    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
-
-    // TODO that is only for presentation !!!
-    const hasDefaultPolicy = true; // useAppSelector(licenseSelectors.statusValue("HasDefaultPolicy"));
-    // TODO that is only for presentation !!!
-    const availabilityData = getLicenseAvailabilityData({
-        isCloud,
-        overrideDefaultPolicy: {
-            licenseType,
-            value: hasDefaultPolicy,
-        },
-    });
 
     useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();
@@ -385,15 +374,10 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Revisions
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionItemWrapper
-                                icon="license"
-                                color={isProfessionalOrAbove ? "success" : "warning"}
-                                heading="Licensing"
-                                description="See which plans offer this and more exciting features"
-                                targetId="licensing"
-                            >
-                                <FeatureAvailabilitySummary data={availabilityData} />
-                            </AccordionItemWrapper>
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={isProfessionalOrAbove}
+                                data={featureAvailabilityData}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>
@@ -408,69 +392,26 @@ function mapToDto(
     return config ? _.omit(config, "Name") : null;
 }
 
-interface GetLicenseAvailabilityDataProps {
-    isCloud: boolean;
-    overrideDefaultPolicy: {
-        licenseType: Raven.Server.Commercial.LicenseType;
-        value: string | number | boolean;
-    };
-}
-
-type LicenseAvailabilityType = "community" | "professional" | "enterprise";
-
-function getLicenseAvailabilityType(licenseType: Raven.Server.Commercial.LicenseType): LicenseAvailabilityType {
-    switch (licenseType) {
-        case "Essential":
-        case "Community":
-            return "community";
-        case "Professional":
-            return "professional";
-        case "Enterprise":
-            return "enterprise";
-        default:
-            return null;
-    }
-}
-// TODO that is only for presentation !!!
-// TODO that is only for presentation !!!
-function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): FeatureAvailabilityData[] {
-    const { isCloud, overrideDefaultPolicy } = props;
-
-    const featureAvailabilityData: FeatureAvailabilityData[] = [
-        {
-            featureName: "Default Policy",
-            featureIcon: "default",
-            community: { value: false },
-            professional: { value: true },
-            enterprise: { value: true },
-        },
-        {
-            featureName: "Max revisions",
-            featureIcon: "revisions",
-            community: { value: 2 },
-            professional: { value: Infinity },
-            enterprise: { value: Infinity },
-        },
-        {
-            featureName: "Max revision days",
-            featureIcon: "clock",
-            community: { value: isCloud ? 38 : 45 },
-            professional: { value: Infinity },
-            enterprise: { value: Infinity },
-        },
-    ];
-
-    const type = getLicenseAvailabilityType(overrideDefaultPolicy.licenseType);
-
-    if (!type) {
-        return featureAvailabilityData;
-    }
-
-    const defaultPolicyData = featureAvailabilityData[0][type];
-
-    if (defaultPolicyData.value !== overrideDefaultPolicy.value) {
-        defaultPolicyData.overwrittenValue = overrideDefaultPolicy.value;
-    }
-
-    return featureAvailabilityData;
-}
+const featureAvailabilityData: FeatureAvailabilityData[] = [
+    {
+        featureName: "Default Policy",
+        featureIcon: "default",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "Max revisions",
+        featureIcon: "revisions",
+        community: { value: 2 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Max revision days",
+        featureIcon: "clock",
+        community: { value: 45 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];

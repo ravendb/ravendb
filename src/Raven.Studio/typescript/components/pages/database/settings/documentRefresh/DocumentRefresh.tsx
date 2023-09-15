@@ -19,8 +19,10 @@ import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 
 export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -153,7 +155,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -187,12 +189,9 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Document Refresh
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionLicenseLimited
-                                description="The expiration frequency limit for Community license is 36 hours. Upgrade to a paid plan and get unlimited availability."
-                                targetId="licensing"
-                                featureName="Document Refresh"
-                                featureIcon="expos-refresh"
-                                isLimited={!isProfessionalOrAbove}
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={isProfessionalOrAbove}
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>
@@ -226,3 +225,12 @@ const codeExample = `{
     "@refresh": "2023-07-16T08:00:00.0000000Z"
   }
 }`;
+
+export const featureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Refresh frequency limit (hours)",
+        community: { value: 36 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];

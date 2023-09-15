@@ -17,7 +17,6 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { AsyncStateStatus, useAsync, useAsyncCallback } from "react-async-hook";
-import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import classNames from "classnames";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { CounterBadge } from "components/common/CounterBadge";
@@ -30,6 +29,9 @@ import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCus
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
@@ -151,7 +153,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                         />
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -201,12 +203,9 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                     <Icon icon="newtab" /> Docs - Custom Sorters
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionLicenseLimited
-                                targetId="licensing"
-                                featureName="Custom Sorters"
-                                featureIcon="custom-sorters"
-                                description="Upgrade to a paid plan and get unlimited availability."
-                                isLimited={!isProfessionalOrAbove}
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={isProfessionalOrAbove}
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>
@@ -304,3 +303,18 @@ function DatabaseSortersList({
         </div>
     );
 }
+
+export const featureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Database sorters limit",
+        community: { value: 1 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Cluster sorters limit",
+        community: { value: 5 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];

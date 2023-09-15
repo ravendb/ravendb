@@ -24,8 +24,10 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { todo } from "common/developmentHelper";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 
 interface IndexesPageProps {
     db: database;
@@ -244,7 +246,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             )}
                         </Col>
                         <Col xs="auto">
-                            <AboutViewFloating>
+                            <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
                                 <AccordionItemWrapper
                                     icon="about"
                                     color="info"
@@ -281,12 +283,9 @@ export function IndexesPage(props: IndexesPageProps) {
                                         <Icon icon="newtab" /> Docs - Indexes List View
                                     </a>
                                 </AccordionItemWrapper>
-                                <AccordionLicenseLimited
-                                    targetId="license-limit"
-                                    description="Upgrade to a paid plan and get unlimited availability."
-                                    featureName="List of Indexes"
-                                    featureIcon="list-of-indexes"
-                                    isLimited={!isProfessionalOrAbove}
+                                <FeatureAvailabilitySummaryWrapper
+                                    isUnlimited={isProfessionalOrAbove}
+                                    data={featureAvailability}
                                 />
                             </AboutViewFloating>
                         </Col>
@@ -422,3 +421,30 @@ export function IndexesPage(props: IndexesPageProps) {
         </>
     );
 }
+
+export const featureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Database static indexes limit",
+        community: { value: 12 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Database auto indexes limit",
+        community: { value: 24 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Cluster static indexes limit",
+        community: { value: 60 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Cluster auto indexes limit",
+        community: { value: 120 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];

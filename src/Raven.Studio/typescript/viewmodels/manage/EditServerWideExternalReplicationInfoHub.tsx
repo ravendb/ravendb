@@ -1,14 +1,15 @@
 ﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
+import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function EditServerWideExternalReplicationInfoHub() {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -17,10 +18,14 @@ export function EditServerWideExternalReplicationInfoHub() {
                 description="Get additional info on this feature"
             >
                 <div>
-                    Defining a <strong>Server-Wide External-Replication task</strong> will create an ongoing External-Replication task for each database in your cluster.
+                    Defining a <strong>Server-Wide External-Replication task</strong> will create an ongoing
+                    External-Replication task for each database in your cluster.
                     <ul className="margin-top-xs">
                         <li>You can select specific databases to exclude from the task.</li>
-                        <li>The configurations set in the Server-Wide task will be applied to the corresponding ongoing task created per database.</li>
+                        <li>
+                            The configurations set in the Server-Wide task will be applied to the corresponding ongoing
+                            task created per database.
+                        </li>
                     </ul>
                 </div>
                 <div className="margin-top-sm">
@@ -31,12 +36,9 @@ export function EditServerWideExternalReplicationInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
-            <AccordionLicenseNotIncluded
-                targetId="licensing"
-                featureName="Server-Wide External Replication"
-                featureIcon="server-wide-replication"
-                checkedLicenses={["Professional", "Enterprise"]}
-                isLimited={!isProfessionalOrAbove}
+            <FeatureAvailabilitySummaryWrapper
+                isUnlimited={isProfessionalOrAbove}
+                data={featureAvailabilityProfessionalOrAbove}
             />
         </AboutViewFloating>
     );

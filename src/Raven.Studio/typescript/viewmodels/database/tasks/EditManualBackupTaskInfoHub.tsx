@@ -1,17 +1,18 @@
 ﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import AccordionLicenseNotIncluded from "components/common/AccordionLicenseNotIncluded";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
-import {Icon} from "components/common/Icon";
+import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 
 export function EditManualBackupTaskInfoHub() {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
     const backupsDocsLink = useRavenLink({ hash: "GMBYOH" });
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -19,8 +20,7 @@ export function EditManualBackupTaskInfoHub() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
-                <p>
-                </p>
+                <p></p>
                 <p>
                     Configuration options available:
                     <ul>
@@ -44,12 +44,9 @@ export function EditManualBackupTaskInfoHub() {
                     <Icon icon="newtab" /> Docs - Backups
                 </a>
             </AccordionItemWrapper>
-            <AccordionLicenseNotIncluded
-                targetId="licensing"
-                featureName="Snapshot Backups"
-                featureIcon="snapshot-backup"
-                checkedLicenses={["Enterprise"]}
-                isLimited={!isProfessionalOrAbove}
+            <FeatureAvailabilitySummaryWrapper
+                isUnlimited={isProfessionalOrAbove}
+                data={featureAvailabilityProfessionalOrAbove}
             />
         </AboutViewFloating>
     );
