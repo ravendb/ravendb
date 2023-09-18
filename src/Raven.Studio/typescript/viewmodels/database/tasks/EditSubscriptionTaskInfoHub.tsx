@@ -60,10 +60,17 @@ export function EditSubscriptionTaskInfoHub() {
 
 export const featureAvailability: FeatureAvailabilityData[] = [
     {
+        featureName: "Concurrent Data Subscriptions",
+        featureIcon: "data-subscriptions",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+    {
         featureName: "Subscriptions Revisions",
         featureIcon: "revisions",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
-    },
+    }
 ];
