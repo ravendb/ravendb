@@ -52,6 +52,7 @@ import testIndex = require("models/database/index/testIndex");
 import inlineShardSelector from "viewmodels/common/sharding/inlineShardSelector";
 import assertUnreachable from "components/utils/assertUnreachable";
 import licenseModel from "models/auth/licenseModel";
+import { EditIndexInfoHub } from "viewmodels/database/indexes/EditIndexInfoHub";
 import compoundField from "models/database/index/compoundField";
 
 class editIndex extends shardViewModelBase {
@@ -125,8 +126,10 @@ class editIndex extends shardViewModelBase {
     
     readonly shardSelector: inlineShardSelector;
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
-    
+    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove()
+    infoHubView: ReactInKnockout<typeof EditIndexInfoHub>;
+    isAddingNewIndex = ko.observable<boolean>(true);
+
     constructor(db: database) {
         super(db);
 
@@ -157,6 +160,10 @@ class editIndex extends shardViewModelBase {
         this.initializeObservables();
 
         this.shardSelector = db.isSharded() ? new inlineShardSelector(db, { dropup: true }) : null;
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: EditIndexInfoHub
+        }))
     }
     
     detached() {
@@ -729,6 +736,7 @@ class editIndex extends shardViewModelBase {
     }
 
     private editExistingIndex(indexName: string) {
+        this.isAddingNewIndex(false);
         this.originalIndexName = indexName;
         this.termsUrl(appUrl.forTerms(indexName, this.db));
         this.queryUrl(appUrl.forQuery(this.db, indexName));
