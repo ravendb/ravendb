@@ -3,7 +3,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { uniqueId } from "lodash";
 import React, { ReactNode } from "react";
-import { Alert, Button, Table, UncontrolledTooltip } from "reactstrap";
+import { Alert, Button, PopoverBody, PopoverHeader, Table, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "./Icon";
@@ -72,14 +72,47 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                 return (
                                     <th
                                         key={licenseType}
-                                        className={classNames(licenseType.toLowerCase(), {
+                                        className={classNames("position-relative", licenseType.toLowerCase(), {
                                             current:
                                                 currentLicense === licenseType ||
-                                                (currentLicense === "None" && licenseType === "Community"),
+                                                (currentLicense === "None" && licenseType === "Community") ||
+                                                (currentLicense === "Community" && licenseType === "Free") ||
+                                                (currentLicense === "Enterprise" && licenseType === "Production"),
                                         })}
                                     >
                                         <Icon icon="circle-filled" className="license-dot" />
                                         {licenseType}
+                                        {licenseType === "Developer" && (
+                                            <>
+                                                <div className="corner-info" id="DevTooltip">
+                                                    <Icon icon="info" margin="m-0" />
+                                                </div>
+                                                <UncontrolledPopover
+                                                    placement="top"
+                                                    target="DevTooltip"
+                                                    trigger="hover"
+                                                    className="bs5"
+                                                >
+                                                    <div className="p-2 text-center">
+                                                        <div>
+                                                            Developer license enables{" "}
+                                                            <strong>Enterprise License features</strong>
+                                                            <br /> but is{" "}
+                                                            <strong>not applicable for commercial use</strong>.
+                                                        </div>
+
+                                                        <Button
+                                                            color="link"
+                                                            size="sm"
+                                                            href="https://ravendb.net/l/FLDLO4#developer"
+                                                            target="_blank"
+                                                        >
+                                                            See details <Icon icon="newtab" margin="ms-1" />
+                                                        </Button>
+                                                    </div>
+                                                </UncontrolledPopover>
+                                            </>
+                                        )}
                                     </th>
                                 );
                             })}
@@ -144,10 +177,16 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                     <td
                                         key={licenseType}
                                         className={classNames(licenseType.toLowerCase(), {
-                                            current: currentLicense === licenseType,
+                                            current:
+                                                currentLicense === licenseType ||
+                                                (currentLicense === "Community" && licenseType === "Free") ||
+                                                (currentLicense === "Enterprise" && licenseType === "Production"),
                                         })}
                                     >
-                                        {currentLicense === licenseType && "current"}
+                                        {(currentLicense === licenseType ||
+                                            (currentLicense === "Community" && licenseType === "Free") ||
+                                            (currentLicense === "Enterprise" && licenseType === "Production")) &&
+                                            "current"}
                                     </td>
                                 );
                             })}
@@ -182,13 +221,13 @@ function formatAvailabilityValue(data: ValueData): ReactNode {
     let formattedValue: ReactNode = value;
 
     if (value === true) {
-        formattedValue = <Icon icon="check" color="success" />;
+        formattedValue = <Icon icon="check" margin="m-0" color="success" />;
     }
     if (value === false) {
-        formattedValue = <Icon icon="cancel" color="danger" />;
+        formattedValue = <Icon icon="cancel" margin="m-0" color="danger" />;
     }
     if (value === Infinity) {
-        formattedValue = <Icon icon="infinity" />;
+        formattedValue = <Icon icon="infinity" margin="m-0" />;
     }
 
     if (data.overwrittenValue == null) {
@@ -219,6 +258,7 @@ export default function FeatureAvailabilitySummaryWrapper({
             heading="Licensing"
             description="See which plans offer this and more exciting features"
             targetId="licensing"
+            className={isUnlimited ? null : "license-limited"}
         >
             <FeatureAvailabilitySummary data={data} />
         </AccordionItemWrapper>

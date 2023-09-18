@@ -1,25 +1,47 @@
 @use "Content/scss/bs5variables";
 
+.license-limited {
+    .current {
+        --decoration-color: var(--bs-warning) !important;
+    }
+}
+
 .feature-availability-table {
     $table-border-radius: bs5variables.$border-radius-md;
     border: bs5variables.$border-width solid bs5variables.$border-color-light;
     border-radius: $table-border-radius;
     text-align: center;
-    margin-bottom: bs5variables.$gutter-lg;
+    margin-bottom: bs5variables.$gutter-md;
 
     --license-color: var(--bs-secondary);
 
     .developer {
         --license-color: var(--license-developer);
+        --decoration-color: var(--license-color);
     }
-    .community {
+    .community,
+    .free {
         --license-color: var(--license-community);
+        --decoration-color: var(--license-color);
     }
     .professional {
         --license-color: var(--license-professional);
+        --decoration-color: var(--license-color);
     }
-    .enterprise {
+    .enterprise,
+    .production {
         --license-color: var(--license-enterprise);
+        --decoration-color: var(--license-color);
+    }
+
+    .corner-info {
+        position: absolute;
+        right: 0;
+        top: 0;
+        background-color: bs5variables.$panel-bg-1-var;
+        padding: 3px 3px bs5variables.$gutter-sm bs5variables.$gutter-sm;
+        color: var(--decoration-color);
+        clip-path: polygon(0% 0%, 100% 0%, 100% 100%);
     }
 
     table {
@@ -45,7 +67,7 @@
                     color: var(--license-color);
                 }
                 &.current {
-                    border: bs5variables.$border-width solid var(--license-color);
+                    border: bs5variables.$border-width solid var(--decoration-color);
                     border-bottom: none;
                     font-weight: bold;
                     color: bs5variables.$text-emphasis-var;
@@ -54,7 +76,7 @@
         }
         tbody {
             .current {
-                border: bs5variables.$border-width solid var(--license-color);
+                border: bs5variables.$border-width solid var(--decoration-color);
                 border-top: 0;
                 border-bottom: 0;
             }
@@ -70,9 +92,9 @@
                 td,
                 th {
                     &.current {
-                        border-bottom: bs5variables.$border-width solid var(--license-color);
+                        border-bottom: bs5variables.$border-width solid var(--decoration-color);
                         border-radius: 0 0 $table-border-radius $table-border-radius;
-                        color: var(--license-color);
+                        color: var(--decoration-color);
                         text-transform: uppercase;
                         letter-spacing: 0.16em;
                         font-weight: bold;

@@ -88,13 +88,14 @@ interface AccordionItemWrapperProps {
     pillText?: string;
     pillIcon?: IconName;
     targetId?: string;
+    className?: string;
 }
 
 const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
-    const { icon, color, heading, description, children, pill, pillText, pillIcon } = props;
+    const { icon, color, heading, description, children, pill, pillText, pillIcon, className } = props;
     const targetId = props.targetId ?? uniqueId();
     return (
-        <AccordionItem className={classNames("rounded-3", `box-shadow-${color}`, "panel-bg-1")}>
+        <AccordionItem className={classNames("rounded-3", `box-shadow-${color}`, "panel-bg-1", className)}>
             <AccordionHeader targetId={targetId}>
                 <Icon icon={icon} color={color} className="tab-icon me-3" />
                 <div className="vstack gap-1">
