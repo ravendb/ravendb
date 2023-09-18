@@ -20,28 +20,35 @@ export function EditExternalReplicationInfoHub() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
-                <ul>
-                    <li>Schedule an <strong>External Replication ongoing-task</strong>{" "}
-                        in order to have a live replica of your data in another RavenDB database in another cluster.
-                        The replica can serve as a failover solution in case the source cluster is down.
-                    </li>
-                    <li className="margin-top-xs">Documents and their related data (attachments, revisions, counters,
-                        time series) will be replicated.
-                        Server and cluster-level items (e.g. indexes, identities,
-                        compare-exchange items, ongoing tasks definitions, etc.) are not replicated.
-                    </li>
-                </ul>
-                <ul>
-                    <li>Task definition includes:
-                        <ul>
-                            <li>An optional delay time for data replication.</li>
-                            <li>A connection string to the destination database containing the URLs of
-                                the target cluster&apos;s servers.
-                            </li>
-                            <li>A responsible node to handle this task can be set.</li>
-                        </ul>
-                    </li>
-                </ul>
+                <div>
+                    Schedule an <strong>External Replication ongoing-task</strong>{" "}
+                    in order to have a live replica of your data in another RavenDB database in another cluster.
+                    <ul className="margin-top-xxs">
+                        <li>The replica can serve as a failover solution in case the source cluster is down.</li>
+                    </ul>
+                </div>
+                <div>
+                    What is replicated:
+                    <ul className="margin-top-xxs">
+                        <li>Documents and their related data (attachments, revisions,
+                            counters,
+                            time series) will be replicated.
+                        </li>
+                        <li>Server and cluster-level items (e.g. indexes, identities,
+                            compare-exchange items, ongoing tasks definitions, etc.) are Not replicated.
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    Task definition includes:
+                    <ul  className="margin-top-xxs">
+                        <li>A connection string to the destination database containing the URLs of
+                            the target cluster&apos;s servers.
+                        </li>
+                        <li>An optional delay time for data replication.</li>
+                        <li>A responsible node to handle this task can be set.</li>
+                    </ul>
+                </div>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
                 <a href={externalReplicationDocsLink} target="_blank">
