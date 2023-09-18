@@ -34,7 +34,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             var state = new SubscriptionState
             {
                 ChangeVectorForNextBatchStartingPoint = tryout.ChangeVector,
-                Query = tryout.Query
+                Query = tryout.Query,
+                ArchivedDataProcessingBehavior = tryout.ArchivedDataProcessingBehavior
             };
 
             if (Enum.TryParse(

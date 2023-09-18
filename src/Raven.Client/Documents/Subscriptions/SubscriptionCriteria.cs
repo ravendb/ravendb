@@ -12,6 +12,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public string ChangeVector { get; set; }
         public string Query { get; set; }
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
     }
 
     public class SubscriptionCreationOptions
