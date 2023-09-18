@@ -5,7 +5,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 
 export function TimeSeriesInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const featureAvailabilityData: FeatureAvailabilityData[] = [
         {
             featureName: "Rollups & Retention",
