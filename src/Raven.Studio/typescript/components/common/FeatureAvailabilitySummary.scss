@@ -2,9 +2,10 @@
 
 .feature-availability-table {
     $table-border-radius: bs5variables.$border-radius-md;
-    //border: bs5variables.$border-width solid bs5variables.$border-color-light;
+    border: bs5variables.$border-width solid bs5variables.$border-color-light;
     border-radius: $table-border-radius;
     text-align: center;
+    margin-bottom: bs5variables.$gutter-lg;
 
     --license-color: var(--bs-secondary);
 
@@ -23,16 +24,32 @@
 
     table {
         border-collapse: unset;
-
+        margin-bottom: bs5variables.$gutter * -1 !important;
         th,
         td {
             border: 0;
         }
+        th {
+            color: bs5variables.$text-muted-var;
+        }
+
+        .current {
+            background-color: var(--faded-primary);
+        }
 
         thead {
-            th.current {
-                border: bs5variables.$border-width solid var(--license-color);
-                border-bottom: none;
+            th {
+                padding-top: bs5variables.$gutter-sm !important;
+                font-weight: normal;
+                .license-dot {
+                    color: var(--license-color);
+                }
+                &.current {
+                    border: bs5variables.$border-width solid var(--license-color);
+                    border-bottom: none;
+                    font-weight: bold;
+                    color: bs5variables.$text-emphasis-var;
+                }
             }
         }
         tbody {
@@ -52,16 +69,14 @@
             tr.current-indicator-row {
                 td,
                 th {
-                    border-bottom: 0;
-                    &:first-of-type {
-                        border-radius: 0 0 0 $table-border-radius;
-                    }
-                    &:last-of-type {
-                        border-radius: 0 0 $table-border-radius 0;
-                    }
-
                     &.current {
                         border-bottom: bs5variables.$border-width solid var(--license-color);
+                        border-radius: 0 0 $table-border-radius $table-border-radius;
+                        color: var(--license-color);
+                        text-transform: uppercase;
+                        letter-spacing: 0.16em;
+                        font-weight: bold;
+                        font-size: bs5variables.$font-size-xs;
                     }
                 }
             }
