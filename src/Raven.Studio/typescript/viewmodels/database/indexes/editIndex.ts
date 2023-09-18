@@ -1231,7 +1231,7 @@ class editIndex extends shardViewModelBase {
             content: () => this.canUseCompoundFields() ? "" : `Compound fields are only available for Corax Search Engine. 
                     <a class="btn btn-primary js-change-to-corax" href="#">Change to Corax</a>`,
             html: true,
-            placement: "top"
+            placement: "right"
         });
 
         popoverUtils.longWithHover($(".js-store-field-info"), 
