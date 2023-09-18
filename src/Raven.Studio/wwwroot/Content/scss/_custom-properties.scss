@@ -20,6 +20,10 @@
     --license-community: #{$color-4};
     --license-professional: #{$color-4-2};
     --license-enterprise: #{$color-5};
+
+    @each $key, $value in $theme-colors {
+        --faded-#{$key}: #{mix($panel-bg-1, $value, 80%)};
+    }
 }
 
 .modal-content,

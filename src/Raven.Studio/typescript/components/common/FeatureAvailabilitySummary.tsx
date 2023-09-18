@@ -3,7 +3,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { uniqueId } from "lodash";
 import React, { ReactNode } from "react";
-import { Alert, Table, UncontrolledTooltip } from "reactstrap";
+import { Alert, Button, Table, UncontrolledTooltip } from "reactstrap";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "./Icon";
@@ -57,7 +57,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                 </Alert>
             )}
             <div className="feature-availability-table">
-                <Table className="m-0">
+                <Table>
                     <thead>
                         <tr>
                             <th className="p-0"></th>
@@ -65,7 +65,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                 if (currentLicense === "Essential" && licenseType === "Community") {
                                     return (
                                         <th key="Essential" className="community current">
-                                            <Icon icon="circle-filled" /> Essential
+                                            <Icon icon="circle-filled" className="license-dot" /> Essential
                                         </th>
                                     );
                                 }
@@ -78,7 +78,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                                 (currentLicense === "None" && licenseType === "Community"),
                                         })}
                                     >
-                                        <Icon icon="circle-filled" />
+                                        <Icon icon="circle-filled" className="license-dot" />
                                         {licenseType}
                                     </th>
                                 );
@@ -157,19 +157,19 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
             </div>
             {currentLicense === "None" && (
                 <div className="hstack gap-4 justify-content-center mt-4">
-                    <a href={buyLink} target="_blank" className="btn btn-primary rounded-pill">
-                        <Icon icon="notifications" />
+                    <Button href={buyLink} target="_blank" color="primary" size="lg" className="rounded-pill px-4">
+                        <Icon icon="license" margin="me-3" />
                         Get License
-                    </a>
+                    </Button>
                 </div>
             )}
             {currentLicense !== "Enterprise" && currentLicense !== "None" && (
                 <div className="hstack gap-4 justify-content-center mt-4">
                     Upgrade License
-                    <a href={buyLink} target="_blank" className="btn btn-primary rounded-pill">
-                        <Icon icon="notifications" />
+                    <Button href={buyLink} target="_blank" color="primary" size="lg" className="rounded-pill px-4">
+                        <Icon icon="license" margin="me-3" />
                         Pricing plans
-                    </a>
+                    </Button>
                 </div>
             )}
         </>
