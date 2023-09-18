@@ -59,8 +59,8 @@ import { FlexGrow } from "components/common/FlexGrow";
 import OngoingTaskAddModal from "./OngoingTaskAddModal";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AccordionLicenseLimited from "components/common/AccordionLicenseLimited";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -165,6 +165,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         subscriptions,
         hubDefinitions,
     } = filteredTasks;
+
+    useEffect(() => {
+        throttledUpdateLicenseLimitsUsage();
+    }, [subscriptions.length]);
 
     const getSelectedTaskShardedInfos = () =>
         [...tasks.tasks, ...tasks.subscriptions, ...tasks.replicationHubs]
