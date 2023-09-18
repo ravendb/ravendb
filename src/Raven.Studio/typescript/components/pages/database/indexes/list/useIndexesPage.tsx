@@ -37,6 +37,7 @@ import ActionContextUtils from "components/utils/actionContextUtils";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
+import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -157,6 +158,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         const tasks = database.getLocations().map(fetchStats);
         try {
             await Promise.race(tasks);
+            throttledUpdateLicenseLimitsUsage();
         } catch {
             // ignore - we handle that below
         }
@@ -168,6 +170,10 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     useEffect(() => {
         currentProcessor.current = (e: IndexEvent) => {
+            if (e.Type === "IndexAdded" || e.Type === "IndexRemoved") {
+                throttledUpdateLicenseLimitsUsage();
+            }
+
             if (!filter.autoRefresh || resettingIndex) {
                 return;
             }

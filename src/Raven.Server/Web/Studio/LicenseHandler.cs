@@ -181,49 +181,35 @@ namespace Raven.Server.Web.Studio
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                if (ServerStore.LicenseManager.LicenseStatus.Type == LicenseType.Community)
+                using (context.OpenReadTransaction())
                 {
-                    // TODO [grisha] temporary code
-                    using (context.OpenReadTransaction())
+                    var limits = new LicenseLimitsUsage
                     {
-                        var limits = new LicenseLimitsUsage
-                        {
-                            ClusterAutoIndexes = 0,
-                            ClusterStaticIndexes = 0,
-                            ClusterSubscriptionTasks = 0
-                        };
+                        ClusterAutoIndexes = 0,
+                        ClusterStaticIndexes = 0,
+                        ClusterSubscriptionTasks = 0
+                    };
 
-                        foreach (var database in ServerStore.Cluster.GetAllRawDatabases(context))
-                        {
-                            limits.ClusterStaticIndexes += database.CountOfStaticIndexes;
-                            limits.ClusterAutoIndexes += database.CountOfAutoIndexes;
-                            limits.ClusterSubscriptionTasks += GetSubscriptionCount(context, database.DatabaseName);
-                        }
-
-                        context.Write(writer, limits.ToJson());
+                    foreach (var database in ServerStore.Cluster.GetAllRawDatabases(context))
+                    {
+                        limits.ClusterStaticIndexes += database.CountOfStaticIndexes;
+                        limits.ClusterAutoIndexes += database.CountOfAutoIndexes;
+                        limits.ClusterSubscriptionTasks += GetSubscriptionCount(context, database.DatabaseName);
                     }
 
-                    return;
+                    context.Write(writer, limits.ToJson());
                 }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(LicenseLimitsUsage.ClusterStaticIndexes)] = null,
-                    [nameof(LicenseLimitsUsage.ClusterAutoIndexes)] = null,
-                    [nameof(LicenseLimitsUsage.ClusterSubscriptionTasks)] = null
-                });
             }
+        }
 
-            return;
+        static int GetSubscriptionCount(TransactionOperationContext context, string databaseName)
+        {
+            var count = 0;
+            foreach (var _ in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseName)))
+                count++;
 
-            static int GetSubscriptionCount(TransactionOperationContext context, string databaseName)
-            {
-                var count = 0;
-                foreach (var _ in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseName)))
-                    count++;
-
-                return count;
-            }
+            return count;
         }
     }
 }
+

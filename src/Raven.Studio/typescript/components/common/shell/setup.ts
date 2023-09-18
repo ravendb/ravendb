@@ -10,7 +10,6 @@ import { licenseActions } from "./licenseSlice";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import { collectionsTrackerActions } from "./collectionsTrackerSlice";
 import changesContext from "common/changesContext";
-import { todo } from "common/developmentHelper";
 import { services } from "hooks/useServices";
 import viewModelBase from "viewmodels/viewModelBase";
 
@@ -38,9 +37,9 @@ function updateReduxCollectionsTracker() {
     );
 }
 
-function updateLicenseLimitsUsage() {
+export const throttledUpdateLicenseLimitsUsage = _.throttle(() => {
     services.licenseService.getLimitsUsage().then((dto) => globalDispatch(licenseActions.limitsUsageLoaded(dto)));
-}
+}, 200);
 
 function initRedux() {
     if (initialized) {
@@ -81,9 +80,7 @@ function initRedux() {
 
     licenseModel.licenseStatus.subscribe((licenseStatus) => {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));
-
-        todo("Other", "Damian", "Call it only when the usage have changed");
-        updateLicenseLimitsUsage();
+        throttledUpdateLicenseLimitsUsage();
     });
 
     collectionsTracker.default.registerOnGlobalChangeVectorUpdatedHandler(updateReduxCollectionsTracker);
