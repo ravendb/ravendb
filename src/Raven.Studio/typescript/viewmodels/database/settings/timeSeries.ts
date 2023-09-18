@@ -10,6 +10,7 @@ import timeSeriesConfigurationEntry = require("models/database/documents/timeSer
 import popoverUtils = require("common/popoverUtils");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import licenseModel from "models/auth/licenseModel";
+import { TimeSeriesInfoHub } from "viewmodels/database/settings/TimeSeriesInfoHub";
 
 class timeSeries extends shardViewModelBase {
 
@@ -31,6 +32,7 @@ class timeSeries extends shardViewModelBase {
     };
 
     isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    infoHubView: ReactInKnockout<typeof TimeSeriesInfoHub>;
 
     constructor(db: database) {
         super(db);
@@ -41,6 +43,10 @@ class timeSeries extends shardViewModelBase {
             "disableConfiguration", "toggleSelectAll");
 
         this.initObservables();
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: TimeSeriesInfoHub
+        }))
     }
 
     private initObservables() {
