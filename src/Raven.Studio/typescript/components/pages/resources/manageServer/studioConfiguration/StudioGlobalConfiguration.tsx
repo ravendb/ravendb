@@ -185,20 +185,17 @@ export default function StudioGlobalConfiguration() {
                             description="Get additional info on this feature"
                             targetId="1"
                         >
-                            <p>
-                                <ul>
-                                    <li className="margin-bottom-xs">
-                                        This is the <strong>Server-wide Studio-Configuration</strong> view.
-                                        <br />
-                                        The available studio-configuration options will apply server-wide to all
-                                        databases.
-                                    </li>
-                                    <li>
-                                        The environment tag can be customized per database in the Database
-                                        Studio-Configuration view.
-                                    </li>
-                                </ul>
-                            </p>
+                            <ul>
+                                <li className="margin-bottom-xs">
+                                    This is the <strong>Server-wide Studio-Configuration</strong> view.
+                                    <br />
+                                    The available studio-configuration options will apply server-wide to all databases.
+                                </li>
+                                <li>
+                                    The environment tag can be customized per database in the Database
+                                    Studio-Configuration view.
+                                </li>
+                            </ul>
                             <hr />
                             <div className="small-label mb-2">useful links</div>
                             <a href={clientConfigurationDocsLink} target="_blank">

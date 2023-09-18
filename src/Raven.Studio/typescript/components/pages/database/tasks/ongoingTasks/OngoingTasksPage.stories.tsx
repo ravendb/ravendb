@@ -30,7 +30,7 @@ export default {
 
 function commonInit() {
     const { accessManager, license } = mockStore;
-    const { tasksService } = mockServices;
+    const { tasksService, licenseService } = mockServices;
 
     accessManager.with_securityClearance("ClusterAdmin");
 
@@ -38,6 +38,7 @@ function commonInit() {
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
+    licenseService.withLimitsUsage();
     tasksService.withGetSubscriptionTaskInfo();
     tasksService.withGetSubscriptionConnectionDetails();
 }
