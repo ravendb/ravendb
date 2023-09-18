@@ -147,7 +147,7 @@ namespace Voron.Data.Containers
                     index++;
                 }
 
-                keys.Sort(vals);
+                keys[..index].Sort(vals[..index]);
                 return index;
             }
 
