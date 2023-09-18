@@ -23,6 +23,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -558,9 +559,11 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
                 var indexMetadata = transaction.CreateTree(Constants.IndexMetadataSlice);
                 foreach (var binding in mapping)
                 {
-                    indexMetadata.MultiAdd(Constants.IndexWriter.MultipleTermsInField, binding.FieldName);
-                    indexMetadata.MultiAdd(Constants.IndexWriter.MultipleTermsInField, binding.FieldNameDouble);
-                    indexMetadata.MultiAdd(Constants.IndexWriter.MultipleTermsInField, binding.FieldNameLong);
+                    Tree tree = transaction.CreateTree(Constants.IndexWriter.MultipleTermsInField);
+                    
+                    tree.Add(binding.FieldName, 1);
+                    tree.Add(binding.FieldNameDouble, 1);
+                    tree.Add(binding.FieldNameLong, 1);
                 }
 
                 transaction.Commit();
