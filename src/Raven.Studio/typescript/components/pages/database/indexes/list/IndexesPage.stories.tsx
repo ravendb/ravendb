@@ -16,8 +16,12 @@ export default {
 
 function commonInit() {
     const { accessManager, license } = mockStore;
+    const { licenseService } = mockServices;
+
     accessManager.with_securityClearance("ClusterAdmin");
     license.with_Enterprise();
+
+    licenseService.withLimitsUsage();
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }
