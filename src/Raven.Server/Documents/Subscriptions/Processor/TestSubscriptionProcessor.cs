@@ -30,7 +30,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         protected override void HandleBatchItem(SubscriptionBatchStatsScope batchScope, SubscriptionBatchItem batchItem, SubscriptionBatchResult result, Document item)
         {
-            result.CurrentBatch.Add(batchItem);
+            if (batchItem.Status == SubscriptionBatchItemStatus.Send)
+                result.CurrentBatch.Add(batchItem);
         }
 
         protected override bool CanContinueBatch(SubscriptionBatchItemStatus batchItemStatus, SubscriptionBatchStatsScope batchScope, int numberOfDocs, Stopwatch sendingCurrentBatchStopwatch)
