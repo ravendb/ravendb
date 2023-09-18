@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -688,7 +690,7 @@ loadToOrders(orderData);
 
                 var timeout = TimeSpan.FromSeconds(30);
 
-                Assert.True(etlDone.Wait(timeout), await Etl.GetEtlDebugInfo(src.Database, timeout, srcDbMode));
+                Assert.True(etlDone.Wait(timeout), await AddDebugInfo(src, dest, timeout, srcDbMode));
 
                 using (var session = dest.OpenSession())
                 {
@@ -917,6 +919,22 @@ loadToUsers(this);
             }
 
             return docsCount;
+        }
+
+        private async Task<string> AddDebugInfo(IDocumentStore src, IDocumentStore dst, TimeSpan timeout, RavenDatabaseMode srcDbMode)
+        {
+            var sb = new StringBuilder()
+                .AppendLine($"ETL from '{src.Database}' failed to reach destination '{dst.Database}':");
+
+            var etlInfo = await Etl.GetEtlDebugInfo(src.Database, timeout, srcDbMode);
+            sb.AppendLine(etlInfo).AppendLine();
+
+            var record = await dst.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dst.Database));
+
+            sb.AppendLine("destination database record:")
+                .AppendLine(JsonConvert.SerializeObject(record));
+
+            return sb.ToString();
         }
 
         private class UserWithAddress : User
