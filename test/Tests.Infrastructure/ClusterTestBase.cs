@@ -615,7 +615,18 @@ namespace Tests.Infrastructure
             string database, 
             Func<IDocumentStore, Task<T>> waitFunc)
         {
-            var stores = nodes.Select(n => new DocumentStore {Database = database, Urls = new[] {n.WebUrl}}.Initialize()).ToArray();
+            var stores = nodes.Select(n => new DocumentStore
+            {
+                Database = database, 
+                Urls = new[]
+                {
+                    n.WebUrl
+                },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize()).ToArray();
 
             using (new DisposableAction(Action))
             {
@@ -1033,7 +1044,7 @@ namespace Tests.Infrastructure
         private static async Task<string[]> GetClusterNodeUrlsAsync(string leadersUrl, IDocumentStore store)
         {
             string[] urls;
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leadersUrl, store.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(leadersUrl, store.Certificate, DocumentConventions.DefaultForServer))
             {
                 try
                 {

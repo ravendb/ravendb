@@ -40,7 +40,7 @@ namespace Raven.Server.Web.System
                 // test the connection from the remote node to this one
                 if (bidirectional == true && result.Success)
                 {
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                     {
                         result = await ServerStore.TestConnectionFromRemote(requestExecutor, context, url);
                     }

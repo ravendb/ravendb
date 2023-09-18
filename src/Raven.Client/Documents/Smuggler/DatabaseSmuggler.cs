@@ -277,7 +277,7 @@ namespace Raven.Client.Documents.Smuggler
                 }
 
                 return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
-                    nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
+                    nodeTag: getOperationIdCommand.NodeTag, afterOperationCompleted: task);
 
             }
             catch (Exception e)

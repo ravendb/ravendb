@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
@@ -28,7 +29,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task put_object()
         {
             var settings = GetS3Settings();
-            using (var client = new RavenAwsS3Client(settings, DefaultConfiguration))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            using (var client = new RavenAwsS3Client(settings, DefaultConfiguration, cancellationToken: cts.Token))
             {
                 var blobs = GenerateBlobNames(settings, 1, out _);
                 Assert.Equal(1, blobs.Count);
@@ -63,7 +65,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             string region1 = settings.AwsRegionName;
             string region2 = settings.AwsRegionName = WestRegion2;
             var bucketName = settings.BucketName;
-            using (var clientRegion2 = new RavenAwsS3Client(settings, DefaultConfiguration))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            using (var clientRegion2 = new RavenAwsS3Client(settings, DefaultConfiguration, cancellationToken: cts.Token))
             {
                 var sb = new StringBuilder();
                 for (var i = 0; i < 1 * 1024 * 1024; i++)
@@ -110,7 +113,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var key = "";
 
             var progress = new Progress();
-            using (var client = new RavenAwsS3Client(settings, DefaultConfiguration, progress))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            using (var client = new RavenAwsS3Client(settings, DefaultConfiguration, progress, cts.Token))
             {
                 client.MaxUploadPutObject = new Sparrow.Size(10, SizeUnit.Megabytes);
                 client.MinOnePartUploadSizeLimit = new Sparrow.Size(7, SizeUnit.Megabytes);
@@ -176,7 +180,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var settings = GetS3Settings();
             settings.AwsRegionName = "fr-par";
             settings.CustomServerUrl = customUrl;
-            using (new RavenAwsS3Client(settings, DefaultConfiguration))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            using (new RavenAwsS3Client(settings, DefaultConfiguration, cancellationToken: cts.Token))
             {
             }
         }

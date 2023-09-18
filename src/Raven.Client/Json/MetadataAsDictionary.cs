@@ -11,14 +11,14 @@ namespace Raven.Client.Json
 {
     public class MetadataAsDictionary : IMetadataDictionary
     {
-        private readonly IMetadataDictionary _parent;
+        private readonly MetadataAsDictionary _parent;
         private readonly string _parentKey;
 
         private IDictionary<string, object> _metadata;
         private readonly BlittableJsonReaderObject _source;
         private bool _hasChanges;
 
-        internal MetadataAsDictionary(BlittableJsonReaderObject metadata, IMetadataDictionary parent, string parentKey)
+        internal MetadataAsDictionary(BlittableJsonReaderObject metadata, MetadataAsDictionary parent, string parentKey)
             : this(metadata)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
@@ -48,9 +48,6 @@ namespace Raven.Client.Json
                 metadata.GetPropertyByIndex(i, ref propDetails);
                 _metadata[propDetails.Name] = ConvertValue(propDetails.Name, propDetails.Value);
             }
-
-            if (_parent != null) // mark parent as dirty
-                _parent[_parentKey] = this;
         }
 
         private object ConvertValue(string key, object value)
@@ -110,7 +107,7 @@ namespace Raven.Client.Json
                 if (_metadata.TryGetValue(key, out var currentValue) == false || (currentValue != null && currentValue.Equals(value) == false) || (currentValue == null && value != null))
                 {
                     _metadata[key] = value;
-                    _hasChanges = true;
+                    MarkChanged();
                 }
             }
         }
@@ -154,7 +151,7 @@ namespace Raven.Client.Json
                 Initialize(_source);
             Debug.Assert(_metadata != null);
             _metadata.Add(item.Key, item.Value);
-            _hasChanges = true;
+            MarkChanged();
         }
 
         public void Add(string key, object value)
@@ -164,7 +161,7 @@ namespace Raven.Client.Json
 
             Debug.Assert(_metadata != null);
             _metadata.Add(key, value);
-            _hasChanges = true;
+            MarkChanged();
         }
 
         public void Clear()
@@ -186,7 +183,7 @@ namespace Raven.Client.Json
                 }
 
                 _metadata.Remove(item);
-                _hasChanges = true;
+                MarkChanged();
             }
         }
 
@@ -228,7 +225,9 @@ namespace Raven.Client.Json
                 Initialize(_source);
             Debug.Assert(_metadata != null);
             var result = _metadata.Remove(item);
-            _hasChanges |= result;
+            if (result)
+                MarkChanged();
+
             return result;
         }
 
@@ -238,7 +237,9 @@ namespace Raven.Client.Json
                 Initialize(_source);
             Debug.Assert(_metadata != null);
             var result = _metadata.Remove(key);
-            _hasChanges |= result;
+            if (result)
+                MarkChanged();
+
             return result;
         }
 
@@ -305,6 +306,16 @@ namespace Raven.Client.Json
                 Initialize(_source);
             Debug.Assert(_metadata != null);
             return _metadata.GetEnumerator();
+        }
+
+        internal void MarkChanged()
+        {
+            _hasChanges = true;
+            if (_parent == null) 
+                return;
+
+            _parent[_parentKey] = this;
+            _parent.MarkChanged();
         }
     }
 }

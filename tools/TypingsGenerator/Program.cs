@@ -144,6 +144,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.Number, typeof(UInt64))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(LinkedList<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IEnumerable<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(Queue<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(ConcurrentQueue<>))
@@ -245,6 +246,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RequestLatencyDetail));
             scripter.AddType(typeof(WarnIndexOutputsPerDocument));
             scripter.AddType(typeof(IndexingReferenceLoadWarning));
+            scripter.AddType(typeof(ConflictPerformanceDetails));
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionConnectionStats));
@@ -272,6 +274,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(EtlErrorsDetails));
             scripter.AddType(typeof(SlowSqlDetails));
             scripter.AddType(typeof(SlowIoDetails));
+            scripter.AddType(typeof(ServerLimitsDetails));
 
             // indexes
             scripter.AddType(typeof(IndexDefinition));
@@ -333,6 +336,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RevisionsConfiguration));
             scripter.AddType(typeof(RevertRevisionsRequest));
             scripter.AddType(typeof(RevertResult));
+            scripter.AddType(typeof(EnforceRevisionsConfigurationRequest));
             scripter.AddType(typeof(EnforceConfigurationResult));
             scripter.AddType(typeof(GetRevisionsCountOperation.DocumentRevisionsCount));
 

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
@@ -33,6 +34,19 @@ namespace Raven.Client.Documents.Session
         internal readonly InMemoryDocumentSessionOperations _session;
 
         private readonly Dictionary<string, CompareExchangeSessionValue> _state = new Dictionary<string, CompareExchangeSessionValue>(StringComparer.OrdinalIgnoreCase);
+
+        private Dictionary<string, string> _missingDocumentsToAtomicGuardIndex;
+
+        internal bool TryGetMissingAtomicGuardFor(string docId, out string changeVector)
+        {
+            if (_missingDocumentsToAtomicGuardIndex == null)
+            {
+                changeVector = null;
+                return false;
+            }
+
+            return _missingDocumentsToAtomicGuardIndex.TryGetValue(docId, out changeVector);
+        }
 
         internal int NumberOfTrackedCompareExchangeValues => _state.Count;
 
@@ -217,7 +231,7 @@ namespace Raven.Client.Documents.Session
             return value;
         }
 
-        internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values)
+        internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values, bool includingMissingAtomicGuards)
         {
             if (_session.NoTracking)
                 return;
@@ -231,7 +245,18 @@ namespace Raven.Client.Documents.Session
 
                     var value = propertyDetails.Value as BlittableJsonReaderObject;
 
-                    RegisterCompareExchangeValue(CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions));
+                    var val = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions);
+                    if(includingMissingAtomicGuards  &&
+                        val.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase) && 
+                        val.ChangeVector != null)
+                    {
+                        _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        _missingDocumentsToAtomicGuardIndex.Add(val.Key.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length), val.ChangeVector);
+                    }
+                    else
+                    {
+                        RegisterCompareExchangeValue(val);
+                    }
                 }
             }
         }

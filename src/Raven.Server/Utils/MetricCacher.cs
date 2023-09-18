@@ -37,6 +37,10 @@ namespace Raven.Server.Utils
 
                 public const string MemInfo = "MemInfo";
 
+                public const string MaxServerLimits = "MaxServerLimits";
+
+                public const string CurrentServerLimits = "CurrentServerLimits";
+
                 public const string GcAny = "GC/Any";
 
                 public const string GcEphemeral = "GC/Ephemeral";

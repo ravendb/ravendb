@@ -25,7 +25,7 @@ namespace SlowTests.Issues
             });
 
             var url = Server.WebUrl;
-            var reqExec = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, "Foo", null, DocumentConventions.Default);
+            var reqExec = RequestExecutor.CreateForShortTermUse(new string[] {url}, "Foo", null, DocumentConventions.Default);
             var op = new CreateDatabaseOperation(new Raven.Client.ServerWide.DatabaseRecord("Foo"));
             using (reqExec.ContextPool.AllocateOperationContext(out var ctx))
             {

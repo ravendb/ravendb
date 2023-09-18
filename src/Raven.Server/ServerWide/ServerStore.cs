@@ -53,6 +53,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Indexing;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
+using Raven.Server.Monitoring;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -133,6 +134,7 @@ namespace Raven.Server.ServerWide
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
         public readonly StorageSpaceMonitor StorageSpaceMonitor;
+        public readonly ServerLimitsMonitor ServerLimitsMonitor;
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
         public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
@@ -189,6 +191,8 @@ namespace Raven.Server.ServerWide
             FeedbackSender = new FeedbackSender();
 
             StorageSpaceMonitor = new StorageSpaceMonitor(NotificationCenter);
+
+            ServerLimitsMonitor = new ServerLimitsMonitor(this, NotificationCenter, _notificationsStorage);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
@@ -2427,6 +2431,7 @@ namespace Raven.Server.ServerWide
                     var toDispose = new List<IDisposable>
                     {
                         StorageSpaceMonitor,
+                        ServerLimitsMonitor,
                         NotificationCenter,
                         LicenseManager,
                         DatabasesLandlord,
@@ -2924,10 +2929,11 @@ namespace Raven.Server.ServerWide
         public NodeInfo GetNodeInfo()
         {
             var memoryInformation = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfo);
+            var clusterTopology = GetClusterTopology();
             return new NodeInfo
             {
                 NodeTag = NodeTag,
-                TopologyId = GetClusterTopology().TopologyId,
+                TopologyId = clusterTopology.TopologyId,
                 Certificate = Server.Certificate.CertificateForClients,
                 NumberOfCores = ProcessorInfo.ProcessorCount,
                 InstalledMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes),
@@ -2936,6 +2942,7 @@ namespace Raven.Server.ServerWide
                 OsInfo = LicenseManager.OsInfo,
                 ServerId = GetServerId(),
                 CurrentState = CurrentRachisState,
+                ServerRole = clusterTopology.GetServerRoleForTag(NodeTag),
                 HasFixedPort = HasFixedPort,
                 ServerSchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion
             };
@@ -3545,6 +3552,7 @@ namespace Raven.Server.ServerWide
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
+            internal Action RestoreDatabaseAfterSavingDatabaseRecord;
         }
         
         public readonly MemoryCache QueryClauseCache;

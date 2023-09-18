@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -27,6 +28,8 @@ using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Subscriptions
@@ -392,7 +395,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public string GetSubscriptionNameById(TransactionOperationContext serverStoreContext, long id)
+        public string GetSubscriptionNameById<T>(TransactionOperationContext<T> serverStoreContext, long id) where T : RavenTransaction
         {
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
                 SubscriptionState.SubscriptionPrefix(_db.Name)))
@@ -417,6 +420,7 @@ namespace Raven.Server.Documents.Subscriptions
             public long Batch;
             public string ChangeVector;
             public SubscriptionType Type;
+            public long SubscriptionId;
 
             public DynamicJsonValue ToJson()
             {
@@ -430,22 +434,42 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public static IEnumerable<ResendItem> GetResendItems(ClusterOperationContext context, string database, long id)
+        public static IEnumerable<ResendItem> GetResendItemsForSubscriptionId(ClusterOperationContext context, string database, long id)
         {
             var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
             using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, database, id, out var prefix))
             using (Slice.External(context.Allocator, prefix, out var prefixSlice))
             {
-                var resendItem = new ResendItem();
-
                 foreach (var item in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
-                    resendItem.Type = (SubscriptionType)item.Key[prefixSlice.Size];
-                    resendItem.Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2);
-                    resendItem.ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
-                    resendItem.Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
+                    yield return new ResendItem
+                    {
+                        Type = (SubscriptionType)item.Key[prefixSlice.Size],
+                        Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2),
+                        ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector),
+                        Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId)),
+                        SubscriptionId = id
+                    };
+                }
+            }
+        }
 
-                    yield return resendItem;
+        public static IEnumerable<ResendItem> GetResendItemsForDatabase(ClusterOperationContext context, string database)
+        {
+            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
+            using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), SpecialChars.RecordSeparator, ByteStringType.Immutable, out var dbNamePrefix);
+            {
+                foreach (var item in subscriptionState.SeekByPrimaryKeyPrefix(dbNamePrefix, Slices.Empty, 0))
+                {
+                    yield return new ResendItem
+                    {
+                        Type = (SubscriptionType)item.Key[dbNamePrefix.Size + sizeof(long) + sizeof(byte)],
+                        Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key,
+                            dbNamePrefix.Size + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte)),
+                        ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector),
+                        Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId)),
+                        SubscriptionId = item.Value.Reader.ReadLongWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, dbNamePrefix.Size)
+                    };
                 }
             }
         }

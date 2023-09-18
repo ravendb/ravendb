@@ -39,7 +39,7 @@ namespace Raven.Server.Rachis
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource<object> _errorOccurred = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource<object> _errorOccurred = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
 
@@ -377,6 +377,12 @@ namespace Raven.Server.Rachis
 
                         if (clusterTopology.Members.Count == 1 && clusterTopology.Members.ContainsKey(_engine.Tag))
                         {
+                            if (_errorOccurred.Task.IsFaulted)
+                            {
+                                _errorOccurred = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                                handles[4] = ((IAsyncResult)_errorOccurred.Task).AsyncWaitHandle;
+                            }
+
                             LogAndNotifyLeaderRunExceptions(ex);
                             Task.Run(async () =>
                             {

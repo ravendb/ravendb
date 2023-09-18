@@ -1,4 +1,5 @@
-﻿using Raven.Client;
+﻿using System;
+using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -15,50 +16,50 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract void FillJson(DynamicJsonValue json);
 
-        protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context,
-            BlittableJsonReaderObject existingValue);
+        protected abstract UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue);
 
         public virtual unsafe void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
         {
-            BlittableJsonReaderObject itemBlittable = null;
+            result = null;
+
             var itemKey = GetItemId();
+            UpdatedValue updatedValue;
 
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
+                BlittableJsonReaderObject itemBlittable = null;
                 if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
                 {
                     var ptr = reader.Read(2, out int size);
                     itemBlittable = new BlittableJsonReaderObject(ptr, size, context);
                 }
 
-                itemBlittable = GetUpdatedValue(index, record, context, itemBlittable);
-
-                // if returned null, means, there is nothing to update and we just wanted to delete the value
-                if (itemBlittable == null)
+                updatedValue = GetUpdatedValue(index, record, context, itemBlittable);
+                switch (updatedValue.ActionType)
                 {
-                    items.DeleteByKey(valueNameLowered);
-                    result = GetResult();
-                    return;
+                    case UpdatedValueActionType.Noop:
+                        return;
+                    case UpdatedValueActionType.Delete:
+                        items.DeleteByKey(valueNameLowered);
+                        return;
+                    default:
+                        // here we get the item key again, in case it was changed (a new entity, etc)
+                        itemKey = GetItemId();
+                        break;
                 }
-
-                // here we get the item key again, in case it was changed (a new entity, etc)
-                itemKey = GetItemId();
             }
+
+            Debug.Assert(updatedValue.ActionType == UpdatedValueActionType.Update && updatedValue.Value != null);
 
             using (Slice.From(context.Allocator, itemKey, out Slice valueName))
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
+            using (updatedValue)
             {
-                ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
-                result = GetResult();
+                ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, updatedValue.Value);
             }
         }
 
         public virtual object GetState()
-        {
-            return null;
-        }
-
-        public virtual object GetResult()
         {
             return null;
         }
@@ -103,6 +104,31 @@ namespace Raven.Server.ServerWide.Commands
             string databaseName = null;
             cmd?.TryGet(nameof(DatabaseName), out databaseName);
             return databaseName;
+        }
+
+        protected enum UpdatedValueActionType
+        {
+            Noop,
+            Update,
+            Delete
+        }
+
+        protected readonly struct UpdatedValue : IDisposable
+        {
+            public readonly UpdatedValueActionType ActionType;
+
+            public readonly BlittableJsonReaderObject Value;
+
+            public UpdatedValue(UpdatedValueActionType actionType, BlittableJsonReaderObject value)
+            {
+                ActionType = actionType;
+                Value = value;
+            }
+
+            public void Dispose()
+            {
+                Value?.Dispose();
+            }
         }
     }
 }

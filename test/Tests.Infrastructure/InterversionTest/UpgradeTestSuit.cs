@@ -156,4 +156,61 @@ namespace Tests.Infrastructure.InterversionTest
             }
         }
     }
+
+    public class Version52X : UpgradeTestSuit
+    {
+        public Version52X(InterversionTestBase infrastructure) : base(infrastructure)
+        {
+        }
+
+        public override async Task TestClustering(List<DocumentStore> stores, string key)
+        {
+            using (var session = stores[0].OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var id = $"cluster/document/{Interlocked.Increment(ref ClusterDocumentNumber)}";
+                session.Advanced.RequestExecutor.DefaultTimeout = TimeSpan.FromSeconds(60);
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, "okay");
+                var user = new User
+                {
+                    Name = "Karmel"
+                };
+                await session.StoreAsync(user, id);
+                await session.SaveChangesAsync();
+
+                Assert.True(await Infrastructure.WaitForDocumentInClusterAsync<User>(
+                    id,
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(10),
+                    stores,
+                    stores[0].Database));
+            }
+        }
+
+        public override async Task TestReplication(List<DocumentStore> stores)
+        {
+            var user = new User
+            {
+                Name = "aviv",
+                Id = new Guid().ToString()
+            };
+
+            using (var session = stores[0].OpenAsyncSession())
+            {
+                session.Advanced.RequestExecutor.DefaultTimeout = TimeSpan.FromSeconds(60);
+
+                await session.StoreAsync(user, user.Id);
+                await session.SaveChangesAsync();
+            }
+
+            Assert.True(await Infrastructure.WaitForDocumentInClusterAsync<User>(
+                user.Id,
+                u => u.Name.Equals("aviv"),
+                TimeSpan.FromSeconds(10),
+                stores,
+                stores[0].Database));
+        }
+    }
 }

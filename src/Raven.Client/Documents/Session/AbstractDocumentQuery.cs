@@ -1108,10 +1108,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <summary>
         ///   Specifies a proximity distance for the phrase in the last search clause
         /// </summary>
-        /// <param name = "proximity">number of words within</param>
+        /// <param name = "proximity">Number of terms between the search terms</param>
         /// <returns></returns>
         /// <remarks>
-        ///   http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
+        ///   https://lucene.apache.org/core/2_9_4/queryparsersyntax.html#Proximity%20Searches
         /// </remarks>
         public void Proximity(int proximity)
         {
@@ -1122,8 +1122,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (whereToken == null || whereToken.WhereOperator != WhereOperator.Search)
                 throw new InvalidOperationException("Proximity can only be used right after Search clause");
 
-            if (proximity < 1)
-                throw new ArgumentOutOfRangeException(nameof(proximity), "Proximity distance must be a positive number");
+            if (proximity < 0)
+                throw new ArgumentOutOfRangeException(nameof(proximity), "Proximity distance must be a number greater than or equal to 0");
 
             whereToken.Options.Proximity = proximity;
         }

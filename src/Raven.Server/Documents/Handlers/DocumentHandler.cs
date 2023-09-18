@@ -22,17 +22,21 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Revisions;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -115,7 +119,6 @@ namespace Raven.Server.Documents.Handlers
             var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
             {
                 if (ids.Count > 0)
                     await GetDocumentsByIdAsync(context, ids, metadataOnly);
@@ -144,8 +147,6 @@ namespace Raven.Server.Documents.Handlers
                     ids[i] = array.GetStringByIndex(i);
                 }
 
-                context.OpenReadTransaction();
-
                 // init here so it can be passed to TW
                 var idsStringValues = new Microsoft.Extensions.Primitives.StringValues(ids);
 
@@ -159,6 +160,7 @@ namespace Raven.Server.Documents.Handlers
         private async Task GetDocumentsAsync(DocumentsOperationContext context, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
+            using var _ = context.OpenReadTransaction();
 
             // everything here operates on all docs
             var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
@@ -214,19 +216,21 @@ namespace Raven.Server.Documents.Handlers
         private async Task GetDocumentsByIdAsync(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues ids, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
-
             var includePaths = GetStringValuesQueryString("include", required: false);
             var documents = new List<Document>(ids.Count);
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths, isProjection: false);
             GetCountersQueryString(Database, context, out var includeCounters);
-
             GetRevisionsQueryString(Database, context, out var includeRevisions);
-
             GetTimeSeriesQueryString(Database, context, out var includeTimeSeries);
+            var txMode = GetStringQueryString("txMode", required: false);
+            var clusterWideTx = txMode != null && Enum.TryParse<TransactionMode>(txMode, ignoreCase: true, out var v) && v == TransactionMode.ClusterWide;
+            GetCompareExchangeValueQueryString(Database, clusterWideTx, out var includeCompareExchangeValues);
 
-            GetCompareExchangeValueQueryString(Database, out var includeCompareExchangeValues);
+            // we have to read this _before_ we open the transaction
+            long lastModifiedIndex = Database.RachisLogIndexNotifications.LastModifiedIndex;
 
+            using (context.OpenReadTransaction())
             using (includeCompareExchangeValues)
             {
                 foreach (var id in ids)
@@ -236,13 +240,37 @@ namespace Raven.Server.Documents.Handlers
                     {
                         document = Database.DocumentsStorage.Get(context, id);
                     }
-
-                    if (document == null && ids.Count == 1)
+                    
+                    if (document == null)
                     {
-                        HttpContext.Response.StatusCode = GetStringFromHeaders(Constants.Headers.IfNoneMatch) == HttpCache.NotFoundResponse
-                        ? (int)HttpStatusCode.NotModified
-                        : (int)HttpStatusCode.NotFound;
-                        return;
+                        if (clusterWideTx)
+                        {
+                            Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
+                            includeCompareExchangeValues.AddDocument(ClusterTransactionCommand.GetAtomicGuardKey(id));
+                            continue;
+                        }
+                        if (ids.Count == 1)
+                        {
+                            HttpContext.Response.StatusCode = GetStringFromHeaders(Constants.Headers.IfNoneMatch) == HttpCache.NotFoundResponse
+                                ? (int)HttpStatusCode.NotModified
+                                : (int)HttpStatusCode.NotFound;
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        string changeVector = document.ChangeVector;
+                        if (clusterWideTx && 
+                            changeVector.Contains(Database.ClusterTransactionId) == false)
+                        {
+                            Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
+                            if (includeCompareExchangeValues.TryGetAtomicGuard(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex, out var guardIndex, out _))
+                            {
+                                var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, Database.ClusterTransactionId, guardIndex, changeVector);
+                                Debug.Assert(isValid, "ChangeVector didn't have ClusterTransactionId tag but now does?!");
+                                document.ChangeVector = cv;
+                            }
+                        }
                     }
 
                     documents.Add(document);
@@ -254,7 +282,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 includeDocs.Fill(includes);
-                includeCompareExchangeValues?.Materialize();
+                includeCompareExchangeValues?.Materialize(lastModifiedIndex);
 
                 var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
 
@@ -265,11 +293,14 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
+             
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
 
-                var (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
-                    includeCompareExchangeValues?.Results);
+                var (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsJsonAsync(context, metadataOnly,
+                    documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, 
+                    includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
+                    includeCompareExchangeValues?.Results, clusterWideTx);
 
                 if (ShouldAddPagingPerformanceHint(numberOfResults))
                 {
@@ -306,12 +337,13 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void GetCompareExchangeValueQueryString(DocumentDatabase database, out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
+        private void GetCompareExchangeValueQueryString(DocumentDatabase database, bool clusterWideTx,
+            out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
         {
             includeCompareExchangeValues = null;
 
             var compareExchangeValues = GetStringValuesQueryString("cmpxchg", required: false);
-            if (compareExchangeValues.Count == 0)
+            if (compareExchangeValues.Count == 0 && clusterWideTx == false)
                 return;
 
             includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(database, compareExchangeValues);
@@ -444,7 +476,8 @@ namespace Raven.Server.Documents.Handlers
             Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Document> revisionByChangeVectorResults,
             Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTimeResults,
             Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries,
-            Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
+            Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues,
+            bool clusterWideTx)
         {
             long numberOfResults;
             long totalDocumentsSizeInBytes;
@@ -489,6 +522,13 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
+                    if (clusterWideTx)
+                    {
+                        foreach (var (k,v) in compareExchangeValues)
+                        {
+                            v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag,v.Index,Database.ClusterTransactionId);
+                        }
+                    }
                     await writer.WriteCompareExchangeValuesAsync(compareExchangeValues, Database.DatabaseShutdown);
                 }
 

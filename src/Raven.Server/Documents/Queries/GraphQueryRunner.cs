@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.Queries
         {
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
             {
-                var result = new StreamDocumentQueryResult(response, writer, token)
+                var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, token)
                 {
                     IndexName = Constants.Documents.Indexing.DummyGraphIndexName
                 };

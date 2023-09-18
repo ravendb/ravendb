@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, token);
+            var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, token);
 
             using (queryContext.OpenReadTransaction())
             {
@@ -145,6 +145,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var scannedResults = new Reference<int>();
                 IEnumerator<Document> enumerator;
 
+                var lastRaftId = Database.RachisLogIndexNotifications.LastModifiedIndex;
                 if (pulseReadingTransaction == false)
                 {
                     var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope, context.Documents,
@@ -155,7 +156,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
                 else
                 {
-                    enumerator = new PulsedTransactionEnumerator<Document, CollectionQueryResultsIterationState>(context.Documents,
+                    enumerator = new TransactionForgetAboutDocumentEnumerator(new PulsedTransactionEnumerator<Document, CollectionQueryResultsIterationState>(context.Documents,
                         state =>
                         {
                             query.Start = state.Start;
@@ -170,7 +171,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             Start = query.Start,
                             Take = query.PageSize
-                        });
+                        }), context.Documents);
                 }
 
                 IncludeCountersCommand includeCountersCommand = null;
@@ -238,7 +239,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     includeDocumentsCommand.Fill(resultToFill.Includes);
 
-                    includeCompareExchangeValuesCommand.Materialize();
+                    includeCompareExchangeValuesCommand.Materialize(lastRaftId);
                 }
 
                 if (includeCompareExchangeValuesCommand != null)

@@ -436,6 +436,7 @@ namespace SlowTests.Client.Attachments
                     });
 
                     AttachmentsRevisions.CreateDocumentWithAttachments(store1);
+
                     using (var bigStream = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x).ToArray()))
                         store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", bigStream, "image/png"));
 
@@ -450,7 +451,8 @@ namespace SlowTests.Client.Attachments
                     var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
                     Assert.Equal(4, stats.CountOfRevisionDocuments);
-                    Assert.Equal(14, stats.CountOfAttachments);
+
+                    Assert.Equal(14, stats.CountOfAttachments); //(10 from doc revisions, 4 from doc)
                     Assert.Equal(4, stats.CountOfUniqueAttachments);
                 }
 
@@ -462,7 +464,7 @@ namespace SlowTests.Client.Attachments
                     var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
                     await Databases.SetDatabaseId(store2, dbId);
 
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database); // 'Users' revisions config has 'MinimumRevisionsToKeep=123'
 
                     for (var i = 0; i < 2; i++) // Make sure that we can import attachments twice and it will overwrite
                     {
@@ -475,6 +477,8 @@ namespace SlowTests.Client.Attachments
                         },OperationStatus.Completed), OperationStatus.Completed);
 
                         var importResult = (SmugglerResult)await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                        // now 'Users' revisions config has 'MinimumRevisionsToKeep=4' (imported)
+                        // Users/1 imported as it was in store1 db (with the same revisions and attachments).
 
                         Assert.Equal(1, importResult.Documents.ReadCount);
                         Assert.True(4 == importResult.RevisionDocuments.ReadCount, $"{i} : importResult.RevisionDocuments.ReadCount = {importResult.RevisionDocuments.ReadCount}");
@@ -483,8 +487,10 @@ namespace SlowTests.Client.Attachments
 
                         var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                         Assert.Equal(1, stats.CountOfDocuments);
-                        Assert.Equal(5, stats.CountOfRevisionDocuments);
-                        Assert.Equal(14 + 4, stats.CountOfAttachments); // the imported document will create 1 additional revision with 4 attachments
+                        Assert.Equal(4, stats.CountOfRevisionDocuments); // the imported document will create 1 additional revision with 4 attachments, and the imported revisions will be above it,
+                                                                                        // ,then this additional revision will be deleted because Users' revisions config has 'MinimumRevisionsToKeep=4'
+
+                        Assert.Equal(14, stats.CountOfAttachments); // the doc 'users/1' imported with its attachments, revisions, and revisions attachments, as it was in store1 db.
                         Assert.Equal(4, stats.CountOfUniqueAttachments);
 
                         using (var session = store2.OpenSession())

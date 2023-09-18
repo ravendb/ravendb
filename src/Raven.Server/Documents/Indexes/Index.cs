@@ -3073,7 +3073,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, token);
+            var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, token);
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: true, token);
             result.Flush();
 
@@ -3284,10 +3284,10 @@ namespace Raven.Server.Documents.Indexes
                                         token.Token);
                                 }
 
+                                long lastRaftId = DocumentDatabase.RachisLogIndexNotifications.LastModifiedIndex;
                                 try
                                 {
                                     var enumerator = documents.GetEnumerator();
-
                                     if (pulseDocsReadingTransaction)
                                     {
                                         var originalEnumerator = enumerator;
@@ -3346,7 +3346,7 @@ namespace Raven.Server.Documents.Indexes
                                 using (fillScope?.Start())
                                 {
                                     includeDocumentsCommand.Fill(resultToFill.Includes);
-                                    includeCompareExchangeValuesCommand?.Materialize();
+                                    includeCompareExchangeValuesCommand?.Materialize(lastRaftId);
                                 }
 
                                 if (includeCountersCommand != null)
