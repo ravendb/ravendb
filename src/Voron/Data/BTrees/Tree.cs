@@ -162,6 +162,8 @@ namespace Voron.Data.BTrees
         /// </summary>
         public long Increment(Slice key, long delta)
         {
+            Debug.Assert((State.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+            
             long currentValue = 0;
 
             var read = Read(key);
@@ -222,6 +224,7 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, long value)
         {
+            Debug.Assert((State.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
             using (DirectAdd(key, sizeof(long), out byte* ptr))
                 *(long*)ptr = value;
         }
@@ -283,6 +286,8 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, Slice value)
         {
+            Debug.Assert((State.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+            
             if (!value.HasValue)
                 ThrowNullReferenceException();
 

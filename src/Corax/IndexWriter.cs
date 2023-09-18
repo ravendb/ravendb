@@ -1687,7 +1687,7 @@ namespace Corax
 
                 if (indexedField.HasMultipleTermsPerField)
                 {
-                    _indexMetadata.MultiAdd(Constants.IndexWriter.MultipleTermsInField, indexedField.Name);
+                    RecordFieldHasMultipleTerms(indexedField);
                 }
             }
 
@@ -1716,7 +1716,7 @@ namespace Corax
                     
                     if (indexedField.HasMultipleTermsPerField)
                     {
-                        _indexMetadata.MultiAdd(Constants.IndexWriter.MultipleTermsInField, indexedField.Name);
+                        RecordFieldHasMultipleTerms(indexedField);
                     }
                 }
             }
@@ -1755,6 +1755,12 @@ namespace Corax
             {
                 _transaction.Commit();
             }
+        }
+
+        private void RecordFieldHasMultipleTerms(IndexedField indexedField)
+        {
+            var tree = _transaction.CreateTree(Constants.IndexWriter.MultipleTermsInField);
+            tree.Add(indexedField.Name, 1);
         }
 
         private void AppendDocumentsBoost()

@@ -58,6 +58,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly bool _ownsIndexMapping;
 
     private Tree _metadataTree;
+    private Tree _multipleTermsInField;
     private Tree _fieldsTree;
     private Tree _entriesToTermsTree;
     private Tree _entriesToSpatialTree;
@@ -94,6 +95,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
+        _multipleTermsInField = _transaction.ReadTree(Constants.IndexWriter.MultipleTermsInField);
         _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
         _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
         FieldCache = new FieldsCache(_transaction, _fieldsTree);
@@ -497,7 +499,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Dictionary<Slice, bool> _hasMultipleTermsInFieldCache;
     private bool HasMultipleTermsInField(Slice fieldName)
     {
-        if (_metadataTree is null)
+        if (_multipleTermsInField is null)
             return false;
 
         _hasMultipleTermsInFieldCache ??= new(SliceComparer.Instance);
@@ -506,10 +508,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         
         if (exists)
             return field;
-        
-        using var it = _metadataTree.MultiRead(Constants.IndexWriter.MultipleTermsInField);
-        var hasField = it.Seek(fieldName);
-        exists = hasField && SliceComparer.Equals(it.CurrentKey, fieldName);
+
+        exists = _multipleTermsInField.Exists(fieldName);
         _hasMultipleTermsInFieldCache[fieldName] = exists;
         
         return exists;
