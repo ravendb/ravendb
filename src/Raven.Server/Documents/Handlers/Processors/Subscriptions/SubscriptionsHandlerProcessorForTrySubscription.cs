@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             {
                 ChangeVectorForNextBatchStartingPoint = tryout.ChangeVector,
                 Query = tryout.Query,
-                ArchivedDataProcessingBehavior = tryout.ArchivedDataProcessingBehavior
+                ArchivedDataProcessingBehavior = tryout.ArchivedDataProcessingBehavior ?? context.DocumentDatabase.Configuration.Subscriptions.ArchivedDataProcessingBehavior
             };
 
             if (Enum.TryParse(
