@@ -34,7 +34,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
     const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
     const { appUrl } = useAppUrls();
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     if (asyncFetchStats.status === "not-requested" || asyncFetchStats.status === "loading") {
         return <LoadingView />;

@@ -8,7 +8,7 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 
 export function EditRavenEtlInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const ravenDbEtlDocsLink = useRavenLink({ hash: "GFSWLI" });
 
     return (

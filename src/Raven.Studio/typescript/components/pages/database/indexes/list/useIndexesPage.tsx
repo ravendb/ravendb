@@ -49,7 +49,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     const locations = database.getLocations();
 

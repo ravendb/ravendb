@@ -8,7 +8,7 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
 
 export function EditRabbitMqEtlInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
     const rabbitMqEtlDocsLink = useRavenLink({ hash: "KFKQM7" });
 
     return (

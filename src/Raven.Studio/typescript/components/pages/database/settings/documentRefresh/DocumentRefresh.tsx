@@ -42,7 +42,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
 
     const documentRefreshDocsLink = useRavenLink({ hash: "1PKUYJ" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const frequencyLimit = 129600;
 
     useEffect(() => {

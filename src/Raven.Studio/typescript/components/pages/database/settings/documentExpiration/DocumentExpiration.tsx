@@ -43,7 +43,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
 
     const documentExpirationDocsLink = useRavenLink({ hash: "XBFEKZ" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const frequencyLimit = 129600;
 
     useEffect(() => {

@@ -49,7 +49,7 @@ export default function ClientGlobalConfiguration() {
 
     useDirtyFlag(formState.isDirty);
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {

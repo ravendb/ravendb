@@ -51,7 +51,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     const loadBalancingLink = useRavenLink({ hash: "GYJ8JA" });
     const clientConfigurationLink = useRavenLink({ hash: "TS7SGF" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;

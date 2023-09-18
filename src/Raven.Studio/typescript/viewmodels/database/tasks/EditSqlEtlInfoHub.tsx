@@ -8,7 +8,7 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 
 export function EditSqlEtlInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const sqlEtlDocsLink = useRavenLink({ hash: "7J6SEO" });
 
     return (

@@ -46,7 +46,7 @@ export default function StudioGlobalConfiguration() {
     const clientConfigurationDocsLink = useRavenLink({ hash: "TS7SGF" });
 
     const { reportEvent } = useEventsCollector();
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     const onSave: SubmitHandler<StudioGlobalConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {

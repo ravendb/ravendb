@@ -266,7 +266,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         isDeleting,
     };
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;
     const subscriptionsDatabaseCount = subscriptions.length;

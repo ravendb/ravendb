@@ -42,7 +42,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
     const { reportEvent } = useEventsCollector();
     const { isAdminAccessOrAbove } = useAccessManager();
 
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
 
     useEffect(() => {
         if (!formValues.isArchiveFrequencyEnabled && formValues.archiveFrequency !== null) {

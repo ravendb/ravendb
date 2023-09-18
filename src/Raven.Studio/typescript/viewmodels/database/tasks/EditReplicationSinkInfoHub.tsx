@@ -7,7 +7,7 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 
 export function EditReplicationSinkInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     return (
         <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
