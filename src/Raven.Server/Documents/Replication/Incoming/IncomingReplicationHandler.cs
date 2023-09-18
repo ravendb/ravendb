@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, LazyStringValue id, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
             {
-                toDispose.Add(Slice.From(context.Allocator, id, out keySlice));
+                toDispose.Add(DocumentIdWorker.GetSliceFromId(context, id, out keySlice));
                 toDispose.Add(RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, id, out changeVectorSlice));
             }
 
