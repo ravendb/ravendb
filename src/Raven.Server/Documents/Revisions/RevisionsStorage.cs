@@ -1866,12 +1866,9 @@ namespace Raven.Server.Documents.Revisions
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
                 var local = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
-                var deletedDoc = local.Document == null && local.Tombstone != null;
-                Debug.Assert(local.Document != null || local.Tombstone != null);
+                var deletedDoc = local.Document == null;
 
-                var docFlags = deletedDoc ? local.Tombstone.Flags : local.Document.Flags;
-
-                var configuration = GetRevisionsConfiguration(collectionName.Name, docFlags, deleteRevisionsWhenNoCofiguration: true);
+                var configuration = GetRevisionsConfiguration(collectionName.Name, deleteRevisionsWhenNoCofiguration: true);
 
                 var result = DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration, 
                     NonPersistentDocumentFlags.ByEnforceRevisionConfiguration,
