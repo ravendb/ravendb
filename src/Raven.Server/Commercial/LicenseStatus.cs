@@ -119,7 +119,7 @@ namespace Raven.Server.Commercial
                 if (Version == null)
                     return false;
 
-                if (System.Version.TryParse(RavenVersionAttribute.Instance.Version, out var currentVersion) == false)
+                if (Version.TryParse(RavenVersionAttribute.Instance.Version, out var currentVersion) == false)
                     return false;
 
                 return Version > currentVersion;
@@ -173,9 +173,9 @@ namespace Raven.Server.Commercial
 
         public bool HasHighlyAvailableTasks => Enabled(LicenseAttribute.HighlyAvailableTasks);
 
-        public bool HasPullReplicationAsHub => Enabled(LicenseAttribute.PullReplicationAsHub);
+        public bool HasPullReplicationAsHub => Enabled(LicenseAttribute.PullReplicationHub);
 
-        public bool HasPullReplicationAsSink => Enabled(LicenseAttribute.PullReplicationAsSink);
+        public bool HasPullReplicationAsSink => Enabled(LicenseAttribute.PullReplicationSink);
 
         public bool HasEncryptedBackups => Enabled(LicenseAttribute.EncryptedBackup);
 

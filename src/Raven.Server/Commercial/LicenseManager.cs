@@ -148,7 +148,7 @@ namespace Raven.Server.Commercial
             {
                 _leaseLicenseTimer = new Timer(state =>
                     AsyncHelpers.RunSync(ExecuteTasks), null,
-                    (int)TimeSpan.FromMinutes(1).TotalMilliseconds,
+                    (int)TimeSpan.FromMinutes(100).TotalMilliseconds, //TODO: revert
                     (int)TimeSpan.FromHours(24).TotalMilliseconds);
             }
         }
