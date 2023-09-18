@@ -22,8 +22,8 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
     const isSharded = db.isSharded();
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
     const { appUrl } = useAppUrls();
 
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;

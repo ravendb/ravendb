@@ -9,7 +9,7 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 
 export function EditSubscriptionTaskInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const subscriptionTasksDocsLink = useRavenLink({ hash: "I5TMCK" });
 
     return (

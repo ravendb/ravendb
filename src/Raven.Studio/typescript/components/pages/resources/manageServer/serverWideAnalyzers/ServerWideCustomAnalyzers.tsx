@@ -25,7 +25,7 @@ export default function ServerWideCustomAnalyzers() {
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;

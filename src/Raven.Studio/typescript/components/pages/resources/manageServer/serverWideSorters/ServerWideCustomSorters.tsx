@@ -25,7 +25,7 @@ export default function ServerWideCustomSorters() {
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
 
     const resultsCount = asyncGetSorters.result?.length ?? null;

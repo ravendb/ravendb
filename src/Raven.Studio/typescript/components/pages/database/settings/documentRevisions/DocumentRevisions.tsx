@@ -63,7 +63,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();

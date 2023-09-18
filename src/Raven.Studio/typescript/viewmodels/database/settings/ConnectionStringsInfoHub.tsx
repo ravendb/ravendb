@@ -6,7 +6,7 @@ import { featureAvailabilityProfessionalOrAbove } from "components/utils/license
 import React from "react";
 
 export function ConnectionStringsInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     return (
         <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>

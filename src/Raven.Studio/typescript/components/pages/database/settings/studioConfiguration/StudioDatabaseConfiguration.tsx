@@ -49,7 +49,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
     const studioConfigurationDocsLink = useRavenLink({ hash: "HIR1VP" });
 
     const { reportEvent } = useEventsCollector();
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     const onSave: SubmitHandler<StudioDatabaseConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {

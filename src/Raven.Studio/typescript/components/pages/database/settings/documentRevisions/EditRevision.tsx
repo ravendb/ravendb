@@ -93,7 +93,7 @@ export default function EditRevision(props: EditRevisionProps) {
         genUtils.timeSpanToSeconds(originalConfig.MinimumRevisionAgeToKeep) - formValues.minimumRevisionAgeToKeep >
             revisionsByAgeDelta;
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const revisionsToKeepLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsToKeep"));
     const revisionsByAgeLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsByAgeToKeep"));
 

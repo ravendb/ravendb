@@ -8,7 +8,7 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
 
 export function EditKafkaEtlInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
     const kafkaEtlDocsLink = useRavenLink({ hash: "S45O2Y" });
 
     return (

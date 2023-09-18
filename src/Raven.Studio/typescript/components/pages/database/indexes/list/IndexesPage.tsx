@@ -88,7 +88,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const allActionContexts = ActionContextUtils.getContexts(db.getLocations());
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const overviewDocsLink = useRavenLink({ hash: "8VWNHJ" });

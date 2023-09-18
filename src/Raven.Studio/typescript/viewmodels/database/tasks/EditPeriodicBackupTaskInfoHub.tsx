@@ -8,7 +8,7 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
 
 export function EditPeriodicBackupTaskInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const backupsDocsLink = useRavenLink({ hash: "GMBYOH" });
 
     return (

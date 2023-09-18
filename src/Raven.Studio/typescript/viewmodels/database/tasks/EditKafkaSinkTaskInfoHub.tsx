@@ -6,7 +6,7 @@ import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUti
 import React from "react";
 
 export function EditKafkaSinkTaskInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
 
     return (
         <AboutViewFloating defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>

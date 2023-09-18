@@ -268,7 +268,7 @@ export function BackupsPage(props: BackupsPageProps) {
 
     const backups = tasks.tasks.filter((x) => x.shared.taskType === "Backup") as OngoingTaskPeriodicBackupInfo[];
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove());
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     return (
         <div className="flex-grow-1 flex-stretch-items">

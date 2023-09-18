@@ -8,7 +8,7 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
 
 export function EditElasticSearchEtlInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
     const elasticSearchEtlDocsLink = useRavenLink({ hash: "AHPBTX" });
 
     return (

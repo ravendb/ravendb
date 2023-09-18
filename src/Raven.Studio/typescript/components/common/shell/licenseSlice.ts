@@ -36,27 +36,23 @@ function statusValue<T extends keyof LicenseStatus>(key: T) {
     return (store: RootState) => store.license.status?.[key] ?? null;
 }
 
-function isEnterpriseOrDeveloper() {
-    return (store: RootState): boolean => {
-        const type = licenseSelectors.licenseType(store);
+const isEnterpriseOrDeveloper = (store: RootState): boolean => {
+    const type = licenseSelectors.licenseType(store);
 
-        if (type === "Enterprise" || type === "Developer") {
-            return true;
-        }
+    if (type === "Enterprise" || type === "Developer") {
+        return true;
+    }
 
-        return false;
-    };
-}
+    return false;
+};
 
-function isProfessionalOrAbove() {
-    return (store: RootState): boolean => {
-        if (isEnterpriseOrDeveloper()(store) || licenseSelectors.licenseType(store) === "Professional") {
-            return true;
-        }
+const isProfessionalOrAbove = (store: RootState): boolean => {
+    if (isEnterpriseOrDeveloper(store) || licenseSelectors.licenseType(store) === "Professional") {
+        return true;
+    }
 
-        return false;
-    };
-}
+    return false;
+};
 
 export const licenseSelectors = {
     statusValue,

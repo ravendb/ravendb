@@ -7,7 +7,7 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
 
 export function DocumentCompressionInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper());
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
 
     return (
         <AboutViewFloating defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
