@@ -308,9 +308,11 @@ namespace Raven.Server.Documents.Patch
                 includesObject.FastSetProperty("revisions", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false));
                 ScriptEngine.SetValue("includes", includesObject);
 
-                // unarchive
+                // archived API
                 var unarchiveDocumentFunc = new ClrFunctionInstance(ScriptEngine, "unarchive", UnarchiveDoc);
+                var archivedAtDocumentFunc = new ClrFunctionInstance(ScriptEngine, "archivedAt", ArchivedAt);
                 ObjectInstance archivedObject = new JsObject(ScriptEngine);
+                archivedObject.FastSetProperty("archivedAt", new PropertyDescriptor(archivedAtDocumentFunc, false, false, false));
                 archivedObject.FastSetProperty("unarchive", new PropertyDescriptor(unarchiveDocumentFunc, false, false, false));
                 ScriptEngine.SetValue("archived", archivedObject);
 
@@ -865,6 +867,50 @@ namespace Raven.Server.Documents.Patch
             {
                 GenericSortTwoElementArray(args);
                 return args[0];
+            }
+
+            private JsValue ArchivedAt(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 2)
+                {
+                    throw new InvalidOperationException("archivedAt(doc, utcDateTimeString) must be called with two args");
+                }
+
+                if (args[0].IsNull() || args[0].IsUndefined())
+                    return args[0];
+                
+                if((args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance) == false)
+                    throw new InvalidOperationException("archivedAt(doc, utcDateTimeString) must take document object as the first argument");
+
+                if (args[1].IsNull() || args[1].IsUndefined() || args[1].IsString() == false)
+                    throw new InvalidOperationException("archivedAt(doc, utcDateTimeString) must take string as the second argument");
+
+                if (DateTime.TryParse(args[1].ToString(), out DateTime _) == false)
+                    throw new InvalidOperationException(
+                        $"Invalid datetime string: '{args[1]}'. Method archivedAt(doc, utcDateTimeString) takes UTC DateTime string as a second argument, in the following format: '1970-01-01T12:00:00.0000000Z'");
+                
+                var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
+                using (var doc = _database.DocumentsStorage.Get(_docsCtx, archivedDocId, DocumentFields.Data, throwOnConflict: true))
+                {
+                    if (doc.TryGetMetadata(out var metadata) == false)
+                    {
+                        throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
+                    }
+                    
+                    // add @archive-at field
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.ArchiveAt] = args[1].ToString()
+                    };
+
+                    using (var updated = _docsCtx.ReadObject(doc.Data, archivedDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    {
+                         _database.DocumentsStorage.Put(_docsCtx, archivedDocId, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                    }
+                }
+                
+                return JsValue.Undefined;
+
             }
 
             private JsValue UnarchiveDoc(JsValue self, JsValue[] args)
