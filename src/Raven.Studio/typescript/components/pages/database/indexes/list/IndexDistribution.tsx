@@ -15,6 +15,7 @@ import { ProgressCircle } from "components/common/ProgressCircle";
 import { Button } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
+import IndexDistributionStatusChecker from "./IndexDistributionStatusChecker";
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -191,109 +192,84 @@ function calculateOverallProgress(index: IndexSharedInfo) {
     return processed / total;
 }
 
-function checkConditions(index: IndexSharedInfo) {
-    return {
-        everyFailure: index.nodesInfo.every((x) => x.status === "failure"),
-        everyFaulty: index.nodesInfo.every((x) => x.details?.faulty),
-        everyErrors: index.nodesInfo.every((x) => x.details?.state === "Error"),
-        everyDisabled: index.nodesInfo.every((x) => x.details?.status === "Disabled"),
-        everyPaused: index.nodesInfo.every((x) => x.details?.status === "Paused"),
-        everyPending: index.nodesInfo.every((x) => x.details?.status === "Pending"),
-        someFailure: index.nodesInfo.some((x) => x.status === "failure"),
-        someErrors: index.nodesInfo.some((x) => x.details?.state === "Error"),
-        someFaulty: index.nodesInfo.some((x) => x.details?.faulty),
-        someDisabled: index.nodesInfo.some((x) => x.details?.status === "Disabled"),
-        somePaused: index.nodesInfo.some((x) => x.details?.status === "Paused"),
-        somePending: index.nodesInfo.some((x) => x.details?.status === "Pending"),
-        someStale: index.nodesInfo.some((x) => x.details?.stale),
-    };
-}
-
-function getState(index: IndexSharedInfo) {
-    const conditions = checkConditions(index);
-
-    if (conditions.someFaulty || conditions.someErrors) {
+function getState(statusChecker: IndexDistributionStatusChecker) {
+    if (statusChecker.everyFailure() || statusChecker.someFaulty() || statusChecker.someErrors()) {
         return "failed";
     }
-    if (conditions.someFailure) {
+    if (statusChecker.someFailure()) {
         return "warning";
     }
-    if (conditions.someDisabled || conditions.somePaused || conditions.somePending || conditions.someStale) {
+    if (
+        statusChecker.someDisabled() ||
+        statusChecker.somePaused() ||
+        statusChecker.somePending() ||
+        statusChecker.someStale()
+    ) {
         return "running";
     }
     return "success";
 }
 
-function getIcon(index: IndexSharedInfo): IconName {
-    const conditions = checkConditions(index);
-
-    if (conditions.someFailure && conditions.someErrors) {
+function getIcon(statusChecker: IndexDistributionStatusChecker): IconName {
+    if (statusChecker.everyFailure() || statusChecker.someFaulty() || statusChecker.someErrors()) {
         return "cancel";
     }
-    if (conditions.someFaulty || conditions.someErrors) {
-        return "cancel";
-    }
-    if (conditions.someFailure) {
+    if (statusChecker.someFailure()) {
         return "warning";
     }
-    if (conditions.someDisabled) {
+    if (statusChecker.someDisabled()) {
         return iconForState("Disabled");
     }
-    if (conditions.somePaused) {
+    if (statusChecker.somePaused()) {
         return iconForState("Paused");
     }
-    if (conditions.somePending) {
+    if (statusChecker.somePending()) {
         return iconForState("Pending");
     }
-    if (conditions.someStale) {
+    if (statusChecker.someStale()) {
         return null;
     }
     return "check";
 }
 
-function getStateText(index: IndexSharedInfo): string {
-    const conditions = checkConditions(index);
-
-    if (conditions.someFailure && conditions.someErrors) {
-        return "Errors";
-    }
-    if (conditions.everyFailure) {
+function getStateText(statusChecker: IndexDistributionStatusChecker): string {
+    if (statusChecker.everyFailure()) {
         return "Load errors";
     }
-    if (conditions.someFailure) {
+    if (statusChecker.someFailure()) {
         return "Some load errors";
     }
-    if (conditions.everyFaulty) {
+    if (statusChecker.everyFaulty()) {
         return "Faulty";
     }
-    if (conditions.someFaulty) {
+    if (statusChecker.someFaulty()) {
         return "Some faulty";
     }
-    if (conditions.everyErrors) {
+    if (statusChecker.everyErrors()) {
         return "Errors";
     }
-    if (conditions.someErrors) {
+    if (statusChecker.someErrors()) {
         return "Some errored";
     }
-    if (conditions.everyDisabled) {
+    if (statusChecker.everyDisabled()) {
         return "Disabled";
     }
-    if (conditions.someDisabled) {
+    if (statusChecker.someDisabled()) {
         return "Some disabled";
     }
-    if (conditions.everyPaused) {
+    if (statusChecker.everyPaused()) {
         return "Paused";
     }
-    if (conditions.somePaused) {
+    if (statusChecker.somePaused()) {
         return "Some paused";
     }
-    if (conditions.everyPending) {
+    if (statusChecker.everyPending()) {
         return "Pending";
     }
-    if (conditions.somePending) {
+    if (statusChecker.somePending()) {
         return "Some pending";
     }
-    if (conditions.someStale) {
+    if (statusChecker.someStale()) {
         return "Running";
     }
     return "Up to date";
@@ -301,17 +277,21 @@ function getStateText(index: IndexSharedInfo): string {
 
 export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
     const { index, onClick } = props;
+
     const overallProgress = calculateOverallProgress(index);
+
+    const statusChecker = new IndexDistributionStatusChecker(index);
+    const stateText = getStateText(statusChecker);
 
     return (
         <ProgressCircle
             inline
-            state={getState(index)}
-            icon={getIcon(index)}
-            progress={getStateText(index) === "Running" ? overallProgress : null}
+            state={getState(statusChecker)}
+            icon={getIcon(statusChecker)}
+            progress={stateText === "Running" ? overallProgress : null}
             onClick={onClick}
         >
-            {getStateText(index)}
+            {stateText}
         </ProgressCircle>
     );
 }
