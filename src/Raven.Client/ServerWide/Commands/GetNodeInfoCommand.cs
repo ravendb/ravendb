@@ -21,6 +21,7 @@ namespace Raven.Client.ServerWide.Commands
         public OsInfo OsInfo;
         public Guid ServerId;
         public RachisState CurrentState;
+        public ServerNode.Role ServerRole;
         public bool HasFixedPort;
         public int ServerSchemaVersion;
 
@@ -39,6 +40,7 @@ namespace Raven.Client.ServerWide.Commands
                 [nameof(OsInfo)] = OsInfo,
                 [nameof(ServerId)] = ServerId.ToString(),
                 [nameof(CurrentState)] = CurrentState,
+                [nameof(ServerRole)] = ServerRole,
                 [nameof(HasFixedPort)] = HasFixedPort,
                 [nameof(ServerSchemaVersion)] = ServerSchemaVersion,
             };

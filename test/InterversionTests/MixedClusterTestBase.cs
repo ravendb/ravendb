@@ -51,7 +51,7 @@ namespace InterversionTests
 
             var chosenOne = processes[0];
 
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(chosenOne.Url, certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(chosenOne.Url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 foreach (var processNode in processes)
@@ -98,7 +98,7 @@ namespace InterversionTests
             };
 
             using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderServer.WebUrl, certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(leaderServer.WebUrl, certificate, DocumentConventions.DefaultForServer))
             {
                 var local = new List<RavenServer>();
 

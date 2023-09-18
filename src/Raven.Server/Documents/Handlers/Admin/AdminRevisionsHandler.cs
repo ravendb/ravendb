@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -18,13 +19,24 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/revisions", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteRevisionsFor()
         {
+            bool includeForceCreated = GetBoolValueQueryString("includeForceCreated", required: false) ?? false;
+
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "admin/revisions/delete");
                 var parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
 
-                var cmd = new DeleteRevisionsCommand(parameters.DocumentIds, Database);
-                await Database.TxMerger.Enqueue(cmd);
+                using (var token = CreateHttpRequestBoundTimeLimitedOperationToken())
+                {
+                    var ids = parameters.DocumentIds;
+                    DeleteRevisionsCommand cmd;
+                    do
+                    {
+                        token.Delay();
+                        cmd = new DeleteRevisionsCommand(ids, Database, includeForceCreated, token);
+                        await Database.TxMerger.Enqueue(cmd);
+                    } while (cmd.MoreWork);
+                }
                 NoContentStatus();
             }
         }
@@ -33,28 +45,34 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             private readonly Microsoft.Extensions.Primitives.StringValues _ids;
             private readonly DocumentDatabase _database;
+            private readonly bool _includeForceCreated;
+            private readonly OperationCancelToken _token;
 
-            public DeleteRevisionsCommand(string[] ids, DocumentDatabase database)
+            public bool MoreWork;
+
+            public DeleteRevisionsCommand(string[] ids, DocumentDatabase database, bool includeForceCreated, OperationCancelToken token)
             {
                 _ids = ids;
                 _database = database;
+                _includeForceCreated = includeForceCreated;
+                _token = token;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                var skipForceCreated = _includeForceCreated == false;
+                MoreWork = false;
                 foreach (var id in _ids)
                 {
-                    _database.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id);
+                    _token.ThrowIfCancellationRequested();
+                    _database.DocumentsStorage.RevisionsStorage.DeleteAllRevisionsFor(context, id, skipForceCreated, ref MoreWork);
                 }
                 return 1;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
-                return new DeleteRevisionsCommandDto
-                {
-                    Ids = _ids
-                };
+                return new DeleteRevisionsCommandDto() { Ids = _ids, IncludeForceCreated = _includeForceCreated };
             }
         }
 
@@ -67,10 +85,11 @@ namespace Raven.Server.Documents.Handlers.Admin
     internal class DeleteRevisionsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AdminRevisionsHandler.DeleteRevisionsCommand>
     {
         public string[] Ids;
+        public bool IncludeForceCreated;
 
         public AdminRevisionsHandler.DeleteRevisionsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new AdminRevisionsHandler.DeleteRevisionsCommand(Ids, database);
+            var command = new AdminRevisionsHandler.DeleteRevisionsCommand(Ids, database, IncludeForceCreated, OperationCancelToken.None);
             return command;
         }
     }

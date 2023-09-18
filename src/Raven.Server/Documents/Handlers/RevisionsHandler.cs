@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
                 RevisionsCollectionConfiguration revisionsForConflictsConfig;
                 using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    revisionsForConflictsConfig = rawRecord?.RevisionsForConflicts;
+                    revisionsForConflictsConfig = rawRecord?.RevisionsForConflicts ?? Database.DocumentsStorage?.RevisionsStorage?.ConflictConfiguration?.Default;
                 }
 
                 if (revisionsForConflictsConfig != null)
@@ -133,11 +133,20 @@ namespace Raven.Server.Documents.Handlers
             var token = CreateTimeLimitedBackgroundOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();
 
+            EnforceRevisionsConfigurationRequest configuration;
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "revisions/revert");
+                configuration = JsonDeserializationServer.EnforceRevisionsConfiguration(json);
+            }
+
+            HashSet<string> collections = configuration.Collections?.Length > 0 ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
+
             var t = Database.Operations.AddOperation(
                 Database,
                 $"Enforce revision configuration in database '{Database.Name}'.",
                 Operations.Operations.OperationType.EnforceRevisionConfiguration,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress, token),
+                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, configuration.IncludeForceCreated, collections, token),
                 operationId,
                 token: token);
 

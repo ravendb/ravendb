@@ -38,7 +38,7 @@ namespace Raven.Server.Utils
 
         private static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, GetTcpInfoCommand getTcpInfoCommand, X509Certificate2 certificate, CancellationToken token)
         {
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, certificate, DocumentConventions.DefaultForServer))//TODO stav: createForFixed instead?
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 await requestExecutor.ExecuteAsync(getTcpInfoCommand, context, token: token);
@@ -52,7 +52,7 @@ namespace Raven.Server.Utils
 
         private static async Task<TcpConnectionInfo> GetTcpInfoForInternalReplicationAsync(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
         {
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var getTcpInfoCommand = databaseId == null ? new GetTcpInfoForReplicationCommand(localNodeTag, tag, databaseName) : new GetTcpInfoForReplicationCommand(localNodeTag, tag, databaseName, databaseId, etag);

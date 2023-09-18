@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     // check that the subscription exists on AppropriateNode
                                     var clusterTopology = server.GetClusterTopology(ctx);
-                                    using (var requester = ClusterRequestExecutor.CreateForSingleNode(
+                                    using (var requester = ClusterRequestExecutor.CreateForShortTermUse(
                                     clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode), server.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                                     {
                                         await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);

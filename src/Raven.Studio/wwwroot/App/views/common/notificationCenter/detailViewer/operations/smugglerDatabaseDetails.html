@@ -105,18 +105,24 @@
             </div>
             <div class="clearfix" data-bind="visible: !operationFailed()">
                 <div class="pull-right margin-top">
-                    <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">
+                    <button class="btn btn-default btn-sm" data-bind="click: toggleDetails">
+                        <i class="icon-logs"></i><span data-bind="text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false"></span>
                     </button>
                 </div>
             </div>
             <div class="export-messages-container" data-bind="visible: detailsVisible">
                 <pre class="margin-top export-messages"><code data-bind="text: messagesJoined"></code></pre>
             </div>
-            <div class="toggle margin-top margin-top-sm" data-bind="visible: detailsVisible() && !operationFailed()">
-                <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
-                <label for="smuggler-monitoring">
-                    Monitoring (tail -f)
-                </label>
+            <div class="clearfix margin-top margin-top-sm">
+                <div class="toggle pull-left" data-bind="visible: detailsVisible() && !operationFailed()">
+                    <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
+                    <label for="smuggler-monitoring">
+                        Monitoring (tail -f)
+                    </label>
+                </div>
+                <button class="pull-right btn btn-default btn-sm" data-bind="click: copyLogs, visible: detailsVisible()">
+                    <i class="icon-copy-to-clipboard"></i> Copy details to clipboard
+                </button>
             </div>
         </div>
         <div class="modal-footer">

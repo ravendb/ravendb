@@ -29,7 +29,7 @@ return docs[0];
     }
 
     copySample() {
-        copyToClipboard.copy(conflictResolutionScriptSyntax.sampleScript, "Sample has been copied to clipboard", this.dialogContainer);
+        copyToClipboard.copy(conflictResolutionScriptSyntax.sampleScript, "Sample has been copied to clipboard");
     }
     
     scriptHtml = ko.pureComputed(() => {

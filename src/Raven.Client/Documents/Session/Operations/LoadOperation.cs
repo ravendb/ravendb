@@ -39,10 +39,14 @@ namespace Raven.Client.Documents.Session.Operations
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
-            if (_includeAllCounters)
-                return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false);
-            
-            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
+            var cmd = _includeAllCounters
+                ? new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude,
+                    compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false)
+                : new GetDocumentsCommand(_ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore,
+                    _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
+
+            cmd.SetTransactionMode(_session.TransactionMode);
+            return cmd;
         }
 
         public LoadOperation ById(string id)
@@ -218,9 +222,11 @@ namespace Raven.Client.Documents.Session.Operations
                _session.RegisterRevisionIncludes(result.RevisionIncludes);
             }
 
-            if (_compareExchangeValuesToInclude != null)
+            var includingMissingAtomicGuards = _session.TransactionMode == TransactionMode.ClusterWide;
+            if (_compareExchangeValuesToInclude != null || includingMissingAtomicGuards)
             {
-                _session.GetClusterSession().RegisterCompareExchangeValues(result.CompareExchangeValueIncludes);
+                var clusterSession = _session.GetClusterSession();
+                clusterSession.RegisterCompareExchangeValues(result.CompareExchangeValueIncludes, includingMissingAtomicGuards);
             }
 
             foreach (var document in GetDocumentsFromResult(result))

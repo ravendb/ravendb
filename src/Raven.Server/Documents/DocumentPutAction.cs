@@ -218,6 +218,12 @@ namespace Raven.Server.Documents
                     flags |= DocumentFlags.Resolved;
                 }
 
+                var revisionsCount = _documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
+                if (revisionsCount > 0)
+                {
+                    flags |= DocumentFlags.HasRevisions;
+                }
+
                 if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                 {
 
@@ -225,20 +231,28 @@ namespace Raven.Server.Documents
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref flags, out var configuration);
-                    
+
                     if (shouldVersion)
                     {
-                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
+                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector,
+                                collectionName))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
-                            
-                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc, oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
+
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc,
+                                oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
                                 oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
-                        
+
                         flags |= DocumentFlags.HasRevisions;
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks,
+                            configuration, collectionName);
+
+                        var revisionsCountAfterDelete = _documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
+                        if (revisionsCountAfterDelete == 0)
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
+
                     }
                 }
 

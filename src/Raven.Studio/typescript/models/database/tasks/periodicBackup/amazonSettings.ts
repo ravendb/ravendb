@@ -14,7 +14,9 @@ abstract class amazonSettings extends backupSettings {
     static availableAwsRegionEndpointsStatic = [
         { label: "Africa (Cape Town)", value: "af-south-1", hasS3: true, hasGlacier: true },
         { label: "Asia Pacific (Hong Kong)", value: "ap-east-1", hasS3: true, hasGlacier: true },
+        { label: "Asia Pacific (Hyderabad)", value: "ap-south-2", hasS3: true, hasGlacier: false },
         { label: "Asia Pacific (Jakarta)", value: "ap-southeast-3", hasS3: true, hasGlacier: true },
+        { label: "Asia Pacific (Melbourne)", value: "ap-southeast-4", hasS3: true, hasGlacier: false },
         { label: "Asia Pacific (Mumbai)", value: "ap-south-1", hasS3: true, hasGlacier: true },
         { label: "Asia Pacific (Osaka)", value: "ap-northeast-3", hasS3: true, hasGlacier: true },
         { label: "Asia Pacific (Seoul)", value: "ap-northeast-2", hasS3: true, hasGlacier: true },
@@ -32,6 +34,7 @@ abstract class amazonSettings extends backupSettings {
         { label: "Europe (Stockholm)", value: "eu-north-1", hasS3: true, hasGlacier: true },
         { label: "Europe (Spain)", value: "eu-south-2", hasS3: true, hasGlacier: false },
         { label: "Europe (Zurich)", value: "eu-central-2", hasS3: true, hasGlacier: false },
+        { label: "Israel (Tel Aviv)", value: "il-central-1", hasS3: true, hasGlacier: true },
         { label: "Middle East (Bahrain)", value: "me-south-1", hasS3: true, hasGlacier: true },
         { label: "Middle East (UAE)", value: "me-central-1", hasS3: true, hasGlacier: false },
         { label: "South America (São Paulo)", value: "sa-east-1", hasS3: true, hasGlacier: true },

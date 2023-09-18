@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     initialState.Skip = new Reference<long>();
                 }
 
-                var documentsEnumerator = new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
+                var documentsEnumerator = new TransactionForgetAboutDocumentEnumerator(new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
                     {
                         if (string.IsNullOrEmpty(state.StartsWith) == false)
                         {
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
 
                         return Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
                     },
-                    initialState);
+                    initialState), context);
 
                 using (var token = CreateHttpRequestBoundOperationToken())
                 await using (var writer = GetLoadDocumentsResultsWriter(format, context, ResponseBodyStream()))

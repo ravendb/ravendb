@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net6.0</TargetFramework>
-    <RuntimeFrameworkVersion>6.0.20</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>6.0.22</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -164,7 +164,7 @@
     <PackageReference Include="JetBrains.Annotations" Version="2023.2.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Jint" Version="3.0.30-ravendb" />
+    <PackageReference Include="Jint" Version="3.0.32-ravendb" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.4.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.6.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />

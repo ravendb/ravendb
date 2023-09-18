@@ -200,6 +200,14 @@ public static class ThreadNames
         };
     }
 
+    public static ThreadInfo ForClusterTransactions(string threadName, string databaseName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.ClusterTransaction(databaseName)
+        };
+    }
+
     public class ThreadDetails
     {
         public interface IThreadDetails
@@ -568,6 +576,20 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return $"PllRepSnk {_destinationDatabase} at {_destinationUrl}";
+            }
+        }
+
+        public class ClusterTransaction : IThreadDetails
+        {
+            private readonly string _db;
+            public ClusterTransaction(string dbName)
+            {
+                _db = dbName;
+            }
+
+            public string GetShortName()
+            {
+                return $"ClstrTx {_db}";
             }
         }
     }

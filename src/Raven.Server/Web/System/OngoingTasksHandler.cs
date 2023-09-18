@@ -23,6 +23,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
@@ -463,7 +464,6 @@ namespace Raven.Server.Web.System
                 try
                 {
                     var operationId = ServerStore.Operations.GetNextOperationId();
-                    var cancelToken = CreateBackgroundOperationToken();
                     var backupParameters = new BackupParameters
                     {
                         RetentionPolicy = null,
@@ -477,7 +477,9 @@ namespace Raven.Server.Web.System
                         Name = backupName
                     };
 
-                    var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger);
+                    var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger, Database.PeriodicBackupRunner._forTestingPurposes);
+                    var cancelToken = backupTask.TaskCancelToken;
+
                     var threadName = $"Backup thread {backupName} for database '{Database.Name}'";
 
                     var t = Database.Operations.AddOperation(
@@ -502,7 +504,7 @@ namespace Raven.Server.Web.System
                                         tcs.SetResult(backupResult);
                                     }
                                 }
-                                catch (OperationCanceledException)
+                                catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
                                 {
                                     tcs.SetCanceled();
                                 }

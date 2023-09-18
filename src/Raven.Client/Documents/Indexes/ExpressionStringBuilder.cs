@@ -841,6 +841,43 @@ namespace Raven.Client.Documents.Indexes
                 Out('M');
                 return node;
             }
+            if (node.Value is DateTime dateTime && dateTime.Equals(default))
+            {
+                Out("default(");
+                Out(nameof(DateTime));
+                Out(')');
+                return node;
+            }
+            if (node.Value is DateTimeOffset dateTimeOffset && dateTimeOffset.Equals(default))
+            {
+                Out("default(");
+                Out(nameof(DateTimeOffset));
+                Out(')');
+                return node;
+            }
+            if (node.Value is TimeSpan timeSpan && timeSpan.Equals(default))
+            {
+                Out("default(");
+                Out(nameof(TimeSpan));
+                Out(')');
+                return node;
+            }
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            if (node.Value is DateOnly dateOnly && dateOnly.Equals(default))
+            {
+                Out("default(");
+                Out(nameof(DateOnly));
+                Out(')');
+                return node;
+            }
+            if (node.Value is TimeOnly timeOnly && timeOnly.Equals(default))
+            {
+                Out("default(");
+                Out(nameof(TimeOnly));
+                Out(')');
+                return node;
+            }
+#endif
             Out(s);
             return node;
         }
@@ -852,8 +889,6 @@ namespace Raven.Client.Documents.Indexes
 
             StringExtensions.EscapeString(_out, value);
         }
-
-
 
         private void OutLiteral(char c)
         {

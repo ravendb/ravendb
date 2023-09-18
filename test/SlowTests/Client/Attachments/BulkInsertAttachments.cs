@@ -7,6 +7,7 @@ using FastTests;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -229,7 +230,7 @@ namespace SlowTests.Client.Attachments
         {
             using (var store = GetDocumentStore())
             {
-                var argumentError = Assert.Throws<InvalidOperationException> (() =>
+                var argumentError = Assert.Throws<BulkInsertInvalidOperationException> (() =>
                 {
                     using (var bulkInsert = store.BulkInsert())
                     {

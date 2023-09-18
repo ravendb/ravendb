@@ -57,7 +57,7 @@ namespace Raven.Client.Http
 
         public RavenCommandResponseType ResponseType { get; protected set; }
 
-        public TimeSpan? Timeout { get; protected set; }
+        public TimeSpan? Timeout { get; protected internal set; }
         public bool CanCache { get; protected set; }
         public bool CanCacheAggressively { get; protected set; }
         public string SelectedNodeTag { get; protected set; }

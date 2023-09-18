@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             var itemId = GetItemId();
             if (existingValue == null)
@@ -49,7 +49,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             subscription.LastClientConnectionTime = LastClientConnectionTime;
             subscription.NodeTag = NodeTag;
 
-            return context.ReadObject(subscription.ToJson(), itemId);
+            return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(subscription.ToJson(), itemId));
         }
 
         public override void FillJson(DynamicJsonValue json)

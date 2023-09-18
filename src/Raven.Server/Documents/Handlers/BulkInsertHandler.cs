@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -53,6 +54,12 @@ namespace Raven.Server.Documents.Handlers
                         currentCtxReset = ContextPool.AllocateOperationContext(out JsonOperationContext docsCtx);
                         var requestBodyStream = RequestBodyStream();
 
+                        if (Database.ForTestingPurposes?.BulkInsertStreamWriteTimeout > 0)
+                        {
+                            var streamWithTimeout = (StreamWithTimeout)requestBodyStream;
+                            streamWithTimeout.WriteTimeout = Database.ForTestingPurposes.BulkInsertStreamWriteTimeout;
+                        }
+
                         using (var parser = new BatchRequestParser.ReadMany(context, requestBodyStream, buffer, token))
                         {
                             await parser.Init();
@@ -89,7 +96,6 @@ namespace Raven.Server.Documents.Handlers
                                                 SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged
                                             });
                                         }
-
                                         ClearStreamsTempFiles();
 
                                         progress.BatchCount++;
@@ -97,7 +103,6 @@ namespace Raven.Server.Documents.Handlers
                                         progress.LastProcessedId = array[numberOfCommands - 1].Id;
 
                                         onProgress(progress);
-
                                         previousCtxReset?.Dispose();
                                         previousCtxReset = currentCtxReset;
                                         currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
@@ -110,6 +115,9 @@ namespace Raven.Server.Documents.Handlers
                                     var commandData = await task;
                                     if (commandData.Type == CommandType.None)
                                         break;
+
+                                    if (commandData.Type == CommandType.HeartBeat)
+                                        continue;
 
                                     if (commandData.Type == CommandType.AttachmentPUT)
                                     {

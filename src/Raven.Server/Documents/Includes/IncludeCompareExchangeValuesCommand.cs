@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Google.Apis.Util;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
@@ -63,39 +64,67 @@ namespace Raven.Server.Documents.Includes
             if (_includes == null || _includes.Length == 0)
                 return;
 
-            if (_includedKeys == null)
-                _includedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _includedKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var include in _includes)
                 IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedKeys, _database.IdentityPartsSeparator);
         }
 
-        internal void Materialize()
+        public void AddDocument(string id)
         {
-            if (_includedKeys == null || _includedKeys.Count == 0)
-                return;
+            _includedKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _includedKeys.Add(id);
+        }
+
+        public bool TryGetAtomicGuard(string key, long maxAllowedRaftId, out long index, out BlittableJsonReaderObject value)
+        {
+            index = -1;
+            value = null;
 
             if (_serverContext == null)
             {
-                if (_throwWhenServerContextIsAllocated)
-                    throw new InvalidOperationException("Cannot allocate new server context during materialization of compare exchange includes.");
-
-                _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
-                _serverContext.OpenReadTransaction();
+                CreateServerContext();
             }
+
+            var result = _database.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_database.Name, key));
+
+            if (result.Index > maxAllowedRaftId)
+                return false; // we are seeing partially committed value, skip it
+
+            if (result.Index < 0)
+                return false;
+            
+            index = result.Index;
+            value = result.Value;
+            return true;
+        }
+        
+        internal void Materialize(long maxAllowedRaftId)
+        {
+            if (_includedKeys == null || _includedKeys.Count == 0)
+                return;
 
             foreach (var includedKey in _includedKeys)
             {
                 if (string.IsNullOrEmpty(includedKey))
                     continue;
 
-                var value = _database.ServerStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_database.Name, includedKey));
+                if (TryGetAtomicGuard(includedKey, maxAllowedRaftId, out var index, out var value) == false)
+                    continue;
+                
+                Results ??= new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 
-                if (Results == null)
-                    Results = new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
-
-                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, value.Index, value.Value));
+                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, index, value));
             }
+        }
+
+        private void CreateServerContext()
+        {
+            if (_throwWhenServerContextIsAllocated)
+                throw new InvalidOperationException("Cannot allocate new server context during materialization of compare exchange includes.");
+
+            _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
+            _serverContext.OpenReadTransaction();
         }
 
         public void Dispose()

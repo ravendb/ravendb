@@ -101,8 +101,13 @@ namespace Tests.Infrastructure.InterversionTest
             if (PlatformDetails.RunningOnPosix)
             {
                 Directory.CreateDirectory(targetDirectory);
-                var extractTarBall = Process.Start(
-                    "tar", $"xjf \"{packagePath}\" -C \"{targetDirectory}\" --strip-components=1");
+                var extractTarBall = new Process();
+                extractTarBall.StartInfo.RedirectStandardOutput = true;
+                extractTarBall.StartInfo.RedirectStandardError = true;
+                extractTarBall.StartInfo.FileName = "tar";
+                extractTarBall.StartInfo.Arguments = $"xjf \"{packagePath}\" -C \"{targetDirectory}\" --strip-components=1";
+                extractTarBall.Start();
+
                 extractTarBall.WaitForExit();
 
                 if (extractTarBall.ExitCode != 0)

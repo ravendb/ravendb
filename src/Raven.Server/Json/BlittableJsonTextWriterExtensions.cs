@@ -1779,6 +1779,13 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(kvp.Value));
                 writer.WriteObject(kvp.Value.Value);
 
+                if (kvp.Value.ChangeVector != null)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(kvp.Value.ChangeVector));
+                    writer.WriteString(kvp.Value.ChangeVector);
+                }
+
                 writer.WriteEndObject();
 
                 await writer.MaybeFlushAsync(token);

@@ -24,8 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         {
             QueryBuilderFactories = queryBuilderFactories;
 
-
-            if (_logger.IsInfoEnabled && query != null)
+            if (query != null && (logger.IsInfoEnabled || logger.IsOperationsEnabled))
             {
                 _memoryInfo = new MemoryInfo
                 {
@@ -62,18 +61,25 @@ namespace Raven.Server.Documents.Indexes.Persistence
         
         public override void Dispose()
         {
-            if (_logger.IsInfoEnabled && _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
+            if ((_logger.IsInfoEnabled || (_logger.IsOperationsEnabled && _index.IsLowMemory)) &&
+                _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
             {
+                // information logs are enabled or we're in a low memory state and operations logs are enabled
+
                 var mangedDiff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedManagedBefore;
                 var unmanagedDiff = Math.Max(0, NativeMemory.ThreadAllocations.Value.TotalAllocated - _memoryInfo.AllocatedUnmanagedBefore);
 
-                if (mangedDiff > 0 || unmanagedDiff > 0)
-                {
-                    var msg = $"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, " +
-                              $"allocated managed: {new Size(mangedDiff, SizeUnit.Bytes)}, " +
-                              $"allocated unmanaged: {new Size(unmanagedDiff, SizeUnit.Bytes)}, " +
-                              $"managed thread id: {_memoryInfo.ManagedThreadId}";
+                var msg = $"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, " +
+                          $"allocated managed: {new Size(mangedDiff, SizeUnit.Bytes)}, " +
+                          $"allocated unmanaged: {new Size(unmanagedDiff, SizeUnit.Bytes)}, " +
+                          $"managed thread id: {_memoryInfo.ManagedThreadId}";
 
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations(msg);
+                }
+                else
+                {
                     _logger.Info(msg);
                 }
             }
