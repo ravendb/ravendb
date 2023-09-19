@@ -310,9 +310,9 @@ namespace Raven.Server.Documents.Patch
 
                 // archived API
                 var unarchiveDocumentFunc = new ClrFunctionInstance(ScriptEngine, "unarchive", UnarchiveDoc);
-                var archivedAtDocumentFunc = new ClrFunctionInstance(ScriptEngine, "archivedAt", ArchivedAt);
+                var archiveAtDocumentFunc = new ClrFunctionInstance(ScriptEngine, "archiveAt", ArchiveAt);
                 ObjectInstance archivedObject = new JsObject(ScriptEngine);
-                archivedObject.FastSetProperty("archivedAt", new PropertyDescriptor(archivedAtDocumentFunc, false, false, false));
+                archivedObject.FastSetProperty("archiveAt", new PropertyDescriptor(archiveAtDocumentFunc, false, false, false));
                 archivedObject.FastSetProperty("unarchive", new PropertyDescriptor(unarchiveDocumentFunc, false, false, false));
                 ScriptEngine.SetValue("archived", archivedObject);
 
@@ -869,25 +869,25 @@ namespace Raven.Server.Documents.Patch
                 return args[0];
             }
 
-            private JsValue ArchivedAt(JsValue self, JsValue[] args)
+            private JsValue ArchiveAt(JsValue self, JsValue[] args)
             {
                 if (args.Length != 2)
                 {
-                    throw new InvalidOperationException("archivedAt(doc, utcDateTimeString) must be called with two args");
+                    throw new InvalidOperationException("archiveAt(doc, utcDateTimeString) must be called with two args");
                 }
 
                 if (args[0].IsNull() || args[0].IsUndefined())
                     return args[0];
                 
                 if((args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance) == false)
-                    throw new InvalidOperationException("archivedAt(doc, utcDateTimeString) must take document object as the first argument");
+                    throw new InvalidOperationException("archiveAt(doc, utcDateTimeString) must take document object as the first argument");
 
                 if (args[1].IsNull() || args[1].IsUndefined() || args[1].IsString() == false)
-                    throw new InvalidOperationException("archivedAt(doc, utcDateTimeString) must take string as the second argument");
+                    throw new InvalidOperationException("archiveAt(doc, utcDateTimeString) must take string as the second argument");
 
                 if (DateTime.TryParse(args[1].ToString(), out DateTime _) == false)
                     throw new InvalidOperationException(
-                        $"Invalid datetime string: '{args[1]}'. Method archivedAt(doc, utcDateTimeString) takes UTC DateTime string as a second argument, in the following format: '1970-01-01T12:00:00.0000000Z'");
+                        $"Invalid datetime string: '{args[1]}'. Method archiveAt(doc, utcDateTimeString) takes UTC DateTime string as a second argument, in the following format: '1970-01-01T12:00:00.0000000Z'");
                 
                 var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
                 using (var doc = _database.DocumentsStorage.Get(_docsCtx, archivedDocId, DocumentFields.Data, throwOnConflict: true))

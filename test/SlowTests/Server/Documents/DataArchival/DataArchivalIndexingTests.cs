@@ -1336,7 +1336,7 @@ User: counter.DocumentId
             // Use patch to schedule archival
             var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery()
             {
-                Query = "from Companies update { archived.archivedAt(this, \"" + retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite) + "\") }"
+                Query = "from Companies update { archived.archiveAt(this, \"" + retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite) + "\") }"
             }));
             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
