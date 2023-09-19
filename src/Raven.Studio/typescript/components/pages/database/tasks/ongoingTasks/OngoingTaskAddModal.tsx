@@ -26,7 +26,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
     const { appUrl } = useAppUrls();
 
-    const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;
+    const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
 
     const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
     const subscriptionsDatabaseLimit = useAppSelector(

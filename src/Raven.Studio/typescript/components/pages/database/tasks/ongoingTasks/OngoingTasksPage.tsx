@@ -268,7 +268,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
-    const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).ClusterSubscriptionTasks;
+    const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
     const subscriptionsDatabaseCount = subscriptions.length;
 
     const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
