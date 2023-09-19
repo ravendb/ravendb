@@ -10,7 +10,7 @@ public class RabbitMqSinkConsumer : DefaultBasicConsumer, IQueueSinkConsumer
     private readonly IModel _channel;
     private readonly BlockingCollection<(byte[] Body, IBasicProperties Properties, ulong deliveryTag)> _deliveries = new();
 
-    private ulong? _latestDeliveryTag;
+    private ulong _latestDeliveryTag;
 
     public RabbitMqSinkConsumer(IModel channel) : base(channel)
     {
@@ -49,9 +49,9 @@ public class RabbitMqSinkConsumer : DefaultBasicConsumer, IQueueSinkConsumer
 
     public void Commit()
     {
-        if (_latestDeliveryTag != null)
+        if (_latestDeliveryTag > 0)
         {
-            _channel.BasicAck(_latestDeliveryTag.Value, true);
+            _channel.BasicAck(0, true);    
         }
     }
     
