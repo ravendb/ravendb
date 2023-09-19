@@ -18,7 +18,7 @@ export function EditRabbitMqSinkTaskInfoHub() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    Define a <strong>RabbitMQ Sink ongoing-task</strong> in order to consume and process incoming
+                    Define a <strong>RabbitMQ Sink</strong> ongoing-task in order to consume and process incoming
                     messages from RabbitMQ queues.
                 </p>
                 <p>

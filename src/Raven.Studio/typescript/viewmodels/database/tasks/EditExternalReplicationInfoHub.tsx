@@ -21,8 +21,8 @@ export function EditExternalReplicationInfoHub() {
                 description="Get additional info on this feature"
             >
                 <div>
-                    Schedule an <strong>External Replication ongoing-task</strong>{" "}
-                    in order to have a live replica of your data in another RavenDB database in another cluster.
+                    Schedule an <strong>External Replication</strong> ongoing-task in order to have a live replica of
+                    your data in another RavenDB database in another cluster.
                     <ul className="margin-top-xxs">
                         <li>The replica can serve as a failover solution in case the source cluster is down.</li>
                     </ul>

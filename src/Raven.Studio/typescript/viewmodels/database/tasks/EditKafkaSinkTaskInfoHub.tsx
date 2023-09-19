@@ -18,7 +18,7 @@ export function EditKafkaSinkTaskInfoHub() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    Define a <strong>Kafka Sink ongoing-task</strong> in order to consume and process incoming messages from Kafka topics.
+                    Define a <strong>Kafka Sink</strong> ongoing-task in order to consume and process incoming messages from Kafka topics.
                 </p>
                 <p>
                     Add one or more <strong>scripts</strong> that Load, Put, or Delete documents in RavenDB based on the incoming messages.
