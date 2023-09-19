@@ -85,9 +85,9 @@ namespace Voron.Data.Containers
                 using var __ = tx.Allocator.Allocate(Math.Max(maxPages, maxFree) * 2, out Span<long> buffer);
 
                 var allPages = GetAllPages(tx.LowLevelTransaction);
-
-                allPages.InitializeCursorState();
                 int index = AddAndSortBuffer(Additions, buffer);
+                
+                allPages.InitializeCursorState();
                 for (int i = 0; i < index; i++)
                 {
                     var key = new Int64LookupKey(buffer[i]);
@@ -95,8 +95,9 @@ namespace Voron.Data.Containers
                     allPages.AddOrSetAfterGetNext(ref key, 0);
                 }
 
-                allPages.InitializeCursorState();
                 index = AddAndSortBuffer(Removals, buffer);
+
+                allPages.InitializeCursorState();
                 for (int i = 0; i < index; i++)
                 {
                     var key = new Int64LookupKey(buffer[i]);
@@ -109,7 +110,7 @@ namespace Voron.Data.Containers
                 var len = buffer.Length / 2;
                 var keys = buffer[..len];
                 var vals = buffer[len..];
-                index = AddAndSort(FreeListAdditions, keys, vals);
+                index = AddAndSort(FreeListAdditions, ref keys, ref vals);
 
                 freePages.InitializeCursorState();
                 for (int i = 0; i < index; i++)
@@ -119,11 +120,12 @@ namespace Voron.Data.Containers
                     freePages.AddOrSetAfterGetNext(ref key, vals[i]);
                 }
                 
-                index = AddAndSortBuffer(Removals, buffer);
+                index = AddAndSortBuffer(FreeListRemovals, buffer);
+                
                 freePages.InitializeCursorState();
                 for (int i = 0; i < index; i++)
                 {
-                    var key = new Int64LookupKey(keys[i]);
+                    var key = new Int64LookupKey(buffer[i]);
                     if(freePages.TryGetNextValue(ref key, out _))
                         freePages.TryRemoveExistingValue(ref key, out _);
                 }
@@ -137,7 +139,7 @@ namespace Voron.Data.Containers
                 freePagesState = freePages.State;
             }
 
-            private static int AddAndSort(Dictionary<long, long> freeListAdditions, Span<long> keys,  Span<long> vals)
+            private static int AddAndSort(Dictionary<long, long> freeListAdditions, ref Span<long> keys, ref Span<long> vals)
             {
                 int index = 0;
                 foreach (var (k, v) in freeListAdditions)
@@ -147,7 +149,10 @@ namespace Voron.Data.Containers
                     index++;
                 }
 
-                keys[..index].Sort(vals[..index]);
+                keys = keys[..index];
+                vals = vals[..index];
+                
+                keys.Sort(vals);
                 return index;
             }
 
