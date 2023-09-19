@@ -21,7 +21,7 @@ export function EditReplicationHubInfoHub() {
                 description="Get additional info on this feature"
             >
                 <div>
-                    Define a <strong>Replication Hub</strong> to replicate documents to and/or from multiple Replication
+                    Define a <strong>Replication Hub</strong> for replicating documents to and/or from multiple Replication
                     Sink tasks that are defined in other RavenDB databases in other clusters:
                     <ul className="margin-top-xxs">
                         <li>A Replication Hub can serve many Sinks.</li>
@@ -56,7 +56,7 @@ export function EditReplicationHubInfoHub() {
                     Task definition includes:
                     <ul className="margin-top-xxs">
                         <li>Setting the replication direction.</li>
-                        <li>The replication access definitions.</li>
+                        <li>The Replication Access definitions.</li>
                         <li>Control whether deletions from Sink are executed on the Hub.</li>
                         <li>An optional delay time for data replication.</li>
                         <li>A responsible node to handle this task can be set.</li>
