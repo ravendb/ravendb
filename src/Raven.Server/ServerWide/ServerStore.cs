@@ -3149,10 +3149,11 @@ namespace Raven.Server.ServerWide
 
                     List<Exception> exceptions = null;
 
-                    foreach (var task in executors.Zip(members, (executor, nodeTag) =>
-                                 WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(executor, nodeTag, index, context, cts.Token)))
+                    var tasks = executors.Zip(members, (executor, nodeTag) =>
+                        WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(executor, nodeTag, index, context, cts.Token)).ToList();
+
+                    foreach (var exception in await Task.WhenAll(tasks))
                     {
-                        var exception = await task;
                         if (exception == null)
                             continue;
 
