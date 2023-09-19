@@ -3,7 +3,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { uniqueId } from "lodash";
 import React, { ReactNode } from "react";
-import { Alert, Button, PopoverBody, PopoverHeader, Table, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+import { Alert, Button, Table, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "./Icon";

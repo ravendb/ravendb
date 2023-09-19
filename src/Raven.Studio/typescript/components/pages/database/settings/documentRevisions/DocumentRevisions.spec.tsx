@@ -14,6 +14,7 @@ describe("DocumentRevisions", () => {
     async function waitForLoad(screen: Screen) {
         await screen.findByText(documentRevisionsConfigNames.defaultConflicts);
     }
+
     it("can render for database admin", async () => {
         const { screen } = rtlRender(
             <DefaultDocumentRevisions databaseAccess="DatabaseAdmin" licenseType="Enterprise" isCloud={false} />
