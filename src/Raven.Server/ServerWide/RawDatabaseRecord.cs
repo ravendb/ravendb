@@ -1145,6 +1145,38 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private int? _countOfSorters;
+
+        public int CountOfSorters
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return (_materializedRecord.Sorters?.Count ?? 0);
+
+                if (_countOfSorters == null)
+                {
+                    _countOfSorters = 0;
+                    if (_record.TryGet(nameof(DatabaseRecord.Sorters), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject)
+                                _countOfSorters++;
+                        }
+                    }
+                }
+
+                return _countOfSorters.Value;
+            }
+        }
+
         private Dictionary<string, AnalyzerDefinition> _analyzers;
 
         public Dictionary<string, AnalyzerDefinition> Analyzers
@@ -1174,6 +1206,38 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _analyzers;
+            }
+        }
+
+        private int? _countOfAnalyzers;
+
+        public int CountOfAnalyzers
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return (_materializedRecord.Analyzers?.Count ?? 0);
+
+                if (_countOfAnalyzers == null)
+                {
+                    _countOfAnalyzers = 0;
+                    if (_record.TryGet(nameof(DatabaseRecord.Analyzers), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject)
+                                _countOfAnalyzers++;
+                        }
+                    }
+                }
+
+                return _countOfAnalyzers.Value;
             }
         }
 

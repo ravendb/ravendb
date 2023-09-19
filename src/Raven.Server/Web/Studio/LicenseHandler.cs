@@ -183,32 +183,21 @@ namespace Raven.Server.Web.Studio
             {
                 using (context.OpenReadTransaction())
                 {
-                    var limits = new LicenseLimitsUsage
-                    {
-                        ClusterAutoIndexes = 0,
-                        ClusterStaticIndexes = 0,
-                        ClusterSubscriptionTasks = 0
-                    };
+                    var limits = new LicenseLimitsUsage();
+                    var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
 
                     foreach (var database in ServerStore.Cluster.GetAllRawDatabases(context))
                     {
-                        limits.ClusterStaticIndexes += database.CountOfStaticIndexes;
-                        limits.ClusterAutoIndexes += database.CountOfAutoIndexes;
-                        limits.ClusterSubscriptionTasks += GetSubscriptionCount(context, database.DatabaseName);
+                        limits.NumberOfStaticIndexesInCluster += database.CountOfStaticIndexes;
+                        limits.NumberOfAutoIndexesInCluster += database.CountOfAutoIndexes;
+                        limits.NumberOfCustomSortersInCluster += database.CountOfSorters;
+                        limits.NumberOfAnalyzersInCluster += database.CountOfAnalyzers;
+                        limits.NumberOfSubscriptionsInCluster += ClusterStateMachine.GetSubscriptionsCountForDatabase(context.Allocator, items, database.DatabaseName);
                     }
 
                     context.Write(writer, limits.ToJson());
                 }
             }
-        }
-
-        static int GetSubscriptionCount(TransactionOperationContext context, string databaseName)
-        {
-            var count = 0;
-            foreach (var _ in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseName)))
-                count++;
-
-            return count;
         }
     }
 }
