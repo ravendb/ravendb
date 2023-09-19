@@ -196,19 +196,29 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
             </div>
             {currentLicense === "None" && (
                 <div className="hstack gap-4 justify-content-center mt-4">
-                    <Button href={buyLink} target="_blank" color="primary" size="lg" className="rounded-pill px-4">
+                    <a
+                        href={buyLink}
+                        target="_blank"
+                        color="primary"
+                        className="btn btn-primary btn-lg rounded-pill px-4"
+                    >
                         <Icon icon="license" margin="me-3" />
                         Get License
-                    </Button>
+                    </a>
                 </div>
             )}
             {currentLicense !== "Enterprise" && currentLicense !== "None" && (
                 <div className="hstack gap-4 justify-content-center mt-4">
                     Upgrade License
-                    <Button href={buyLink} target="_blank" color="primary" size="lg" className="rounded-pill px-4">
+                    <a
+                        href={buyLink}
+                        target="_blank"
+                        color="primary"
+                        className="btn btn-primary btn-lg rounded-pill px-4"
+                    >
                         <Icon icon="license" margin="me-3" />
                         Pricing plans
-                    </Button>
+                    </a>
                 </div>
             )}
         </>
