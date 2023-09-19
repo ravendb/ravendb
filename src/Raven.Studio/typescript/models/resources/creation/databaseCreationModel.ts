@@ -20,6 +20,8 @@ type shardTopologyItem = {
 const defaultReplicationFactor = 2;
 
 class databaseCreationModel {
+
+    static readonly shardsLimit = 100;
     static storageExporterPathKeyName = storageKeyProvider.storageKeyFor("storage-exporter-path");
 
     readonly configurationSections: Array<availableConfigurationSection> = [
@@ -270,6 +272,11 @@ class databaseCreationModel {
     private assertShardTopologySpace() {
         const factor = this.replicationAndSharding.replicationFactor();
         const shardCount = this.replicationAndSharding.numberOfShards();
+
+        // prevent UI break
+        if (shardCount > databaseCreationModel.shardsLimit) {
+            return;
+        }
         
         // assert we have space for manual sharding topology
         this.replicationAndSharding.shardTopology().forEach(shard => {
@@ -432,6 +439,10 @@ class databaseCreationModel {
                 {
                     validator: (val: number) => val >= 1,
                     message: `Number of shards must be at least 1.`
+                },
+                {
+                    validator: (val: number) => val < databaseCreationModel.shardsLimit,
+                    message: `Number of shards must be less than ${databaseCreationModel.shardsLimit}.`
                 }
             ],
             digit: true

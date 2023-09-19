@@ -651,7 +651,7 @@
                 </tr>
             </thead>
             <tbody>
-            <!-- ko foreach: new Array(numberOfShards()) -->
+            <!-- ko foreach: new Array(Math.min(numberOfShards(), $root.constructor.shardsLimit)) -->
             <tr>
                 <td data-bind="text: 'Shard #' + $index()"></td>
                 <!-- ko foreach: new Array($parent.replicationFactor()) -->
