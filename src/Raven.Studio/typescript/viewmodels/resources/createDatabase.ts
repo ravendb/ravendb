@@ -28,6 +28,8 @@ class createDatabase extends dialogViewModelBase {
     
     view = require("views/resources/createDatabase.html");
     
+    static readonly shardsLimit = databaseCreationModel.shardsLimit; 
+    
     static readonly legacyKeySizes = [128, 192, 256];
 
     static readonly defaultSection: availableConfigurationSectionId = "replicationAndSharding";
