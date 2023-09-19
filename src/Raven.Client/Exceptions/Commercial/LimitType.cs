@@ -97,6 +97,12 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Server Wide Tasks")]
         ServerWideTasks,
 
+        [Description("Server Wide Custom Sorters")]
+        ServerWideCustomSorters,
+
+        [Description("Server Wide Analyzers")]
+        ServerWideAnalyzers,
+
         [Description("Index Cleanup")]
         IndexCleanup,
 

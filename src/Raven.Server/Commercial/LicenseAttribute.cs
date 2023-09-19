@@ -39,6 +39,8 @@ public enum LicenseAttribute
     CanBeActivatedUntil,
     QueueEtl,
     ServerWideTasks,
+    ServerWideCustomSorters,
+    ServerWideAnalyzers,
     IndexCleanup,
     PeriodicBackup,
     ClientConfiguration,

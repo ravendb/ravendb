@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
+using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
@@ -426,10 +427,28 @@ public sealed partial class ClusterStateMachine
         return true;
     }
 
-    private static void AssertServerWideTasks(ServerStore serverStore)
+    private static void AssertServerWideFor(ServerStore serverStore, LicenseAttribute attribute)
     {
-        if (serverStore.LicenseManager.LicenseStatus.HasServerWideTasks == false)
-            throw new LicenseLimitException(LimitType.ServerWideTasks, "Your license doesn't support adding server wide tasks.");
+        switch (attribute)
+        {
+            case LicenseAttribute.ServerWideTasks:
+                if (serverStore.LicenseManager.LicenseStatus.HasServerWideCustomSorters == false)
+                    throw new LicenseLimitException(LimitType.ServerWideTasks, "Your license doesn't support adding server wide tasks.");
+
+                break;
+
+            case LicenseAttribute.ServerWideCustomSorters:
+                if (serverStore.LicenseManager.LicenseStatus.HasServerWideCustomSorters == false)
+                    throw new LicenseLimitException(LimitType.ServerWideCustomSorters, "Your license doesn't support adding server wide custom sorters.");
+
+                break;
+
+            case LicenseAttribute.ServerWideAnalyzers:
+                if (serverStore.LicenseManager.LicenseStatus.HasServerWideAnalyzers == false)
+                    throw new LicenseLimitException(LimitType.ServerWideAnalyzers, "Your license doesn't support adding server wide analyzers.");
+
+                break;
+        }
     }
 
     private enum DatabaseRecordElementType
