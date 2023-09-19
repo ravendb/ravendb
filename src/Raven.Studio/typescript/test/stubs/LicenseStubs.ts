@@ -107,6 +107,8 @@ export class LicenseStubs {
             HasPeriodicBackup: true,
             HasRevisionsInSubscriptions: true,
             HasServerWideTasks: true,
+            HasServerWideCustomSorters: true,
+            HasServerWideAnalyzers: true,
             HasStudioConfiguration: true,
             UpgradeRequired: false,
         };
@@ -133,9 +135,11 @@ export class LicenseStubs {
 
     static limitsUsage(): LicenseLimitsUsage {
         return {
-            ClusterAutoIndexes: 20,
-            ClusterStaticIndexes: 58,
-            ClusterSubscriptionTasks: 14,
+            NumberOfStaticIndexesInCluster: 58,
+            NumberOfAutoIndexesInCluster: 20,
+            NumberOfCustomSortersInCluster: 10,
+            NumberOfAnalyzersInCluster: 10,
+            NumberOfSubscriptionsInCluster: 14
         };
     }
 }

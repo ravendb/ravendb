@@ -11,9 +11,11 @@ interface LicenseState {
 const initialState: LicenseState = {
     status: null,
     limitsUsage: {
-        ClusterAutoIndexes: null,
-        ClusterStaticIndexes: null,
-        ClusterSubscriptionTasks: null,
+        NumberOfStaticIndexesInCluster: 0,
+        NumberOfAutoIndexesInCluster: 0,
+        NumberOfCustomSortersInCluster: 0,
+        NumberOfAnalyzersInCluster: 0,
+        NumberOfSubscriptionsInCluster: 0
     },
 };
 
