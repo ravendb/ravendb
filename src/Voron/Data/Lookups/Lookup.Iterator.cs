@@ -71,9 +71,14 @@ namespace Voron.Data.Lookups
                         i++;
                         state.LastSearchPosition++;
                     }
-                    else if (_tree.GoToNextPage(ref _cursor) == false)
+                    else
                     {
-                        i++;
+                        if (_tree.GoToNextPage(ref _cursor) == false)
+                        {
+                            i++;
+                        }
+
+                        state = ref _cursor._stk[_cursor._pos];
                     }
                 }
 
@@ -98,7 +103,7 @@ namespace Voron.Data.Lookups
                     state = ref cState._stk[cState._pos];
                 }
             }
-            
+
             public int FillKeys(Span<long> results)
             {
                 if (_cursor._pos < 0)
@@ -120,6 +125,7 @@ namespace Voron.Data.Lookups
                     {
                         return 0;
                     }
+                    state = ref _cursor._stk[_cursor._pos];
                 }
             }
 
@@ -150,6 +156,8 @@ namespace Voron.Data.Lookups
                     {
                         return 0;
                     }
+
+                    state = ref _cursor._stk[_cursor._pos];
                 }
             }
             
@@ -176,6 +184,8 @@ namespace Voron.Data.Lookups
                         value = default;
                         return false;
                     }
+
+                    state = ref _cursor._stk[_cursor._pos];
                 }
             }
 
@@ -213,6 +223,8 @@ namespace Voron.Data.Lookups
                         hasPreviousValue = false;
                         return false;
                     }
+
+                    state = ref _cursor._stk[_cursor._pos];
                 }
             }
 
@@ -282,9 +294,14 @@ namespace Voron.Data.Lookups
                         i++;
                         state.LastSearchPosition--;
                     }
-                    else if (_tree.GoToPreviousPage(ref _cursor) == false)
+                    else
                     {
-                        i++;
+                        if (_tree.GoToPreviousPage(ref _cursor) == false)
+                        {
+                            i++;
+                        }
+
+                        state = ref _cursor._stk[_cursor._pos];
                     }
                 }
 
@@ -344,6 +361,7 @@ namespace Voron.Data.Lookups
                     {
                         return 0;
                     }
+                    state = ref _cursor._stk[_cursor._pos];
                 }
             }
 
@@ -370,6 +388,7 @@ namespace Voron.Data.Lookups
                         value = default;
                         return false;
                     }
+                    state = ref _cursor._stk[_cursor._pos];
                 }
             }
 
@@ -407,6 +426,7 @@ namespace Voron.Data.Lookups
                         hasPreviousValue = false;
                         return false;
                     }
+                    state = ref _cursor._stk[_cursor._pos];
                 }
             }
             
@@ -462,6 +482,7 @@ namespace Voron.Data.Lookups
                     state = ref cstate._stk[cstate._pos];
                 } 
                 while (state.Header->IsBranch);
+                Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
                 return true;
             }
         }
