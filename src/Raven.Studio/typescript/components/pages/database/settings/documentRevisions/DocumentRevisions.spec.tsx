@@ -1,20 +1,27 @@
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";
 import * as stories from "./DocumentRevisions.stories";
-import { documentRevisionsConfigNames } from "./store/documentRevisionsSlice";
 import { composeStories } from "@storybook/testing-react";
+import { documentRevisionsConfigNames } from "./store/documentRevisionsSlice";
 
 const { DefaultDocumentRevisions } = composeStories(stories);
 
+const upgradeLicenseText = "Upgrade License";
+
+type Screen = ReturnType<typeof rtlRender>["screen"];
+
 describe("DocumentRevisions", () => {
+    async function waitForLoad(screen: Screen) {
+        await screen.findByText(documentRevisionsConfigNames.defaultConflicts);
+    }
     it("can render for database admin", async () => {
         const { screen } = rtlRender(
             <DefaultDocumentRevisions databaseAccess="DatabaseAdmin" licenseType="Enterprise" isCloud={false} />
         );
 
-        expect(await screen.findByText(documentRevisionsConfigNames.defaultDocument)).toBeInTheDocument();
-        expect(screen.getByText(documentRevisionsConfigNames.defaultConflicts)).toBeInTheDocument();
+        await waitForLoad(screen);
 
+        expect(screen.queryByText(upgradeLicenseText)).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /Save/ })).toBeInTheDocument();
     });
 
@@ -23,9 +30,9 @@ describe("DocumentRevisions", () => {
             <DefaultDocumentRevisions databaseAccess="DatabaseRead" licenseType="Enterprise" isCloud={false} />
         );
 
-        expect(await screen.findByText(documentRevisionsConfigNames.defaultDocument)).toBeInTheDocument();
-        expect(screen.getByText(documentRevisionsConfigNames.defaultConflicts)).toBeInTheDocument();
+        await waitForLoad(screen);
 
+        expect(screen.queryByText(upgradeLicenseText)).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /Save/ })).not.toBeInTheDocument();
     });
 
@@ -34,7 +41,6 @@ describe("DocumentRevisions", () => {
             <DefaultDocumentRevisions databaseAccess="DatabaseAdmin" licenseType="Community" isCloud={false} />
         );
 
-        const licensingText = await screen.findByText(/Licensing/i);
-        expect(licensingText).toBeInTheDocument();
+        expect(await screen.findByText(upgradeLicenseText)).toBeInTheDocument();
     });
 });
