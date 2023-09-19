@@ -34,7 +34,7 @@ export const LicenseRestricted: StoryObj<typeof DocumentRefresh> = {
         commonInit();
 
         const { license } = mockStore;
-        license.with_License({ Type: "Community" });
+        license.with_LicenseLimited();
 
         return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },

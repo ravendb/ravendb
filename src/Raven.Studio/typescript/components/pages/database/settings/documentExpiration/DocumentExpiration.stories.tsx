@@ -34,7 +34,7 @@ export const LicenseRestricted: StoryObj<typeof DocumentExpiration> = {
         commonInit();
 
         const { license } = mockStore;
-        license.with_License({ Type: "Community" });
+        license.with_LicenseLimited();
 
         return <DocumentExpiration db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },

@@ -146,7 +146,7 @@ export const SubscriptionsWithLicenseLimits = () => {
     commonInit();
 
     const { license } = mockStore;
-    license.with_License({ Type: "Community" });
+    license.with_LicenseLimited();
 
     const db = DatabasesStubs.shardedDatabase();
 

@@ -30,7 +30,7 @@ export function CommunityLimits() {
     commonInit();
 
     const { license } = mockStore;
-    license.with_License({ Type: "Community" });
+    license.with_LicenseLimited();
 
     return <ServerWideCustomSorters />;
 }

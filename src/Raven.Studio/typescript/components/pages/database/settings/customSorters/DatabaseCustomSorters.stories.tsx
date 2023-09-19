@@ -73,7 +73,7 @@ export function CommunityLimits() {
 
     databasesService.withCustomSorters();
 
-    license.with_License({ Type: "Community" });
+    license.with_LicenseLimited();
 
     return <DatabaseCustomSorters db={db} />;
 }

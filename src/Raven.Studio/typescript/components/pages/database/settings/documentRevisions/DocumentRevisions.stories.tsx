@@ -41,10 +41,17 @@ export const DefaultDocumentRevisions: StoryObj<DefaultDocumentRevisionsProps> =
             [db.name]: databaseAccess,
         });
 
-        license.with_License({
-            Type: licenseType,
-            IsCloud: isCloud,
-        });
+        if (licenseType !== "Enterprise" && licenseType !== "Professional" && licenseType !== "Developer") {
+            license.with_LicenseLimited({
+                Type: licenseType,
+                IsCloud: isCloud,
+            });
+        } else {
+            license.with_License({
+                Type: licenseType,
+                IsCloud: isCloud,
+            });
+        }
 
         return <DocumentRevisions db={db} />;
     },
