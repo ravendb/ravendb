@@ -135,20 +135,6 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
-                if (item.Flags.Contain(DocumentFlags.Archived) && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived)
-                {
-                    reason = $"{id} is archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
-                    result.Status = SubscriptionBatchItemStatus.Skip;
-                    return result;
-                }
-                
-                if (item.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ArchivedOnly)
-                {
-                    reason = $"{id} is not archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
-                    result.Status = SubscriptionBatchItemStatus.Skip;
-                    return result;
-                }
-                
                 var conflictStatus = GetConflictStatus(item.ChangeVector);
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
@@ -189,6 +175,20 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 };
             }
 
+            if (item.Flags.Contain(DocumentFlags.Archived) && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived)
+            {
+                reason = $"{id} is archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
+                result.Status = SubscriptionBatchItemStatus.Skip;
+                return result;
+            }
+            
+            if (item.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ArchivedOnly)
+            {
+                reason = $"{id} is not archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
+                result.Status = SubscriptionBatchItemStatus.Skip;
+                return result;
+            }
+            
             if (Patch == null)
             {
                 result.Status = SubscriptionBatchItemStatus.Send;
