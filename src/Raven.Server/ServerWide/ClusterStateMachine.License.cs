@@ -14,7 +14,7 @@ using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -157,7 +157,7 @@ public sealed partial class ClusterStateMachine
                             revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep > maxRevisionsToKeep)
                         {
                             throw new LicenseLimitException(LimitType.RevisionsConfiguration,
-                                $"The defined minimum revisions keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep}' " +
+                                $"The defined minimum revisions to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep}' " +
                                 $" exceeds the licensed one '{maxRevisionsToKeep}'");
                         }
 
@@ -309,24 +309,21 @@ public sealed partial class ClusterStateMachine
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     var (_, _, record) = GetCurrentItem(context, result.Value);
+                    var rawRecord = new RawDatabaseRecord(context, record);
 
                     switch (resultType)
                     {
                         case DatabaseRecordElementType.StaticIndex:
-                            if (record.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject obj) && obj != null)
-                                total += obj.Count;
+                            total += rawRecord.CountOfStaticIndexes;
                             break;
                         case DatabaseRecordElementType.AutoIndex:
-                            if (record.TryGet(nameof(DatabaseRecord.AutoIndexes), out obj) && obj != null)
-                                total += obj.Count;
+                            total += rawRecord.CountOfAutoIndexes;
                             break;
                         case DatabaseRecordElementType.CustomSorters:
-                            if (record.TryGet(nameof(DatabaseRecord.Sorters), out obj) && obj != null)
-                                total += obj.Count;
+                            total += rawRecord.CountOfSorters;
                             break;
                         case DatabaseRecordElementType.Analyzers:
-                            if (record.TryGet(nameof(DatabaseRecord.Analyzers), out obj) && obj != null)
-                                total += obj.Count;
+                            total += rawRecord.CountOfAnalyzers;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -341,7 +338,7 @@ public sealed partial class ClusterStateMachine
     private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand command, ClusterOperationContext context)
     {
         var maxSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
-        if (maxSubscriptionsPerDatabase != null && maxSubscriptionsPerDatabase >= 0 && maxSubscriptionsPerDatabase < GetSubscriptionsCountForDatabase(command.DatabaseName))
+        if (maxSubscriptionsPerDatabase != null && maxSubscriptionsPerDatabase >= 0 && maxSubscriptionsPerDatabase < GetSubscriptionsCountForDatabase(context.Allocator, items, command.DatabaseName))
         {
             if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                 return;
@@ -373,28 +370,28 @@ public sealed partial class ClusterStateMachine
 
             foreach (var name in GetDatabaseNames(context))
             {
-                count += GetSubscriptionsCountForDatabase(name);
+                count += GetSubscriptionsCountForDatabase(context.Allocator, items, name);
             }
 
             return count;
         }
+    }
 
-        long GetSubscriptionsCountForDatabase(string name)
+    public static long GetSubscriptionsCountForDatabase(ByteStringContext allocator, Table items, string name)
+    {
+        long count = 0;
+
+        var subscriptionPrefix = Client.Documents.Subscriptions.SubscriptionState.SubscriptionPrefix(name).ToLowerInvariant();
+
+        using (Slice.From(allocator, subscriptionPrefix, out Slice loweredPrefix))
         {
-            var count = 0;
-
-            var subscriptionPrefix = Client.Documents.Subscriptions.SubscriptionState.SubscriptionPrefix(name).ToLowerInvariant();
-
-            using (Slice.From(context.Allocator, subscriptionPrefix, out Slice loweredPrefix))
+            foreach (var _ in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
             {
-                foreach (var _ in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
-                {
-                    count++;
-                }
+                count++;
             }
-
-            return count;
         }
+
+        return count;
     }
 
     private bool CanAssertLicenseLimits(ClusterOperationContext context, int minBuildVersion)
