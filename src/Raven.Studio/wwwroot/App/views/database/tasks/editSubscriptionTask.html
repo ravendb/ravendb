@@ -1,5 +1,11 @@
     <div class="edit-subscription flex-vertical absolute-fill content-margin edit-subscription-task edit-ongoing-task">
-        <div class="flex-end" data-bind="react: infoHubView"></div>
+        <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+            <div class="flex-horizontal gap-2">
+                <i class="icon-subscription"></i>
+                <h2 data-bind="text: $root.isAddingNewSubscriptionTask() ? `New Subscription` : `Edit Subscription`" class="mb-0"></h2>
+            </div>
+            <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
+        </div>
         <div class="row flex-row flex-grow flex-stretch-items">
             <div class="col-sm-12 col-lg-6 flex-vertical">
                 <form data-bind="submit: saveSubscription">
@@ -32,7 +38,6 @@
                                     <i class="icon-warning"></i>&nbsp;&nbsp;Warning: You are editing a live subscription connection . . .
                                 </div>
                             </div>
-                            <h3 data-bind="text: $parent.isAddingNewSubscriptionTask() ? `New Subscription` : `Edit Subscription`"></h3>
                             <div class="form-group margin-top" data-bind="validationElement: taskName">
                                 <label class="control-label">Task Name</label>
                                 <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task (optional)"
