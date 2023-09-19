@@ -86,7 +86,7 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
     private const int MaxTermSize = 128;
 
-    private unsafe SuggestWord[] QueryOverSingleWord(SuggestionField field, string word, SuggestionOptions options)
+    private SuggestWord[] QueryOverSingleWord(SuggestionField field, string word, SuggestionOptions options)
     {
         var sortByPopularity = options.SortMode == SuggestionSortMode.Popularity;
         var match = options.Distance switch

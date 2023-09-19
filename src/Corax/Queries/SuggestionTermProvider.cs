@@ -26,26 +26,21 @@ namespace Corax.Queries
         private readonly IndexSearcher.IndexSearcher _searcher;
         private readonly int _fieldId;
         private readonly Slice _term;
-        private IndexFieldBinding _binding;
         private readonly int _take;
         private readonly bool _sort;
         private readonly float _distance;
-        private readonly delegate*<ref SuggestionTermProvider<TDistanceProvider>, ref Span<byte>, ref Span<Token>, ref Span<float>, void> _nextFunc;
         private readonly TDistanceProvider _distanceProvider;
 
         public SuggestionTermProvider(
             IndexSearcher.IndexSearcher searcher, int fieldId,
-            Slice term, IndexFieldBinding binding, int take, bool sortByPopularity, float accuracy, TDistanceProvider distanceProvider,
-            delegate*<ref SuggestionTermProvider<TDistanceProvider>, ref Span<byte>, ref Span<Token>, ref Span<float>, void> nextFunc)
+            Slice term, IndexFieldBinding binding, int take, bool sortByPopularity, float accuracy, TDistanceProvider distanceProvider)
         {            
             _searcher = searcher;
             _fieldId = fieldId;
             _term = term;
-            _binding = binding;
             _take = take;
             _distanceProvider = distanceProvider;
             _distance = accuracy;
-            _nextFunc = nextFunc;
             _sort = sortByPopularity;
         }
 
@@ -101,7 +96,7 @@ namespace Corax.Queries
                 // Copy to storage.                
                 _maxSize = word.Length * word.Length;
 
-                int minSize = word.Length + (2 * _maxSize * sizeof(int)) + _maxSize * sizeof(float);
+                int minSize = _maxSize + (2 * _maxSize * sizeof(int)) + _maxSize * sizeof(float);
                 if ( _storage == null )
                 {
                     _storage = ArrayPool<byte>.Shared.Rent(minSize);
@@ -156,232 +151,116 @@ namespace Corax.Queries
             }
         }
 
-
         public static SuggestionTermProvider<TDistanceProvider> YieldSuggestions(IndexSearcher.IndexSearcher searcher, int fieldId, Slice term, IndexFieldBinding binding, TDistanceProvider distanceProvider, bool sortByPopularity, float distance, int take = -1)
         {
-            static void NextNGram(ref SuggestionTermProvider<TDistanceProvider> provider, ref Span<byte> terms, ref Span<Token> tokens, ref Span<float> scores)
-            {
-                int fieldId = provider._fieldId;
-                var allocator = provider._searcher.Allocator;
-
-                Slice.From(allocator, $"__Suggestion_{fieldId}", out var treeName);
-                var tree = provider._searcher.Transaction.CompactTreeFor(treeName);
-
-                using var gramTable = new SuggestionsNGramTable(Suggestions.DefaultNGramSize);
-                gramTable.Generate(provider._term.AsSpan());
-
-                // We initialize the iterator and store it in the stack memory.
-                var iter = tree.Iterate();
-                var values = new FastList<(Slice Term, int Popularity)>();
-                var dictionary = new Dictionary<uint, int>();
-                while (gramTable.MoveNext(out var ngram, out var boost))
-                {
-                    iter.Seek(ngram);
-
-                    byte lastByte = ngram[^1];
-
-                    while (iter.MoveNext(out var gramCompactKey, out _, out _))
-                    {
-                        var gramKey = gramCompactKey.Decoded();
-                        if (gramKey[ngram.Length - 1] > lastByte)
-                            break;
-
-                        var key = gramKey.Slice(Suggestions.DefaultNGramSize);
-                        uint keyHash = Hashing.XXHash32.CalculateInline(key);
-
-                        if (dictionary.TryGetValue(keyHash, out int location) == false)
-                        {
-                            location = values.Count;
-
-                            Slice.From(allocator, gramKey, out var gramSlice);
-                            values.Add((gramSlice, 0));
-                            dictionary.Add(keyHash, location);
-                        }
-
-                        ref var item = ref values.GetAsRef(location);
-                        item.Popularity++;
-                    }
-                }
-
-                if (values.Count == 0)
-                    goto NoResults;
-
-                if (provider._sort)
-                {
-                    var sorter = new Sorter<(Slice, int), ScoreComparer>();
-                    sorter.Sort(values.AsUnsafeSpan());
-                } 
-
-                int take = provider._take;
-                if (take == Constants.IndexSearcher.TakeAll)
-                    take = int.MaxValue;
-                take = Math.Min(Math.Min(take, values.Count), tokens.Length);
-
-                Span<byte> auxTerms = terms;
-
-                NGramDistance nGramDistance = default;
-
-                int tokenTaken = 0;
-                int totalTermsBytes = 0;
-                var term = provider._term;
-                for (int tokensCount = 0; tokensCount < values.Count; tokensCount++)
-                {
-                    ref var v = ref values.GetAsRef(tokensCount);
-
-                    var termKey = v.Term.AsReadOnlySpan();
-                    
-                    if (termKey.Length > 1 && termKey[^1] == '\0')
-                        termKey = termKey.Slice(0, termKey.Length - 1);
-
-                    if (termKey.Length > Suggestions.DefaultNGramSize)
-                        termKey = termKey.Slice(Suggestions.DefaultNGramSize);
-
-                    if (termKey.Length >= auxTerms.Length)
-                        break; // No enough space to put it here. 
-
-                    float score = nGramDistance.GetDistance(term, termKey);
-                    if (score < provider._distance)
-                        continue;
-
-                    termKey.CopyTo(auxTerms);
-                    tokens[tokenTaken].Offset = totalTermsBytes;
-                    tokens[tokenTaken].Length = (uint)termKey.Length;
-
-                    scores[tokenTaken] = score;
-
-                    auxTerms = auxTerms.Slice(termKey.Length);
-                    totalTermsBytes += termKey.Length;
-
-                    tokenTaken++;
-                    if (tokenTaken >= take)
-                        break;
-                }
-
-                terms = terms.Slice(0, totalTermsBytes);
-                tokens = tokens.Slice(0, tokenTaken);
-                scores = scores.Slice(0, tokenTaken);
-
-                return;
-
-
-            NoResults:
-                terms = terms.Slice(0, 0);
-                tokens = tokens.Slice(0, 0);
-                scores = scores.Slice(0, 0);
-            }
-
-            static void Next(ref SuggestionTermProvider<TDistanceProvider> provider, ref Span<byte> terms, ref Span<Token> tokens, ref Span<float> scores)
-            {
-                int fieldId = provider._fieldId;
-                var term = provider._term;
-                var maxDistance = provider._distance;
-
-                // We get the actual field tree. 
-                var fields = provider._searcher.Transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-                var fieldTree = fields?.CompactTreeFor(provider._binding.FieldName);
-                if (fieldTree == null)
-                    goto NoResults;
-
-                // For each term to look for, we will look at every potential hit using fuzzy searching with low threshold unless we are doing it
-                // using Levenshtein, in which case we just do it properly.                
-                var currentTermSlice = provider._term;                                
-                var iter = fieldTree.FuzzyIterate(term, typeof(TDistanceProvider) == typeof(LevenshteinDistance) ? provider._distance : 0.3f);
-                iter.Seek(currentTermSlice);
-
-                var values = new FastList<(Slice Term, float)>();
-
-                var allocator = provider._searcher.Allocator;
-                TDistanceProvider distance = provider._distanceProvider;
-                while (iter.MoveNext(out var compactKey, out var _, out float score))
-                {
-                    var key = compactKey.Decoded();
-
-                    // The original distance is Levenshtein, therefore we dont need to recompute it. 
-                    if (typeof(TDistanceProvider) != typeof(LevenshteinDistance))
-                    {
-                        score = distance.GetDistance(term, key);
-                        if (score < provider._distance)
-                            continue;
-                    }
-
-                    Slice.From(allocator, key, out var keySlice);
-                    values.Add((keySlice, score));
-                }
-
-                if (values.Count == 0)
-                    goto NoResults;
-
-                if (provider._sort)
-                {
-                    var sorter = new Sorter<(Slice, float), ScoreComparer>();
-                    sorter.Sort(values.AsUnsafeSpan());
-                }
-
-                int take = provider._take;
-                if (take == Constants.IndexSearcher.TakeAll)
-                    take = int.MaxValue;
-                take = Math.Min(take, tokens.Length);
-
-                Span<byte> auxTerms = terms;
-
-                int tokensCount = 0;
-                int tokenTaken = 0;
-                int totalTermsBytes = 0;                
-                for (; tokensCount < values.Count; tokensCount++)
-                {
-                    ref var v = ref values.GetAsRef(tokensCount);
-
-                    int termSize = v.Term.Size;
-                    if (termSize > 1 && v.Term[termSize - 1] == '\0')
-                        termSize--; //delete null char from the end
-
-                    Debug.Assert(termSize > 0);
-
-                    if (termSize >= auxTerms.Length)
-                        break; // No enough space to put another one. 
-
-                    v.Item1.CopyTo(auxTerms);
-                    tokens[tokenTaken].Offset = totalTermsBytes;
-                    tokens[tokenTaken].Length = (uint)termSize;
-
-                    scores[tokenTaken] = v.Item2;
-
-                    auxTerms = auxTerms.Slice(termSize);
-                    totalTermsBytes += termSize;
-
-                    tokenTaken++;
-                    if (tokenTaken >= take)
-                        break;
-                }
-
-                terms = terms.Slice(0, totalTermsBytes);
-                tokens = tokens.Slice(0, tokenTaken);
-                scores = scores.Slice(0, tokenTaken);
-
-                return;
-
-            NoResults:
-                terms = terms.Slice(0, 0);
-                tokens = tokens.Slice(0, 0);
-                scores = scores.Slice(0, 0);
-            }
-
-            if (typeof(TDistanceProvider) == typeof(LevenshteinDistance))
-                return new SuggestionTermProvider<TDistanceProvider>(searcher, fieldId, term, binding, take, sortByPopularity, distance, distanceProvider, &Next);
-            else if (typeof(TDistanceProvider) == typeof(NGramDistance))
-                return new SuggestionTermProvider<TDistanceProvider>(searcher, fieldId, term, binding, take, sortByPopularity, distance, distanceProvider, &NextNGram);
-            else if (typeof(TDistanceProvider) == typeof(JaroWinklerDistance))
-                return new SuggestionTermProvider<TDistanceProvider>(searcher, fieldId, term, binding, take, sortByPopularity, distance, distanceProvider, &Next);
-            else if (typeof(TDistanceProvider) == typeof(NoStringDistance))
-                return new SuggestionTermProvider<TDistanceProvider>(searcher, fieldId, term, binding, take, sortByPopularity, distance, distanceProvider, &NextNGram);
-            else
-                throw new NotSupportedException($"The distance function is not supported.");
+            return new SuggestionTermProvider<TDistanceProvider>(searcher, fieldId, term, binding, take, sortByPopularity, distance, distanceProvider);
         }       
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Next(ref Span<byte> terms, ref Span<Token> tokens, ref Span<float> scores)
         {
-            _nextFunc(ref this, ref terms, ref tokens, ref scores);
+            var allocator = _searcher.Allocator;
+
+            var values = new FastList<(Slice Term, int Popularity)>();
+            var dictionary = new Dictionary<uint, int>();
+
+            // We initialize the iterator and store it in the stack memory.
+            Slice.From(allocator, $"__Suggestion_{_fieldId}", out var treeName);
+            var tree = _searcher.Transaction.CompactTreeFor(treeName);
+            var iter = tree.Iterate();
+
+            using var gramTable = new SuggestionsNGramTable(Suggestions.DefaultNGramSize);
+            gramTable.Generate(_term.AsSpan());
+            while (gramTable.MoveNext(out var ngram, out var boost))
+            {
+                iter.Seek(ngram);
+
+                byte lastByte = ngram[^1];
+
+                while (iter.MoveNext(out var gramCompactKey, out _, out _))
+                {
+                    var gramKey = gramCompactKey.Decoded();
+                    if (gramKey[ngram.Length - 1] > lastByte)
+                        break;
+
+                    if (gramKey.Length <= Suggestions.DefaultNGramSize)
+                        continue;
+
+                    var key = gramKey.Slice(Suggestions.DefaultNGramSize);
+                    uint keyHash = Hashing.XXHash32.CalculateInline(key);
+
+                    if (dictionary.TryGetValue(keyHash, out int location) == false)
+                    {
+                        location = values.Count;
+
+                        Slice.From(allocator, key, out var gramSlice);
+                        values.Add((gramSlice, 0));
+                        dictionary.Add(keyHash, location);
+                    }
+
+                    ref var item = ref values.GetAsRef(location);
+                    item.Popularity++;
+                }
+            }
+
+            if (values.Count == 0)
+                goto NoResults;
+
+            if (_sort)
+            {
+                var sorter = new Sorter<(Slice, int), ScoreComparer>();
+                sorter.Sort(values.AsUnsafeSpan());
+            }
+
+            int take = _take;
+            if (take == Constants.IndexSearcher.TakeAll)
+                take = int.MaxValue;
+            take = Math.Min(Math.Min(take, values.Count), tokens.Length);
+
+            Span<byte> auxTerms = terms;
+
+            int tokenTaken = 0;
+            int totalTermsBytes = 0;
+            for (int tokensCount = 0; tokensCount < values.Count; tokensCount++)
+            {
+                ref var v = ref values.GetAsRef(tokensCount);
+
+                var termKey = v.Term.AsReadOnlySpan();
+
+                if (termKey.Length > 1 && termKey[^1] == '\0')
+                    termKey = termKey.Slice(0, termKey.Length - 1);
+
+                if (termKey.Length >= auxTerms.Length)
+                    break; // No enough space to put it here. 
+
+                float score = _distanceProvider.GetDistance(_term, termKey);
+                if (score < _distance)
+                    continue;
+
+                termKey.CopyTo(auxTerms);
+                tokens[tokenTaken].Offset = totalTermsBytes;
+                tokens[tokenTaken].Length = (uint)termKey.Length;
+                scores[tokenTaken] = score;
+
+                auxTerms = auxTerms.Slice(termKey.Length);
+                totalTermsBytes += termKey.Length;
+
+                tokenTaken++;
+                if (tokenTaken >= take)
+                    break;
+            }
+
+            terms = terms.Slice(0, totalTermsBytes);
+            tokens = tokens.Slice(0, tokenTaken);
+            scores = scores.Slice(0, tokenTaken);
+
+            return;
+
+
+        NoResults:
+            terms = terms.Slice(0, 0);
+            tokens = tokens.Slice(0, 0);
+            scores = scores.Slice(0, 0);
         }
     }
 }
