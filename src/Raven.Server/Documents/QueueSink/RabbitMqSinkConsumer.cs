@@ -51,7 +51,7 @@ public class RabbitMqSinkConsumer : DefaultBasicConsumer, IQueueSinkConsumer
     {
         if (_latestDeliveryTag > 0)
         {
-            _channel.BasicAck(0, true);    
+            _channel.BasicAck(_latestDeliveryTag, true);    
         }
     }
     
