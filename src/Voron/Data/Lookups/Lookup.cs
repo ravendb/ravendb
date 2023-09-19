@@ -406,6 +406,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 {
                     Page = _llt.GetPage(sibling)
                 };
+                Debug.Assert(sourceState.Header->IsBranch ^ sourceState.Header->IsLeaf, "sourceState.Header->IsBranch ^ sourceState.Header->IsLeaf");
                 FreePageFor(ref sourceState, ref destinationState);
             }
             return true;
@@ -1022,6 +1023,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         Page page = _llt.GetPage(p);
         var state = new CursorState { Page = page, };
+        Debug.Assert(state.Header->IsBranch ^ state.Header->IsLeaf, "state.Header->IsBranch ^ state.Header->IsLeaf");
 
         var results = new List<(TLookupKey, long)>();
 
@@ -1046,6 +1048,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             Page page = _llt.GetPage(p);
             var state = new CursorState { Page = page, };
+            Debug.Assert(state.Header->IsBranch ^ state.Header->IsLeaf, "state.Header->IsBranch ^ state.Header->IsLeaf");
 
             results.Add(p);
             if (state.Header->PageFlags.HasFlag(LookupPageFlags.Branch))
@@ -1108,6 +1111,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         ref var state = ref cstate._stk[++cstate._pos];
         state.LastSearchPosition = 0;
         state.Page = _llt.GetPage(nextPage);
+        Debug.Assert(state.Header->IsBranch ^ state.Header->IsLeaf, "state.Header->IsBranch ^ state.Header->IsLeaf");
         cstate._len++;
     }
 
