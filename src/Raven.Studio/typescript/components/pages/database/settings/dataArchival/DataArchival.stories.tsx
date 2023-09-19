@@ -28,7 +28,7 @@ export const LicenseRestricted: StoryObj<typeof DataArchival> = {
         const { databasesService } = mockServices;
         const { license } = mockStore;
         databasesService.withDataArchivalConfiguration();
-        license.with_License({ Type: "Community" });
+        license.with_LicenseLimited();
         return <DataArchival db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
 };

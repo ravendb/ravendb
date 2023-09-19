@@ -99,6 +99,23 @@ export class LicenseStubs {
             HasPowerBI: true,
             HasPostgreSqlIntegration: true,
             HasQueueSink: true,
+            CanSetupDefaultRevisionsConfiguration: true,
+            HasClientConfiguration: true,
+            HasDataArchival: true,
+            HasIndexCleanup: true,
+            HasMultiNodeSharding: true,
+            HasPeriodicBackup: true,
+            HasRevisionsInSubscriptions: true,
+            HasServerWideTasks: true,
+            HasStudioConfiguration: true,
+            UpgradeRequired: false,
+        };
+    }
+
+    static getStatusLimited(): LicenseStatus {
+        return {
+            ...LicenseStubs.getStatus(),
+            Type: "Community",
             MaxNumberOfStaticIndexesPerDatabase: 12,
             MaxNumberOfStaticIndexesPerCluster: 12 * 5,
             MaxNumberOfAutoIndexesPerDatabase: 24,
@@ -111,16 +128,6 @@ export class LicenseStubs {
             MaxNumberOfCustomAnalyzersPerCluster: 5,
             MaxNumberOfRevisionsToKeep: 2,
             MaxNumberOfRevisionAgeToKeepInDays: 45,
-            CanSetupDefaultRevisionsConfiguration: true,
-            HasClientConfiguration: true,
-            HasDataArchival: true,
-            HasIndexCleanup: true,
-            HasMultiNodeSharding: true,
-            HasPeriodicBackup: true,
-            HasRevisionsInSubscriptions: true,
-            HasServerWideTasks: true,
-            HasStudioConfiguration: true,
-            UpgradeRequired: false,
         };
     }
 

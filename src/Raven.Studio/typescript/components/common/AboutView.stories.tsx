@@ -110,7 +110,7 @@ const FloatingButton = ({ isCloud, licenseType, isEnabled }: FloatingButtonProps
 
 const AnchoredHub = (args: { featureAvailable: boolean }) => {
     const { license } = mockStore;
-    license.with_License({ Type: "Community" });
+    license.with_LicenseLimited();
 
     return (
         <div className="content-margin">

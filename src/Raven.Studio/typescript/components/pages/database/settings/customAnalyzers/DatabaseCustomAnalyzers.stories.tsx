@@ -73,7 +73,7 @@ export function CommunityLimits() {
 
     databasesService.withCustomAnalyzers();
 
-    license.with_License({ Type: "Community" });
+    license.with_LicenseLimited();
 
     return <DatabaseCustomAnalyzers db={db} />;
 }

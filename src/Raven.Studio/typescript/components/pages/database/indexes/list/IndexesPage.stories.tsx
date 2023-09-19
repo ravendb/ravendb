@@ -171,7 +171,7 @@ export const LicenseLimits: ComponentStory<typeof IndexesPage> = () => {
     commonInit();
     configureDifferentIndexStates();
 
-    license.with_License({ Type: "Community" });
+    license.with_LicenseLimited();
     license.with_LimitsUsage();
 
     return <IndexesPage db={db} />;

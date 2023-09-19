@@ -45,7 +45,7 @@ export const LicenseRestricted: ComponentStory<typeof ClientDatabaseConfiguratio
     const { manageServerService } = mockServices;
     const { license } = mockStore;
     manageServerService.withGetGlobalClientConfiguration();
-    license.with_License({ Type: "Community" });
+    license.with_LicenseLimited();
 
     return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
 };

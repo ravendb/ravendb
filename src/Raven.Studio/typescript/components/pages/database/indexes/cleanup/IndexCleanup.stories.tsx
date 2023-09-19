@@ -41,7 +41,7 @@ export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
 
 export const LicenseRestricted: Story<typeof IndexCleanup> = () => {
     const { license } = mockStore;
-    license.with_License({ Type: "Community" });
+    license.with_LicenseLimited();
 
     const { indexesService } = mockServices;
 
