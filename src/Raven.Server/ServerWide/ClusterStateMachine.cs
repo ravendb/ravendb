@@ -588,7 +588,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideBackupConfigurationCommand):
-                        AssertServerWideTasks(serverStore);
+                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideTasks);
 
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
@@ -606,7 +606,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideExternalReplicationCommand):
-                        AssertServerWideTasks(serverStore);
+                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideTasks);
 
                         var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
@@ -648,10 +648,14 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideAnalyzerCommand):
+                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideAnalyzers);
+
                         PutValue<AnalyzerDefinition>(context, type, cmd, index);
                         break;
 
                     case nameof(PutServerWideSorterCommand):
+                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideCustomSorters);
+
                         PutValue<SorterDefinition>(context, type, cmd, index);
                         break;
 

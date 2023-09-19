@@ -224,6 +224,10 @@ namespace Raven.Server.Commercial
 
         public bool HasServerWideTasks => Enabled(LicenseAttribute.ServerWideTasks);
 
+        public bool HasServerWideCustomSorters => Enabled(LicenseAttribute.ServerWideCustomSorters);
+
+        public bool HasServerWideAnalyzers => Enabled(LicenseAttribute.ServerWideAnalyzers);
+
         public bool HasIndexCleanup => Enabled(LicenseAttribute.IndexCleanup);
 
         public bool HasPeriodicBackup => Enabled(LicenseAttribute.PeriodicBackup);
@@ -322,6 +326,8 @@ namespace Raven.Server.Commercial
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
                 [nameof(HasServerWideTasks)] = HasServerWideTasks,
+                [nameof(HasServerWideCustomSorters)] = HasServerWideCustomSorters,
+                [nameof(HasServerWideAnalyzers)] = HasServerWideAnalyzers,
                 [nameof(HasIndexCleanup)] = HasIndexCleanup,
                 [nameof(HasPeriodicBackup)] = HasPeriodicBackup,
                 [nameof(HasClientConfiguration)] = HasClientConfiguration,
