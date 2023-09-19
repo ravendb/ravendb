@@ -391,7 +391,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     private bool MaybeMergeEntries(ref CursorState destinationState)
     {
         CursorState sourceState;
+        Debug.Assert(_internalCursor._pos > 0, "_internalCursor._pos > 0");
         ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
+        Debug.Assert(parent.Header->NumberOfEntries >= 2,"parent.Header->NumberOfEntries >= 2");
 
         // optimization: not merging right most / left most pages
         // that allows to delete in up / down order without doing any
