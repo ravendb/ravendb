@@ -27,6 +27,7 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import getAdminStatsCommand from "commands/resources/getAdminStatsCommand";
 import assertUnreachable from "components/utils/assertUnreachable";
 import licenseModel from "models/auth/licenseModel";
+import { CertificatesInfoHub } from "viewmodels/manage/CertificatesInfoHub";
 
 type certificatesSortMode = "default" |
     "byNameAsc" |
@@ -119,6 +120,7 @@ class certificates extends viewModelBase {
     deleteExistingCertificate = ko.observable<boolean>(false);
     
     isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    infoHubView: ReactInKnockout<typeof CertificatesInfoHub>;
     
     constructor() {
         super();
@@ -142,6 +144,10 @@ class certificates extends viewModelBase {
         this.showUserCertificates.subscribe(() => this.filterCertificates());
         
         this.databasesToShow.subscribe(() => this.filterCertificates());
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: CertificatesInfoHub
+        }));
     }
     
     activate() {
