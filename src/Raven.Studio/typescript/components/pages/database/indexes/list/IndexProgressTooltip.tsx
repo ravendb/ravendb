@@ -17,6 +17,8 @@ import {
 } from "components/common/LocationSpecificDetails";
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
+import copyToClipboard from "common/copyToClipboard";
+import { Badge, Button } from "reactstrap";
 
 interface IndexProgressTooltipProps {
     target: HTMLElement;
@@ -32,13 +34,27 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
     if (nodeInfo.status === "failure") {
         return (
             <PopoverWithHover target={target} placement="top">
-                <div className="text-warning flex-horizontal p-3">
-                    <div className="flex-start text-warning">
-                        <Icon icon="warning" />
-                    </div>
+                <div className="flex-horizontal p-3 word-break">
                     <div>
-                        <div>Unable to load index status:</div>
-                        <div>{nodeInfo.loadError.responseJSON.Message}</div>
+                        <div className="d-flex justify-content-between flex-wrap">
+                            <span className="text-danger">
+                                <Icon icon="warning" /> Unable to load index status
+                            </span>
+                            <Button
+                                className="rounded-pill"
+                                color="primary"
+                                size="xs"
+                                onClick={() =>
+                                    copyToClipboard.copy(
+                                        nodeInfo.loadError.responseJSON.Message,
+                                        "Copied error message to clipboard"
+                                    )
+                                }
+                            >
+                                <Icon icon="copy" /> <span>Copy to clipboard</span>
+                            </Button>
+                        </div>
+                        <div className="error-message text-danger mt-3">{nodeInfo.loadError.responseJSON.Message}</div>
                     </div>
                 </div>
             </PopoverWithHover>

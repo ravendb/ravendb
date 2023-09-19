@@ -353,3 +353,10 @@ select {
 .cursor-pointer {
     cursor: pointer;
 }
+
+// index load error popover message
+.error-message {
+    max-height: 180px;
+    overflow-y: scroll;
+    position: relative;
+}
