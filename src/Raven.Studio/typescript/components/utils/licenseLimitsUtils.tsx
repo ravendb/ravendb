@@ -24,8 +24,6 @@ export function getLicenseLimitReachStatus(count: number, limit: number): Licens
 
 export type LicenseAvailabilityType = "community" | "professional" | "enterprise";
 
-// Method prepared for future use
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getLicenseAvailabilityType(licenseType: Raven.Server.Commercial.LicenseType): LicenseAvailabilityType {
     switch (licenseType) {
         case "Essential":
