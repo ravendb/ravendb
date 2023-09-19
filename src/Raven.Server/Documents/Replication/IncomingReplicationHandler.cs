@@ -1448,7 +1448,6 @@ namespace Raven.Server.Documents.Replication
                                 // recreate attachments reference
                                 database.DocumentsStorage.AttachmentsStorage.PutAttachmentRevert(context, doc.Id, doc.Data, out _);
                                 
-                                doc.Data.Modifications = null;
                                 using var newVer = doc.Data.Clone(context);
                                 // now we save it again, and a side effect of that is syncing all the attachments
                                 context.DocumentDatabase.DocumentsStorage.Put(context, docId, null, newVer, lastModifiedTicks,
