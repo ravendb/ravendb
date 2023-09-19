@@ -25,8 +25,8 @@ export function EditRavenEtlInfoHub() {
                     transfers data from documents from this RavenDB database to another RavenDB database.
                 </p>
                 <ul>
-                    <li>The sent data can be filtered and modified by multiple transformation scripts that are added to
-                        the task.
+                    <li>The sent data can be filtered and modified by multiple transformation JavaScript scripts that
+                        are added to the task.
                     </li>
                     <li className="margin-top-xxs">
                         Custom logic for Attachments, Counters, Time series,
@@ -36,7 +36,7 @@ export function EditRavenEtlInfoHub() {
                         Revisions are not sent by the ETL process.
                     </li>
                     <li className="margin-top-xxs">
-                        Each script specifies the source collection(s) and the target collection(s) which may be
+                        Each script specifies the source collection(s) and the destination collection(s) which may be
                         different than the source.
                     </li>
                     <li className="margin-top-xxs">
@@ -52,7 +52,7 @@ export function EditRavenEtlInfoHub() {
                     Task definition includes:
                     <ul>
                         <li>The transformation scripts definitions.</li>
-                        <li>A connection string with URLs of the target database servers.</li>
+                        <li>A connection string with URLs of the destination database servers.</li>
                         <li>A responsible node to handle this task can be set.</li>
                     </ul>
                 </div>
