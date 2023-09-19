@@ -20,24 +20,21 @@ export function EditManualBackupTaskInfoHub() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
-                <p></p>
-                <p>
+                <div>
+                    Generate a one-time backup of this database.
+                    <ul className="margin-top-xxs">
+                        <li>Creating an ad-hoc backup may be essential before an upgrade or whenever an unscheduled backup is needed.</li>
+                        <li>No retention period is defined for this backup, so it will not be automatically deleted.</li>
+                    </ul>
+                </div>
+                <div>
                     Configuration options available:
-                    <ul>
+                    <ul className="margin-top-xxs">
                         <li>Customize the backup type (Backup or Snapshot)</li>
-                        <li>Select full and/or incremental backups</li>
-                        <li>Set the backups retention period</li>
-                        <li>Specify destinations, where the backup files will be stored</li>
+                        <li>Specify destinations, where the backup file will be stored</li>
                         <li>Opt for backup data encryption to enhance data security</li>
                     </ul>
-                </p>
-                <p>
-                    In addition:
-                    <ul>
-                        <li>The task state can be disabled as needed</li>
-                        <li>You can set a responsible node to handle this task</li>
-                    </ul>
-                </p>
+                </div>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
                 <a href={backupsDocsLink} target="_blank">
