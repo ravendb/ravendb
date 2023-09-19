@@ -467,16 +467,27 @@ namespace InterversionTests
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ReplicationInMixedCluster_60Leader_with_two_54()
         {
-            var (leader, peers, local) = await CreateMixedCluster(new[]
-            {
-                "5.4.101",
-                "5.4.101"
-            });
+            var nodes = await CreateCluster(new[] { "5.4.101", "5.4.101", "5.4.101" });
+            var database = GetDatabaseName();
 
-            var stores = await GetStores(leader, peers);
+            var stores = await GetStores(database, nodes);
+
             using (stores.Disposable)
             {
                 var storeA = stores.Stores[0];
+                
+                ProcessNode leader;
+                using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(storeA.Urls[0], certificate : null, DocumentConventions.DefaultForServer))
+                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var clusterTopology = new GetClusterTopologyCommand();
+                    await requestExecutor.ExecuteAsync(clusterTopology, context);
+
+                    Assert.True(clusterTopology.Result.Topology.Members.TryGetValue(clusterTopology.Result.Leader, out var leaderUrl));
+                    leader = nodes.Single(n => n.Url == leaderUrl);
+                }
+
+                await UpgradeServerAsync("current", leader);
 
                 var dbName = await CreateDatabase(storeA, 3);
 
@@ -998,14 +1009,17 @@ namespace InterversionTests
         public async Task ClusterTcpCompressionTest()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
-            var (leader, peers, local) = await CreateMixedCluster(new[] { "5.4.0", "5.4.0", "5.4.0" }, watcherCluster: true);
-            await UpgradeServerAsync("current", peers[0]);
+            
+            var nodes = await CreateCluster(new[] { "5.4.0", "5.4.0", "5.4.0" });
+            await UpgradeServerAsync("current", nodes[0]);
+
             var database = GetDatabaseName();
-            var (disposable, stores) = await GetStores(database, peers);
+            var (disposable, stores) = await GetStores(database, nodes);
             using (disposable)
             {
-                await CreateDatabase(stores, database, peers.Count);
+                await CreateDatabase(stores, database, nodes.Count);
             }
+
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Counters, RavenPlatform.Windows, Skip = "WIP")]

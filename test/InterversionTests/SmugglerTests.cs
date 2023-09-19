@@ -58,6 +58,11 @@ namespace InterversionTests
                                                                                  DatabaseRecordItemType.SinkPullReplications |
                                                                                  DatabaseRecordItemType.HubPullReplications;
 
+        private static readonly DatabaseItemType _operateOnTypes54 = _operateOnTypes42 |
+                                                                     DatabaseItemType.TimeSeries |
+                                                                     DatabaseItemType.ReplicationHubCertificates;
+
+
         private static readonly DatabaseRecordItemType _operateOnRecordTypes54 = _operateOnRecordTypes42 |
                                                                                  DatabaseRecordItemType.TimeSeries |
                                                                                  DatabaseRecordItemType.DocumentsCompression |
@@ -302,8 +307,13 @@ namespace InterversionTests
         {
             using var store54 = await GetDocumentStoreAsync(Server54Version);
             using var storeCurrent = GetDocumentStore(options);
+            var exportOptions = new DatabaseSmugglerExportOptions
+            {
+                OperateOnTypes = _operateOnTypes54, 
+                OperateOnDatabaseRecordTypes = _operateOnRecordTypes54
+            };
 
-            await InsertDataAndExecuteExportImportAsync(store54, storeCurrent);
+            await InsertDataAndExecuteExportImportAsync(store54, storeCurrent, exportOptions);
             await GetStatsAndAssertAsync(store54, storeCurrent);
         }
 
@@ -512,7 +522,7 @@ namespace InterversionTests
             }
         }
 
-        private async Task InsertDataAndExecuteExportImportAsync(DocumentStore fromStore, DocumentStore toStore)
+        private async Task InsertDataAndExecuteExportImportAsync(IDocumentStore fromStore, IDocumentStore toStore, DatabaseSmugglerExportOptions exportOptions = null)
         {
             var file = GetTempFileName();
 
@@ -522,7 +532,7 @@ namespace InterversionTests
                                                                                     DatabaseItemType.RevisionDocuments | DatabaseItemType.Documents));
 
                 //Export
-                var exportOptions = new DatabaseSmugglerExportOptions();
+                exportOptions ??= new DatabaseSmugglerExportOptions();
                 var exportOperation = await fromStore.Smuggler.ExportAsync(exportOptions, file);
                 await exportOperation.WaitForCompletionAsync(_operationTimeout);
 
