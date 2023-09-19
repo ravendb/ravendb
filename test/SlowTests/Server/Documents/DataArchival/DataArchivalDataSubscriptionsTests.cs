@@ -30,15 +30,18 @@ using Xunit.Abstractions;
 namespace SlowTests.Server.Documents.DataArchival;
 
 
-public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : RavenTestBase(output)
+public class DataArchivalDataSubscriptionsTests : RavenTestBase
 {
+    public DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : base(output)
+    {
+    }
+
     private async Task SetupDataArchival(IDocumentStore store)
     {
-        var config = new DataArchivalConfiguration {Disabled = false, ArchiveFrequencyInSec = 100};
+        var config = new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 };
 
         await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
     }
-
 
 
     [Fact]
@@ -49,7 +52,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             List<Company> companies = new();
 
             // Insert document with archive time before activating the archival
-            var company = new Company {Name = "Company Name", Address1 = "Dabrowskiego 6"};
+            var company = new Company { Name = "Company Name", Address1 = "Dabrowskiego 6" };
             var retires = SystemTime.UtcNow.AddMinutes(5);
             using (var session = store.OpenAsyncSession())
             {
@@ -62,7 +65,9 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             // Set-up the subscription and run the worker
             var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
             {
-                Query = "from Companies", Name = "Created", ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
+                Query = "from Companies",
+                Name = "Created",
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
             });
             var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
             var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
@@ -98,7 +103,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             List<Company> companies = new();
 
             // Insert document with archive time before activating the archival
-            var company = new Company {Name = "Company Name", Address1 = "Dabrowskiego 6"};
+            var company = new Company { Name = "Company Name", Address1 = "Dabrowskiego 6" };
             var retires = SystemTime.UtcNow.AddMinutes(5);
             using (var session = store.OpenAsyncSession())
             {
@@ -109,7 +114,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             }
 
             // Set-up the subscription and run the worker
-            var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions {Query = "from Companies", Name = "Created",});
+            var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Companies", Name = "Created", });
             var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
             var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
 
@@ -137,7 +142,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             List<Company> companies = new();
 
             // Insert document with archive time before activating the archival
-            var company = new Company {Name = "Company Name", Address1 = "Dabrowskiego 6"};
+            var company = new Company { Name = "Company Name", Address1 = "Dabrowskiego 6" };
             var retires = SystemTime.UtcNow.AddMinutes(5);
             using (var session = store.OpenAsyncSession())
             {
@@ -148,7 +153,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             }
 
             // Set-up the subscription and run the worker
-            var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions {Query = "from Companies", Name = "Created"});
+            var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Companies", Name = "Created" });
             var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
             var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
 
@@ -177,7 +182,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             List<Company> companies = new();
 
             // Insert document with archive time before activating the archival
-            var company = new Company {Name = "Company Name", Address1 = "Dabrowskiego 6"};
+            var company = new Company { Name = "Company Name", Address1 = "Dabrowskiego 6" };
             var retires = SystemTime.UtcNow.AddMinutes(5);
             using (var session = store.OpenAsyncSession())
             {
@@ -190,7 +195,9 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             // Set-up the subscription and run the worker
             var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
             {
-                Query = "from Companies", Name = "Created", ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived
+                Query = "from Companies",
+                Name = "Created",
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived
             });
             var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
             var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
@@ -220,7 +227,9 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             // Set-up the subscription
             var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
             {
-                Query = "from Companies", Name = "Created", ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
+                Query = "from Companies",
+                Name = "Created",
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
             });
 
             // Disable the subscription
@@ -256,7 +265,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             List<Company> companies = new();
 
             // Insert document with archive time before activating the archival
-            var company = new Company {Name = "Company Name", Address1 = "Dabrowskiego 6"};
+            var company = new Company { Name = "Company Name", Address1 = "Dabrowskiego 6" };
             var retires = SystemTime.UtcNow.AddMinutes(5);
             using (var session = store.OpenAsyncSession())
             {
@@ -267,7 +276,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             }
 
             // Set-up the subscription and run the worker
-            var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions {Query = "from Companies", Name = "Created",});
+            var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Companies", Name = "Created", });
             var worker = store.Subscriptions.GetSubscriptionWorker<Company>(subsId);
             var t = worker.Run(batch => companies.AddRange(batch.Items.Select(item => item.Result)));
 
@@ -409,7 +418,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             Result = new StreamReader(stream).ReadToEnd();
         }
     }
-    
+
     [Fact]
     public async Task DataSubscriptionTryoutResultsAreConsistentWithCurrentArchivedDataBehavior()
     {
@@ -420,13 +429,13 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
                 dr.Settings[RavenConfiguration.GetKey(x => x.Subscriptions.ArchivedDataProcessingBehavior)] = "ArchivedOnly";
             }
         };
-        
+
         using (var store = GetDocumentStore(options))
         {
             // Insert document with archive time before activating the archival
-            var company1 = new Company {Name = "Company Name 1", Address1 = "Dabrowskiego 6"};
-            var company2 = new Company {Name = "Company Name 2", Address1 = "Dabrowskiego 6"};
-            var company3 = new Company {Name = "Company Name 3", Address1 = "Dabrowskiego 6"};
+            var company1 = new Company { Name = "Company Name 1", Address1 = "Dabrowskiego 6" };
+            var company2 = new Company { Name = "Company Name 2", Address1 = "Dabrowskiego 6" };
+            var company3 = new Company { Name = "Company Name 3", Address1 = "Dabrowskiego 6" };
             var retires = SystemTime.UtcNow.AddMinutes(5);
             using (var session = store.OpenAsyncSession())
             {
@@ -449,7 +458,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
-            
+
             var result = store.Operations.Send(new SubscriptionTryoutOperation(new SubscriptionTryout
             {
                 Query = "from Companies",
@@ -459,33 +468,33 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
             Assert.Contains("Company Name 1", result);
             Assert.DoesNotContain("Company Name 2", result);
             Assert.DoesNotContain("Company Name 3", result);
-            
+
             result = store.Operations.Send(new SubscriptionTryoutOperation(new SubscriptionTryout
             {
                 Query = "from Companies",
                 ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ExcludeArchived
             }));
-            
+
             Assert.DoesNotContain("Company Name 1", result);
             Assert.Contains("Company Name 2", result);
             Assert.Contains("Company Name 3", result);
-            
+
             result = store.Operations.Send(new SubscriptionTryoutOperation(new SubscriptionTryout
             {
                 Query = "from Companies",
                 ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived
             }));
-            
+
             Assert.Contains("Company Name 1", result);
             Assert.Contains("Company Name 2", result);
             Assert.Contains("Company Name 3", result);
-            
+
             // default from configuration - ArchivedOnly
             result = store.Operations.Send(new SubscriptionTryoutOperation(new SubscriptionTryout
             {
                 Query = "from Companies",
             }));
-            
+
             Assert.Contains("Company Name 1", result);
             Assert.DoesNotContain("Company Name 2", result);
             Assert.DoesNotContain("Company Name 3", result);
