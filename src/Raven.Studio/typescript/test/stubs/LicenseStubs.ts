@@ -55,7 +55,14 @@ export class LicenseStubs {
             },
             FormattedExpiration: null,
             ErrorMessage: null,
-            Version: 50,
+            Version: {
+                Build: 1,
+                Major: 1,
+                MajorRevision: 0,
+                Minor: 2,
+                MinorRevision: 0,
+                Revision: 0,
+            },
             Expiration: moment()
                 .add(2 as const, "months")
                 .format(),
@@ -103,7 +110,17 @@ export class LicenseStubs {
             MaxNumberOfCustomAnalyzersPerDatabase: 1,
             MaxNumberOfCustomAnalyzersPerCluster: 5,
             MaxNumberOfRevisionsToKeep: 2,
-            MaxNumberOfRevisionsByAgeToKeep: 3888000,
+            MaxNumberOfRevisionAgeToKeepInDays: 45,
+            CanSetupDefaultRevisionsConfiguration: true,
+            HasClientConfiguration: true,
+            HasDataArchival: true,
+            HasIndexCleanup: true,
+            HasMultiNodeSharding: true,
+            HasPeriodicBackup: true,
+            HasRevisionsInSubscriptions: true,
+            HasServerWideTasks: true,
+            HasStudioConfiguration: true,
+            UpgradeRequired: false,
         };
     }
 

@@ -25,6 +25,7 @@ import genUtils from "common/generalUtils";
 import generalUtils from "common/generalUtils";
 import { todo } from "common/developmentHelper";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import moment from "moment";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
@@ -95,14 +96,16 @@ export default function EditRevision(props: EditRevisionProps) {
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const revisionsToKeepLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsToKeep"));
-    const revisionsByAgeLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsByAgeToKeep"));
+    const revisionsAgeInDaysLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionAgeToKeepInDays"));
 
     const isDefaultConflicts = config?.Name === documentRevisionsConfigNames.defaultConflicts;
+
+    const minimumRevisionAgeToKeepDays = moment.duration(formValues.minimumRevisionAgeToKeep, "seconds").asDays();
 
     const isLimitExceeded =
         !isDefaultConflicts &&
         !isProfessionalOrAbove &&
-        (formValues.minimumRevisionAgeToKeep > revisionsByAgeLimit ||
+        (minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit ||
             formValues.minimumRevisionsToKeep > revisionsToKeepLimit);
 
     return (
@@ -161,11 +164,10 @@ export default function EditRevision(props: EditRevisionProps) {
                             />
                             {!isDefaultConflicts &&
                             !isProfessionalOrAbove &&
-                            formValues.minimumRevisionAgeToKeep > revisionsByAgeLimit ? (
+                            minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit ? (
                                 <Alert color="warning" className="my-2">
                                     <Icon icon="warning" />
-                                    Your license allows max{" "}
-                                    {generalUtils.formatTimeSpan(revisionsByAgeLimit * 1000, true)} retention time
+                                    Your license allows max {revisionsAgeInDaysLimit} days retention time
                                 </Alert>
                             ) : null}
                             {isRevisionsToKeepByAgeLimitWarning && (
