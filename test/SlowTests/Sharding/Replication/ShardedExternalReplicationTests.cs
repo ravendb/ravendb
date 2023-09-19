@@ -614,7 +614,12 @@ namespace SlowTests.Sharding.Replication
                 await SetupReplicationAsync(src, dst);
                 await SetupReplicationAsync(dst, src);
 
-                Assert.True(WaitForDocument(dst, "users/1", 30_000));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    dstNodes,
+                    dst.Database,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60)));
 
                 using (var session = dst.OpenSession())
                 {
