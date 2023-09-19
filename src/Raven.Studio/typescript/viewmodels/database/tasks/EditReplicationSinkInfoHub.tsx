@@ -55,7 +55,7 @@ export function EditReplicationSinkInfoHub() {
                 <div>
                     Task definition includes:
                     <ul className="margin-top-xxs">
-                        <li>A connection string to the Replication Hub</li>
+                        <li>A connection string to the Replication Hub.</li>
                         <li>Setting the replication direction.</li>
                         <li>The Replication Access definition.</li>
                         <li>A responsible node to handle this task can be set.</li>
