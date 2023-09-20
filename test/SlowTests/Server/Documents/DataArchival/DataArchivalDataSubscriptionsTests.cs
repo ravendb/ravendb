@@ -22,6 +22,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Subscriptions;
+using SlowTests.Client.Subscriptions;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
@@ -519,39 +520,40 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
                     await bulkInsert.StoreAsync(new Order {Freight = i}, $"orders/{i}-A", new MetadataAsDictionary {{Constants.Documents.Metadata.ArchiveAt, retires}});
                 }
             }
+
             var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
             var docs = collectionStats.Collections["Orders"];
             Assert.Equal(128, docs);
-            
-            
+
+
             // create a new subscription
-            var sub = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions() { Query = "from 'Orders'" });
+            var sub = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions() {Query = "from 'Orders'"});
             var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sub)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
             });
-            
-            
+
+
             var mre = new AsyncManualResetEvent();
             var mre2 = new AsyncManualResetEvent();
-            
+
             var exceptions = new List<Exception>();
             subscription.OnUnexpectedSubscriptionError += exception =>
             {
                 exceptions.Add(exception);
             };
-            
+
             // fetch all docs from storage to the received subscription batch, then wait on mre2
             var fetchFromStorageTask = subscription.Run(async x =>
             {
                 mre.Set();
                 Assert.True(await mre2.WaitAsync(reasonableWaitTime), "await mre2.WaitAsync(_reasonableWaitTime)");
             });
-            
+
             // wait for setting mre above
             Assert.True(await mre.WaitAsync(reasonableWaitTime), "await mre.WaitAsync(_reasonableWaitTime)");
-            
-            
+
+
             // drop subscription
             await subscription.DisposeAsync(false);
             try
@@ -564,30 +566,29 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
             {
                 // no one cares
             }
-            
+
             Assert.True(exceptions.Count == 0, $"{string.Join(Environment.NewLine, exceptions.Select(x => x.ToString()))}");
-            
+
             // assert that all previously fetched items are on the resend list already
             var executor = store.GetRequestExecutor();
             using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
-            var cmd = new GetSubscriptionResendListCommand(store.Database, subscription.SubscriptionName);
+            var cmd = new ConcurrentSubscriptionsTests.GetSubscriptionResendListCommand(store.Database, subscription.SubscriptionName);
             await executor.ExecuteAsync(cmd, ctx);
             var res = cmd.Result;
-            
+
             Assert.Equal(128, res.Results.Count);
-            
+
             // Activate the archival manually - change docs archival status while they're on the resend list
             await SetupDataArchival(store);
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
-            
+
             // start new worker it will process from resend
             subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sub)
             {
-                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16),
-                MaxDocsPerBatch = 1
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16), MaxDocsPerBatch = 1
             });
             try
             {
@@ -599,7 +600,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
                         items.Add(item.Id);
                     }
                 });
-                
+
                 // assert that documents are skipped in this scenario
                 Assert.Equal(0, await WaitForValueAsync(() => items.Count, docs, timeout: 10_000));
             }
@@ -608,55 +609,6 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
                 await subscription.DisposeAsync();
             }
         }
-    }
-    private class GetSubscriptionResendListCommand : RavenCommand<ResendListResult>
-    {
-        private readonly string _database;
-        private readonly string _name;
-
-        public GetSubscriptionResendListCommand(string database, string name)
-        {
-            _database = database;
-            _name = name;
-        }
-
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/databases/{_database}/debug/subscriptions/resend?name={_name}";
-
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Get,
-            };
-
-            return request;
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-            {
-                Result = null;
-                return;
-            }
-
-            var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<ResendListResult>();
-            Result = deserialize.Invoke(response);
-        }
-
-        public override bool IsReadRequest => true;
-    }
-
-    private class ResendListResult
-    {
-#pragma warning disable CS0649
-        public List<ResendItem> Results;
-#pragma warning restore CS0649
-    }
-
-    private class User
-    {
-        public string Name;
     }
 }
 
