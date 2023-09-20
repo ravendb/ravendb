@@ -270,7 +270,7 @@ function DatabaseSortersList({
                                     <UncontrolledTooltip target={tooltipId} placement="left">
                                         Overrides server-wide sorter
                                     </UncontrolledTooltip>
-                                    <Icon id={tooltipId} icon="info" />
+                                    <Icon id={tooltipId} icon="info" className="text-info" />
                                 </>
                             )}
                             <RichPanelActions>
@@ -306,13 +306,13 @@ function DatabaseSortersList({
 
 export const featureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "Database sorters limit",
+        featureName: "Limit per database",
         community: { value: 1 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
     {
-        featureName: "Cluster sorters limit",
+        featureName: "Limit per cluster",
         community: { value: 5 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
