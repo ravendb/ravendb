@@ -23,7 +23,7 @@ namespace Corax.Queries
         void Next(ref Span<byte> terms, ref Span<Token> tokens, ref Span<float> score);
     }    
 
-    public unsafe partial struct SuggestionTermProvider<TDistanceProvider> : IRawTermProvider
+    public struct SuggestionTermProvider<TDistanceProvider> : IRawTermProvider
         where TDistanceProvider : IStringDistance
     {
         private readonly IndexSearcher.IndexSearcher _searcher;

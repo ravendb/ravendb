@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_295.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,15 +21,21 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUpdateSuggestions()
+        private class User
         {
-            using (var store = GetDocumentStore())
+            public string Name;
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUpdateSuggestions(Options options)
+        {
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "john" });
-                    session.Store(new { Name = "darsy" });
+                    session.Store(new User { Name = "john" });
+                    session.Store(new User { Name = "darsy" });
                     session.SaveChanges();
                 }
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
@@ -46,26 +54,32 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                //var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
-                //{
-                //    Field = "Name",
-                //    Term = "orne"
-                //});
-                //Assert.Empty(suggestionQueryResult.Suggestions);
+                using (var s = store.OpenSession())
+                {
+                    var suggestionQueryResult =
+                        s.Advanced.DocumentQuery<User>("test")
+                            .SuggestUsing(x => x.ByField(y => y.Name, "orne"))
+                            .Execute();
+
+                    Assert.Empty(suggestionQueryResult["Name"].Suggestions);
+                }
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "oren" });
+                    session.Store(new User { Name = "oren" });
                     session.SaveChanges();
                 }
                 Indexes.WaitForIndexing(store);
 
-                //suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
-                //{
-                //    Field = "Name",
-                //    Term = "orne"
-                //});
-                //Assert.NotEmpty(suggestionQueryResult.Suggestions);
+                using (var s = store.OpenSession())
+                {
+                    var suggestionQueryResult =
+                        s.Advanced.DocumentQuery<User>("test")
+                            .SuggestUsing(x => x.ByField(y => y.Name, "orne"))
+                            .Execute();
+
+                    Assert.NotEmpty(suggestionQueryResult["Name"].Suggestions);
+                }
             }
         }
 
