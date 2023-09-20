@@ -252,12 +252,7 @@ export default function EditRevision(props: EditRevisionProps) {
                     <Button type="button" color="secondary" onClick={toggle}>
                         Cancel
                     </Button>
-                    <Button
-                        type="submit"
-                        color="success"
-                        disabled={!formState.isValid || isLimitExceeded}
-                        title="Add this configuration"
-                    >
+                    <Button type="submit" color="success" disabled={isLimitExceeded} title="Add this configuration">
                         <Icon icon={getSubmitIcon(taskType)} />
                         {_.startCase(taskType)} config
                     </Button>

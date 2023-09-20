@@ -11,7 +11,7 @@ const editCollectionConfigSchema = yup.object({
         .nullable()
         .positive()
         .integer()
-        .when("IsMinimumRevisionsToKeepEnabled", {
+        .when("isMinimumRevisionsToKeepEnabled", {
             is: true,
             then: (schema) => schema.required(),
         }),
@@ -21,7 +21,7 @@ const editCollectionConfigSchema = yup.object({
         .nullable()
         .positive()
         .integer()
-        .when("IsMinimumRevisionAgeToKeepEnabled", {
+        .when("isMinimumRevisionAgeToKeepEnabled", {
             is: true,
             then: (schema) => schema.required(),
         }),
@@ -31,7 +31,7 @@ const editCollectionConfigSchema = yup.object({
         .nullable()
         .positive()
         .integer()
-        .when("IsMaximumRevisionsToDeleteUponDocumentUpdateEnabled", {
+        .when("isMaximumRevisionsToDeleteUponDocumentUpdateEnabled", {
             is: true,
             then: (schema) => schema.required(),
         }),
