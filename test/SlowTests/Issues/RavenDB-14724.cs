@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,12 +17,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task DeleteDocumentAndRevisions()
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DeleteDocumentAndRevisions(Options options)
         {
             var user = new User { Name = "Raven" };
             var id = "user/1";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store);
 
@@ -52,6 +54,7 @@ namespace SlowTests.Issues
        
                     await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
                 }
+
 
                 using (var session = store.OpenSession())
                 {

@@ -97,12 +97,15 @@ namespace Raven.Server.Documents
             return FinalizeHash(size, state);
         }
 
-        public static unsafe string ComputeEtagForRevisions(List<Document> revisions)
+        public static unsafe string ComputeEtagForRevisions(Document[] revisions)
         {
+            if (revisions.Length == 0)
+                return "nothing";
+
             // This method is efficient because we aren't materializing any values
             // except the change vector, which we need
-            if (revisions.Count == 1)
-                return revisions[0]?.ChangeVector ?? string.Empty;
+            if (revisions.Length == 1)
+                return revisions[0]?.ChangeVector ?? Guid.NewGuid().ToString(); // if the change vector is null, we can't tell whether something was modified or not
 
             var size = Sodium.crypto_generichash_bytes();
             Debug.Assert((int)size == 32);
@@ -111,7 +114,7 @@ namespace Raven.Server.Documents
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ThrowFailToInitHash();
 
-            HashNumber(state, revisions.Count);
+            HashNumber(state, revisions.Length);
             foreach (var doc in revisions)
             {
                 HashChangeVector(state, doc?.ChangeVector);

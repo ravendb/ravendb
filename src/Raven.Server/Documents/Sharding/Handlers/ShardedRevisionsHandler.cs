@@ -9,19 +9,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/revisions", "GET")]
         public async Task GetRevisionsFor()
         {
-            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisions(this))
-            {
+            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisions(this)) 
                 await processor.ExecuteAsync();
-            }
         }
 
         [RavenShardedAction("/databases/*/revisions/count", "GET")]
         public async Task GetRevisionsCountFor()
         {
-            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsCount(this))
-            {
+            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsCount(this)) 
                 await processor.ExecuteAsync();
-            }
         }
 
         [RavenShardedAction("/databases/*/admin/revisions/config", "POST")]
