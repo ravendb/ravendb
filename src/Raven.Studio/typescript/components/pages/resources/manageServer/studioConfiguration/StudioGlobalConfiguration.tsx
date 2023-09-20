@@ -82,7 +82,7 @@ export default function StudioGlobalConfiguration() {
                     <AboutViewHeading
                         icon="studio-configuration"
                         title="Studio Configuration"
-                        badgeText={isProfessionalOrAbove ? null : "Professional +"}
+                        licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <ButtonWithSpinner

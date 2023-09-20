@@ -46,7 +46,7 @@ const FloatingButton = ({ isCloud, licenseType, isEnabled }: FloatingButtonProps
             <Col xxl={12}>
                 <Row>
                     <Col>
-                        <AboutViewHeading title="Section title" icon="zombie" badgeText="Professional" />
+                        <AboutViewHeading title="Section title" icon="zombie" licenseBadgeText="Professional +" />
                         default open: {isEnabled ? "true" : "false"} / feature available: {isEnabled ? "true" : "false"}
                     </Col>
                     <Col sm={"auto"}>

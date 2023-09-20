@@ -77,7 +77,7 @@ export default function ClientGlobalConfiguration() {
                         <AboutViewHeading
                             icon="database-client-configuration"
                             title="Client Configuration"
-                            badgeText={isProfessionalOrAbove ? null : "Professional +"}
+                            licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
                         />
                         <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
                             {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <Icon icon="save" />}

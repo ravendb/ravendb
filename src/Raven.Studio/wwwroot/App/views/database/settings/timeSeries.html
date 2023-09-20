@@ -107,7 +107,7 @@
                                 <input id="rawHasRetention" class="styled" type="checkbox" data-bind="checked: hasRetention">
                                 <label for="rawHasRetention">
                                     Enable Retention
-                                    <span class="badge license-restricted-badge margin-left-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                                    <span class="badge license-restricted-badge professional margin-left-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
                                 </label>
                             </div>
                         </div>
@@ -116,7 +116,7 @@
                     </div>
                     <div class="hr-title">
                         <h5>Rollup Policies</h5>
-                        <span class="badge license-restricted-badge margin-left-xxs margin-right-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                        <span class="badge license-restricted-badge professional margin-left-xxs margin-right-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
                         <hr>
                         <a class="aggregation-info margin-left margin-left-sm" data-toggle="tooltip">
                             <i class="icon-info text-info"></i>
@@ -174,7 +174,7 @@
                                     <input class="styled" type="checkbox" data-bind="checked: hasRetention, attr: { id: 'policyHasRetention' + $index() }">
                                     <label data-bind="attr: { for: 'policyHasRetention' + $index() }, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
                                         Enable Retention
-                                        <span class="badge license-restricted-badge margin-left-xxs margin-right-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                                        <span class="badge license-restricted-badge professional margin-left-xxs margin-right-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
                                     </label>
                                 </div>
                             </div>

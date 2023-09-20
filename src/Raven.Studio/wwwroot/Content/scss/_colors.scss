@@ -312,6 +312,9 @@ $shard-color: $color-4-1;
 $orchestrator-color: $color-2-1;
 $progress-color: $color-2-3;
 
+$professional: $color-4-2;
+$enterprise: $color-5;
+
 // Color system
 // scss-docs-end gray-color-variables
 
@@ -376,6 +379,8 @@ $theme-colors: (
     "shard": $shard-color,
     "orchestrator": $orchestrator-color,
     "progress": $progress-color,
+    "professional": $professional,
+    "enterprise": $enterprise,
 ) !default;
 
 // scss-docs-end theme-colors-map
