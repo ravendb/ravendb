@@ -6,7 +6,7 @@ import { highlight, languages } from "prismjs";
 class queueSinkSyntax extends dialogViewModelBase {
     
     view = require("views/database/tasks/queueSinkSyntax.html"); 
-    patchSyntaxFunctionsView = require("views/database/patch/patchSyntaxFunctions.html");
+    scriptFunctionsSyntaxView = require("views/database/patch/scriptFunctionsSyntax.html");
 
     dialogContainer: Element;
     clientVersion = viewModelBase.clientVersion;
