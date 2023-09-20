@@ -13,10 +13,11 @@ public class RavenDB_18784 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
-    public void DynamicMapReduceQueryProjectionsOnShardedDatabase()
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public void DynamicMapReduceQueryProjectionsOnShardedDatabase(Options options)
     {
-        using (var store = Sharding.GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
@@ -61,6 +62,26 @@ public class RavenDB_18784 : RavenTestBase
                 foreach (dynamic order in orders3)
                 {
                     Assert.NotNull(order["MyCount"].Value);
+                    Assert.NotNull(order["c"].Value);
+                }
+
+                var orders4 = session.Advanced.RawQuery<dynamic>("from Orders group by ShipTo.City order by count select count() as count, ShipTo.City as c").WaitForNonStaleResults().ToList();
+
+                Assert.Equal(3, orders4.Count);
+
+                foreach (dynamic order in orders4)
+                {
+                    Assert.NotNull(order["count"].Value);
+                    Assert.NotNull(order["c"].Value);
+                }
+
+                var orders5 = session.Advanced.RawQuery<dynamic>("from Orders group by ShipTo.City order by c select count() as count, ShipTo.City as c").WaitForNonStaleResults().ToList();
+
+                Assert.Equal(3, orders5.Count);
+
+                foreach (dynamic order in orders5)
+                {
+                    Assert.NotNull(order["count"].Value);
                     Assert.NotNull(order["c"].Value);
                 }
 
