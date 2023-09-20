@@ -4,15 +4,35 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
 
 export function EditManualBackupTaskInfoHub() {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const backupsDocsLink = useRavenLink({ hash: "GMBYOH" });
+    const featureAvailabilityData: FeatureAvailabilityData[] = [
+        {
+            featureName: "Encryption",
+            featureIcon: "encryption",
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true }
+        },{
+            featureName: "Remote destinations",
+            featureIcon: "cloud",
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true }
+        },{
+            featureName: "Snapshot backups",
+            featureIcon: "snapshot-backup",
+            community: { value: false },
+            professional: { value: false },
+            enterprise: { value: true }
+        },
+    ];
 
     return (
-        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+        <AboutViewFloating>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -43,7 +63,7 @@ export function EditManualBackupTaskInfoHub() {
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
                 isUnlimited={isProfessionalOrAbove}
-                data={featureAvailabilityProfessionalOrAbove}
+                data={featureAvailabilityData}
             />
         </AboutViewFloating>
     );
