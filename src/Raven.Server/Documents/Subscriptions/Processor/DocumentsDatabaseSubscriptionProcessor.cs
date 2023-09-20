@@ -171,18 +171,19 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                     Data = current.Data, 
                     Id = current.Id, // use proper casing
                     LowerId = current.LowerId, 
-                    ChangeVector = current.ChangeVector
+                    ChangeVector = current.ChangeVector,
+                    Flags = current.Flags
                 };
             }
 
-            if (item.Flags.Contain(DocumentFlags.Archived) && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived)
+            if (result.Document.Flags.Contain(DocumentFlags.Archived) && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived)
             {
                 reason = $"{id} is archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
                 result.Status = SubscriptionBatchItemStatus.Skip;
                 return result;
             }
             
-            if (item.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ArchivedOnly)
+            if (result.Document.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ArchivedOnly)
             {
                 reason = $"{id} is not archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
                 result.Status = SubscriptionBatchItemStatus.Skip;
