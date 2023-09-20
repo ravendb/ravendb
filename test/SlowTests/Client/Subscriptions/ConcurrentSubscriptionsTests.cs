@@ -1153,7 +1153,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        private class GetSubscriptionResendListCommand : RavenCommand<ResendListResult>
+        internal class GetSubscriptionResendListCommand : RavenCommand<ResendListResult>
         {
             private readonly string _database;
             private readonly string _name;
@@ -1191,7 +1191,7 @@ namespace SlowTests.Client.Subscriptions
             public override bool IsReadRequest => true;
         }
 
-        private class ResendListResult
+        internal class ResendListResult
         {
 #pragma warning disable CS0649
             public List<ResendItem> Results;
