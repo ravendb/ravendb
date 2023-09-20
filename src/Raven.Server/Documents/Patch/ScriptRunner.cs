@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -1178,8 +1179,10 @@ namespace Raven.Server.Documents.Patch
                 {
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    if (_database is ShardedDocumentDatabase)
-                        id = GenerateIdForShard(id);
+                    if (_database is ShardedDocumentDatabase sharded)
+                    {
+                        id = GenerateIdForShard(sharded, id);
+                    }
 
                     var putResult = _database.DocumentsStorage.Put(
                         _docsCtx,
@@ -1213,10 +1216,27 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private string GenerateIdForShard(string id)
+            private string GenerateIdForShard(ShardedDocumentDatabase shardedDocumentDatabase, string id)
             {
-                if (id?[^1] != _database.IdentityPartsSeparator)
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    id = $"{Guid.NewGuid()}${OriginalDocumentId}";
+                }
+                
+                if (id[^1] != _database.IdentityPartsSeparator)
+                {
+                    var config = shardedDocumentDatabase.ShardingConfiguration;
+                    var originalBucket = ShardHelper.GetBucketFor(config, _docsCtx.Allocator, OriginalDocumentId);
+                    var currentBucketId = ShardHelper.GetBucketFor(config, _docsCtx.Allocator, id);
+                    if (originalBucket != currentBucketId)
+                    {
+                        throw new ShardedPatchBehaviorViolationException(
+                            $"The original ID '{OriginalDocumentId}' isn't in the same bucket as the requested ID '{id}'.{Environment.NewLine}" +
+                            $"To Ensure they will be in the same bucket use the '$' convention.{Environment.NewLine}" +
+                            $"E.g. '{id}${OriginalDocumentId}' or use server-side generated IDs");
+                    }
                     return id;
+                }
 
                 return ShardHelper.GenerateStickyId(id, OriginalDocumentId, _database.IdentityPartsSeparator);
             }
