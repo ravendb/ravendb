@@ -15,7 +15,7 @@ const initialState: LicenseState = {
         NumberOfAutoIndexesInCluster: 0,
         NumberOfCustomSortersInCluster: 0,
         NumberOfAnalyzersInCluster: 0,
-        NumberOfSubscriptionsInCluster: 0
+        NumberOfSubscriptionsInCluster: 0,
     },
 };
 

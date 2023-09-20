@@ -139,7 +139,7 @@ export class LicenseStubs {
             NumberOfAutoIndexesInCluster: 20,
             NumberOfCustomSortersInCluster: 10,
             NumberOfAnalyzersInCluster: 10,
-            NumberOfSubscriptionsInCluster: 14
+            NumberOfSubscriptionsInCluster: 14,
         };
     }
 }
