@@ -1319,7 +1319,7 @@ User: counter.DocumentId
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Patching)]
     public async Task CanScheduleDocumentsToBeArchivedUsingPatch()
     {
         using (var store = GetDocumentStore())
