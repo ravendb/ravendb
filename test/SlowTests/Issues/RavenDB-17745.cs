@@ -59,29 +59,30 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert, Skip = "RavenDB-21078")]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public async Task StartStoreInTheMiddleOfAnHeartbeat()
         {
-            ManualResetEvent mre = new ManualResetEvent(false);
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
+                var mre = new ManualResetEvent(false);
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 db.ForTestingPurposesOnly().BulkInsertStreamWriteTimeout = _writeTimeout;
-
                 var bulkInsertOptions = new BulkInsertOptions();
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _writeTimeout;
 
-                var bulk = store.BulkInsert(bulkInsertOptions);
-
-                bulkInsertOptions.ForTestingPurposesOnly().OnSendHeartBeat_DoBulkStore = () =>
+                using (var bulk = store.BulkInsert(bulkInsertOptions))
                 {
-                    Task.Run(() => bulk.Store(new User { Name = "Daniel" }, "users/1"));
-                };
+                    bulkInsertOptions.ForTestingPurposesOnly().OnSendHeartBeat_DoBulkStore = () =>
+                    {
+                        mre.Set();
+                    };
 
-                await Task.Delay(_delay);
+                    Assert.True(mre.WaitOne(_delay * 3));
 
-                bulk.Dispose();
+                    await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
+                }
+
 
                 using (var session = store.OpenSession())
                 {
