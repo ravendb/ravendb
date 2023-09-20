@@ -363,9 +363,13 @@ function mapToDocumentRevisionsConfig(
     return {
         Name: name,
         Disabled: formData.disabled,
-        MaximumRevisionsToDeleteUponDocumentUpdate: formData.maximumRevisionsToDeleteUponDocumentUpdate,
-        MinimumRevisionAgeToKeep: genUtils.formatAsTimeSpan(formData.minimumRevisionAgeToKeep * 1000),
-        MinimumRevisionsToKeep: formData.minimumRevisionsToKeep,
+        MaximumRevisionsToDeleteUponDocumentUpdate: formData.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled
+            ? formData.maximumRevisionsToDeleteUponDocumentUpdate
+            : null,
+        MinimumRevisionAgeToKeep: formData.isMinimumRevisionAgeToKeepEnabled
+            ? genUtils.formatAsTimeSpan(formData.minimumRevisionAgeToKeep * 1000)
+            : null,
+        MinimumRevisionsToKeep: formData.isMinimumRevisionsToKeepEnabled ? formData.minimumRevisionsToKeep : null,
         PurgeOnDelete: formData.isPurgeOnDeleteEnabled,
     };
 }
