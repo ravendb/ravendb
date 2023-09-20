@@ -26,11 +26,13 @@ export function NoLimits() {
     return <ServerWideCustomAnalyzers />;
 }
 
-export function CommunityLimits() {
+export function LicenseLimits() {
     commonInit();
 
     const { license } = mockStore;
-    license.with_LicenseLimited();
+    license.with_LicenseLimited({
+        HasServerWideAnalyzers: false,
+    });
 
     return <ServerWideCustomAnalyzers />;
 }

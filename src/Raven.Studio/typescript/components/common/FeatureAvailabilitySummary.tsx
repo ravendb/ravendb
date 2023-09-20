@@ -10,7 +10,7 @@ import { Icon } from "./Icon";
 import "./FeatureAvailabilitySummary.scss";
 import { AccordionItemWrapper } from "./AboutView";
 
-type AvailabilityValue = boolean | number | string;
+export type AvailabilityValue = boolean | number | string;
 
 interface ValueData {
     value: AvailabilityValue;

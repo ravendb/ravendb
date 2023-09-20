@@ -53,3 +53,35 @@ export const featureAvailabilityEnterprise: FeatureAvailabilityData[] = [
         enterprise: { value: true },
     },
 ];
+
+interface GetLicenseAvailabilityDataProps {
+    licenseType: Raven.Server.Commercial.LicenseType;
+    overrideValue: boolean;
+}
+
+export function getProfessionalOrAboveLicenseAvailabilityData(
+    props: GetLicenseAvailabilityDataProps
+): FeatureAvailabilityData[] {
+    const { licenseType, overrideValue } = props;
+
+    const featureAvailabilityData: FeatureAvailabilityData[] = [
+        {
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+    ];
+
+    const type = getLicenseAvailabilityType(licenseType);
+    if (!type) {
+        return featureAvailabilityData;
+    }
+
+    const data = featureAvailabilityData[0][type];
+
+    if (data.value !== overrideValue) {
+        data.overwrittenValue = overrideValue;
+    }
+
+    return featureAvailabilityData;
+}

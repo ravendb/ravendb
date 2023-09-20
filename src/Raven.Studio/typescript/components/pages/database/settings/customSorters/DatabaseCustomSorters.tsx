@@ -29,9 +29,8 @@ import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCus
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {
-    FeatureAvailabilityData,
-} from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { databaseCustomSortersAndAnalyzersUtils } from "components/common/databaseCustomSortersAndAnalyzers/databaseCustomSortersAndAnalyzersUtils";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
@@ -48,17 +47,24 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
+    const numberOfCustomSortersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfCustomSortersInCluster;
+
+    const featureAvailability = databaseCustomSortersAndAnalyzersUtils.getLicenseAvailabilityData({
+        licenseType,
+        overrideClusterLimit: licenseClusterLimit,
+        overrideDatabaseLimit: licenseDatabaseLimit,
+    });
 
     const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideSorters.result?.length ?? null;
 
-    const isLimitExceeded =
-        !isProfessionalOrAbove &&
-        getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit) === "limitReached";
+    const databaseLimitReachStatus = getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit);
+    const clusterLimitReachStatus = getLicenseLimitReachStatus(numberOfCustomSortersInCluster, licenseClusterLimit);
+
+    const isLimitReached = databaseLimitReachStatus === "limitReached" || clusterLimitReachStatus === "limitReached";
 
     if (db.isSharded()) {
         return (
@@ -82,13 +88,15 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 <div id="newCustomSorter" className="w-fit-content">
                                     <a
                                         href={appUrl.forEditCustomSorter(db)}
-                                        className={classNames("btn btn-primary mb-3", { disabled: isLimitExceeded })}
+                                        className={classNames("btn btn-primary mb-3", {
+                                            disabled: isLimitReached,
+                                        })}
                                     >
                                         <Icon icon="plus" />
                                         Add a custom sorter
                                     </a>
                                 </div>
-                                {isLimitExceeded && (
+                                {isLimitReached && (
                                     <UncontrolledPopover
                                         trigger="hover"
                                         target="newCustomSorter"
@@ -96,8 +104,9 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                         className="bs5"
                                     >
                                         <div className="p-3 text-center">
-                                            Database has reached the maximum number of Custom Sorters allowed per
-                                            database.
+                                            {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has
+                                            reached the maximum number of Custom Sorters allowed per{" "}
+                                            {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
                                             <br /> Delete unused sorters or{" "}
                                             <a href={upgradeLicenseLink} target="_blank">
                                                 upgrade your license
@@ -108,9 +117,9 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                             </>
                         )}
 
-                        <HrHeader>
+                        <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
                             Database custom sorters
-                            {!isProfessionalOrAbove && (
+                            {databaseLimitReachStatus !== "notReached" && (
                                 <CounterBadge
                                     className="ms-2"
                                     count={databaseResultsCount}
@@ -135,15 +144,9 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                     Server-wide custom sorters
                                 </a>
                             }
+                            count={serverWideResultsCount}
                         >
                             Server-wide custom sorters
-                            {!isProfessionalOrAbove && (
-                                <CounterBadge
-                                    className="ms-2"
-                                    count={serverWideResultsCount}
-                                    limit={licenseClusterLimit}
-                                />
-                            )}
                         </HrHeader>
                         <ServerWideCustomSortersList
                             fetchStatus={asyncGetServerWideSorters.status}
@@ -153,7 +156,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                         />
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                        <AboutViewAnchored>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -204,7 +207,10 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
+                                isUnlimited={
+                                    databaseLimitReachStatus === "notReached" &&
+                                    clusterLimitReachStatus === "notReached"
+                                }
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
@@ -270,7 +276,7 @@ function DatabaseSortersList({
                                     <UncontrolledTooltip target={tooltipId} placement="left">
                                         Overrides server-wide sorter
                                     </UncontrolledTooltip>
-                                    <Icon id={tooltipId} icon="info" />
+                                    <Icon id={tooltipId} icon="info" color="info" />
                                 </>
                             )}
                             <RichPanelActions>
@@ -303,18 +309,3 @@ function DatabaseSortersList({
         </div>
     );
 }
-
-export const featureAvailability: FeatureAvailabilityData[] = [
-    {
-        featureName: "Database sorters limit",
-        community: { value: 1 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-    {
-        featureName: "Cluster sorters limit",
-        community: { value: 5 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-];
