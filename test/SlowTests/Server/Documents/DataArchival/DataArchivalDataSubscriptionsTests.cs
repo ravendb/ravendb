@@ -26,6 +26,7 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -495,7 +496,7 @@ public class DataArchivalDataSubscriptionsTests(ITestOutputHelper output) : Rave
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Subscriptions)]
     public async Task DocumentFromTryoutListWontBeReturnedIfItWasArchivedInMeantime()
     {
         var reasonableWaitTime = TimeSpan.FromSeconds(15);
