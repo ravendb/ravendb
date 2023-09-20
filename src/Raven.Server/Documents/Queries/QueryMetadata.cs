@@ -2898,5 +2898,10 @@ function execute(doc, args){
 
             return RootAliasPaths.TryGetValue(expr.Compound[0], out _);
         }
+
+        internal bool IsAliasedField(FieldExpression fe)
+        {
+            return _aliasToName.ContainsKey(fe.Compound[0].Value);
+        }
     }
 }

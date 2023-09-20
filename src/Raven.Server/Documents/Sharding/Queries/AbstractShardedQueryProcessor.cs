@@ -276,7 +276,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
         else if (queryChanges.HasFlag(QueryChanges.UpdateOrderByFieldsInMapReduce))
         {
-            query.CachedOrderBy = clone.OrderBy ??= new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)>();
+            var orderByExpressions = new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)>();
             var orderByFields = new List<OrderByField>();
 
             if (Query.Metadata.OrderBy != null)
@@ -284,6 +284,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 // add existing order by fields
                 foreach (var orderByField in Query.Metadata.OrderBy)
                 {
+                    orderByExpressions.Add((new FieldExpression(new List<StringSegment> { orderByField.Name.Value }), orderByField.OrderingType, orderByField.Ascending));
                     orderByFields.Add(orderByField);
                 }
             }
@@ -294,9 +295,12 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 if (Query.Metadata.OrderBy != null && Query.Metadata.OrderByFieldNames.Contains(groupByField))
                     continue;
 
-                clone.OrderBy.Add((new FieldExpression(new List<StringSegment> { groupByField }), OrderByFieldType.Implicit, Ascending: true));
+                orderByExpressions.Add((new FieldExpression(new List<StringSegment> { groupByField }), OrderByFieldType.Implicit, Ascending: true));
                 orderByFields.Add(new OrderByField(new QueryFieldName(groupByField, isQuoted: false), OrderByFieldType.Implicit, ascending: true));
             }
+
+            clone.OrderBy = orderByExpressions;
+            query.CachedOrderBy = orderByExpressions;
 
             Query.Metadata.CachedOrderBy = orderByFields.ToArray();
         }
@@ -427,42 +431,72 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             if (query.Filter != null)
                 queryChanges |= QueryChanges.RewriteForFilterInMapReduce;
 
-            if (query.Limit != null)
+            if (query.CachedOrderBy != null)
             {
+                queryChanges |= QueryChanges.UseCachedOrderByFieldsInMapReduce;
                 groupByFields = GetGroupByFields();
+            }
+            else
+            {
+                if (query.Limit != null)
+                {
+                    groupByFields = GetGroupByFields();
 
-                if (query.CachedOrderBy != null)
-                {
-                    queryChanges |= QueryChanges.UseCachedOrderByFieldsInMapReduce;
-                }
-                if (query.OrderBy == null)
-                {
-                    if (groupByFields.Count > 0) // we can have `group by 1` - then we don't have any field names
+                    if (query.CachedOrderBy != null)
                     {
-                        // we have a limit but not an order by
-                        // we need to add the group by fields in order to get correct results
-                        queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
+                        queryChanges |= QueryChanges.UseCachedOrderByFieldsInMapReduce;
                     }
-                }
-                else
-                {
-                    // we have a limit and order by fields
-                    // we need to get all results if the order by isn't done on the group by fields
-                    foreach (var orderByField in indexQuery.Metadata.OrderByFieldNames)
+                    if (query.OrderBy == null)
                     {
-                        if (groupByFields.Contains(orderByField) == false)
+                        if (groupByFields.Count > 0) // we can have `group by 1` - then we don't have any field names
                         {
-                            // we found an order by field that isn't a group by field, we must get all the results
-                            queryChanges |= QueryChanges.RewriteForLimitWithOrderByInMapReduce;
-                            break;
+                            // we have a limit but not an order by
+                            // we need to add the group by fields in order to get correct results
+                            queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
                         }
                     }
-
-                    // we are missing some group by fields
-                    if (queryChanges.HasFlag(QueryChanges.RewriteForLimitWithOrderByInMapReduce) == false &&
-                        indexQuery.Metadata.OrderByFieldNames.Count != groupByFields.Count)
+                    else
                     {
-                        queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
+                        // we have a limit and order by fields
+                        // we need to get all results if the order by isn't done on the group by fields
+                        foreach (var orderByField in indexQuery.Metadata.OrderByFieldNames)
+                        {
+                            if (groupByFields.Contains(orderByField) == false)
+                            {
+                                // we found an order by field that isn't a group by field, we must get all the results
+                                queryChanges |= QueryChanges.RewriteForLimitWithOrderByInMapReduce;
+                                break;
+                            }
+                        }
+
+                        // we are missing some group by fields
+                        if (queryChanges.HasFlag(QueryChanges.RewriteForLimitWithOrderByInMapReduce) == false &&
+                            indexQuery.Metadata.OrderByFieldNames.Count != groupByFields.Count)
+                        {
+                            queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
+                        }
+                    }
+                }
+
+                if (query.OrderBy is { Count: > 0 } &&
+                    queryChanges.HasFlag(QueryChanges.UpdateOrderByFieldsInMapReduce) == false)
+                {
+                    // we have order by fields but haven't detect that we need to update them yet
+                    // we need to do additional checks
+
+                    foreach (var orderByField in query.OrderBy)
+                    {
+                        if (orderByField.Expression is FieldExpression fe)
+                        {
+                            // we have alias usage in order by - we need use original field name
+                            if (indexQuery.Metadata.IsAliasedField(fe))
+                            {
+                                groupByFields = GetGroupByFields();
+                                queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
+
+                                break;
+                            }
+                        }
                     }
                 }
             }
