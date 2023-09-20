@@ -884,10 +884,9 @@ namespace Raven.Server.Documents.Patch
 
                 if (args[1].IsNull() || args[1].IsUndefined() || args[1].IsString() == false)
                     throw new InvalidOperationException("archiveAt(doc, utcDateTimeString) must take string as the second argument");
-
-                if (DateTime.TryParse(args[1].ToString(), out DateTime _) == false)
-                    throw new InvalidOperationException(
-                        $"Invalid datetime string: '{args[1]}'. Method archiveAt(doc, utcDateTimeString) takes UTC DateTime string as a second argument, in the following format: '1970-01-01T12:00:00.0000000Z'");
+                
+                // Validate correct datetime format
+                GetDateArg(args[1].ToString(), "archiveAt(doc, utcDateTimeString)", "utcDateTimeString");
                 
                 var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
                 using (var doc = _database.DocumentsStorage.Get(_docsCtx, archivedDocId, DocumentFields.Data, throwOnConflict: true))
