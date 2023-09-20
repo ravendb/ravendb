@@ -25,13 +25,14 @@ export function EditElasticSearchEtlInfoHub() {
                     that transfers data from documents from this RavenDB database to an Elasticsearch destination.
                 </p>
                 <ul>
-                    <li>The sent data can be filtered and modified by multiple transformation JavaScript scripts that
-                        are added to the task.
+                    <li>
+                        Data is extracted from documents only.
+                        <br/>
+                        Attachments, Counters, Time series, and Revisions are not sent.
                     </li>
                     <li className="margin-top-xxs">
-                        An Elasticsearch ETL task transfers documents only.
-                        <br/>
-                        Attachments, Counters, Time series, and Revisions are not transferred.
+                        The sent data can be filtered and modified by multiple transformation JavaScript scripts that
+                        are added to the task.
                     </li>
                     <li className="margin-top-xxs">
                         Each script specifies the RavenDB source collection(s) and the destination Elasticsearch
