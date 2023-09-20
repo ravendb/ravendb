@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,10 +29,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
                 var sw = Stopwatch.StartNew();
                 
-                var revisions = new List<Document>(changeVectors.Count);
+                var revisions = new Document[changeVectors.Count];
 
-                foreach (var changeVector in changeVectors)
+                for (int index = 0; index < changeVectors.Count; index++)
                 {
+                    string changeVector = changeVectors[index];
                     var revision = revisionsStorage.GetRevision(context, changeVector);
                     if (revision == null && changeVectors.Count == 1)
                     {
@@ -39,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                         return;
                     }
 
-                    revisions.Add(revision);
+                    revisions[index] = revision;
                 }
 
                 var actualEtag = ComputeHttpEtags.ComputeEtagForRevisions(revisions);
@@ -57,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 var blittable = RequestHandler.GetBoolValueQueryString("blittable", required: false) ?? false;
                 if (blittable)
                 {
-                    WriteRevisionsBlittable(context, GetDataArrayFromDocumentList(revisions), out numberOfResults, out totalDocumentsSizeInBytes);
+                    WriteRevisionsBlittable(context, revisions.Select(r => r.Data), out numberOfResults, out totalDocumentsSizeInBytes);
                 }
                 else
                 {
@@ -66,7 +68,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
                 //using this function's legacy name GetRevisionByChangeVector
                 RequestHandler.AddPagingPerformanceHint(PagingOperationType.Documents, "GetRevisionByChangeVector", HttpContext.Request.QueryString.Value, numberOfResults,
-                    revisions.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+                    revisions.Length, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
         }
 
@@ -92,15 +94,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                     (revisions, count) = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisions(context, id, start, pageSize);
                 }
 
-                var actualChangeVector = revisions.Length == 0 ? "" : revisions[0].ChangeVector;
-                if (NotModified(actualChangeVector))
+                var actualEtag = ComputeHttpEtags.ComputeEtagForRevisions(revisions);
+                if (NotModified(actualEtag))
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return;
                 }
-                
-                if(string.IsNullOrEmpty(actualChangeVector) == false)
-                    HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualChangeVector + "\"";
+
+                if (string.IsNullOrEmpty(actualEtag) == false)
+                    HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
                 
                 long loadedRevisionsCount;
                 long totalDocumentsSizeInBytes;
@@ -123,7 +125,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             }
         }
 
-        private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteRevisionsJsonAsync(JsonOperationContext context, bool metadataOnly, List<Document> revisionsResult, CancellationToken token)
+        private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteRevisionsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> revisionsResult, CancellationToken token)
         {
             long numberOfResults;
             long totalDocumentsSizeInBytes;
@@ -137,19 +139,5 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
             return (numberOfResults, totalDocumentsSizeInBytes);
         }
-
-        private static BlittableJsonReaderObject[] GetDataArrayFromDocumentList(List<Document> documents)
-        {
-            var dataArr = new BlittableJsonReaderObject[documents.Count];
-            int i = 0;
-            foreach (var doc in documents)
-            {
-                dataArr[i] = doc.Data;
-                i++;
-            }
-
-            return dataArr;
-        }
-
     }
 }

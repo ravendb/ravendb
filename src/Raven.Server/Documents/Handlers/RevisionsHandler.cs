@@ -29,16 +29,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsCountFor()
         {
-            using (var processor = new RevisionsHandlerProcessorForGetRevisionsCount(this))
-            {
+            using (var processor = new RevisionsHandlerProcessorForGetRevisionsCount(this)) 
                 await processor.ExecuteAsync();
-            }
         }
 
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsFor()
         {
-            using (var processor = new RevisionsHandlerProcessorForGetRevisions(this)) await processor.ExecuteAsync();
+            using (var processor = new RevisionsHandlerProcessorForGetRevisions(this)) 
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/revisions/revert", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
