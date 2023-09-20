@@ -1,43 +1,44 @@
 using System;
+using System.Runtime.CompilerServices;
+using System.Text;
 using Sparrow.Server;
 
 namespace Corax.Utils
 {
     internal static class SuggestionsKeys
     {
-        internal static ByteString Generate(ByteStringContext allocator, int ngramSize, ReadOnlySpan<byte> term, out int keysCount)
+        internal static ByteString Generate(ByteStringContext allocator, int ngramSize, ReadOnlySpan<byte> term, Span<int> termsLength, out int keysCount)
         {
             // This method will generate the ngram based suggestion keys. The idea behind this keys is that we could perform
             // a very efficient starts-with operation on the suggestions tree in order to find the proper documents.
             // Keys are been constructed in such a way that common ngrams gets pushed at the start of the key. 
-            // The general format is: {ngram}{term} 
+            // The general format is: {ngram}:{term} 
             // Therefore now we can go insert such a key and perform multiple calls to start-with with the different ngrams
             // to find all potential terms that share that ngram.
 
-            if (term.Length <= ngramSize)
-            {
-                // If the term is smaller than the ngram size, it will be stored in its entirely. 
-                allocator.From(term, out var single);
-                keysCount = 1;
-                return single;
-            }
+            // Since we are going to be testing against n-grams of minimum size of 2, we should be aware
+            // that the last part of the work should be indexed with 2-grams and 3-grams too, to ensure
+            // proper coverage at the time of doing the preselection. 
 
-            keysCount = term.Length - ngramSize;
-            allocator.Allocate(keysCount * (term.Length + ngramSize), out var outputBufferSlice);
-
-            Span<byte> buffer = stackalloc byte[term.Length + ngramSize];
-            term.CopyTo(buffer[ngramSize..]); // Copy the last part of the key that we will be using as potential suggestion.
+            keysCount = term.Length - 1;
+            allocator.Allocate(keysCount * (term.Length + ngramSize + 1), out var outputBufferSlice);
 
             // CHECK: This may not work on compound multibyte characters. 
             var outputBuffer = outputBufferSlice.ToSpan();
-            for (int i = ngramSize; i < term.Length; i++)
+            for (int i = 0; i < term.Length - 1; i++)
             {
-                // Copy the ngram to the local buffer
-                term[(i - ngramSize)..i].CopyTo(buffer);
-                // Copy the local modified buffer
-                buffer.CopyTo(outputBuffer);
+                int size = Math.Min(term.Length - i, Constants.Suggestions.DefaultNGramSize);
+
+                term.Slice(i, size)
+                    .CopyTo(outputBuffer);
+                outputBuffer[size] = (byte)':';
+                term.CopyTo(outputBuffer.Slice(size+1));
+
+                int termLength = term.Length + size + 1;
+                termsLength[i] = termLength;
+
                 // Advance the pointer for the local buffer
-                outputBuffer = outputBuffer[buffer.Length..];
+                outputBuffer = outputBuffer.Slice(termLength);
             }
 
             return outputBufferSlice;
