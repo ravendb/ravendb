@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { Col, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -30,6 +30,7 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { databaseCustomSortersAndAnalyzersUtils } from "components/common/databaseCustomSortersAndAnalyzers/databaseCustomSortersAndAnalyzersUtils";
+import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 
 export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
@@ -57,6 +58,10 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
 
     const databaseResultsCount = asyncGetDatabaseAnalyzers.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideAnalyzers.result?.length ?? null;
+
+    useEffect(() => {
+        throttledUpdateLicenseLimitsUsage();
+    }, [databaseResultsCount]);
 
     const databaseLimitReachStatus = getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit);
     const clusterLimitReachStatus = getLicenseLimitReachStatus(numberOfCustomAnalyzersInCluster, licenseClusterLimit);
