@@ -246,7 +246,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             )}
                         </Col>
                         <Col xs="auto">
-                            <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                            <AboutViewFloating>
                                 <AccordionItemWrapper
                                     icon="about"
                                     color="info"

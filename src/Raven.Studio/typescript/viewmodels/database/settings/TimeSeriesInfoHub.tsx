@@ -17,7 +17,7 @@ export function TimeSeriesInfoHub() {
     ];
 
     return (
-        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+        <AboutViewFloating>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
