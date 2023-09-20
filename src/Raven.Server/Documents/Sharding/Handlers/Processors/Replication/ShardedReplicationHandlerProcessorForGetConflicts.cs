@@ -71,6 +71,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
                 var pageSize = _token.PageSize;
                 foreach (var res in _handler.DatabaseContext.Streaming.CombinedResults(results, r => r.Results, ConflictsLastModifiedComparer.Instance))
                 {
+                    if (_token.Skip > 0)
+                    {
+                        _token.Skip--;
+                        continue;
+                    }
+
                     final.Results.Add(res.Item);
                     pageSize--;
 

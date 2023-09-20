@@ -153,7 +153,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
 
         return new DocumentsResult
         {
-            DocumentsAsync = ShardedDatabaseContext.ShardedStreaming.UnwrapDocuments(documents),
+            DocumentsAsync = ShardedDatabaseContext.ShardedStreaming.UnwrapDocuments(documents, token),
             ContinuationToken = token,
             Etag = results.CombinedEtag
         };
