@@ -129,55 +129,5 @@ const AboutViewAnchored = (props: AboutViewProps) => {
     );
 };
 
-interface AccordionItemLicensingProps {
-    description: ReactNode;
-    featureName: string;
-    featureIcon: IconName;
-    children: ReactNode;
-    checkedLicenses: string[];
-    isCommunityLimited?: boolean;
-    isProfessionalLimited?: boolean;
-}
-
-const AccordionItemLicensing = (props: AccordionItemLicensingProps) => {
-    const {
-        featureName,
-        featureIcon,
-        children,
-        checkedLicenses,
-        description,
-        isCommunityLimited,
-        isProfessionalLimited,
-    } = props;
-    const licenses = [
-        { name: "Community", checked: checkedLicenses.includes("Community") },
-        { name: "Professional", checked: checkedLicenses.includes("Professional") },
-        { name: "Enterprise", checked: checkedLicenses.includes("Enterprise") },
-    ];
-    return (
-        <div className="text-center">
-            <div className="lead mb-3 fs-4">{description}</div>
-            <h4>
-                <Icon icon={featureIcon} /> {featureName}
-            </h4>
-            <div className="d-flex flex-wrap gap-3 licensing-cols">
-                {licenses.map((license) => (
-                    <div className="vstack align-items-center" key={license.name}>
-                        <h5 className={classNames("license-name", license.name.toLowerCase())}>{license.name}</h5>
-                        <Icon icon={license.checked ? "tick" : "cancel"} />
-                        {isCommunityLimited && license.name === "Community" ? (
-                            <small className="text-muted">(limited)</small>
-                        ) : null}
-                        {isProfessionalLimited && license.name === "Professional" ? (
-                            <small className="text-muted">(limited)</small>
-                        ) : null}
-                    </div>
-                ))}
-            </div>
-            {children}
-        </div>
-    );
-};
-
 export default AboutViewFloating;
-export { AboutViewFloating, AboutViewAnchored, AccordionItemLicensing, AccordionItemWrapper, AboutViewHeading };
+export { AboutViewFloating, AboutViewAnchored, AccordionItemWrapper, AboutViewHeading };
