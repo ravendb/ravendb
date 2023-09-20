@@ -8,14 +8,11 @@ import { useAsync } from "react-async-hook";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { CounterBadge } from "components/common/CounterBadge";
 import classNames from "classnames";
 import AnalyzersList from "./ServerWideCustomAnalyzersList";
-import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { getProfessionalOrAboveLicenseAvailabilityData } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {
-    FeatureAvailabilityData,
-} from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 
 export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
@@ -25,13 +22,15 @@ export default function ServerWideCustomAnalyzers() {
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-    const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasServerWideAnalyzers"));
+
+    const featureAvailability = getProfessionalOrAboveLicenseAvailabilityData({
+        licenseType,
+        overrideValue: isFeatureInLicense,
+    });
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
-
-    const isLimitExceeded =
-        !isProfessionalOrAbove && getLicenseLimitReachStatus(resultsCount, licenseLimit) === "limitReached";
 
     return (
         <div className="content-margin">
@@ -42,13 +41,13 @@ export default function ServerWideCustomAnalyzers() {
                         <div id="newServerWideCustomAnalyzer" className="w-fit-content">
                             <a
                                 href={appUrl.forEditServerWideCustomAnalyzer()}
-                                className={classNames("btn btn-primary mb-3", { disabled: isLimitExceeded })}
+                                className={classNames("btn btn-primary mb-3", { disabled: !isFeatureInLicense })}
                             >
                                 <Icon icon="plus" />
                                 Add a server-wide custom analyzer
                             </a>
                         </div>
-                        {isLimitExceeded && (
+                        {!isFeatureInLicense && (
                             <UncontrolledPopover
                                 trigger="hover"
                                 target="newServerWideCustomAnalyzer"
@@ -56,28 +55,26 @@ export default function ServerWideCustomAnalyzers() {
                                 className="bs5"
                             >
                                 <div className="p-3 text-center">
-                                    You&apos;ve reached the maximum number of Custom Analyzers allowed per cluster.
-                                    <br /> Delete unused analyzers or{" "}
+                                    Your current license does not support this feature.
+                                    <br />
                                     <a href={upgradeLicenseLink} target="_blank">
-                                        upgrade your license
-                                    </a>
+                                        Upgrade your plan
+                                    </a>{" "}
+                                    to access.
                                 </div>
                             </UncontrolledPopover>
                         )}
-                        <HrHeader>
-                            Server-wide custom analyzers
-                            {!isProfessionalOrAbove && (
-                                <CounterBadge className="ms-2" count={resultsCount} limit={licenseLimit} />
-                            )}
-                        </HrHeader>
-                        <AnalyzersList
-                            fetchStatus={asyncGetAnalyzers.status}
-                            analyzers={asyncGetAnalyzers.result}
-                            reload={asyncGetAnalyzers.execute}
-                        />
+                        <div className={isFeatureInLicense ? null : "item-disabled pe-none"}>
+                            <HrHeader count={resultsCount}>Server-wide custom analyzers</HrHeader>
+                            <AnalyzersList
+                                fetchStatus={asyncGetAnalyzers.status}
+                                analyzers={asyncGetAnalyzers.result}
+                                reload={asyncGetAnalyzers.execute}
+                            />
+                        </div>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -128,7 +125,7 @@ export default function ServerWideCustomAnalyzers() {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
+                                isUnlimited={isFeatureInLicense}
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
@@ -138,12 +135,3 @@ export default function ServerWideCustomAnalyzers() {
         </div>
     );
 }
-
-export const featureAvailability: FeatureAvailabilityData[] = [
-    {
-        featureName: "Analyzers limit",
-        community: { value: 5 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-];

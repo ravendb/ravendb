@@ -28,9 +28,8 @@ import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/Delet
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {
-    FeatureAvailabilityData,
-} from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { databaseCustomSortersAndAnalyzersUtils } from "components/common/databaseCustomSortersAndAnalyzers/databaseCustomSortersAndAnalyzersUtils";
 
 export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
@@ -45,17 +44,24 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerDatabase"));
+    const numberOfCustomAnalyzersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfAnalyzersInCluster;
+
+    const featureAvailability = databaseCustomSortersAndAnalyzersUtils.getLicenseAvailabilityData({
+        licenseType,
+        overrideClusterLimit: licenseClusterLimit,
+        overrideDatabaseLimit: licenseDatabaseLimit,
+    });
 
     const databaseResultsCount = asyncGetDatabaseAnalyzers.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideAnalyzers.result?.length ?? null;
 
-    const isLimitExceeded =
-        !isProfessionalOrAbove &&
-        getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit) === "limitReached";
+    const databaseLimitReachStatus = getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit);
+    const clusterLimitReachStatus = getLicenseLimitReachStatus(numberOfCustomAnalyzersInCluster, licenseClusterLimit);
+
+    const isLimitReached = databaseLimitReachStatus === "limitReached" || clusterLimitReachStatus === "limitReached";
 
     return (
         <div className="content-margin">
@@ -68,13 +74,13 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 <div id="newCustomAnalyzer" className="w-fit-content">
                                     <a
                                         href={appUrl.forEditCustomAnalyzer(db)}
-                                        className={classNames("btn btn-primary mb-3", { disabled: isLimitExceeded })}
+                                        className={classNames("btn btn-primary mb-3", { disabled: isLimitReached })}
                                     >
                                         <Icon icon="plus" />
                                         Add a custom analyzer
                                     </a>
                                 </div>
-                                {isLimitExceeded && (
+                                {isLimitReached && (
                                     <UncontrolledPopover
                                         trigger="hover"
                                         target="newCustomAnalyzer"
@@ -82,8 +88,9 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                         className="bs5"
                                     >
                                         <div className="p-3 text-center">
-                                            Database has reached the maximum number of Custom Analyzers allowed per
-                                            database.
+                                            {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has
+                                            reached the maximum number of Custom Analyzers allowed per{" "}
+                                            {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
                                             <br /> Delete unused analyzers or{" "}
                                             <a href={upgradeLicenseLink} target="_blank">
                                                 upgrade your license
@@ -94,9 +101,9 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                             </>
                         )}
 
-                        <HrHeader>
+                        <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
                             Database custom analyzers
-                            {!isProfessionalOrAbove && (
+                            {databaseLimitReachStatus !== "notReached" && (
                                 <CounterBadge
                                     className="ms-2"
                                     count={databaseResultsCount}
@@ -125,15 +132,9 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                     Server-wide custom analyzers
                                 </a>
                             }
+                            count={serverWideResultsCount}
                         >
                             Server-wide custom analyzers
-                            {!isProfessionalOrAbove && (
-                                <CounterBadge
-                                    className="ms-2"
-                                    count={serverWideResultsCount}
-                                    limit={licenseClusterLimit}
-                                />
-                            )}
                         </HrHeader>
                         <ServerWideCustomAnalyzersList
                             fetchStatus={asyncGetServerWideAnalyzers.status}
@@ -143,7 +144,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                         />
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                        <AboutViewAnchored>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -197,7 +198,10 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
+                                isUnlimited={
+                                    databaseLimitReachStatus === "notReached" &&
+                                    clusterLimitReachStatus === "notReached"
+                                }
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
@@ -263,7 +267,7 @@ function DatabaseAnalyzersList({
                                     <UncontrolledTooltip target={tooltipId} placement="left">
                                         Overrides server-wide analyzer
                                     </UncontrolledTooltip>
-                                    <Icon id={tooltipId} icon="info" />
+                                    <Icon id={tooltipId} icon="info" color="info" />
                                 </>
                             )}
                             <RichPanelActions>
@@ -296,18 +300,3 @@ function DatabaseAnalyzersList({
         </div>
     );
 }
-
-export const featureAvailability: FeatureAvailabilityData[] = [
-    {
-        featureName: "Database analyzers limit",
-        community: { value: 1 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-    {
-        featureName: "Cluster analyzers limit",
-        community: { value: 5 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-];

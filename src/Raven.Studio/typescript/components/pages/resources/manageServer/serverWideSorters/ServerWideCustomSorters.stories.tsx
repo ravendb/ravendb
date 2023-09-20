@@ -26,11 +26,13 @@ export function NoLimits() {
     return <ServerWideCustomSorters />;
 }
 
-export function CommunityLimits() {
+export function LicenseLimits() {
     commonInit();
 
     const { license } = mockStore;
-    license.with_LicenseLimited();
+    license.with_LicenseLimited({
+        HasServerWideCustomSorters: false,
+    });
 
     return <ServerWideCustomSorters />;
 }

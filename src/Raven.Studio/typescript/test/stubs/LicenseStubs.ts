@@ -137,8 +137,8 @@ export class LicenseStubs {
         return {
             NumberOfStaticIndexesInCluster: 58,
             NumberOfAutoIndexesInCluster: 20,
-            NumberOfCustomSortersInCluster: 10,
-            NumberOfAnalyzersInCluster: 10,
+            NumberOfCustomSortersInCluster: 4,
+            NumberOfAnalyzersInCluster: 4,
             NumberOfSubscriptionsInCluster: 14,
         };
     }

@@ -61,7 +61,7 @@ export function BelowDatabaseAdmin() {
     return <DatabaseCustomAnalyzers db={db} />;
 }
 
-export function CommunityLimits() {
+export function LicenseLimits() {
     commonInit();
 
     const { accessManager, license } = mockStore;
@@ -74,6 +74,7 @@ export function CommunityLimits() {
     databasesService.withCustomAnalyzers();
 
     license.with_LicenseLimited();
+    license.with_LimitsUsage();
 
     return <DatabaseCustomAnalyzers db={db} />;
 }

@@ -8,14 +8,11 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { CounterBadge } from "components/common/CounterBadge";
 import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
-import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {
-    FeatureAvailabilityData,
-} from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { getProfessionalOrAboveLicenseAvailabilityData } from "components/utils/licenseLimitsUtils";
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
@@ -25,13 +22,15 @@ export default function ServerWideCustomSorters() {
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-    const licenseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
+
+    const featureAvailability = getProfessionalOrAboveLicenseAvailabilityData({
+        licenseType,
+        overrideValue: isFeatureInLicense,
+    });
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
-
-    const isLimitExceeded =
-        !isProfessionalOrAbove && getLicenseLimitReachStatus(resultsCount, licenseLimit) === "limitReached";
 
     return (
         <div className="content-margin">
@@ -42,13 +41,13 @@ export default function ServerWideCustomSorters() {
                         <div id="newServerWideCustomSorter" className="w-fit-content">
                             <a
                                 href={appUrl.forEditServerWideCustomSorter()}
-                                className={classNames("btn btn-primary mb-3", { disabled: isLimitExceeded })}
+                                className={classNames("btn btn-primary mb-3", { disabled: !isFeatureInLicense })}
                             >
                                 <Icon icon="plus" />
                                 Add a server-wide custom sorter
                             </a>
                         </div>
-                        {isLimitExceeded && (
+                        {!isFeatureInLicense && (
                             <UncontrolledPopover
                                 trigger="hover"
                                 target="newServerWideCustomSorter"
@@ -56,28 +55,26 @@ export default function ServerWideCustomSorters() {
                                 className="bs5"
                             >
                                 <div className="p-3 text-center">
-                                    You&apos;ve reached the maximum number of Custom Sorters allowed per cluster.
-                                    <br /> Delete unused sorters or{" "}
+                                    Your current license does not support this feature.
+                                    <br />
                                     <a href={upgradeLicenseLink} target="_blank">
-                                        upgrade your license
-                                    </a>
+                                        Upgrade your plan
+                                    </a>{" "}
+                                    to access.
                                 </div>
                             </UncontrolledPopover>
                         )}
-                        <HrHeader>
-                            Server-wide custom sorters
-                            {!isProfessionalOrAbove && (
-                                <CounterBadge className="ms-2" count={resultsCount} limit={licenseLimit} />
-                            )}
-                        </HrHeader>
-                        <SortersList
-                            fetchStatus={asyncGetSorters.status}
-                            sorters={asyncGetSorters.result}
-                            reload={asyncGetSorters.execute}
-                        />
+                        <div className={isFeatureInLicense ? null : "item-disabled pe-none"}>
+                            <HrHeader count={resultsCount}>Server-wide custom sorters</HrHeader>
+                            <SortersList
+                                fetchStatus={asyncGetSorters.status}
+                                sorters={asyncGetSorters.result}
+                                reload={asyncGetSorters.execute}
+                            />
+                        </div>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -124,7 +121,7 @@ export default function ServerWideCustomSorters() {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
+                                isUnlimited={isFeatureInLicense}
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
@@ -134,12 +131,3 @@ export default function ServerWideCustomSorters() {
         </div>
     );
 }
-
-export const featureAvailability: FeatureAvailabilityData[] = [
-    {
-        featureName: "Sorters limit",
-        community: { value: 5 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-];
