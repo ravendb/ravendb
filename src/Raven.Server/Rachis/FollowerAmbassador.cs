@@ -492,14 +492,19 @@ namespace Raven.Server.Rachis
             var isGracefulError = IsGracefulError(e);
             if (hadConnectionFailure || isGracefulError == false)
             {
-                Status = AmbassadorStatus.FailedToConnect;
-                StatusMessage = $"{message}.{Environment.NewLine}" + e;
-                if (_engine.Log.IsInfoEnabled)
+                //We don't want to notify about cluster change every time we check the connection, only if the change is new
+                if (Status != AmbassadorStatus.FailedToConnect)
                 {
-                    _engine.Log.Info(message, e);
-                }
+                    Status = AmbassadorStatus.FailedToConnect;
+                    StatusMessage = $"{message}.{Environment.NewLine}" + e;
 
-                _leader?.NotifyAboutException(_tag, $"Node {_tag} encountered an error", message, e);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info(message, e);
+                    }
+
+                    _leader?.NotifyAboutException(_tag, $"Node {_tag} encountered an error", message, e);
+                }
             }
 
             if (isGracefulError)
