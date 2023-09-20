@@ -118,6 +118,12 @@ namespace Raven.Server.Documents.Sharding
                 var results = StreamCombinedArray(combinedState, name, converter, comparer);
                 await foreach (var result in results.WithCancellation(combinedState.CancellationToken))
                 {
+                    if (pagingContinuation.Skip > 0)
+                    {
+                        pagingContinuation.Skip--;
+                        continue;
+                    }
+
                     if (pageSize-- <= 0)
                         yield break;
 
@@ -237,10 +243,17 @@ namespace Raven.Server.Documents.Sharding
                 PagedShardedDocumentsById(documents, resultPropertyName, pagingContinuation);
 
             
-            public static async IAsyncEnumerable<Document> UnwrapDocuments(IAsyncEnumerable<ShardStreamItem<Document>> docs)
+            public static async IAsyncEnumerable<Document> UnwrapDocuments(IAsyncEnumerable<ShardStreamItem<Document>> docs,
+                ShardedPagingContinuation shardedPagingContinuation)
             {
                 await foreach (var doc in docs)
                 {
+                    if (shardedPagingContinuation.Skip > 0)
+                    {
+                        shardedPagingContinuation.Skip--;
+                        continue;
+                    }
+
                     yield return doc.Item;
                 }
             }
@@ -254,6 +267,12 @@ namespace Raven.Server.Documents.Sharding
                 var pageSize = pagingContinuation.PageSize;
                 foreach (var result in CombinedResults(results, selector, comparer))
                 {
+                    if (pagingContinuation.Skip > 0)
+                    {
+                        pagingContinuation.Skip--;
+                        continue;
+                    }
+
                     if (pageSize-- <= 0)
                         yield break;
 
