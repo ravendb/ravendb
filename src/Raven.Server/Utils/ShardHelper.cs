@@ -32,7 +32,7 @@ namespace Raven.Server.Utils
         /// </summary>
         public static int GetBucketFor(ShardingConfiguration configuration, ByteStringContext context, string id)
         {
-            using (DocumentIdWorker.GetLower(context, id, out var lowerId))
+            using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             {
                 return GetBucketFor(configuration, lowerId);
             }
@@ -156,7 +156,7 @@ namespace Raven.Server.Utils
 
         public static int GetShardNumberFor(ShardingConfiguration configuration, Slice id) => GetShardNumberAndBucketFor(configuration, id).ShardNumber;
 
-        public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(ShardingConfiguration configuration, Slice id)
+        private static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(ShardingConfiguration configuration, Slice id)
         {
             int bucket = GetBucketFor(configuration, id);
             return (FindBucketShard(configuration.BucketRanges, bucket), bucket);
@@ -164,7 +164,7 @@ namespace Raven.Server.Utils
 
         public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(ShardingConfiguration configuration, ByteStringContext allocator, string id)
         {
-            using (DocumentIdWorker.GetLower(allocator, id, out var lowerId))
+            using (DocumentIdWorker.GetSliceFromId(allocator, id, out var lowerId))
             {
                 return GetShardNumberAndBucketFor(configuration, lowerId);
             }
@@ -173,7 +173,7 @@ namespace Raven.Server.Utils
         public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(ShardingConfiguration configuration, ByteStringContext allocator, LazyStringValue id)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Avoid the allocation of the LazyStringValue below");
-            using (DocumentIdWorker.GetLower(allocator, id, out var lowerId))
+            using (DocumentIdWorker.GetSliceFromId(allocator, id, out var lowerId))
             {
                 return GetShardNumberAndBucketFor(configuration, lowerId);
             }

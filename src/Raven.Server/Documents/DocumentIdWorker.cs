@@ -28,12 +28,20 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId(
+            ByteStringContext allocator, string id, out Slice idSlice,
+            byte? separator = null)
+        {
+            return GetSliceFromId(allocator, id.AsSpan(), out idSlice, separator);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(
             TransactionOperationContext<TTransaction> context, string id, out Slice idSlice,
             byte? separator = null)
             where TTransaction : RavenTransaction
         {
-            return GetSliceFromId(context, id.AsSpan(), out idSlice, separator);
+            return GetSliceFromId(context.Allocator, id.AsSpan(), out idSlice, separator);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -51,12 +59,11 @@ namespace Raven.Server.Documents
             {
                 if(id.Size > 0)
                     charCount = Encodings.Utf8.GetChars(id.Buffer, id.Size, pChars, tempBuffer.Length);
-                return GetSliceFromId(context, new Span<char>(pChars, charCount), out idSlice, separator);
+                return GetSliceFromId(context.Allocator, new Span<char>(pChars, charCount), out idSlice, separator);
             }
         }
 
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(TransactionOperationContext<TTransaction> context, ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)
-            where TTransaction : RavenTransaction
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId(ByteStringContext allocator, ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)
         {
             if (_jsonParserState == null)
                 _jsonParserState = new JsonParserState();
@@ -71,7 +78,7 @@ namespace Raven.Server.Documents
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(id.ToString());
 
-            var internalScope = context.Allocator.Allocate(
+            var internalScope = allocator.Allocate(
                 maxStrSize // this buffer is allocated to also serve the GetSliceFromUnicodeKey
                 + sizeof(char) * id.Length
                 + escapePositionsSize
@@ -240,6 +247,12 @@ namespace Raven.Server.Documents
             TransactionOperationContext<TTransaction> context, string str, out Slice lowerIdSlice, out Slice idSlice)
             where TTransaction : RavenTransaction
         {
+            return GetLowerIdSliceAndStorageKey(context.Allocator, str, out lowerIdSlice, out idSlice);
+        }
+
+        public static ByteStringContext.InternalScope GetLowerIdSliceAndStorageKey(
+            ByteStringContext allocator, string str, out Slice lowerIdSlice, out Slice idSlice)
+        {
             // Because we need to also store escape positions for the key when we store it
             // we need to store it as a lazy string value.
             // But lazy string value has two lengths, one is the string length, and the other 
@@ -278,10 +291,10 @@ namespace Raven.Server.Documents
 
             int idSize = JsonParserState.VariableSizeIntSize(maxStrSize);
 
-            var scope = context.Allocator.Allocate(maxStrSize // lower key
-                                       + idSize // the size of var int for the len of the key
-                                       + maxStrSize // actual key
-                                       + escapePositionsSize, out ByteString buffer);
+            var scope = allocator.Allocate(maxStrSize // lower key
+                                           + idSize // the size of var int for the len of the key
+                                           + maxStrSize // actual key
+                                           + escapePositionsSize, out ByteString buffer);
 
 
             byte* ptr = buffer.Ptr;
@@ -333,19 +346,18 @@ namespace Raven.Server.Documents
             escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
             idSize = escapePositionsSize + strLength + idSize;
 
-            Slice.External(context.Allocator, ptr + maxStrSize + sizeDifference, idSize, out idSlice);
-            Slice.External(context.Allocator, ptr, strLength, out lowerIdSlice);
+            Slice.External(allocator, ptr + maxStrSize + sizeDifference, idSize, out idSlice);
+            Slice.External(allocator, ptr, strLength, out lowerIdSlice);
             return scope;
 
         UnlikelyUnicode:
             scope.Dispose();
-            return UnicodeGetLowerIdAndStorageKey(context, str, out lowerIdSlice, out idSlice, maxStrSize, escapePositionsSize);
+            return UnicodeGetLowerIdAndStorageKey(allocator, str, out lowerIdSlice, out idSlice, maxStrSize, escapePositionsSize);
         }
 
-        private static ByteStringContext.InternalScope UnicodeGetLowerIdAndStorageKey<TTransaction>(
-            TransactionOperationContext<TTransaction> context, string str,
+        private static ByteStringContext.InternalScope UnicodeGetLowerIdAndStorageKey(
+            ByteStringContext allocator, string str,
             out Slice lowerIdSlice, out Slice idSlice, int maxStrSize, int escapePositionsSize)
-            where TTransaction : RavenTransaction
         {
             // See comment in GetLowerIdSliceAndStorageKey for the format
 
@@ -353,7 +365,7 @@ namespace Raven.Server.Documents
 
             int strLength = str.Length;
 
-            var scope = context.Allocator.Allocate(
+            var scope = allocator.Allocate(
                 sizeof(char) * strLength // for the lower calls
                 + maxStrSize // lower ID
                 + maxIdLenSize // the size of var int for the len of the ID
@@ -392,8 +404,8 @@ namespace Raven.Server.Documents
                 escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + idSize);
                 idSize += escapePositionsSize + maxIdLenSize;
 
-                Slice.External(context.Allocator, id, idSize, out idSlice);
-                Slice.External(context.Allocator, lowerId, lowerSize, out lowerIdSlice);
+                Slice.External(allocator, id, idSize, out idSlice);
+                Slice.External(allocator, lowerId, lowerSize, out lowerIdSlice);
                 return scope;
             }
         }
