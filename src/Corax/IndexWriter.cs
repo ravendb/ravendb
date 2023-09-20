@@ -1220,12 +1220,17 @@ namespace Corax
         
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
+        private int[] _suggestionsTermsLengths;
+
         private void AddSuggestions(IndexedField field, Slice slice)
         {
             _hasSuggestions = true;
             field.Suggestions ??= new Dictionary<Slice, int>();
 
-            Span<int> termsLength = stackalloc int[slice.Size];
+            if (_suggestionsTermsLengths == null || _suggestionsTermsLengths.Length < slice.Size)
+                _suggestionsTermsLengths = new int[Math.Max(2 * slice.Size, 32)];
+
+            var termsLength = _suggestionsTermsLengths;
 
             var keys = SuggestionsKeys.Generate(_entriesAllocator, Constants.Suggestions.DefaultNGramSize, slice.AsReadOnlySpan(), termsLength, out int keysCount);
 
@@ -1254,8 +1259,10 @@ namespace Corax
             _hasSuggestions = true;
             field.Suggestions ??= new Dictionary<Slice, int>();
 
+            if (_suggestionsTermsLengths == null || _suggestionsTermsLengths.Length < sequence.Length)
+                _suggestionsTermsLengths = new int[Math.Max(2 * sequence.Length, 32)];
 
-            Span<int> termsLength = stackalloc int[sequence.Length];
+            var termsLength = _suggestionsTermsLengths;
 
             var keys = SuggestionsKeys.Generate(_entriesAllocator, Constants.Suggestions.DefaultNGramSize, sequence, termsLength, out int keysCount);
 
