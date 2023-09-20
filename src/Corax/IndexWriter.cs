@@ -517,8 +517,6 @@ namespace Corax
             _dynamicFieldsMapping = current;
         }
 
-        private const string SuggestionsTreePrefix = "__Suggestion_";
-
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -1226,21 +1224,27 @@ namespace Corax
         {
             _hasSuggestions = true;
             field.Suggestions ??= new Dictionary<Slice, int>();
-            
-            var keys = SuggestionsKeys.Generate(_entriesAllocator, Constants.Suggestions.DefaultNGramSize, slice.AsSpan(), out int keysCount);
-            int keySizes = keys.Length / keysCount;
+
+            Span<int> termsLength = stackalloc int[slice.Size];
+
+            var keys = SuggestionsKeys.Generate(_entriesAllocator, Constants.Suggestions.DefaultNGramSize, slice.AsReadOnlySpan(), termsLength, out int keysCount);
 
             var suggestionsToAdd = field.Suggestions;
 
             int idx = 0;
+            int currentOffset = 0;
             while (idx < keysCount)
             {
-                var key = new Slice(_entriesAllocator.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
+                int keySize = termsLength[idx];
+
+                var key = new Slice(_entriesAllocator.Slice(keys, currentOffset, keySize, ByteStringType.Immutable));
                 if (suggestionsToAdd.TryGetValue(key, out int counter) == false)
                     counter = 0;
 
                 counter++;
                 suggestionsToAdd[key] = counter;
+
+                currentOffset += keySize;
                 idx++;
             }
         }
@@ -1251,21 +1255,27 @@ namespace Corax
             field.Suggestions ??= new Dictionary<Slice, int>();
 
 
-            var keys = SuggestionsKeys.Generate(_entriesAllocator, Constants.Suggestions.DefaultNGramSize, sequence, out int keysCount);
-            int keySizes = keys.Length / keysCount;
+            Span<int> termsLength = stackalloc int[sequence.Length];
 
-            var suggestionsToAdd = field.Suggestions;
+            var keys = SuggestionsKeys.Generate(_entriesAllocator, Constants.Suggestions.DefaultNGramSize, sequence, termsLength, out int keysCount);
+
+            var suggestionsToRemove = field.Suggestions;
 
             int idx = 0;
+            int currentOffset = 0;
             while (idx < keysCount)
             {
-                var key = new Slice(_entriesAllocator.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
-                if (suggestionsToAdd.TryGetValue(key, out int counter) == false)
+                int keySize = termsLength[idx];
+
+                var key = new Slice(_entriesAllocator.Slice(keys, currentOffset, keySize, ByteStringType.Immutable));
+                if (suggestionsToRemove.TryGetValue(key, out int counter) == false)
                     counter = 0;
 
                 counter--;
-                suggestionsToAdd[key] = counter;
+                suggestionsToRemove[key] = counter;
                 idx++;
+
+                currentOffset += keySize;
             }
         }
 
@@ -1734,8 +1744,13 @@ namespace Corax
                 for (var fieldId = 0; fieldId < _knownFieldsTerms.Length; fieldId++)
                 {
                     IndexedField indexedField = _knownFieldsTerms[fieldId];
-                    if (indexedField.Suggestions == null) continue;
-                    Slice.From(_entriesAllocator, $"{SuggestionsTreePrefix}{fieldId}", out var treeName);
+
+                    // If there are no suggestion to add, we can continue
+                    if (indexedField.Suggestions == null) 
+                        continue;
+
+                    Slice.From(_entriesAllocator, $"{Constants.IndexWriter.SuggestionsTreePrefix}{fieldId}", out var treeName);
+
                     var tree = _transaction.CompactTreeFor(treeName);
                     foreach (var (key, counter) in indexedField.Suggestions)
                     {

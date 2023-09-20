@@ -1,13 +1,16 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Debugging;
+using Sparrow.Server;
 using Sparrow.Server.Strings;
 
 using Voron;
@@ -93,8 +96,10 @@ namespace Corax.Queries
 
             public void Generate(ReadOnlySpan<byte> word)
             {
+                int wordLength = word.Length + 1;
+
                 // Copy to storage.                
-                _maxSize = word.Length * word.Length;
+                _maxSize = wordLength * wordLength;
 
                 int minSize = _maxSize + (2 * _maxSize * sizeof(int)) + _maxSize * sizeof(float);
                 if ( _storage == null )
@@ -164,29 +169,47 @@ namespace Corax.Queries
             var values = new FastList<(Slice Term, int Popularity)>();
             var dictionary = new Dictionary<uint, int>();
 
+            using var gramTable = new SuggestionsNGramTable(Suggestions.DefaultNGramSize);
+
             // We initialize the iterator and store it in the stack memory.
-            Slice.From(allocator, $"__Suggestion_{_fieldId}", out var treeName);
+            Slice.From(allocator, $"{Constants.IndexWriter.SuggestionsTreePrefix}{_fieldId}", out var treeName);
             var tree = _searcher.Transaction.CompactTreeFor(treeName);
+            if (tree == null)
+                goto NoResults;
+
             var iter = tree.Iterate();
 
-            using var gramTable = new SuggestionsNGramTable(Suggestions.DefaultNGramSize);
             gramTable.Generate(_term.AsSpan());
             while (gramTable.MoveNext(out var ngram, out var boost))
             {
                 iter.Seek(ngram);
 
-                byte lastByte = ngram[^1];
+                ref var ngramStart = ref MemoryMarshal.GetReference(ngram);
 
+                ReadOnlySpan<byte> key;
                 while (iter.MoveNext(out var gramCompactKey, out _, out _))
                 {
                     var gramKey = gramCompactKey.Decoded();
-                    if (gramKey[ngram.Length - 1] > lastByte)
-                        break;
 
-                    if (gramKey.Length <= Suggestions.DefaultNGramSize)
+                    // There must be a shared prefix.
+                    ref var gramKeyStart = ref MemoryMarshal.GetReference(gramKey);
+
+                    var cmp = AdvMemory.CompareInline(ref ngramStart, ref gramKeyStart, Math.Min(ngram.Length, gramKey.Length));
+                    if (cmp > 0)
+                        break;
+                    if (cmp < 0)
                         continue;
 
-                    var key = gramKey.Slice(Suggestions.DefaultNGramSize);
+                    if (ngram.Length == Suggestions.DefaultNGramSize)
+                    {
+                        key = gramKey.Slice(Suggestions.DefaultNGramSize + 1);
+                    }
+                    else
+                    {
+                        // This is an ngram prefix, we need to figure out where to cut it.
+                        key = gramKey.Slice(gramKey.IndexOf((byte)':') + 1);
+                    }
+
                     uint keyHash = Hashing.XXHash32.CalculateInline(key);
 
                     if (dictionary.TryGetValue(keyHash, out int location) == false)
@@ -224,7 +247,7 @@ namespace Corax.Queries
             for (int tokensCount = 0; tokensCount < values.Count; tokensCount++)
             {
                 ref var v = ref values.GetAsRef(tokensCount);
-
+                
                 var termKey = v.Term.AsReadOnlySpan();
 
                 if (termKey.Length > 1 && termKey[^1] == '\0')

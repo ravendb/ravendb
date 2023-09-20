@@ -63,7 +63,11 @@ namespace Corax
             public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
                 StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice,
                 DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists;            
+            
             public const int DynamicField = -2;
+
+            public const string SuggestionsTreePrefix = "__Suggestion_";
+
             static IndexWriter()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))
