@@ -13,7 +13,7 @@ export function EditSubscriptionTaskInfoHub() {
     const subscriptionTasksDocsLink = useRavenLink({ hash: "I5TMCK" });
 
     return (
-        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+        <AboutViewFloating>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"

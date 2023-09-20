@@ -158,7 +158,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                        <AboutViewAnchored>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"

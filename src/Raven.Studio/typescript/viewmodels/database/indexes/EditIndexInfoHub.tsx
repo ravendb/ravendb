@@ -10,7 +10,7 @@ export function EditIndexInfoHub() {
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
 
     return (
-        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+        <AboutViewFloating>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
