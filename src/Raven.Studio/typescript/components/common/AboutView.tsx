@@ -15,6 +15,7 @@ import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
 import { uniqueId } from "lodash";
+import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
@@ -25,20 +26,17 @@ interface AboutViewProps {
 interface AboutViewHeadingProps {
     title: string;
     icon: IconName;
-    badgeText?: string;
+    licenseBadgeText?: LicenseBadgeText;
     marginBottom?: number;
 }
 
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
-    const { title, icon, badgeText, marginBottom } = props;
+    const { title, icon, licenseBadgeText, marginBottom } = props;
+
     return (
         <h2 className={classNames("d-flex align-items-center gap-1 flex-wrap", `mb-${marginBottom ?? 5}`)}>
             <Icon icon={icon} /> {title}{" "}
-            {badgeText != null && (
-                <Badge color="faded-primary" className="about-view-title-badge">
-                    {badgeText}
-                </Badge>
-            )}
+            {licenseBadgeText != null && <LicenseRestrictedBadge licenseRequired={licenseBadgeText} />}
         </h2>
     );
 };

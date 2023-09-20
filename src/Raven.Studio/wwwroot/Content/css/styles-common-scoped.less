@@ -2261,8 +2261,15 @@ ul.properties {
     font-weight: 600 !important;
     letter-spacing: 0;
     text-transform: capitalize;
-    background-color: @bg-faded-primary;
-    color: @text-faded-primary;
+    &.professional {
+        background-color: var(--faded-professional);
+        color: var(--license-professional);
+    }
+    &.enterprise {
+        background-color: var(--faded-enterprise);
+        color: var(--license-enterprise);
+    }
+
 }
 
 .pe-none {

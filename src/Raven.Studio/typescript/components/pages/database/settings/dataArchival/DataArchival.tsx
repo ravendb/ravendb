@@ -92,7 +92,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                             <AboutViewHeading
                                 title="Data Archival"
                                 icon="data-archival"
-                                badgeText={isEnterpriseOrDeveloper ? null : "Enterprise"}
+                                licenseBadgeText={isEnterpriseOrDeveloper ? null : "Enterprise"}
                             />
                             <ButtonWithSpinner
                                 type="submit"

@@ -348,6 +348,14 @@ select {
     font-weight: 600 !important;
     letter-spacing: 0;
     text-transform: capitalize;
+    &.professional {
+        background-color: var(--faded-professional) !important;
+        color: var(--license-professional);
+    }
+    &.enterprise {
+        background-color: var(--faded-enterprise) !important;
+        color: var(--license-enterprise);
+    }
 }
 
 .cursor-pointer {

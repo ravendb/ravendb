@@ -4,7 +4,7 @@
             <div class="flex-horizontal gap-2">
                 <i class="icon-server-wide-replication"></i>
                 <h2 data-bind="text: $root.isAddingNewExternalReplicationTask() ? `New Server-Wide External Replication` : `Edit Server-Wide External Replication`" class="mb-0"></h2>
-                <span class="badge license-restricted-badge" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                <span class="badge license-restricted-badge professional" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
             </div>
             <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
         </div>

@@ -103,7 +103,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <AboutViewHeading
                             icon="database-client-configuration"
                             title="Client Configuration"
-                            badgeText={isProfessionalOrAbove ? null : "Professional +"}
+                            licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
                         />
                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
                             <div>
