@@ -12,11 +12,13 @@ using Jint.Native.RegExp;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Patch
@@ -515,13 +517,27 @@ namespace Raven.Server.Documents.Patch
                    property == Constants.Documents.Metadata.Flags;
         }
 
-        public static BlittableJsonReaderObject Translate(JsonOperationContext context, Engine scriptEngine, ObjectInstance objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None, bool isNested = false)
+        public static BlittableJsonReaderObject Translate(JsonOperationContext context, Engine scriptEngine, ObjectInstance objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None, bool isNested = false, bool removeSpecialMetadata = false)
         {
             if (objectInstance == null)
                 return null;
 
-            if (objectInstance is BlittableObjectInstance boi && boi.Changed == false && isNested == false)
+            if (objectInstance is BlittableObjectInstance {Changed: false} boi && isNested == false)
+            {
+                if (removeSpecialMetadata && boi.DocumentFlags != null && boi.DocumentFlags.Value.HasFlag(DocumentFlags.Archived) && boi.Blittable.TryGetMetadata(out var metadata))
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
+                    
+                    boi.Blittable.Modifications = new DynamicJsonValue(boi.Blittable)
+                    {
+                        [Constants.Documents.Metadata.Key] = metadata
+                    };
+                    
+                    return context.ReadObject(boi.Blittable, null, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
                 return boi.Blittable.Clone(context);
+            }
 
             using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {

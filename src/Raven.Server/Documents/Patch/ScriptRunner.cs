@@ -1182,26 +1182,11 @@ namespace Raven.Server.Documents.Patch
                 BlittableJsonReaderObject reader = null;
                 try
                 {
-                    reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-                    // delete '@archived: true' if exists
-                    if (reader.TryGetMetadata(out BlittableJsonReaderObject metadata))
-                    {
-                        if (metadata.TryGetMember(Constants.Documents.Metadata.Archived, out _))
-                        {
-                            metadata.Modifications = new DynamicJsonValue(metadata);
-                            metadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
-                            
-                            var newReader = _jsonCtx.ReadObject(reader, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                            reader.Dispose();
-                            reader = newReader;
-                        }
-                    }
-
                     if (_database is ShardedDocumentDatabase sharded)
                     {
                         id = GenerateIdForShard(sharded, id);
                     }
+                    reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk, removeSpecialMetadata: true);
 
                     var putResult = _database.DocumentsStorage.Put(
                         _docsCtx,
