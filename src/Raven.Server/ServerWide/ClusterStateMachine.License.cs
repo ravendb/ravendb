@@ -41,9 +41,7 @@ public sealed partial class ClusterStateMachine
         nameof(PutAnalyzersCommand),
         nameof(PutDatabaseClientConfigurationCommand),
         nameof(EditDatabaseClientConfigurationCommand),
-        nameof(PutClientConfigurationCommand),
         nameof(PutDatabaseStudioConfigurationCommand),
-        nameof(PutServerWideStudioConfigurationCommand)
     };
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
@@ -253,8 +251,10 @@ public sealed partial class ClusterStateMachine
 
             case nameof(PutDatabaseClientConfigurationCommand):
             case nameof(EditDatabaseClientConfigurationCommand):
-            case nameof(PutClientConfigurationCommand):
                 if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
+                    return;
+
+                if (databaseRecord.Client == null || databaseRecord.Client.Disabled)
                     return;
 
                 if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
@@ -262,7 +262,28 @@ public sealed partial class ClusterStateMachine
 
                 throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
 
+            case nameof(PutClientConfigurationCommand):
+                if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
+                    return;
+
+
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                    return;
+
+                throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
+
             case nameof(PutDatabaseStudioConfigurationCommand):
+                if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
+                    return;
+
+                if (databaseRecord.Studio == null || databaseRecord.Studio.Disabled)
+                    return;
+
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                    return;
+
+                throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
+
             case nameof(PutServerWideStudioConfigurationCommand):
                 if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
                     return;
