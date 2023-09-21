@@ -87,7 +87,7 @@ public sealed partial class ClusterStateMachine
             case nameof(PutIndexCommand):
             case nameof(PutIndexesCommand):
                 var maxStaticIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
-                if (maxStaticIndexesPerDatabase != null && maxStaticIndexesPerDatabase >= 0 && maxStaticIndexesPerDatabase < databaseRecord.Indexes.Count)
+                if (maxStaticIndexesPerDatabase != null && maxStaticIndexesPerDatabase >= 0 && databaseRecord.Indexes.Count > maxStaticIndexesPerDatabase)
                 {
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
@@ -96,7 +96,7 @@ public sealed partial class ClusterStateMachine
                 }
 
                 var maxStaticIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerCluster;
-                if (maxStaticIndexesPerCluster != null && maxStaticIndexesPerCluster >= 0 && maxStaticIndexesPerCluster < GetTotal(DatabaseRecordElementType.StaticIndex))
+                if (maxStaticIndexesPerCluster != null && maxStaticIndexesPerCluster >= 0 && GetTotal(DatabaseRecordElementType.StaticIndex) > maxStaticIndexesPerCluster)
                 {
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
@@ -107,7 +107,7 @@ public sealed partial class ClusterStateMachine
 
             case nameof(PutAutoIndexCommand):
                 var maxAutoIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerDatabase;
-                if (maxAutoIndexesPerDatabase != null && maxAutoIndexesPerDatabase >= 0 && maxAutoIndexesPerDatabase < databaseRecord.AutoIndexes.Count)
+                if (maxAutoIndexesPerDatabase != null && maxAutoIndexesPerDatabase >= 0 && databaseRecord.AutoIndexes.Count > maxAutoIndexesPerDatabase)
                 {
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
@@ -116,7 +116,7 @@ public sealed partial class ClusterStateMachine
                 }
 
                 var maxAutoIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerCluster;
-                if (maxAutoIndexesPerCluster != null && maxAutoIndexesPerCluster >= 0 && maxAutoIndexesPerCluster < GetTotal(DatabaseRecordElementType.AutoIndex))
+                if (maxAutoIndexesPerCluster != null && maxAutoIndexesPerCluster >= 0 && GetTotal(DatabaseRecordElementType.AutoIndex) > maxAutoIndexesPerCluster)
                 {
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
@@ -177,7 +177,8 @@ public sealed partial class ClusterStateMachine
             case nameof(EditExpirationCommand):
                 var minPeriodForExpirationInHours = serverStore.LicenseManager.LicenseStatus.MinPeriodForExpirationInHours;
                 if (databaseRecord.Expiration != null && databaseRecord.Expiration.Disabled == false &&
-                    minPeriodForExpirationInHours != null && minPeriodForExpirationInHours * 60 * 60 > databaseRecord.Expiration.DeleteFrequencyInSec)
+                    minPeriodForExpirationInHours != null && databaseRecord.Expiration.DeleteFrequencyInSec != null &&
+                    databaseRecord.Expiration.DeleteFrequencyInSec * 60 * 60 > minPeriodForExpirationInHours)
                 {
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
@@ -190,7 +191,8 @@ public sealed partial class ClusterStateMachine
             case nameof(EditRefreshCommand):
                 var minPeriodForRefreshInHours = serverStore.LicenseManager.LicenseStatus.MinPeriodForRefreshInHours;
                 if (databaseRecord.Refresh != null && databaseRecord.Refresh.Disabled == false &&
-                    minPeriodForRefreshInHours != null && minPeriodForRefreshInHours * 60 * 60 > databaseRecord.Refresh.RefreshFrequencyInSec)
+                    minPeriodForRefreshInHours != null && databaseRecord.Refresh.RefreshFrequencyInSec != null &&
+                    databaseRecord.Refresh.RefreshFrequencyInSec * 60 * 60 > minPeriodForRefreshInHours)
                 {
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
@@ -202,7 +204,7 @@ public sealed partial class ClusterStateMachine
 
             case nameof(PutSortersCommand):
                 var maxCustomSortersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
-                if (maxCustomSortersPerDatabase != null && maxCustomSortersPerDatabase >= 0 && maxCustomSortersPerDatabase > databaseRecord.Sorters.Count)
+                if (maxCustomSortersPerDatabase != null && maxCustomSortersPerDatabase >= 0 && databaseRecord.Sorters.Count > maxCustomSortersPerDatabase)
                 {
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
@@ -211,12 +213,8 @@ public sealed partial class ClusterStateMachine
                 }
 
                 var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
-                if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0)
+                if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0 && GetTotal(DatabaseRecordElementType.CustomSorters) > maxCustomSortersPerCluster)
                 {
-                    var totalSorters = GetTotal(DatabaseRecordElementType.CustomSorters);
-                    if (totalSorters <= maxCustomSortersPerCluster)
-                        return;
-
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
 
@@ -226,7 +224,7 @@ public sealed partial class ClusterStateMachine
 
             case nameof(PutAnalyzersCommand):
                 var maxAnalyzersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerDatabase;
-                if (maxAnalyzersPerDatabase != null && maxAnalyzersPerDatabase >= 0 && maxAnalyzersPerDatabase > databaseRecord.Sorters.Count)
+                if (maxAnalyzersPerDatabase != null && maxAnalyzersPerDatabase >= 0 && databaseRecord.Analyzers.Count > maxAnalyzersPerDatabase)
                 {
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
@@ -235,12 +233,8 @@ public sealed partial class ClusterStateMachine
                 }
 
                 var maxAnalyzersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
-                if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0)
+                if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0 && GetTotal(DatabaseRecordElementType.Analyzers) > maxAnalyzersPerCluster)
                 {
-                    var totalAnalyzers = GetTotal(DatabaseRecordElementType.Analyzers);
-                    if (totalAnalyzers <= maxAnalyzersPerCluster)
-                        return;
-
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
 
