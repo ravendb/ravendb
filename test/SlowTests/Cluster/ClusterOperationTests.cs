@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -185,6 +186,35 @@ namespace SlowTests.Cluster
 
                 Assert.NotEqual(tag, newPreferred.Item2.ClusterTag);
                 Assert.Equal(2, result);
+            }
+        }
+
+        [Fact]
+        public async Task NextIdentityForOperationShouldBroadcast2()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ReplicationFactor = 3,
+                       Server = cluster.Leader
+                   }))
+            {
+
+                var re = store.GetRequestExecutor(store.Database);
+                await re.EnsureNodeSelector();
+
+                var op = new NextIdentityForCommand("person|");
+                await re.Broadcast(op, sessionInfo: null, CancellationToken.None);
+
+                op = new NextIdentityForCommand("person|");
+                await re.Broadcast(op, sessionInfo: null, CancellationToken.None);
+
+                op = new NextIdentityForCommand("person|");
+                var r = await re.Broadcast(op, sessionInfo: null, CancellationToken.None);
+                    
+                Assert.Equal(3, r);
             }
         }
 
