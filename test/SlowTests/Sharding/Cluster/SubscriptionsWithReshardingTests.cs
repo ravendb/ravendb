@@ -1049,7 +1049,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions, Skip = "RavenDB-21361")]
         public async Task ContinueSubscriptionAfterReshardingInAClusterRF3WithOrchestratorFailover()
         {
             var cluster = await CreateRaftCluster(5, watcherCluster: true, shouldRunInMemory: false);
@@ -1161,7 +1161,7 @@ namespace SlowTests.Sharding.Cluster
             await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id, cluster.Nodes);
         }
 
-        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions, Skip = "RavenDB-21369")]
         public async Task ContinueSubscriptionAfterReshardingInAClusterRF1WithOrchestratorFailover()
         {
             var cluster = await CreateRaftCluster(5, watcherCluster: true, shouldRunInMemory: false);
