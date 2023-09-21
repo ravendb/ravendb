@@ -24,7 +24,7 @@ namespace Voron.Platform.Posix
         private readonly bool _isSyncDirAllowed;
         private readonly bool _copyOnWriteMode;
 
-        private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>>(NumericEqualityComparer.BoxedInstanceInt64);
+        private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new();
         private long _totalMapped;
         private int _concurrentTransactions;
         private readonly ReaderWriterLockSlim _globalMemory = new ReaderWriterLockSlim();

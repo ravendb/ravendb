@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -23,7 +24,7 @@ namespace Micro.Benchmark.Benchmarks.Sorting
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core22,
+                        Runtime = CoreRuntime.Core70,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit,
                     },
@@ -77,20 +78,17 @@ namespace Micro.Benchmark.Benchmarks.Sorting
             values = Generator(ArraySize);
         }
 
-        private class NumericClassComparer : IComparer<int>
+        [Benchmark]
+        public void Baseline()
         {
-            public int Compare(int x, int y)
-            {
-                return x - y;
-            }
+            var data = (int[])values.Clone();
         }
 
         [Benchmark(Baseline = true)]
         public void Framework()
         {
             var data = (int[])values.Clone();
-            var comparer = new NumericClassComparer();
-            Array.Sort(data, comparer);
+            Array.Sort(data, Comparer<int>.Default);
         }
 
         [Benchmark]
@@ -108,5 +106,40 @@ namespace Micro.Benchmark.Benchmarks.Sorting
             Array.Sort(data);
         }
 
+        [Benchmark]
+        public void MemoryExtensions()
+        {
+            var data = ((int[])values.Clone()).AsSpan();
+            data.Sort();
+        }
+
+        internal readonly struct NumericComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(long x, long y)
+            {
+                return Math.Sign(x - y);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(int x, int y)
+            {
+                return x - y;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(ulong x, ulong y)
+            {
+                // We need to use branching here because without sign flags we can overflow and return wrong values.
+                return x == y ? 0 : x > y ? 1 : -1;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(uint x, uint y)
+            {
+                // We need to use branching here because without sign flags we can overflow and return wrong values.
+                return x == y ? 0 : x > y ? 1 : -1;
+            }
+        }
     }
 }

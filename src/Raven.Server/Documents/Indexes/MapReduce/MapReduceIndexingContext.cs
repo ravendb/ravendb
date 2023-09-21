@@ -21,10 +21,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public Tree ReducePhaseTree;
         
         public FixedSizeTree ResultsStoreTypes;
-        public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new Dictionary<ulong, MapReduceResultsStore>(NumericEqualityComparer.BoxedInstanceUInt64);
-        public Dictionary<string, long> ProcessedDocEtags = new Dictionary<string, long>();
-        public Dictionary<string, long> ProcessedTombstoneEtags = new Dictionary<string, long>();
-        public readonly HashSet<long> FreedPages = new HashSet<long>();
+        public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new();
+        public Dictionary<string, long> ProcessedDocEtags = new();
+        public Dictionary<string, long> ProcessedTombstoneEtags = new();
+        public readonly HashSet<long> FreedPages = new();
 
         public long NextMapResultId;
 

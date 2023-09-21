@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
@@ -8,6 +9,35 @@ namespace FastTests.Sparrow
 {
     public class SortingTests : NoDisposalNeeded
     {
+        private readonly struct NumericComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(long x, long y)
+            {
+                return Math.Sign(x - y);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(int x, int y)
+            {
+                return x - y;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(ulong x, ulong y)
+            {
+                // We need to use branching here because without sign flags we can overflow and return wrong values.
+                return x == y ? 0 : x > y ? 1 : -1;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(uint x, uint y)
+            {
+                // We need to use branching here because without sign flags we can overflow and return wrong values.
+                return x == y ? 0 : x > y ? 1 : -1;
+            }
+        }
+
         public SortingTests(ITestOutputHelper output) : base(output)
         {
         }
