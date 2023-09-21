@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Http
@@ -187,6 +188,14 @@ namespace Raven.Client.Http
         public string LastNodeId { get; private set; }
         public string TopologyId { get; private set; }
         public long Etag { get; private set; }
+
+        public override string ToString()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                return ctx.ReadObject(ToJson(), "cluster-topology").ToString();
+            }
+        }
 
         public Dictionary<string, string> Members { get; private set; }
         public Dictionary<string, string> Promotables { get; private set; }

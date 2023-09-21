@@ -20,11 +20,12 @@ public class RavenDB_20423 : ReplicationTestBase
     {
     }
 
-    [Fact]
-    public async Task RevisionsWithAttachmentOfDeletedDocAreReplicated()
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
+    [RavenExternalReplication(RavenDatabaseMode.All, RavenDatabaseMode.All)]
+    public async Task RevisionsWithAttachmentOfDeletedDocAreReplicated(Options src, Options dst)
     {
-        using (var source = GetDocumentStore())
-        using (var destination = GetDocumentStore())
+        using (var source = GetDocumentStore(src))
+        using (var destination = GetDocumentStore(dst))
         {
             var configuration = new RevisionsConfiguration
             {
@@ -36,7 +37,7 @@ public class RavenDB_20423 : ReplicationTestBase
                     PurgeOnDelete = false
                 }
             };
-            await RevisionsHelper.SetupRevisionsAsync(source, Server.ServerStore, configuration: configuration);
+            await RevisionsHelper.SetupRevisionsAsync(source, configuration: configuration);
 
             var id = "FoObAr/0";
             using (var session = source.OpenAsyncSession())
@@ -60,8 +61,7 @@ public class RavenDB_20423 : ReplicationTestBase
             }
 
             configuration.Default.Disabled = true;
-            await RevisionsHelper.SetupRevisionsAsync(source, Server.ServerStore, configuration: configuration);
-
+            await RevisionsHelper.SetupRevisionsAsync(source, configuration: configuration);
 
             using (var session = source.OpenAsyncSession())
             {
@@ -69,7 +69,7 @@ public class RavenDB_20423 : ReplicationTestBase
                 await session.SaveChangesAsync();
             }
 
-            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+            var database = await GetDocumentDatabaseInstanceForAsync(source, src.DatabaseMode, id);
             await database.TombstoneCleaner.ExecuteCleanup();
 
             await SetupReplicationAsync(source, destination);
@@ -102,7 +102,7 @@ public class RavenDB_20423 : ReplicationTestBase
 
                 Assert.False(revisionsMetadata[0].Keys.Contains(atKey)); // the last revision ('Delete Revision') doesn't contain any attachments/counters/time-series.
                 Assert.False(revisionsMetadata[3].Keys.Contains(atKey)); // the first revision was created before the attachment was stored, therefore it wont have any attachment.
-                var db = await Databases.GetDocumentDatabaseInstanceFor(destination);
+                var db = await GetDocumentDatabaseInstanceForAsync(destination, dst.DatabaseMode, id);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {

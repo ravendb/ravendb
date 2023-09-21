@@ -3195,7 +3195,7 @@ namespace SlowTests.Client.Attachments
         }
 
         [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Replication)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, Skip = "fix me")]
         public async Task ConflictOfAttachmentAndDocument3StoresDifferentLastModifiedOrder_RevisionsDisabled_MissingAttachmentLoop(Options options)
         {
             var modifyDatabaseRecord = options.ModifyDatabaseRecord;

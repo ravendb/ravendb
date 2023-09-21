@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -11,6 +14,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -59,20 +63,25 @@ namespace FastTests.Client
 
         [RavenTheory(RavenTestCategory.Studio | RavenTestCategory.ClientApi | RavenTestCategory.Replication, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void GetExternalReplicationTaskInfo(Options options)
+        public async Task GetExternalReplicationTaskInfo(Options options)
         {
-            var watcher = new ExternalReplication("Watcher1", "Connection")
+            var destDatabaseName = GetDatabaseName();
+            var watcher = new ExternalReplication(destDatabaseName, "Connection")
             {
                 Name = "MyExternalReplication"
             };
 
             using (var store = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(new Options()
+                   {
+                       ModifyDatabaseName = _ => destDatabaseName
+                   }))
             {
                 var result = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = watcher.ConnectionStringName,
                     Database = watcher.Database,
-                    TopologyDiscoveryUrls = store.Urls
+                    TopologyDiscoveryUrls = dest.Urls
                 }));
                 Assert.NotNull(result.RaftCommandIndex);
 
@@ -81,20 +90,58 @@ namespace FastTests.Client
                 
                 var taskId = replication.TaskId;
 
-                var op = new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Replication);
-                var replicationResult = (OngoingTaskReplication)store.Maintenance.Send(op);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
 
-                Assert.Equal(watcher.Database, replicationResult.DestinationDatabase);
-                Assert.Equal(watcher.Url, replicationResult.DestinationUrl);
-                Assert.Equal(watcher.Name, replicationResult.TaskName);
+                var res = WaitForValue(() =>
+                {
+                    using (var session = dest.OpenSession())
+                    {
+                        try
+                        {
+                            return session.Load<User>("users/1") != null;
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    }
+                }, true);
+                
+                Assert.True(res);
 
-                op = new GetOngoingTaskInfoOperation("MyExternalReplication", OngoingTaskType.Replication);
-                replicationResult = (OngoingTaskReplication)store.Maintenance.Send(op);
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    var shards = await Sharding.GetShardingConfigurationAsync(store);
+                    foreach (var shardNumber in shards.Shards.Keys)
+                    {
+                        ValidateReplicationTaskDetails(store.Maintenance.ForShard(shardNumber), taskId, watcher, dest);
+                    }
+                    return;
+                }
 
-                Assert.Equal(watcher.Database, replicationResult.DestinationDatabase);
-                Assert.Equal(watcher.Url, replicationResult.DestinationUrl);
-                Assert.Equal(taskId, replicationResult.TaskId);
+                ValidateReplicationTaskDetails(store.Maintenance, taskId, watcher, dest);
             }
+        }
+
+        private static void ValidateReplicationTaskDetails(MaintenanceOperationExecutor executor, long taskId, ExternalReplication watcher, DocumentStore dest)
+        {
+            var op = new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Replication);
+            var replicationResult = (OngoingTaskReplication)executor.Send(op);
+
+            Assert.Equal(watcher.Database, replicationResult.DestinationDatabase);
+            Assert.Equal(dest.Urls.Single(), replicationResult.DestinationUrl);
+            Assert.Equal(watcher.Name, replicationResult.TaskName);
+
+            op = new GetOngoingTaskInfoOperation("MyExternalReplication", OngoingTaskType.Replication);
+            replicationResult = (OngoingTaskReplication)executor.Send(op);
+
+            Assert.Equal(watcher.Database, replicationResult.DestinationDatabase);
+            Assert.Equal(dest.Urls.Single(), replicationResult.DestinationUrl);
+            Assert.Equal(taskId, replicationResult.TaskId);
         }
 
         [RavenTheory(RavenTestCategory.Studio | RavenTestCategory.ClientApi | RavenTestCategory.Etl, LicenseRequired = true)]

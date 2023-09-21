@@ -434,11 +434,11 @@ namespace Raven.Server.Documents
             var currentAttachments = GetAttachmentsFromDocumentMetadata(document);
 
             foreach (var bjro in currentAttachments)
-                {
+            {
                 var attachment = JsonDeserializationClient.AttachmentName(bjro);
-                    PutRevisionAttachment(context, lowerId.Content.Ptr, lowerId.Size, changeVector, attachment);
-                }
+                PutRevisionAttachment(context, lowerId.Content.Ptr, lowerId.Size, changeVector, attachment);
             }
+        }
 
         public void PutAttachmentRevert(DocumentsOperationContext context, LazyStringValue id, BlittableJsonReaderObject document, out bool hasAttachments)
         {

@@ -361,7 +361,7 @@ namespace RachisTests
             var dbWatcher = GetDatabaseName();
 
             var fromSeconds = Debugger.IsAttached ? TimeSpan.FromSeconds(15) : TimeSpan.FromSeconds(5);
-            var (_, leader) = await CreateRaftCluster(5);
+            var (nodes, leader) = await CreateRaftCluster(5, leaderIndex: 0);
             Assert.True(leader.ServerStore.LicenseManager.HasHighlyAvailableTasks());
 
             var db = await CreateDatabaseInCluster(dbMain, 5, leader.WebUrl);
@@ -398,7 +398,7 @@ namespace RachisTests
 
                 Assert.True(watcher.MentorNode != watcherDb.Servers[0].ServerStore.NodeTag);
 
-                var watcherRes = await AddWatcherToReplicationTopology((DocumentStore)leaderStore, watcher);
+                var watcherRes = await AddWatcherToReplicationTopology((DocumentStore)leaderStore, watcher, nodes.Select(n => n.WebUrl).ToArray());
                 var tasks = new List<Task>();
                 foreach (var ravenServer in Servers)
                 {
@@ -469,7 +469,7 @@ namespace RachisTests
                     }
                 }
 
-                Assert.True(WaitForDocument<User>(watcherStore, "users/3", u => u.Name == "Karmel3", 30_000));
+                Assert.True(WaitForDocument<User>(watcherStore, "users/3", u => u.Name == "Karmel3", 30_000), $"Doc 'users/3' did not reach watcherStore");
 
                 // rejoin the node
                 var newLeader = await ActionWithLeader(l => l.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrl, watcherRes.ResponsibleNode));
