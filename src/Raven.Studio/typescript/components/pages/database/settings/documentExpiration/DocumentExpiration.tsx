@@ -62,7 +62,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const isLimitWarningVisible =
         minPeriodForExpirationInHours > 0 &&
         formValues.isDeleteFrequencyEnabled &&
-        deleteFrequencyInHours < minPeriodForExpirationInHours;
+        deleteFrequencyInHours > minPeriodForExpirationInHours;
 
     useEffect(() => {
         if (!formValues.isDeleteFrequencyEnabled && formValues.deleteFrequency !== null) {

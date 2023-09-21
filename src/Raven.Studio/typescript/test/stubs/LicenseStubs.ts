@@ -130,6 +130,8 @@ export class LicenseStubs {
             MaxNumberOfCustomAnalyzersPerCluster: 5,
             MaxNumberOfRevisionsToKeep: 2,
             MaxNumberOfRevisionAgeToKeepInDays: 45,
+            MinPeriodForExpirationInHours: 36,
+            MinPeriodForRefreshInHours: 36,
         };
     }
 
