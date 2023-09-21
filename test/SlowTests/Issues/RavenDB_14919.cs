@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Counters;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void GetCountersOperationShouldDiscardNullCounters()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetCountersOperationShouldDiscardNullCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var docId = "users/2";
                 string[] counterNames = new string[124];
@@ -61,10 +63,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void GetCountersOperationShouldDiscardNullCounters_PostGet()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetCountersOperationShouldDiscardNullCounters_PostGet(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var docId = "users/2";
                 string[] counterNames = new string[1024];
@@ -110,10 +113,11 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
-        public void GetDocumentsCommandShouldDiscardNullIds()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetDocumentsCommandShouldDiscardNullIds(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string[] ids = new string[124];
                 using (var session = store.OpenSession())
@@ -139,10 +143,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void GetDocumentsCommandShouldDiscardNullIds_PostGet()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetDocumentsCommandShouldDiscardNullIds_PostGet(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string[] ids = new string[1024];
                 using (var session = store.OpenSession())

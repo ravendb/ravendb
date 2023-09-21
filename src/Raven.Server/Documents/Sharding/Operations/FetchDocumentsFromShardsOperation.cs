@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             ShardedCounterIncludes counterIncludes = null;
             ShardedTimeSeriesIncludes timeSeriesIncludes = null;
             ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
+            var hasNullId = false;
 
             foreach (var (shardNumber, cmd) in results)
             {
@@ -101,7 +102,10 @@ namespace Raven.Server.Documents.Sharding.Operations
                 foreach (BlittableJsonReaderObject cmdResult in cmdResults)
                 {
                     if (cmdResult == null)
+                    {
+                        hasNullId = true;
                         continue;
+                    }
 
                     if (_includePaths != null)
                     {
@@ -154,7 +158,8 @@ namespace Raven.Server.Documents.Sharding.Operations
                 RevisionIncludes = revisionIncludes,
                 CounterIncludes = counterIncludes,
                 TimeSeriesIncludes = timeSeriesIncludes,
-                CompareExchangeValueIncludes = compareExchangeValueIncludes?.Results
+                CompareExchangeValueIncludes = compareExchangeValueIncludes?.Results,
+                HasNullId = hasNullId
             };
         }
 
@@ -189,5 +194,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         public ITimeSeriesIncludes TimeSeriesIncludes;
 
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> CompareExchangeValueIncludes;
+
+        public bool HasNullId;
     }
 }

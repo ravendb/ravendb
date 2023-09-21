@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,12 +15,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void CanWaitForIndexesWithLoadAfterSaveChanges(bool allIndexes)
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanWaitForIndexesWithLoadAfterSaveChanges(Options options, bool allIndexes)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 new MyIndex().Execute(documentStore);
                 using (var session = documentStore.OpenSession())
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(15), throwOnTimeout: true, indexes: allIndexes ? null : new[] { "MyIndex" });
-                    var related = session.Load<RelatedDocument>("related/A");
+                    var related = session.Load<RelatedDocument>("related/A$foo");
                     related.Value = 42m;
 
                     session.SaveChanges();
@@ -59,7 +60,7 @@ namespace SlowTests.Issues
         private class MainDocument
         {
             public string Name { get; set; }
-            public string Id => $"main/{Name}";
+            public string Id => $"main/{Name}$foo";
         }
 
         private class RelatedDocument
@@ -67,7 +68,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
             public decimal Value { get; set; }
 
-            public string Id => $"related/{Name}";
+            public string Id => $"related/{Name}$foo";
         }
 
         private class MyIndex : AbstractIndexCreationTask<MainDocument>
@@ -81,7 +82,7 @@ namespace SlowTests.Issues
             public MyIndex()
             {
                 Map = mainDocuments => from mainDocument in mainDocuments
-                                       let related = LoadDocument<RelatedDocument>($"related/{mainDocument.Name}")
+                                       let related = LoadDocument<RelatedDocument>($"related/{mainDocument.Name}$foo")
                                        select new Result
                                        {
                                            Name = mainDocument.Name,
