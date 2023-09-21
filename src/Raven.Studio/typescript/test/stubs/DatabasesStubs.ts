@@ -268,14 +268,14 @@ export class DatabasesStubs {
     static refreshConfiguration(): RefreshConfiguration {
         return {
             Disabled: false,
-            RefreshFrequencyInSec: 65,
+            RefreshFrequencyInSec: 129601,
         };
     }
 
     static expirationConfiguration(): ExpirationConfiguration {
         return {
             Disabled: false,
-            DeleteFrequencyInSec: 65,
+            DeleteFrequencyInSec: 129601,
         };
     }
 
