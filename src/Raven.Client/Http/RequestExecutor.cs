@@ -1745,7 +1745,7 @@ namespace Raven.Client.Http
             public IDisposable ReturnContext;
         }
 
-        private async Task<TResult> Broadcast<TResult>(RavenCommand<TResult> command, SessionInfo sessionInfo, CancellationToken token)
+        internal async Task<TResult> Broadcast<TResult>(RavenCommand<TResult> command, SessionInfo sessionInfo, CancellationToken token)
         {
             var broadcastCommand = command as IBroadcast;
             if (broadcastCommand == null)
@@ -2378,7 +2378,7 @@ namespace Raven.Client.Http
             return _nodeSelector.GetFastestNode();
         }
 
-        private async Task EnsureNodeSelector()
+        internal async Task EnsureNodeSelector()
         {
             if (_disableTopologyUpdates == false)
                 await WaitForTopologyUpdate(_firstTopologyUpdate).ConfigureAwait(false);

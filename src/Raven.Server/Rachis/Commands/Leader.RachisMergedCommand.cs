@@ -27,41 +27,8 @@ namespace Raven.Server.Rachis
 
             protected override long ExecuteCmd(ClusterOperationContext context)
             {
-                var lostLeadershipException = new NotLeadingException(_leaderDisposedMessage);
-
                 try
                 {
-                    _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
-                    if (_leader._running.IsRaised() == false) // not longer leader
-                    {
-                        // throw lostLeadershipException;
-                        TaskResult = Task.FromException<(long, object)>(lostLeadershipException);
-                        return 1;
-                    }
-
-                    if (_engine.LogHistory.HasHistoryLog(context, Command.UniqueRequestId, out var index, out var result, out var exception))
-                    {
-                        // if this command is already committed, we can skip it and notify the caller about it
-                        if (lastCommitted >= index)
-                        {
-                            if (exception != null)
-                            {
-                                TaskResult = Task.FromException<(long, object)>(exception);
-                            }
-                            else
-                            {
-                                if (result != null)
-                                {
-                                    result = GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
-                                }
-
-                                TaskResult = Task.FromResult<(long, object)>((index, result));
-                            }
-                            return 1;
-                        }
-
-                    }
-
                     InsertCommandToLeaderLog(context);
                 }
                 catch (Exception e)
@@ -82,11 +49,45 @@ namespace Raven.Server.Rachis
 
             private void InsertCommandToLeaderLog(ClusterOperationContext context)
             {
-                _engine.InvokeBeforeAppendToRaftLog(context, Command);
-                var djv = Command.ToJson(context);
-                var commandJson = context.ReadObject(djv, "raft/command");
+                _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
+                if (_leader._running.IsRaised() == false) // not longer leader
+                {
+                    // throw lostLeadershipException;
+                    TaskResult = Task.FromException<(long, object)>(new NotLeadingException(_leaderDisposedMessage));
+                    return;
+                }
 
-                long index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
+                if (_engine.LogHistory.HasHistoryLog(context, Command.UniqueRequestId, out var index, out var result, out var exception))
+                {
+                    // if this command is already committed, we can skip it and notify the caller about it
+                    if (lastCommitted >= index)
+                    {
+                        if (exception != null)
+                        {
+                            TaskResult = Task.FromException<(long, object)>(exception);
+                        }
+                        else
+                        {
+                            if (result != null)
+                            {
+                                result = GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
+                            }
+
+                            TaskResult = Task.FromResult<(long, object)>((index, result));
+                        }
+                        return;
+                    }
+                }
+                else
+                {
+                    _engine.InvokeBeforeAppendToRaftLog(context, Command);
+
+                    var djv = Command.ToJson(context);
+                    var commandJson = context.ReadObject(djv, "raft/command");
+
+                    index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
+                }
+               
                 if (_leader._entries.TryGetValue(index, out var state))
                 {
                     TaskResult = state.TaskCompletionSource.Task;
