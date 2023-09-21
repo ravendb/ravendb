@@ -21,10 +21,10 @@
 
     .notification-actions {
         flex-shrink: 0;
-        background-color: @panel-bg;
+        background-color: var(--panel-bg-1);
         position: sticky;
         top: 0;
-        border-bottom: 1px solid @gray-base;
+        border-bottom: 1px solid var(--border-color-light);
         z-index: 1;
         margin-bottom: @notification-margin;
 
@@ -41,10 +41,7 @@
             -ms-user-select: none;
             user-select: none;
             outline: none;
-
-            &:hover {
-                color: @text-emphasis;
-            }
+            color: var(--text-muted);
         }
 
         .notification-type-toggle {
@@ -133,38 +130,39 @@
 
             h3 {
                 margin-bottom: 0;
+                color: inherit;
             }
         }
 
         &.notification-success {
-            box-shadow: 6px 0 0 0 @brand-success-dark inset;
+            box-shadow: 6px 0 0 0 var(--bs-success) inset;
 
             .notification-header {
-                color: @brand-success;
+                color: var(--bs-success);
             }
         }
 
         &.notification-info {
-            box-shadow: 6px 0 0 0 @brand-info-dark inset;
+            box-shadow: 6px 0 0 0 var(--bs-info) inset;
 
             .notification-header {
-                color: @brand-info;
+                color: var(--bs-info);
             }
         }
 
         &.notification-warning {
-            box-shadow: 6px 0 0 0 @brand-warning-dark inset;
+            box-shadow: 6px 0 0 0 var(--bs-warning) inset;
 
             .notification-header {
-                color: @brand-warning;
+                color: var(--bs-warning);
             }
         }
 
         &.notification-danger {
-            box-shadow: 6px 0 0 0 @brand-danger-dark inset;
+            box-shadow: 6px 0 0 0 var(--bs-danger) inset;
 
             .notification-header {
-                color: @brand-danger;
+                color: var(--bs-danger);
             }
         }
 
