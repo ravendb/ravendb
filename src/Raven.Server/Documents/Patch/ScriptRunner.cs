@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Client.Extensions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
@@ -1178,6 +1179,20 @@ namespace Raven.Server.Documents.Patch
                 try
                 {
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    // delete '@archived: true' if exists
+                    if (reader.TryGetMetadata(out BlittableJsonReaderObject metadata))
+                    {
+                        if (metadata.TryGetMember(Constants.Documents.Metadata.Archived, out _))
+                        {
+                            metadata.Modifications = new DynamicJsonValue(metadata);
+                            metadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
+                            
+                            var newReader = _jsonCtx.ReadObject(reader, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            reader.Dispose();
+                            reader = newReader;
+                        }
+                    }
 
                     if (_database is ShardedDocumentDatabase sharded)
                     {
