@@ -435,32 +435,32 @@ namespace Raven.Server.Commercial
 
             if (licenseStatus.Version.Major < 6)
             {
-                if (skipGettingUpdatedLicense == false)
+                if (skipGettingUpdatedLicense)
+                {
+                    throw new LicenseLimitException($"Your license version is {licenseStatus.Version}. " +
+                                                    $"You must upgrade your license before you install it on v6.x. " +
+                                                    $"You can do it by going to the following website: https://ravendb.net/l/8O2YU1");
+                }
+
+                try
                 {
                     var updatedLicense = await GetUpdatedLicenseForActivation(license);
-                    if (updatedLicense != null)
+                    if (updatedLicense == null)
                     {
-                        await ActivateAsync(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
-                        return;
+                        throw new LicenseLimitException($"Your license version is {licenseStatus.Version}. We failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}. " +
+                                                        $"You must upgrade your license before you install it on v6.x. " +
+                                                        $"You can do it by going to the following website: https://ravendb.net/l/8O2YU1");
                     }
-                }
 
-                //TODO: if (updatedLicense == null)
+                    await ActivateAsync(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
+                    return;
+                }
+                catch (Exception e)
                 {
-                    var errorMessage =
-                        $"License already expired on: {licenseStatus.FormattedExpiration} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}.";
-                    if (licenseStatus.IsIsv)
-                    {
-                        errorMessage += $" Since this is an ISV license, you can use this license with any RavenDB version that was released prior to {licenseStatus.FormattedExpiration}";
-                    }
-
-                    throw new LicenseLimitException(errorMessage);
+                    throw new LicenseLimitException($"Your license version is {licenseStatus.Version} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}. " +
+                                                    $"You must upgrade your license before you install it on v6.x. " +
+                                                    $"You can do it by going to the following website: https://ravendb.net/l/8O2YU1", e);
                 }
-
-                throw new LicenseLimitException($"Your license version is {licenseStatus.Version}. " +
-                                                $"You must upgrade your license before you install it on v6.x.");
-
-                
             }
 
             ThrowIfCannotActivateLicense(licenseStatus);
