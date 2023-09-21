@@ -383,12 +383,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             _internalCursor._pos > 0 && // nothing to do for a single leaf node
             state.Header->FreeSpace > Constants.Storage.PageSize / 2)
         {
-            // We check if we need to run defrag by seeing if there is a significant difference between the free space in the page
-            // and the actual available space (should have at least 1KB to recover before we run)
-            // It is in our best interest to defrag the receiving page to avoid having to try again and again without achieving any gains.
-            if (state.Header->Upper - state.Header->Lower < state.Header->FreeSpace - Constants.Storage.PageSize / 8)
-                DefragPage(_llt, ref state);
-
             if (MaybeMergeEntries(ref state))
             {
                 VerifySizeOfFullCursor();
@@ -431,11 +425,17 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
         Debug.Assert(parent.Header->NumberOfEntries >= 2,"parent.Header->NumberOfEntries >= 2");
 
+        if (destinationState.Header->NumberOfEntries == 0)
+        {
+            RemovePageFromParent(ref destinationState, ref parent);
+            return true;
+        }
+
         if (parent.LastSearchPosition == 0 || parent.LastSearchPosition == parent.Header->NumberOfEntries - 1)
         {
             // optimization: not merging right most / left most pages that allows to delete in up / down order without doing any
             // merges, for FIFO / LIFO scenarios
-            return TryMergeEdgePage(ref destinationState, ref parent);
+            return false;
         }
 
         var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
@@ -455,6 +455,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             // there is sufficient free space _after_ the merge  
             return false;
         }
+        
+        DefragPage(_llt, ref destinationState);
 
         // we have to use a temporary copy, because we may fail to copy _all_ the values from the nearby page
         using var _ = _llt.Allocator.Allocate(Constants.Storage.PageSize, out ByteString temp);
@@ -561,11 +563,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
 
-    private bool TryMergeEdgePage(ref CursorState destinationState, ref CursorState parent)
+    private void RemovePageFromParent(ref CursorState destinationState, ref CursorState parent)
     {
-        if (destinationState.Header->NumberOfEntries != 0)
-            return false;
-
+        
         // can just remove the whole thing
         int position = parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
         if (position < 0 || position >= parent.Header->NumberOfEntries)
@@ -578,7 +578,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         if (parent.LastSearchPosition > 0)
         {
             FreePageFor(ref sourceState, ref destinationState, ref parent);
-            return true;
+            return;
         }
 
         // if we are removing the leftmost item, we need to maintain the smallest entry, just copy the sibling's contents
@@ -589,7 +589,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         // now ask that we'll remove the _sibling_ page, not us, since we copied it
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);
-        return true;
     }
 
     private void FreePageFor(ref CursorState stateToKeep, ref CursorState stateToDelete, ref CursorState parent)
@@ -949,7 +948,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             // here we insert a minimum value as the first item of the branch
             var k = TLookupKey.FromLong<TLookupKey>(separatorKey);
             RemoveEntryFromPage(ref newPageState, ref k, 0, out var pageNum);
-            var requiredSize = EncodeEntry(state.Header, TLookupKey.MinValue, pageNum, entryBufferPtr);
+            var requiredSize = EncodeEntry(newPageState.Header, TLookupKey.MinValue, pageNum, entryBufferPtr);
             newPageState.LastSearchPosition = 0;
             AddEntryToPage(ref newPageState, requiredSize, entryBufferPtr, false);
         }
