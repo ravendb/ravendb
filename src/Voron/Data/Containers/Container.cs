@@ -1087,8 +1087,8 @@ namespace Voron.Data.Containers
 
         public static Item MaybeGetFromSamePage(LowLevelTransaction llt, ref Page page, long id)
         {
-            if (id == 0)
-                throw new InvalidOperationException("Got an invalid container id: 0");
+            if (id <= 0)
+                throw new InvalidOperationException("Got an invalid container id: " + id);
 
             var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
             if(!page.IsValid || pageNum != page.PageNumber)
