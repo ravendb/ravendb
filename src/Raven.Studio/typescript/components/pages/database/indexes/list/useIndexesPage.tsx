@@ -49,8 +49,6 @@ export function useIndexesPage(database: database, stale: boolean) {
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-
     const locations = database.getLocations();
 
     const [bulkOperationConfirm, setBulkOperationConfirm] = useState<{
@@ -587,7 +585,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         const staticIndexReachStatus = getLicenseLimitReachStatus(staticIndexCount, staticDatabaseLimit);
 
         const staticIndexInputLimit: InputItemLimit =
-            !isProfessionalOrAbove && staticIndexReachStatus !== "notReached"
+            staticIndexReachStatus !== "notReached"
                 ? {
                       value: staticDatabaseLimit,
                       badgeColor: staticIndexReachStatus === "closeToLimit" ? "warning" : "danger",
@@ -596,7 +594,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                 : null;
 
         const autoIndexInputLimit: InputItemLimit =
-            !isProfessionalOrAbove && autoIndexReachStatus !== "notReached"
+            autoIndexReachStatus !== "notReached"
                 ? {
                       value: autoDatabaseLimit,
                       badgeColor: autoIndexReachStatus === "closeToLimit" ? "warning" : "danger",
@@ -618,7 +616,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                 limit: autoIndexInputLimit,
             },
         ] satisfies InputItem<IndexType>[];
-    }, [autoDatabaseLimit, isProfessionalOrAbove, staticDatabaseLimit, stats.indexes]);
+    }, [autoDatabaseLimit, staticDatabaseLimit, stats.indexes]);
 
     const filterByStatusOptions: InputItem<IndexStatus>[] = useMemo(() => {
         let normal = 0,

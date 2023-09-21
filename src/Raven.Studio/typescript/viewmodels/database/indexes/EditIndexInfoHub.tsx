@@ -4,10 +4,21 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function EditIndexInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const hasAdditionalAssembliesFromNuGet = useAppSelector(licenseSelectors.statusValue("HasAdditionalAssembliesFromNuGet"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasAdditionalAssembliesFromNuGet,
+            },
+        ],
+    });
 
     return (
         <AboutViewFloating>
@@ -20,12 +31,12 @@ export function EditIndexInfoHub() {
             >
                 <p>Text</p>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper isUnlimited={isProfessionalOrAbove} data={featureAvailabilityData} />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasAdditionalAssembliesFromNuGet} data={featureAvailability} />
         </AboutViewFloating>
     );
 }
 
-const featureAvailabilityData: FeatureAvailabilityData[] = [
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Additional Assemblies from NuGet",
         featureIcon: "additional-assemblies",
