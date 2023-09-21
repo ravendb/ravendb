@@ -17,6 +17,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
@@ -219,8 +220,8 @@ namespace Raven.Server.Web.System
                     }
 
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
-
-                    var dbNodes = GetNodes(rawRecord.Topology.Members, ServerNode.Role.Member).Concat(GetNodes(rawRecord.Topology.Rehabs, ServerNode.Role.Rehab));
+                    var license = ServerStore.LoadLicenseLimits();
+                    var dbNodes = GetNodes(rawRecord.Topology.Members, ServerNode.Role.Member, license).Concat(GetNodes(rawRecord.Topology.Rehabs, ServerNode.Role.Rehab, license));
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer,
@@ -231,7 +232,9 @@ namespace Raven.Server.Web.System
                             });
                     }
 
-                    IEnumerable<DynamicJsonValue> GetNodes(List<string> nodes, ServerNode.Role serverRole)
+
+
+                    IEnumerable<DynamicJsonValue> GetNodes(List<string> nodes, ServerNode.Role serverRole, LicenseLimits license)
                     {
                         foreach (var node in nodes)
                         {
@@ -239,22 +242,35 @@ namespace Raven.Server.Web.System
                             if (url == null)
                                 continue;
 
-                            yield return TopologyNodeToJson(node, url, name, serverRole);
+                            if (license == null || license.NodeLicenseDetails.TryGetValue(node, out DetailsPerNode nodeDetails)==false)
+                            {
+                                nodeDetails = null;
+                            }
+
+                            yield return TopologyNodeToJson(node, url, name, serverRole, nodeDetails);
                         }
                     }
                 }
             }
         }
 
-        private DynamicJsonValue TopologyNodeToJson(string tag, string url, string name, ServerNode.Role role)
+        private DynamicJsonValue TopologyNodeToJson(string tag, string url, string name, ServerNode.Role role, DetailsPerNode details)
         {
-            return new DynamicJsonValue
+            var json = new DynamicJsonValue
             {
                 [nameof(ServerNode.Url)] = url,
                 [nameof(ServerNode.ClusterTag)] = tag,
                 [nameof(ServerNode.ServerRole)] = role,
                 [nameof(ServerNode.Database)] = name
             };
+
+            if(details != null)
+            {
+                json[nameof(ServerNode.ServerVersionFromDatabaseTopology)] =
+                    details.BuildInfo.AssemblyVersion ?? details.BuildInfo.ProductVersion;
+            }
+
+            return json;
         }
 
         private void AlertIfDocumentStoreCreationRateIsNotReasonable(string applicationIdentifier, string name)

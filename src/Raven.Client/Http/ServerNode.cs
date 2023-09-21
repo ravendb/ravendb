@@ -51,7 +51,31 @@ namespace Raven.Client.Http
 
         public string LastServerVersion { get; private set; }
 
-        internal bool SupportsAtomicClusterWrites { get; set; }
+        public string ServerVersionFromDatabaseTopology
+        {
+            get
+            {
+                return LastServerVersion;
+            }
+            private set
+            {
+                UpdateServerVersion(value);
+            }
+        }
+
+        private bool? _supportsAtomicClusterWrites;
+
+        internal bool SupportsAtomicClusterWrites
+        {
+            get
+            {
+                if (_supportsAtomicClusterWrites.HasValue)
+                    return _supportsAtomicClusterWrites.Value;
+
+                UpdateServerVersion(LastServerVersion);
+                return _supportsAtomicClusterWrites.Value;
+            }
+        }
 
         public bool ShouldUpdateServerVersion()
         {
@@ -69,12 +93,12 @@ namespace Raven.Client.Http
             if (serverVersion != null && Version.TryParse(serverVersion, out var ver))
             {
                 // 5.2 or higher
-                SupportsAtomicClusterWrites = ver.Major == 5 && ver.Minor >= 2 ||
-                                              ver.Major > 5;
+                _supportsAtomicClusterWrites = ver.Major == 5 && ver.Minor >= 2 ||
+                                               ver.Major > 5;
             }
             else
             {
-                SupportsAtomicClusterWrites = false;
+                _supportsAtomicClusterWrites = false;
             }
         }
 
