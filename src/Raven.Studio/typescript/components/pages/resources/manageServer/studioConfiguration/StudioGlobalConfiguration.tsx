@@ -21,7 +21,7 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export default function StudioGlobalConfiguration() {
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
@@ -44,9 +44,10 @@ export default function StudioGlobalConfiguration() {
     useDirtyFlag(formState.isDirty);
 
     const clientConfigurationDocsLink = useRavenLink({ hash: "TS7SGF" });
-
     const { reportEvent } = useEventsCollector();
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
 
     const onSave: SubmitHandler<StudioGlobalConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -82,7 +83,7 @@ export default function StudioGlobalConfiguration() {
                     <AboutViewHeading
                         icon="studio-configuration"
                         title="Studio Configuration"
-                        licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
+                        licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <ButtonWithSpinner
@@ -95,7 +96,7 @@ export default function StudioGlobalConfiguration() {
                         >
                             Save
                         </ButtonWithSpinner>
-                        <div className={isProfessionalOrAbove ? null : "item-disabled pe-none"}>
+                        <div className={isFeatureInLicense ? null : "item-disabled pe-none"}>
                             <Card id="popoverContainer">
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -178,7 +179,7 @@ export default function StudioGlobalConfiguration() {
                     </Form>
                 </Col>
                 <Col sm={12} md={4}>
-                    <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                    <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
                         <AccordionItemWrapper
                             icon="about"
                             color="info"
@@ -204,8 +205,8 @@ export default function StudioGlobalConfiguration() {
                             </a>
                         </AccordionItemWrapper>
                         <FeatureAvailabilitySummaryWrapper
-                            isUnlimited={isProfessionalOrAbove}
-                            data={featureAvailabilityProfessionalOrAbove}
+                            isUnlimited={isFeatureInLicense}
+                            data={featureAvailability}
                         />
                     </AboutViewAnchored>
                 </Col>

@@ -25,7 +25,6 @@ import { useServices } from "components/hooks/useServices";
 import messagePublisher from "common/messagePublisher";
 import notificationCenter from "common/notifications/notificationCenter";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import DocumentRevisionsSelectActions from "./DocumentRevisionsSelectActions";
 import { StickyHeader } from "components/common/StickyHeader";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
@@ -36,6 +35,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -60,7 +60,31 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const canSetupDefaultRevisionsConfiguration = useAppSelector(
+        licenseSelectors.statusValue("CanSetupDefaultRevisionsConfiguration")
+    );
+    const maxNumberOfRevisionsToKeep = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsToKeep"));
+    const maxNumberOfRevisionAgeToKeepInDays = useAppSelector(
+        licenseSelectors.statusValue("MaxNumberOfRevisionAgeToKeepInDays")
+    );
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: canSetupDefaultRevisionsConfiguration,
+            },
+            {
+                featureName: defaultFeatureAvailability[1].featureName,
+                value: maxNumberOfRevisionsToKeep,
+            },
+            {
+                featureName: defaultFeatureAvailability[2].featureName,
+                value: maxNumberOfRevisionAgeToKeepInDays,
+            },
+        ],
+    });
 
     useDirtyFlag(isAnyModified);
     const dispatch = useAppDispatch();
@@ -206,13 +230,13 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                                                 dispatch(documentRevisionsActions.addConfig(config)),
                                                         })
                                                     }
-                                                    disabled={!isProfessionalOrAbove}
+                                                    disabled={!canSetupDefaultRevisionsConfiguration}
                                                 >
                                                     <Icon icon="plus" />
                                                     Add new
                                                 </Button>
                                             </div>
-                                            {!isProfessionalOrAbove && (
+                                            {!canSetupDefaultRevisionsConfiguration && (
                                                 <UncontrolledTooltip target="add-default-config-button">
                                                     <div className="p-3">
                                                         Your license does not allow you to set up default policy.
@@ -372,8 +396,12 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
-                                data={featureAvailabilityData}
+                                isUnlimited={
+                                    canSetupDefaultRevisionsConfiguration &&
+                                    !maxNumberOfRevisionsToKeep &&
+                                    !maxNumberOfRevisionAgeToKeepInDays
+                                }
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>
@@ -389,7 +417,7 @@ function mapToDto(
     return config ? _.omit(config, "Name") : null;
 }
 
-const featureAvailabilityData: FeatureAvailabilityData[] = [
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Default Policy",
         featureIcon: "default",

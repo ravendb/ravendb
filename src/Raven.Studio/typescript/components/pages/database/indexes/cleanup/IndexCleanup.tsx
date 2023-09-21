@@ -17,7 +17,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
@@ -34,7 +34,8 @@ export function IndexCleanup(props: IndexCleanupProps) {
     const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
     const { appUrl } = useAppUrls();
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
 
     if (asyncFetchStats.status === "not-requested" || asyncFetchStats.status === "loading") {
         return <LoadingView />;
@@ -53,11 +54,11 @@ export function IndexCleanup(props: IndexCleanupProps) {
                             <AboutViewHeading
                                 icon="index-cleanup"
                                 title="Index Cleanup"
-                                licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
+                                licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
                             />
 
                             <FlexGrow />
-                            <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                            <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
                                 <AccordionItemWrapper
                                     targetId="about"
                                     icon="about"
@@ -77,12 +78,12 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                     </p>
                                 </AccordionItemWrapper>
                                 <FeatureAvailabilitySummaryWrapper
-                                    isUnlimited={isProfessionalOrAbove}
-                                    data={featureAvailabilityProfessionalOrAbove}
+                                    isUnlimited={isFeatureInLicense}
+                                    data={featureAvailability}
                                 />
                             </AboutViewFloating>
                         </div>
-                        <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
+                        <div className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
                             <Nav className="card-tabs gap-3 card-tabs">
                                 <NavItem>
                                     <Card

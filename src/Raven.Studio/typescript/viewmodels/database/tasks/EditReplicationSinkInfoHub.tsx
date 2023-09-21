@@ -4,15 +4,17 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
-import {useRavenLink} from "hooks/useRavenLink";
+import { useRavenLink } from "hooks/useRavenLink";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditReplicationSinkInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsSink"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+
     const replicationSinkDocsLink = useRavenLink({ hash: "MMUKGD" });
 
     return (
-        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -68,8 +70,8 @@ export function EditReplicationSinkInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isProfessionalOrAbove}
-                data={featureAvailabilityProfessionalOrAbove}
+                isUnlimited={isFeatureInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );

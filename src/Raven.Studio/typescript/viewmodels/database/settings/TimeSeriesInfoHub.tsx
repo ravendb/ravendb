@@ -2,19 +2,21 @@ import AboutViewFloating, { AccordionItemWrapper } from "components/common/About
 import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function TimeSeriesInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-    const featureAvailabilityData: FeatureAvailabilityData[] = [
-        {
-            featureName: "Rollups & Retention",
-            featureIcon: "timeseries-settings",
-            community: { value: false },
-            professional: { value: true },
-            enterprise: { value: true }
-        }
-    ];
+    const hasTimeSeriesRollupsAndRetention = useAppSelector(licenseSelectors.statusValue("HasTimeSeriesRollupsAndRetention"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasTimeSeriesRollupsAndRetention,
+            },
+        ],
+    });
 
     return (
         <AboutViewFloating>
@@ -28,9 +30,19 @@ export function TimeSeriesInfoHub() {
                 <p>Text</p>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isProfessionalOrAbove}
-                data={featureAvailabilityData}
+                isUnlimited={hasTimeSeriesRollupsAndRetention}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Rollups & Retention",
+        featureIcon: "timeseries-settings",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true }
+    }
+];

@@ -5,14 +5,16 @@ import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
+import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditKafkaEtlInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+
     const kafkaEtlDocsLink = useRavenLink({ hash: "S45O2Y" });
 
     return (
-        <AboutViewFloating defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -28,8 +30,8 @@ export function EditKafkaEtlInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isEnterpriseOrDeveloper}
-                data={featureAvailabilityEnterprise}
+                isUnlimited={isFeatureInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );

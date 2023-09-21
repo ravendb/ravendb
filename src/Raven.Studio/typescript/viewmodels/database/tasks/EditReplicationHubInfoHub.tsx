@@ -4,15 +4,17 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
-import {useRavenLink} from "hooks/useRavenLink";
+import { useRavenLink } from "hooks/useRavenLink";
+import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditReplicationHubInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
+    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+
     const replicationHubDocsLink = useRavenLink({ hash: "NIH5LN" });
 
     return (
-        <AboutViewFloating defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -69,8 +71,8 @@ export function EditReplicationHubInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isEnterpriseOrDeveloper}
-                data={featureAvailabilityEnterprise}
+                isUnlimited={isFeatureInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );

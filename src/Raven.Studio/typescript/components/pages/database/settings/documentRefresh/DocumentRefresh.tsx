@@ -23,6 +23,8 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import moment = require("moment");
 
 export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -42,8 +44,23 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
 
     const documentRefreshDocsLink = useRavenLink({ hash: "1PKUYJ" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-    const frequencyLimit = 129600;
+    const minPeriodForRefreshInHours = useAppSelector(licenseSelectors.statusValue("MinPeriodForRefreshInHours"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: minPeriodForRefreshInHours,
+            },
+        ],
+    });
+
+    const refreshFrequencyInHours = moment.duration(formValues.refreshFrequency, "seconds").asHours();
+
+    const isLimitWarningVisible =
+        minPeriodForRefreshInHours > 0 &&
+        formValues.isRefreshFrequencyEnabled &&
+        refreshFrequencyInHours < minPeriodForRefreshInHours;
 
     useEffect(() => {
         if (!formValues.isRefreshFrequencyEnabled && formValues.refreshFrequency !== null) {
@@ -95,12 +112,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 color="primary"
                                 className="mb-3"
                                 icon="save"
-                                disabled={
-                                    !formState.isDirty ||
-                                    (!isProfessionalOrAbove &&
-                                        formValues.isRefreshFrequencyEnabled &&
-                                        formValues.refreshFrequency < frequencyLimit)
-                                }
+                                disabled={!formState.isDirty || isLimitWarningVisible}
                                 isSpinning={formState.isSubmitting}
                             >
                                 Save
@@ -135,18 +147,24 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                                         formState.isSubmitting || !formValues.isRefreshFrequencyEnabled
                                                     }
                                                     placeholder={
-                                                        isProfessionalOrAbove ? "Default (60)" : "Default (129600)"
+                                                        minPeriodForRefreshInHours > 0
+                                                            ? `Default (${moment
+                                                                  .duration(minPeriodForRefreshInHours, "hours")
+                                                                  .asSeconds()})`
+                                                            : "Default (60)"
                                                     }
                                                     addonText="seconds"
                                                 />
-                                                {!isProfessionalOrAbove &&
-                                                    formValues.isRefreshFrequencyEnabled &&
-                                                    formValues.refreshFrequency < frequencyLimit && (
-                                                        <Alert color="warning" className="mt-3">
-                                                            <Icon icon="warning" /> Your current license does not allow
-                                                            a frequency higher than 36 hours (129600 seconds)
-                                                        </Alert>
-                                                    )}
+                                                {isLimitWarningVisible && (
+                                                    <Alert color="warning" className="mt-3">
+                                                        <Icon icon="warning" /> Your current license does not allow a
+                                                        frequency higher than {minPeriodForRefreshInHours} hours (
+                                                        {moment
+                                                            .duration(minPeriodForRefreshInHours, "hours")
+                                                            .asSeconds()}{" "}
+                                                        seconds)
+                                                    </Alert>
+                                                )}
                                             </div>
                                         </div>
                                     </CardBody>
@@ -190,7 +208,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
+                                isUnlimited={!minPeriodForRefreshInHours}
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
@@ -226,7 +244,7 @@ const codeExample = `{
   }
 }`;
 
-export const featureAvailability: FeatureAvailabilityData[] = [
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Refresh frequency limit (hours)",
         community: { value: 36 },

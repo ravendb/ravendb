@@ -10,9 +10,9 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import classNames from "classnames";
 import AnalyzersList from "./ServerWideCustomAnalyzersList";
-import { getProfessionalOrAboveLicenseAvailabilityData } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
@@ -22,13 +22,8 @@ export default function ServerWideCustomAnalyzers() {
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
     const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasServerWideAnalyzers"));
-
-    const featureAvailability = getProfessionalOrAboveLicenseAvailabilityData({
-        licenseType,
-        overrideValue: isFeatureInLicense,
-    });
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
 

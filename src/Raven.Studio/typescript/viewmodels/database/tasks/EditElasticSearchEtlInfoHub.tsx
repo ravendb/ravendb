@@ -5,14 +5,16 @@ import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
+import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditElasticSearchEtlInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
+    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+    
     const elasticSearchEtlDocsLink = useRavenLink({ hash: "AHPBTX" });
 
     return (
-        <AboutViewFloating defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -67,8 +69,8 @@ export function EditElasticSearchEtlInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isEnterpriseOrDeveloper}
-                data={featureAvailabilityEnterprise}
+                isUnlimited={isFeatureInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );

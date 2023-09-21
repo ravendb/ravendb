@@ -19,7 +19,7 @@ export const StudioConfiguration: ComponentStory<typeof StudioGlobalConfiguratio
 
 export const LicenseRestricted: ComponentStory<typeof StudioGlobalConfiguration> = () => {
     const { license } = mockStore;
-    license.with_LicenseLimited();
+    license.with_LicenseLimited({ HasStudioConfiguration: false });
 
     return <StudioGlobalConfiguration />;
 };

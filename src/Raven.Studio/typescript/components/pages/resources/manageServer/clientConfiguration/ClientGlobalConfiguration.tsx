@@ -22,7 +22,7 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export default function ClientGlobalConfiguration() {
     const { manageServerService } = useServices();
@@ -49,7 +49,8 @@ export default function ClientGlobalConfiguration() {
 
     useDirtyFlag(formState.isDirty);
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasClientConfiguration"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -77,13 +78,13 @@ export default function ClientGlobalConfiguration() {
                         <AboutViewHeading
                             icon="database-client-configuration"
                             title="Client Configuration"
-                            licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
+                            licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
                         />
                         <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
                             {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <Icon icon="save" />}
                             Save
                         </Button>
-                        <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
+                        <div className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
                             <Card className="card flex-column p-3 my-3">
                                 <div className="d-flex flex-grow-1">
                                     <div className="md-label">
@@ -294,7 +295,7 @@ export default function ClientGlobalConfiguration() {
                         </div>
                     </Col>
                     <Col sm={12} md={4}>
-                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
                             <AccordionItemWrapper
                                 icon="about"
                                 color="info"
@@ -339,8 +340,8 @@ export default function ClientGlobalConfiguration() {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
-                                data={featureAvailabilityProfessionalOrAbove}
+                                isUnlimited={isFeatureInLicense}
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>

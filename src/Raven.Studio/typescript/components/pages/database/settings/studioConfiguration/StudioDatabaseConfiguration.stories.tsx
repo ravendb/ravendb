@@ -20,7 +20,7 @@ export const StudioConfiguration: ComponentStory<typeof StudioDatabaseConfigurat
 
 export const LicenseRestricted: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
     const { license } = mockStore;
-    license.with_LicenseLimited();
+    license.with_LicenseLimited({ HasStudioConfiguration: false });
 
     return <StudioDatabaseConfiguration db={DatabasesStubs.nonShardedClusterDatabase()} />;
 };

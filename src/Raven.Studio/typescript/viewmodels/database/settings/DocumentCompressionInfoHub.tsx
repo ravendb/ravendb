@@ -4,15 +4,17 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
 import {useRavenLink} from "hooks/useRavenLink";
+import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export function DocumentCompressionInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasDocumentsCompression"));
+    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+    
     const compressionDocsLink = useRavenLink({ hash: "E2WX16" });
 
     return (
-        <AboutViewFloating defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -51,8 +53,8 @@ export function DocumentCompressionInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isEnterpriseOrDeveloper}
-                data={featureAvailabilityEnterprise}
+                isUnlimited={isFeatureInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );

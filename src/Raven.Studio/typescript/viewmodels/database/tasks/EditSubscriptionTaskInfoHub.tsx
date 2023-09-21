@@ -7,9 +7,26 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditSubscriptionTaskInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const hasConcurrentDataSubscriptions = useAppSelector(licenseSelectors.statusValue("HasConcurrentDataSubscriptions"));
+    const hasRevisionsInSubscriptions = useAppSelector(licenseSelectors.statusValue("HasRevisionsInSubscriptions"));
+    
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasConcurrentDataSubscriptions,
+            },
+            {
+                featureName: defaultFeatureAvailability[1].featureName,
+                value: hasRevisionsInSubscriptions,
+            },
+        ],
+    });
+
     const subscriptionTasksDocsLink = useRavenLink({ hash: "I5TMCK" });
 
     return (
@@ -53,12 +70,12 @@ export function EditSubscriptionTaskInfoHub() {
                     <Icon icon="newtab" /> Docs - Subscription Task
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper isUnlimited={isProfessionalOrAbove} data={featureAvailability} />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasConcurrentDataSubscriptions && hasRevisionsInSubscriptions} data={featureAvailability} />
         </AboutViewFloating>
     );
 }
 
-export const featureAvailability: FeatureAvailabilityData[] = [
+export const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Concurrent Data Subscriptions",
         featureIcon: "data-subscriptions",

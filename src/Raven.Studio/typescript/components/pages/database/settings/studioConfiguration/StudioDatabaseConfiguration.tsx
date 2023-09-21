@@ -23,7 +23,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -47,9 +47,10 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
     useDirtyFlag(formState.isDirty);
 
     const studioConfigurationDocsLink = useRavenLink({ hash: "HIR1VP" });
-
     const { reportEvent } = useEventsCollector();
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
 
     const onSave: SubmitHandler<StudioDatabaseConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -78,7 +79,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                     <AboutViewHeading
                         icon="database-studio-configuration"
                         title="Studio Configuration"
-                        licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
+                        licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <div className="d-flex align-items-center justify-content-between">
@@ -99,7 +100,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                                 </a>
                             </small>
                         </div>
-                        <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
+                        <div className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
                             <Card id="popoverContainer">
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -163,7 +164,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                     </Form>
                 </Col>
                 <Col sm={12} md={4}>
-                    <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                    <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
                         <AccordionItemWrapper
                             icon="about"
                             color="info"
@@ -183,8 +184,8 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                             </a>
                         </AccordionItemWrapper>
                         <FeatureAvailabilitySummaryWrapper
-                            isUnlimited={isProfessionalOrAbove}
-                            data={featureAvailabilityProfessionalOrAbove}
+                            isUnlimited={isFeatureInLicense}
+                            data={featureAvailability}
                         />
                     </AboutViewAnchored>
                 </Col>

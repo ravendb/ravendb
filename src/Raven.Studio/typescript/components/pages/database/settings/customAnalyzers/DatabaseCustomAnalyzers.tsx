@@ -26,10 +26,11 @@ import ServerWideCustomAnalyzersList from "components/pages/resources/manageServ
 import { NonShardedViewProps } from "components/models/common";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { databaseCustomSortersAndAnalyzersUtils } from "components/common/databaseCustomSortersAndAnalyzers/databaseCustomSortersAndAnalyzersUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 
 export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
@@ -45,15 +46,22 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerDatabase"));
     const numberOfCustomAnalyzersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfAnalyzersInCluster;
 
-    const featureAvailability = databaseCustomSortersAndAnalyzersUtils.getLicenseAvailabilityData({
-        licenseType,
-        overrideClusterLimit: licenseClusterLimit,
-        overrideDatabaseLimit: licenseDatabaseLimit,
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: licenseDatabaseLimit,
+            },
+            {
+                featureName: defaultFeatureAvailability[1].featureName,
+                value: licenseClusterLimit,
+            },
+        ],
     });
 
     const databaseResultsCount = asyncGetDatabaseAnalyzers.result?.length ?? null;
@@ -305,3 +313,18 @@ function DatabaseAnalyzersList({
         </div>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Limit per database",
+        community: { value: 1 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Limit per cluster",
+        community: { value: 5 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];

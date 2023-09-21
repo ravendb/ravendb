@@ -17,8 +17,10 @@ export const DefaultDataArchival: StoryObj<typeof DataArchival> = {
     render: () => {
         const { databasesService } = mockServices;
         const { license } = mockStore;
+
         databasesService.withDataArchivalConfiguration();
         license.with_License();
+
         return <DataArchival db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
 };
@@ -27,8 +29,10 @@ export const LicenseRestricted: StoryObj<typeof DataArchival> = {
     render: () => {
         const { databasesService } = mockServices;
         const { license } = mockStore;
+
         databasesService.withDataArchivalConfiguration();
-        license.with_LicenseLimited();
+        license.with_LicenseLimited({ HasDataArchival: false });
+
         return <DataArchival db={DatabasesStubs.nonShardedClusterDatabase()} />;
     },
 };

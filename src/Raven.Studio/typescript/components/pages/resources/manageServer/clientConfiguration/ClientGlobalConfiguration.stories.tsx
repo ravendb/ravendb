@@ -29,7 +29,7 @@ export const LicenseRestricted: ComponentStory<typeof ClientGlobalConfiguration>
     commonInit();
 
     const { license } = mockStore;
-    license.with_LicenseLimited();
+    license.with_LicenseLimited({ HasClientConfiguration: false });
 
     return <ClientGlobalConfiguration />;
 };

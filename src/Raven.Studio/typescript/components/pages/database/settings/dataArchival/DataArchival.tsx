@@ -25,7 +25,7 @@ import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
+import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export default function DataArchival({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -42,7 +42,8 @@ export default function DataArchival({ db }: NonShardedViewProps) {
     const { reportEvent } = useEventsCollector();
     const { isAdminAccessOrAbove } = useAccessManager();
 
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
+    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
 
     useEffect(() => {
         if (!formValues.isArchiveFrequencyEnabled && formValues.archiveFrequency !== null) {
@@ -92,7 +93,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                             <AboutViewHeading
                                 title="Data Archival"
                                 icon="data-archival"
-                                licenseBadgeText={isEnterpriseOrDeveloper ? null : "Enterprise"}
+                                licenseBadgeText={isFeatureInLicense ? null : "Enterprise"}
                             />
                             <ButtonWithSpinner
                                 type="submit"
@@ -104,7 +105,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                             >
                                 Save
                             </ButtonWithSpinner>
-                            <Col className={isEnterpriseOrDeveloper ? "" : "item-disabled pe-none"}>
+                            <Col className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
                                 <Card>
                                     <CardBody>
                                         <div className="vstack gap-2">
@@ -144,7 +145,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="about"
                                 icon="about"
@@ -186,8 +187,8 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isEnterpriseOrDeveloper}
-                                data={featureAvailabilityEnterprise}
+                                isUnlimited={isFeatureInLicense}
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>
