@@ -10,6 +10,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Connections;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Properties;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -332,18 +333,30 @@ namespace Raven.Server
 
                 var licenseStatus = LicenseManager.GetLicenseStatus(license);
 
-                VerifyLicenseVersion(licenseStatus, serverStore);
+                VerifyLicenseVersion(licenseStatus, license, serverStore, contextPool);
                 VerifyLicenseExpiration(licenseStatus, serverStore, environment, license, contextPool);
             }
         }
 
-        private static void VerifyLicenseVersion(LicenseStatus licenseStatus, ServerStore serverStore)
+        private static void VerifyLicenseVersion(LicenseStatus licenseStatus, License license, ServerStore serverStore, TransactionContextPool contextPool)
         {
             if (licenseStatus.Version.Major >= 6 || licenseStatus.IsCloud)
                 return;
 
-            var licenseJson = GetLicenseJson(serverStore, out _);
+            var licenseFromApi = GetLicenseFromApi(license, serverStore, contextPool).GetAwaiter().GetResult();
+            if (licenseFromApi != null)
+            {
+                licenseStatus = LicenseManager.GetLicenseStatus(licenseFromApi);
+                if (licenseStatus.Version.Major >= 6)
+                {
+                    serverStore.LicenseManager.OnBeforeInitialize += () =>
+                        serverStore.LicenseManager.ActivateAsync(licenseFromApi, RaftIdGenerator.NewId())
+                            .Wait(serverStore.ServerShutdown);
+                    return;
+                }
+            }
 
+            var licenseJson = GetLicenseJson(serverStore, out _);
             if (string.IsNullOrEmpty(licenseJson) == false &&
                 LicenseHelper.TryDeserializeLicense(licenseJson, out License localLicense))
             {
@@ -357,10 +370,22 @@ namespace Raven.Server
                 }
             }
 
-            //TODO: add link and explain what need to be done
             throw new LicenseLimitException($"Your license version with ID '{licenseStatus.Id}' is '{licenseStatus.Version}' doesn't allow you to upgrade to server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
-                                            
-                                            $"You can upgrade");
+                                            $"You can upgrade your license on the following website: https://ravendb.net/l/8O2YU1");
+        }
+
+        private static async Task<License> GetLicenseFromApi(License license, ServerStore serverStore, TransactionContextPool contextPool)
+        {
+            try
+            {
+                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool);
+                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response);
+                return leasedLicense.License;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static void VerifyLicenseExpiration(LicenseStatus licenseStatus, ServerStore serverStore, StorageEnvironment environment, License license, TransactionContextPool contextPool)
