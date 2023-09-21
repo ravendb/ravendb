@@ -15,6 +15,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
@@ -304,10 +305,17 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
-            protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, LazyStringValue id, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
+            protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
             {
-                toDispose.Add(DocumentIdWorker.GetSliceFromId(context, id, out keySlice));
-                toDispose.Add(RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, id, out changeVectorSlice));
+                if (docId != null)
+                {
+                    RevisionsStorage.CreateRevisionTombstoneKeySlice(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
+                }
+                else
+                {
+                    toDispose.Add(Slice.From(context.Allocator, changeVector, out keySlice));
+                    changeVectorSlice = keySlice;
+                }
             }
 
             protected virtual void SetIsIncomingReplication()
@@ -409,7 +417,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
 
-                                HandleRevisionTombstone(context, revisionTombstone.Id, out var changeVectorSlice, out var idKeySlice, toDispose);
+                                RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(revisionTombstone.Id, out string id, out string revisionChangeVector);
+                                HandleRevisionTombstone(context, id, revisionChangeVector, out var changeVectorSlice, out var idKeySlice, toDispose);
+                                
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, idKeySlice, revisionTombstone.Collection,
                                     changeVectorVersion, revisionTombstone.LastModifiedTicks, changeVectorSlice);
                                 break;

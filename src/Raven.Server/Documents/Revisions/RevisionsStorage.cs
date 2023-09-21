@@ -1175,7 +1175,7 @@ namespace Raven.Server.Documents.Revisions
 
         internal static void CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, string documentId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
         {
-            toDispose.Add(Slice.From(context.Allocator, documentId, out var documentIdSlice));
+            toDispose.Add(DocumentIdWorker.GetSliceFromId(context, documentId, out var documentIdSlice));
             toDispose.Add(CreateRevisionTombstoneKeySlice(context, documentIdSlice, changeVector, out changeVectorSlice, out keySlice));
         }
 
