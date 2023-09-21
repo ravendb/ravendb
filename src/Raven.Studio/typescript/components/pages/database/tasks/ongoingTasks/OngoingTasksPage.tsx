@@ -266,19 +266,19 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         isDeleting,
     };
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
     const subscriptionsDatabaseCount = subscriptions.length;
 
-    const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
+    const subscriptionsClusterLimit = useAppSelector(
+        licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster")
+    );
     const subscriptionsDatabaseLimit = useAppSelector(
         licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerDatabase")
     );
 
-    const subscriptionsServerLimitStatus = getLicenseLimitReachStatus(
+    const subscriptionsClusterLimitStatus = getLicenseLimitReachStatus(
         subscriptionsServerCount,
-        subscriptionsServerLimit
+        subscriptionsClusterLimit
     );
 
     const subscriptionsDatabaseLimitStatus = getLicenseLimitReachStatus(
@@ -288,49 +288,44 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     return (
         <div>
-            {!isProfessionalOrAbove && (
-                <>
-                    {subscriptionsServerLimitStatus !== "notReached" && (
-                        <Alert
-                            color={subscriptionsServerLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center"
-                        >
-                            Your server {subscriptionsServerLimitStatus === "limitReached" ? "reached" : "is reaching"}{" "}
-                            the <strong>maximum number of subscriptions</strong> allowed by your license{" "}
-                            <strong>
-                                ({subscriptionsServerCount}/{subscriptionsServerLimit})
-                            </strong>
-                            <br />
-                            <strong>
-                                <a href={upgradeLicenseLink} target="_blank">
-                                    Upgrade your license
-                                </a>{" "}
-                            </strong>
-                            to add more
-                        </Alert>
-                    )}
+            {subscriptionsClusterLimitStatus !== "notReached" && (
+                <Alert
+                    color={subscriptionsClusterLimitStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center"
+                >
+                    Your server {subscriptionsClusterLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                    <strong>maximum number of subscriptions</strong> allowed by your license{" "}
+                    <strong>
+                        ({subscriptionsServerCount}/{subscriptionsClusterLimit})
+                    </strong>
+                    <br />
+                    <strong>
+                        <a href={upgradeLicenseLink} target="_blank">
+                            Upgrade your license
+                        </a>{" "}
+                    </strong>
+                    to add more
+                </Alert>
+            )}
 
-                    {subscriptionsDatabaseLimitStatus !== "notReached" && (
-                        <Alert
-                            color={subscriptionsDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center"
-                        >
-                            Your database{" "}
-                            {subscriptionsDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                            <strong>maximum number of subscriptions</strong> allowed by your license{" "}
-                            <strong>
-                                ({subscriptionsDatabaseCount}/{subscriptionsDatabaseLimit})
-                            </strong>
-                            <br />
-                            <strong>
-                                <a href={upgradeLicenseLink} target="_blank">
-                                    Upgrade your license
-                                </a>{" "}
-                            </strong>
-                            to add more
-                        </Alert>
-                    )}
-                </>
+            {subscriptionsDatabaseLimitStatus !== "notReached" && (
+                <Alert
+                    color={subscriptionsDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center"
+                >
+                    Your database {subscriptionsDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                    <strong>maximum number of subscriptions</strong> allowed by your license{" "}
+                    <strong>
+                        ({subscriptionsDatabaseCount}/{subscriptionsDatabaseLimit})
+                    </strong>
+                    <br />
+                    <strong>
+                        <a href={upgradeLicenseLink} target="_blank">
+                            Upgrade your license
+                        </a>{" "}
+                    </strong>
+                    to add more
+                </Alert>
             )}
 
             {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
@@ -617,11 +612,15 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                         <div key="subscriptions">
                             <HrHeader
                                 className="subscription"
-                                count={isProfessionalOrAbove ? subscriptionsDatabaseCount : null}
+                                count={
+                                    subscriptionsDatabaseLimitStatus === "notReached"
+                                        ? subscriptionsDatabaseCount
+                                        : null
+                                }
                             >
                                 <Icon icon="subscription" />
                                 Subscription
-                                {!isProfessionalOrAbove && (
+                                {subscriptionsDatabaseLimitStatus !== "notReached" && (
                                     <CounterBadge
                                         count={subscriptionsDatabaseCount}
                                         limit={subscriptionsDatabaseLimit}
