@@ -69,6 +69,12 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
             StatusCode = (HttpStatusCode)shardedReadResult.StatusCode
         };
 
+        if (shardedReadResult.Result?.HasNullId == true)
+        {
+            result.Documents ??= new List<BlittableJsonReaderObject>();
+            result.Documents.Add(null);
+        }
+
         if (result.MissingIncludes?.Count > 0)
         {
             var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, result.MissingIncludes);
