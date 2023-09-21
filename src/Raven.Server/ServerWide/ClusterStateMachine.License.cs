@@ -32,7 +32,6 @@ public sealed partial class ClusterStateMachine
         nameof(PutSortersCommand),
         nameof(PutAnalyzersCommand),
         nameof(PutIndexCommand),
-        nameof(PutIndexesCommand),
         nameof(PutAutoIndexCommand),
         nameof(EditRevisionsConfigurationCommand),
         nameof(EditExpirationCommand),
@@ -83,44 +82,16 @@ public sealed partial class ClusterStateMachine
 
                 break;
             case nameof(PutIndexCommand):
-            case nameof(PutIndexesCommand):
-                var maxStaticIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
-                if (maxStaticIndexesPerDatabase != null && maxStaticIndexesPerDatabase >= 0 && databaseRecord.Indexes.Count > maxStaticIndexesPerDatabase)
-                {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
-
-                    throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of static indexes per database cannot exceed the limit of: {maxStaticIndexesPerDatabase}");
-                }
-
-                var maxStaticIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerCluster;
-                if (maxStaticIndexesPerCluster != null && maxStaticIndexesPerCluster >= 0 && GetTotal(DatabaseRecordElementType.StaticIndex) > maxStaticIndexesPerCluster)
-                {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
-
-                    throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
-                }
+                AssertStaticIndexesCount();
                 break;
 
             case nameof(PutAutoIndexCommand):
-                var maxAutoIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerDatabase;
-                if (maxAutoIndexesPerDatabase != null && maxAutoIndexesPerDatabase >= 0 && databaseRecord.AutoIndexes.Count > maxAutoIndexesPerDatabase)
-                {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
+                AssertAutoIndexesCount();
+                break;
 
-                    throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
-                }
-
-                var maxAutoIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerCluster;
-                if (maxAutoIndexesPerCluster != null && maxAutoIndexesPerCluster >= 0 && GetTotal(DatabaseRecordElementType.AutoIndex) > maxAutoIndexesPerCluster)
-                {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
-
-                    throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
-                }
+            case nameof(PutIndexesCommand):
+                AssertStaticIndexesCount();
+                AssertAutoIndexesCount();
                 break;
 
             case nameof(EditRevisionsConfigurationCommand):
@@ -211,8 +182,12 @@ public sealed partial class ClusterStateMachine
                 }
 
                 var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
-                if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0 && GetTotal(DatabaseRecordElementType.CustomSorters) > maxCustomSortersPerCluster)
+                if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0)
                 {
+                    var totalSortersCount = GetTotal(DatabaseRecordElementType.CustomSorters, databaseRecord.DatabaseName) + databaseRecord.Sorters.Count;
+                    if (totalSortersCount <= maxCustomSortersPerCluster)
+                        return;
+
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
 
@@ -231,8 +206,12 @@ public sealed partial class ClusterStateMachine
                 }
 
                 var maxAnalyzersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
-                if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0 && GetTotal(DatabaseRecordElementType.Analyzers) > maxAnalyzersPerCluster)
+                if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0)
                 {
+                    var totalAnalyzersCount = GetTotal(DatabaseRecordElementType.Analyzers, databaseRecord.DatabaseName) + databaseRecord.Analyzers.Count;
+                    if (totalAnalyzersCount <= maxAnalyzersPerCluster)
+                        return;
+
                     if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
 
@@ -314,7 +293,7 @@ public sealed partial class ClusterStateMachine
 
         return;
 
-        long GetTotal(DatabaseRecordElementType resultType)
+        long GetTotal(DatabaseRecordElementType resultType, string exceptDb)
         {
             long total = 0;
 
@@ -324,6 +303,8 @@ public sealed partial class ClusterStateMachine
                 {
                     var (_, _, record) = GetCurrentItem(context, result.Value);
                     var rawRecord = new RawDatabaseRecord(context, record);
+                    if (rawRecord.DatabaseName.Equals(exceptDb, StringComparison.OrdinalIgnoreCase))
+                        continue;
 
                     switch (resultType)
                     {
@@ -345,6 +326,57 @@ public sealed partial class ClusterStateMachine
                 }
 
                 return total;
+            }
+        }
+
+        void AssertStaticIndexesCount()
+        {
+            var maxStaticIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
+            if (maxStaticIndexesPerDatabase != null && maxStaticIndexesPerDatabase >= 0 && databaseRecord.Indexes.Count > maxStaticIndexesPerDatabase)
+            {
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                    return;
+
+                throw new LicenseLimitException(LimitType.Indexes,
+                    $"The maximum number of static indexes per database cannot exceed the limit of: {maxStaticIndexesPerDatabase}");
+            }
+
+            var maxStaticIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerCluster;
+            if (maxStaticIndexesPerCluster != null && maxStaticIndexesPerCluster >= 0)
+            {
+                var totalStaticIndexesCount = GetTotal(DatabaseRecordElementType.StaticIndex, databaseRecord.DatabaseName) + databaseRecord.Indexes.Count;
+                if (totalStaticIndexesCount <= maxStaticIndexesPerCluster)
+                    return;
+
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                    return;
+
+                throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
+            }
+        }
+
+        void AssertAutoIndexesCount()
+        {
+            var maxAutoIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerDatabase;
+            if (maxAutoIndexesPerDatabase != null && maxAutoIndexesPerDatabase >= 0 && databaseRecord.AutoIndexes.Count > maxAutoIndexesPerDatabase)
+            {
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                    return;
+
+                throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+            }
+
+            var maxAutoIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerCluster;
+            if (maxAutoIndexesPerCluster != null && maxAutoIndexesPerCluster >= 0)
+            {
+                var totalAutoIndexesCount = GetTotal(DatabaseRecordElementType.AutoIndex, databaseRecord.DatabaseName) + databaseRecord.AutoIndexes.Count;
+                if (totalAutoIndexesCount <= maxAutoIndexesPerCluster)
+                    return;
+
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                    return;
+
+                throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
             }
         }
     }
