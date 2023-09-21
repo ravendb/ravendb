@@ -338,7 +338,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasMultiNodeSharding)] = HasMultiNodeSharding,
                 [nameof(MaxNumberOfRevisionsToKeep)] = MaxNumberOfRevisionsToKeep,
                 [nameof(MaxNumberOfRevisionAgeToKeepInDays)] = MaxNumberOfRevisionAgeToKeepInDays,
-                [nameof(MinPeriodForExpirationInHours)] = MaxNumberOfRevisionAgeToKeepInDays,
+                [nameof(MinPeriodForExpirationInHours)] = MinPeriodForExpirationInHours,
                 [nameof(MinPeriodForRefreshInHours)] = MinPeriodForRefreshInHours,
                 [nameof(MaxReplicationFactorForSharding)] = MaxReplicationFactorForSharding,
                 [nameof(MaxNumberOfStaticIndexesPerDatabase)] = MaxNumberOfStaticIndexesPerDatabase,
