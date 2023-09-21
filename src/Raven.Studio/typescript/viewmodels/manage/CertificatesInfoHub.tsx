@@ -37,8 +37,8 @@ export function CertificatesInfoHub() {
                     <strong>Server certificates</strong>:
                     <ul>
                         <li className="margin-top-xxs">
-                            The server certificate can be exported in order to upload it by another server for
-                            establishing a secure connection between the servers.
+                            The server certificate can be exported for the purpose of uploading it to another server,
+                            in order to establish a secure connection between the servers.
                         </li>
                         <li className="margin-top-xxs">
                             The server certificate can be replaced as needed - this will apply to all cluster nodes.

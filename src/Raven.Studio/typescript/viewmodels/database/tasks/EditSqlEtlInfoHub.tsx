@@ -24,7 +24,7 @@ export function EditSqlEtlInfoHub() {
             >
                 <p>
                     A <strong>SQL ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process
-                    that transfers data from documents from this RavenDB database to a relational database.
+                    that transfers data from this RavenDB database to a relational database.
                 </p>
                 <ul>
                     <li>
