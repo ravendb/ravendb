@@ -41,7 +41,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
         return <LoadingView />;
     }
 
-    if (asyncFetchStats.status === "error") {
+    if (isFeatureInLicense && asyncFetchStats.status === "error") {
         return <LoadError error="Unable to load index cleanup data" refresh={asyncFetchStats.execute} />;
     }
 
@@ -95,7 +95,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             className="rounded-pill fs-5"
                                             color={mergable.data.length !== 0 ? "primary" : "secondary"}
                                         >
-                                            {mergable.data.length}
+                                            {isFeatureInLicense ? mergable.data.length : "?"}
                                         </Badge>
                                         <h4 className="text-center">
                                             Merge
@@ -114,7 +114,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             className="rounded-pill fs-5"
                                             color={surpassing.data.length !== 0 ? "primary" : "secondary"}
                                         >
-                                            {surpassing.data.length}
+                                            {isFeatureInLicense ? surpassing.data.length : "?"}
                                         </Badge>
                                         <h4 className="text-center">
                                             Remove
@@ -133,7 +133,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             className="rounded-pill fs-5"
                                             color={unused.data.length !== 0 ? "primary" : "secondary"}
                                         >
-                                            {unused.data.length}
+                                            {isFeatureInLicense ? unused.data.length : "?"}
                                         </Badge>
                                         <h4 className="text-center">
                                             Remove <br />
@@ -151,7 +151,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             className="rounded-pill fs-5"
                                             color={unmergable.data.length !== 0 ? "primary" : "secondary"}
                                         >
-                                            {unmergable.data.length}
+                                            {isFeatureInLicense ? unmergable.data.length : "?"}
                                         </Badge>
                                         <h4 className="text-center">
                                             Unmergable
@@ -182,111 +182,113 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                     original indexes can be removed.
                                                 </div>
                                             </Card>
-                                            <div className="p-2">
-                                                {mergable.data.length === 0 ? (
-                                                    <EmptySet>No indexes to merge</EmptySet>
-                                                ) : (
-                                                    <>
-                                                        <div className="mx-3">
-                                                            <Table className="mb-1 table-inner-border">
-                                                                <tbody>
-                                                                    <tr>
-                                                                        <td></td>
-                                                                        <td width={300}>
-                                                                            <div className="small-label">
-                                                                                Last query time
-                                                                            </div>
-                                                                        </td>
-                                                                        <td width={300}>
-                                                                            <div className="small-label">
-                                                                                Last indexing time
-                                                                            </div>
-                                                                        </td>
-                                                                    </tr>
-                                                                </tbody>
-                                                            </Table>
-                                                        </div>
+                                            {isFeatureInLicense && (
+                                                <div className="p-2">
+                                                    {mergable.data.length === 0 ? (
+                                                        <EmptySet>No indexes to merge</EmptySet>
+                                                    ) : (
+                                                        <>
+                                                            <div className="mx-3">
+                                                                <Table className="mb-1 table-inner-border">
+                                                                    <tbody>
+                                                                        <tr>
+                                                                            <td></td>
+                                                                            <td width={300}>
+                                                                                <div className="small-label">
+                                                                                    Last query time
+                                                                                </div>
+                                                                            </td>
+                                                                            <td width={300}>
+                                                                                <div className="small-label">
+                                                                                    Last indexing time
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </Table>
+                                                            </div>
 
-                                                        {mergable.data.map((mergableGroup, groupKey) => (
-                                                            <RichPanel
-                                                                key={
-                                                                    "mergeGroup-" +
-                                                                    mergableGroup.mergedIndexDefinition.Name
-                                                                }
-                                                                hover
-                                                            >
-                                                                <RichPanelHeader className="px-3 py-2 flex-wrap flex-row gap-3">
-                                                                    <div className="mt-1">
-                                                                        <Button
-                                                                            color="primary"
-                                                                            size="sm"
-                                                                            className="rounded-pill"
-                                                                            onClick={() =>
-                                                                                mergable.navigateToMergeSuggestion(
-                                                                                    mergableGroup
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            <Icon icon="merge" />
-                                                                            Review suggested merge
-                                                                        </Button>
-                                                                    </div>
-                                                                    <div className="flex-grow-1">
-                                                                        <Table className="m-0 table-inner-border">
-                                                                            <tbody>
-                                                                                {mergableGroup.toMerge.map(
-                                                                                    (index, indexKey) => (
-                                                                                        <tr
-                                                                                            key={
-                                                                                                "index-" +
-                                                                                                groupKey +
-                                                                                                "-" +
-                                                                                                indexKey
-                                                                                            }
-                                                                                        >
-                                                                                            <td>
-                                                                                                <div>
-                                                                                                    <a
-                                                                                                        href={appUrl.forEditIndex(
-                                                                                                            index.name,
-                                                                                                            db
-                                                                                                        )}
-                                                                                                    >
-                                                                                                        {index.name}{" "}
-                                                                                                        <Icon
-                                                                                                            icon="newtab"
-                                                                                                            margin="ms-1"
-                                                                                                        />
-                                                                                                    </a>
-                                                                                                </div>
-                                                                                            </td>
-
-                                                                                            <td width={300}>
-                                                                                                <div>
-                                                                                                    {formatDate(
-                                                                                                        index.lastQueryTime
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            </td>
-                                                                                            <td width={300}>
-                                                                                                <div>
-                                                                                                    {formatDate(
-                                                                                                        index.lastIndexingTime
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            </td>
-                                                                                        </tr>
+                                                            {mergable.data.map((mergableGroup, groupKey) => (
+                                                                <RichPanel
+                                                                    key={
+                                                                        "mergeGroup-" +
+                                                                        mergableGroup.mergedIndexDefinition.Name
+                                                                    }
+                                                                    hover
+                                                                >
+                                                                    <RichPanelHeader className="px-3 py-2 flex-wrap flex-row gap-3">
+                                                                        <div className="mt-1">
+                                                                            <Button
+                                                                                color="primary"
+                                                                                size="sm"
+                                                                                className="rounded-pill"
+                                                                                onClick={() =>
+                                                                                    mergable.navigateToMergeSuggestion(
+                                                                                        mergableGroup
                                                                                     )
-                                                                                )}
-                                                                            </tbody>
-                                                                        </Table>
-                                                                    </div>
-                                                                </RichPanelHeader>
-                                                            </RichPanel>
-                                                        ))}
-                                                    </>
-                                                )}
-                                            </div>
+                                                                                }
+                                                                            >
+                                                                                <Icon icon="merge" />
+                                                                                Review suggested merge
+                                                                            </Button>
+                                                                        </div>
+                                                                        <div className="flex-grow-1">
+                                                                            <Table className="m-0 table-inner-border">
+                                                                                <tbody>
+                                                                                    {mergableGroup.toMerge.map(
+                                                                                        (index, indexKey) => (
+                                                                                            <tr
+                                                                                                key={
+                                                                                                    "index-" +
+                                                                                                    groupKey +
+                                                                                                    "-" +
+                                                                                                    indexKey
+                                                                                                }
+                                                                                            >
+                                                                                                <td>
+                                                                                                    <div>
+                                                                                                        <a
+                                                                                                            href={appUrl.forEditIndex(
+                                                                                                                index.name,
+                                                                                                                db
+                                                                                                            )}
+                                                                                                        >
+                                                                                                            {index.name}{" "}
+                                                                                                            <Icon
+                                                                                                                icon="newtab"
+                                                                                                                margin="ms-1"
+                                                                                                            />
+                                                                                                        </a>
+                                                                                                    </div>
+                                                                                                </td>
+
+                                                                                                <td width={300}>
+                                                                                                    <div>
+                                                                                                        {formatDate(
+                                                                                                            index.lastQueryTime
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                                <td width={300}>
+                                                                                                    <div>
+                                                                                                        {formatDate(
+                                                                                                            index.lastIndexingTime
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        )
+                                                                                    )}
+                                                                                </tbody>
+                                                                            </Table>
+                                                                        </div>
+                                                                    </RichPanelHeader>
+                                                                </RichPanel>
+                                                            ))}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
                                         </Card>
                                     </div>
                                 </CarouselItem>
