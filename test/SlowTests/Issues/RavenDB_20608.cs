@@ -16,12 +16,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
-        public async Task ReplicationShouldNotCauseConflictAfterResolve()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldNotCauseConflictAfterResolve(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
-            using (var storeC = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
+            using (var storeC = GetDocumentStore(options))
             {
                 // create conflict of identical document
                 using (var session = storeA.OpenSession())
@@ -90,13 +91,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
-        public async Task ReplicationShouldNotCauseConflictAfterResolve2()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldNotCauseConflictAfterResolve2(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
-            using (var storeC = GetDocumentStore())
-            using (var storeD = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
+            using (var storeC = GetDocumentStore(options))
+            using (var storeD = GetDocumentStore(options))
             {
                 // create conflict
                 using (var session = storeA.OpenSession())
@@ -169,12 +171,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
-        public async Task ReplicationWithAttachmentsShouldNotCauseConflictAfterResolve()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationWithAttachmentsShouldNotCauseConflictAfterResolve(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
-            using (var storeC = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
+            using (var storeC = GetDocumentStore(options))
             {
                 // create conflict of identical document with same attachment
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
@@ -237,12 +240,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
-        public async Task ReplicationWithAttachmentsShouldNotCauseConflictAfterResolve2()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationWithAttachmentsShouldNotCauseConflictAfterResolve2(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
-            using (var storeC = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
+            using (var storeC = GetDocumentStore(options))
             {
                 // create conflict of identical document with different attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
@@ -308,18 +312,17 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
-        public async Task GenerateNewChangeVectorInReplicationWithAttachmentConflict()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task GenerateNewChangeVectorInReplicationWithAttachmentConflict(Options options)
         {
             // unlike the previous tests, this one should create a new change vector
             // because we recreated the attachment reference locally in the incoming replication (RavenDB-19421)
-            var options = new Options
+            options.ModifyDatabaseRecord = record =>
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString();
-                }
+                record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString();
             };
+
             using (var storeA = GetDocumentStore(options))
             using (var storeB = GetDocumentStore(options))
             using (var storeC = GetDocumentStore(options))

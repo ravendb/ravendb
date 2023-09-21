@@ -299,6 +299,7 @@ namespace Raven.Server.Documents.Replication
             // to avoid feature conflicts on the document due to one-way external replication
             // if this is not the case (resolvedToLatest == false), we should generate a new change vector since it was changed locally.
             // in a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
+            
             var changeVector = resolvedToLatest ?
                 context.GetChangeVector(resolved.ChangeVector) :
                 ChangeVector.MergeWithNewDatabaseChangeVector(context, resolved.ChangeVector);

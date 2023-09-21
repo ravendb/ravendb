@@ -645,7 +645,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                             // we need to force an update when this is _not_ the case, because this replication batch gave us the tombstone only, without
                             // the related document update, so we need to simulate that locally
                             if (doc != null &&
-                                (ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged 
+                                (ChangeVector.GetConflictStatusForDocument(context, cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged 
                                  || doc.Flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved))) 
                             {
                                 // have to load the full document
