@@ -1232,7 +1232,7 @@ namespace Raven.Server.Documents.Patch
                     {
                         throw new ShardedPatchBehaviorViolationException(
                             $"The original ID '{OriginalDocumentId}' isn't in the same bucket as the requested ID '{id}'.{Environment.NewLine}" +
-                            $"To Ensure they will be in the same bucket use the '$' convention.{Environment.NewLine}" +
+                            $"To ensure operation will be performed on the same bucket, use anchored ID with '$'.{Environment.NewLine}" +
                             $"E.g. '{id}${OriginalDocumentId}' or use server-side generated IDs");
                     }
                     return id;

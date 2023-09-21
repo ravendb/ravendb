@@ -1122,7 +1122,7 @@ this.Else = a;
         { 'CopiedValue':  this.Value, '@metadata': {'CreatedBy': 'JS_Script'} });",
                 })));
 
-                Assert.Contains("To Ensure they will be in the same bucket use the '$' convention", ex.Message);
+                Assert.Contains("To ensure operation will be performed on the same bucket, use anchored ID with '$'.", ex.Message);
             }
         }
 
