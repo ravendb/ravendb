@@ -23,6 +23,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Properties;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
@@ -429,9 +430,8 @@ namespace Raven.Server.Commercial
             {
                 if (skipGettingUpdatedLicense)
                 {
-                    throw new LicenseLimitException($"Your license version is {licenseStatus.Version}. " +
-                                                    $"You must upgrade your license before you install it on v6.x. " +
-                                                    $"You can do it by going to the following website: https://ravendb.net/l/8O2YU1");
+                    throw new LicenseLimitException($"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to upgrade to server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
+                                                    $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first.");
                 }
 
                 try
@@ -439,9 +439,9 @@ namespace Raven.Server.Commercial
                     var updatedLicense = await GetUpdatedLicenseForActivation(license);
                     if (updatedLicense == null)
                     {
-                        throw new LicenseLimitException($"Your license version is {licenseStatus.Version}. We failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}. " +
-                                                        $"You must upgrade your license before you install it on v6.x. " +
-                                                        $"You can do it by going to the following website: https://ravendb.net/l/8O2YU1");
+                        throw new LicenseLimitException($"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to upgrade to server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
+                                                        $"We failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}. " +
+                                                        $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first.");
                     }
 
                     await ActivateAsync(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
@@ -449,9 +449,9 @@ namespace Raven.Server.Commercial
                 }
                 catch (Exception e)
                 {
-                    throw new LicenseLimitException($"Your license version is {licenseStatus.Version} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}. " +
-                                                    $"You must upgrade your license before you install it on v6.x. " +
-                                                    $"You can do it by going to the following website: https://ravendb.net/l/8O2YU1", e);
+                    throw new LicenseLimitException($"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to upgrade to server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
+                                                    $"We failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}. " +
+                                                    $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first.", e);
                 }
             }
 

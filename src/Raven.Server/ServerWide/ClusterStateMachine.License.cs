@@ -417,6 +417,12 @@ public sealed partial class ClusterStateMachine
             if (limit.Value.BuildInfo == null)
                 return false;
 
+            if (ServerVersion.IsNightlyOrDev(limit.Value.BuildInfo.BuildVersion))
+                continue;
+
+            if (limit.Value.BuildInfo.BuildVersion < 60)
+                return false;
+
             if (limit.Value.BuildInfo.BuildVersion < minBuildVersion)
                 return false;
         }
