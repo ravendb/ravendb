@@ -133,6 +133,12 @@ namespace FastTests.Client
 
                     var customers = session.Load<Customer>(orders.Select(x => x.CustomerId));
                     Assert.Equal(2, customers.Count);
+
+                    foreach (var customer in customers)
+                    {
+                        Assert.NotNull(session.Advanced.GetChangeVectorFor(customer.Value));
+                    }
+
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
