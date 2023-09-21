@@ -216,6 +216,10 @@ class commandBase {
 
         return options;
     }
+
+    static isLicenseLimitException(response: JQueryXHR): boolean {
+        return response.status === 402;
+    }
 }
 
 export = commandBase;

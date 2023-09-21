@@ -16,7 +16,11 @@ class getIndexMergeSuggestionsCommand extends commandBase {
         const url = endpoints.databases.index.indexesSuggestIndexMerge;
         
         return this.query<IndexMergeResults>(url, null, this.db)
-            .fail((response: JQueryXHR) => this.reportError("Failed to get index merge suggestions", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => {
+                if (!commandBase.isLicenseLimitException(response)) {
+                    this.reportError("Failed to get index merge suggestions", response.responseText, response.statusText)
+                }
+            });
     }
 }
 
