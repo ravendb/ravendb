@@ -289,14 +289,14 @@ namespace Voron.Debugging
         }
         
         [Conditional("DEBUG")]
-        public static void RenderAndShow<TKey>(Lookup<TKey> tree, string message = null)
+        public static void RenderAndShow<TKey>(Lookup<TKey> tree, int steps = 1, string message = null)
             where TKey : struct, ILookupKey
         {
             var headerData = $"{tree.State}";
             if (!string.IsNullOrWhiteSpace(message))
                 headerData = $"{message}-{headerData}";
 
-            RenderAndShowTCompactTree(tree, tree.State.RootPage, $"<p>{headerData}</p>");
+            RenderAndShowTCompactTree(tree, steps, tree.State.RootPage, $"<p>{headerData}</p>");
         }
 
         [Conditional("DEBUG")]
@@ -306,7 +306,7 @@ namespace Voron.Debugging
         }
 
         [Conditional("DEBUG")]
-        public static void RenderAndShowTCompactTree<TKey>(Lookup<TKey>  tree, long startPageNumber, string headerData = null)
+        public static void RenderAndShowTCompactTree<TKey>(Lookup<TKey> tree, int steps, long startPageNumber, string headerData = null)
             where TKey : struct, ILookupKey
         {
             RenderHtmlTreeView(writer =>
@@ -314,13 +314,13 @@ namespace Voron.Debugging
                 if (headerData != null)
                     writer.WriteLine(headerData);
                 writer.WriteLine("<div class='css-treeview'><ul>");
-                               RenderPageInternal(tree, tree.Llt.GetPage(startPageNumber), writer, "Root", true);
+                               RenderPageInternal(tree, steps, tree.Llt.GetPage(startPageNumber), writer, "Root", true);
 
                 writer.WriteLine("</ul></div>");
             });
         }
         
-        private static unsafe void RenderPageInternal<TKey>(Lookup<TKey>  tree, Page page, TextWriter sw, string text, bool open)
+        private static unsafe void RenderPageInternal<TKey>(Lookup<TKey> tree, int steps, Page page, TextWriter sw, string text, bool open)
             where TKey : struct, ILookupKey
         {
             var header = (LookupPageHeader*)page.Pointer;
@@ -335,11 +335,14 @@ namespace Voron.Debugging
 
                 if (header->PageFlags.HasFlag(LookupPageFlags.Leaf))
                 {
-                    sw.Write($"<li>{lookupKey.ToString(tree)} --> {val}</li>");
+                    if (i % steps == 0)
+                    {
+                        sw.Write($"<li>{lookupKey.ToString(tree)} --> {val}</li>");
+                    }
                 }
                 else
                 {
-                    RenderPageInternal(tree, tree.Llt.GetPage(val), sw, lookupKey.ToString(tree), false);
+                    RenderPageInternal(tree, steps, tree.Llt.GetPage(val), sw, lookupKey.ToString(tree), false);
                 }
             }
 

@@ -53,6 +53,15 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int DecodeEntry(LookupPageHeader* header, int pos, out long keyData, out long val)
+    {
+        Debug.Assert(pos >= 0 && pos < header->NumberOfEntries);
+        ushort* entries = (ushort*)((byte*)header + PageHeader.SizeOf);
+        var  buffer = (byte*)header + entries[pos];
+        return DecodeEntry(header, buffer, out keyData, out val);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int DecodeEntry(LookupPageHeader* header, byte* buffer, out long keyData, out long val)
     {
         var keyLen = buffer[0] >> 4;
@@ -82,6 +91,17 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var valLen = buffer[0] & 0xF;
         return keyLen + valLen + 1;
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int GetEntryBuffer(LookupPageHeader* p, int pos, out byte* buffer)
+    {
+        Debug.Assert(pos >= 0 && pos < p->NumberOfEntries);
+        ushort* entries = (ushort*)((byte*)p + PageHeader.SizeOf);
+        buffer = (byte*)p + entries[pos];
+        var keyLen = buffer[0] >> 4;
+        var valLen = buffer[0] & 0xF;
+        return keyLen + valLen + 1;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetEntrySize(ref CursorState state, int pos)
@@ -100,7 +120,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long GetKeyData(ref CursorState state, int pos)
+    internal static long GetKeyData(ref CursorState state, int pos)
     {
         Debug.Assert(pos >= 0 && pos < state.Header->NumberOfEntries);
         var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
@@ -142,7 +162,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void GetKeyAndValue(ref CursorState state, int pos, out long key, out long value)
+    public static int GetKeyAndValue(ref CursorState state, int pos, out long key, out long value)
     {
         Debug.Assert(pos >= 0 && pos < state.Header->NumberOfEntries);
         var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
@@ -152,6 +172,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         long v = ReadBackward(buffer + 1 + keyLen, valLen);
         key = Unzag(k, state.Header->KeysBase);
         value = Unzag(v, state.Header->ValuesBase);
+
+        return keyLen + valLen + 1;
     }
 
     private struct IteratorCursorState
@@ -347,20 +369,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             return false;
         }
+
         state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
-        var entriesOffsets = state.EntriesOffsets;
-        var len = GetEntryBuffer(ref state, state.LastSearchPosition, out _);
-
-        state.Header->FreeSpace += (ushort)(sizeof(ushort) + len);
-        state.Header->Lower -= sizeof(short); // the upper will be fixed on defrag
-
-        Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
-        Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
-
-        key.OnKeyRemoval(this);
-        
-        entriesOffsets[(state.LastSearchPosition + 1)..].CopyTo(entriesOffsets[state.LastSearchPosition..]);
+        RemoveEntryFromPage(ref state, ref key, state.LastSearchPosition, out _);
 
         if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
         {
@@ -373,49 +385,61 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             // We check if we need to run defrag by seeing if there is a significant difference between the free space in the page
             // and the actual available space (should have at least 1KB to recover before we run)
-            // It is in our best interest to defrag the receiving page to avoid having to  try again and again without achieving any gains.
+            // It is in our best interest to defrag the receiving page to avoid having to try again and again without achieving any gains.
             if (state.Header->Upper - state.Header->Lower < state.Header->FreeSpace - Constants.Storage.PageSize / 8)
                 DefragPage(_llt, ref state);
 
             if (MaybeMergeEntries(ref state))
             {
+                VerifySizeOfFullCursor();
                 _treeStructureVersion++;
                 InitializeCursorState(); // we change the structure of the tree, so we can't reuse 
             }
         }
 
-        VerifySizeOf(ref state);
+        VerifySizeOf(ref state, _internalCursor._pos == 0);
         return true;
+    }
+
+    private void RemoveEntryFromPage(ref CursorState state, ref TLookupKey key, int pos, out long value)
+    {
+        var entriesOffsets = state.EntriesOffsets;
+        var len = GetKeyAndValue(ref state, pos, out var k, out value);
+
+        state.Header->FreeSpace += (ushort)(sizeof(ushort) + len);
+        state.Header->Lower -= sizeof(short); // the upper will be fixed on defrag
+
+        Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
+        Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
+        Debug.Assert(k == key.ToLong(), "k == key.ToLong()");
+        key.OnKeyRemoval(this);
+        entriesOffsets[(state.LastSearchPosition + 1)..].CopyTo(entriesOffsets[state.LastSearchPosition..]);
+    }
+
+    [Conditional("DEBUG")]
+    private void VerifySizeOfFullCursor()
+    {
+        for (int i = 0; i < _internalCursor._pos; i++)
+        {
+            VerifySizeOf(ref _internalCursor._stk[i], i == 0);
+        }
     }
 
     private bool MaybeMergeEntries(ref CursorState destinationState)
     {
-        CursorState sourceState;
         Debug.Assert(_internalCursor._pos > 0, "_internalCursor._pos > 0");
         ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
         Debug.Assert(parent.Header->NumberOfEntries >= 2,"parent.Header->NumberOfEntries >= 2");
 
-        // optimization: not merging right most / left most pages
-        // that allows to delete in up / down order without doing any
-        // merges, for FIFO / LIFO scenarios
-        if (parent.LastSearchPosition == 0 ||
-            parent.LastSearchPosition == parent.Header->NumberOfEntries - 1)
+        if (parent.LastSearchPosition == 0 || parent.LastSearchPosition == parent.Header->NumberOfEntries - 1)
         {
-            if (destinationState.Header->NumberOfEntries == 0) // just remove the whole thing
-            {
-                var sibling = GetValue(ref parent, parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1);
-                sourceState = new CursorState
-                {
-                    Page = _llt.GetPage(sibling)
-                };
-                Debug.Assert(sourceState.Header->IsBranch ^ sourceState.Header->IsLeaf, "sourceState.Header->IsBranch ^ sourceState.Header->IsLeaf");
-                FreePageFor(ref sourceState, ref destinationState);
-            }
-            return true;
+            // optimization: not merging right most / left most pages that allows to delete in up / down order without doing any
+            // merges, for FIFO / LIFO scenarios
+            return TryMergeEdgePage(ref destinationState, ref parent);
         }
 
         var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
-        sourceState = new CursorState
+        var sourceState = new CursorState
         {
             Page = _llt.ModifyPage(siblingPage)
         };
@@ -423,128 +447,155 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         if (sourceState.Header->PageFlags != destinationState.Header->PageFlags)
             return false; // cannot merge leaf & branch pages
 
-        var destinationPage = destinationState.Page;
-        var destinationHeader = destinationState.Header;
-        var sourcePage = sourceState.Page;
-        var sourceHeader = sourceState.Header;
-
-        // the new entries size is composed of entries from _both_ pages            
-        var entries = new Span<ushort>(destinationPage.Pointer + PageHeader.SizeOf, destinationHeader->NumberOfEntries + sourceHeader->NumberOfEntries)
-                            .Slice(destinationHeader->NumberOfEntries);
-
-        bool reEncode = sourceHeader->KeysBase != destinationHeader->KeysBase ||
-                        sourceHeader->ValuesBase != destinationHeader->ValuesBase;
-
-        int sourceMovedLength = 0;
-        int sourceKeysCopied = 0;
+        int combinedFreeSpace = sourceState.Header->FreeSpace + destinationState.Header->FreeSpace;
+        if (combinedFreeSpace <= Constants.Storage.PageSize)
         {
-            for (; sourceKeysCopied < sourceHeader->NumberOfEntries; sourceKeysCopied++)
-            {
-                var copied = reEncode
-                    ? MoveEntryWithReEncoding(ref destinationState, entries)
-                    : MoveEntryAsIs(ref destinationState, entries);
-                if (copied == false)
-                    break;
-            }
+            // no point in trying if after combining *both* pages, we'll be completely full
+            // we also want to avoid merge / split cycles - so a merge should happen only when
+            // there is sufficient free space _after_ the merge  
+            return false;
         }
 
-        if (sourceKeysCopied == 0)
-            return false;
+        // we have to use a temporary copy, because we may fail to copy _all_ the values from the nearby page
+        using var _ = _llt.Allocator.Allocate(Constants.Storage.PageSize, out ByteString temp);
+        Memory.Copy(temp.Ptr, destinationState.Page.Pointer, Constants.Storage.PageSize);
 
-        Memory.Move(sourcePage.Pointer + PageHeader.SizeOf,
-                    sourcePage.Pointer + PageHeader.SizeOf + (sourceKeysCopied * sizeof(ushort)),
-                    (sourceHeader->NumberOfEntries - sourceKeysCopied) * sizeof(ushort));
+        if (TryMoveAllEntries((LookupPageHeader*)temp.Ptr, sourceState.Header) == false)
+            return false; // nothing to be done here, we cannot fully merge, so abort
+        
+        // now copy from the temp buffer to the actual page
+        Memory.Copy(destinationState.Page.Pointer, temp.Ptr, Constants.Storage.PageSize);
 
         // We update the entries offsets on the source page, now that we have moved the entries.
-        var oldLower = sourceHeader->Lower;
-        sourceHeader->Lower -= (ushort)(sourceKeysCopied * sizeof(ushort));
-        if (sourceHeader->NumberOfEntries == 0) // emptied the sibling entries
-        {
-            parent.LastSearchPosition++;
-            FreePageFor(ref destinationState, ref sourceState);
-            return true;
-        }
-
-        sourceHeader->FreeSpace += (ushort)(sourceMovedLength + (sourceKeysCopied * sizeof(ushort)));
-        Memory.Set(sourcePage.Pointer + sourceHeader->Lower, 0, (oldLower - sourceHeader->Lower));
-
-        // now re-wire the new splitted page key
-
-
-        PopPage(ref _internalCursor);
-
-        // we aren't _really_ removing, so preventing merging of parents
-        RemoveFromPage(allowRecurse: false, parent.LastSearchPosition + 1);
-
-        // Ensure that we got the right key to search. 
-        var newKey = TLookupKey.FromLong<TLookupKey>(GetKeyData(ref sourceState, 0));
-
-        SearchInCurrentPage(ref newKey, ref _internalCursor._stk[_internalCursor._pos]); // positions changed, re-search
-        AddToPage(ref newKey, siblingPage);
+        parent.LastSearchPosition++;
+        FreePageFor(ref destinationState, ref sourceState, ref parent);
         return true;
-        
-        [SkipLocalsInit]
-        bool MoveEntryWithReEncoding(ref CursorState destinationState, Span<ushort> entries)
-        {
-            // PERF: This method is marked SkipLocalInit because we want to avoid initialize these values
-            // as we are going to be writing them anyways.
-            byte* entryBuffer = stackalloc byte[EncodingBufferSize];
-            //We get the encoded key and value from the sibling page
-            var originalEntrySize = DecodeEntry(ref sourceState, sourceKeysCopied, out var key, out var value);
 
-            // If we don't have enough free space in the receiving page, we move on. 
-            var requiredSize = EncodeEntry(destinationState.Header, key, value, entryBuffer);
-            if (requiredSize + sizeof(ushort) > destinationState.Header->Upper - destinationState.Header->Lower)
+    }
+
+    [SkipLocalsInit]
+    private bool TryMoveAllEntries(LookupPageHeader* destination, LookupPageHeader* source)
+    {
+        // PERF: This method is marked SkipLocalInit because we want to avoid initialize these values
+        // as we are going to be writing them anyways.
+        byte* entryBuffer = stackalloc byte[EncodingBufferSize];
+
+        bool reEncode = source->KeysBase != destination->KeysBase ||
+                        source->ValuesBase != destination->ValuesBase;
+        // the new entries size is composed of entries from _both_ pages            
+        int combinedEntries = destination->NumberOfEntries + source->NumberOfEntries;
+        var entries = new Span<ushort>((byte*)destination + PageHeader.SizeOf, combinedEntries)[destination->NumberOfEntries..];
+        int idx = 0;
+        if (destination->IsBranch)
+        {
+            // special handling for the left most section
+            (long key, long childValue) = GetFirstActualKeyAndValue(source);
+            var len = EncodeEntry(destination, key, childValue, entryBuffer);
+            if (AddBufferToPage(entryBuffer, len, ref entries[idx]) == false)
+                return false;
+            idx++;
+        }
+        for (; idx < source->NumberOfEntries; idx++)
+        {
+            int requiredSize;
+            byte* buffer;
+            if (reEncode)
             {
-                return false; // done moving entries
+                //We get the encoded key and value from the sibling page
+                DecodeEntry(source, idx, out var key, out var value);
+                requiredSize = EncodeEntry(destination, key, value, entryBuffer);
+                buffer = entryBuffer;
+            }
+            else
+            {
+                // We get the encoded key and value from the sibling page
+                requiredSize = GetEntryBuffer(source, idx, out buffer);
             }
 
-            sourceMovedLength += originalEntrySize;
-
-            // We will update the entries offsets in the receiving page.
-            destinationHeader->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
-            destinationHeader->Upper -= (ushort)requiredSize;
-            destinationHeader->Lower += sizeof(ushort);
-            entries[sourceKeysCopied] = destinationHeader->Upper;
-
-            // We are going to be storing in the following format:
-            // [ keySizeInBits: ushort | key: sequence<byte> | value: varint ]
-            var entryPos = destinationPage.Pointer + destinationHeader->Upper;
-            Memory.Copy(entryPos, entryBuffer, requiredSize);
-
-            Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
-
-            return true;
+            if (AddBufferToPage(buffer, requiredSize, ref entries[idx]) == false)
+                return false;
         }
 
-        bool MoveEntryAsIs(ref CursorState destinationState, Span<ushort> entries)
+        return true;
+        
+        bool AddBufferToPage(byte* buffer, int requiredSize, ref ushort entry)
         {
-            // We get the encoded key and value from the sibling page
-            var len = GetEntryBuffer(ref sourceState, sourceKeysCopied, out var buffer);
+            if (requiredSize + sizeof(ushort) > destination->Upper - destination->Lower)
+            {
+                return false; // failed to move
+            }
 
-            // If we don't have enough free space in the receiving page, we move on. 
-            if (len + sizeof(ushort) > destinationState.Header->Upper - destinationState.Header->Lower)
-                return false; // done moving entries
-
-            sourceMovedLength += len;
             // We will update the entries offsets in the receiving page.
-            destinationHeader->FreeSpace -= (ushort)(len + sizeof(ushort));
-            destinationHeader->Upper -= (ushort)len;
-            destinationHeader->Lower += sizeof(ushort);
-            entries[sourceKeysCopied] = destinationHeader->Upper;
+            destination->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
+            destination->Upper -= (ushort)requiredSize;
+            destination->Lower += sizeof(ushort);
+            entry = destination->Upper;
 
-            Memory.Copy(destinationPage.Pointer + destinationHeader->Upper, buffer, len);
+            var entryPos = (byte*)destination + destination->Upper;
+            Memory.Copy(entryPos, buffer, requiredSize);
 
-            Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
+            Debug.Assert(destination->Upper >= destination->Lower);
+
             return true;
         }
     }
 
-    private void FreePageFor(ref CursorState stateToKeep, ref CursorState stateToDelete)
+    private (long key, long childValue) GetFirstActualKeyAndValue(LookupPageHeader* src)
     {
-        ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
-        DecrementPageNumbers(ref stateToDelete);
+        Debug.Assert(src->IsBranch,"destination->IsBranch");
 
+        DecodeEntry(src, 0, out _, out var childValue);
+
+        var child = src;
+        while (child->IsBranch)
+        {
+            DecodeEntry(src, 0, out _, out var pg);
+            var childPage = _llt.GetPage(pg);
+            child = (LookupPageHeader*)childPage.Pointer;
+        }
+        DecodeEntry(child, 0, out var key, out _);
+
+        // important, we go _down_ the tree until we find the value from the leaf page
+        // note that the *key* value changes and we return the _bottom most_ key with the _first_ value
+        return (key, childValue);
+    }
+
+
+    private bool TryMergeEdgePage(ref CursorState destinationState, ref CursorState parent)
+    {
+        if (destinationState.Header->NumberOfEntries != 0)
+            return false;
+
+        // can just remove the whole thing
+        int position = parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
+        if (position < 0 || position >= parent.Header->NumberOfEntries)
+            throw new ArgumentOutOfRangeException(
+                $"Found a parent page {parent.Page.PageNumber} where the number of entries is invalid ({parent.Header->NumberOfEntries}) since position is ({position})");
+
+        var sibling = GetValue(ref parent, position);
+        var sourceState = new CursorState { Page = _llt.GetPage(sibling) };
+        Debug.Assert(sourceState.Header->IsBranch ^ sourceState.Header->IsLeaf, "sourceState.Header->IsBranch ^ sourceState.Header->IsLeaf");
+        if (parent.LastSearchPosition > 0)
+        {
+            FreePageFor(ref sourceState, ref destinationState, ref parent);
+            return true;
+        }
+
+        // if we are removing the leftmost item, we need to maintain the smallest entry, just copy the sibling's contents
+        long pageNum = destinationState.Page.PageNumber;
+        Memory.Copy(destinationState.Page.Pointer, sourceState.Page.Pointer, Constants.Storage.PageSize);
+        destinationState.Page.PageNumber = pageNum;
+
+        // now ask that we'll remove the _sibling_ page, not us, since we copied it
+        parent.LastSearchPosition++;
+        FreePageFor(ref destinationState, ref sourceState, ref parent);
+        return true;
+    }
+
+    private void FreePageFor(ref CursorState stateToKeep, ref CursorState stateToDelete, ref CursorState parent)
+    {
+        DecrementPageNumbers(ref stateToDelete);
+        Debug.Assert(parent.Header->NumberOfEntries >= 2, "parent.Header->NumberOfEntries >= 2");
         if (parent.Header->NumberOfEntries == 2)
         {
             // let's reduce the height of the tree entirely...
@@ -688,12 +739,13 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                         state.LastSearchPosition = ~state.LastSearchPosition;
                 }
                 SplitPage(ref key, value);
+                VerifySizeOfFullCursor();
                 return;
             }
         }
 
         AddEntryToPage(ref state, requiredSize, entryBufferPtr, isUpdate);
-        VerifySizeOf(ref state);
+        VerifySizeOf(ref state, _internalCursor._pos == 0);
     }
 
     private void AddEntryToPage(ref CursorState state, int requiredSize, byte* entryBufferPtr, bool isUpdate)
@@ -806,7 +858,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             InitializeCursorState(); 
         }
 
-        VerifySizeOf(ref state);
+        VerifySizeOf(ref state, _internalCursor._pos == 0);
     }
 
     private TLookupKey SplitPageEncodedEntries(ref TLookupKey causeForSplit, Page page, long valueForSplit, ref CursorState state)
@@ -821,9 +873,26 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         if (numberOfEntries == state.LastSearchPosition && state.LastMatch > 0)
         {
             newPageState.LastSearchPosition = 0; // add as first
+
+            var splitMarker = causeForSplit;
+            
+            if (state.Header->IsBranch) // we cannot allow a branch with a single element, steal another one
+            {
+                DecodeEntry(ref state, state.Header->NumberOfEntries - 1, out var k, out var v);
+                RemoveFromPage(allowRecurse: false, state.Header->NumberOfEntries - 1);
+                // the first item in a branch is always the smallest
+                var prevEntryLen = EncodeEntry(newPageState.Header, TLookupKey.MinValue, v, entryBufferPtr);
+                AddEntryToPage(ref newPageState, prevEntryLen, entryBufferPtr, isUpdate: false);
+         
+                newPageState.LastSearchPosition++;
+                
+                splitMarker = TLookupKey.FromLong<TLookupKey>(k);
+            }
+            
             var entryLength = EncodeEntry(newPageState.Header, causeForSplit.ToLong(), valueForSplit, entryBufferPtr);
             AddEntryToPage(ref newPageState, entryLength, entryBufferPtr, isUpdate: false);
-            return causeForSplit;
+
+            return splitMarker;
         }
 
         // non sequential write, let's just split in middle
@@ -871,10 +940,21 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Debug.Assert(updatedPageState.Header->Upper - updatedPageState.Header->Lower >= entryLength + sizeof(ushort));
             AddEntryToPage(ref updatedPageState, entryLength, entryBufferPtr, isUpdate: false);
         }
-        VerifySizeOf(ref newPageState);
-        VerifySizeOf(ref state);
+        VerifySizeOf(ref newPageState, isRoot: false);
+        VerifySizeOf(ref state, isRoot: false);
 
-        return TLookupKey.FromLong<TLookupKey>(GetKeyData(ref newPageState, 0));
+        long separatorKey = GetKeyData(ref newPageState, 0);
+        if (newPageState.Header->IsBranch)
+        {
+            // here we insert a minimum value as the first item of the branch
+            var k = TLookupKey.FromLong<TLookupKey>(separatorKey);
+            RemoveEntryFromPage(ref newPageState, ref k, 0, out var pageNum);
+            var requiredSize = EncodeEntry(state.Header, TLookupKey.MinValue, pageNum, entryBufferPtr);
+            newPageState.LastSearchPosition = 0;
+            AddEntryToPage(ref newPageState, requiredSize, entryBufferPtr, false);
+        }
+
+        return TLookupKey.FromLong<TLookupKey>(separatorKey);
     }
 
     private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state, ref CursorState newPageState)
@@ -903,7 +983,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
     [Conditional("DEBUG")]
-    private static void VerifySizeOf(ref CursorState p)
+    private static void VerifySizeOf(ref CursorState p, bool isRoot)
     {
         if (p.Header == null)
             return; // page may have been released
@@ -916,6 +996,14 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         if (p.Header->FreeSpace > Constants.Storage.PageSize - PageHeader.SizeOf)
         {
             throw new InvalidOperationException($"FreeSpace is too large: {p.Header->FreeSpace}");
+        }
+        
+        if(p.Header->IsBranch && p.Header->NumberOfEntries <2)
+            throw new InvalidOperationException($"Branch page with too few records: {p.Header->NumberOfEntries}");
+
+        if (p.Header->IsLeaf && p.Header->NumberOfEntries == 0 && isRoot == false /* the root is allowed to be empty*/)
+        {
+            throw new InvalidOperationException($"Leaf page with too few records: {p.Header->NumberOfEntries}");
         }
 
         var actualFreeSpace = p.ComputeFreeSpace();
@@ -1168,9 +1256,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
     [Conditional("DEBUG")]
-    public void Render()
+    public void Render(int steps = 1)
     {
-        DebugStuff.RenderAndShow(this);
+        DebugStuff.RenderAndShow(this, steps);
     }
 
     /// <summary>
@@ -1546,5 +1634,42 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
 
         return shouldBeInCurrentPage;
+    }
+
+    public void VerifyStructure()
+    {
+        var state = new CursorState { Page = _llt.GetPage(_state.RootPage) };
+        if (state.Header->NumberOfEntries == 0)
+            return;
+        var previous = TLookupKey.FromLong<TLookupKey>(TLookupKey.MinValue);
+        VerifyStructure(state, ref previous);
+
+    }
+
+    private void VerifyStructure(CursorState state, ref TLookupKey previous)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+        for (int i = 0; i < state.Header->NumberOfEntries; i++)
+        {
+            GetKeyAndValue(ref state, i,out var keyData, out var value);
+            if (i == 0 && state.Header->IsBranch)
+            {
+                if (keyData != TLookupKey.MinValue)
+                    throw new InvalidOperationException("First item on branch page isn't the minimum value!");
+                
+                continue;
+            }
+            var key = TLookupKey.FromLong<TLookupKey>(keyData);
+            if (previous.CompareTo(key) > 0)
+                throw new InvalidOperationException("Unsorted values: " + previous + " >= " + key + " on " + state.Header->PageNumber);
+            previous = key;
+
+            if (state.Header->IsBranch)
+            {
+                // we recurse down and *update* the previous, so we get cross page verification as well
+                var child = new CursorState { Page = _llt.GetPage(value) };
+                VerifyStructure(child, ref previous);
+            }
+        }
     }
 }
