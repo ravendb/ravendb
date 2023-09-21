@@ -343,7 +343,7 @@ namespace Raven.Server
             if (licenseStatus.Version.Major >= 6 || licenseStatus.IsCloud)
                 return;
 
-            var licenseFromApi = GetLicenseFromApi(license, serverStore, contextPool).GetAwaiter().GetResult();
+            var licenseFromApi = GetLicenseFromApi(license, contextPool).GetAwaiter().GetResult();
             if (licenseFromApi != null)
             {
                 licenseStatus = LicenseManager.GetLicenseStatus(licenseFromApi);
@@ -370,11 +370,14 @@ namespace Raven.Server
                 }
             }
 
-            throw new LicenseLimitException($"Your license version with ID '{licenseStatus.Id}' is '{licenseStatus.Version}' doesn't allow you to upgrade to server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
-                                            $"You can upgrade your license on the following website: https://ravendb.net/l/8O2YU1");
+            throw new LicenseLimitException($"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to upgrade to server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
+                                            $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first. " +
+                                            $"After the upgrade, if your server has access to {ApiHttpClient.ApiRavenDbNet}, your license will be automatically updated. " +
+                                            $"In case of connectivity issues with {ApiHttpClient.ApiRavenDbNet} please either update the license via one of the configuration options '{RavenConfiguration.GetKey(x => x.Licensing.LicensePath)}', '{RavenConfiguration.GetKey(x => x.Licensing.License)}', " +
+                                            $"or downgrade to the previous version of RavenDB, apply the new license and continue the update procedure.");
         }
 
-        private static async Task<License> GetLicenseFromApi(License license, ServerStore serverStore, TransactionContextPool contextPool)
+        private static async Task<License> GetLicenseFromApi(License license, TransactionContextPool contextPool)
         {
             try
             {
