@@ -266,7 +266,6 @@ public sealed partial class ClusterStateMachine
                 if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
                     return;
 
-
                 if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 

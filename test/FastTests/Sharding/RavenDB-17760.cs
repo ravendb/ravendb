@@ -222,7 +222,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task CanGetRevisionsByBucket()
         {
             using var store = Sharding.GetDocumentStore();

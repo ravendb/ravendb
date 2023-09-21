@@ -15,7 +15,7 @@ namespace FastTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport)]
+        [RavenFact(RavenTestCategory.BackupExportImport, LicenseRequired = true)]
         public async Task CanChangeBackupFrequency()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
