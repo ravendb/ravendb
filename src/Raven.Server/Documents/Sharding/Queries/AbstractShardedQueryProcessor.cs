@@ -12,6 +12,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
@@ -749,7 +750,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                         documentIncludes.Add(new Document
                         {
                             Id = id,
-                            Data = missing
+                            Data = missing,
+                            ChangeVector = metadata.GetChangeVector()
                         });
                     }
                 }

@@ -79,6 +79,8 @@ namespace SlowTests.Issues
                     Assert.Equal("Street1", address.Street);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.NotNull(session.Advanced.GetChangeVectorFor(address));
                 }
             }
         }
