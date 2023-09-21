@@ -1242,7 +1242,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillNotCreateRevision()
         {
             var product = new Product { Description = "A fine document db", Quantity = 5 };
