@@ -426,7 +426,7 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            if (licenseStatus.Version.Major < 6)
+            if (licenseStatus.Version.Major < 6 && licenseStatus.IsCloud == false)
             {
                 if (skipGettingUpdatedLicense)
                 {
