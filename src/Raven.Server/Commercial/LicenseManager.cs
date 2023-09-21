@@ -33,6 +33,7 @@ using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -45,6 +46,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
+using static Raven.Server.Monitoring.Snmp.SnmpOids;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial
@@ -375,16 +377,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private int GetUtilizedCores()
-        {
-            var licenseLimits = _serverStore.LoadLicenseLimits();
-            var detailsPerNode = licenseLimits?.NodeLicenseDetails;
-            if (detailsPerNode == null)
-                return 0;
-
-            return detailsPerNode.Sum(x => x.Value.UtilizedCores);
-        }
-
         public async Task ActivateAsync(License license, string raftRequestId, bool skipGettingUpdatedLicense = false)
         {
             var licenseStatus = GetLicenseStatus(license);
@@ -559,9 +551,9 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task<HttpResponseMessage> GetUpdatedLicenseResponseMessage(License currentLicense)
+        public static async Task<HttpResponseMessage> GetUpdatedLicenseResponseMessage(License currentLicense, TransactionContextPool contextPool)
         {
-            var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
+            var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense, contextPool);
 
             var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
                     new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
@@ -572,7 +564,7 @@ namespace Raven.Server.Commercial
 
         public async Task<License> GetUpdatedLicense(License currentLicense)
         {
-            var response = await GetUpdatedLicenseResponseMessage(currentLicense).ConfigureAwait(false);
+            var response = await GetUpdatedLicenseResponseMessage(currentLicense, _serverStore.ContextPool).ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
                 return null;
 
@@ -580,7 +572,7 @@ namespace Raven.Server.Commercial
             return leasedLicense.License;
         }
 
-        private static async Task<LeasedLicense> ConvertResponseToLeasedLicense(HttpResponseMessage httpResponseMessage)
+        public static async Task<LeasedLicense> ConvertResponseToLeasedLicense(HttpResponseMessage httpResponseMessage)
         {
             var leasedLicenseAsStream = await httpResponseMessage.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -591,34 +583,57 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private LeaseLicenseInfo GetLeaseLicenseInfo(License license)
+        private static LeaseLicenseInfo GetLeaseLicenseInfo(License license, TransactionContextPool contextPool)
         {
-            return new LeaseLicenseInfo
-            {
-                License = license,
-                BuildInfo = BuildInfo,
-                OsInfo = OsInfo,
-                ClusterId = _serverStore.GetClusterTopology().TopologyId,
-                UtilizedCores = GetUtilizedCores(),
-                NodeTag = _serverStore.NodeTag,
-                StudioEnvironment = GetStudioEnvironment()
-            };
-        }
-
-        private StudioConfiguration.StudioEnvironment GetStudioEnvironment()
-        {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var studioConfigurationJson = _serverStore.Cluster.Read(context, Constants.Configuration.StudioId, out long _);
+                return new LeaseLicenseInfo
+                {
+                    License = license,
+                    BuildInfo = BuildInfo,
+                    OsInfo = OsInfo,
+                    ClusterId = RachisConsensus.GetClusterTopology(context).TopologyId,
+                    UtilizedCores = GetUtilizedCores(context),
+                    NodeTag = RachisConsensus.ReadNodeTag(context),
+                    StudioEnvironment = GetStudioEnvironment(context)
+                };
+            }
+        }
+
+        private static int GetUtilizedCores(TransactionOperationContext context)
+        {
+            var lowerName = ServerStore.LicenseLimitsStorageKey.ToLowerInvariant();
+
+            using (Slice.From(context.Allocator, lowerName, out Slice key))
+            {
+                var licenseLimitsBlittable = ClusterStateMachine.ReadInternal(context, out _, key);
+                if (licenseLimitsBlittable == null)
+                    return 0;
+
+                var licenseLimits = JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
+                var detailsPerNode = licenseLimits?.NodeLicenseDetails;
+                if (detailsPerNode == null)
+                    return 0;
+
+                return detailsPerNode.Sum(x => x.Value.UtilizedCores);
+            }
+        }
+
+        private static StudioConfiguration.StudioEnvironment GetStudioEnvironment(TransactionOperationContext context)
+        {
+            var lowerName = Constants.Configuration.StudioId.ToLowerInvariant();
+
+            using (Slice.From(context.Allocator, lowerName, out Slice key))
+            {
+                var studioConfigurationJson = ClusterStateMachine.ReadInternal(context, out _, key);
+
                 if (studioConfigurationJson == null)
                     return StudioConfiguration.StudioEnvironment.None;
 
                 var studioConfiguration = JsonDeserializationServer.ServerWideStudioConfiguration(studioConfigurationJson);
 
-                return studioConfiguration.Disabled ?
-                    StudioConfiguration.StudioEnvironment.None :
-                    studioConfiguration.Environment;
+                return studioConfiguration.Disabled ? StudioConfiguration.StudioEnvironment.None : studioConfiguration.Environment;
             }
         }
 
@@ -652,7 +667,7 @@ namespace Raven.Server.Commercial
                     return null;
                 }
 
-                var response = await GetUpdatedLicenseResponseMessage(currentLicense).ConfigureAwait(false);
+                var response = await GetUpdatedLicenseResponseMessage(currentLicense, _serverStore.ContextPool).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode == false)
                 {
@@ -1792,7 +1807,7 @@ namespace Raven.Server.Commercial
                 return GetDefaultLicenseSupportInfo();
             }
 
-            var leaseLicenseInfo = GetLeaseLicenseInfo(license);
+            var leaseLicenseInfo = GetLeaseLicenseInfo(license, _serverStore.ContextPool);
             const int timeoutInSec = 5;
             try
             {

@@ -536,6 +536,14 @@ namespace Raven.Server.Rachis
             return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
         }
 
+        public static string ReadNodeTag(TransactionOperationContext context)
+        {
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+
+            var readResult = state.Read(TagSlice);
+            return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
+        }
+
         public string ReadPreviousNodeTag(ClusterOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
@@ -1173,6 +1181,12 @@ namespace Raven.Server.Rachis
         }
 
         public unsafe ClusterTopology GetTopology<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
+        {
+            return RachisConsensus.GetClusterTopology(context);
+        }
+
+        public static unsafe ClusterTopology GetClusterTopology<TTransaction>(TransactionOperationContext<TTransaction> context)
             where TTransaction : RavenTransaction
         {
             Debug.Assert(context.Transaction != null);
