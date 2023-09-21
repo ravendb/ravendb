@@ -37,7 +37,7 @@ namespace FastTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task CanChangeBackupFrequency_Sharding()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace FastTests.Server.Basic
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillNotFilterMetadataPropertiesStartingWithAt()
         {
             using (var store = GetDocumentStore())
