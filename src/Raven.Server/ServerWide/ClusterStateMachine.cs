@@ -515,7 +515,7 @@ namespace Raven.Server.ServerWide
 
 
                     case nameof(PutSubscriptionCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out _, onCommandExecuted: (items, updateValueCommand) =>
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out _, onBeforeCommandExecuted: (items, updateValueCommand) =>
                         {
                             AssertSubscriptionsLicenseLimits(serverStore, items, (PutSubscriptionCommand)updateValueCommand, context);
                         });
@@ -1500,7 +1500,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result, Action<Table, UpdateValueForDatabaseCommand> onCommandExecuted = null)
+        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result, Action<Table, UpdateValueForDatabaseCommand> onBeforeCommandExecuted = null)
         {
             UpdateValueForDatabaseCommand updateCommand = null;
             Exception exception = null;
@@ -1510,6 +1510,8 @@ namespace Raven.Server.ServerWide
 
                 updateCommand = (UpdateValueForDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
 
+                onBeforeCommandExecuted?.Invoke(items, updateCommand);
+
                 using (var databaseRecord = ReadRawDatabaseRecord(context, updateCommand.DatabaseName))
                 {
                     if (databaseRecord == null)
@@ -1517,8 +1519,6 @@ namespace Raven.Server.ServerWide
 
                     updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
                 }
-
-                onCommandExecuted?.Invoke(items, updateCommand);
             }
             catch (Exception e)
             {
@@ -1784,6 +1784,13 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
+                    AssertLicenseLimits(type, serverStore, addDatabaseCommand.Record, items, context);
+
+                    foreach (var command in _licenseLimitsCommandsForCreateDatabase)
+                    {
+                        AssertLicenseLimits(command, serverStore, addDatabaseCommand.Record, items, context);
+                    }
+
                     bool shouldSetClientConfigEtag;
                     using (var oldDatabaseRecord = ReadRawDatabaseRecord(context, addDatabaseCommand.Name))
                     {
@@ -1797,13 +1804,6 @@ namespace Raven.Server.ServerWide
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
-
-                        AssertLicenseLimits(type, serverStore, addDatabaseCommand.Record, items, context);
-
-                        foreach (var command in _licenseLimitsCommandsForCreateDatabase)
-                        {
-                            AssertLicenseLimits(command, serverStore, addDatabaseCommand.Record, items, context);
-                        }
 
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
                         if (addDatabaseCommand.Record.IsSharded == false)
@@ -2711,11 +2711,11 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
+                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context);
+
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
-
-                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context);
                 }
             }
             catch (Exception e)
@@ -4047,7 +4047,7 @@ namespace Raven.Server.ServerWide
             {
                 //if this is a shard database, we need to change the sharded database record
                 var isShard = ShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out string recordDatabaseName, out int shardNumber);
-                
+
                 var key = "db/" + recordDatabaseName;
                 using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice valueNameLowered))
                 {
@@ -4094,7 +4094,7 @@ namespace Raven.Server.ServerWide
                                 throw new RachisInvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: {databaseName}");
                             }
 
-                            if(isShard && rawDatabaseRecord.Sharding.Shards.ContainsKey(shardNumber) == false)
+                            if (isShard && rawDatabaseRecord.Sharding.Shards.ContainsKey(shardNumber) == false)
                                 throw new RachisInvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for shard {shardNumber} in database {databaseName} because this shard does not belong to the database");
 
                             var topology = isShard ? rawDatabaseRecord.Sharding.Shards[shardNumber] : rawDatabaseRecord.Topology;
