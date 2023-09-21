@@ -213,7 +213,7 @@ public sealed partial class ClusterStateMachine
                 var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
                 if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0)
                 {
-                    var totalSorters = GetTotal(DatabaseRecordElementType.CustomSorters); //TODO: add server wide sorters count
+                    var totalSorters = GetTotal(DatabaseRecordElementType.CustomSorters);
                     if (totalSorters <= maxCustomSortersPerCluster)
                         return;
 
@@ -237,7 +237,7 @@ public sealed partial class ClusterStateMachine
                 var maxAnalyzersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
                 if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0)
                 {
-                    var totalAnalyzers = GetTotal(DatabaseRecordElementType.Analyzers); //TODO: add server wide analyzers count
+                    var totalAnalyzers = GetTotal(DatabaseRecordElementType.Analyzers);
                     if (totalAnalyzers <= maxAnalyzersPerCluster)
                         return;
 
