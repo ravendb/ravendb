@@ -125,7 +125,7 @@ public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection
     }
 
     protected override IAsyncEnumerable<ShardStreamItem<Document>> GetDocumentsAsync() =>
-        RequestHandler.DatabaseContext.Streaming.GetDocumentsAsync(_combinedReadState, _continuationToken);
+        RequestHandler.DatabaseContext.Streaming.PagedShardedDocumentsByLastModified(_combinedReadState, "Results", _continuationToken);
 
     protected override async ValueTask<List<string>> GetAvailableColumnsAsync()
     {

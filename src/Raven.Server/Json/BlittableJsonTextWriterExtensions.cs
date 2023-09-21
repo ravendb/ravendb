@@ -1892,7 +1892,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, CancellationToken token)
+        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, CancellationToken token)
         {
             long numberOfResults = 0;
             long totalDocumentsSizeInBytes = 0;
@@ -1920,6 +1920,49 @@ namespace Raven.Server.Json
                     
                     var writtenBytes = await writer.MaybeFlushAsync(token);
                     
+                    if (o.HasParent)
+                    {
+                        // If blittable has a parent then its size is the parent's size
+                        // Let's use the number of actually written bytes then
+                        totalDocumentsSizeInBytes += writtenBytes;
+                    }
+                    else
+                        totalDocumentsSizeInBytes += o.Size;
+                }
+            }
+
+            writer.WriteEndArray();
+            return (numberOfResults, totalDocumentsSizeInBytes);
+        }
+
+        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IAsyncEnumerable<BlittableJsonReaderObject> objects, CancellationToken token)
+        {
+            long numberOfResults = 0;
+            long totalDocumentsSizeInBytes = 0;
+
+            writer.WriteStartArray();
+
+            var first = true;
+            await foreach (var o in objects.WithCancellation(token))
+            {
+                numberOfResults++;
+
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                if (o == null)
+                {
+                    writer.WriteNull();
+                    continue;
+                }
+
+                using (o)
+                {
+                    writer.WriteObject(o);
+
+                    var writtenBytes = await writer.MaybeFlushAsync(token);
+
                     if (o.HasParent)
                     {
                         // If blittable has a parent then its size is the parent's size

@@ -150,10 +150,15 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         });
     }
 
-    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName, List<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
+    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+        DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
     {
-        writer.WritePropertyName(propertyName);
+        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
+    }
 
+    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+        DocumentsOperationContext context, IAsyncEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
+    {
         return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
     }
 
