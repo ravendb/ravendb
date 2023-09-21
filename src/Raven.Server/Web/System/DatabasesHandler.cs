@@ -187,14 +187,10 @@ namespace Raven.Server.Web.System
                             stampIndex = topology.Stamp?.Index ?? -1;
                         }
 
-                        dbNodes = topology.Members.Select(x =>
-                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member))
-                            .Concat(topology.Rehabs.Select(x =>
-                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Rehab)));
+                        dbNodes = GetNodes(topology.Members, ServerNode.Role.Member).Concat(GetNodes(topology.Rehabs, ServerNode.Role.Rehab));
 
                         if (includePromotables)
-                            promotables = topology.Promotables.Select(x =>
-                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Promotable));
+                            promotables = GetNodes(topology.Promotables, ServerNode.Role.Promotable);
 
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -202,6 +198,18 @@ namespace Raven.Server.Web.System
                             [nameof(Topology.Nodes)] = new DynamicJsonArray(dbNodes),
                             [nameof(Topology.Etag)] = stampIndex
                         });
+
+                        IEnumerable<DynamicJsonValue> GetNodes(List<string> nodes, ServerNode.Role serverRole)
+                        {
+                            foreach (var node in nodes)
+                            {
+                                var url = GetUrl(node, clusterTopology, usePrivate);
+                                if (url == null)
+                                    continue;
+
+                                yield return TopologyNodeToJson(node, url, name, serverRole);
+                            }
+                        }
                     }
                 }
             }

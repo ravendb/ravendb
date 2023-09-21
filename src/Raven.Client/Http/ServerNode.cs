@@ -118,5 +118,10 @@ namespace Raven.Client.Http
             
             return newTopology;
         }
+
+        public override string ToString()
+        {
+            return $"{{Url: {Url}, Database: {Database}, ClusterTag: {ClusterTag}, ServerRole: {ServerRole}}}";
+        }
     }
 }

@@ -1561,9 +1561,11 @@ namespace Raven.Server.Documents
                     {
                         Monitor.Exit(state.Locker);
 
-                        if (sp?.Elapsed > TimeSpan.FromSeconds(10))
+                        sp?.Stop();
+
+                        if (sp?.Elapsed > TimeSpan.FromSeconds(10) && state.Logger.IsOperationsEnabled)
                         {
-                            if (state.Logger.IsOperationsEnabled)
+                            try
                             {
                                 using (state.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                                 using (ctx.OpenReadTransaction())
@@ -1577,6 +1579,13 @@ namespace Raven.Server.Documents
                                     Console.WriteLine(msg);
 #endif
                                 }
+                            }
+                            catch (OperationCanceledException)
+                            {
+                            }
+                            catch (Exception e)
+                            {
+                                state.Logger.Operations($"Failed to log long held cluster lock: {sp.Elapsed} in database {state.Name}", e);
                             }
                         }
                     }
