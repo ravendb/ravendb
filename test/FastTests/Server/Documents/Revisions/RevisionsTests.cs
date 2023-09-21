@@ -11,6 +11,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
+using Microsoft.Extensions.Azure;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
@@ -55,7 +56,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsByChangeVectorsLazily(Options options)
         {
@@ -100,7 +101,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetForLazily(Options options)
         {
@@ -139,7 +140,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsByIdAndTimeLazily(Options options)
         {
@@ -178,7 +179,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetMetadataForLazily()
         {
             using (var store = GetDocumentStore())
@@ -218,7 +219,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetRevisionsByChangeVectorLazily()
         {
             using (var store = GetDocumentStore())
@@ -271,7 +272,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetForAsyncLazily()
         {
             using (var store = GetDocumentStore())
@@ -309,7 +310,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetMetadataForAsyncLazily()
         {
             using (var store = GetDocumentStore())
@@ -362,7 +363,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsByChangeVectors2(Options options)
         {
@@ -404,7 +405,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions | RavenTestCategory.Sharding, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CanGetRevisionsByChangeVectors2Shards(Options options)
         {
@@ -473,7 +474,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsByChangeVectorsNonExist(Options options)
         {
@@ -514,7 +515,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsByIdStartTake(Options options)
         {
@@ -559,7 +560,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetRevisionsByIdAndTimeAsyncLazily()
         {
             using (var store = GetDocumentStore())
@@ -597,7 +598,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetRevisionsByChangeVectorAsyncLazily()
         {
             using (var store = GetDocumentStore())
@@ -642,7 +643,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetRevisionsByChangeVectorsAsyncLazily()
         {
             using (var store = GetDocumentStore())
@@ -701,7 +702,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsByChangeVectors(Options options)
         {
@@ -745,7 +746,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task ZeroMinimumRevisionsToKeepShouldWork()
         {
             using (var store = GetDocumentStore())
@@ -785,7 +786,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task EnforceRevisionConfiguration()
         {
             using (var store = GetDocumentStore())
@@ -860,7 +861,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task EnforceRevisionConfigurationWithTombstones()
         {
             using (var store = GetDocumentStore())
@@ -936,7 +937,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task EnforceEmptyConfigurationWillDeleteAllRevisions()
         {
             using (var store = GetDocumentStore())
@@ -985,7 +986,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetNullForNotExistsDocument()
         {
             using (var store = GetDocumentStore())
@@ -1006,7 +1007,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetAllRevisionsFor()
         {
             var company = new Company { Name = "Company Name" };
@@ -1036,7 +1037,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanCheckIfDocumentHasRevisions()
         {
             var company = new Company { Name = "Company Name" };
@@ -1059,7 +1060,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task RemoveHasRevisionsFlag()
         {
             var company = new Company { Name = "Company Name" };
@@ -1103,7 +1104,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task GetRevisionsOfNotExistKey()
         {
             using (var store = GetDocumentStore())
@@ -1117,7 +1118,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanExcludeEntitiesFromRevisions()
         {
             var user = new User { Name = "User Name" };
@@ -1141,7 +1142,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task ServerSaveBundlesAfterRestart()
         {
             var path = NewDataPath();
@@ -1179,7 +1180,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillCreateRevision()
         {
             var product = new User { Name = "Hibernating" };
@@ -1217,7 +1218,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillCreateValidRevisionWhenCompressionDocumentWasSaved()
         {
             var user = new User { Name = new string('1', 4096 * 2) }; // create a string which will be compressed
@@ -1276,7 +1277,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillDeleteOldRevisions()
         {
             var company = new Company { Name = "Company #1" };
@@ -1304,7 +1305,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue()
         {
             using (var store = GetDocumentStore())
@@ -1371,7 +1372,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task RevisionsOrder()
         {
             using (var store = GetDocumentStore())
@@ -1409,7 +1410,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetCountersSnapshotInRevisions()
         {
             using (var store = GetDocumentStore())
@@ -1570,7 +1571,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions, LicenseRequired = true)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task GetRevisionsBinEntries(bool useSession)
@@ -1644,7 +1645,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task GetRevisionsBinEntries2(Options options)
         {
@@ -1691,7 +1692,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task EnforceRevisionsConfiguration(Options options)
         {
@@ -1737,7 +1738,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task DeleteRevisions(Options options)
         {
@@ -1785,7 +1786,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions, LicenseRequired = true)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)
@@ -1838,7 +1839,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task DeleteRevisionsWhenNoneExistShouldNotThrow()
         {
             using (var store = GetDocumentStore())
@@ -1953,7 +1954,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetAllRevisionsForDocument_UsingStoreOperation(Options options)
         {
@@ -1985,7 +1986,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsWithPaging_UsingStoreOperation(Options options)
         {
@@ -2038,7 +2039,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetRevisionsWithPaging2_UsingStoreOperation()
         {
             using (var store = GetDocumentStore())
@@ -2076,7 +2077,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsCountFor(Options options)
         {
@@ -2113,7 +2114,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetRevisionsCountForAsync(Options options)
         {
@@ -2142,7 +2143,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task GetRevisionsByIdShouldGetNotModifiedStatus(Options options)
         {
@@ -2186,7 +2187,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task GetRevisionsByChangeVectorsShouldGetNotModifiedStatus(Options options)
         {

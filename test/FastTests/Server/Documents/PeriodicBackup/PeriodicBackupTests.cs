@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
@@ -22,7 +23,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport, LicenseRequired = true)]
         public async Task CanSetupPeriodicBackupWithVeryLargePeriods()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
