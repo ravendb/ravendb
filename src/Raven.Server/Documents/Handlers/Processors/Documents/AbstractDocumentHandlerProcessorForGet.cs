@@ -213,7 +213,9 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         {
             writer.WriteStartObject();
 
-            (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, nameof(GetDocumentsResult.Results), result.Documents, metadataOnly, CancellationToken);
+            writer.WritePropertyName(nameof(GetDocumentsResult.Results));
+
+            (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
 
             writer.WriteComma();
 
@@ -254,8 +256,13 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         return (numberOfResults, totalDocumentsSizeInBytes);
     }
 
-    protected abstract ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer, TOperationContext context, string propertyName,
-        List<TDocumentType> documentsToWrite, bool metadataOnly, CancellationToken token);
+    protected abstract ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+        TOperationContext context,
+        IEnumerable<TDocumentType> documentsToWrite, bool metadataOnly, CancellationToken token);
+
+    protected abstract ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+        TOperationContext context,
+        IAsyncEnumerable<TDocumentType> documentsToWrite, bool metadataOnly, CancellationToken token);
 
     protected abstract ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, TOperationContext context, string propertyName,
         List<TDocumentType> includes, CancellationToken token);
@@ -285,9 +292,13 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             writer.WritePropertyName("Results");
 
             if (result.DocumentsAsync != null)
-                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, result.DocumentsAsync, metadataOnly, CancellationToken);
+            {
+               (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.DocumentsAsync, metadataOnly, CancellationToken);
+            }
             else
-                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, result.Documents, metadataOnly, CancellationToken);
+            {
+                (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
+            }
 
             if (result.ContinuationToken != null)
             {
@@ -454,9 +465,9 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     protected sealed class DocumentsResult
     {
-        public IAsyncEnumerable<Document> DocumentsAsync { get; set; }
+        public IAsyncEnumerable<TDocumentType> DocumentsAsync { get; set; }
 
-        public IEnumerable<Document> Documents { get; set; }
+        public IEnumerable<TDocumentType> Documents { get; set; }
 
         public ShardedPagingContinuation ContinuationToken { get; set; }
 

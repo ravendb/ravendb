@@ -147,19 +147,6 @@ namespace Raven.Server.Documents.Sharding
                     pagingContinuation);
             }
 
-            public IAsyncEnumerable<ShardStreamItem<Document>> PagedShardedDocumentsById(
-                CombinedReadContinuationState combinedState,
-                string name,
-                ShardedPagingContinuation pagingContinuation)
-            {
-                return PagedShardedStream(
-                    combinedState,
-                    name,
-                    ShardResultConverter.BlittableToDocumentConverter,
-                    DocumentIdComparer.Instance,
-                    pagingContinuation);
-            }
-
             public IAsyncEnumerable<ShardStreamItem<BlittableJsonReaderObject>> PagedShardedDocumentsBlittableByLastModified(
                 CombinedReadContinuationState combinedState,
                 string name,
@@ -236,14 +223,24 @@ namespace Raven.Server.Documents.Sharding
                     pagingContinuation);
             }
 
-            public IAsyncEnumerable<ShardStreamItem<Document>> GetDocumentsAsync(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation, string resultPropertyName = "Results") => 
-                PagedShardedDocumentsByLastModified(documents, resultPropertyName, pagingContinuation);
+            public IAsyncEnumerable<ShardStreamItem<BlittableJsonReaderObject>> GetDocumentsAsync(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation) =>
+                PagedShardedStream(
+                documents,
+                "Results",
+                x => x,
+                DocumentLastModifiedComparer.Instance,
+                pagingContinuation);
 
-            public IAsyncEnumerable<ShardStreamItem<Document>> GetDocumentsAsyncById(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation, string resultPropertyName = "Results") => 
-                PagedShardedDocumentsById(documents, resultPropertyName, pagingContinuation);
+            public IAsyncEnumerable<ShardStreamItem<BlittableJsonReaderObject>> GetDocumentsAsyncById(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation) =>
+                PagedShardedStream(
+                documents,
+                "Results",
+                x => x,
+                BlittableIdComparer.Instance,
+                pagingContinuation);
 
-            
-            public static async IAsyncEnumerable<Document> UnwrapDocuments(IAsyncEnumerable<ShardStreamItem<Document>> docs,
+
+            public static async IAsyncEnumerable<T> UnwrapDocuments<T>(IAsyncEnumerable<ShardStreamItem<T>> docs,
                 ShardedPagingContinuation shardedPagingContinuation)
             {
                 await foreach (var doc in docs)

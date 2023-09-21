@@ -97,12 +97,18 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
         return result;
     }
 
-    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer, TransactionOperationContext context, string propertyName, List<BlittableJsonReaderObject> documentsToWrite,
+    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+        TransactionOperationContext context, IEnumerable<BlittableJsonReaderObject> documentsToWrite,
         bool metadataOnly, CancellationToken token)
     {
-        await writer.WriteArrayAsync(propertyName, documentsToWrite);
+        return await writer.WriteObjectsAsync(context, documentsToWrite, token);
+    }
 
-        return (documentsToWrite.Count, -1);
+    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+        TransactionOperationContext context, IAsyncEnumerable<BlittableJsonReaderObject> documentsToWrite,
+        bool metadataOnly, CancellationToken token)
+    {
+        return await writer.WriteObjectsAsync(context, documentsToWrite, token);
     }
 
     protected override async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, TransactionOperationContext context, string propertyName, List<BlittableJsonReaderObject> includes, CancellationToken token)
@@ -147,7 +153,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
 
         Disposables.Add(streams);
 
-        IAsyncEnumerable<ShardStreamItem<Document>> documents;
+        IAsyncEnumerable<ShardStreamItem<BlittableJsonReaderObject>> documents;
         if (startsWith != null)
         {
             documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsyncById(streams, token);

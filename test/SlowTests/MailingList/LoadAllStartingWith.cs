@@ -54,6 +54,9 @@ namespace SlowTests.MailingList
 
                     Assert.Equal(1, testClasses.Value.Count());
                     Assert.Equal(1, test2Classes.Count());
+
+                    Assert.NotNull(session.Advanced.GetChangeVectorFor(testClasses.Value.First().Value));
+                    Assert.NotNull(session.Advanced.GetChangeVectorFor(test2Classes.First()));
                 }
             }
         }
