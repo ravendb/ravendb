@@ -898,6 +898,10 @@ namespace Raven.Server.Documents.Patch
                         throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
                     }
                     
+                    if(metadata.TryGetMember(Constants.Documents.Metadata.Archived, out _))
+                    {
+                        return JsValue.Undefined; // no-op, document already archived
+                    }
                     // add @archive-at field
                     metadata.Modifications = new DynamicJsonValue(metadata)
                     {
