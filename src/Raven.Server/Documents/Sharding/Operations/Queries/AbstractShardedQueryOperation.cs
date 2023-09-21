@@ -121,7 +121,7 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
                 if (result.Includes is List<BlittableJsonReaderObject> blittableIncludes)
                     blittableIncludes.Add(include.Clone(context));
                 else if (result.Includes is List<Document> documentIncludes)
-                    documentIncludes.Add(new Document { Id = context.GetLazyString(id), Data = include.Clone(context) });
+                    documentIncludes.Add(new Document { Id = context.GetLazyString(id), Data = include.Clone(context), ChangeVector = include.GetMetadata().GetChangeVector() });
                 else
                     throw new NotSupportedException($"Unknown includes type: {result.Includes.GetType().FullName}");
             }

@@ -86,12 +86,16 @@ namespace SlowTests.Client.Queries
                     Assert.Equal(1, users.Count);
 
                     var loaded = session.Load<RoleData>("role/1");
+                    Assert.NotNull(session.Advanced.GetChangeVectorFor(loaded));
+
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                     Assert.Equal(loaded.Role, "role/1");
 
                     loaded = session.Load<RoleData>("role/2");
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                     Assert.Equal(loaded.Role, "role/2");
+                    Assert.NotNull(session.Advanced.GetChangeVectorFor(loaded));
+
                 }
             }
         }

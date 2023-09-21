@@ -15,6 +15,7 @@ import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
 import { uniqueId } from "lodash";
+import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
@@ -25,20 +26,17 @@ interface AboutViewProps {
 interface AboutViewHeadingProps {
     title: string;
     icon: IconName;
-    badgeText?: string;
+    licenseBadgeText?: LicenseBadgeText;
     marginBottom?: number;
 }
 
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
-    const { title, icon, badgeText, marginBottom } = props;
+    const { title, icon, licenseBadgeText, marginBottom } = props;
+
     return (
         <h2 className={classNames("d-flex align-items-center gap-1 flex-wrap", `mb-${marginBottom ?? 5}`)}>
             <Icon icon={icon} /> {title}{" "}
-            {badgeText != null && (
-                <Badge color="faded-primary" className="about-view-title-badge">
-                    {badgeText}
-                </Badge>
-            )}
+            {licenseBadgeText != null && <LicenseRestrictedBadge licenseRequired={licenseBadgeText} />}
         </h2>
     );
 };
@@ -131,55 +129,5 @@ const AboutViewAnchored = (props: AboutViewProps) => {
     );
 };
 
-interface AccordionItemLicensingProps {
-    description: ReactNode;
-    featureName: string;
-    featureIcon: IconName;
-    children: ReactNode;
-    checkedLicenses: string[];
-    isCommunityLimited?: boolean;
-    isProfessionalLimited?: boolean;
-}
-
-const AccordionItemLicensing = (props: AccordionItemLicensingProps) => {
-    const {
-        featureName,
-        featureIcon,
-        children,
-        checkedLicenses,
-        description,
-        isCommunityLimited,
-        isProfessionalLimited,
-    } = props;
-    const licenses = [
-        { name: "Community", checked: checkedLicenses.includes("Community") },
-        { name: "Professional", checked: checkedLicenses.includes("Professional") },
-        { name: "Enterprise", checked: checkedLicenses.includes("Enterprise") },
-    ];
-    return (
-        <div className="text-center">
-            <div className="lead mb-3 fs-4">{description}</div>
-            <h4>
-                <Icon icon={featureIcon} /> {featureName}
-            </h4>
-            <div className="d-flex flex-wrap gap-3 licensing-cols">
-                {licenses.map((license) => (
-                    <div className="vstack align-items-center" key={license.name}>
-                        <h5 className={classNames("license-name", license.name.toLowerCase())}>{license.name}</h5>
-                        <Icon icon={license.checked ? "tick" : "cancel"} />
-                        {isCommunityLimited && license.name === "Community" ? (
-                            <small className="text-muted">(limited)</small>
-                        ) : null}
-                        {isProfessionalLimited && license.name === "Professional" ? (
-                            <small className="text-muted">(limited)</small>
-                        ) : null}
-                    </div>
-                ))}
-            </div>
-            {children}
-        </div>
-    );
-};
-
 export default AboutViewFloating;
-export { AboutViewFloating, AboutViewAnchored, AccordionItemLicensing, AccordionItemWrapper, AboutViewHeading };
+export { AboutViewFloating, AboutViewAnchored, AccordionItemWrapper, AboutViewHeading };

@@ -53,7 +53,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                             <AboutViewHeading
                                 icon="index-cleanup"
                                 title="Index Cleanup"
-                                badgeText={isProfessionalOrAbove ? null : "Professional +"}
+                                licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
                             />
 
                             <FlexGrow />

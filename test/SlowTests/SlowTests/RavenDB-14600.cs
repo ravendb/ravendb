@@ -2,12 +2,13 @@ using System;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
+using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Order = Tests.Infrastructure.Entities.Order;
 
 namespace SlowTests.SlowTests
 {
@@ -35,7 +36,10 @@ namespace SlowTests.SlowTests
                 Assert.NotEmpty(facets["Employee"].Values);
                 foreach (var f in facets["Employee"].Values)
                 {
-                    s.Load<object>(f.Range);
+                    var e = s.Load<Employee>(f.Range);
+
+                    string cv = s.Advanced.GetChangeVectorFor(e);
+                    Assert.NotNull(cv);
                 }
                 Assert.Equal(1, s.Advanced.NumberOfRequests);
             }
