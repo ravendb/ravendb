@@ -1170,6 +1170,36 @@ namespace Raven.Server.Documents
             }
         }
 
+        public struct AttachmentOrTombstone
+        {
+            public Attachment Attachment;
+            public Tombstone Tombstone;
+            public bool Missing => Attachment == null && Tombstone == null;
+        }
+
+        public AttachmentOrTombstone GetAttachmentOrTombstone(DocumentsOperationContext context, Slice attachmentKey)
+        {
+            var attachment = GetAttachmentByKey(context, attachmentKey);
+            if (attachment != null)
+            {
+                return new AttachmentOrTombstone
+                {
+                    Attachment = attachment
+                };
+            }
+
+            var tombstone = GetAttachmentTombstoneByKey(context, attachmentKey);
+            if (tombstone != null)
+            {
+                return new AttachmentOrTombstone
+                {
+                    Tombstone = tombstone
+                };
+            }
+
+            return new AttachmentOrTombstone();
+        }
+
         private void DeleteAttachmentDirect(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
             LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector)
         {
