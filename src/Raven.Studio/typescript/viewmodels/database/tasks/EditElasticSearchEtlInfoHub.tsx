@@ -24,7 +24,7 @@ export function EditElasticSearchEtlInfoHub() {
             >
                 <p>
                     An <strong>Elasticsearch ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process
-                    that transfers data from documents from this RavenDB database to an Elasticsearch destination.
+                    that transfers data from this RavenDB database to an Elasticsearch destination.
                 </p>
                 <ul>
                     <li>
