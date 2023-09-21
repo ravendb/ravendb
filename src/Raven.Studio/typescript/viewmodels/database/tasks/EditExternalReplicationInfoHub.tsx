@@ -4,15 +4,17 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 import {useRavenLink} from "hooks/useRavenLink";
 
 export function EditExternalReplicationInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+
     const externalReplicationDocsLink = useRavenLink({ hash: "MZOBO3" });
 
     return (
-        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -56,8 +58,8 @@ export function EditExternalReplicationInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isProfessionalOrAbove}
-                data={featureAvailabilityProfessionalOrAbove}
+                isUnlimited={isFeatureInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );

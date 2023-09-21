@@ -21,12 +21,22 @@ const db = DatabasesStubs.nonShardedClusterDatabase();
 interface DefaultDocumentRevisionsProps {
     licenseType: Raven.Server.Commercial.LicenseType;
     isCloud: boolean;
+    canSetupDefaultRevisionsConfiguration: boolean;
+    maxNumberOfRevisionsToKeep: number;
+    maxNumberOfRevisionAgeToKeepInDays: number;
     databaseAccess: databaseAccessLevel;
 }
 
 export const DefaultDocumentRevisions: StoryObj<DefaultDocumentRevisionsProps> = {
     name: "Document Revisions",
-    render: ({ licenseType, isCloud, databaseAccess }: DefaultDocumentRevisionsProps) => {
+    render: ({
+        licenseType,
+        isCloud,
+        canSetupDefaultRevisionsConfiguration,
+        maxNumberOfRevisionsToKeep,
+        maxNumberOfRevisionAgeToKeepInDays,
+        databaseAccess,
+    }: DefaultDocumentRevisionsProps) => {
         const { collectionsTracker, accessManager, license } = mockStore;
         const { databasesService } = mockServices;
 
@@ -41,23 +51,22 @@ export const DefaultDocumentRevisions: StoryObj<DefaultDocumentRevisionsProps> =
             [db.name]: databaseAccess,
         });
 
-        if (licenseType !== "Enterprise" && licenseType !== "Professional" && licenseType !== "Developer") {
-            license.with_LicenseLimited({
-                Type: licenseType,
-                IsCloud: isCloud,
-            });
-        } else {
-            license.with_License({
-                Type: licenseType,
-                IsCloud: isCloud,
-            });
-        }
+        license.with_LicenseLimited({
+            Type: licenseType,
+            IsCloud: isCloud,
+            CanSetupDefaultRevisionsConfiguration: canSetupDefaultRevisionsConfiguration,
+            MaxNumberOfRevisionAgeToKeepInDays: maxNumberOfRevisionAgeToKeepInDays,
+            MaxNumberOfRevisionsToKeep: maxNumberOfRevisionsToKeep,
+        });
 
         return <DocumentRevisions db={db} />;
     },
     args: {
         licenseType: "Community",
         isCloud: false,
+        canSetupDefaultRevisionsConfiguration: false,
+        maxNumberOfRevisionsToKeep: 2,
+        maxNumberOfRevisionAgeToKeepInDays: 45,
         databaseAccess: "DatabaseAdmin",
     },
 };

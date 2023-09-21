@@ -94,7 +94,6 @@ export default function EditRevision(props: EditRevisionProps) {
         genUtils.timeSpanToSeconds(originalConfig.MinimumRevisionAgeToKeep) - formValues.minimumRevisionAgeToKeep >
             revisionsByAgeDelta;
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const revisionsToKeepLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsToKeep"));
     const revisionsAgeInDaysLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionAgeToKeepInDays"));
 
@@ -104,9 +103,8 @@ export default function EditRevision(props: EditRevisionProps) {
 
     const isLimitExceeded =
         !isDefaultConflicts &&
-        !isProfessionalOrAbove &&
-        (minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit ||
-            formValues.minimumRevisionsToKeep > revisionsToKeepLimit);
+        ((revisionsAgeInDaysLimit > 0 && minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit) ||
+            (revisionsToKeepLimit > 0 && formValues.minimumRevisionsToKeep > revisionsToKeepLimit));
 
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info">
@@ -142,7 +140,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                 {isRevisionsToKeepLimitWarning && <LimitWarning limit={revisionsDelta} />}
                             </InputGroup>
                             {!isDefaultConflicts &&
-                            !isProfessionalOrAbove &&
+                            revisionsToKeepLimit > 0 &&
                             formValues.minimumRevisionsToKeep > revisionsToKeepLimit ? (
                                 <Alert color="warning" className="mb-2">
                                     <Icon icon="warning" />
@@ -163,7 +161,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                 showSeconds
                             />
                             {!isDefaultConflicts &&
-                            !isProfessionalOrAbove &&
+                            revisionsAgeInDaysLimit > 0 &&
                             minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit ? (
                                 <Alert color="warning" className="my-2">
                                     <Icon icon="warning" />

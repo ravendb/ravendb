@@ -20,7 +20,7 @@ import { ConfirmSwapSideBySideIndex } from "./ConfirmSwapSideBySideIndex";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { todo } from "common/developmentHelper";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -88,8 +88,6 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const allActionContexts = ActionContextUtils.getContexts(db.getLocations());
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const overviewDocsLink = useRavenLink({ hash: "8VWNHJ" });
     const listDocsLink = useRavenLink({ hash: "7HOOEA" });
@@ -98,6 +96,28 @@ export function IndexesPage(props: IndexesPageProps) {
     const staticClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerCluster"));
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: autoClusterLimit,
+            },
+            {
+                featureName: defaultFeatureAvailability[1].featureName,
+                value: staticClusterLimit,
+            },
+            {
+                featureName: defaultFeatureAvailability[2].featureName,
+                value: autoDatabaseLimit,
+            },
+            {
+                featureName: defaultFeatureAvailability[3].featureName,
+                value: staticDatabaseLimit,
+            },
+        ],
+    });
 
     const autoClusterCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfAutoIndexesInCluster;
     const staticClusterCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfStaticIndexesInCluster;
@@ -112,8 +132,7 @@ export function IndexesPage(props: IndexesPageProps) {
     const staticDatabaseLimitStatus = getLicenseLimitReachStatus(staticDatabaseCount, staticDatabaseLimit);
 
     const isNewIndexDisabled =
-        !isProfessionalOrAbove &&
-        (staticClusterLimitStatus === "limitReached" || staticDatabaseLimitStatus === "limitReached");
+        staticClusterLimitStatus === "limitReached" || staticDatabaseLimitStatus === "limitReached";
 
     todo("Other", "Damian", "Move limits to separate component");
 
@@ -127,85 +146,84 @@ export function IndexesPage(props: IndexesPageProps) {
 
     return (
         <>
-            {!isProfessionalOrAbove && (
-                <>
-                    {staticClusterLimitStatus !== "notReached" && (
-                        <Alert
-                            color={staticClusterLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center mb-3"
-                        >
-                            Cluster {staticClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
-                            <strong>maximum number of static indexes</strong> allowed per cluster by your license{" "}
-                            <strong>
-                                ({staticClusterCount}/{staticClusterLimit})
-                            </strong>
-                            <br /> Delete unused indexes or{" "}
-                            <strong>
-                                <a href={upgradeLicenseLink} target="_blank">
-                                    upgrade your license
-                                </a>
-                            </strong>
-                        </Alert>
-                    )}
+            <>
+                {staticClusterLimitStatus !== "notReached" && (
+                    <Alert
+                        color={staticClusterLimitStatus === "limitReached" ? "danger" : "warning"}
+                        className="text-center mb-3"
+                    >
+                        Cluster {staticClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                        <strong>maximum number of static indexes</strong> allowed per cluster by your license{" "}
+                        <strong>
+                            ({staticClusterCount}/{staticClusterLimit})
+                        </strong>
+                        <br /> Delete unused indexes or{" "}
+                        <strong>
+                            <a href={upgradeLicenseLink} target="_blank">
+                                upgrade your license
+                            </a>
+                        </strong>
+                    </Alert>
+                )}
 
-                    {autoClusterLimitStatus !== "notReached" && (
-                        <Alert
-                            color={autoClusterLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center mb-3"
-                        >
-                            Cluster {autoClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
-                            <strong>maximum number of auto indexes</strong> allowed per cluster by your license{" "}
-                            <strong>
-                                ({autoClusterCount}/{autoClusterLimit})
-                            </strong>
-                            <br /> Delete unused indexes or{" "}
-                            <strong>
-                                <a href={upgradeLicenseLink} target="_blank">
-                                    upgrade your license
-                                </a>
-                            </strong>
-                        </Alert>
-                    )}
+                {autoClusterLimitStatus !== "notReached" && (
+                    <Alert
+                        color={autoClusterLimitStatus === "limitReached" ? "danger" : "warning"}
+                        className="text-center mb-3"
+                    >
+                        Cluster {autoClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                        <strong>maximum number of auto indexes</strong> allowed per cluster by your license{" "}
+                        <strong>
+                            ({autoClusterCount}/{autoClusterLimit})
+                        </strong>
+                        <br /> Delete unused indexes or{" "}
+                        <strong>
+                            <a href={upgradeLicenseLink} target="_blank">
+                                upgrade your license
+                            </a>
+                        </strong>
+                    </Alert>
+                )}
 
-                    {staticDatabaseLimitStatus !== "notReached" && (
-                        <Alert
-                            color={staticDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center mb-3"
-                        >
-                            Database {staticDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
-                            <strong>maximum number of static indexes</strong> allowed per database by your license{" "}
-                            <strong>
-                                ({staticDatabaseCount}/{staticDatabaseLimit})
-                            </strong>
-                            <br /> Delete unused indexes or{" "}
-                            <strong>
-                                <a href={upgradeLicenseLink} target="_blank">
-                                    upgrade your license
-                                </a>
-                            </strong>
-                        </Alert>
-                    )}
+                {staticDatabaseLimitStatus !== "notReached" && (
+                    <Alert
+                        color={staticDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                        className="text-center mb-3"
+                    >
+                        Database {staticDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                        <strong>maximum number of static indexes</strong> allowed per database by your license{" "}
+                        <strong>
+                            ({staticDatabaseCount}/{staticDatabaseLimit})
+                        </strong>
+                        <br /> Delete unused indexes or{" "}
+                        <strong>
+                            <a href={upgradeLicenseLink} target="_blank">
+                                upgrade your license
+                            </a>
+                        </strong>
+                    </Alert>
+                )}
 
-                    {autoDatabaseLimitStatus !== "notReached" && (
-                        <Alert
-                            color={autoDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                            className="text-center mb-3"
-                        >
-                            Database {autoDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
-                            <strong>maximum number of auto indexes</strong> allowed per database by your license{" "}
-                            <strong>
-                                ({autoDatabaseCount}/{autoDatabaseLimit})
-                            </strong>
-                            <br /> Delete unused indexes or{" "}
-                            <strong>
-                                <a href={upgradeLicenseLink} target="_blank">
-                                    upgrade your license
-                                </a>
-                            </strong>
-                        </Alert>
-                    )}
-                </>
-            )}
+                {autoDatabaseLimitStatus !== "notReached" && (
+                    <Alert
+                        color={autoDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                        className="text-center mb-3"
+                    >
+                        Database {autoDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                        <strong>maximum number of auto indexes</strong> allowed per database by your license{" "}
+                        <strong>
+                            ({autoDatabaseCount}/{autoDatabaseLimit})
+                        </strong>
+                        <br /> Delete unused indexes or{" "}
+                        <strong>
+                            <a href={upgradeLicenseLink} target="_blank">
+                                upgrade your license
+                            </a>
+                        </strong>
+                    </Alert>
+                )}
+            </>
+
             {stats.indexes.length > 0 && (
                 <StickyHeader>
                     <Row>
@@ -284,7 +302,10 @@ export function IndexesPage(props: IndexesPageProps) {
                                     </a>
                                 </AccordionItemWrapper>
                                 <FeatureAvailabilitySummaryWrapper
-                                    isUnlimited={isProfessionalOrAbove}
+                                    isUnlimited={
+                                        staticClusterLimitStatus === "notReached" &&
+                                        staticDatabaseLimitStatus === "notReached"
+                                    }
                                     data={featureAvailability}
                                 />
                             </AboutViewFloating>
@@ -422,16 +443,10 @@ export function IndexesPage(props: IndexesPageProps) {
     );
 }
 
-export const featureAvailability: FeatureAvailabilityData[] = [
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "Database static indexes limit",
-        community: { value: 12 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-    {
-        featureName: "Database auto indexes limit",
-        community: { value: 24 },
+        featureName: "Cluster auto indexes limit",
+        community: { value: 120 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
@@ -442,8 +457,14 @@ export const featureAvailability: FeatureAvailabilityData[] = [
         enterprise: { value: Infinity },
     },
     {
-        featureName: "Cluster auto indexes limit",
-        community: { value: 120 },
+        featureName: "Database auto indexes limit",
+        community: { value: 24 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Database static indexes limit",
+        community: { value: 12 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },

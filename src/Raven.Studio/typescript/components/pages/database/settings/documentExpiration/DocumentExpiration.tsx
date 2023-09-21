@@ -23,6 +23,8 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import moment = require("moment");
 
 export default function DocumentExpiration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -39,12 +41,28 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
 
     useDirtyFlag(formState.isDirty);
     const formValues = useWatch({ control: control });
+
     const { reportEvent } = useEventsCollector();
 
     const documentExpirationDocsLink = useRavenLink({ hash: "XBFEKZ" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-    const frequencyLimit = 129600;
+    const minPeriodForExpirationInHours = useAppSelector(licenseSelectors.statusValue("MinPeriodForExpirationInHours"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: minPeriodForExpirationInHours,
+            },
+        ],
+    });
+
+    const deleteFrequencyInHours = moment.duration(formValues.deleteFrequency, "seconds").asHours();
+
+    const isLimitWarningVisible =
+        minPeriodForExpirationInHours > 0 &&
+        formValues.isDeleteFrequencyEnabled &&
+        deleteFrequencyInHours < minPeriodForExpirationInHours;
 
     useEffect(() => {
         if (!formValues.isDeleteFrequencyEnabled && formValues.deleteFrequency !== null) {
@@ -101,12 +119,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                 color="primary"
                                 className="mb-3"
                                 icon="save"
-                                disabled={
-                                    !formState.isDirty ||
-                                    (!isProfessionalOrAbove &&
-                                        formValues.isDeleteFrequencyEnabled &&
-                                        formValues.deleteFrequency < frequencyLimit)
-                                }
+                                disabled={!formState.isDirty || isLimitWarningVisible}
                                 isSpinning={formState.isSubmitting}
                             >
                                 Save
@@ -138,18 +151,24 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                                         formState.isSubmitting || !formValues.isDeleteFrequencyEnabled
                                                     }
                                                     placeholder={
-                                                        isProfessionalOrAbove ? "Default (60)" : "Default (129600)"
+                                                        minPeriodForExpirationInHours > 0
+                                                            ? `Default (${moment
+                                                                  .duration(minPeriodForExpirationInHours, "hours")
+                                                                  .asSeconds()})`
+                                                            : "Default (60)"
                                                     }
                                                     addonText="seconds"
                                                 />
-                                                {!isProfessionalOrAbove &&
-                                                    formValues.isDeleteFrequencyEnabled &&
-                                                    formValues.deleteFrequency < frequencyLimit && (
-                                                        <Alert color="warning" className="mt-3">
-                                                            <Icon icon="warning" /> Your current license does not allow
-                                                            a frequency higher than 36 hours (129600 seconds)
-                                                        </Alert>
-                                                    )}
+                                                {isLimitWarningVisible && (
+                                                    <Alert color="warning" className="mt-3">
+                                                        <Icon icon="warning" /> Your current license does not allow a
+                                                        frequency higher than {minPeriodForExpirationInHours} hours (
+                                                        {moment
+                                                            .duration(minPeriodForExpirationInHours, "hours")
+                                                            .asSeconds()}{" "}
+                                                        seconds)
+                                                    </Alert>
+                                                )}
                                             </div>
                                         </div>
                                     </CardBody>
@@ -189,7 +208,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
+                                isUnlimited={!minPeriodForExpirationInHours}
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
@@ -225,7 +244,7 @@ const codeExample = `{
     }
 }`;
 
-export const featureAvailability: FeatureAvailabilityData[] = [
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Expiration frequency limit (hours)",
         community: { value: 36 },

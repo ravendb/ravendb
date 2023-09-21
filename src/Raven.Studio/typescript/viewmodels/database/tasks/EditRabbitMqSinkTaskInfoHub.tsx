@@ -2,14 +2,15 @@
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import { featureAvailabilityEnterprise } from "components/utils/licenseLimitsUtils";
+import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function EditRabbitMqSinkTaskInfoHub() {
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
+    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
 
     return (
-        <AboutViewFloating defaultOpen={isEnterpriseOrDeveloper ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -42,8 +43,8 @@ export function EditRabbitMqSinkTaskInfoHub() {
                 </ul>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isEnterpriseOrDeveloper}
-                data={featureAvailabilityEnterprise}
+                isUnlimited={isFeatureInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );

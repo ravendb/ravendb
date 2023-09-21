@@ -12,7 +12,7 @@ import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { getProfessionalOrAboveLicenseAvailabilityData } from "components/utils/licenseLimitsUtils";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
@@ -22,13 +22,8 @@ export default function ServerWideCustomSorters() {
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
     const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
-
-    const featureAvailability = getProfessionalOrAboveLicenseAvailabilityData({
-        licenseType,
-        overrideValue: isFeatureInLicense,
-    });
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
 

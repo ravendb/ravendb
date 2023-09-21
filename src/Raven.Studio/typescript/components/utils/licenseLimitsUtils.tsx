@@ -1,4 +1,6 @@
-import { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { AvailabilityValue, FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useAppSelector } from "components/store";
 
 export type LicenseLimitReachStatus = "notReached" | "closeToLimit" | "limitReached";
 
@@ -37,40 +39,29 @@ export function getLicenseAvailabilityType(licenseType: Raven.Server.Commercial.
             return null;
     }
 }
+// // TODO remove + run webpack
+// export const featureAvailabilityProfessionalOrAbove: FeatureAvailabilityData[] = [
+//     {
+//         community: { value: false },
+//         professional: { value: true },
+//         enterprise: { value: true },
+//     },
+// ];
 
-export const featureAvailabilityProfessionalOrAbove: FeatureAvailabilityData[] = [
-    {
-        community: { value: false },
-        professional: { value: true },
-        enterprise: { value: true },
-    },
-];
+// // TODO remove + run webpack
+// export const featureAvailabilityEnterprise: FeatureAvailabilityData[] = [
+//     {
+//         community: { value: false },
+//         professional: { value: false },
+//         enterprise: { value: true },
+//     },
+// ];
 
-export const featureAvailabilityEnterprise: FeatureAvailabilityData[] = [
-    {
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-];
-
-interface GetLicenseAvailabilityDataProps {
-    licenseType: Raven.Server.Commercial.LicenseType;
-    overrideValue: boolean;
-}
-
-export function getProfessionalOrAboveLicenseAvailabilityData(
-    props: GetLicenseAvailabilityDataProps
+function useLicenseAvailability(
+    featureAvailabilityData: FeatureAvailabilityData[],
+    isFeatureInLicense: boolean
 ): FeatureAvailabilityData[] {
-    const { licenseType, overrideValue } = props;
-
-    const featureAvailabilityData: FeatureAvailabilityData[] = [
-        {
-            community: { value: false },
-            professional: { value: true },
-            enterprise: { value: true },
-        },
-    ];
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     const type = getLicenseAvailabilityType(licenseType);
     if (!type) {
@@ -79,9 +70,76 @@ export function getProfessionalOrAboveLicenseAvailabilityData(
 
     const data = featureAvailabilityData[0][type];
 
-    if (data.value !== overrideValue) {
-        data.overwrittenValue = overrideValue;
+    if (data.value !== isFeatureInLicense) {
+        data.overwrittenValue = isFeatureInLicense;
     }
 
     return featureAvailabilityData;
+}
+
+export function useProfessionalOrAboveLicenseAvailability(isFeatureInLicense: boolean): FeatureAvailabilityData[] {
+    const featureAvailabilityData: FeatureAvailabilityData[] = [
+        {
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+    ];
+
+    return useLicenseAvailability(featureAvailabilityData, isFeatureInLicense);
+}
+
+export function useEnterpriseLicenseAvailability(isFeatureInLicense: boolean): FeatureAvailabilityData[] {
+    const featureAvailabilityData: FeatureAvailabilityData[] = [
+        {
+            community: { value: false },
+            professional: { value: false },
+            enterprise: { value: true },
+        },
+    ];
+
+    return useLicenseAvailability(featureAvailabilityData, isFeatureInLicense);
+}
+
+export function shouldOverrideLicenseAvailability(value: AvailabilityValue, overwriteValue: AvailabilityValue) {
+    if (overwriteValue == null && value === Infinity) {
+        return false;
+    }
+    if (overwriteValue === value) {
+        return false;
+    }
+
+    return true;
+}
+
+interface UseLimitedFeatureAvailabilityProps {
+    defaultFeatureAvailability: FeatureAvailabilityData[];
+    overwrites: {
+        featureName: string;
+        value: AvailabilityValue;
+    }[];
+}
+
+export function useLimitedFeatureAvailability({
+    defaultFeatureAvailability,
+    overwrites,
+}: UseLimitedFeatureAvailabilityProps) {
+    const licenseType = useAppSelector(licenseSelectors.licenseType);
+
+    const featureAvailability = _.cloneDeep(defaultFeatureAvailability);
+
+    const type = getLicenseAvailabilityType(licenseType);
+    if (!type) {
+        return featureAvailability;
+    }
+
+    for (const overwrite of overwrites) {
+        const data = featureAvailability.find((x) => x.featureName === overwrite.featureName);
+
+        if (shouldOverrideLicenseAvailability(data[type].value, overwrite.value)) {
+            data[type].overwrittenValue = overwrite.value;
+        }
+    }
+
+    return featureAvailability;
 }

@@ -2,56 +2,50 @@
 import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function ConnectionStringsInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-    const featureAvailabilityData: FeatureAvailabilityData[] = [
-        {
-            featureName: "RavenDB ETL",
-            featureIcon: "ravendb-etl",
-            community: { value: false },
-            professional: { value: true },
-            enterprise: { value: true },
-        },{
-            featureName: "SQL ETL",
-            featureIcon: "sql-etl",
-            community: { value: false },
-            professional: { value: true },
-            enterprise: { value: true },
-        },
-        {
-            featureName: "OLAP ETL",
-            featureIcon: "olap-etl",
-            community: { value: false },
-            professional: { value: false },
-            enterprise: { value: true },
-        },
-        {
-            featureName: "Elasticsearch ETL",
-            featureIcon: "elastic-search-etl",
-            community: { value: false },
-            professional: { value: false },
-            enterprise: { value: true },
-        },
-        {
-            featureName: "Kafka ETL",
-            featureIcon: "kafka-etl",
-            community: { value: false },
-            professional: { value: false },
-            enterprise: { value: true },
-        },
-        {
-            featureName: "RabbitMQ ETL",
-            featureIcon: "rabbitmq-etl",
-            community: { value: false },
-            professional: { value: false },
-            enterprise: { value: true },
-        },
-    ];
+    const hasRavenEtl = useAppSelector(licenseSelectors.statusValue("HasRavenEtl"));
+    const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
+    const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
+    const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
+    const hasQueueEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasRavenEtl,
+            },
+            {
+                featureName: defaultFeatureAvailability[1].featureName,
+                value: hasSqlEtl,
+            },
+            {
+                featureName: defaultFeatureAvailability[2].featureName,
+                value: hasOlapEtl,
+            },
+            {
+                featureName: defaultFeatureAvailability[3].featureName,
+                value: hasElasticSearchEtl,
+            },
+            {
+                featureName: defaultFeatureAvailability[4].featureName,
+                value: hasQueueEtl,
+            },
+            {
+                featureName: defaultFeatureAvailability[5].featureName,
+                value: hasQueueEtl,
+            },
+        ],
+    });
+
+    const hasAllFeaturesInLicense = hasRavenEtl && hasSqlEtl && hasOlapEtl && hasElasticSearchEtl && hasQueueEtl;
 
     return (
-        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasAllFeaturesInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -81,9 +75,53 @@ export function ConnectionStringsInfoHub() {
                 </div>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isProfessionalOrAbove}
-                data={featureAvailabilityData}
+                isUnlimited={hasAllFeaturesInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "RavenDB ETL",
+        featureIcon: "ravendb-etl",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },{
+        featureName: "SQL ETL",
+        featureIcon: "sql-etl",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "OLAP ETL",
+        featureIcon: "olap-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "Elasticsearch ETL",
+        featureIcon: "elastic-search-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "Kafka ETL",
+        featureIcon: "kafka-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "RabbitMQ ETL",
+        featureIcon: "rabbitmq-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

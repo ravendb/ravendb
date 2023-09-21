@@ -2,14 +2,15 @@
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function EditServerWideExternalReplicationInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
 
     return (
-        <AboutViewFloating defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -37,8 +38,8 @@ export function EditServerWideExternalReplicationInfoHub() {
                 </div>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isProfessionalOrAbove}
-                data={featureAvailabilityProfessionalOrAbove}
+                isUnlimited={isFeatureInLicense}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );

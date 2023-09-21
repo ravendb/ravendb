@@ -5,31 +5,32 @@ import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditManualBackupTaskInfoHub() {
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const hasEncryptedBackups = useAppSelector(licenseSelectors.statusValue("HasEncryptedBackups"));
+    const hasCloudBackups = useAppSelector(licenseSelectors.statusValue("HasCloudBackups"));
+    const hasSnapshotBackups = useAppSelector(licenseSelectors.statusValue("HasSnapshotBackups"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasEncryptedBackups,
+            },
+            {
+                featureName: defaultFeatureAvailability[1].featureName,
+                value: hasCloudBackups,
+            },
+            {
+                featureName: defaultFeatureAvailability[2].featureName,
+                value: hasSnapshotBackups,
+            },
+        ],
+    });
+
     const backupsDocsLink = useRavenLink({ hash: "GMBYOH" });
-    const featureAvailabilityData: FeatureAvailabilityData[] = [
-        {
-            featureName: "Encryption",
-            featureIcon: "encryption",
-            community: { value: false },
-            professional: { value: true },
-            enterprise: { value: true }
-        },{
-            featureName: "Remote destinations",
-            featureIcon: "cloud",
-            community: { value: false },
-            professional: { value: true },
-            enterprise: { value: true }
-        },{
-            featureName: "Snapshot backups",
-            featureIcon: "snapshot-backup",
-            community: { value: false },
-            professional: { value: false },
-            enterprise: { value: true }
-        },
-    ];
 
     return (
         <AboutViewFloating>
@@ -62,9 +63,31 @@ export function EditManualBackupTaskInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isProfessionalOrAbove}
-                data={featureAvailabilityData}
+                isUnlimited={hasEncryptedBackups && hasCloudBackups && hasSnapshotBackups}
+                data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Encryption",
+        featureIcon: "encryption",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true }
+    },{
+        featureName: "Remote destinations",
+        featureIcon: "cloud",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true }
+    },{
+        featureName: "Snapshot backups",
+        featureIcon: "snapshot-backup",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true }
+    },
+];

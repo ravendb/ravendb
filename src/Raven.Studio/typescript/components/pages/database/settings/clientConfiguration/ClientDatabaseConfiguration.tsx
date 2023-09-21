@@ -26,7 +26,7 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { featureAvailabilityProfessionalOrAbove } from "components/utils/licenseLimitsUtils";
+import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -51,7 +51,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     const loadBalancingLink = useRavenLink({ hash: "GYJ8JA" });
     const clientConfigurationLink = useRavenLink({ hash: "TS7SGF" });
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasClientConfiguration"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
 
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;
@@ -103,7 +104,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <AboutViewHeading
                             icon="database-client-configuration"
                             title="Client Configuration"
-                            licenseBadgeText={isProfessionalOrAbove ? null : "Professional +"}
+                            licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
                         />
                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
                             <div>
@@ -130,7 +131,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 </small>
                             )}
                         </div>
-                        <div className={isProfessionalOrAbove ? "" : "item-disabled pe-none"}>
+                        <div className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
                             {globalConfig && (
                                 <div className="mt-4 mb-3">
                                     <div className="hstack justify-content-center">
@@ -572,7 +573,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         </div>
                     </Col>
                     <Col sm={12} md={4}>
-                        <AboutViewAnchored defaultOpen={isProfessionalOrAbove ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
                             <AccordionItemWrapper
                                 icon="about"
                                 color="info"
@@ -621,8 +622,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             </AccordionItemWrapper>
 
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isProfessionalOrAbove}
-                                data={featureAvailabilityProfessionalOrAbove}
+                                isUnlimited={isFeatureInLicense}
+                                data={featureAvailability}
                             />
                         </AboutViewAnchored>
                     </Col>

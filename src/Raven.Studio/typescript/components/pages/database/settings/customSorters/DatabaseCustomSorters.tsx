@@ -27,10 +27,11 @@ import { NonShardedViewProps } from "components/models/common";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { databaseCustomSortersAndAnalyzersUtils } from "components/common/databaseCustomSortersAndAnalyzers/databaseCustomSortersAndAnalyzersUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
@@ -48,15 +49,22 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const licenseType = useAppSelector(licenseSelectors.licenseType);
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
     const numberOfCustomSortersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfCustomSortersInCluster;
 
-    const featureAvailability = databaseCustomSortersAndAnalyzersUtils.getLicenseAvailabilityData({
-        licenseType,
-        overrideClusterLimit: licenseClusterLimit,
-        overrideDatabaseLimit: licenseDatabaseLimit,
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: licenseDatabaseLimit,
+            },
+            {
+                featureName: defaultFeatureAvailability[1].featureName,
+                value: licenseClusterLimit,
+            },
+        ],
     });
 
     const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
@@ -314,3 +322,18 @@ function DatabaseSortersList({
         </div>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Limit per database",
+        community: { value: 1 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Limit per cluster",
+        community: { value: 5 },
+        professional: { value: Infinity },
+        enterprise: { value: Infinity },
+    },
+];
