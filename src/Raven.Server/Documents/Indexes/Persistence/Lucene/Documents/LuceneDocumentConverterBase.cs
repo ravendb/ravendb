@@ -72,9 +72,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private int _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField;
 
-        private Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(NumericEqualityComparer.BoxedInstanceInt32);
+        private Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new();
 
-        private Dictionary<int, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>(NumericEqualityComparer.BoxedInstanceInt32);
+        private Dictionary<int, CachedFieldItem<NumericField>> _numericFieldsCache = new ();
 
         public readonly LuceneDocument Document = new LuceneDocument();
 
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (_fieldsCache.Count > 256)
             {
                 var fieldsCache = _fieldsCache;
-                _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(NumericEqualityComparer.BoxedInstanceInt32);
+                _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>();
                 _numberOfItemsInFieldsCacheForMultipleItemsSameField = 0;
 
                 ClearFieldCache(fieldsCache);
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (_numericFieldsCache.Count > 256)
             {
                 var fieldsCache = _numericFieldsCache;
-                _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>(NumericEqualityComparer.BoxedInstanceInt32);
+                _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>();
                 _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField = 0;
 
                 ClearFieldCache(fieldsCache);
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
              bool storeValue = false,
              string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValueFieldName, fields)
         {
-            _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
+            _storeValueField = new Field(storeValueFieldName, Array.Empty<byte>(), 0, 0, Field.Store.YES);
 
             Scope = new (storeValue, _storeValueField);
         }

@@ -289,7 +289,7 @@ namespace Voron.Impl
                 _dirtyPages = previous._dirtyPages;
                 _dirtyPages.Clear();
 
-                _freedPages = new HashSet<long>(NumericEqualityComparer.BoxedInstanceInt64);
+                _freedPages = new HashSet<long>();
                 _unusedScratchPages = new List<PageFromScratchBuffer>();
                 _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
                 _pagesToFreeOnCommit = new Stack<long>();
@@ -396,7 +396,7 @@ namespace Voron.Impl
                 _env.WriteTransactionPool.Reset();
                 _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
                 _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
-                _freedPages = new HashSet<long>(NumericEqualityComparer.BoxedInstanceInt64);
+                _freedPages = new HashSet<long>();
                 _unusedScratchPages = new List<PageFromScratchBuffer>();
                 _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
                 _pagesToFreeOnCommit = new Stack<long>();

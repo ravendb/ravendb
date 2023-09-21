@@ -220,7 +220,7 @@ namespace Sparrow.Json
                 ((BlittableJsonReaderBase)result.Item1).NoCache = NoCache;
                 if (NoCache == false)
                 {
-                    _cache ??= new Dictionary<int, (object, BlittableJsonToken)>(NumericEqualityComparer.BoxedInstanceInt32);
+                    _cache ??= new Dictionary<int, (object, BlittableJsonToken)>();
                     _cache[index] = result;
                 }
             }

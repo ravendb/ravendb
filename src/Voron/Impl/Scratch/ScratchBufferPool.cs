@@ -42,7 +42,7 @@ namespace Voron.Impl.Scratch
 
         private Dictionary<int, PagerState> _pagerStatesAllScratchesCache;
 
-        private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.BoxedInstanceInt32);
+        private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new();
 
         private readonly LinkedList<ScratchBufferItem> _recycleArea = new LinkedList<ScratchBufferItem>();
 
@@ -113,7 +113,7 @@ namespace Voron.Impl.Scratch
 
         public void UpdateCacheForPagerStatesOfAllScratches()
         {
-            var dic = new Dictionary<int, PagerState>(NumericEqualityComparer.BoxedInstanceInt32);
+            var dic = new Dictionary<int, PagerState>();
             foreach (var scratchBufferItem in _scratchBuffers)
             {
                 if (scratchBufferItem.Value.File.IsDisposed) // precaution
