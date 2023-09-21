@@ -57,9 +57,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const collectionConfigs = useAppSelector(documentRevisionsSelectors.collectionConfigs);
     const isAnyModified = useAppSelector(documentRevisionsSelectors.isAnyModified);
 
-    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
-    const isAllCollectionsAdded = allCollectionNames.length === collectionConfigs.length;
-
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
@@ -271,7 +268,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    isDatabaseAdmin && !isAllCollectionsAdded ? (
+                                    isDatabaseAdmin ? (
                                         <Button
                                             color="info"
                                             size="sm"
