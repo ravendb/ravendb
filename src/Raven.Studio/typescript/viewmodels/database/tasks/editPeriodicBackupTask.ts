@@ -147,7 +147,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
 
         this.setupDisableReasons();
         
-        if (this.configuration() instanceof periodicBackupConfiguration) {
+        if (this.configuration() instanceof periodicBackupConfiguration && this.hasPeriodicBackup) {
             document.getElementById("taskName").focus();
         }
 
