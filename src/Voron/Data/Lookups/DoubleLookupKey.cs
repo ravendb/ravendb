@@ -45,6 +45,11 @@ public struct DoubleLookupKey : ILookupKey
     
     public static long MinValue => BitConverter.DoubleToInt64Bits(double.MinValue);
 
+    public void Init<T>(Lookup<T> parent) where T : struct, ILookupKey
+    {
+        
+    }
+
     [Pure]
     public int CompareTo<T>(Lookup<T> parent, long l) where T : struct, ILookupKey
     {

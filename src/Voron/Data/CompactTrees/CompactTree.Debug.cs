@@ -30,6 +30,8 @@ unsafe partial class CompactTree
 
     public void VerifyOrderOfElements()
     {
+        _inner.VerifyStructure();
+        
         var it = Iterate();
         it.Reset();
 
