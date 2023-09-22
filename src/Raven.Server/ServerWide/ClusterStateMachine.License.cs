@@ -181,7 +181,7 @@ public sealed partial class ClusterStateMachine
                     throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per database cannot exceed the limit of: {maxCustomSortersPerDatabase}");
                 }
 
-                var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
+                var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerCluster;
                 if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0)
                 {
                     var totalSortersCount = GetTotal(DatabaseRecordElementType.CustomSorters, databaseRecord.DatabaseName) + databaseRecord.Sorters.Count;
