@@ -46,7 +46,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanDeleteSubscription(Options options)
         {
@@ -68,7 +68,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ShouldThrowWhenOpeningNoExisingSubscription(Options options)
         {
@@ -82,7 +82,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ShouldThrowOnAttemptToOpenAlreadyOpenedSubscription(Options options)
         {
@@ -117,7 +117,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldBeAbleToChangeBufferSizes(Options options)
         {
@@ -149,8 +149,8 @@ namespace FastTests.Client.Subscriptions
 
                     var expected = new Dictionary<string, int>
                     {
-                        ["users/1"] = 31, 
-                        ["users/12"] = 27, 
+                        ["users/1"] = 31,
+                        ["users/12"] = 27,
                         ["users/3"] = 25
                     };
                     Assert.True(users.TryTake(out User user, _reasonableWaitTime));
@@ -180,7 +180,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldStreamAllDocumentsAfterSubscriptionCreation(Options options)
         {
@@ -210,8 +210,8 @@ namespace FastTests.Client.Subscriptions
 
                     var expected = new Dictionary<string, int>
                     {
-                        ["users/1"] = 31, 
-                        ["users/12"] = 27, 
+                        ["users/1"] = 31,
+                        ["users/12"] = 27,
                         ["users/3"] = 25
                     };
                     Assert.True(users.TryTake(out User user, _reasonableWaitTime));
@@ -241,7 +241,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldSendAllNewAndModifiedDocs(Options options)
         {
@@ -298,7 +298,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldRespectMaxDocCountInBatch(Options options)
         {
@@ -344,7 +344,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldRespectCollectionCriteria(Options options)
         {
@@ -427,7 +427,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void WillAcknowledgeEmptyBatches(Options options)
         {
@@ -472,7 +472,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldKeepPullingDocsAfterServerRestart(Options options)
         {
@@ -562,7 +562,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanReleaseSubscription(Options options)
         {
@@ -635,7 +635,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldPullDocumentsAfterBulkInsert(Options options)
         {
@@ -688,7 +688,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanSetToIgnoreSubscriberErrors(Options options)
         {
@@ -719,7 +719,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RavenDB_3452_ShouldStopPullingDocsIfReleased(Options options)
         {
@@ -775,8 +775,8 @@ namespace FastTests.Client.Subscriptions
                 }
             }
         }
-        
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void RavenDB_3453_ShouldDeserializeTheWholeDocumentsAfterTypedSubscription(Options options)
         {
@@ -809,8 +809,8 @@ namespace FastTests.Client.Subscriptions
 
                     var expected = new Dictionary<string, int>
                     {
-                        ["users/1"] = 31, 
-                        ["users/12"] = 27, 
+                        ["users/1"] = 31,
+                        ["users/12"] = 27,
                         ["users/3"] = 25
                     };
                     Assert.True(users.TryTake(out User user, _reasonableWaitTime));
@@ -828,7 +828,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers(Options options)
         {
@@ -893,7 +893,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanUpdateSubscriptionByName(Options options)
         {
@@ -928,7 +928,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanUpdateSubscriptionById(Options options)
         {
@@ -963,7 +963,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void UpdateNonExistentSubscriptionShouldThrow(Options options)
         {
@@ -990,7 +990,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task UpdateSubscriptionShouldReturnNotModified(Options options)
         {
@@ -1020,7 +1020,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanCreateByUpdateSubscription(Options options)
         {
@@ -1112,7 +1112,7 @@ namespace FastTests.Client.Subscriptions
             public string SomeProp { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad(Options options)
@@ -1157,7 +1157,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction(Options options)
         {
