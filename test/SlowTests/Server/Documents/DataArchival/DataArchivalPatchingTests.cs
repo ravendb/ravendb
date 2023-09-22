@@ -214,6 +214,8 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
                 var metadata = session.Advanced.GetMetadataFor(originalCompany);
                 Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
                 
+                await Indexes.WaitForIndexingAsync(store);
+                
                 // Make sure that the company is skipped while indexing (auto map index)
                 var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                 Assert.Equal(1, companies.Count);
