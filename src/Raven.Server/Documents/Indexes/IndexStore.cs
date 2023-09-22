@@ -15,6 +15,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.DataArchival;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -2131,6 +2132,12 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
+        }
+
+        [DoesNotReturn]
+        public static void ThrowIndexCreationExceptionDueToLicenseLimitations(string indexType, string indexName, LicenseLimitException exception)
+        {
+            throw new IndexCreationException($"Failed to create {indexType} index '{indexName}' due to license limitations.", exception);
         }
 
         [DoesNotReturn]

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util;
@@ -129,6 +130,10 @@ public abstract class AbstractIndexCreateController
         {
             index = (await ServerStore.SendToLeaderAsync(command)).Index;
         }
+        catch (LicenseLimitException e)
+        {
+            IndexStore.ThrowIndexCreationExceptionDueToLicenseLimitations("static", definition.Name, e);
+        }
         catch (Exception e)
         {
             IndexStore.ThrowIndexCreationException("static", definition.Name, e, "the cluster is probably down", ServerStore);
@@ -166,6 +171,10 @@ public abstract class AbstractIndexCreateController
         try
         {
             index = (await ServerStore.SendToLeaderAsync(command).ConfigureAwait(false)).Index;
+        }
+        catch (LicenseLimitException e)
+        {
+            IndexStore.ThrowIndexCreationExceptionDueToLicenseLimitations("auto", definition.Name, e);
         }
         catch (Exception e)
         {
