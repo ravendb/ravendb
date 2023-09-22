@@ -52,6 +52,7 @@ class connectionStrings extends viewModelBase {
     hasOlapEtl = licenseModel.getStatusValue("HasOlapEtl");
     hasElasticSearchEtl = licenseModel.getStatusValue("HasElasticSearchEtl");
     hasQueueEtl = licenseModel.getStatusValue("HasQueueEtl");
+    hasQueueSink = licenseModel.getStatusValue("HasQueueSink");
     
     // Mapping from { connection string } to { taskId, taskName, taskType }
     connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: StudioTaskType }>> = {};
