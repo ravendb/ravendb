@@ -87,7 +87,7 @@ namespace SlowTests.Issues
                 }));
 
                 await EnsureReplicatingAsync(store1, store2);
-              
+
                 await CheckData(store2, options.DatabaseMode, id, expectedRevisionTombstones: 2, expectedAttachmentTombstones: 1);
             }
         }
@@ -213,7 +213,6 @@ namespace SlowTests.Issues
 
                 var revisionTombstones = 0;
                 var attachmentTombstones = 0;
-                var counterTombstones = 0;
                 foreach (var tombstone in tombstones)
                 {
                     switch (tombstone.Type)
