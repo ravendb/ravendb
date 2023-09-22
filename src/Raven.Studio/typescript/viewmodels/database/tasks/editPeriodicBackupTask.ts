@@ -37,6 +37,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
 
     hasPeriodicBackup = licenseModel.getStatusValue("HasPeriodicBackup");
     hasCloudBackups = licenseModel.getStatusValue("HasCloudBackups");
+    hasSnapshotBackups = licenseModel.getStatusValue("HasSnapshotBackups");
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();

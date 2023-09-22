@@ -4,17 +4,33 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
+import {
+    useLimitedFeatureAvailability
+} from "components/utils/licenseLimitsUtils";
 
 export function EditPeriodicBackupTaskInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
+    const hasSnapshotBackups = useAppSelector(licenseSelectors.statusValue("HasSnapshotBackups"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasPeriodicBackups,
+            },
+            {
+                featureName: defaultFeatureAvailability[1].featureName,
+                value: hasSnapshotBackups,
+            }
+        ],
+    });
 
     const backupsDocsLink = useRavenLink({ hash: "GMBYOH" });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasPeriodicBackups ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -50,9 +66,25 @@ export function EditPeriodicBackupTaskInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasPeriodicBackups && hasSnapshotBackups}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Periodic Backups",
+        featureIcon: "periodic-backup",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true }
+    },{
+        featureName: "Snapshot Backups",
+        featureIcon: "snapshot-backup",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true }
+    }
+];
