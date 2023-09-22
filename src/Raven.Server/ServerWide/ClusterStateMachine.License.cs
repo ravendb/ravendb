@@ -394,21 +394,30 @@ public sealed partial class ClusterStateMachine
     private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand command, ClusterOperationContext context)
     {
         var maxSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
-        if (maxSubscriptionsPerDatabase != null && maxSubscriptionsPerDatabase >= 0 && maxSubscriptionsPerDatabase < GetSubscriptionsCountForDatabase(context.Allocator, items, command.DatabaseName))
+        if (maxSubscriptionsPerDatabase is >= 0)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                return;
+            var subscriptionsCount = GetSubscriptionsCountForDatabase(context.Allocator, items, command.DatabaseName);
+            if (subscriptionsCount + 1 > maxSubscriptionsPerDatabase)
+            {
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                    return;
 
-            throw new LicenseLimitException(LimitType.Subscriptions, $"The maximum number of subscriptions per database cannot exceed the limit of: {maxSubscriptionsPerDatabase}");
+                throw new LicenseLimitException(LimitType.Subscriptions,
+                    $"The maximum number of subscriptions per database cannot exceed the limit of: {maxSubscriptionsPerDatabase}");
+            }
         }
 
         var maxSubscriptionsPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerCluster;
-        if (maxSubscriptionsPerCluster != null && maxSubscriptionsPerCluster >= 0 && maxSubscriptionsPerCluster < GetSubscriptionsCount())
+        if (maxSubscriptionsPerCluster is >= 0)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                return;
+            var clusterSubscriptionsCounts = GetSubscriptionsCount();
+            if (clusterSubscriptionsCounts + 1 > maxSubscriptionsPerCluster)
+            {
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                    return;
 
-            throw new LicenseLimitException(LimitType.Subscriptions, $"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
+                throw new LicenseLimitException(LimitType.Subscriptions, $"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
+            }
         }
 
         if (serverStore.LicenseManager.LicenseStatus.HasRevisionsInSubscriptions == false &&
