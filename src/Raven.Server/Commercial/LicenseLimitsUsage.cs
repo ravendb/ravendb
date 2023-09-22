@@ -1,3 +1,5 @@
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
@@ -24,6 +26,29 @@ namespace Raven.Server.Commercial
                 [nameof(NumberOfAnalyzers)] = NumberOfAnalyzers,
                 [nameof(NumberOfSubscriptions)] = NumberOfSubscriptions
             };
+        }
+
+        public static DatabaseLicenseLimitsUsage CreateFor<TTransaction>(TransactionOperationContext<TTransaction> context, RawDatabaseRecord databaseRecord)
+            where TTransaction : RavenTransaction
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
+
+            var limits = new DatabaseLicenseLimitsUsage();
+
+            limits.NumberOfStaticIndexes += databaseRecord.CountOfStaticIndexes;
+            limits.NumberOfAutoIndexes += databaseRecord.CountOfAutoIndexes;
+            limits.NumberOfCustomSorters += databaseRecord.CountOfSorters;
+            limits.NumberOfAnalyzers += databaseRecord.CountOfAnalyzers;
+            limits.NumberOfSubscriptions += ClusterStateMachine.GetSubscriptionsCountForDatabase(context.Allocator, items, databaseRecord.DatabaseName);
+
+            return limits;
+        }
+
+        public static DatabaseLicenseLimitsUsage CreateFor<TTransaction>(TransactionOperationContext<TTransaction> context, ServerStore serverStore, string databaseName)
+            where TTransaction : RavenTransaction
+        {
+            using (var databaseRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                return CreateFor(context, databaseRecord);
         }
     }
 
