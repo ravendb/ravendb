@@ -8,6 +8,6 @@ export default class MockLicenseService extends AutoMockService<LicenseService> 
     }
 
     withLimitsUsage(dto?: MockedValue<Raven.Server.Commercial.LicenseLimitsUsage>) {
-        return this.mockResolvedValue(this.mocks.getLimitsUsage, dto, LicenseStubs.limitsUsage());
+        return this.mockResolvedValue(this.mocks.getClusterLimitsUsage, dto, LicenseStubs.limitsUsage());
     }
 }
