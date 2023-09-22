@@ -22,7 +22,7 @@ class rqlLanguageService implements LanguageService {
         this.worker = new Worker("/studio/assets/rql_worker.js");
         this.queryType = queryType;
         
-        this.metadataProvider = new cachedMetadataProvider(new remoteMetadataProvider(db, indexes()));
+        this.metadataProvider = new cachedMetadataProvider(new remoteMetadataProvider(db, indexes));
         
         _.bindAll(this, "complete");
         
