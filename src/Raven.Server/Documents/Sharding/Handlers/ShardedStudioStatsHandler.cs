@@ -1,7 +1,9 @@
 ﻿extern alias NGC;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Studio;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -14,6 +16,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 await processor.ExecuteAsync();
             }
+        }
+
+        [RavenShardedAction("/databases/*/studio/license/limits-usage", "GET")]
+        public async Task GetLicenseLimitsUsage()
+        {
+            using (var processor = new StudioStatsHandlerProcessorForGetLicenseLimitsUsage<TransactionOperationContext>(this))
+                await processor.ExecuteAsync();
         }
     }
 }

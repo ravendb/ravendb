@@ -2,6 +2,7 @@
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Studio
 {
@@ -14,6 +15,13 @@ namespace Raven.Server.Web.Studio
             {
                 await processor.ExecuteAsync();
             }
+        }
+
+        [RavenAction("/databases/*/studio/license/limits-usage", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetLicenseLimitsUsage()
+        {
+            using (var processor = new StudioStatsHandlerProcessorForGetLicenseLimitsUsage<DocumentsOperationContext>(this))
+                await processor.ExecuteAsync();
         }
     }
 }
