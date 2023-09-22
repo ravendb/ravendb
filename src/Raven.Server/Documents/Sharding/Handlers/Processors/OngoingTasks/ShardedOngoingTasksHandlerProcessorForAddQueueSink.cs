@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override void AssertCanAddOrUpdateQueueSink(ref BlittableJsonReaderObject etlConfiguration)
+        protected override void AssertCanAddOrUpdateQueueSink(ref BlittableJsonReaderObject queueSinkConfiguration)
         {
             throw new NotSupportedInShardingException("Queue Sinks are currently not supported in sharding");
         }

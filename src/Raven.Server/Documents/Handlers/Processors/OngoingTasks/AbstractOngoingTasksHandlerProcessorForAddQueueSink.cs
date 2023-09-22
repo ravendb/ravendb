@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -27,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             _taskId = index;
 
-            responseJson[nameof(EtlConfiguration<ConnectionString>.TaskId)] = _taskId;
+            responseJson[nameof(QueueSinkConfiguration.TaskId)] = _taskId;
         }
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration,
@@ -60,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 raftRequestId);
         }
 
-        protected virtual void AssertCanAddOrUpdateQueueSink(ref BlittableJsonReaderObject etlConfiguration)
+        protected virtual void AssertCanAddOrUpdateQueueSink(ref BlittableJsonReaderObject queueSinkConfiguration)
         {
         }
     }
