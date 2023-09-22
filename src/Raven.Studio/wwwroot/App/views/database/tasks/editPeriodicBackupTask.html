@@ -53,9 +53,9 @@
                             </button>
                             <ul class="dropdown-menu" data-bind="foreach: backupOptions">
                                 <li class="position-relative">
-                                    <a href="#" data-bind="css: { 'item-disabled pe-none': !$root.hasPeriodicBackup && $data === 'Snapshot' }, click: $parent.useBackupType.bind($parent, $data)">
+                                    <a href="#" data-bind="css: { 'item-disabled pe-none': !$root.hasSnapshotBackups && $data === 'Snapshot' }, click: $parent.useBackupType.bind($parent, $data)">
                                         <span data-bind="text: $data"></span>
-                                        <!-- ko if: !$root.hasPeriodicBackup && $data === 'Snapshot' -->
+                                        <!-- ko if: !$root.hasSnapshotBackups && $data === 'Snapshot' -->
                                         <span class="badge license-restricted-badge enterprise margin-left-xxs">Enterprise</span>
                                         <!-- /ko -->
                                     </a>

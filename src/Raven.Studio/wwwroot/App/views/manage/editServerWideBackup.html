@@ -47,7 +47,14 @@
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" data-bind="foreach: backupOptions">
-                                <li><a href="#" data-bind="text: $data, click: $parent.useBackupType.bind($parent, $data)"></a></li>
+                                <li class="position-relative">
+                                    <a href="#" data-bind="css: { 'item-disabled pe-none': !$root.hasSnapshotBackups && $data === 'Snapshot' }, click: $parent.useBackupType.bind($parent, $data)">
+                                        <span data-bind="text: $data"></span>
+                                        <!-- ko if: !$root.hasSnapshotBackups && $data === 'Snapshot' -->
+                                        <span class="badge license-restricted-badge enterprise margin-left-xxs">Enterprise</span>
+                                        <!-- /ko -->
+                                    </a>
+                                </li>
                             </ul>
                             <div class="bg-warning padding-left-xxs" data-bind="visible: isSnapshot() && excludeInfo().shardedDatabaseNames().length > 0">
                                 <small>Snapshot is not supported in <i class="icon-sharding text-shard"></i> Sharded Databases</small>
