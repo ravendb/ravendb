@@ -34,6 +34,11 @@ public struct Int64LookupKey : ILookupKey
 
     public static long MinValue => long.MinValue;
 
+    public void Init<T>(Lookup<T> parent) where T : struct, ILookupKey
+    {
+        
+    }
+
     public int CompareTo<T>(Lookup<T> parent, long l) where T : struct, ILookupKey
     {
         return Value.CompareTo(l);

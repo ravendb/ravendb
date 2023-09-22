@@ -407,7 +407,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
         Debug.Assert(k == key.ToLong(), "k == key.ToLong()");
         key.OnKeyRemoval(this);
-        entriesOffsets[(state.LastSearchPosition + 1)..].CopyTo(entriesOffsets[state.LastSearchPosition..]);
+        entriesOffsets[(pos + 1)..].CopyTo(entriesOffsets[pos..]);
     }
 
     [Conditional("DEBUG")]
@@ -896,7 +896,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         // non sequential write, let's just split in middle
         int entriesCopied = 0;
-        int sizeCopied = 0;
         ushort* offsets = newPageState.EntriesOffsetsPtr;
         int i = FindPositionToSplitPageInHalfBasedOfEntriesSize(ref state, ref newPageState);
 
@@ -909,18 +908,17 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             newPageState.Header->Lower += sizeof(ushort);
             newPageState.Header->Upper -= (ushort)entryLength;
             newPageState.Header->FreeSpace -= (ushort)(entryLength + sizeof(ushort));
-            sizeCopied += entryLength + sizeof(ushort);
-
-            Debug.Assert(sizeCopied <= Constants.Storage.PageSize - PageHeader.SizeOf);
-
             offsets[entriesCopied++] = newPageState.Header->Upper;
+
+            Debug.Assert(newPageState.Header->Lower <= newPageState.Header->Upper, "newPageState.Header->Lower <= newPageState.Header->Upper");
             Memory.Copy(page.Pointer + newPageState.Header->Upper, entryBufferPtr, entryLength);
         }
         state.Header->Lower -= (ushort)(sizeof(ushort) * entriesCopied);
-        state.Header->FreeSpace += (ushort)(sizeCopied);
-        Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
 
         DefragPage(_llt, ref state); // need to ensure that we have enough space to add the new entry in the source page
+        Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf,"state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf");
+        Debug.Assert(state.Header->FreeSpace == state.ComputeFreeSpace(),"state.Header->FreeSpace == state.ComputeFreeSpace()");
+        Debug.Assert(newPageState.Header->FreeSpace == newPageState.ComputeFreeSpace(),"newPageState.Header->FreeSpace == newPageState.ComputeFreeSpace()");
 
         ref CursorState updatedPageState = ref newPageState; // start with the new page
         int position = state.Header->NumberOfEntries - 1;
@@ -939,8 +937,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Debug.Assert(updatedPageState.Header->Upper - updatedPageState.Header->Lower >= entryLength + sizeof(ushort));
             AddEntryToPage(ref updatedPageState, entryLength, entryBufferPtr, isUpdate: false);
         }
-        VerifySizeOf(ref newPageState, isRoot: false);
-        VerifySizeOf(ref state, isRoot: false);
 
         long separatorKey = GetKeyData(ref newPageState, 0);
         if (newPageState.Header->IsBranch)
@@ -952,6 +948,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             newPageState.LastSearchPosition = 0;
             AddEntryToPage(ref newPageState, requiredSize, entryBufferPtr, false);
         }
+
+        VerifySizeOf(ref newPageState, isRoot: false);
+        VerifySizeOf(ref state, isRoot: false);
 
         return TLookupKey.FromLong<TLookupKey>(separatorKey);
     }
@@ -1202,6 +1201,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         state.Page = _llt.GetPage(nextPage);
         Debug.Assert(state.Header->IsBranch ^ state.Header->IsLeaf, "state.Header->IsBranch ^ state.Header->IsLeaf");
         cstate._len++;
+        VerifySizeOf(ref state, cstate._pos == 0);
     }
 
     private void SearchInCurrentPage(ref TLookupKey key, ref CursorState state)
@@ -1640,7 +1640,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var state = new CursorState { Page = _llt.GetPage(_state.RootPage) };
         if (state.Header->NumberOfEntries == 0)
             return;
+        VerifySizeOf(ref state, true);
         var previous = TLookupKey.FromLong<TLookupKey>(TLookupKey.MinValue);
+        previous.Init(this);
         VerifyStructure(state, ref previous);
 
     }
@@ -1659,6 +1661,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 continue;
             }
             var key = TLookupKey.FromLong<TLookupKey>(keyData);
+            key.Init(this);
             if (previous.CompareTo(key) > 0)
                 throw new InvalidOperationException("Unsorted values: " + previous + " >= " + key + " on " + state.Header->PageNumber);
             previous = key;
@@ -1667,6 +1670,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             {
                 // we recurse down and *update* the previous, so we get cross page verification as well
                 var child = new CursorState { Page = _llt.GetPage(value) };
+                VerifySizeOf(ref state, false);
                 VerifyStructure(child, ref previous);
             }
         }

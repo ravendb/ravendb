@@ -10,6 +10,8 @@ public interface ILookupKey
     static abstract T FromLong<T>(long l);
 
     static abstract long MinValue { get; }
+    
+    void Init<T>(Lookup<T> parent) where T : struct, ILookupKey;
 
     int CompareTo<T>(Lookup<T> parent, long l) where T : struct, ILookupKey;
     

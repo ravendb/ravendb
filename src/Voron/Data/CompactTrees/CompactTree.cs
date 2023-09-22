@@ -97,7 +97,12 @@ public sealed partial class CompactTree : IPrepareForCommit
             Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
             return Key;
         }
-        
+
+        public void Init<T>(Lookup<T> parent) where T : struct, ILookupKey
+        {
+            GetKey(parent);
+        }
+
         public int CompareTo<T>(Lookup<T> parent, long currentKeyId) where T : struct, ILookupKey
         {
             var llt = parent.Llt;
@@ -478,4 +483,9 @@ public sealed partial class CompactTree : IPrepareForCommit
         _inner.AllEntriesIn(p)
             .Select(x=>(x.Item1.GetKey(_inner).ToString(), x.Item2))
             .ToList();
+
+    public void VerifyStructure()
+    {
+        _inner.VerifyStructure();
+    }
 }
