@@ -17,7 +17,14 @@
                         <a data-bind="attr: { href: indexesUrl }" class="btn btn-default" title="Return to list of indexes">
                             <i class="icon-cancel"></i><span>Cancel</span>
                         </a>
-                        <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex, requiredAccess: 'DatabaseReadWrite'" title="Clone this index">
+                        <button
+                            class="btn btn-default"
+                            data-bind="click: cloneIndex,
+                                visible: isEditingExistingIndex,
+                                disable: $root.databaseLimitStatus() === 'limitReached' || $root.clusterLimitStatus() === 'limitReached',
+                                requiredAccess: 'DatabaseReadWrite',
+                                attr: { title: $root.cloneButtonTitle }"
+                        >
                             <i class="icon-clone"></i><span>Clone</span>
                         </button>
                         <div data-bind="if: showIndexHistory" style="margin: unset">

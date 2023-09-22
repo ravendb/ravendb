@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class getLicenseLimitsUsage extends commandBase {
+class getClusterLicenseLimitsUsage extends commandBase {
 
     execute(): JQueryPromise<Raven.Server.Commercial.LicenseLimitsUsage> {
         const url = endpoints.global.license.licenseLimitsUsage;
@@ -11,4 +11,4 @@ class getLicenseLimitsUsage extends commandBase {
     }
 }
 
-export = getLicenseLimitsUsage;
+export = getClusterLicenseLimitsUsage;

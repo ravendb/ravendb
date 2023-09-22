@@ -38,7 +38,9 @@ function updateReduxCollectionsTracker() {
 }
 
 export const throttledUpdateLicenseLimitsUsage = _.throttle(() => {
-    services.licenseService.getLimitsUsage().then((dto) => globalDispatch(licenseActions.limitsUsageLoaded(dto)));
+    services.licenseService
+        .getClusterLimitsUsage()
+        .then((dto) => globalDispatch(licenseActions.limitsUsageLoaded(dto)));
 }, 200);
 
 function initRedux() {

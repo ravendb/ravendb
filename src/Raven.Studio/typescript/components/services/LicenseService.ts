@@ -1,7 +1,7 @@
-import getLicenseLimitsUsage from "commands/licensing/getLicenseLimitsUsage";
+import getClusterLicenseLimitsUsage from "commands/licensing/getClusterLicenseLimitsUsage";
 
 export default class LicenseService {
-    async getLimitsUsage() {
-        return new getLicenseLimitsUsage().execute();
+    async getClusterLimitsUsage() {
+        return new getClusterLicenseLimitsUsage().execute();
     }
 }

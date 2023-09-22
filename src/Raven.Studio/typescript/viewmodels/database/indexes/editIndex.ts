@@ -54,6 +54,9 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import licenseModel from "models/auth/licenseModel";
 import { EditIndexInfoHub } from "viewmodels/database/indexes/EditIndexInfoHub";
 import compoundField from "models/database/index/compoundField";
+import getDatabaseLicenseLimitsUsage = require("commands/licensing/getDatabaseLicenseLimitsUsage");
+import { LicenseLimitReachStatus, getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import getClusterLicenseLimitsUsage = require("commands/licensing/getClusterLicenseLimitsUsage");
 
 class editIndex extends shardViewModelBase {
     
@@ -76,11 +79,16 @@ class editIndex extends shardViewModelBase {
     canEditIndexName: KnockoutComputed<boolean>;
     canUseCompoundFields: KnockoutComputed<boolean>;
 
+    cloneButtonTitle: KnockoutComputed<string>;
+    clusterLimitStatus: KnockoutComputed<LicenseLimitReachStatus>;
+    databaseLimitStatus: KnockoutComputed<LicenseLimitReachStatus>;     
+    databaseLicenseLimitsUsage = ko.observable<Raven.Server.Commercial.DatabaseLicenseLimitsUsage>();
+    clusterLicenseLimitsUsage = ko.observable<Raven.Server.Commercial.LicenseLimitsUsage>();
+
     fieldNames = ko.observableArray<string>([]);
     indexNameHasFocus = ko.observable<boolean>(false);
 
     private indexesNames = ko.observableArray<string>();
-
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
     indexesUrl = ko.pureComputed(() => this.appUrls.indexes());
@@ -127,6 +135,9 @@ class editIndex extends shardViewModelBase {
     readonly shardSelector: inlineShardSelector;
 
     hasAdditionalAssembliesFromNuGet = licenseModel.getStatusValue("HasAdditionalAssembliesFromNuGet");
+    maxNumberOfStaticIndexesPerCluster = licenseModel.getStatusValue("MaxNumberOfStaticIndexesPerCluster");
+    maxNumberOfStaticIndexesPerDatabase = licenseModel.getStatusValue("MaxNumberOfStaticIndexesPerDatabase");
+
     infoHubView: ReactInKnockout<typeof EditIndexInfoHub>;
     isAddingNewIndex = ko.observable<boolean>(true);
 
@@ -237,7 +248,7 @@ class editIndex extends shardViewModelBase {
             
             return this.defaultSearchEngine() === "Corax";
         });
-
+        
         this.nameChanged = ko.pureComputed(() => {
             const newName = this.editedIndex().name();
             const oldName = this.originalIndexName;
@@ -305,10 +316,29 @@ class editIndex extends shardViewModelBase {
             
             if ((engine === "Corax") || (!engine && this.defaultSearchEngine() === "Corax")) {
                 valueToUpdate = "Corax";
-    }
+            }
     
             this.editedIndex().searchEngine(valueToUpdate);
-        }) 
+        });
+
+        this.databaseLimitStatus = ko.pureComputed(() => {
+            return getLicenseLimitReachStatus(this.databaseLicenseLimitsUsage()?.NumberOfStaticIndexes, this.maxNumberOfStaticIndexesPerDatabase);
+        });
+        
+        this.clusterLimitStatus = ko.pureComputed(() => {
+            return getLicenseLimitReachStatus(this.clusterLicenseLimitsUsage()?.NumberOfStaticIndexesInCluster, this.maxNumberOfStaticIndexesPerCluster);
+        });
+
+        this.cloneButtonTitle = ko.pureComputed(() => {
+            if (this.databaseLimitStatus() === "limitReached") {
+                return "Database reached the maximum number of static indexes allowed per database by your license.";
+            }
+            if (this.clusterLimitStatus() === "limitReached") {
+                return "Cluster reached the maximum number of static indexes allowed per cluster by your license.";
+            }
+
+            return "Clone this index";
+        })
     }
     
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
@@ -372,6 +402,8 @@ class editIndex extends shardViewModelBase {
         this.initValidation();
         
         this.fetchIndexes();
+        this.fetchDatabaseLicenseLimitsUsage();
+        this.fetchClusterLicenseLimitsUsage();
         
         if (!this.editedIndex().isAutoIndex() && !!indexToEditName) {
             this.showIndexHistory(true);
@@ -490,6 +522,22 @@ class editIndex extends shardViewModelBase {
             .execute()
             .done((indexesNames) => {
                 this.indexesNames(indexesNames);
+            });
+    }
+
+    private fetchDatabaseLicenseLimitsUsage() {
+        new getDatabaseLicenseLimitsUsage(this.db)
+            .execute()
+            .done((x) => {
+                this.databaseLicenseLimitsUsage(x);
+            });
+    }
+
+    private fetchClusterLicenseLimitsUsage() {
+        new getClusterLicenseLimitsUsage()
+            .execute()
+            .done((x) => {
+                this.clusterLicenseLimitsUsage(x);
             });
     }
     
