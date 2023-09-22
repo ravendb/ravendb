@@ -1878,23 +1878,26 @@ namespace Raven.Server.Commercial
                     return;
 
                 var settingsPath = _serverStore.Configuration.ConfigPath;
-
-                using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                if (File.Exists(settingsPath))
                 {
-                    BlittableJsonReaderObject settingsJson;
-
-                    await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
+                    using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
-                        settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
-                        settingsJson.Modifications = new DynamicJsonValue(settingsJson);
-                        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true;
+                        BlittableJsonReaderObject settingsJson;
+
+                        await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
+                        {
+                            settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
+                            settingsJson.Modifications = new DynamicJsonValue(settingsJson);
+                            settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true;
+                        }
+
+                        var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
+
+                        var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
+                        SettingsZipFileHelper.WriteSettingsJsonLocally(settingsPath, indentedJson);
                     }
-
-                    var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
-
-                    var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
-                    SettingsZipFileHelper.WriteSettingsJsonLocally(settingsPath, indentedJson);
                 }
+
                 _eulaAcceptedButHasPendingRestart = true;
             }
             finally
