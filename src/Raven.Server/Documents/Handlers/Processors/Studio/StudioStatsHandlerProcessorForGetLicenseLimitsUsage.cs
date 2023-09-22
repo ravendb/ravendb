@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Commercial;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -22,18 +21,7 @@ internal sealed class StudioStatsHandlerProcessorForGetLicenseLimitsUsage<TOpera
         {
             using (context.OpenReadTransaction())
             {
-                var limits = new DatabaseLicenseLimitsUsage();
-
-                var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
-
-                using (var database = ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName))
-                {
-                    limits.NumberOfStaticIndexes += database.CountOfStaticIndexes;
-                    limits.NumberOfAutoIndexes += database.CountOfAutoIndexes;
-                    limits.NumberOfCustomSorters += database.CountOfSorters;
-                    limits.NumberOfAnalyzers += database.CountOfAnalyzers;
-                    limits.NumberOfSubscriptions += ClusterStateMachine.GetSubscriptionsCountForDatabase(context.Allocator, items, database.DatabaseName);
-                }
+                var limits = DatabaseLicenseLimitsUsage.CreateFor(context, ServerStore, RequestHandler.DatabaseName);
 
                 context.Write(writer, limits.ToJson());
             }

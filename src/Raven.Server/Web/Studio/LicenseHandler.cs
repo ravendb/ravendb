@@ -186,13 +186,15 @@ namespace Raven.Server.Web.Studio
                     var limits = new LicenseLimitsUsage();
                     var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
 
-                    foreach (var database in ServerStore.Cluster.GetAllRawDatabases(context))
+                    foreach (var databaseRecord in ServerStore.Cluster.GetAllRawDatabases(context))
                     {
-                        limits.NumberOfStaticIndexesInCluster += database.CountOfStaticIndexes;
-                        limits.NumberOfAutoIndexesInCluster += database.CountOfAutoIndexes;
-                        limits.NumberOfCustomSortersInCluster += database.CountOfSorters;
-                        limits.NumberOfAnalyzersInCluster += database.CountOfAnalyzers;
-                        limits.NumberOfSubscriptionsInCluster += ClusterStateMachine.GetSubscriptionsCountForDatabase(context.Allocator, items, database.DatabaseName);
+                        var databaseLimits = DatabaseLicenseLimitsUsage.CreateFor(context, databaseRecord);
+
+                        limits.NumberOfStaticIndexesInCluster += databaseLimits.NumberOfStaticIndexes;
+                        limits.NumberOfAutoIndexesInCluster += databaseLimits.NumberOfAutoIndexes;
+                        limits.NumberOfCustomSortersInCluster += databaseLimits.NumberOfCustomSorters;
+                        limits.NumberOfAnalyzersInCluster += databaseLimits.NumberOfAnalyzers;
+                        limits.NumberOfSubscriptionsInCluster += databaseLimits.NumberOfSubscriptions;
                     }
 
                     context.Write(writer, limits.ToJson());
