@@ -23,6 +23,10 @@ namespace Raven.Server.Documents.Expiration
 {
     public sealed class ExpiredDocumentsCleaner : BackgroundWorkBase
     {
+        public const int DefaultDeleteFrequencyInSec = 60;
+
+        public const int DefaultRefreshFrequencyInSec = 60;
+
         internal static int BatchSize = PlatformDetails.Is32Bits == false
             ? 4096
             : 1024;
@@ -39,8 +43,8 @@ namespace Raven.Server.Documents.Expiration
             ExpirationConfiguration = expirationConfiguration;
             RefreshConfiguration = refreshConfiguration;
             _database = database;
-            _expirationPeriod = TimeSpan.FromSeconds(ExpirationConfiguration?.DeleteFrequencyInSec ?? 60);
-            _refreshPeriod = TimeSpan.FromSeconds(RefreshConfiguration?.RefreshFrequencyInSec ?? 60);
+            _expirationPeriod = TimeSpan.FromSeconds(ExpirationConfiguration?.DeleteFrequencyInSec ?? DefaultDeleteFrequencyInSec);
+            _refreshPeriod = TimeSpan.FromSeconds(RefreshConfiguration?.RefreshFrequencyInSec ?? DefaultRefreshFrequencyInSec);
         }
 
         public static ExpiredDocumentsCleaner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, ExpiredDocumentsCleaner expiredDocumentsCleaner)

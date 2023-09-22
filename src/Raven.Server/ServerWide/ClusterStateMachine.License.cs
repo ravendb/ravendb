@@ -5,6 +5,8 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
@@ -145,28 +147,36 @@ public sealed partial class ClusterStateMachine
 
             case nameof(EditExpirationCommand):
                 var minPeriodForExpirationInHours = serverStore.LicenseManager.LicenseStatus.MinPeriodForExpirationInHours;
-                if (databaseRecord.Expiration != null && databaseRecord.Expiration.Disabled == false &&
-                    minPeriodForExpirationInHours != null && databaseRecord.Expiration.DeleteFrequencyInSec != null &&
-                    databaseRecord.Expiration.DeleteFrequencyInSec * 60 * 60 > minPeriodForExpirationInHours)
+                if (minPeriodForExpirationInHours != null && databaseRecord.Expiration is { Disabled: false })
                 {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
+                    var deleteFrequencyInSec = databaseRecord.Expiration.DeleteFrequencyInSec ?? ExpiredDocumentsCleaner.DefaultDeleteFrequencyInSec;
+                    var deleteFrequency = new TimeSetting(deleteFrequencyInSec, TimeUnit.Seconds);
+                    var minPeriodForExpiration = new TimeSetting(minPeriodForExpirationInHours.Value, TimeUnit.Hours);
+                    if (deleteFrequency.AsTimeSpan < minPeriodForExpiration.AsTimeSpan)
+                    {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                            return;
 
-                    throw new LicenseLimitException(LimitType.Expiration, "Your license doesn't allow modifying the expiration configuration");
+                        throw new LicenseLimitException(LimitType.Expiration, $"Your license doesn't allow modifying the expiration frequency below {minPeriodForExpirationInHours} hours.");
+                    }
                 }
 
                 break;
 
             case nameof(EditRefreshCommand):
                 var minPeriodForRefreshInHours = serverStore.LicenseManager.LicenseStatus.MinPeriodForRefreshInHours;
-                if (databaseRecord.Refresh != null && databaseRecord.Refresh.Disabled == false &&
-                    minPeriodForRefreshInHours != null && databaseRecord.Refresh.RefreshFrequencyInSec != null &&
-                    databaseRecord.Refresh.RefreshFrequencyInSec * 60 * 60 > minPeriodForRefreshInHours)
+                if (minPeriodForRefreshInHours != null && databaseRecord.Refresh is { Disabled: false })
                 {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
+                    var refreshFrequencyInSec = databaseRecord.Refresh.RefreshFrequencyInSec ?? ExpiredDocumentsCleaner.DefaultRefreshFrequencyInSec;
+                    var refreshFrequency = new TimeSetting(refreshFrequencyInSec, TimeUnit.Seconds);
+                    var minPeriodForRefresh = new TimeSetting(minPeriodForRefreshInHours.Value, TimeUnit.Hours);
+                    if (refreshFrequency.AsTimeSpan < minPeriodForRefresh.AsTimeSpan)
+                    {
+                        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                            return;
 
-                    throw new LicenseLimitException(LimitType.Refresh, $"Your license doesn't allow modifying the refresh configuration");
+                        throw new LicenseLimitException(LimitType.Refresh, $"Your license doesn't allow modifying the refresh frequency below {minPeriodForRefreshInHours} hours.");
+                    }
                 }
 
                 break;
