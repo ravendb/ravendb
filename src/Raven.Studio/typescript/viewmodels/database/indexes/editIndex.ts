@@ -126,7 +126,7 @@ class editIndex extends shardViewModelBase {
     
     readonly shardSelector: inlineShardSelector;
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove()
+    hasAdditionalAssembliesFromNuGet = licenseModel.getStatusValue("HasAdditionalAssembliesFromNuGet");
     infoHubView: ReactInKnockout<typeof EditIndexInfoHub>;
     isAddingNewIndex = ko.observable<boolean>(true);
 

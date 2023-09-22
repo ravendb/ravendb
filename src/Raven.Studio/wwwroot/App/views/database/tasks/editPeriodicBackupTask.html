@@ -4,7 +4,7 @@
             <i class="icon-periodic-backup" data-bind="visible: backupOperation === 'periodic'"></i>
             <i class="icon-backup" data-bind="visible: backupOperation === 'manual'"></i>
             <h2 data-bind="text: $root.titleForView" class="mb-0"></h2>
-            <span class="badge license-restricted-badge professional" data-bind="if: backupOperation === 'periodic' && !isProfessionalOrAbove">Professional +</span>
+            <span class="badge license-restricted-badge professional" data-bind="if: backupOperation === 'periodic' && !hasPeriodicBackup">Professional +</span>
         </div>
         <!-- ko if: backupOperation === 'manual' -->
         <div class="flex-end margin-right-xs" data-bind="react: $root.manualInfoHubView"></div>
@@ -21,7 +21,7 @@
             <i class="icon-cancel"></i><span>Cancel</span>
         </button>
     </div>
-    <div data-bind="css: { 'pe-none item-disabled': !isProfessionalOrAbove && backupOperation === 'periodic' }">
+    <div data-bind="css: { 'pe-none item-disabled': !hasPeriodicBackup && backupOperation === 'periodic' }">
         <div class="panel">
             <div class="padding">
                 <div class="row margin-bottom" data-bind="validationElement: name, if: backupOperation === 'periodic'">
@@ -53,9 +53,9 @@
                             </button>
                             <ul class="dropdown-menu" data-bind="foreach: backupOptions">
                                 <li class="position-relative">
-                                    <a href="#" data-bind="css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && $data === 'Snapshot' }, click: $parent.useBackupType.bind($parent, $data)">
+                                    <a href="#" data-bind="css: { 'item-disabled pe-none': !$root.hasPeriodicBackup && $data === 'Snapshot' }, click: $parent.useBackupType.bind($parent, $data)">
                                         <span data-bind="text: $data"></span>
-                                        <!-- ko if: !$root.isProfessionalOrAbove && $data === 'Snapshot' -->
+                                        <!-- ko if: !$root.hasPeriodicBackup && $data === 'Snapshot' -->
                                         <span class="badge license-restricted-badge enterprise margin-left-xxs">Enterprise</span>
                                         <!-- /ko -->
                                     </a>
@@ -209,14 +209,14 @@
             </div>
         </div>
         <h3 class="margin-bottom margin-bottom-xs">Encryption</h3>
-        <div class="panel" data-bind="with: encryptionSettings, css: { 'item-disabled pe-none': !$root.isProfessionalOrAbove && backupOperation === 'manual' }">
+        <div class="panel" data-bind="with: encryptionSettings, css: { 'item-disabled pe-none': !$root.hasPeriodicBackup && backupOperation === 'manual' }">
             <div class="padding">
                 <div class="flex-horizontal" data-bind="validationElement: enabled">
                     <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
                         <input id="toggle-encryption" type="checkbox" data-bind="checked: enabled">
                         <label for="toggle-encryption">Encrypt backup</label>
                     </div>
-                    <span class="badge license-restricted-badge professional" data-bind="if: !$root.isProfessionalOrAbove && $parent.backupOperation === 'manual'">Professional +</span>
+                    <span class="badge license-restricted-badge professional" data-bind="if: !$root.hasPeriodicBackup && $parent.backupOperation === 'manual'">Professional +</span>
                     <span class="help-block margin-left" data-bind="validationMessage: enabled"></span>
                 </div>
                 <div data-bind="collapse: needExplicitConsent">

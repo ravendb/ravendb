@@ -31,7 +31,7 @@ class timeSeries extends shardViewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasTimeSeriesRollupsAndRetention = licenseModel.getStatusValue("HasTimeSeriesRollupsAndRetention");
     infoHubView: ReactInKnockout<typeof TimeSeriesInfoHub>;
 
     constructor(db: database) {

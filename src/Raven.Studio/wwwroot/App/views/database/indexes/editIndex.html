@@ -483,9 +483,9 @@
                                             <ul class="dropdown-menu" role="menu">
                                                 <li data-bind="click: _.partial(setAssemblySourceType, 'Server Runtime')"><a href="#">Server Runtime</a></li>
                                                 <li data-bind="click: _.partial(setAssemblySourceType, 'Path')"><a href="#">Path</a></li>
-                                                <li data-bind="click: _.partial(setAssemblySourceType, 'NuGet'), css: { 'd-flex align-items-center pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                                                <li data-bind="click: _.partial(setAssemblySourceType, 'NuGet'), css: { 'd-flex align-items-center pe-none item-disabled': !$root.hasAdditionalAssembliesFromNuGet }">
                                                     <a href="#">NuGet</a>
-                                                    <span class="badge license-restricted-badge professional margin-right-xs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                                                    <span class="badge license-restricted-badge professional margin-right-xs" data-bind="if: !$root.hasAdditionalAssembliesFromNuGet">Professional +</span>
                                                 </li>
                                             </ul>
                                         </div>

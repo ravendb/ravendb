@@ -47,8 +47,11 @@ class connectionStrings extends viewModelBase {
 
     infoHubView: ReactInKnockout<typeof ConnectionStringsInfoHub>;
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
-    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    hasRavenEtl = licenseModel.getStatusValue("HasRavenEtl");
+    hasSqlEtl = licenseModel.getStatusValue("HasSqlEtl");
+    hasOlapEtl = licenseModel.getStatusValue("HasOlapEtl");
+    hasElasticSearchEtl = licenseModel.getStatusValue("HasElasticSearchEtl");
+    hasQueueEtl = licenseModel.getStatusValue("HasQueueEtl");
     
     // Mapping from { connection string } to { taskId, taskName, taskType }
     connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: StudioTaskType }>> = {};

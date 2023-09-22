@@ -54,7 +54,7 @@ class editReplicationHubTask extends shardViewModelBase {
         generateCertificate: ko.observable<boolean>(false)
     };
 
-    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    hasPullReplicationAsHub = licenseModel.getStatusValue("HasPullReplicationAsHub");
 
     infoHubView: ReactInKnockout<typeof EditReplicationHubInfoHub>;
 

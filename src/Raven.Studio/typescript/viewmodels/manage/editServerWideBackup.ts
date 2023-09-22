@@ -31,7 +31,8 @@ class editServerWideBackup extends viewModelBase {
     editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasPeriodicBackup = licenseModel.getStatusValue("HasPeriodicBackup");
+    hasCloudBackups = licenseModel.getStatusValue("HasCloudBackups");
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();

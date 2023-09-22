@@ -11,11 +11,11 @@
             <div class="scroll flex-grow">
                 <div class="hr-title on-base-background">
                     <h5><strong>RavenDB</strong> Connection Strings</h5>
-                    <span class="badge license-restricted-badge professional margin-right-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                    <span class="badge license-restricted-badge professional margin-right-xxs" data-bind="if: !$root.hasRavenEtl">Professional +</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRavenEtl, css: { 'pe-none disabled': !$root.isProfessionalOrAbove }" title="Add a new RavenDB ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRavenEtl, css: { 'pe-none disabled': !$root.hasRavenEtl }" title="Add a new RavenDB ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
-                <div data-bind="if: ravenEtlConnectionStringsNames().length === 0 && $root.isProfessionalOrAbove">
+                <div data-bind="if: ravenEtlConnectionStringsNames().length === 0 && $root.hasRavenEtl">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
                         <h3 class="text-center text-muted margin-top">No RavenDB ETL connection strings have been defined</h3>
@@ -49,9 +49,9 @@
                     <h5><strong>SQL</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge professional margin-right-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl, css: { 'pe-none disabled': !$root.isProfessionalOrAbove }" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl, css: { 'pe-none disabled': !$root.hasSqlEtl }" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
                 </div>
-                <div data-bind="if: sqlEtlConnectionStringsNames().length === 0 && $root.isProfessionalOrAbove">
+                <div data-bind="if: sqlEtlConnectionStringsNames().length === 0 && $root.hasSqlEtl">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
                         <h3 class="text-center text-muted margin-top">No SQL ETL connection strings have been defined</h3>
@@ -82,9 +82,9 @@
                     <h5><strong>OLAP</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge enterprise margin-right-xxs" data-bind="if: !$root.isEnterpriseOrDeveloper">Enterprise</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddOlapEtl, css: { 'pe-none disabled': !$root.isEnterpriseOrDeveloper }" title="Add a new Olap ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddOlapEtl, css: { 'pe-none disabled': !$root.hasOlapEtl }" title="Add a new Olap ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
-                <div data-bind="if: olapEtlConnectionStringsNames().length === 0 && $root.isEnterpriseOrDeveloper">
+                <div data-bind="if: olapEtlConnectionStringsNames().length === 0 && $root.hasOlapEtl">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
                         <h3 class="text-center text-muted margin-top">No OLAP ETL connection strings have been defined</h3>
@@ -115,9 +115,9 @@
                     <h5><strong>Elasticsearch</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge enterprise margin-right-xxs" data-bind="if: !$root.isEnterpriseOrDeveloper">Enterprise</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddElasticSearchEtl, css: { 'pe-none disabled': !$root.isEnterpriseOrDeveloper }" title="Add a new Elasticsearch ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddElasticSearchEtl, css: { 'pe-none disabled': !$root.hasElasticSearchEtl }" title="Add a new Elasticsearch ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
-                <div data-bind="if: elasticSearchEtlConnectionStringsNames().length === 0 && $root.isEnterpriseOrDeveloper">
+                <div data-bind="if: elasticSearchEtlConnectionStringsNames().length === 0 && $root.hasElasticSearchEtl">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
                         <h3 class="text-center text-muted margin-top">No Elasticsearch ETL connection strings have been defined</h3>
@@ -148,9 +148,9 @@
                     <h5><strong>Kafka</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge enterprise margin-right-xxs" data-bind="if: !$root.isEnterpriseOrDeveloper">Enterprise</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddKafka, css: { 'pe-none disabled': !$root.isEnterpriseOrDeveloper }" title="Add a new Kafka connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddKafka, css: { 'pe-none disabled': !$root.hasQueueEtl }" title="Add a new Kafka connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
-                <div data-bind="if: kafkaConnectionStringsNames().length === 0 && $root.isEnterpriseOrDeveloper">
+                <div data-bind="if: kafkaConnectionStringsNames().length === 0 && $root.hasQueueEtl">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
                         <h3 class="text-center text-muted margin-top">No Kafka connection strings have been defined</h3>
@@ -181,9 +181,9 @@
                     <h5><strong>RabbitMQ</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge enterprise margin-right-xxs" data-bind="if: !$root.isEnterpriseOrDeveloper">Enterprise</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRabbitMq, css: { 'pe-none disabled': !$root.isEnterpriseOrDeveloper }" title="Add a new RabbitMQ connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRabbitMq, css: { 'pe-none disabled': !$root.hasQueueEtl }" title="Add a new RabbitMQ connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
-                <div data-bind="if: rabbitMqConnectionStringsNames().length === 0 && $root.isEnterpriseOrDeveloper">
+                <div data-bind="if: rabbitMqConnectionStringsNames().length === 0 && $root.hasQueueEtl">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
                         <h3 class="text-center text-muted margin-top">No RabbitMQ connection strings have been defined</h3>

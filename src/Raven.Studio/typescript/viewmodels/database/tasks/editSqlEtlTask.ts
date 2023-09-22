@@ -216,7 +216,7 @@ class editSqlEtlTask extends shardViewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringSqlEtlModel>();
     
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasSqlEtl = licenseModel.getStatusValue("HasSqlEtl");
     infoHubView: ReactInKnockout<typeof EditSqlEtlInfoHub>;
 
     constructor(db: database) {

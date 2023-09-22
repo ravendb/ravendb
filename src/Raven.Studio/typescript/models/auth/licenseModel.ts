@@ -120,6 +120,10 @@ class licenseModel {
         return licenseModel.licenseStatus()?.Type ?? null;
     });
 
+    static getStatusValue<T extends keyof Raven.Server.Commercial.LicenseStatus>(key: T) {
+        return licenseModel.licenseStatus()?.[key] ?? null;
+    }
+
     static isEnterpriseOrDeveloper = ko.pureComputed(() => {
         const type = licenseModel.licenseType();
 

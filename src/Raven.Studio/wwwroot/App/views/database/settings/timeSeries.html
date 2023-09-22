@@ -103,11 +103,11 @@
                     <div data-bind="with: rawPolicy" class="margin-bottom margin-bottom-sm">
                         <div class="form-group">
                             <label class="control-label">&nbsp;</label>
-                            <div class="toggle" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                            <div class="toggle" data-bind="css: { 'pe-none item-disabled': !$root.hasTimeSeriesRollupsAndRetention }">
                                 <input id="rawHasRetention" class="styled" type="checkbox" data-bind="checked: hasRetention">
                                 <label for="rawHasRetention">
                                     Enable Retention
-                                    <span class="badge license-restricted-badge professional margin-left-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                                    <span class="badge license-restricted-badge professional margin-left-xxs" data-bind="if: !$root.hasTimeSeriesRollupsAndRetention">Professional +</span>
                                 </label>
                             </div>
                         </div>
@@ -116,7 +116,7 @@
                     </div>
                     <div class="hr-title">
                         <h5>Rollup Policies</h5>
-                        <span class="badge license-restricted-badge professional margin-left-xxs margin-right-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                        <span class="badge license-restricted-badge professional margin-left-xxs margin-right-xxs" data-bind="if: !$root.hasTimeSeriesRollupsAndRetention">Professional +</span>
                         <hr>
                         <a class="aggregation-info margin-left margin-left-sm" data-toggle="tooltip">
                             <i class="icon-info text-info"></i>
@@ -172,9 +172,9 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
                                     <input class="styled" type="checkbox" data-bind="checked: hasRetention, attr: { id: 'policyHasRetention' + $index() }">
-                                    <label data-bind="attr: { for: 'policyHasRetention' + $index() }, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                                    <label data-bind="attr: { for: 'policyHasRetention' + $index() }, css: { 'pe-none item-disabled': !$root.hasTimeSeriesRollupsAndRetention }">
                                         Enable Retention
-                                        <span class="badge license-restricted-badge professional margin-left-xxs margin-right-xxs" data-bind="if: !$root.isProfessionalOrAbove">Professional +</span>
+                                        <span class="badge license-restricted-badge professional margin-left-xxs margin-right-xxs" data-bind="if: !$root.hasTimeSeriesRollupsAndRetention">Professional +</span>
                                     </label>
                                 </div>
                             </div>
@@ -185,7 +185,7 @@
                                 <hr><i class="icon-arrow-filled-down margin-left margin-right" data-bind="visible: $index() < $parent.policies().length - 1"></i><hr>
                             </div>
                         </div>
-                        <div class="margin-left margin-left-lg" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                        <div class="margin-left margin-left-lg" data-bind="css: { 'pe-none item-disabled': !$root.hasTimeSeriesRollupsAndRetention }">
                             <button class="btn btn-default" data-bind="click: addPolicy">
                                 <i class="icon-plus"></i>
                                 <span>Add Policy</span>

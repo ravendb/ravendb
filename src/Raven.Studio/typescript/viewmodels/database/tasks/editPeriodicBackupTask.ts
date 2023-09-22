@@ -35,7 +35,8 @@ class editPeriodicBackupTask extends shardViewModelBase {
     titleForView: KnockoutComputed<string>;
     configuration = ko.observable<backupConfigurationClass>();
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasPeriodicBackup = licenseModel.getStatusValue("HasPeriodicBackup");
+    hasCloudBackups = licenseModel.getStatusValue("HasCloudBackups");
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();
