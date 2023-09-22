@@ -498,7 +498,6 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(UpdateExternalReplicationStateCommand):
                     case nameof(ShardedUpdateExternalReplicationStateCommand):
-                    case nameof(PutShardedSubscriptionCommand):
                     case nameof(DeleteSubscriptionCommand):
                     case nameof(UpdateEtlProcessStateCommand):
                     case nameof(ToggleSubscriptionStateCommand):
@@ -513,12 +512,15 @@ namespace Raven.Server.ServerWide
                             leader?.SetStateOf(index, result);
                         break;
 
-
+                    case nameof(PutShardedSubscriptionCommand):
                     case nameof(PutSubscriptionCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out _, onBeforeCommandExecuted: (items, updateValueCommand) =>
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result, onBeforeCommandExecuted: (items, updateValueCommand) =>
                         {
                             AssertSubscriptionsLicenseLimits(serverStore, items, (PutSubscriptionCommand)updateValueCommand, context);
                         });
+
+                        if (result != null)
+                            leader?.SetStateOf(index, result);
                         break;
 
                     case nameof(DelayBackupCommand):
