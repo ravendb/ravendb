@@ -18,8 +18,12 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival;
 
-public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase(output)
+public class DataArchivalPatchingTests : RavenTestBase
 {
+    public DataArchivalPatchingTests(ITestOutputHelper output) : base(output)
+    {
+    }
+
     private async Task SetupDataArchival(IDocumentStore store)
     {
         var config = new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 };
@@ -40,7 +44,7 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
                 await session.StoreAsync(company);
                 await session.SaveChangesAsync();
             }
-            
+
             // Use patch to schedule archival
             var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery()
             {
@@ -80,7 +84,7 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
             }
         }
     }
-    
+
     [RavenFact(RavenTestCategory.Patching)]
     public async Task CanRevertDataArchivalUsingPatch()
     {
@@ -160,7 +164,7 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
         using (var store = GetDocumentStore())
         {
             // Insert document with archive time before activating the archival
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             var retires = SystemTime.UtcNow.AddMinutes(5);
             using (var session = store.OpenAsyncSession())
             {
@@ -169,7 +173,7 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
                 metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                 await session.SaveChangesAsync();
             }
-            
+
             // Make sure that the company is not skipped while indexing yet
             using (var session = store.OpenAsyncSession())
             {
@@ -186,7 +190,7 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
             await documentsArchiver.ArchiveDocs();
 
             await Indexes.WaitForIndexingAsync(store);
-            
+
             using (var session = store.OpenAsyncSession())
             {
                 var archivedCompany = await session.LoadAsync<Company>(company.Id);
@@ -200,7 +204,7 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
                 var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                 Assert.Equal(0, companies.Count);
             }
-            
+
             var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery()
             {
                 Query = "from Companies update { put(\"companies/\", this); }"
@@ -213,14 +217,14 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
                 Assert.Equal("Company Name", originalCompany.Name);
                 var metadata = session.Advanced.GetMetadataFor(originalCompany);
                 Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
-                
+
                 await Indexes.WaitForIndexingAsync(store);
-                
+
                 // Make sure that the company is skipped while indexing (auto map index)
                 var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                 Assert.Equal(1, companies.Count);
                 Assert.Equal("Company Name", companies[0].Name);
-   
+
                 metadata = session.Advanced.GetMetadataFor(companies[0]);
                 Assert.DoesNotContain(Constants.Documents.Metadata.ArchiveAt, metadata.Keys);
                 Assert.Contains(Constants.Documents.Metadata.Collection, metadata.Keys);
@@ -228,8 +232,8 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
             }
         }
     }
-    
-    
+
+
     [RavenFact(RavenTestCategory.Patching)]
     public async Task SchedulingAlreadyArchivedDocumentsToBeArchivedUsingPatchWontAddArchiveAtFieldToDocMetadata()
     {
@@ -246,7 +250,7 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
                 metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                 await session.SaveChangesAsync();
             }
-            
+
             // Activate the archival
             await SetupDataArchival(store);
 
@@ -255,7 +259,7 @@ public class DataArchivalPatchingTests(ITestOutputHelper output) : RavenTestBase
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
 
-            
+
             // Use patch to schedule archival
             var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery()
             {
