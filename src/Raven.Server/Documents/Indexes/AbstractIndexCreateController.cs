@@ -84,7 +84,7 @@ public abstract class AbstractIndexCreateController
             if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
                 OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
         }
-        
+
         if (definition.SourceType != IndexSourceType.Documents)
         {
             if (definition.ArchivedDataProcessingBehavior != null && definition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.IncludeArchived)
@@ -340,9 +340,13 @@ public abstract class AbstractIndexCreateController
                 {
                     index = (await _serverStore.SendToLeaderAsync(_command)).Index;
                 }
+                catch (LicenseLimitException e)
+                {
+                    ThrowIndexCreationExceptionDueToLicenseLimitations(e);
+                }
                 catch (Exception e)
                 {
-                    ThrowIndexCreationException(e, "Cluster is probably down.");
+                    ThrowIndexCreationException(e, ". Cluster is probably down.");
                 }
 
                 var indexCount = _command.Static.Count + _command.Auto.Count;
@@ -357,7 +361,7 @@ public abstract class AbstractIndexCreateController
                 }
                 catch (TimeoutException toe)
                 {
-                    ThrowIndexCreationException(toe, $"Operation timed out after: {timeout}.");
+                    ThrowIndexCreationException(toe, $". Operation timed out after: {timeout}.");
                 }
             }
             finally
@@ -367,19 +371,34 @@ public abstract class AbstractIndexCreateController
         }
 
         [DoesNotReturn]
+        private void ThrowIndexCreationExceptionDueToLicenseLimitations(LicenseLimitException exception)
+        {
+            var sb = CreateIndexCreationExceptionMessage(" due to license limitations.");
+
+            throw new IndexCreationException(sb.ToString(), exception);
+        }
+
+        [DoesNotReturn]
         private void ThrowIndexCreationException(Exception exception, string reason)
         {
-            var sb = new StringBuilder();
-            sb.AppendLine($"Failed to create indexes. {reason}");
-            if (_command.Static != null && _command.Static.Count > 0)
-                sb.AppendLine("Static: " + string.Join(", ", _command.Static.Select(x => x.Name)));
-
-            if (_command.Auto != null && _command.Auto.Count > 0)
-                sb.AppendLine("Auto: " + string.Join(", ", _command.Auto.Select(x => x.Name)));
+            var sb = CreateIndexCreationExceptionMessage(reason);
 
             sb.AppendLine($"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}");
 
             throw new IndexCreationException(sb.ToString(), exception);
+        }
+
+        private StringBuilder CreateIndexCreationExceptionMessage(string reason)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Failed to create indexes{reason}");
+            if (_command.Static is { Count: > 0 })
+                sb.AppendLine("Static: " + string.Join(", ", _command.Static.Select(x => x.Name)));
+
+            if (_command.Auto is { Count: > 0 })
+                sb.AppendLine("Auto: " + string.Join(", ", _command.Auto.Select(x => x.Name)));
+
+            return sb;
         }
     }
 }
