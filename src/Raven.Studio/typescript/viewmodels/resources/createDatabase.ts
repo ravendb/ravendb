@@ -30,6 +30,8 @@ class createDatabase extends dialogViewModelBase {
     
     static readonly shardsLimit = databaseCreationModel.shardsLimit; 
     
+    static readonly nodesLimit = databaseCreationModel.nodesLimit;
+    
     static readonly legacyKeySizes = [128, 192, 256];
 
     static readonly defaultSection: availableConfigurationSectionId = "replicationAndSharding";

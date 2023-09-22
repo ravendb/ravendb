@@ -22,6 +22,7 @@ const defaultReplicationFactor = 2;
 class databaseCreationModel {
 
     static readonly shardsLimit = 100;
+    static readonly nodesLimit = 100;
     static storageExporterPathKeyName = storageKeyProvider.storageKeyFor("storage-exporter-path");
 
     readonly configurationSections: Array<availableConfigurationSection> = [
@@ -274,6 +275,10 @@ class databaseCreationModel {
         const shardCount = this.replicationAndSharding.numberOfShards();
 
         // prevent UI break
+        if (factor > databaseCreationModel.nodesLimit) {
+            return;
+        }
+        
         if (shardCount > databaseCreationModel.shardsLimit) {
             return;
         }
@@ -428,6 +433,10 @@ class databaseCreationModel {
                     validator: (val: number) => val <= maxReplicationFactor,
                     message: `Max available nodes: {0}`,
                     params: maxReplicationFactor
+                },
+                {
+                    validator: (val: number) => val < databaseCreationModel.nodesLimit,
+                    message: `Replication factor must be less than ${databaseCreationModel.nodesLimit}.`
                 }
             ],
             digit: true

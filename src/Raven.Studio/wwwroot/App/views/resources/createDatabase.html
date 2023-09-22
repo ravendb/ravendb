@@ -654,7 +654,7 @@
             <thead>
                 <tr>
                     <th>&nbsp;</th>
-                    <!-- ko foreach: new Array(replicationFactor()) -->
+                    <!-- ko foreach: new Array(Math.min(replicationFactor(), $root.constructor.nodesLimit)) -->
                     <th>Replica <span data-bind="text: $index() + 1"></span></th>
                     <!-- /ko -->
                 </tr>
