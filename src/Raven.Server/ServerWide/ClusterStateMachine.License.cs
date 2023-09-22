@@ -68,7 +68,7 @@ public sealed partial class ClusterStateMachine
                     var topology = shard.Value;
                     if (maxReplicationFactorForSharding != null && topology.ReplicationFactor > maxReplicationFactorForSharding)
                     {
-                        throw new LicenseLimitException(LimitType.Sharding, $"Your license doesn't allow to use a replication factor of more than {topology.ReplicationFactor} for sharding");
+                        throw new LicenseLimitException(LimitType.Sharding, $"Your license doesn't allow to use a replication factor of more than {maxReplicationFactorForSharding} for sharding");
                     }
 
                     foreach (var nodeTag in topology.AllNodes)
