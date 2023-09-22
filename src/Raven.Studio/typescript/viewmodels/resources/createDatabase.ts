@@ -59,9 +59,9 @@ class createDatabase extends dialogViewModelBase {
     canUseDynamicOption: KnockoutComputed<boolean>; 
     defaultReplicationFactor = ko.observable<number>();
 
-    licenseType = licenseModel.licenseType();
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
-    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    hasEncryption = licenseModel.getStatusValue("HasEncryption");
+    hasMultiNodeSharding = licenseModel.getStatusValue("HasMultiNodeSharding");
+    maxReplicationFactorForSharding = licenseModel.getStatusValue("MaxReplicationFactorForSharding");
 
     databaseLocationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
     databaseLocationInfoToDisplay: KnockoutComputed<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult[]>;

@@ -46,7 +46,7 @@ class editExternalReplicationTask extends shardViewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
     
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasExternalReplication = licenseModel.getStatusValue("HasExternalReplication");
     infoHubView: ReactInKnockout<typeof EditExternalReplicationInfoHub>
 
     constructor(db: database) {

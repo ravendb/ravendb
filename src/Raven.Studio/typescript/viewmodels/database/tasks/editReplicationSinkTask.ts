@@ -56,7 +56,7 @@ class editReplicationSinkTask extends shardViewModelBase {
     exportCertificateUrl = endpoints.global.adminCertificates.adminCertificatesExport;
     private readonly serverCertificateName = "Server Certificate";
     
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasPullReplicationAsSink = licenseModel.getStatusValue("HasPullReplicationAsSink");
     infoHubView: ReactInKnockout<typeof EditReplicationSinkInfoHub>
 
     constructor(db: database) {

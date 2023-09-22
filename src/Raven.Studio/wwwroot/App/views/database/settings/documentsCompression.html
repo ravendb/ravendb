@@ -3,7 +3,7 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-documents-compression"></i>
             <h2 class="mb-0">Document Compression</h2>
-            <span class="badge license-restricted-badge enterprise" data-bind="if: !$root.isEnterpriseOrDeveloper">Enterprise</span>
+            <span class="badge license-restricted-badge enterprise" data-bind="if: !$root.hasDocumentsCompression">Enterprise</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
     </div>
@@ -19,7 +19,7 @@
             </small>
         </div>
     </div>
-    <div class="row" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
+    <div class="row" data-bind="css: { 'pe-none item-disabled': !$root.hasDocumentsCompression }">
         <div class="col-sm-12 col-lg-6">
             <div class="panel">
                 <div class="padding">

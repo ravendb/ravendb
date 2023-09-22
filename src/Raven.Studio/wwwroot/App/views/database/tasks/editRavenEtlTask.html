@@ -3,7 +3,7 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-ravendb-etl"></i>
             <h2 data-bind="text: $root.isAddingNewRavenEtlTask() ? `New RavenDB ETL` : `Edit RavenDB ETL`" class="mb-0"></h2>
-            <span class="badge license-restricted-badge professional" data-bind="if: !isProfessionalOrAbove">Professional +</span>
+            <span class="badge license-restricted-badge professional" data-bind="if: !hasRavenEtl">Professional +</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
     </div>
@@ -18,7 +18,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasRavenEtl }">
                     <div class="panel-body" data-bind="with: editedRavenEtl">
                         <div class="form-group margin-top">
                             <label for="taskName" class="control-label">Task Name</label>
@@ -185,7 +185,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasRavenEtl }">
                     <div class="flex-row margin-top">
                         <h3>Transform Scripts</h3>
                         <button type="button" id="addNewScript" data-bind="click: addNewTransformation, disable: editedRavenEtl().showEditTransformationArea" class="btn btn-info pull-right">
@@ -193,7 +193,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="scroll" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                <div class="scroll" data-bind="css: { 'pe-none item-disabled': !$root.hasRavenEtl }">
                     <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
                         <div data-bind="if: transformationScripts().length === 0 && !editedTransformationScriptSandbox()">
                             <div class="text-center text-muted">
@@ -232,12 +232,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="panel-addon" data-bind="visible: $root.usingHttps, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                <div class="panel-addon" data-bind="visible: $root.usingHttps, css: { 'pe-none item-disabled': !$root.hasRavenEtl }">
                     <div data-bind="compose: $root.certificateUploadInfoForOngoingTasks"></div>
                 </div>
             </form>
         </div>
-        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl(), css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl(), css: { 'pe-none item-disabled': !$root.hasRavenEtl }">
             <div class="flex-grow" data-bind="if: showEditTransformationArea">
                 <div id="editTransform" class="panel padding">
                     <div data-bind="with: editedTransformationScriptSandbox">
@@ -369,7 +369,7 @@
             </div>
         </div>
     </div>
-    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.hasRavenEtl }">
         <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
             <i class="icon-info icon-xl"></i>
             Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.

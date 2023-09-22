@@ -3,7 +3,7 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-sql-etl"></i>
             <h2 data-bind="text: $root.isAddingNewSqlEtlTask() ? 'New SQL ETL' : 'Edit SQL ETL'" class="mb-0"></h2>
-            <span class="badge license-restricted-badge professional" data-bind="if: !isProfessionalOrAbove">Professional +</span>
+            <span class="badge license-restricted-badge professional" data-bind="if: !hasSqlEtl">Professional +</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
     </div>
@@ -18,7 +18,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasSqlEtl }">
                     <div data-bind="with: editedSqlEtl">
                         <div class="panel-body">
                             <div class="form-group margin-top" data-bind="validationElement: taskName">
@@ -188,11 +188,11 @@
                     </div>
                 </div>
             </form>
-            <div class="flex-horizontal flex-header margin-top" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+            <div class="flex-horizontal flex-header margin-top" data-bind="css: { 'pe-none item-disabled': !$root.hasSqlEtl }">
                 <div class="flex-grow"><h3>SQL Tables</h3></div>
                 <div><button type="button" class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>
             </div>
-            <div class="sql-tables-list margin-bottom" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+            <div class="sql-tables-list margin-bottom" data-bind="css: { 'pe-none item-disabled': !$root.hasSqlEtl }">
                 <!-- Sql table edit area -->
                 <div class="panel" data-bind="visible: showEditSqlTableArea()">
                     <div class="padding padding-sm flex-horizontal item" data-bind="with: editedSqlTableSandbox()">
@@ -243,7 +243,7 @@
                     </div>
                 </div>
             </div>
-            <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+            <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasSqlEtl }">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
                     <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea">
@@ -252,7 +252,7 @@
                 </div> 
             </div>
             <!-- The transformation scripts -->
-            <div class="etl-list" data-bind="with: editedSqlEtl, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+            <div class="etl-list" data-bind="with: editedSqlEtl, css: { 'pe-none item-disabled': !$root.hasSqlEtl }">
                 <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
                     <i class="icon-lg icon-empty-set"></i>
                     <h3 class="margin-top margin-top-sm"
@@ -293,7 +293,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.hasSqlEtl }">
             <div class="flex-grow">
                 <div class="panel padding" data-bind="if: $root.showEditTransformationArea">
                     <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
@@ -435,7 +435,7 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
             </div>
         </div>
     </div>
-    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.isProfessionalOrAbove }">
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.hasSqlEtl }">
         <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
             <i class="icon-info icon-xl"></i>
             Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.

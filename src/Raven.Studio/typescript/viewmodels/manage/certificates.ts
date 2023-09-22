@@ -119,7 +119,7 @@ class certificates extends viewModelBase {
 
     deleteExistingCertificate = ko.observable<boolean>(false);
     
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasReadOnlyCertificates = licenseModel.getStatusValue("HasReadOnlyCertificates");
     infoHubView: ReactInKnockout<typeof CertificatesInfoHub>;
     
     constructor() {

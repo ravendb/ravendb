@@ -28,10 +28,10 @@
                                     <i data-bind="attr: { 'class' : validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
-                            <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: !alwaysEnabled, css: { 'pe-none item-disabled': $data.id === 'encryption' && !$root.isEnterpriseOrDeveloper }">
+                            <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: !alwaysEnabled, css: { 'pe-none item-disabled': $data.id === 'encryption' && !$root.hasEncryption }">
                                 <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }, disable: disableToggle">
                                 <label data-bind="text: name, attr: { 'for': 'section_' + $index() }"></label>
-                                <span class="badge license-restricted-badge enterprise align-self-center margin-right-xs" data-bind="if: $data.id === 'encryption' && !$root.isEnterpriseOrDeveloper">Enterprise</span>
+                                <span class="badge license-restricted-badge enterprise align-self-center margin-right-xs" data-bind="if: $data.id === 'encryption' && !$root.hasEncryption">Enterprise</span>
                                 <button type="button" class="btn pull-right btn-toggle"
                                         data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }, disable: disableToggle() && !enabled()">
                                     <i data-bind="attr: { 'class' : enabled() && validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
@@ -541,11 +541,20 @@
             <div class="input-group" title="Set the number of nodes that will contain the database" 
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
-                <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" placeholder="Enter number of nodes"
-                       data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput, disable: !$root.isProfessionalOrAbove || $root.licenseType === 'Developer'">
+                <input
+                    class="form-control"
+                    type="number"
+                    min="1"
+                    title="Set the number of nodes that will contain the database"
+                    placeholder="Enter number of nodes"
+                    data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput,
+                        attr: { max: ($root.databaseModel.replicationAndSharding.enableSharding && $root.maxReplicationFactorForSharding) > 0 ? $root.maxReplicationFactorForSharding : null }"
+                >
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning">
-                    <span data-bind="visible: !$root.isProfessionalOrAbove || $root.licenseType === 'Developer'">Your license doesn't allow replication factor higher than 1. The data won't be replicated.</span>
-                    <span data-bind="visible: $root.isProfessionalOrAbove && $root.licenseType !== 'Developer'">With replication factor set to 1, the data won't be replicated</span>
+                    With replication factor set to 1, the data won't be replicated.
+                </div>
+                <div class="help-block" data-bind="visible: $root.databaseModel.replicationAndSharding.enableSharding && $root.maxReplicationFactorForSharding > 0">
+                    Your license doesn't allow replication factor higher than <span data-bind="text: $root.maxReplicationFactorForSharding"></span> for sharded database.
                 </div>
             </div>
         </div>
@@ -608,12 +617,12 @@
         <div data-bind="if: manualMode() && !enableSharding()">
             <div data-bind="template: { name: 'manual-selection-non-sharded' }"></div>
         </div>
-        <div class="margin-top-sm" data-bind="if: manualMode() && enableSharding() && !$root.isProfessionalOrAbove || $root.licenseType === 'Professional' ">
+        <div class="margin-top-sm" data-bind="if: manualMode() && enableSharding() && !$root.hasMultiNodeSharding ">
             <div class="alert alert-warning">
                 <small>
                     <strong class="text-warning"><i class="icon-license"></i> Your license allows replication only across a single node.</strong>
                     <br/>
-                    Unleash the full potential of <span><i class="icon-sharding"></i> Sharding</span> and <a href="https://ravendb.net/buy" target="_blank">upgrade</a> your plan.
+                    Unleash the full potential of <span><i class="icon-sharding"></i> Sharding</span> and <a href="https://ravendb.net/l/FLDLO4" target="_blank">upgrade</a> your plan.
                 </small>
             </div>
         </div>

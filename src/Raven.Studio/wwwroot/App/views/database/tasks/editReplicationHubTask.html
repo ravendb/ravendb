@@ -4,7 +4,7 @@
             <div class="flex-horizontal gap-2">
                 <i class="icon-pull-replication-hub"></i>
                 <h2 data-bind="text: $root.isNewTask() ? `New Replication Hub` : `Edit Replication Hub`" class="mb-0"></h2>
-                <span class="badge license-restricted-badge enterprise" data-bind="if: !isEnterpriseOrDeveloper">Enterprise</span>
+                <span class="badge license-restricted-badge enterprise" data-bind="if: !hasPullReplicationAsHub">Enterprise</span>
             </div>
             <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
         </div>
@@ -18,7 +18,7 @@
                         </button>
                     </div>
                     <div data-bind="visible: !$root.canDefineCertificates">
-                        <button class="btn btn-default" data-bind="click: $root.exportHubConfiguration, css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }" title="Export this Hub Configuration to be used by a Sink task">
+                        <button class="btn btn-default" data-bind="click: $root.exportHubConfiguration, css: { 'pe-none item-disabled': !$root.hasPullReplicationAsHub }" title="Export this Hub Configuration to be used by a Sink task">
                             <i class="icon-export"></i><span>Export configuration</span>
                         </button>
                     </div>
@@ -31,7 +31,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasPullReplicationAsHub }">
                     <div class="panel-body">
                         <div class="bg-info text-info padding padding-xs pull-right">
                             <small><i class="icon-info"></i><span>Connection to the Hub is always initiated by the Replication Sink</span></small>
@@ -160,7 +160,7 @@
                         </div>
                     </div>
                 </div>
-                <div data-bind="if: $root.canDefineCertificates, css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
+                <div data-bind="if: $root.canDefineCertificates, css: { 'pe-none item-disabled': !$root.hasPullReplicationAsHub }">
                     <div class="flex-horizontal">
                         <h3 class="margin-top"
                             data-bind="text: withFiltering() ? 'Filtered Replication Access' : 'Replication Access'">
@@ -188,7 +188,7 @@
                         </h3>
                     </div>
                 </div>
-                <div class="scroll replication-access-list flex-vertical" data-bind="css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
+                <div class="scroll replication-access-list flex-vertical" data-bind="css: { 'pe-none item-disabled': !$root.hasPullReplicationAsHub }">
                     <div data-bind="foreach: $root.visibleReplicationAccessItems">
                         <div class="panel panel-hover"
                              data-bind="css: { active: $root.editedReplicationAccessItem() && $data.certificate() === $root.editedReplicationAccessItem().certificate() }">
@@ -274,7 +274,7 @@
                     </button>
                 </div>
             </div>
-            <div class="col-xs-12 col-lg-6" data-bind="with: $root.editedReplicationAccessItem, css: { 'pe-none item-disabled': !$root.isEnterpriseOrDeveloper }">
+            <div class="col-xs-12 col-lg-6" data-bind="with: $root.editedReplicationAccessItem, css: { 'pe-none item-disabled': !$root.hasPullReplicationAsHub }">
                 <div class="panel margin-top">
                     <div class="panel-body">
                         <button class="close" data-bind="click: $root.cancelReplicationAccessOperation" aria-hidden="true">

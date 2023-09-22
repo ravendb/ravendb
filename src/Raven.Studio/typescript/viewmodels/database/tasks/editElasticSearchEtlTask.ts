@@ -208,7 +208,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringElasticSearchEtlModel>();
     
-    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    hasElasticSearchEtl = licenseModel.getStatusValue("HasElasticSearchEtl");
     infoHubView: ReactInKnockout<typeof EditElasticSearchEtlInfoHub>;
 
     constructor(db: database) {

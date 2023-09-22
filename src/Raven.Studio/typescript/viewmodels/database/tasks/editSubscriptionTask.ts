@@ -53,7 +53,7 @@ class editSubscriptionTask extends shardViewModelBase {
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasRevisionsInSubscriptions = licenseModel.getStatusValue("HasRevisionsInSubscriptions");
     possibleMentors = ko.observableArray<string>([]);
     
     enableTestArea = ko.observable<boolean>(false);

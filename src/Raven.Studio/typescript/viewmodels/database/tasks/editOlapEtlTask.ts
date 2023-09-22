@@ -267,7 +267,7 @@ class editOlapEtlTask extends shardViewModelBase {
 
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>(); // needed for olap local destination in connection string
 
-    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    hasOlapEtl = licenseModel.getStatusValue("HasOlapEtl");
     infoHubView: ReactInKnockout<typeof EditOlapEtlInfoHub>;
     
     constructor(db: database) {

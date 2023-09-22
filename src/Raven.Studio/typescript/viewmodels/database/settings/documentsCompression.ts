@@ -29,7 +29,7 @@ class documentsCompression extends shardViewModelBase {
 
     storageReportUrl: KnockoutComputed<string>;
 
-    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    hasDocumentsCompression = licenseModel.getStatusValue("HasDocumentsCompression");
     
     infoHubView: ReactInKnockout<typeof DocumentCompressionInfoHub>;
     

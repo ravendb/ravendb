@@ -210,7 +210,7 @@ class editRavenEtlTask extends shardViewModelBase {
     usingHttps = location.protocol === "https:";
     certificatesUrl = appUrl.forCertificates();
 
-    isProfessionalOrAbove = licenseModel.isProfessionalOrAbove();
+    hasRavenEtl = licenseModel.getStatusValue("HasRavenEtl");
     infoHubView: ReactInKnockout<typeof EditRavenEtlInfoHub>;
 
     constructor(db: database) {

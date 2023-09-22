@@ -206,7 +206,7 @@ class editKafkaEtlTask extends viewModelBase {
         return db ? db.isSharded() : false;
     });
 
-    isEnterpriseOrDeveloper = licenseModel.isEnterpriseOrDeveloper();
+    hasQueueEtl = licenseModel.getStatusValue("HasQueueEtl");
     infoHubView: ReactInKnockout<typeof EditKafkaEtlInfoHub>;
 
     constructor() {
