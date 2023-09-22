@@ -620,7 +620,9 @@
         <div class="margin-top-sm" data-bind="if: manualMode() && enableSharding() && !$root.hasMultiNodeSharding ">
             <div class="alert alert-warning">
                 <small>
-                    <strong class="text-warning"><i class="icon-license"></i> Your license allows replication only across a single node.</strong>
+                    <strong class="text-warning">
+                        <i class="icon-license"></i><span>Your license allows creating only single replica shards on a single node.</span>
+                    </strong>
                     <br/>
                     Unleash the full potential of <span><i class="icon-sharding"></i> Sharding</span> and <a href="https://ravendb.net/l/FLDLO4" target="_blank">upgrade</a> your plan.
                 </small>
