@@ -40,10 +40,10 @@ export function EditSubscriptionTaskInfoHub() {
             >
                 <p>
                     Define a <strong>Subscription Query</strong> in this view to create a subscription-task on the
-                    server to which clients can subscribe.
+                    RavenDB server to which clients can subscribe.
                 </p>
                 <p>
-                    When a client opens a connection to this task, RavenDB sends all documents{" "}
+                    When a client opens a connection to this task, the server sends all documents{" "}
                     <strong>matching the defined query</strong> to the client for processing.
                 </p>
                 <p>
@@ -59,9 +59,9 @@ export function EditSubscriptionTaskInfoHub() {
                     <li>
                         The <strong>starting point</strong> from where to send the matching documents can be configured.
                     </li>
-                    <li>
-                        You can <strong>test the subscription</strong> in this view to preview sample document results
-                        that will be sent.
+                    <li className="margin-top-xxs">
+                        You can <strong>test the subscription query</strong> in this view to preview sample document results
+                        that will be sent to the client.
                     </li>
                 </ul>
                 <hr />
