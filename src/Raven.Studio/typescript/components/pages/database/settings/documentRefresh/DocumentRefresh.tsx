@@ -60,7 +60,7 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
     const isLimitWarningVisible =
         minPeriodForRefreshInHours > 0 &&
         formValues.isRefreshFrequencyEnabled &&
-        refreshFrequencyInHours > minPeriodForRefreshInHours;
+        refreshFrequencyInHours < minPeriodForRefreshInHours;
 
     useEffect(() => {
         if (!formValues.isRefreshFrequencyEnabled && formValues.refreshFrequency !== null) {
