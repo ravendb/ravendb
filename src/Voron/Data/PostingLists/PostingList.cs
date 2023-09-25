@@ -69,7 +69,7 @@ namespace Voron.Data.PostingLists
             state.LeafPages = 1;
             state.RootPage = newPage.PageNumber;
 
-            leafPage.AppendToNewPage(encoder);
+            leafPage.AppendToNewPage(tx, encoder);
             state.NumberOfEntries += leafPage.Header->NumberOfEntries;;
 
             if (encoder.Done == false) // we overflow and need to split excess to additional pages
@@ -549,7 +549,7 @@ namespace Voron.Data.PostingLists
                 PostingListLeafPage.InitLeaf(newPage.Header);
                 _state.LeafPages++;
                 var first = encoder.NextValueToEncode;
-                newPage.AppendToNewPage(encoder);
+                newPage.AppendToNewPage(_llt, encoder);
                 _state.NumberOfEntries += newPage.Header->NumberOfEntries;
                 AddToParentPage(first, newPage.Header->PageNumber);
             }
@@ -660,8 +660,10 @@ namespace Voron.Data.PostingLists
             var page = _llt.AllocatePage(1);
             long cpy = page.PageNumber;
             ref var state = ref _stk[_pos];
+            Debug.Assert(_llt.IsDirty(page.PageNumber));
             Memory.Copy(page.Pointer, state.Page.Pointer, Constants.Storage.PageSize);
             page.PageNumber = cpy;
+            Debug.Assert(_llt.IsDirty(state.Page.PageNumber));
             Memory.Set(state.Page.DataPointer, 0, Constants.Storage.PageSize - PageHeader.SizeOf);
             var rootPage = new PostingListBranchPage(state.Page);
             rootPage.Init();

@@ -466,6 +466,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             return false; // nothing to be done here, we cannot fully merge, so abort
         
         // now copy from the temp buffer to the actual page
+        Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, temp.Ptr, Constants.Storage.PageSize);
 
         // We update the entries offsets on the source page, now that we have moved the entries.
@@ -583,6 +584,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         // if we are removing the leftmost item, we need to maintain the smallest entry, just copy the sibling's contents
         long pageNum = destinationState.Page.PageNumber;
+        Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, sourceState.Page.Pointer, Constants.Storage.PageSize);
         destinationState.Page.PageNumber = pageNum;
 
@@ -1031,9 +1033,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var page = _llt.AllocatePage(1);
 
         long cpy = page.PageNumber;
+        Debug.Assert(_llt.IsDirty(page.PageNumber));
         Memory.Copy(page.Pointer, state.Page.Pointer, Constants.Storage.PageSize);
         page.PageNumber = cpy;
 
+        Debug.Assert(_llt.IsDirty(state.Page.PageNumber));
         Memory.Set(state.Page.DataPointer, 0, Constants.Storage.PageSize - PageHeader.SizeOf);
         state.Header->PageFlags = LookupPageFlags.Branch;
         state.Header->Lower = PageHeader.SizeOf + sizeof(ushort);
@@ -1112,7 +1116,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             tmpHeader->FreeSpace = (ushort)(tmpHeader->Upper - tmpHeader->Lower);
 
             // We copy back the defragmented structure on the temporary page to the actual page.
-            Unsafe.CopyBlockUnaligned(state.Page.Pointer, tmpPtr, Constants.Storage.PageSize);
+            Debug.Assert(llt.IsDirty(state.Page.PageNumber));
+            Memory.Copy(state.Page.Pointer, tmpPtr, Constants.Storage.PageSize);
             Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
         }
     }
