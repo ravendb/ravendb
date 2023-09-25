@@ -26,6 +26,7 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function DataArchival({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -42,8 +43,8 @@ export default function DataArchival({ db }: NonShardedViewProps) {
     const { reportEvent } = useEventsCollector();
     const { isAdminAccessOrAbove } = useAccessManager();
 
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
-    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+    const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
+    const featureAvailability = useEnterpriseLicenseAvailability(hasDataArchival);
 
     useEffect(() => {
         if (!formValues.isArchiveFrequencyEnabled && formValues.archiveFrequency !== null) {
@@ -80,8 +81,6 @@ export default function DataArchival({ db }: NonShardedViewProps) {
         return <LoadError error="Unable to load data archival" refresh={asyncGetDataArchivalConfiguration.execute} />;
     }
 
-    todo("Feature", "Damian", "Add the missing logic");
-    todo("Other", "Danielle", "Text for About this view");
     todo("Feature", "Damian", "Render you do not have permission to this view");
 
     return (
@@ -93,19 +92,22 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                             <AboutViewHeading
                                 title="Data Archival"
                                 icon="data-archival"
-                                licenseBadgeText={isFeatureInLicense ? null : "Enterprise"}
+                                licenseBadgeText={hasDataArchival ? null : "Enterprise"}
                             />
-                            <ButtonWithSpinner
-                                type="submit"
-                                color="primary"
-                                className="mb-3"
-                                icon="save"
-                                disabled={!formState.isDirty || !isAdminAccessOrAbove}
-                                isSpinning={formState.isSubmitting}
-                            >
-                                Save
-                            </ButtonWithSpinner>
-                            <Col className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
+                            <div id="saveDataArchival" className="w-fit-content">
+                                <ButtonWithSpinner
+                                    type="submit"
+                                    color="primary"
+                                    className="mb-3"
+                                    icon="save"
+                                    disabled={!formState.isDirty || !isAdminAccessOrAbove}
+                                    isSpinning={formState.isSubmitting}
+                                >
+                                    Save
+                                </ButtonWithSpinner>
+                            </div>
+                            {!hasDataArchival && <FeatureNotAvailableInYourLicensePopover target="saveDataArchival" />}
+                            <Col className={hasDataArchival ? "" : "item-disabled pe-none"}>
                                 <Card>
                                     <CardBody>
                                         <div className="vstack gap-2">
@@ -145,7 +147,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={hasDataArchival ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="about"
                                 icon="about"
@@ -187,7 +189,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isFeatureInLicense}
+                                isUnlimited={hasDataArchival}
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
