@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -371,7 +372,31 @@ namespace Voron.Impl.Paging
             return transactionState;
         }
 
-        private void TxOnCommit(IPagerLevelTransactionState tx)
+        [Conditional("DEBUG")]
+        private unsafe void VerifyDidNotChanged(IPagerLevelTransactionState tx, long pageNumber, EncryptionBuffer buffer, PagerState pagerState)
+        {
+            var pagePointer = Inner.AcquirePagePointerWithOverflowHandling(tx, pageNumber, pagerState);
+            var pageHeader = (PageHeader*)pagePointer;
+            int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
+
+            if (Memory.Compare((byte*)pageHeader, buffer.Pointer, Constants.Storage.PageSize) != 0)
+                throw new InvalidOperationException($"The header of {pageNumber} was modified, but it was *not* changed in this transaction!");
+
+            var toCopy = numberOfPages * Constants.Storage.PageSize;
+            AssertCopyWontExceedPagerFile(toCopy, pageNumber);
+
+            ulong currentHash = Hashing.XXHash64.Calculate(buffer.Pointer, (ulong)toCopy);
+
+            Memory.Copy(buffer.Pointer, pagePointer, toCopy);
+            DecryptPage((PageHeader*)buffer.Pointer);
+            ulong hashFromPager = Hashing.XXHash64.Calculate(buffer.Pointer, (ulong)toCopy);
+            
+            if(currentHash != hashFromPager)
+                throw new InvalidOperationException($"The hash of {pageNumber} was modified, but it was *not* changed in this transaction!");
+
+        }
+
+        private void TxOnCommit(IPagerLevelTransactionState tx, PagerState pagerState)
         {
             if (tx.IsWriteTransaction == false)
                 return;
@@ -388,7 +413,10 @@ namespace Voron.Impl.Paging
                     continue;
 
                 if (buffer.Value.Modified == false)
+                {
+                    VerifyDidNotChanged(tx, buffer.Key, buffer.Value, pagerState);
                     continue; // No modification
+                }
 
                 // Encrypt the local buffer, then copy the encrypted value to the pager
                 var pageHeader = (PageHeader*)buffer.Value.Pointer;

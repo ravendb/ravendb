@@ -91,7 +91,7 @@ namespace Voron.Impl
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.
 
-        public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
+        public event Action<IPagerLevelTransactionState, PagerState> BeforeCommitFinalization;
 
         public event Action<LowLevelTransaction> LastChanceToReadFromWriteTransactionBeforeCommit;
 
@@ -1102,8 +1102,8 @@ namespace Voron.Impl
                 Environment.LastWorkTime = DateTime.UtcNow;
                 CommitStage2_WriteToJournal();
             }
-
-            BeforeCommitFinalization?.Invoke(this);
+            
+            BeforeCommitFinalization?.Invoke(this, _lastState);
             CommitStage3_DisposeTransactionResources();
         }
 
@@ -1220,7 +1220,7 @@ namespace Voron.Impl
             if (AsyncCommit.Result)
                 Environment.LastWorkTime = DateTime.UtcNow;
 
-            BeforeCommitFinalization?.Invoke(this);
+            BeforeCommitFinalization?.Invoke(this, _lastState);
             CommitStage3_DisposeTransactionResources();
         }
 
