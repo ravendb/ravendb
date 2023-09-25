@@ -13,17 +13,17 @@ import AnalyzersList from "./ServerWideCustomAnalyzersList";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function ServerWideCustomAnalyzers() {
     const { manageServerService } = useServices();
     const asyncGetAnalyzers = useAsync(manageServerService.getServerWideCustomAnalyzers, []);
 
     const { appUrl } = useAppUrls();
-    const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
 
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasServerWideAnalyzers"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasServerWideCustomAnalyzers = useAppSelector(licenseSelectors.statusValue("HasServerWideAnalyzers"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasServerWideCustomAnalyzers);
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
 
@@ -36,30 +36,18 @@ export default function ServerWideCustomAnalyzers() {
                         <div id="newServerWideCustomAnalyzer" className="w-fit-content">
                             <a
                                 href={appUrl.forEditServerWideCustomAnalyzer()}
-                                className={classNames("btn btn-primary mb-3", { disabled: !isFeatureInLicense })}
+                                className={classNames("btn btn-primary mb-3", {
+                                    disabled: !hasServerWideCustomAnalyzers,
+                                })}
                             >
                                 <Icon icon="plus" />
                                 Add a server-wide custom analyzer
                             </a>
                         </div>
-                        {!isFeatureInLicense && (
-                            <UncontrolledPopover
-                                trigger="hover"
-                                target="newServerWideCustomAnalyzer"
-                                placement="top"
-                                className="bs5"
-                            >
-                                <div className="p-3 text-center">
-                                    Your current license does not support this feature.
-                                    <br />
-                                    <a href={upgradeLicenseLink} target="_blank">
-                                        Upgrade your plan
-                                    </a>{" "}
-                                    to access.
-                                </div>
-                            </UncontrolledPopover>
+                        {!hasServerWideCustomAnalyzers && (
+                            <FeatureNotAvailableInYourLicensePopover target="newServerWideCustomAnalyzer" />
                         )}
-                        <div className={isFeatureInLicense ? null : "item-disabled pe-none"}>
+                        <div className={hasServerWideCustomAnalyzers ? null : "item-disabled pe-none"}>
                             <HrHeader count={resultsCount}>Server-wide custom analyzers</HrHeader>
                             <AnalyzersList
                                 fetchStatus={asyncGetAnalyzers.status}
@@ -69,7 +57,7 @@ export default function ServerWideCustomAnalyzers() {
                         </div>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={hasServerWideCustomAnalyzers ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -120,7 +108,7 @@ export default function ServerWideCustomAnalyzers() {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isFeatureInLicense}
+                                isUnlimited={hasServerWideCustomAnalyzers}
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
