@@ -11,6 +11,7 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database = require("models/resources/database");
 import shardedDatabase from "models/resources/shardedDatabase";
 import shard from "models/resources/shard";
+import { IntegrationsInfoHub } from "viewmodels/database/settings/IntegrationsInfoHub";
 
 class integrations extends shardViewModelBase {
 
@@ -21,7 +22,11 @@ class integrations extends shardViewModelBase {
     editedPostgreSqlCredentials = ko.observable<postgreSqlCredentialsModel>(null);
 
     canUseIntegrations: boolean;
-    
+
+    hasPostgreSql = licenseModel.getStatusValue("HasPostgreSqlIntegration");
+    hasPowerBi = licenseModel.getStatusValue("HasPowerBI");
+    infoHubView: ReactInKnockout<typeof IntegrationsInfoHub>;
+
     //TODO
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     errorText: KnockoutComputed<string>;
@@ -41,6 +46,9 @@ class integrations extends shardViewModelBase {
         
         this.bindToCurrentInstance("onConfirmDelete");
         this.initObservables();
+        this.infoHubView = ko.pureComputed(() => ({
+            component: IntegrationsInfoHub
+        }));
     }
     
     private initObservables(): void {
