@@ -1692,5 +1692,10 @@ namespace Voron.Impl
             page = new TreePage(tmp.Ptr, pageSize);
             return dispose;
         }
+
+        public bool IsDirty(long p)
+        {
+            return _dirtyPages.Contains(p);
+        }
     }
 }
