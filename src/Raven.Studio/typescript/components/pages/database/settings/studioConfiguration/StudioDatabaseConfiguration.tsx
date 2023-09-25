@@ -24,6 +24,7 @@ import { useAppSelector } from "components/store";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -49,8 +50,8 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
     const studioConfigurationDocsLink = useRavenLink({ hash: "HIR1VP" });
     const { reportEvent } = useEventsCollector();
 
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasStudioConfiguration = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasStudioConfiguration);
 
     const onSave: SubmitHandler<StudioDatabaseConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -79,20 +80,25 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                     <AboutViewHeading
                         icon="database-studio-configuration"
                         title="Studio Configuration"
-                        licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
+                        licenseBadgeText={hasStudioConfiguration ? null : "Professional +"}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <div className="d-flex align-items-center justify-content-between">
-                            <ButtonWithSpinner
-                                type="submit"
-                                color="primary"
-                                className="mb-3"
-                                icon="save"
-                                disabled={!formState.isDirty}
-                                isSpinning={formState.isSubmitting}
-                            >
-                                Save
-                            </ButtonWithSpinner>
+                            <div id="saveStudioConfiguration" className="w-fit-content">
+                                <ButtonWithSpinner
+                                    type="submit"
+                                    color="primary"
+                                    className="mb-3"
+                                    icon="save"
+                                    disabled={!formState.isDirty}
+                                    isSpinning={formState.isSubmitting}
+                                >
+                                    Save
+                                </ButtonWithSpinner>
+                            </div>
+                            {!hasStudioConfiguration && (
+                                <FeatureNotAvailableInYourLicensePopover target="saveStudioConfiguration" />
+                            )}
                             <small title="Navigate to the server-wide Client Configuration View">
                                 <a target="_blank" href={appUrl.forGlobalStudioConfiguration()}>
                                     <Icon icon="link" />
@@ -100,7 +106,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                                 </a>
                             </small>
                         </div>
-                        <div className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
+                        <div className={hasStudioConfiguration ? "" : "item-disabled pe-none"}>
                             <Card id="popoverContainer">
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -164,7 +170,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                     </Form>
                 </Col>
                 <Col sm={12} md={4}>
-                    <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
+                    <AboutViewAnchored defaultOpen={hasStudioConfiguration ? null : "licensing"}>
                         <AccordionItemWrapper
                             icon="about"
                             color="info"
@@ -184,7 +190,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                             </a>
                         </AccordionItemWrapper>
                         <FeatureAvailabilitySummaryWrapper
-                            isUnlimited={isFeatureInLicense}
+                            isUnlimited={hasStudioConfiguration}
                             data={featureAvailability}
                         />
                     </AboutViewAnchored>
