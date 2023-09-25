@@ -291,8 +291,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
             {subscriptionsClusterLimitStatus !== "notReached" && (
                 <Alert
                     color={subscriptionsClusterLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center"
+                    className="text-center mb-3"
                 >
+                    <Icon icon="cluster" />
                     Cluster {subscriptionsClusterLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
                     <strong>maximum number of subscriptions</strong> allowed per cluster by your license{" "}
                     <strong>
@@ -311,8 +312,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
             {subscriptionsDatabaseLimitStatus !== "notReached" && (
                 <Alert
                     color={subscriptionsDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center"
+                    className="text-center mb-3"
                 >
+                    <Icon icon="database" />
                     Database {subscriptionsDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
                     <strong>maximum number of subscriptions</strong> allowed per database by your license{" "}
                     <strong>

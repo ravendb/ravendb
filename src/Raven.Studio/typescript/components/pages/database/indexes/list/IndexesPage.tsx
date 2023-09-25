@@ -152,6 +152,7 @@ export function IndexesPage(props: IndexesPageProps) {
                         color={staticClusterLimitStatus === "limitReached" ? "danger" : "warning"}
                         className="text-center mb-3"
                     >
+                        <Icon icon="cluster" />
                         Cluster {staticClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
                         <strong>maximum number of static indexes</strong> allowed per cluster by your license{" "}
                         <strong>
@@ -171,6 +172,7 @@ export function IndexesPage(props: IndexesPageProps) {
                         color={autoClusterLimitStatus === "limitReached" ? "danger" : "warning"}
                         className="text-center mb-3"
                     >
+                        <Icon icon="cluster" />
                         Cluster {autoClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
                         <strong>maximum number of auto indexes</strong> allowed per cluster by your license{" "}
                         <strong>
@@ -190,6 +192,7 @@ export function IndexesPage(props: IndexesPageProps) {
                         color={staticDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
                         className="text-center mb-3"
                     >
+                        <Icon icon="database" />
                         Database {staticDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
                         <strong>maximum number of static indexes</strong> allowed per database by your license{" "}
                         <strong>
@@ -209,6 +212,7 @@ export function IndexesPage(props: IndexesPageProps) {
                         color={autoDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
                         className="text-center mb-3"
                     >
+                        <Icon icon="database" />
                         Database {autoDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
                         <strong>maximum number of auto indexes</strong> allowed per database by your license{" "}
                         <strong>
@@ -248,6 +252,9 @@ export function IndexesPage(props: IndexesPageProps) {
                                     className="bs5"
                                 >
                                     <div className="p-3 text-center">
+                                        <Icon
+                                            icon={staticClusterLimitStatus === "limitReached" ? "cluster" : "database"}
+                                        />
                                         {staticClusterLimitStatus === "limitReached" ? "Cluster" : "Database"} has
                                         reached the maximum number of static indexes allowed per{" "}
                                         {staticClusterLimitStatus === "limitReached" ? "cluster" : "database"} by your

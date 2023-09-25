@@ -101,6 +101,11 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                         className="bs5"
                                     >
                                         <div className="p-3 text-center">
+                                            <Icon
+                                                icon={
+                                                    databaseLimitReachStatus === "limitReached" ? "database" : "cluster"
+                                                }
+                                            />
                                             {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has
                                             reached the maximum number of Custom Analyzers allowed per{" "}
                                             {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
