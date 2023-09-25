@@ -15,7 +15,7 @@ namespace Voron.Impl.Paging
 
         public void Dispose()
         {
-            BeforeCommitFinalization?.Invoke(this, null);
+            BeforeCommitFinalization?.Invoke(this);
             OnDispose?.Invoke(this);
         }
 
@@ -53,7 +53,7 @@ namespace Voron.Impl.Paging
         }
 
         public event Action<IPagerLevelTransactionState> OnDispose;
-        public event Action<IPagerLevelTransactionState, PagerState> BeforeCommitFinalization;
+        public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
 
         public void EnsurePagerStateReference(ref PagerState state)
         {

@@ -373,13 +373,15 @@ namespace Voron.Impl.Paging
         }
 
         [Conditional("DEBUG")]
-        private unsafe void VerifyDidNotChanged(IPagerLevelTransactionState tx, long pageNumber, EncryptionBuffer buffer, PagerState pagerState)
+        private unsafe void VerifyDidNotChanged(IPagerLevelTransactionState tx, long pageNumber, EncryptionBuffer buffer)
         {
-            var pagePointer = Inner.AcquirePagePointerWithOverflowHandling(tx, pageNumber, pagerState);
+            var pagePointer = Inner.AcquirePagePointerWithOverflowHandling(tx, pageNumber, null);
             var pageHeader = (PageHeader*)pagePointer;
             int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
 
-            if (Memory.Compare((byte*)pageHeader, buffer.Pointer, Constants.Storage.PageSize) != 0)
+            PageHeader* bufferPointer = ((PageHeader*)buffer.Pointer);
+            if (pageHeader->PageNumber != bufferPointer->PageNumber || 
+                pageHeader->OverflowSize != bufferPointer->OverflowSize)
                 throw new InvalidOperationException($"The header of {pageNumber} was modified, but it was *not* changed in this transaction!");
 
             var toCopy = numberOfPages * Constants.Storage.PageSize;
@@ -396,7 +398,7 @@ namespace Voron.Impl.Paging
 
         }
 
-        private void TxOnCommit(IPagerLevelTransactionState tx, PagerState pagerState)
+        private void TxOnCommit(IPagerLevelTransactionState tx)
         {
             if (tx.IsWriteTransaction == false)
                 return;
@@ -414,7 +416,7 @@ namespace Voron.Impl.Paging
 
                 if (buffer.Value.Modified == false)
                 {
-                    VerifyDidNotChanged(tx, buffer.Key, buffer.Value, pagerState);
+                    VerifyDidNotChanged(tx, buffer.Key, buffer.Value);
                     continue; // No modification
                 }
 

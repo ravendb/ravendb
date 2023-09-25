@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands.Sorters
 
         public override void UpdateValue(ClusterOperationContext context, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += (_,_) => SorterCompilationCache.Instance.AddServerWideItem(Value.Name, Value.Code);
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ => SorterCompilationCache.Instance.AddServerWideItem(Value.Name, Value.Code);
         }
 
         public override DynamicJsonValue ValueToJson()
