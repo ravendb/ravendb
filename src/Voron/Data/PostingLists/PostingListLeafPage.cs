@@ -62,7 +62,7 @@ public readonly unsafe struct PostingListLeafPage
         {
             encoder.Encode(additions, maxAdditionsLimit);
             
-            var written = AppendToNewPage(encoder);
+            var written = AppendToNewPage(tx, encoder);
             removals += maxRemovalsLimit;
             removalsCount -= maxRemovalsLimit;
             additions += written;
@@ -116,6 +116,7 @@ public readonly unsafe struct PostingListLeafPage
         newHeader->NumberOfEntries = entriesCount;
         // clear the parts we aren't using
         Memory.Set(newPagePtr + PageHeader.SizeOf + sizeUsed, 0, Constants.Storage.PageSize - (PageHeader.SizeOf + sizeUsed));
+        Debug.Assert(tx.IsDirty(Header->PageNumber));
         Memory.Copy(Header, newPagePtr, Constants.Storage.PageSize);
             
         tmpPageScope.Dispose();
@@ -130,8 +131,9 @@ public readonly unsafe struct PostingListLeafPage
     /// Additions and removals are *sorted* by the caller
     /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
     /// </summary>
-    public int AppendToNewPage(FastPForEncoder encoder)
+    public int AppendToNewPage(LowLevelTransaction llt, FastPForEncoder encoder)
     {
+        Debug.Assert(llt.IsDirty(_page.PageNumber));
         PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)_page.Pointer;
         InitLeaf(newHeader);
 

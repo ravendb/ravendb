@@ -423,7 +423,8 @@ namespace Voron.Data.Containers
                 tmpOffsetsPtr -= sizeof(ItemMetadata);
                 tmpHeader.NumberOfOffsets--;
             }
-            
+           
+            Debug.Assert(llt.IsDirty(_page.PageNumber));
             Memory.Copy(_page.Pointer, tmpPtr, Constants.Storage.PageSize);
         }
 

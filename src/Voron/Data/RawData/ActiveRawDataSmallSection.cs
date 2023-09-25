@@ -147,6 +147,7 @@ namespace Voron.Data.RawData
                 tmp.Clear();
                 var maxUsedPos = pageHeader->NextAllocation;
                 var tmpPtr = tmp.Ptr;
+                Debug.Assert(_llt.IsDirty(pageHeader->PageNumber));
                 Memory.Copy(tmpPtr, (byte*)pageHeader, Constants.Storage.PageSize);
 
                 pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);

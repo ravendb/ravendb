@@ -1426,6 +1426,7 @@ namespace Voron.Data.Fixed
                 // can just replace the child and use my own page
                 var childPage = page.GetEntry(0)->PageNumber;
                 var rootPageNum = page.PageNumber;
+                System.Diagnostics.Debug.Assert(_tx.IsDirty(page.PageNumber));
                 Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, Constants.Storage.PageSize);
                 page.PageNumber = rootPageNum; //overwritten by copy
 
