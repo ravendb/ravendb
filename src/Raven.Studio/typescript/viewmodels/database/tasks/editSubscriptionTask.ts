@@ -25,6 +25,9 @@ import licenseModel from "models/auth/licenseModel";
 import { EditSubscriptionTaskInfoHub } from "./EditSubscriptionTaskInfoHub";
 import assertUnreachable from "components/utils/assertUnreachable";
 import popoverUtils = require("common/popoverUtils");
+import { LicenseLimitReachStatus, getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import getDatabaseLicenseLimitsUsage = require("commands/licensing/getDatabaseLicenseLimitsUsage");
+import getClusterLicenseLimitsUsage = require("commands/licensing/getClusterLicenseLimitsUsage");
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -53,7 +56,16 @@ class editSubscriptionTask extends shardViewModelBase {
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
+    cloneButtonTitle: KnockoutComputed<string>;
+    clusterLimitStatus: KnockoutComputed<LicenseLimitReachStatus>;
+    databaseLimitStatus: KnockoutComputed<LicenseLimitReachStatus>;     
+    databaseLicenseLimitsUsage = ko.observable<Raven.Server.Commercial.DatabaseLicenseLimitsUsage>();
+    clusterLicenseLimitsUsage = ko.observable<Raven.Server.Commercial.LicenseLimitsUsage>();
+
     hasRevisionsInSubscriptions = licenseModel.getStatusValue("HasRevisionsInSubscriptions");
+    maxNumberOfSubscriptionsPerCluster = licenseModel.getStatusValue("MaxNumberOfSubscriptionsPerCluster");
+    maxNumberOfSubscriptionsPerDatabase = licenseModel.getStatusValue("MaxNumberOfSubscriptionsPerDatabase");
+
     possibleMentors = ko.observableArray<string>([]);
     
     enableTestArea = ko.observable<boolean>(false);
@@ -92,6 +104,25 @@ class editSubscriptionTask extends shardViewModelBase {
         this.infoHubView = ko.pureComputed(() => ({
             component: EditSubscriptionTaskInfoHub
         }));
+
+        this.databaseLimitStatus = ko.pureComputed(() => {
+            return getLicenseLimitReachStatus(this.databaseLicenseLimitsUsage()?.NumberOfSubscriptions, this.maxNumberOfSubscriptionsPerDatabase);
+        });
+        
+        this.clusterLimitStatus = ko.pureComputed(() => {
+            return getLicenseLimitReachStatus(this.clusterLicenseLimitsUsage()?.NumberOfSubscriptionsInCluster, this.maxNumberOfSubscriptionsPerCluster);
+        });
+
+        this.cloneButtonTitle = ko.pureComputed(() => {
+            if (this.databaseLimitStatus() === "limitReached") {
+                return "Database reached the maximum number of subscriptions allowed per database by your license.";
+            }
+            if (this.clusterLimitStatus() === "limitReached") {
+                return "Cluster reached the maximum number of subscriptions allowed per cluster by your license.";
+            }
+
+            return "Clone this subscription";
+        });
     }
 
     activate(args: any) { 
@@ -99,6 +130,9 @@ class editSubscriptionTask extends shardViewModelBase {
         const deferred = $.Deferred<void>();
 
         this.loadPossibleMentors();
+        
+        this.fetchDatabaseLicenseLimitsUsage();
+        this.fetchClusterLicenseLimitsUsage();
         
         if (args.taskId) { 
 
@@ -337,6 +371,22 @@ class editSubscriptionTask extends shardViewModelBase {
                 this.onIncludesLoaded(result.includes);
             })
             .always(() => this.spinners.globalToggleDisable(false));
+    }
+
+    private fetchDatabaseLicenseLimitsUsage() {
+        new getDatabaseLicenseLimitsUsage(this.db)
+            .execute()
+            .done((x) => {
+                this.databaseLicenseLimitsUsage(x);
+            });
+    }
+
+    private fetchClusterLicenseLimitsUsage() {
+        new getClusterLicenseLimitsUsage()
+            .execute()
+            .done((x) => {
+                this.clusterLicenseLimitsUsage(x);
+            });
     }
     
     private cacheResults(items: Array<documentObject>) {
