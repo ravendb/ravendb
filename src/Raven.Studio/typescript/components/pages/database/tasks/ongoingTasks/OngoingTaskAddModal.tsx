@@ -61,9 +61,9 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
             return null;
         }
 
-        return `Your ${
-            subscriptionsServerLimitStatus === "limitReached" ? "server" : "database"
-        } reached the maximum number of subscriptions.`;
+        const limitReachedReason = subscriptionsServerLimitStatus === "limitReached" ? "Cluster" : "Database";
+
+        return `${limitReachedReason} has reached the maximum number of subscriptions allowed per ${limitReachedReason.toLowerCase()}.`;
     };
 
     return (
