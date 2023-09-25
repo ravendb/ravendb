@@ -187,6 +187,7 @@ namespace Voron.Data.PostingLists
         
         public bool TryAdd(LowLevelTransaction tx, long key, long page)
         {
+            Debug.Assert(tx.IsDirty(_page.PageNumber));
             Span<byte> buffer = stackalloc byte[24];
             var len = ZigZagEncoding.Encode(buffer, key);
             len += ZigZagEncoding.Encode(buffer, page, pos: len);

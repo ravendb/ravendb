@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -423,6 +424,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         Debug.Assert(_internalCursor._pos > 0, "_internalCursor._pos > 0");
         ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
+        parent.Page = _llt.ModifyPage(parent.Page.PageNumber);
         Debug.Assert(parent.Header->NumberOfEntries >= 2,"parent.Header->NumberOfEntries >= 2");
 
         if (destinationState.Header->NumberOfEntries == 0)
