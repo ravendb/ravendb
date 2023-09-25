@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             }
         }
 
-        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriter writer, IEnumerable<SubscriptionState> subscriptions, ClusterOperationContext context)
+        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriterForDebug writer, IEnumerable<SubscriptionState> subscriptions, ClusterOperationContext context)
         {
             writer.WriteStartObject();
             writer.WriteArray(context, "Results", subscriptions.Select(SubscriptionStateAsJson), (w, c, subscription) => c.Write(w, subscription));

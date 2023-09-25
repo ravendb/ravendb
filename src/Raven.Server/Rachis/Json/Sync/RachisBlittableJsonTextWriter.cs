@@ -1,17 +1,26 @@
 ﻿using System;
 using System.IO;
 using Sparrow.Json;
-using Sparrow.Json.Sync;
 
 namespace Raven.Server.Rachis.Json.Sync
 {
-    internal sealed class RachisBlittableJsonTextWriter : BlittableJsonTextWriter
+    internal sealed class RachisBlittableJsonTextWriter : AbstractBlittableJsonTextWriter, IDisposable
     {
         private readonly Action _afterFlush;
 
         public RachisBlittableJsonTextWriter(JsonOperationContext context, Stream stream, Action afterFlush) : base(context, stream)
         {
             _afterFlush = afterFlush;
+        }
+
+        public void Dispose()
+        {
+            DisposeInternal();
+        }
+
+        public void Flush()
+        {
+            FlushInternal();
         }
 
         protected override bool FlushInternal()

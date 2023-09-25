@@ -38,7 +38,8 @@ namespace Raven.Server.Documents.Queries
             Token = token;
         }
 
-        public void Write(AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
+        public void Write<TWriter>(TWriter writer, JsonOperationContext context)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
 

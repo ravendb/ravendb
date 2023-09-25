@@ -287,7 +287,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static void WriteMemoryStats(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, bool includeThreads, bool includeMappings)
+        private static void WriteMemoryStats<TWriter>(TWriter writer, JsonOperationContext context, bool includeThreads, bool includeMappings)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
 
@@ -367,7 +368,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             writer.WriteEndObject();
         }
 
-        private static void WriteThreads(bool includeThreads, AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
+        private static void WriteThreads<TWriter>(bool includeThreads, TWriter writer, JsonOperationContext context)
+            where TWriter : IBlittableJsonTextWriter
         {
             if (includeThreads == false)
                 return;
@@ -412,8 +414,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static void WriteMappings(bool includeMappings, AsyncBlittableJsonTextWriter writer, JsonOperationContext context,
+        private static void WriteMappings<TWriter>(bool includeMappings, TWriter writer, JsonOperationContext context,
             Dictionary<string, long> fileMappingSizesByDir, Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>> fileMappingByDir)
+            where TWriter : IBlittableJsonTextWriter
         {
             if (includeMappings == false)
                 return;
