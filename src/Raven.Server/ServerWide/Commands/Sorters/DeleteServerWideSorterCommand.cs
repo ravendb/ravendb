@@ -18,7 +18,7 @@ namespace Raven.Server.ServerWide.Commands.Sorters
 
         public override void DeleteValue(ClusterOperationContext context)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ => SorterCompilationCache.Instance.RemoveServerWideItem(PutServerWideSorterCommand.ExtractName(Name));
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += (_,_) => SorterCompilationCache.Instance.RemoveServerWideItem(PutServerWideSorterCommand.ExtractName(Name));
         }
     }
 }
