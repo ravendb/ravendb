@@ -24,7 +24,19 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const isSharded = db.isSharded();
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
+    const hasReplicationHub = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
+    const hasReplicationSink = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsSink"));
+    const hasRavenDbEtl = useAppSelector(licenseSelectors.statusValue("HasRavenEtl"));
+    const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
+    const hasKafkaEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
+    const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
+    const hasRabbitMqEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
+    const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
+    const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
+
     const { appUrl } = useAppUrls();
 
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
@@ -96,7 +108,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="external-replication" />
                         <h4 className="mt-1 mb-0">External Replication</h4>
-                        {!isProfessionalOrAbove && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                        {!hasExternalReplication && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                     </TaskItem>
 
                     <TaskItem
@@ -109,7 +121,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="pull-replication-hub" />
                         <h4 className="mt-1 mb-0">Replication Hub</h4>
-                        {!isEnterpriseOrDeveloper && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                        {!hasReplicationHub && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
                     <TaskItem
                         title="Create new Replication Sink task"
@@ -121,7 +133,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="pull-replication-agent" />
                         <h4 className="mt-1 mb-0">Replication Sink</h4>
-                        {!isProfessionalOrAbove && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                        {!hasReplicationSink && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                     </TaskItem>
                 </Row>
                 <HrHeader>ETL (RavenDB ⇛ TARGET)</HrHeader>
@@ -134,7 +146,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="ravendb-etl" />
                         <h4 className="mt-1 mb-0">RavenDB ETL</h4>
-                        {!isProfessionalOrAbove && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                        {!hasRavenDbEtl && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                     </TaskItem>
 
                     <TaskItem
@@ -145,7 +157,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="elastic-search-etl" />
                         <h4 className="mt-1 mb-0">Elasticsearch ETL</h4>
-                        {!isEnterpriseOrDeveloper && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                        {!hasElasticSearchEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
 
                     <TaskItem
@@ -158,7 +170,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="kafka-etl" />
                         <h4 className="mt-1 mb-0">Kafka ETL</h4>
-                        {!isEnterpriseOrDeveloper && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                        {!hasKafkaEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
 
                     <TaskItem
@@ -169,7 +181,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="sql-etl" />
                         <h4 className="mt-1 mb-0">SQL ETL</h4>
-                        {!isProfessionalOrAbove && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                        {!hasSqlEtl && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                     </TaskItem>
 
                     <TaskItem
@@ -180,7 +192,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="olap-etl" />
                         <h4 className="mt-1 mb-0">OLAP ETL</h4>
-                        {!isEnterpriseOrDeveloper && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                        {!hasOlapEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
 
                     <TaskItem
@@ -193,7 +205,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="rabbitmq-etl" />
                         <h4 className="mt-1 mb-0">RabbitMQ ETL</h4>
-                        {!isEnterpriseOrDeveloper && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                        {!hasRabbitMqEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
                 </Row>
                 <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>
@@ -208,7 +220,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="kafka-sink" />
                         <h4 className="mt-1 mb-0">Kafka Sink</h4>
-                        {!isEnterpriseOrDeveloper && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                        {!hasKafkaSink && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
 
                     <TaskItem
@@ -221,7 +233,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="rabbitmq-sink" />
                         <h4 className="mt-1 mb-0">RabbitMQ Sink</h4>
-                        {!isEnterpriseOrDeveloper && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                        {!hasRabbitMqSink && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
                 </Row>
                 <HrHeader>Backups & Subscriptions</HrHeader>
@@ -234,7 +246,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="periodic-backup" />
                         <h4 className="mt-1 mb-0">Periodic Backup</h4>
-                        {!isProfessionalOrAbove && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                        {!hasPeriodicBackups && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                     </TaskItem>
 
                     <TaskItem
