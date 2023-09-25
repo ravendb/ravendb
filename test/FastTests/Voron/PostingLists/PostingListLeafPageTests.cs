@@ -16,7 +16,6 @@ namespace FastTests.Voron.Sets
     {
         private readonly Transaction _tx;
         private readonly StorageEnvironment _env;
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseStr;
         private readonly byte* _pagePtr;
         private readonly LowLevelTransaction _llt;
 
@@ -25,8 +24,7 @@ namespace FastTests.Voron.Sets
             _env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
             _tx = _env.WriteTransaction();
             _llt = _tx.LowLevelTransaction;
-            _releaseStr = _tx.Allocator.Allocate(Constants.Storage.PageSize, out var bs);
-            _pagePtr = bs.Ptr;
+            _pagePtr = _llt.AllocatePage(1).Pointer;
         }
         
         [Theory]
@@ -178,7 +176,6 @@ namespace FastTests.Voron.Sets
         {
             try
             {
-                _releaseStr.Dispose();
                 _tx?.Dispose();
                 _env?.Dispose();
             }
