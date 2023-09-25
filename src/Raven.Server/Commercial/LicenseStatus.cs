@@ -251,7 +251,7 @@ namespace Raven.Server.Commercial
         public int? MaxNumberOfRevisionAgeToKeepInDays => GetValue<int?>(LicenseAttribute.MaxNumberOfRevisionAgeToKeepInDays, agplValue: 45);
 
         public int? MinPeriodForExpirationInHours => GetValue<int?>(LicenseAttribute.MinPeriodForExpirationInHours, agplValue: 36);
-        
+
         public int? MinPeriodForRefreshInHours => GetValue<int?>(LicenseAttribute.MinPeriodForRefreshInHours, agplValue: 36);
 
         public int? MaxReplicationFactorForSharding => GetValue<int?>(LicenseAttribute.MaxReplicationFactorForSharding, agplValue: 1);
@@ -272,7 +272,7 @@ namespace Raven.Server.Commercial
 
         public int? MaxNumberOfCustomSortersPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomSortersPerCluster, agplValue: 5);
 
-        public int? MaxNumberOfCustomAnalyzersPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomAnalyzersPerDatabase, agplValue: 1) ;
+        public int? MaxNumberOfCustomAnalyzersPerDatabase => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomAnalyzersPerDatabase, agplValue: 1);
 
         public int? MaxNumberOfCustomAnalyzersPerCluster => GetValue<int?>(LicenseAttribute.MaxNumberOfCustomAnalyzersPerCluster, agplValue: 5);
 
@@ -351,6 +351,7 @@ namespace Raven.Server.Commercial
                 [nameof(MaxNumberOfCustomSortersPerCluster)] = MaxNumberOfCustomSortersPerCluster,
                 [nameof(MaxNumberOfCustomAnalyzersPerDatabase)] = MaxNumberOfCustomAnalyzersPerDatabase,
                 [nameof(MaxNumberOfCustomAnalyzersPerCluster)] = MaxNumberOfCustomAnalyzersPerCluster,
+                [nameof(CanSetupDefaultRevisionsConfiguration)] = CanSetupDefaultRevisionsConfiguration,
             };
         }
     }
