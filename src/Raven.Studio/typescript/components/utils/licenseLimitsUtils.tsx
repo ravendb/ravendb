@@ -33,29 +33,13 @@ export function getLicenseAvailabilityType(licenseType: Raven.Server.Commercial.
             return "community";
         case "Professional":
             return "professional";
+        case "Developer":
         case "Enterprise":
             return "enterprise";
         default:
             return null;
     }
 }
-// // TODO remove + run webpack
-// export const featureAvailabilityProfessionalOrAbove: FeatureAvailabilityData[] = [
-//     {
-//         community: { value: false },
-//         professional: { value: true },
-//         enterprise: { value: true },
-//     },
-// ];
-
-// // TODO remove + run webpack
-// export const featureAvailabilityEnterprise: FeatureAvailabilityData[] = [
-//     {
-//         community: { value: false },
-//         professional: { value: false },
-//         enterprise: { value: true },
-//     },
-// ];
 
 function useLicenseAvailability(
     featureAvailabilityData: FeatureAvailabilityData[],
