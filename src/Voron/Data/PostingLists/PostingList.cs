@@ -532,7 +532,7 @@ namespace Voron.Data.PostingLists
             {
                 (long key, long page) = sibling.GetByIndex(i);
                 if(current.TryAdd(_llt, key, page) == false)
-                    throw new InvalidOperationException("Even though we have checked for spare capacity, we run out?! Should not hapen ever");
+                    throw new InvalidOperationException("Even though we have checked for spare capacity, we run out?! Should not happen ever");
             }
 
             MergeSiblingsAtParent();
