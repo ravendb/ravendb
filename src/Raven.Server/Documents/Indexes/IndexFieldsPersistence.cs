@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Indexes
 
             _index._indexStorage.WriteIndexTimeFields(indexContext.Transaction, _timeFieldsToWrite);
 
-            indexContext.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += (_,_) =>
+            indexContext.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
             {
                 var timeFields = new HashSet<string>(_timeFields);
                 foreach (var fieldName in _timeFieldsToWrite)

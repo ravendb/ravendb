@@ -12,7 +12,7 @@ namespace Voron.Impl
         Size AdditionalMemoryUsageSize { get; }
 
         event Action<IPagerLevelTransactionState> OnDispose;
-        event Action<IPagerLevelTransactionState, PagerState> BeforeCommitFinalization;
+        event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
         void EnsurePagerStateReference(ref PagerState state);
         StorageEnvironment Environment { get; }
         bool IsWriteTransaction { get; }

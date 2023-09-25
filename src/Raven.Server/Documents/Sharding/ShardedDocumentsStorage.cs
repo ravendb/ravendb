@@ -438,7 +438,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             // this would prevent NREs next time a PUT is run,since if a transaction
             // is not committed, DocsSchema and TombstonesSchema will not be actually created..
             // has to happen after the commit, but while we are holding the write tx lock
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += (_,_) =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
             {
                 _collectionsCache = collectionNames;
             };

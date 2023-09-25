@@ -38,6 +38,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
@@ -2480,7 +2481,7 @@ namespace Raven.Server.Documents
                 // this would prevent NREs next time a PUT is run,since if a transaction
                 // is not committed, DocsSchema and TombstonesSchema will not be actually created..
                 // has to happen after the commit, but while we are holding the write tx lock
-                context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += (_,_) =>
+                context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
                 {
                     var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase)
                     {
