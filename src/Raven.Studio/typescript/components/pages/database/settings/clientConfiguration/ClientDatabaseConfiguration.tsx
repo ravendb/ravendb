@@ -27,6 +27,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -51,8 +52,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     const loadBalancingLink = useRavenLink({ hash: "GYJ8JA" });
     const clientConfigurationLink = useRavenLink({ hash: "TS7SGF" });
 
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasClientConfiguration"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasClientConfiguration = useAppSelector(licenseSelectors.statusValue("HasClientConfiguration"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasClientConfiguration);
 
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;
@@ -104,10 +105,10 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <AboutViewHeading
                             icon="database-client-configuration"
                             title="Client Configuration"
-                            licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
+                            licenseBadgeText={hasClientConfiguration ? null : "Professional +"}
                         />
                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
-                            <div>
+                            <div id="saveClientConfiguration" className="w-fit-content">
                                 <Button
                                     type="submit"
                                     color="primary"
@@ -121,6 +122,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     Save
                                 </Button>
                             </div>
+                            {!hasClientConfiguration && (
+                                <FeatureNotAvailableInYourLicensePopover target="saveClientConfiguration" />
+                            )}
 
                             {canNavigateToServerSettings() && (
                                 <small title="Navigate to the server-wide Client Configuration View">
@@ -131,7 +135,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 </small>
                             )}
                         </div>
-                        <div className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
+                        <div className={hasClientConfiguration ? "" : "item-disabled pe-none"}>
                             {globalConfig && (
                                 <div className="mt-4 mb-3">
                                     <div className="hstack justify-content-center">
@@ -573,7 +577,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         </div>
                     </Col>
                     <Col sm={12} md={4}>
-                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={hasClientConfiguration ? null : "licensing"}>
                             <AccordionItemWrapper
                                 icon="about"
                                 color="info"
@@ -622,7 +626,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             </AccordionItemWrapper>
 
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isFeatureInLicense}
+                                isUnlimited={hasClientConfiguration}
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
