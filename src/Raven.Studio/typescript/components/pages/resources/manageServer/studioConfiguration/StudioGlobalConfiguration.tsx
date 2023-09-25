@@ -22,6 +22,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function StudioGlobalConfiguration() {
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
@@ -46,8 +47,8 @@ export default function StudioGlobalConfiguration() {
     const clientConfigurationDocsLink = useRavenLink({ hash: "TS7SGF" });
     const { reportEvent } = useEventsCollector();
 
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasStudioConfiguration = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasStudioConfiguration);
 
     const onSave: SubmitHandler<StudioGlobalConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -83,20 +84,25 @@ export default function StudioGlobalConfiguration() {
                     <AboutViewHeading
                         icon="studio-configuration"
                         title="Studio Configuration"
-                        licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
+                        licenseBadgeText={hasStudioConfiguration ? null : "Professional +"}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
-                        <ButtonWithSpinner
-                            type="submit"
-                            color="primary"
-                            className="mb-3"
-                            icon="save"
-                            disabled={!formState.isDirty}
-                            isSpinning={formState.isSubmitting}
-                        >
-                            Save
-                        </ButtonWithSpinner>
-                        <div className={isFeatureInLicense ? null : "item-disabled pe-none"}>
+                        <div id="saveStudioConfiguration" className="w-fit-content">
+                            <ButtonWithSpinner
+                                type="submit"
+                                color="primary"
+                                className="mb-3"
+                                icon="save"
+                                disabled={!formState.isDirty}
+                                isSpinning={formState.isSubmitting}
+                            >
+                                Save
+                            </ButtonWithSpinner>
+                        </div>
+                        {!hasStudioConfiguration && (
+                            <FeatureNotAvailableInYourLicensePopover target="saveStudioConfiguration" />
+                        )}
+                        <div className={hasStudioConfiguration ? null : "item-disabled pe-none"}>
                             <Card id="popoverContainer">
                                 <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -179,7 +185,7 @@ export default function StudioGlobalConfiguration() {
                     </Form>
                 </Col>
                 <Col sm={12} md={4}>
-                    <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
+                    <AboutViewAnchored defaultOpen={hasStudioConfiguration ? null : "licensing"}>
                         <AccordionItemWrapper
                             icon="about"
                             color="info"
@@ -205,7 +211,7 @@ export default function StudioGlobalConfiguration() {
                             </a>
                         </AccordionItemWrapper>
                         <FeatureAvailabilitySummaryWrapper
-                            isUnlimited={isFeatureInLicense}
+                            isUnlimited={hasStudioConfiguration}
                             data={featureAvailability}
                         />
                     </AboutViewAnchored>
