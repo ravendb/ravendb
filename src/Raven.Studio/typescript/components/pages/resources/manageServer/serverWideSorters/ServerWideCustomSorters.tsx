@@ -13,17 +13,17 @@ import SortersList from "./ServerWideCustomSortersList";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function ServerWideCustomSorters() {
     const { manageServerService } = useServices();
     const asyncGetSorters = useAsync(manageServerService.getServerWideCustomSorters, []);
 
     const { appUrl } = useAppUrls();
-    const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
 
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
+    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasServerWideCustomSorters);
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
 
@@ -36,30 +36,18 @@ export default function ServerWideCustomSorters() {
                         <div id="newServerWideCustomSorter" className="w-fit-content">
                             <a
                                 href={appUrl.forEditServerWideCustomSorter()}
-                                className={classNames("btn btn-primary mb-3", { disabled: !isFeatureInLicense })}
+                                className={classNames("btn btn-primary mb-3", {
+                                    disabled: !hasServerWideCustomSorters,
+                                })}
                             >
                                 <Icon icon="plus" />
                                 Add a server-wide custom sorter
                             </a>
                         </div>
-                        {!isFeatureInLicense && (
-                            <UncontrolledPopover
-                                trigger="hover"
-                                target="newServerWideCustomSorter"
-                                placement="top"
-                                className="bs5"
-                            >
-                                <div className="p-3 text-center">
-                                    Your current license does not support this feature.
-                                    <br />
-                                    <a href={upgradeLicenseLink} target="_blank">
-                                        Upgrade your plan
-                                    </a>{" "}
-                                    to access.
-                                </div>
-                            </UncontrolledPopover>
+                        {!hasServerWideCustomSorters && (
+                            <FeatureNotAvailableInYourLicensePopover target="newServerWideCustomSorter" />
                         )}
-                        <div className={isFeatureInLicense ? null : "item-disabled pe-none"}>
+                        <div className={hasServerWideCustomSorters ? null : "item-disabled pe-none"}>
                             <HrHeader count={resultsCount}>Server-wide custom sorters</HrHeader>
                             <SortersList
                                 fetchStatus={asyncGetSorters.status}
@@ -69,7 +57,7 @@ export default function ServerWideCustomSorters() {
                         </div>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored defaultOpen={isFeatureInLicense ? null : "licensing"}>
+                        <AboutViewAnchored defaultOpen={hasServerWideCustomSorters ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="1"
                                 icon="about"
@@ -116,7 +104,7 @@ export default function ServerWideCustomSorters() {
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={isFeatureInLicense}
+                                isUnlimited={hasServerWideCustomSorters}
                                 data={featureAvailability}
                             />
                         </AboutViewAnchored>
