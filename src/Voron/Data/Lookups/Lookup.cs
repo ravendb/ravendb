@@ -601,6 +601,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             DecrementPageNumbers(ref parent);
 
             var parentPageNumber = parent.Page.PageNumber;
+            Debug.Assert(_llt.IsDirty(parent.Page.PageNumber));
             Memory.Copy(parent.Page.Pointer, stateToKeep.Page.Pointer, Constants.Storage.PageSize);
             parent.Page.PageNumber = parentPageNumber; // we overwrote it...
 
@@ -986,28 +987,37 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         if (p.Header == null)
             return; // page may have been released
 
+        if (p.Header->NumberOfEntries < 0)
+        {
+            throw new InvalidOperationException("Cannot have negative number of entries " + p.Page.PageNumber);
+        }
+
+        if (p.Header->IsBranch ^ p.Header->IsLeaf == false)
+        {
+            throw new InvalidOperationException("The page is corrupted, must be either leaf or branch " + p.Page.PageNumber);
+        }
         if (p.Header->Upper - p.Header->Lower < 0)
         {
-            throw new InvalidOperationException($"Lower {p.Header->Lower} > Upper {p.Header->Upper}");
+            throw new InvalidOperationException($"Lower {p.Header->Lower} > Upper {p.Header->Upper} " + p.Page.PageNumber);
         }
 
         if (p.Header->FreeSpace > Constants.Storage.PageSize - PageHeader.SizeOf)
         {
-            throw new InvalidOperationException($"FreeSpace is too large: {p.Header->FreeSpace}");
+            throw new InvalidOperationException($"FreeSpace is too large: {p.Header->FreeSpace} " + p.Page.PageNumber);
         }
         
         if(p.Header->IsBranch && p.Header->NumberOfEntries <2)
-            throw new InvalidOperationException($"Branch page with too few records: {p.Header->NumberOfEntries}");
+            throw new InvalidOperationException($"Branch page with too few records: {p.Header->NumberOfEntries} " + p.Page.PageNumber);
 
         if (p.Header->IsLeaf && p.Header->NumberOfEntries == 0 && isRoot == false /* the root is allowed to be empty*/)
         {
-            throw new InvalidOperationException($"Leaf page with too few records: {p.Header->NumberOfEntries}");
+            throw new InvalidOperationException($"Leaf page with too few records: {p.Header->NumberOfEntries} " + p.Page.PageNumber);
         }
 
         var actualFreeSpace = p.ComputeFreeSpace();
         if (p.Header->FreeSpace != actualFreeSpace)
         {
-            throw new InvalidOperationException("The sizes do not match! FreeSpace: " + p.Header->FreeSpace + " but actually was space: " + actualFreeSpace);
+            throw new InvalidOperationException("The sizes do not match! FreeSpace: " + p.Header->FreeSpace + " but actually was space: " + actualFreeSpace  +", " + p.Page.PageNumber);
         }
     }
 
@@ -1653,24 +1663,25 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         for (int i = 0; i < state.Header->NumberOfEntries; i++)
         {
             GetKeyAndValue(ref state, i,out var keyData, out var value);
+            var key = TLookupKey.FromLong<TLookupKey>(keyData);
+            key.Init(this);
             if (i == 0 && state.Header->IsBranch)
             {
                 if (keyData != TLookupKey.MinValue)
                     throw new InvalidOperationException("First item on branch page isn't the minimum value!");
-                
-                continue;
             }
-            var key = TLookupKey.FromLong<TLookupKey>(keyData);
-            key.Init(this);
-            if (previous.CompareTo(key) > 0)
-                throw new InvalidOperationException("Unsorted values: " + previous + " >= " + key + " on " + state.Header->PageNumber);
+            else
+            {
+                if (previous.CompareTo(key) > 0)
+                    throw new InvalidOperationException("Unsorted values: " + previous + " >= " + key + " on " + state.Header->PageNumber);
+            }
             previous = key;
 
             if (state.Header->IsBranch)
             {
                 // we recurse down and *update* the previous, so we get cross page verification as well
                 var child = new CursorState { Page = _llt.GetPage(value) };
-                VerifySizeOf(ref state, false);
+                VerifySizeOf(ref child, false);
                 VerifyStructure(child, ref previous);
             }
         }
