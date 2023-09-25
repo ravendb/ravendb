@@ -149,13 +149,13 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                     </td>
                                 )}
                                 <td className={classNames("enterprise", { current: currentLicense === "Enterprise" })}>
-                                    {formatAvailabilityValue(data.enterprise)}
+                                    {formatAvailabilityValue(data.enterprise, isCloud)}
                                 </td>
                                 {currentLicense === "Developer" && (
                                     <td
                                         className={classNames("developer", { current: currentLicense === "Developer" })}
                                     >
-                                        {formatAvailabilityValue(data.enterprise)}
+                                        {formatAvailabilityValue(data.enterprise, isCloud)}
                                     </td>
                                 )}
                             </tr>
@@ -225,7 +225,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
     );
 }
 
-function formatAvailabilityValue(data: ValueData): ReactNode {
+function formatAvailabilityValue(data: ValueData, canBeEnabledInCloud?: boolean): ReactNode {
     const value = data.overwrittenValue ?? data.value;
 
     let formattedValue: ReactNode = value;
@@ -234,7 +234,19 @@ function formatAvailabilityValue(data: ValueData): ReactNode {
         formattedValue = <Icon icon="check" margin="m-0" color="success" />;
     }
     if (value === false) {
-        formattedValue = <Icon icon="cancel" margin="m-0" color="danger" />;
+        if (canBeEnabledInCloud) {
+            const cloudOnDemandId = "cloud-on-demand-" + uniqueId();
+            return (
+                <>
+                    <Icon id={cloudOnDemandId} icon="upgrade-arrow" margin="m-0" color="success" />
+                    <UncontrolledTooltip target={cloudOnDemandId}>
+                        Enable this feature in Cloud Portal or contact support.
+                    </UncontrolledTooltip>
+                </>
+            );
+        } else {
+            formattedValue = <Icon icon="cancel" margin="m-0" color="danger" />;
+        }
     }
     if (value === Infinity) {
         formattedValue = <Icon icon="infinity" margin="m-0" />;
@@ -244,7 +256,7 @@ function formatAvailabilityValue(data: ValueData): ReactNode {
         return formattedValue;
     }
 
-    const id = "overwritten-Availability-value-" + uniqueId();
+    const id = "overwritten-availability-value-" + uniqueId();
 
     return (
         <>
