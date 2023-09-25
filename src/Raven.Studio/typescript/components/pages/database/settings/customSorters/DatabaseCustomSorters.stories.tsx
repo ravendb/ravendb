@@ -17,10 +17,11 @@ const db = DatabasesStubs.nonShardedClusterDatabase();
 
 function commonInit() {
     const { accessManager } = mockStore;
-    const { manageServerService } = mockServices;
+    const { manageServerService, licenseService } = mockServices;
 
     accessManager.with_securityClearance("ValidUser");
 
+    licenseService.withLimitsUsage();
     manageServerService.withServerWideCustomSorters();
 }
 
