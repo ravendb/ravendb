@@ -10,8 +10,9 @@ namespace Sparrow.Json
     internal static class BlittableJsonTextWriterExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray<T>(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, string name, IEnumerable<T> items,
-            Action<AbstractBlittableJsonTextWriter, JsonOperationContext, T> onWrite)
+        public static void WriteArray<TWriter, T>(this TWriter writer, JsonOperationContext context, string name, IEnumerable<T> items,
+            Action<TWriter, JsonOperationContext, T> onWrite)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WritePropertyName(name);
 
@@ -31,7 +32,8 @@ namespace Sparrow.Json
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArrayValue(this AbstractBlittableJsonTextWriter writer, IEnumerable<string> items)
+        public static void WriteArrayValue<TWriter>(this TWriter writer, IEnumerable<string> items)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartArray();
             var first = true;
@@ -49,7 +51,8 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, Memory<double> items)
+        public static void WriteArray<TWriter>(this TWriter writer, string name, Memory<double> items)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WritePropertyName(name);
 
@@ -84,7 +87,8 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<LazyStringValue> items)
+        public static void WriteArray<TWriter>(this TWriter writer, string name, IEnumerable<LazyStringValue> items)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WritePropertyName(name);
 
@@ -102,7 +106,8 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<string> items)
+        public static void WriteArray<TWriter>(this TWriter writer, string name, IEnumerable<string> items)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WritePropertyName(name);
 
@@ -126,7 +131,8 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<DynamicJsonValue> items, JsonOperationContext context)
+        public static void WriteArray<TWriter>(this TWriter writer, string name, IEnumerable<DynamicJsonValue> items, JsonOperationContext context)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WritePropertyName(name);
 
@@ -144,7 +150,8 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<BlittableJsonReaderObject> items)
+        public static void WriteArray<TWriter>(this TWriter writer, string name, IEnumerable<BlittableJsonReaderObject> items)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WritePropertyName(name);
 
@@ -200,7 +207,8 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<long> items)
+        public static void WriteArray<TWriter>(this TWriter writer, string name, IEnumerable<long> items)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WritePropertyName(name);
 
