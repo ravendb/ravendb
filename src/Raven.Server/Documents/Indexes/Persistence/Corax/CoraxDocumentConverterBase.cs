@@ -313,9 +313,17 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
 
             case ValueType.DynamicJsonObject:
+                if (_index.Type.IsAuto())
+                {
+                    InsertRegularField(field, value.ToString(), indexContext, builder, sourceDocument, out shouldSkip);
+                    _index.SetFieldIsIndexedAsJsonViaCoraxAutoIndex(field);
+
+                    return;
+                }
+                
                 if (field.Indexing is not FieldIndexing.No) 
                     AssertOrAdjustIndexingOptionForComplexObject(field);
-
+                
                 if (_index.SourceDocumentIncludedInOutput == false && sourceDocument == value)
                 {
                     _index.SourceDocumentIncludedInOutput = true;
@@ -334,13 +342,20 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     return;
                 }
 
+                var jsonScope = Scope.CreateJson(json, indexContext);
+                if (_index.Type.IsAuto())
+                {
+                    InsertRegularField(field, jsonScope, indexContext, builder, sourceDocument, out shouldSkip);
+                    _index.SetFieldIsIndexedAsJsonViaCoraxAutoIndex(field);
+                    return;
+                }
+                
                 if (field.Indexing is not FieldIndexing.No)
                 {
                     AssertOrAdjustIndexingOptionForComplexObject(field);
                     break;
                 }
 
-                var jsonScope = Scope.CreateJson(json, indexContext);
                 builder.Store(fieldId, path,  jsonScope);
                 break;
 
@@ -409,14 +424,20 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    void HandleObject<TBuilder>(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, TBuilder builder, object sourceDocument,
-         out bool shouldSkip)
+    void HandleObject<TBuilder>(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, TBuilder builder, object sourceDocument, out bool shouldSkip)
         where TBuilder : IndexWriter.IIndexEntryBuilder
     {
         if (val.TryGetMember(RavenConstants.Json.Fields.Values, out var values) &&
             IsArrayOfTypeValueObject(val))
         {
             InsertRegularField(field, (IEnumerable)values, indexContext, builder, sourceDocument, out shouldSkip);
+            return;
+        }
+
+        if (_index.Type.IsAuto())
+        {
+            _index.SetFieldIsIndexedAsJsonViaCoraxAutoIndex(field);
+            InsertRegularField(field, val.ToString(), indexContext, builder, sourceDocument, out shouldSkip);
             return;
         }
         
