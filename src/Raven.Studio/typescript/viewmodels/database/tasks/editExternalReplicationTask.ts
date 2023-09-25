@@ -159,7 +159,9 @@ class editExternalReplicationTask extends shardViewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        document.getElementById('taskName').focus();
+        if (this.hasExternalReplication) {
+            document.getElementById('taskName').focus();
+        }
         
         $('.edit-replication-task [data-toggle="tooltip"]').tooltip();
     }
