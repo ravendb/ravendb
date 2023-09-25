@@ -149,62 +149,97 @@
                     </div>
                     <div class="name">Max cores in cluster</div><div class="value"><strong data-bind="text: maxCores"></strong></div>
                     <div class="name">Max cluster memory usage</div><div class="value"><strong data-bind="text: maxMemory() + ' GB RAM'"></strong></div>
-                    <div class="name">Highly available tasks</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasHighlyAvailableTasks') }"></i></div>
-                    <div class="name">Dynamic database distribution</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDynamicNodesDistribution') }"></i></div>
-                    <div class="name">TCP Data Compression</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasTcpDataCompression') }"></i></div>
+                    <div class="name">Highly available tasks</div><div class="value" data-bind="html: formatLicenseStatusValue('HasHighlyAvailableTasks')"></div>
+                    <div class="name">Dynamic database distribution</div><div class="value" data-bind="html: formatLicenseStatusValue('HasDynamicNodesDistribution')"></div>
+                    <div class="name">TCP Data Compression</div><div class="value" data-bind="html: formatLicenseStatusValue('HasTcpDataCompression')"></div>
+
+                    <h4>Server-Wide</h4>
+                    <div class="name">Tasks</div><div class="value" data-bind="html: formatLicenseStatusValue('HasServerWideTasks')"></div>
+                    <div class="name">Custom Sorters</div><div class="value"><i data-bind="html: formatLicenseStatusValue('HasServerWideSorters')"></i></div>
+                    <div class="name">Custom Analyzers</div><div class="value" data-bind="html: formatLicenseStatusValue('HasServerWideAnalyzers')"></div>
 
                     <a href="https://ravendb.net/features#indexes" target="_blank" class="d-contents"><h4>Indexes <i class="icon-newtab"></i></h4></a>
-                    <div class="name">Additional Assemblies from NuGet</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasAdditionalAssembliesFromNuGet') }"></i></div>
+                    <div class="name">Index Cleanup</div><div class="value" data-bind="html: formatLicenseStatusValue('HasIndexCleanup')"></div>
+                    <div class="name">Static indexes limit per database</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfStaticIndexesPerDatabase')"></div>
+                    <div class="name">Static indexes limit per cluster</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfStaticIndexesPerCluster')"></div>
+                    <div class="name">Auto indexes limit per database</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfAutoIndexesPerDatabase')"></div>
+                    <div class="name">Auto indexes limit per cluster</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfAutoIndexesPerCluster')"></div>
+                    <div class="name">Additional Assemblies from NuGet</div><div class="value" data-bind="html: formatLicenseStatusValue('HasAdditionalAssembliesFromNuGet')"></div>
 
                     <a href="https://ravendb.net/features#monitoring" target="_blank" class="d-contents"><h4>Monitoring <i class="icon-newtab"></i></h4></a>
                     <div class="name">Cluster Dashboard</div><div class="value"><i class="icon-checkmark"></i></div>
-                    <div class="name">SNMP</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSnmpMonitoring') }"></i></div>
-                    <div class="name">Monitoring Endpoints</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasMonitoringEndpoints') }"></i></div>
+                    <div class="name">SNMP</div><div class="value" data-bind="html: formatLicenseStatusValue('HasSnmpMonitoring')"></div>
+                    <div class="name">Monitoring Endpoints</div><div class="value" data-bind="html: formatLicenseStatusValue('HasMonitoringEndpoints')"></div>
+
+                    <h4>Sharding</h4>
+                    <div class="name">Multi-node sharding</div><div class="value" data-bind="html: formatLicenseStatusValue('HasMultiNodeSharding')"></div>
+                    <div class="name">Max replication factor</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxReplicationFactorForSharding')"></div>
 
                     <a href="https://ravendb.net/features#extensions" target="_blank" class="d-contents"><h4>Extensions <i class="icon-newtab"></i></h4></a>
                     <div class="name">Document Revisions</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Document Expiration</div><div class="value"><i class="icon-checkmark"></i></div>
-                    <div class="name">Document Compression</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDocumentsCompression') }"></i></div>
+                    <div class="name">Document Compression</div><div class="value" data-bind="html: formatLicenseStatusValue('HasDocumentsCompression')"></div>
                     <div class="name">Attachments</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Counters</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Time Series</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Incremental Time Series</div><div class="value"><i class="icon-checkmark"></i></div>
-                    <div class="name">Time Series Rollups & Retention</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasTimeSeriesRollupsAndRetention') }"></i></div>
+                    <div class="name">Time Series Rollups & Retention</div><div class="value" data-bind="html: formatLicenseStatusValue('HasTimeSeriesRollupsAndRetention')"></div>
 
                     <a href="https://ravendb.net/features/replication/external-replication" target="_blank" class="d-contents"><h4>External Replication <i class="icon-newtab"></i></h4></a>
-                    <div class="name">Immediate</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasExternalReplication') }"></i></div>
-                    <div class="name">Delayed</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDelayedExternalReplication') }"></i></div>
+                    <div class="name">Immediate</div><div class="value" data-bind="html: formatLicenseStatusValue('HasExternalReplication')"></div>
+                    <div class="name">Delayed</div><div class="value" data-bind="html: formatLicenseStatusValue('HasDelayedExternalReplication')"></div>
 
                     <a href="https://ravendb.net/features/replication/filtered-replication" target="_blank" class="d-contents"><h4>Filtered Replication <i class="icon-newtab"></i></h4></a>
-                    <div class="name">Replication Hub</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPullReplicationAsHub') }"></i></div>
-                    <div class="name">Replication Sink</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPullReplicationAsSink') }"></i></div>
+                    <div class="name">Replication Hub</div><div class="value" data-bind="html: formatLicenseStatusValue('HasPullReplicationAsHub')"></div>
+                    <div class="name">Replication Sink</div><div class="value" data-bind="html: formatLicenseStatusValue('HasPullReplicationAsSink')"></div>
 
                     <a href="https://ravendb.net/features#backups" target="_blank" class="d-contents"><h4>Backups <i class="icon-newtab"></i></h4></a>
                     <div class="name">Local</div><div class="value"><i class="icon-checkmark"></i></div>
-                    <div class="name">Cloud & Remote</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasCloudBackups') }"></i></div>
-                    <div class="name">Snapshot backups</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSnapshotBackups') }"></i></div>
-                    <div class="name">Encrypted backups</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasEncryptedBackups') }"></i></div>
+                    <div class="name">Cloud & Remote</div><div class="value" data-bind="html: formatLicenseStatusValue('HasCloudBackups')"></div>
+                    <div class="name">Periodic backups</div><div class="value" data-bind="html: formatLicenseStatusValue('HasPeriodicBackup')"></div>
+                    <div class="name">Snapshot backups</div><div class="value" data-bind="html: formatLicenseStatusValue('HasSnapshotBackups')"></div>
+                    <div class="name">Encrypted backups</div><div class="value" data-bind="html: formatLicenseStatusValue('HasEncryptedBackups')"></div>
 
-                    <a href="https://ravendb.net/features#integration" target="_blank" class="d-contents"><h4>ETL <i class="icon-newtab"></i></h4></a>
-                    <div class="name">SQL ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSqlEtl') }"></i></div>
-                    <div class="name">OLAP ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasOlapEtl') }"></i></div>
-                    <div class="name">RavenDB ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasRavenEtl') }"></i></div>
-                    <div class="name">Elasticsearch ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasElasticSearchEtl') }"></i></div>
-                    <div class="name">Queue ETLs</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasQueueEtl') }"></i></div>
+                    <a href="https://ravendb.net/features#integration" target="_blank" class="d-contents"><h4>Ongoing Tasks <i class="icon-newtab"></i></h4></a>
+                    <div class="name">RavenDB ETL</div><div class="value" data-bind="html: formatLicenseStatusValue('HasRavenEtl')"></div>
+                    <div class="name">Elasticsearch ETL</div><div class="value" data-bind="html: formatLicenseStatusValue('HasElasticSearchEtl')"></div>
+                    <div class="name">Kafka ETL</div><div class="value" data-bind="html: formatLicenseStatusValue('HasQueueEtl')"></div>
+                    <div class="name">SQL ETL</div><div class="value" data-bind="html: formatLicenseStatusValue('HasSqlEtl')"></div>
+                    <div class="name">OLAP ETL</div><div class="value" data-bind="html: formatLicenseStatusValue('HasOlapEtl')"></div>
+                    <div class="name">RabbitMQ ETL</div><div class="value" data-bind="html: formatLicenseStatusValue('HasQueueEtl')"></div>
+                    <div class="name">Kafka Sink</div><div class="value" data-bind="html: formatLicenseStatusValue('HasQueueSink')"></div>
+                    <div class="name">RabbitMQ Sink</div><div class="value" data-bind="html: formatLicenseStatusValue('HasQueueSink')"></div>
 
                     <a href="https://ravendb.net/features/extensions/subscriptions" target="_blank" class="d-contents"><h4>Data Subscriptions <i class="icon-newtab"></i></h4></a>
                     <div class="name">Single-worker Data Subscriptions</div><div class="value"><i class="icon-checkmark"></i></div>
-                    <div class="name">Concurrent-worker Data Subscriptions</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasConcurrentDataSubscriptions') }"></i></div>
+                    <div class="name">Concurrent-worker Data Subscriptions</div><div class="value" data-bind="html: formatLicenseStatusValue('HasConcurrentDataSubscriptions')"></div>
+                    <div class="name">Revisions in Subscriptions</div><div class="value" data-bind="html: formatLicenseStatusValue('HasRevisionsInSubscriptions')"></div>
+                    <div class="name">Subscriptions limit per database</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfSubscriptionsPerDatabase')"></div>
+                    <div class="name">Subscriptions limit per cluster</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfSubscriptionsPerCluster')"></div>
                     
                     <a href="https://ravendb.net/features#security" target="_blank" class="d-contents"><h4>Security <i class="icon-newtab"></i></h4></a>
                     <div class="name">Certificates</div><div class="value"><i class="icon-checkmark"></i></div>
-                    <div class="name">Read-only Certificates</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasReadOnlyCertificates') }"></i></div>
+                    <div class="name">Read-only Certificates</div><div class="value" data-bind="html: formatLicenseStatusValue('HasReadOnlyCertificates')"></div>
                     <div class="name">Encryption in transit</div><div class="value"><strong>TLS 1.2 & X.509</strong></div>
-                    <div class="name">Storage encryption</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasEncryption') }"></i></div>
+                    <div class="name">Storage encryption</div><div class="value" data-bind="html: formatLicenseStatusValue('HasEncryption')"></div>
+
+                    <h4>Settings</h4>
+                    <div class="name">Client Configuration</div><div class="value" data-bind="html: formatLicenseStatusValue('HasClientConfiguration')"></div>
+                    <div class="name">Studio Configuration</div><div class="value" data-bind="html: formatLicenseStatusValue('HasStudioConfiguration')"></div>
+                    <div class="name">Data Archival</div><div class="value" data-bind="html: formatLicenseStatusValue('HasDataArchival')"></div>
+                    <div class="name">Default revisions configuration</div><div class="value" data-bind="html: formatLicenseStatusValue('CanSetupDefaultRevisionsConfiguration')"></div>
+                    <div class="name">Max number of revisions to keep</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfRevisionsToKeep')"></div>
+                    <div class="name">Max revisions retention time (days)</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfRevisionAgeToKeepInDays')"></div>
+                    <div class="name">Min refresh frequency limit (hours)</div><div class="value" data-bind="html: formatLicenseStatusValue('MinPeriodForRefreshInHours')"></div>
+                    <div class="name">Min expiration frequency limit (hours)</div><div class="value" data-bind="html: formatLicenseStatusValue('MinPeriodForExpirationInHours')"></div>
+                    <div class="name">Custom Sorters limit per database</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfCustomSortersPerDatabase')"></div>
+                    <div class="name">Custom Sorters limit per cluster</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfCustomSortersPerCluster')"></div>
+                    <div class="name">Custom Analyzers limit per database</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfCustomAnalyzersPerDatabase')"></div>
+                    <div class="name">Custom Analyzers limit per cluster</div><div class="value" data-bind="html: formatLicenseStatusValue('MaxNumberOfCustomAnalyzersPerCluster')"></div>
 
                     <a href="https://ravendb.net/features#integration" target="_blank" class="d-contents"><h4>Integrations <i class="icon-newtab"></i></h4></a>
-                    <div class="name">PostgreSQL Protocol Support</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPostgreSqlIntegration') }"></i></div>
-                    <div class="name">Power BI Support</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPowerBI') }"></i></div>
+                    <div class="name">PostgreSQL Protocol Support</div><div class="value" data-bind="html: formatLicenseStatusValue('HasPostgreSqlIntegration')"></div>
+                    <div class="name">Power BI Support</div><div class="value" data-bind="html: formatLicenseStatusValue('HasPowerBI')"></div>
                 </div>
             </div>
             <div class="padding">

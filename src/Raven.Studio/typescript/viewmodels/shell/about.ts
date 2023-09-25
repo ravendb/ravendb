@@ -12,6 +12,7 @@ import appUrl = require("common/appUrl");
 import popoverUtils = require("common/popoverUtils");
 import app = require("durandal/app");
 import feedback from "viewmodels/shell/feedback";
+import licenseModel from "models/auth/licenseModel";
 
 class about extends viewModelBase {
 
@@ -171,15 +172,23 @@ class about extends viewModelBase {
     canRenewLicense = ko.pureComputed(() => {
         return this.licenseType() === 'Developer' || this.licenseType() === 'Community';
     });
-    
-    licenseAttribute(name: keyof Raven.Server.Commercial.LicenseStatus) {
-        return ko.pureComputed(() => {
-           const licenseStatus = license.licenseStatus();
-           if (licenseStatus) {
-               return licenseStatus[name] ? "icon-checkmark" : "icon-cancel";
-           }
-           return "icon-cancel";
-        });
+
+    formatLicenseStatusValue(
+        name: Exclude<keyof Raven.Server.Commercial.LicenseStatus, "Attributes" | "Version">
+    ): string | number {
+        const value = license.getStatusValue(name);
+
+        if (value == null) {
+            return `<i class="icon-infinity"></i>`;
+        }
+        if (value === true) {
+            return `<i class="icon-checkmark"></i>`;
+        }
+        if (value === false) {
+            return `<i class="icon-cancel"></i>`;
+        }
+
+        return value;
     }
 
     isRegisterLicenseEnabled = ko.observable<boolean>(false);
