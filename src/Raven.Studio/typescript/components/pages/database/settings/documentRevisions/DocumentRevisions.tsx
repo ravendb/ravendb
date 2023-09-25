@@ -94,6 +94,10 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
 
     useEffect(() => {
         dispatch(documentRevisionsActions.fetchConfigs(db));
+
+        return () => {
+            dispatch(documentRevisionsActions.reset());
+        };
     }, [db, dispatch]);
 
     const { databasesService } = useServices();

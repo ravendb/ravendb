@@ -110,6 +110,7 @@ export const documentRevisionsSlice = createSlice({
         saveConfigs: (state) => {
             configsAdapter.setAll(state.originalConfigs, configsSelectors.selectAll(state.configs));
         },
+        reset: () => initialState,
     },
     extraReducers: (builder) => {
         builder
