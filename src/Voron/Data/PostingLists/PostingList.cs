@@ -70,7 +70,7 @@ namespace Voron.Data.PostingLists
             state.RootPage = newPage.PageNumber;
 
             leafPage.AppendToNewPage(tx, encoder);
-            state.NumberOfEntries += leafPage.Header->NumberOfEntries;;
+            state.NumberOfEntries += leafPage.Header->NumberOfEntries;
 
             if (encoder.Done == false) // we overflow and need to split excess to additional pages
             {
@@ -432,7 +432,7 @@ namespace Voron.Data.PostingLists
                     var siblingIdx = GetSiblingIndex(parent);
                     var (_, siblingPageNum) = branch.GetByIndex(siblingIdx);
 
-                    var siblingPage = _llt.GetPage(siblingPageNum);
+                    var siblingPage = _llt.ModifyPage(siblingPageNum);
                     var siblingHeader = (PostingListLeafPageHeader*)siblingPage.Pointer;
                     if (siblingHeader->PostingListFlags != ExtendedPageType.PostingListLeaf)
                         continue;
@@ -447,19 +447,16 @@ namespace Voron.Data.PostingLists
 
                     // we assume that the two pages can be merged, note that they don't *have* to
                     // we do a quick validation above, but we don't check if shared prefixes, etc are involved
-                    if (PostingListLeafPage.TryMerge(_llt.Allocator, ref decoder, leafPage.Header,
+                    if (PostingListLeafPage.TryMerge(_llt, _llt.Allocator, ref decoder, leafPage.Header,
                             parent.LastSearchPosition == 0 ? leafPage.Header : siblingHeader,
                             parent.LastSearchPosition == 0 ? siblingHeader : leafPage.Header
                         ))
                     {
-                        
                         MergeSiblingsAtParent();
                     }
 
                 }
             }
-
-
         }
 
         private static int GetSiblingIndex(in PostingListCursorState parent)

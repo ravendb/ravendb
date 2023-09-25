@@ -248,9 +248,13 @@ public readonly unsafe struct PostingListLeafPage
     }
 
     public static bool TryMerge(
+        LowLevelTransaction llt,
         ByteStringContext allocator, ref FastPForDecoder fastPForDecoder,
         PostingListLeafPageHeader* dest, PostingListLeafPageHeader* first, PostingListLeafPageHeader* second)
     {
+        Debug.Assert(llt.IsDirty(dest->PageNumber));
+        Debug.Assert(llt.IsDirty(first->PageNumber));
+        Debug.Assert(llt.IsDirty(second->PageNumber));
         var scope = allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
         var tmpPtr = tmp.Ptr;
         var newHeader = (PostingListLeafPageHeader*)tmpPtr;
