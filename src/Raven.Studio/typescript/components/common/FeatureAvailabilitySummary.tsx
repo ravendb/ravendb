@@ -240,7 +240,7 @@ function formatAvailabilityValue(data: ValueData, canBeEnabledInCloud?: boolean)
                 <>
                     <Icon id={cloudOnDemandId} icon="upgrade-arrow" margin="m-0" color="success" />
                     <UncontrolledTooltip target={cloudOnDemandId}>
-                        Enable this feature in Cloud Portal or contact support.
+                        You can enable this feature in RavenDB Cloud Portal or by contacting support.
                     </UncontrolledTooltip>
                 </>
             );
