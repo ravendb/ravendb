@@ -14,7 +14,14 @@
                             <i class="icon-save"></i>
                             <span>Save</span>
                         </button>
-                        <button class="btn btn-default" data-bind="click: cloneSubscription, visible: !isAddingNewSubscriptionTask()" title="Clone this subscription">
+                        <button
+                            class="btn btn-default"
+                            data-bind="
+                                click: cloneSubscription,
+                                visible: !isAddingNewSubscriptionTask(),
+                                disable: $root.databaseLimitStatus() === 'limitReached' || $root.clusterLimitStatus() === 'limitReached',
+                                attr: { title: $root.cloneButtonTitle }"
+                        >
                             <i class="icon-clone"></i>
                             <span>Clone</span>
                         </button>

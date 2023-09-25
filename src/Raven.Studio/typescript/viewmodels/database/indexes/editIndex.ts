@@ -338,7 +338,7 @@ class editIndex extends shardViewModelBase {
             }
 
             return "Clone this index";
-        })
+        });
     }
     
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {

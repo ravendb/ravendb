@@ -293,8 +293,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     color={subscriptionsClusterLimitStatus === "limitReached" ? "danger" : "warning"}
                     className="text-center"
                 >
-                    Your server {subscriptionsClusterLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                    <strong>maximum number of subscriptions</strong> allowed by your license{" "}
+                    Cluster {subscriptionsClusterLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                    <strong>maximum number of subscriptions</strong> allowed per cluster by your license{" "}
                     <strong>
                         ({subscriptionsServerCount}/{subscriptionsClusterLimit})
                     </strong>
@@ -313,8 +313,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     color={subscriptionsDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
                     className="text-center"
                 >
-                    Your database {subscriptionsDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
-                    <strong>maximum number of subscriptions</strong> allowed by your license{" "}
+                    Database {subscriptionsDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
+                    <strong>maximum number of subscriptions</strong> allowed per database by your license{" "}
                     <strong>
                         ({subscriptionsDatabaseCount}/{subscriptionsDatabaseLimit})
                     </strong>
