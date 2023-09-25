@@ -26,6 +26,8 @@ namespace Raven.Server.NotificationCenter
 
         private MismatchedReferencesLoadWarning _mismatchedReferencesLoadWarning;
 
+        private readonly ConcurrentQueue<(string indexName, string fieldName)> _warningComplexFieldAutoIndexing = new();
+
         private Timer _indexingTimer;
         private readonly Logger _logger;
         private readonly object _locker = new();
@@ -64,6 +66,13 @@ namespace Raven.Server.NotificationCenter
             while (_warningReferenceDocumentLoadsQueue.Count > 50)
                 _warningReferenceDocumentLoadsQueue.TryDequeue(out _);
 
+            EnsureTimer();
+        }
+
+        public void AddComplexFieldWarning(string indexName, string fieldName)
+        {
+            _warningComplexFieldAutoIndexing.Enqueue((indexName, fieldName));
+            
             EnsureTimer();
         }
 
@@ -108,7 +117,7 @@ namespace Raven.Server.NotificationCenter
         {
             try
             {
-                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty && _mismatchedReferencesLoadWarning == null)
+                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty && _mismatchedReferencesLoadWarning == null && _warningComplexFieldAutoIndexing.IsEmpty)
                     return;
 
                 PerformanceHint indexOutputPerDocumentHint = null;
@@ -141,6 +150,11 @@ namespace Raven.Server.NotificationCenter
                 {
                     AlertRaised mismatchedReferencesAlert = GetMismatchedReferencesAlert();
                     _notificationCenter.Add(mismatchedReferencesAlert);
+                }
+
+                while (_warningComplexFieldAutoIndexing.TryDequeue(out var complexField))
+                {
+                    _notificationCenter.Add(GetComplexFieldAlert(complexField.indexName, complexField.fieldName));
                 }
             }
             catch (Exception e)
@@ -188,6 +202,12 @@ namespace Raven.Server.NotificationCenter
             return AlertRaised.Create(_notificationCenter.Database, $"Loading documents with mismatched collection name in '{_mismatchedReferencesLoadWarning.IndexName}' index",
                 "We have detected usage of LoadDocument(doc, collectionName) where loaded document collection is different than given parameter.",
                 AlertType.MismatchedReferenceLoad, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
+        }
+
+        private AlertRaised GetComplexFieldAlert(string indexName, string fieldName)
+        {
+            return AlertRaised.Create(_notificationCenter.Database, $"Complex field in AutoIndex", $"We detected '{fieldName}' as complex field in '{indexName}'. It may result in higher resource usage since its values will be processed as JSON objects. You should consider querying on individual fields of that object or using static index.", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning,
+                Source);
         }
 
         public void Dispose()

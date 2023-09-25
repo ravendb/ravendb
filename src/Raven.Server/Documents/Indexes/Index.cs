@@ -280,6 +280,8 @@ namespace Raven.Server.Documents.Indexes
 
         public TestIndexRun TestRun;
         
+        private HashSet<string> _fieldsReportedAsComplex = new();
+        
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
         {
             Type = type;
@@ -2545,6 +2547,17 @@ namespace Raven.Server.Documents.Indexes
             _updateReferenceLoadWarning = false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SetFieldIsIndexedAsJsonViaCoraxAutoIndex(IndexField field)
+        {
+            if (Type.IsAuto() == false || _fieldsReportedAsComplex.Contains(field.OriginalName))
+                return;
+            
+            DocumentDatabase.NotificationCenter.Indexing.AddComplexFieldWarning(Name, field.OriginalName);
+            _fieldsReportedAsComplex.Add(field.OriginalName);
+        }
+        
+        
         private void HandleMismatchedReferences()
         {
             if (CurrentIndexingScope.Current.MismatchedReferencesWarningHandler == null || CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.IsEmpty)
