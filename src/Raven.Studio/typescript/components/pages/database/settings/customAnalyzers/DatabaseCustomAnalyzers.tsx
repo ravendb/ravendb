@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
-import { Col, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+import { Alert, Col, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -32,6 +32,7 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
+import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 
 export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
@@ -49,6 +50,7 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerDatabase"));
     const numberOfCustomAnalyzersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfAnalyzersInCluster;
+    const hasServerWideCustomAnalyzers = useAppSelector(licenseSelectors.statusValue("HasServerWideAnalyzers"));
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -77,156 +79,186 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
     const isLimitReached = databaseLimitReachStatus === "limitReached" || clusterLimitReachStatus === "limitReached";
 
     return (
-        <div className="content-margin">
-            <Col xxl={12}>
-                <Row className="gy-sm">
-                    <Col>
-                        <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
-                        {isDatabaseAdmin && (
-                            <>
-                                <div id="newCustomAnalyzer" className="w-fit-content">
-                                    <a
-                                        href={appUrl.forEditCustomAnalyzer(db)}
-                                        className={classNames("btn btn-primary mb-3", { disabled: isLimitReached })}
-                                    >
-                                        <Icon icon="plus" />
-                                        Add a custom analyzer
-                                    </a>
-                                </div>
-                                {isLimitReached && (
-                                    <UncontrolledPopover
-                                        trigger="hover"
-                                        target="newCustomAnalyzer"
-                                        placement="top"
-                                        className="bs5"
-                                    >
-                                        <div className="p-3 text-center">
-                                            <Icon
-                                                icon={
-                                                    databaseLimitReachStatus === "limitReached" ? "database" : "cluster"
-                                                }
-                                            />
-                                            {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has
-                                            reached the maximum number of Custom Analyzers allowed per{" "}
-                                            {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
-                                            <br /> Delete unused analyzers or{" "}
-                                            <a href={upgradeLicenseLink} target="_blank">
-                                                upgrade your license
-                                            </a>
-                                        </div>
-                                    </UncontrolledPopover>
-                                )}
-                            </>
-                        )}
+        <>
+            {clusterLimitReachStatus !== "notReached" && (
+                <Alert
+                    color={clusterLimitReachStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center mb-3"
+                >
+                    <Icon icon="cluster" />
+                    Cluster {clusterLimitReachStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                    <strong>maximum number of Custom Analyzers</strong> allowed per cluster by your license{" "}
+                    <strong>
+                        ({numberOfCustomAnalyzersInCluster}/{licenseClusterLimit})
+                    </strong>
+                    <br /> Delete unused analyzers or{" "}
+                    <strong>
+                        <a href={upgradeLicenseLink} target="_blank">
+                            upgrade your license
+                        </a>
+                    </strong>
+                </Alert>
+            )}
+            <div className="content-margin">
+                <Col xxl={12}>
+                    <Row className="gy-sm">
+                        <Col>
+                            <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
+                            {isDatabaseAdmin && (
+                                <>
+                                    <div id="newCustomAnalyzer" className="w-fit-content">
+                                        <a
+                                            href={appUrl.forEditCustomAnalyzer(db)}
+                                            className={classNames("btn btn-primary mb-3", { disabled: isLimitReached })}
+                                        >
+                                            <Icon icon="plus" />
+                                            Add a custom analyzer
+                                        </a>
+                                    </div>
+                                    {isLimitReached && (
+                                        <UncontrolledPopover
+                                            trigger="hover"
+                                            target="newCustomAnalyzer"
+                                            placement="top"
+                                            className="bs5"
+                                        >
+                                            <div className="p-3 text-center">
+                                                <Icon
+                                                    icon={
+                                                        databaseLimitReachStatus === "limitReached"
+                                                            ? "database"
+                                                            : "cluster"
+                                                    }
+                                                />
+                                                {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"}{" "}
+                                                has reached the maximum number of Custom Analyzers allowed per{" "}
+                                                {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
+                                                <br /> Delete unused analyzers or{" "}
+                                                <a href={upgradeLicenseLink} target="_blank">
+                                                    upgrade your license
+                                                </a>
+                                            </div>
+                                        </UncontrolledPopover>
+                                    )}
+                                </>
+                            )}
 
-                        <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
-                            Database custom analyzers
-                            {databaseLimitReachStatus !== "notReached" && (
-                                <CounterBadge
-                                    className="ms-2"
-                                    count={databaseResultsCount}
-                                    limit={licenseDatabaseLimit}
+                            <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
+                                Database custom analyzers
+                                {databaseLimitReachStatus !== "notReached" && (
+                                    <CounterBadge
+                                        className="ms-2"
+                                        count={databaseResultsCount}
+                                        limit={licenseDatabaseLimit}
+                                    />
+                                )}
+                            </HrHeader>
+                            <DatabaseAnalyzersList
+                                fetchStatus={asyncGetDatabaseAnalyzers.status}
+                                analyzers={asyncGetDatabaseAnalyzers.result}
+                                reload={asyncGetDatabaseAnalyzers.execute}
+                                forEditLink={(name) => appUrl.forEditCustomAnalyzer(db, name)}
+                                deleteCustomAnalyzer={(name) => databasesService.deleteCustomAnalyzer(db, name)}
+                                serverWideAnalyzerNames={asyncGetServerWideAnalyzers.result?.map((x) => x.Name) ?? []}
+                                isDatabaseAdmin={isDatabaseAdmin}
+                            />
+
+                            <HrHeader
+                                right={
+                                    <a
+                                        href={appUrl.forServerWideCustomAnalyzers()}
+                                        target="_blank"
+                                        title="Navigate to the server-wide view to edit"
+                                    >
+                                        <Icon icon="link" />
+                                        Server-wide custom analyzers
+                                    </a>
+                                }
+                                count={serverWideResultsCount}
+                            >
+                                Server-wide custom analyzers
+                                {!hasServerWideCustomAnalyzers && (
+                                    <LicenseRestrictedBadge licenseRequired="Professional +" />
+                                )}
+                            </HrHeader>
+                            {hasServerWideCustomAnalyzers && (
+                                <ServerWideCustomAnalyzersList
+                                    fetchStatus={asyncGetServerWideAnalyzers.status}
+                                    analyzers={asyncGetServerWideAnalyzers.result}
+                                    reload={asyncGetServerWideAnalyzers.execute}
+                                    isReadOnly
                                 />
                             )}
-                        </HrHeader>
-                        <DatabaseAnalyzersList
-                            fetchStatus={asyncGetDatabaseAnalyzers.status}
-                            analyzers={asyncGetDatabaseAnalyzers.result}
-                            reload={asyncGetDatabaseAnalyzers.execute}
-                            forEditLink={(name) => appUrl.forEditCustomAnalyzer(db, name)}
-                            deleteCustomAnalyzer={(name) => databasesService.deleteCustomAnalyzer(db, name)}
-                            serverWideAnalyzerNames={asyncGetServerWideAnalyzers.result?.map((x) => x.Name) ?? []}
-                            isDatabaseAdmin={isDatabaseAdmin}
-                        />
-
-                        <HrHeader
-                            right={
-                                <a
-                                    href={appUrl.forServerWideCustomAnalyzers()}
-                                    target="_blank"
-                                    title="Navigate to the server-wide view to edit"
+                        </Col>
+                        <Col sm={12} lg={4}>
+                            <AboutViewAnchored>
+                                <AccordionItemWrapper
+                                    targetId="1"
+                                    icon="about"
+                                    color="info"
+                                    description="Get additional info on this feature"
+                                    heading="About this view"
                                 >
-                                    <Icon icon="link" />
-                                    Server-wide custom analyzers
-                                </a>
-                            }
-                            count={serverWideResultsCount}
-                        >
-                            Server-wide custom analyzers
-                        </HrHeader>
-                        <ServerWideCustomAnalyzersList
-                            fetchStatus={asyncGetServerWideAnalyzers.status}
-                            analyzers={asyncGetServerWideAnalyzers.result}
-                            reload={asyncGetServerWideAnalyzers.execute}
-                            isReadOnly
-                        />
-                    </Col>
-                    <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
-                            <AccordionItemWrapper
-                                targetId="1"
-                                icon="about"
-                                color="info"
-                                description="Get additional info on this feature"
-                                heading="About this view"
-                            >
-                                <p>
-                                    <strong>Analyzers</strong> are used by indexes to split the index-fields into tokens
-                                    (terms).
-                                    <br />
-                                    The analyzer defines how the field is tokenized.
-                                    <br />
-                                    When querying an index, these terms are used to define the search criteria and
-                                    filter query results.
-                                </p>
-                                <div>
-                                    <strong>In this view</strong>, you can add your own analyzers in addition to the
-                                    existing analyzers that come with RavenDB.
-                                    <ul>
-                                        <li>
-                                            The custom analyzers added here can be used only by indexes in this
-                                            database.
-                                        </li>
-                                        <li>
-                                            The server-wide custom analyzers listed can also be used in this database.
-                                        </li>
-                                        <li>Note: custom analyzers are not supported by Corax indexes.</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    Provide <code>C#</code> code in the editor view, or upload from file.
-                                    <ul>
-                                        <li>
-                                            The analyzer name must be the same as the analyzer&apos;s class name in your
-                                            code.
-                                        </li>
-                                        <li>
-                                            Inherit from <code>Lucene.Net.Analysis.Analyzer</code>
-                                        </li>
-                                        <li>
-                                            Code must be compilable and include all necessary <code>using</code>{" "}
-                                            statements.
-                                        </li>
-                                    </ul>
-                                </div>
-                                <hr />
-                                <div className="small-label mb-2">useful links</div>
-                                <a href={customAnalyzersDocsLink} target="_blank">
-                                    <Icon icon="newtab" /> Docs - Custom Analyzers
-                                </a>
-                            </AccordionItemWrapper>
-                            <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={
-                                    databaseLimitReachStatus === "notReached" &&
-                                    clusterLimitReachStatus === "notReached"
-                                }
-                                data={featureAvailability}
-                            />
-                        </AboutViewAnchored>
-                    </Col>
-                </Row>
-            </Col>
-        </div>
+                                    <p>
+                                        <strong>Analyzers</strong> are used by indexes to split the index-fields into
+                                        tokens (terms).
+                                        <br />
+                                        The analyzer defines how the field is tokenized.
+                                        <br />
+                                        When querying an index, these terms are used to define the search criteria and
+                                        filter query results.
+                                    </p>
+                                    <div>
+                                        <strong>In this view</strong>, you can add your own analyzers in addition to the
+                                        existing analyzers that come with RavenDB.
+                                        <ul>
+                                            <li>
+                                                The custom analyzers added here can be used only by indexes in this
+                                                database.
+                                            </li>
+                                            <li>
+                                                The server-wide custom analyzers listed can also be used in this
+                                                database.
+                                            </li>
+                                            <li>Note: custom analyzers are not supported by Corax indexes.</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        Provide <code>C#</code> code in the editor view, or upload from file.
+                                        <ul>
+                                            <li>
+                                                The analyzer name must be the same as the analyzer&apos;s class name in
+                                                your code.
+                                            </li>
+                                            <li>
+                                                Inherit from <code>Lucene.Net.Analysis.Analyzer</code>
+                                            </li>
+                                            <li>
+                                                Code must be compilable and include all necessary <code>using</code>{" "}
+                                                statements.
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <hr />
+                                    <div className="small-label mb-2">useful links</div>
+                                    <a href={customAnalyzersDocsLink} target="_blank">
+                                        <Icon icon="newtab" /> Docs - Custom Analyzers
+                                    </a>
+                                </AccordionItemWrapper>
+                                <FeatureAvailabilitySummaryWrapper
+                                    isUnlimited={
+                                        databaseLimitReachStatus === "notReached" &&
+                                        clusterLimitReachStatus === "notReached" &&
+                                        hasServerWideCustomAnalyzers
+                                    }
+                                    data={featureAvailability}
+                                />
+                            </AboutViewAnchored>
+                        </Col>
+                    </Row>
+                </Col>
+            </div>
+        </>
     );
 }
 
@@ -331,5 +363,11 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: 5 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Server-wide custom analyzers",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
     },
 ];

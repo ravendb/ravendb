@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
-import { Col, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+import { Alert, Col, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -33,6 +33,7 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
+import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
@@ -52,6 +53,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
     const numberOfCustomSortersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfCustomSortersInCluster;
+    const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -63,6 +65,10 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
             {
                 featureName: defaultFeatureAvailability[1].featureName,
                 value: licenseClusterLimit,
+            },
+            {
+                featureName: defaultFeatureAvailability[2].featureName,
+                value: hasServerWideCustomSorters,
             },
         ],
     });
@@ -91,151 +97,180 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     }
 
     return (
-        <div className="content-margin">
-            <Col xxl={12}>
-                <Row className="gy-sm">
-                    <Col>
-                        <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
-                        {isDatabaseAdmin && (
-                            <>
-                                <div id="newCustomSorter" className="w-fit-content">
-                                    <a
-                                        href={appUrl.forEditCustomSorter(db)}
-                                        className={classNames("btn btn-primary mb-3", {
-                                            disabled: isLimitReached,
-                                        })}
-                                    >
-                                        <Icon icon="plus" />
-                                        Add a custom sorter
-                                    </a>
-                                </div>
-                                {isLimitReached && (
-                                    <UncontrolledPopover
-                                        trigger="hover"
-                                        target="newCustomSorter"
-                                        placement="top"
-                                        className="bs5"
-                                    >
-                                        <div className="p-3 text-center">
-                                            <Icon
-                                                icon={
-                                                    databaseLimitReachStatus === "limitReached" ? "database" : "cluster"
-                                                }
-                                            />
-                                            {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has
-                                            reached the maximum number of Custom Sorters allowed per{" "}
-                                            {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
-                                            <br /> Delete unused sorters or{" "}
-                                            <a href={upgradeLicenseLink} target="_blank">
-                                                upgrade your license
-                                            </a>
-                                        </div>
-                                    </UncontrolledPopover>
-                                )}
-                            </>
-                        )}
+        <>
+            {clusterLimitReachStatus !== "notReached" && (
+                <Alert
+                    color={clusterLimitReachStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center mb-3"
+                >
+                    <Icon icon="cluster" />
+                    Cluster {clusterLimitReachStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                    <strong>maximum number of Custom Sorters</strong> allowed per cluster by your license{" "}
+                    <strong>
+                        ({numberOfCustomSortersInCluster}/{licenseClusterLimit})
+                    </strong>
+                    <br /> Delete unused sorters or{" "}
+                    <strong>
+                        <a href={upgradeLicenseLink} target="_blank">
+                            upgrade your license
+                        </a>
+                    </strong>
+                </Alert>
+            )}
+            <div className="content-margin">
+                <Col xxl={12}>
+                    <Row className="gy-sm">
+                        <Col>
+                            <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
+                            {isDatabaseAdmin && (
+                                <>
+                                    <div id="newCustomSorter" className="w-fit-content">
+                                        <a
+                                            href={appUrl.forEditCustomSorter(db)}
+                                            className={classNames("btn btn-primary mb-3", {
+                                                disabled: isLimitReached,
+                                            })}
+                                        >
+                                            <Icon icon="plus" />
+                                            Add a custom sorter
+                                        </a>
+                                    </div>
+                                    {isLimitReached && (
+                                        <UncontrolledPopover
+                                            trigger="hover"
+                                            target="newCustomSorter"
+                                            placement="top"
+                                            className="bs5"
+                                        >
+                                            <div className="p-3 text-center">
+                                                <Icon
+                                                    icon={
+                                                        databaseLimitReachStatus === "limitReached"
+                                                            ? "database"
+                                                            : "cluster"
+                                                    }
+                                                />
+                                                {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"}{" "}
+                                                has reached the maximum number of Custom Sorters allowed per{" "}
+                                                {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
+                                                <br /> Delete unused sorters or{" "}
+                                                <a href={upgradeLicenseLink} target="_blank">
+                                                    upgrade your license
+                                                </a>
+                                            </div>
+                                        </UncontrolledPopover>
+                                    )}
+                                </>
+                            )}
 
-                        <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
-                            Database custom sorters
-                            {databaseLimitReachStatus !== "notReached" && (
-                                <CounterBadge
-                                    className="ms-2"
-                                    count={databaseResultsCount}
-                                    limit={licenseDatabaseLimit}
+                            <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
+                                Database custom sorters
+                                {databaseLimitReachStatus !== "notReached" && (
+                                    <CounterBadge
+                                        className="ms-2"
+                                        count={databaseResultsCount}
+                                        limit={licenseDatabaseLimit}
+                                    />
+                                )}
+                            </HrHeader>
+                            <DatabaseSortersList
+                                fetchStatus={asyncGetDatabaseSorters.status}
+                                sorters={asyncGetDatabaseSorters.result}
+                                reload={asyncGetDatabaseSorters.execute}
+                                forEditLink={(name) => appUrl.forEditCustomSorter(db, name)}
+                                deleteCustomSorter={(name) => databasesService.deleteCustomSorter(db, name)}
+                                serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
+                                isDatabaseAdmin={isDatabaseAdmin}
+                            />
+
+                            <HrHeader
+                                right={
+                                    <a href={appUrl.forServerWideCustomSorters()} target="_blank">
+                                        <Icon icon="link" />
+                                        Server-wide custom sorters
+                                    </a>
+                                }
+                                count={serverWideResultsCount}
+                            >
+                                Server-wide custom sorters
+                                {!hasServerWideCustomSorters && (
+                                    <LicenseRestrictedBadge licenseRequired="Professional +" />
+                                )}
+                            </HrHeader>
+                            {hasServerWideCustomSorters && (
+                                <ServerWideCustomSortersList
+                                    fetchStatus={asyncGetServerWideSorters.status}
+                                    sorters={asyncGetServerWideSorters.result}
+                                    reload={asyncGetServerWideSorters.execute}
+                                    isReadOnly
                                 />
                             )}
-                        </HrHeader>
-                        <DatabaseSortersList
-                            fetchStatus={asyncGetDatabaseSorters.status}
-                            sorters={asyncGetDatabaseSorters.result}
-                            reload={asyncGetDatabaseSorters.execute}
-                            forEditLink={(name) => appUrl.forEditCustomSorter(db, name)}
-                            deleteCustomSorter={(name) => databasesService.deleteCustomSorter(db, name)}
-                            serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
-                            isDatabaseAdmin={isDatabaseAdmin}
-                        />
-
-                        <HrHeader
-                            right={
-                                <a href={appUrl.forServerWideCustomSorters()} target="_blank">
-                                    <Icon icon="link" />
-                                    Server-wide custom sorters
-                                </a>
-                            }
-                            count={serverWideResultsCount}
-                        >
-                            Server-wide custom sorters
-                        </HrHeader>
-                        <ServerWideCustomSortersList
-                            fetchStatus={asyncGetServerWideSorters.status}
-                            sorters={asyncGetServerWideSorters.result}
-                            reload={asyncGetServerWideSorters.execute}
-                            isReadOnly
-                        />
-                    </Col>
-                    <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
-                            <AccordionItemWrapper
-                                targetId="1"
-                                icon="about"
-                                color="info"
-                                description="Get additional info on this feature"
-                                heading="About this view"
-                            >
-                                <p>
-                                    A <strong>Custom Sorter</strong> allows you to define how documents will be ordered
-                                    in the query results
-                                    <br /> according to your specific requirements.
-                                </p>
-                                <div>
-                                    <strong>In this view</strong>, you can add your own sorters:
-                                    <ul className="margin-top-xxs">
-                                        <li>
-                                            The custom sorters added here can be used only with queries in this
-                                            database.
-                                        </li>
-                                        <li>
-                                            The server-wide custom sorters listed can also be applied within this
-                                            database.
-                                        </li>
-                                        <li>The custom sorters can be tested in this view with a sample query.</li>
-                                        <li>Note: custom sorters are not supported when querying Corax indexes.</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    Provide <code>C#</code> code in the editor view, or upload from file:
-                                    <ul className="margin-top-xxs">
-                                        <li>
-                                            The sorter name must be the same as the sorter&apos;s class name in your
-                                            code.
-                                        </li>
-                                        <li>
-                                            Inherit from <code>Lucene.Net.Search.FieldComparator</code>
-                                        </li>
-                                        <li>
-                                            Code must be compilable and include all necessary <code>using</code>{" "}
-                                            statements.
-                                        </li>
-                                    </ul>
-                                </div>
-                                <hr />
-                                <div className="small-label mb-2">useful links</div>
-                                <a href={customSortersDocsLink} target="_blank">
-                                    <Icon icon="newtab" /> Docs - Custom Sorters
-                                </a>
-                            </AccordionItemWrapper>
-                            <FeatureAvailabilitySummaryWrapper
-                                isUnlimited={
-                                    databaseLimitReachStatus === "notReached" &&
-                                    clusterLimitReachStatus === "notReached"
-                                }
-                                data={featureAvailability}
-                            />
-                        </AboutViewAnchored>
-                    </Col>
-                </Row>
-            </Col>
-        </div>
+                        </Col>
+                        <Col sm={12} lg={4}>
+                            <AboutViewAnchored>
+                                <AccordionItemWrapper
+                                    targetId="1"
+                                    icon="about"
+                                    color="info"
+                                    description="Get additional info on this feature"
+                                    heading="About this view"
+                                >
+                                    <p>
+                                        A <strong>Custom Sorter</strong> allows you to define how documents will be
+                                        ordered in the query results
+                                        <br /> according to your specific requirements.
+                                    </p>
+                                    <div>
+                                        <strong>In this view</strong>, you can add your own sorters:
+                                        <ul className="margin-top-xxs">
+                                            <li>
+                                                The custom sorters added here can be used only with queries in this
+                                                database.
+                                            </li>
+                                            <li>
+                                                The server-wide custom sorters listed can also be applied within this
+                                                database.
+                                            </li>
+                                            <li>The custom sorters can be tested in this view with a sample query.</li>
+                                            <li>Note: custom sorters are not supported when querying Corax indexes.</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        Provide <code>C#</code> code in the editor view, or upload from file:
+                                        <ul className="margin-top-xxs">
+                                            <li>
+                                                The sorter name must be the same as the sorter&apos;s class name in your
+                                                code.
+                                            </li>
+                                            <li>
+                                                Inherit from <code>Lucene.Net.Search.FieldComparator</code>
+                                            </li>
+                                            <li>
+                                                Code must be compilable and include all necessary <code>using</code>{" "}
+                                                statements.
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <hr />
+                                    <div className="small-label mb-2">useful links</div>
+                                    <a href={customSortersDocsLink} target="_blank">
+                                        <Icon icon="newtab" /> Docs - Custom Sorters
+                                    </a>
+                                </AccordionItemWrapper>
+                                <FeatureAvailabilitySummaryWrapper
+                                    isUnlimited={
+                                        databaseLimitReachStatus === "notReached" &&
+                                        clusterLimitReachStatus === "notReached" &&
+                                        hasServerWideCustomSorters
+                                    }
+                                    data={featureAvailability}
+                                />
+                            </AboutViewAnchored>
+                        </Col>
+                    </Row>
+                </Col>
+            </div>
+        </>
     );
 }
 
@@ -340,5 +375,11 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: 5 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+    },
+    {
+        featureName: "Server-wide custom sorters",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
     },
 ];
