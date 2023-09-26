@@ -74,8 +74,6 @@ const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterB
         { value: "Offline", label: "Offline", count: offline },
         { value: "Error", label: "Errored", count: error },
         { value: "Disabled", label: "Disabled", count: disabled },
-        { value: "Sharded", label: "Sharded", count: sharded, verticalSeparatorLine: true },
-        { value: "NonSharded", label: "Non Sharded", count: nonSharded },
         {
             value: "Local",
             label: `Local (Node ${localNodeTag})`,
