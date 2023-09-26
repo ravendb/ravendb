@@ -950,7 +950,7 @@ namespace Raven.Server.Documents.TimeSeries
                     return ChangeVector.MergeWithNewDatabaseChangeVector(_context, ReadOnlyChangeVector, _currentEtag);
                 }
 
-                ChangeVector mergedChangeVector = ChangeVector.MergeChangeVectors(ReadOnlyChangeVector, ChangeVectorFromReplication, _context);
+                ChangeVector mergedChangeVector = ChangeVector.Merge(ReadOnlyChangeVector, ChangeVectorFromReplication, _context);
                 return ChangeVectorUtils.GetConflictStatus(ChangeVectorFromReplication, ReadOnlyChangeVector) switch
                 {
                     ConflictStatus.Update => mergedChangeVector,
