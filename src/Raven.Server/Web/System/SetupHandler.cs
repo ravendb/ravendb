@@ -14,7 +14,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Operations;
@@ -126,6 +128,14 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "license activation");
                 var licenseInfo = JsonDeserializationServer.LicenseInfo(json);
 
+                var licenseStatus = LicenseManager.GetLicenseStatus(licenseInfo.License);
+                if (licenseStatus.Version.Major < 6)
+                {
+                    throw new LicenseLimitException(
+                        $"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to use server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
+                        $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first.");
+                }
+
                 var content = new StringContent(JsonConvert.SerializeObject(licenseInfo), Encoding.UTF8, "application/json");
                 try
                 {
@@ -216,7 +226,7 @@ namespace Raven.Server.Web.System
                         fullResult.UserDomainsWithIps.Domains.Add(domain.Key, list);
                     }
 
-                    var licenseStatus = await SetupManager
+                    licenseStatus = await SetupManager
                         .GetUpdatedLicenseStatus(ServerStore, licenseInfo.License)
                         .ConfigureAwait(false);
                     fullResult.MaxClusterSize = licenseStatus.MaxClusterSize;
