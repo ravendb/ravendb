@@ -32,7 +32,11 @@ export default function ServerWideCustomSorters() {
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
-                        <AboutViewHeading title="Server-Wide Sorters" icon="server-wide-custom-sorters" />
+                        <AboutViewHeading
+                            title="Server-Wide Sorters"
+                            icon="server-wide-custom-sorters"
+                            licenseBadgeText={hasServerWideCustomSorters ? null : "Professional +"}
+                        />
                         <div id="newServerWideCustomSorter" className="w-fit-content">
                             <a
                                 href={appUrl.forEditServerWideCustomSorter()}

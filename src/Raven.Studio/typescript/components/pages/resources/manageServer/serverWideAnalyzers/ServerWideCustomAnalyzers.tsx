@@ -32,7 +32,11 @@ export default function ServerWideCustomAnalyzers() {
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
-                        <AboutViewHeading title="Server-Wide Analyzers" icon="server-wide-custom-analyzers" />
+                        <AboutViewHeading
+                            title="Server-Wide Analyzers"
+                            icon="server-wide-custom-analyzers"
+                            licenseBadgeText={hasServerWideCustomAnalyzers ? null : "Professional +"}
+                        />
                         <div id="newServerWideCustomAnalyzer" className="w-fit-content">
                             <a
                                 href={appUrl.forEditServerWideCustomAnalyzer()}
