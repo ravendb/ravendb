@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Subscriptions;
 
@@ -207,6 +208,21 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
             return null;
 
         return subscription;
+    }
+
+    public int GetAllRunningSubscriptionsCount()
+    {
+        var count = 0;
+        foreach (var kvp in _subscriptions)
+        {
+            var subscriptionConnectionsState = kvp.Value;
+
+            if (subscriptionConnectionsState.IsSubscriptionActive() == false)
+                continue;
+
+            count++;
+        }
+        return count;
     }
 
     public virtual void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)

@@ -27,12 +27,18 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : PlatformDetails.Is32Bits ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15);
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Run()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Run(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+            using (var store = GetDocumentStore(new Options(options)
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(c => c.Subscriptions.MaxNumberOfConcurrentConnections)] = "4"
+                ModifyDatabaseRecord = record =>
+                {
+                    modifyDatabaseRecord?.Invoke(record);
+                    record.Settings[RavenConfiguration.GetKey(c => c.Subscriptions.MaxNumberOfConcurrentConnections)] = "4";
+                }
             }))
             {
                 var mres = new List<AsyncManualResetEvent>();
@@ -80,13 +86,20 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var sp = Stopwatch.StartNew();
                     var subscriptionsCount = 0;
-
+                    
                     while (sp.Elapsed < _reasonableWaitTime && subscriptionsCount != 3)
                     {
-                        subscriptionsCount = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database)).SubscriptionStorage
-                            .GetAllRunningSubscriptions(context, false, 0, 1024).Count();
+                        if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                        {
+                            var orch = Sharding.GetOrchestrator(store.Database);
+                            subscriptionsCount = orch.SubscriptionsStorage.GetAllRunningSubscriptionsCount();
+                        }
+                        else
+                        {
+                            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                            subscriptionsCount = db.SubscriptionStorage.GetAllRunningSubscriptions(context, false, 0, 1024).Count();
+                        }
                     }
-
 
                     Assert.Equal(3, subscriptionsCount);
                 }
@@ -95,7 +108,6 @@ namespace SlowTests.Client.Subscriptions
                 OpenAndRunSubscription(store, nowItConnectsMre.Set, run: true);
 
                 Assert.True(await nowItConnectsMre.WaitAsync(_reasonableWaitTime));
-
             }
         }
 
