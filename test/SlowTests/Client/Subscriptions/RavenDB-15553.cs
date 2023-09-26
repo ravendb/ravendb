@@ -19,12 +19,13 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(10);
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ShouldUseIdPropertySupportWhenTranslatingPredicateToJS()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldUseIdPropertySupportWhenTranslatingPredicateToJS(Options options)
         {
             var workspaceId = "workspaces/1";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -80,15 +81,18 @@ namespace SlowTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
 
+                    var count = 0;
                     _ = subscription.Run(x =>
                     {
-                        names = x.Items.Select(i => i.Result.Name).ToList();
-                        mre.Set();
+                        names.AddRange(x.Items.Select(i => i.Result.Name).ToList());
+                        count+= x.Items.Count;
+                        if(count >= 3)
+                            mre.Set();
                     });
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
-                    Assert.Equal(new[] { "R&D", "Support", "Marketing" }, names);
-
+                    names.Sort();
+                    Assert.Equal(new[] { "Marketing", "R&D", "Support" }, names);
                 }
             }
         }
