@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
@@ -351,11 +352,11 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutSubscriptionBatchCommand):
-                        ExecutePutSubscriptionBatch<PutSubscriptionCommand>(context, cmd, index, type);
+                        ExecutePutSubscriptionBatch<PutSubscriptionCommand>(context, cmd, index, type, serverStore);
                         break;
 
                     case nameof(PutShardedSubscriptionBatchCommand):
-                        ExecutePutSubscriptionBatch<PutShardedSubscriptionCommand>(context, cmd, index, type);
+                        ExecutePutSubscriptionBatch<PutShardedSubscriptionCommand>(context, cmd, index, type, serverStore);
                         break;
 
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
@@ -767,7 +768,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ExecutePutSubscriptionBatch<T>(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
+        private void ExecutePutSubscriptionBatch<T>(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type, ServerStore serverStore)
             where T : PutSubscriptionCommand
         {
             if (cmd.TryGet(nameof(PutSubscriptionBatchCommand.Commands), out BlittableJsonReaderArray subscriptionCommands) == false)
@@ -789,6 +790,8 @@ namespace Raven.Server.ServerWide
                     }
 
                     updateCommand = (T)JsonDeserializationCluster.Commands[typeof(T).Name](command);
+
+                    AssertSubscriptionsLicenseLimits(serverStore, items, updateCommand, context);
 
                     var database = updateCommand.DatabaseName;
                     if (DatabaseExists(context, database) == false)
