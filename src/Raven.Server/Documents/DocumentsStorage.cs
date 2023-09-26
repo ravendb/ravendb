@@ -38,7 +38,6 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
-using Voron.Impl.Paging;
 using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
@@ -2530,10 +2529,7 @@ namespace Raven.Server.Documents
 
             if (fromReplication == false)
             {
-                context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
-                oldChangeVector = oldChangeVector == null
-                    ? context.LastDatabaseChangeVector
-                    : oldChangeVector.MergeWith(context.LastDatabaseChangeVector, context);
+                oldChangeVector = ChangeVector.MergeWithDatabaseChangeVector(context, oldChangeVector);
             }
 
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
