@@ -131,7 +131,7 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
         var documentStorage = _index.DocumentDatabase.DocumentsStorage;
         
         using var scope = indexingStatsAggregator.CreateScope();
-        using var _ = scope.For(IndexingOperation.Corax.DictionaryTraining);
+        using var indexingStatsScope = scope.For(IndexingOperation.Corax.DictionaryTraining);
         using var __ = CultureHelper.EnsureInvariantCulture();
         using var ___ = contextPool.AllocateOperationContext(out TransactionOperationContext indexContext);
         using var queryContext = QueryOperationContext.Allocate(_index.DocumentDatabase, _index);
@@ -148,7 +148,7 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             var converter = CreateConverter(_index);
             converter.IgnoreComplexObjectsDuringIndex = true; // for training, we don't care
             
-            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
+            var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token, indexingStatsScope, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
             var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);
