@@ -331,10 +331,10 @@ class editIndex extends shardViewModelBase {
 
         this.cloneButtonTitle = ko.pureComputed(() => {
             if (this.databaseLimitStatus() === "limitReached") {
-                return "Database reached the maximum number of static indexes allowed per database by your license.";
+                return "The database has reached the maximum number of static indexes allowed by your license per database.";
             }
             if (this.clusterLimitStatus() === "limitReached") {
-                return "Cluster reached the maximum number of static indexes allowed per cluster by your license.";
+                return "The cluster has reached the maximum number of static indexes allowed by your license per cluster.";
             }
 
             return "Clone this index";
