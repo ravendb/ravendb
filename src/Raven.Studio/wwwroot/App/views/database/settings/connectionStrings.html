@@ -13,7 +13,10 @@
                     <h5><strong>RavenDB</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge professional margin-right-xxs" data-bind="if: !$root.hasRavenEtl">Professional +</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRavenEtl, css: { 'pe-none disabled': !$root.hasRavenEtl }" title="Add a new RavenDB ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasRavenEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button class="btn btn-sm btn-primary" data-bind="click: onAddRavenEtl, css: { 'pe-none disabled': !$root.hasRavenEtl }" title="Add a new RavenDB ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    </span>
                 </div>
                 <div data-bind="if: ravenEtlConnectionStringsNames().length === 0 && $root.hasRavenEtl">
                     <div class="text-center">
@@ -49,7 +52,10 @@
                     <h5><strong>SQL</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge professional margin-right-xxs" data-bind="if: !$root.hasSqlEtl">Professional +</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl, css: { 'pe-none disabled': !$root.hasSqlEtl }" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
+                    <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasSqlEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl, css: { 'pe-none disabled': !$root.hasSqlEtl }" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
+                    </span>
                 </div>
                 <div data-bind="if: sqlEtlConnectionStringsNames().length === 0 && $root.hasSqlEtl">
                     <div class="text-center">
@@ -82,7 +88,10 @@
                     <h5><strong>OLAP</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge enterprise margin-right-xxs" data-bind="if: !$root.hasOlapEtl">Enterprise</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddOlapEtl, css: { 'pe-none disabled': !$root.hasOlapEtl }" title="Add a new Olap ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasOlapEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button class="btn btn-sm btn-primary" data-bind="click: onAddOlapEtl, css: { 'pe-none disabled': !$root.hasOlapEtl }" title="Add a new Olap ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    </span>
                 </div>
                 <div data-bind="if: olapEtlConnectionStringsNames().length === 0 && $root.hasOlapEtl">
                     <div class="text-center">
@@ -115,7 +124,10 @@
                     <h5><strong>Elasticsearch</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge enterprise margin-right-xxs" data-bind="if: !$root.hasElasticSearchEtl">Enterprise</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddElasticSearchEtl, css: { 'pe-none disabled': !$root.hasElasticSearchEtl }" title="Add a new Elasticsearch ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasElasticSearchEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button class="btn btn-sm btn-primary" data-bind="click: onAddElasticSearchEtl, css: { 'pe-none disabled': !$root.hasElasticSearchEtl }" title="Add a new Elasticsearch ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    </span>
                 </div>
                 <div data-bind="if: elasticSearchEtlConnectionStringsNames().length === 0 && $root.hasElasticSearchEtl">
                     <div class="text-center">
@@ -149,7 +161,10 @@
                     <h5><strong>Kafka</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge enterprise margin-right-xxs" data-bind="if: !$root.hasQueueEtl || !$root.hasQueueSink">Enterprise</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddKafka, css: { 'pe-none disabled': !$root.hasQueueEtl || !$root.hasQueueSink }" title="Add a new Kafka connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasQueueEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button class="btn btn-sm btn-primary" data-bind="click: onAddKafka, css: { 'pe-none disabled': !$root.hasQueueEtl || !$root.hasQueueSink }" title="Add a new Kafka connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    </span>
                 </div>
                 <div data-bind="if: kafkaConnectionStringsNames().length === 0 && $root.hasQueueEtl || $root.hasQueueSink">
                     <div class="text-center">
@@ -183,7 +198,10 @@
                     <h5><strong>RabbitMQ</strong> Connection Strings</h5>
                     <span class="badge license-restricted-badge enterprise margin-right-xxs" data-bind="if: !$root.hasQueueEtl || !$root.hasQueueSink">Enterprise</span>
                     <hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRabbitMq, css: { 'pe-none disabled': !$root.hasQueueEtl || !$root.hasQueueSink }" title="Add a new RabbitMQ connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasQueueEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button class="btn btn-sm btn-primary" data-bind="click: onAddRabbitMq, css: { 'pe-none disabled': !$root.hasQueueEtl || !$root.hasQueueSink }" title="Add a new RabbitMQ connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    </div>
                 </div>
                 <div data-bind="if: rabbitMqConnectionStringsNames().length === 0 && $root.hasQueueEtl || $root.hasQueueSink">
                     <div class="text-center">
