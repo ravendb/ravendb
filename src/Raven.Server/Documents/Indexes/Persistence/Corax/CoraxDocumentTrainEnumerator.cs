@@ -211,8 +211,9 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private IEnumerator<ArraySegment<byte>> _itemsEnumerable;
     private readonly CancellationToken _token;
     private readonly Size _maxAllocatedMemory;
+    private readonly IndexingStatsScope _indexingStatsScope;
 
-    public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, DocumentsOperationContext docsContext, HashSet<string> collections, CancellationToken token, int take = int.MaxValue)
+    public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, DocumentsOperationContext docsContext, HashSet<string> collections, CancellationToken token, IndexingStatsScope indexingStatsScope, int take = int.MaxValue)
     {
         _indexContext = indexContext;
         _index = index;
@@ -220,6 +221,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         _converter = converter;
         _take = take;
         _token = token;
+        _indexingStatsScope = indexingStatsScope;
 
         // RavenDB-21043: Tracking the total memory allocated by the thread is also a way to limit the total resources allocated
         // to the training process. We are currently limiting the default to 2Gb and we haven't seen any deterioration in the 
@@ -255,6 +257,10 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
                 var doc = (Document)itemEnumerator.Current.Item;
 
+                _indexingStatsScope.RecordMapAttempt();
+                _indexingStatsScope.RecordMapSuccess();
+                _indexingStatsScope.RecordDocumentSize(doc.Data.Size);
+                
                 foreach (var result in mapResults)
                 {
                     builder.Reset();
@@ -268,8 +274,6 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                 var totalAllocated = new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes) - atStartAllocated;
                 if (totalAllocated > maxAllocatedMemoryPerCollection)
                     break;
-
-
             }
         }
     }
