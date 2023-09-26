@@ -491,7 +491,8 @@
 //** Tooltip text color
 @tooltip-color: @text-color;
 //** Tooltip background color
-@tooltip-bg: @panel-bg-2;
+@tooltip-bg: var(--panel-bg-2);
+@tooltip-border-radius: @gutter-xs;
 @tooltip-opacity: 1;
 //** Tooltip arrow width
 @tooltip-arrow-width: 5px;
@@ -501,7 +502,7 @@
 //
 //##
 //** Popover body background color
-@popover-bg: @tooltip-bg;
+@popover-bg: @panel-bg-2;
 //** Popover maximum width
 @popover-max-width: 480px;
 //** Popover border color

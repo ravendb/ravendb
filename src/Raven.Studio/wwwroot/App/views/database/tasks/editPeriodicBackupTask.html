@@ -14,7 +14,7 @@
         <!-- /ko -->
     </div>
     <div class="toolbar" data-bind="with: $root">
-        <span data-placement="top" data-toggle="tooltip" data-html="true" data-animation="true"
+        <span data-placement="right" data-toggle="tooltip" data-html="true" data-animation="true"
                     data-bind="tooltipText: $root.hasPeriodicBackup ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
             <button data-bind="click: onSubmit, enable: dirtyFlag().isDirty" type="submit" class="btn btn-primary">
                 <i class="icon-save"></i><span data-bind="text: configuration().backupOperation === 'manual' ? 'Backup Now' : 'Save'"></span>
