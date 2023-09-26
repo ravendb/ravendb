@@ -1157,10 +1157,10 @@ namespace Raven.Server.Documents.Replication
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                                var newChangeVector = AttachmentOrTombstone.GetConflictStatus(attachment.ChangeVector, result, out string localChangeVector) switch
+                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, result.ChangeVector) switch
                                 {
                                     // we don't need to worry about the *contents* of the attachments, that is handled by the conflict detection during document replication
-                                    ConflictStatus.Conflict => ChangeVectorUtils.MergeVectors(attachment.ChangeVector, localChangeVector),
+                                    ConflictStatus.Conflict => ChangeVectorUtils.MergeVectors(attachment.ChangeVector, result.ChangeVector),
                                     ConflictStatus.Update => attachment.ChangeVector,
                                     ConflictStatus.AlreadyMerged => null, // nothing to do
                                     _ => throw new ArgumentOutOfRangeException()
@@ -1176,7 +1176,7 @@ namespace Raven.Server.Documents.Replication
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
                                 
                                 var attachmentOrTombstone = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachmentTombstone.Key);
-                                if (AttachmentOrTombstone.GetConflictStatus(item.ChangeVector, attachmentOrTombstone, out _) == ConflictStatus.AlreadyMerged)
+                                if (ChangeVectorUtils.GetConflictStatus(item.ChangeVector, attachmentOrTombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
                                     continue;
 
                                 string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key); 

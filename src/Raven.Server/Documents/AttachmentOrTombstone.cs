@@ -1,5 +1,4 @@
 ﻿using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Documents
@@ -8,7 +7,9 @@ namespace Raven.Server.Documents
     {
         public Attachment Attachment;
         public Tombstone Tombstone;
+
         public bool Missing => Attachment == null && Tombstone == null;
+        public string ChangeVector => Attachment?.ChangeVector ?? Tombstone?.ChangeVector;
 
         public static AttachmentOrTombstone GetAttachmentOrTombstone(DocumentsOperationContext context, Slice attachmentKey)
         {
@@ -31,12 +32,6 @@ namespace Raven.Server.Documents
             }
 
             return new AttachmentOrTombstone();
-        }
-
-        public static ConflictStatus GetConflictStatus(string remoteAsString, AttachmentOrTombstone attachmentOrTombstone, out string existingChangeVector)
-        {
-            existingChangeVector = attachmentOrTombstone.Attachment?.ChangeVector ?? attachmentOrTombstone.Tombstone?.ChangeVector;
-            return ChangeVectorUtils.GetConflictStatus(remoteAsString, existingChangeVector);
         }
     }
 }
