@@ -64,7 +64,8 @@ import queueSinkErrorDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/queueSinkErrorDetails";
 import conflictExceededDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/conflictExceededDetails";
-
+import complexFieldsAlertDetails
+    from "viewmodels/common/notificationCenter/detailViewer/alerts/complexFieldsAlertDetails";
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
     showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void> | void;
@@ -188,7 +189,7 @@ class notificationCenter {
             queueSinkErrorDetails,
             serverLimitsDetails,
             conflictExceededDetails,
-
+            complexFieldsAlertDetails,
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );
 
