@@ -1655,6 +1655,8 @@ namespace Raven.Server.Documents
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
             DocumentFlags documentFlags = DocumentFlags.None)
         {
+            var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
+
             if (ConflictsStorage.ConflictsCount != 0)
             {
                 var result = ConflictsStorage.DeleteConflicts(context, lowerId, expectedChangeVector, changeVector);
@@ -1698,7 +1700,7 @@ namespace Raven.Server.Documents
                     flags = localFlags | documentFlags;
                     var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
+                    if (fromReplication &&
                         localFlags.Contain(DocumentFlags.HasRevisions) != documentFlags.Contain(DocumentFlags.HasRevisions))
                     {
                         var count = revisionsStorage.GetRevisionsCount(context, id);
@@ -1708,7 +1710,7 @@ namespace Raven.Server.Documents
                     if (collectionName.IsHiLo == false &&
                         (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                     {
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                        if (fromReplication == false &&
                             (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                         {
                             revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
@@ -1791,53 +1793,57 @@ namespace Raven.Server.Documents
 
                 EnsureLastEtagIsPersisted(context, etag);
 
-                var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
-
-                if (collectionName.IsHiLo == false &&
-                    ((flags & DocumentFlags.Artificial) != DocumentFlags.Artificial) &&
-                    (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false))
+                if (fromReplication == false)
                 {
-                    var shouldVersion = DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
-                        collectionName, nonPersistentFlags, local.Document.Data, null, context, id, lastModifiedTicks, ref flags, out var configuration);
+                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
-                    if (shouldVersion || flags.Contain(DocumentFlags.HasRevisions))
+                    if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                     {
+                        var shouldVersion = DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
+                            collectionName, nonPersistentFlags, local.Document.Data, null, context, id, lastModifiedTicks, ref flags, out var configuration);
 
-                        if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data,
-                                local.Document.ChangeVector, collectionName))
+                        if (shouldVersion || flags.Contain(DocumentFlags.HasRevisions))
                         {
-                            DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data,
-                                flags | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
-                                local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
+
+                            if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data,
+                                    local.Document.ChangeVector, collectionName))
+                            {
+                                DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data,
+                                    flags | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
+                                    local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
+                            }
+
+                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                                modifiedTicks, nonPersistentFlags, documentFlags == DocumentFlags.Reverted ? documentFlags : flags);
+                        }
+                    }
+
+                    if (flags.Contain(DocumentFlags.HasRevisions))
+                    {
+                        if (revisionsStorage.Configuration == null &&
+                            flags.Contain(DocumentFlags.Resolved) == false)
+                        {
+                            revisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
                         }
 
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, documentFlags == DocumentFlags.Reverted ? documentFlags : flags);
+                        if (revisionsStorage.Configuration != null)
+                        {
+                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                                modifiedTicks, nonPersistentFlags, documentFlags);
+                        }
                     }
+
+                    if (flags.Contain(DocumentFlags.HasAttachments))
+                        AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
+
+                    if (flags.Contain(DocumentFlags.HasCounters))
+                        CountersStorage.DeleteCountersForDocument(context, id, collectionName);
+
+                    if (flags.Contain(DocumentFlags.HasTimeSeries))
+                        TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
                 }
 
-                if (flags.Contain(DocumentFlags.HasRevisions) &&
-                    revisionsStorage.Configuration == null &&
-                    flags.Contain(DocumentFlags.Resolved) == false &&
-                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                    revisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
-
-                if (flags.Contain(DocumentFlags.HasRevisions) &&
-                    revisionsStorage.Configuration != null &&
-                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
-                    revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                        modifiedTicks, nonPersistentFlags, documentFlags);
-
                 table.Delete(doc.StorageId);
-
-                if (flags.Contain(DocumentFlags.HasAttachments))
-                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
-
-                if (flags.Contain(DocumentFlags.HasCounters))
-                    CountersStorage.DeleteCountersForDocument(context, id, collectionName);
-
-                if (flags.Contain(DocumentFlags.HasTimeSeries))
-                    TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
