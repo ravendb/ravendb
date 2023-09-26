@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding;
@@ -84,11 +85,12 @@ public sealed class SubscriptionBinder<TState, TConnection, TIncludeCommand> : I
             try
             {
                 await _connection.ParseSubscriptionOptionsAsync();
-
+                
                 if (_storage.TryEnterSubscriptionsSemaphore() == false)
                 {
                     throw new SubscriptionClosedException(
-                        $"Cannot open new subscription connection, max amount of concurrent connections reached ({_connection.TcpConnection.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections}), you can modify the value at 'Subscriptions.MaxNumberOfConcurrentConnections'");
+                        $"Cannot open new subscription connection, max amount of concurrent connections reached (" +
+                        $"{(_connection.TcpConnection.DocumentDatabase?.Configuration ?? _connection.TcpConnection.DatabaseContext.Configuration).Subscriptions.MaxNumberOfConcurrentConnections}), you can modify the value at 'Subscriptions.MaxNumberOfConcurrentConnections'");
                 }
 
                 try
