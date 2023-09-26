@@ -80,12 +80,13 @@ namespace Voron.Impl.Paging
         public byte* Pointer;
         public long Size;
         public long? OriginalSize;
-        public bool Modified;
-        public NativeMemory.ThreadStats AllocatingThread;
         public long Generation;
-        public bool SkipOnTxCommit;
 
-        public int Usages { get; private set; }
+        public NativeMemory.ThreadStats AllocatingThread;
+        public bool SkipOnTxCommit;
+        public bool ExcessStorageFromAllocationBreakup;
+        public bool Modified;
+        public int Usages;
 
         public bool CanRelease => Usages == 0;
 
@@ -317,6 +318,10 @@ namespace Voron.Impl.Paging
 
                     buffer.Modified = true;
                 }
+                else
+                {
+                    buffer.ExcessStorageFromAllocationBreakup = true;
+                }
 
                 state[valuePositionInScratchBuffer + i] = buffer;
             }
@@ -373,7 +378,7 @@ namespace Voron.Impl.Paging
         }
 
         [Conditional("DEBUG")]
-        private unsafe void VerifyDidNotChanged(IPagerLevelTransactionState tx, long pageNumber, EncryptionBuffer buffer)
+        private unsafe void Debug_VerifyDidNotChanged(IPagerLevelTransactionState tx, long pageNumber, EncryptionBuffer buffer)
         {
             var pagePointer = Inner.AcquirePagePointerWithOverflowHandling(tx, pageNumber, null);
             var pageHeader = (PageHeader*)pagePointer;
@@ -416,7 +421,11 @@ namespace Voron.Impl.Paging
 
                 if (buffer.Value.Modified == false)
                 {
-                    VerifyDidNotChanged(tx, buffer.Key, buffer.Value);
+                     
+                    if (buffer.Value.ExcessStorageFromAllocationBreakup)
+                        continue;// do not attempt to validate memory that we are ignoring
+                    
+                    Debug_VerifyDidNotChanged(tx, buffer.Key, buffer.Value);
                     continue; // No modification
                 }
 
