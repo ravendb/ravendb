@@ -72,8 +72,12 @@ namespace Raven.Server.NotificationCenter
         public void AddComplexFieldWarning(string indexName, string fieldName)
         {
             _warningComplexFieldAutoIndexing.Enqueue((indexName, fieldName));
-            
-            EnsureTimer();
+        }
+
+        public void ProcessComplexFields()
+        {
+            if (_warningComplexFieldAutoIndexing.IsEmpty == false)
+                EnsureTimer();
         }
 
         public void AddWarning(MismatchedReferencesLoadWarning mismatchedReferenceLoadWarningDetails)
@@ -152,9 +156,10 @@ namespace Raven.Server.NotificationCenter
                     _notificationCenter.Add(mismatchedReferencesAlert);
                 }
 
-                while (_warningComplexFieldAutoIndexing.TryDequeue(out var complexField))
+                if (_warningComplexFieldAutoIndexing.IsEmpty == false)
                 {
-                    _notificationCenter.Add(GetComplexFieldAlert(complexField.indexName, complexField.fieldName));
+                    var complexFieldAlertMessage = new ComplexFieldsWarning(_warningComplexFieldAutoIndexing);
+                    _notificationCenter.Add(GetComplexFieldAlert(complexFieldAlertMessage));
                 }
             }
             catch (Exception e)
@@ -204,10 +209,10 @@ namespace Raven.Server.NotificationCenter
                 AlertType.MismatchedReferenceLoad, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
         }
 
-        private AlertRaised GetComplexFieldAlert(string indexName, string fieldName)
+        private AlertRaised GetComplexFieldAlert(ComplexFieldsWarning complexFieldsWarning)
         {
-            return AlertRaised.Create(_notificationCenter.Database, $"Complex field in AutoIndex", $"We detected '{fieldName}' as complex field in '{indexName}'. It may result in higher resource usage since its values will be processed as JSON objects. You should consider querying on individual fields of that object or using static index.", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning,
-                Source);
+            return AlertRaised.Create(_notificationCenter.Database, $"Complex field in AutoIndex", $"We detected complex field in AutoIndex. It may result in higher resource usage since its values will be processed as JSON objects. You should consider querying on individual fields of that object or using static index.", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning,
+                Source, complexFieldsWarning);
         }
 
         public void Dispose()

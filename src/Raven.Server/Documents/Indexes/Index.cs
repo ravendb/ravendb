@@ -281,6 +281,7 @@ namespace Raven.Server.Documents.Indexes
         public TestIndexRun TestRun;
         
         private HashSet<string> _fieldsReportedAsComplex = new();
+        private bool _newComplexFieldsToReport = false;
         
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
         {
@@ -2486,6 +2487,7 @@ namespace Raven.Server.Documents.Indexes
                             HandleReferences(tx);
 
                             HandleMismatchedReferences();
+                            HandleComplexFieldsAlert();
                         }
 
                         using (stats.For(IndexingOperation.Storage.Commit))
@@ -2550,13 +2552,23 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void SetFieldIsIndexedAsJsonViaCoraxAutoIndex(IndexField field)
         {
-            if (Type.IsAuto() == false || _fieldsReportedAsComplex.Contains(field.OriginalName))
+            var fieldName = field.OriginalName ?? field.Name;
+            if (Type.IsAuto() == false || _fieldsReportedAsComplex.Contains(fieldName))
                 return;
             
-            DocumentDatabase.NotificationCenter.Indexing.AddComplexFieldWarning(Name, field.OriginalName);
-            _fieldsReportedAsComplex.Add(field.OriginalName);
+            DocumentDatabase.NotificationCenter.Indexing.AddComplexFieldWarning(Name, fieldName);
+            _fieldsReportedAsComplex.Add(fieldName);
+            _newComplexFieldsToReport = true;
         }
         
+        private void HandleComplexFieldsAlert()
+        {
+            if (_newComplexFieldsToReport)
+            {
+                DocumentDatabase.NotificationCenter.Indexing.ProcessComplexFields();
+                _newComplexFieldsToReport = false;
+            }
+        }
         
         private void HandleMismatchedReferences()
         {

@@ -22,15 +22,15 @@ public class RavenDB_21430 : RavenTestBase
 
         using (var session = store.OpenAsyncSession())
         {
-            await session.StoreAsync(new ComplexField(new Query.Order() {Company = "Maciej"}));
-            await session.StoreAsync(new ComplexField(null));
+            await session.StoreAsync(new ComplexField(new Query.Order() {Company = "Maciej"}, new Query.Order(){Company = "Test"}));
+            await session.StoreAsync(new ComplexField(null, null));
             await session.SaveChangesAsync();
 
             var result = await session.Query<ComplexField>()
                 .Customize(i => i.WaitForNonStaleResults())
-                .Statistics(out var stats).Where(x => x.Order != null)
+                .Statistics(out var stats).Where(x => x.Order != null && x.Field != null)
                 .ToListAsync();
-            
+            WaitForUserToContinueTheTest(store);
             Assert.False(stats.IsStale);
             
             Assert.Equal(1, result.Count);
@@ -41,5 +41,5 @@ public class RavenDB_21430 : RavenTestBase
         
     }
 
-    private sealed record ComplexField(Query.Order Order, string Id = null);
+    private sealed record ComplexField(Query.Order Order, Query.Order Field, string Id = null);
 }
