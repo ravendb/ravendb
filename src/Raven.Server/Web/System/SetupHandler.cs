@@ -132,7 +132,7 @@ namespace Raven.Server.Web.System
                 if (licenseStatus.Version.Major < 6)
                 {
                     throw new LicenseLimitException(
-                        $"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to use server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
+                        $"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to set up a server of version '{RavenVersionAttribute.Instance.FullVersion}'. " +
                         $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first.");
                 }
 
