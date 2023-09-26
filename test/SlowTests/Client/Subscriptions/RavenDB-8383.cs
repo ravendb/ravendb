@@ -17,11 +17,12 @@ namespace SlowTests.Client.Subscriptions
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
-        
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task RunningSubscriptionOnNonExistantCollectionShould_NOT_Throw()
+
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RunningSubscriptionOnNonExistentCollectionShould_NOT_Throw(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = await store.Subscriptions.CreateAsync<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subscriptionName)
