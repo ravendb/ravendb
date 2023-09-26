@@ -11,9 +11,12 @@
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <form class="flex-form" data-bind="submit: saveKafkaEtl" autocomplete="off">
                 <div class="flex-header">
-                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
-                        <i class="icon-save"></i><span>Save</span>
-                    </button>
+                    <span data-placement="top" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasQueueEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                            <i class="icon-save"></i><span>Save</span>
+                        </button>
+                    </span>
                     <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>

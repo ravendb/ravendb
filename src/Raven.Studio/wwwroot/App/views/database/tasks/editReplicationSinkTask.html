@@ -11,15 +11,16 @@
         <div class="row flex-row">
             <div class="col-xs-12 col-lg-6 flex-vertical">
                 <div class="flex-header flex-horizontal">
-                    <div>
+                    <span data-placement="top" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasPullReplicationAsSink ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
                         <button type="submit" class="btn btn-primary"
-                                data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                            data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
                             <i class="icon-save"></i><span>Save</span>
                         </button>
-                        <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
-                            <i class="icon-cancel"></i><span>Cancel</span>
-                        </button>
-                    </div>
+                    </span>
+                    <button data-bind="click: cancelOperation" class="btn btn-default margin-left-xxs" title="Return to Ongoing Tasks View">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
                     <div class="flex-separator"></div>
                     <div class="input-group file-input" title="Import configuration from the configuration file created on the Hub">
                         <input type="file" id="configurationFilePicker" 

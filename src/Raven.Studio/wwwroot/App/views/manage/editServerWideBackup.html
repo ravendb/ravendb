@@ -8,10 +8,13 @@
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
     </div>
     <div class="toolbar" data-bind="with: $root">
-        <button type="submit" class="btn btn-primary"
+        <span data-placement="top" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasPeriodicBackup ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+            <button type="submit" class="btn btn-primary"
                 data-bind="click: saveBackupSettings, disable: spinners.save() || !dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }">
-            <i class="icon-save"></i><span>Save</span>
-        </button>
+                <i class="icon-save"></i><span>Save</span>
+            </button>
+        </span>
         <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to the Server-Wide Tasks view">
             <i class="icon-cancel"></i><span>Cancel</span>
         </button>
