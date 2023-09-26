@@ -266,6 +266,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(HugeDocumentsDetails));
             scripter.AddType(typeof(HugeDocumentInfo));
             scripter.AddType(typeof(MismatchedReferencesLoadWarning));
+            scripter.AddType(typeof(ComplexFieldsWarning));
             scripter.AddType(typeof(BlockingTombstoneDetails));
             scripter.AddType(typeof(RequestLatencyDetail));
             scripter.AddType(typeof(WarnIndexOutputsPerDocument));
