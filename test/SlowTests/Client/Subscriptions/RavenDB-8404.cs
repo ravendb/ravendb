@@ -19,11 +19,12 @@ namespace SlowTests.Client.Subscriptions
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
-        
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionsRQLSupportStartsWith()
+
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsRQLSupportStartsWith(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -66,10 +67,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionsRQLSupportEndsWith()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsRQLSupportEndsWith(Options options)
         {            
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -112,10 +114,11 @@ namespace SlowTests.Client.Subscriptions
         }
 
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionsRQLSupportRegex()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsRQLSupportRegex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -162,10 +165,11 @@ namespace SlowTests.Client.Subscriptions
             public string Name { get; set; }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionsRQLSupportExists()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsRQLSupportExists(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -204,10 +208,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionsRQLSupportIntersect()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsRQLSupportIntersect(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -246,10 +251,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionsRQLSupportIntersectWithComplexRegex()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsRQLSupportIntersectWithComplexRegex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -288,10 +294,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionsRQLSupportStartsWithWithEscapedValues()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsRQLSupportStartsWithWithEscapedValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -330,10 +337,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionsRQLSupportEscapedValue()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsRQLSupportEscapedValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
