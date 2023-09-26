@@ -243,8 +243,12 @@ class createDatabase extends dialogViewModelBase {
         });
 
         this.showReplicationFactorWarning = ko.pureComputed(() => {
+            const isFromBackup = this.databaseModel.isFromBackup;
             const factor = this.databaseModel.replicationAndSharding.replicationFactor();
-            return factor === 1;
+            const enableSharding = this.databaseModel.replicationAndSharding.enableSharding();
+
+            return !isFromBackup && (factor === 1 || (enableSharding && this.maxReplicationFactorForSharding > 0));
+
         });
 
         this.showNumberOfShardsWarning = ko.pureComputed(() => {

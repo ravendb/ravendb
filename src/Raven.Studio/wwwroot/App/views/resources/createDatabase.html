@@ -539,7 +539,7 @@
     <div data-bind="with: databaseModel.replicationAndSharding" class="margin-top-sm">
         <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackup ? '' : '62px' }">
             <div class="input-group" title="Set the number of nodes that will contain the database" 
-                 data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
+                 data-bind="css: { 'has-warning': $root.showReplicationFactorWarning() }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
                 <input
                     class="form-control"
@@ -547,14 +547,33 @@
                     min="1"
                     title="Set the number of nodes that will contain the database"
                     placeholder="Enter number of nodes"
-                    data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput,
-                        attr: { max: ($root.databaseModel.replicationAndSharding.enableSharding && $root.maxReplicationFactorForSharding) > 0 ? $root.maxReplicationFactorForSharding : null }"
+                    data-bind="
+                        numericInput: replicationFactor,
+                        disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput() || ($root.databaseModel.replicationAndSharding.enableSharding() && $root.databaseModel.replicationAndSharding.replicationFactor() === 1 && $root.maxReplicationFactorForSharding === 1)"
                 >
-                <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning">
-                    With replication factor set to 1, the data won't be replicated.
-                </div>
-                <div class="help-block" data-bind="visible: $root.databaseModel.replicationAndSharding.enableSharding && $root.maxReplicationFactorForSharding > 0">
-                    Your license doesn't allow replication factor higher than <span data-bind="text: $root.maxReplicationFactorForSharding"></span> for sharded database.
+                <!-- TODO simplify the condition in 6.0.x -->
+                <div class="help-block" data-bind="visible: $root.showReplicationFactorWarning">
+                    <span data-bind="visible: !$root.databaseModel.replicationAndSharding.enableSharding() && $root.databaseModel.replicationAndSharding.replicationFactor() === 1">
+                        With replication factor set to 1, the data will have only a single replica.
+                    </span>
+    
+                    <span data-bind="visible: $root.databaseModel.replicationAndSharding.enableSharding()">
+                        <span data-bind="visible: $root.maxReplicationFactorForSharding == null && $root.databaseModel.replicationAndSharding.replicationFactor() === 1">
+                            With replication factor set to 1, the data will have only a single replica.
+                        </span>
+    
+                        <span data-bind="visible: $root.maxReplicationFactorForSharding === 1">
+                            Your license doesn't allow replication factor higher than 1 for sharded database. <span data-bind="visible: $root.databaseModel.replicationAndSharding.replicationFactor() === 1">The data will have only a single replica.</span>
+                        </span>
+    
+                        <span data-bind="visible: $root.maxReplicationFactorForSharding > 1 && $root.databaseModel.replicationAndSharding.replicationFactor() === 1">
+                            With replication factor set to 1, the data will have only a single replica.
+                        </span>
+
+                        <span data-bind="visible: $root.maxReplicationFactorForSharding > 1 && $root.databaseModel.replicationAndSharding.replicationFactor() > $root.maxReplicationFactorForSharding">
+                            Your license doesn't allow replication factor higher than <span data-bind="text: $root.maxReplicationFactorForSharding"></span> for sharded database.
+                        </span>
+                    </span>
                 </div>
             </div>
         </div>
@@ -624,7 +643,7 @@
                         <i class="icon-license"></i><span>Your license allows creating only single replica shards on a single node.</span>
                     </strong>
                     <br/>
-                    Unleash the full potential of <span><i class="icon-sharding"></i> Sharding</span> and <a href="https://ravendb.net/l/FLDLO4" target="_blank">upgrade</a> your plan.
+                    Unleash the full potential of <span><i class="icon-sharding"></i> Sharding</span> by <a href="https://ravendb.net/l/FLDLO4" target="_blank">upgrading</a> your plan.
                 </small>
             </div>
         </div>
