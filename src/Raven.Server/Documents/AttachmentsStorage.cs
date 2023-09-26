@@ -745,7 +745,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Attachment GetAttachmentByKey(DocumentsOperationContext context, Slice key)
+        public static Attachment GetAttachmentByKey(DocumentsOperationContext context, Slice key)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -1168,36 +1168,6 @@ namespace Raven.Server.Documents
                 if (attachmentFoundInResolveDocument == false)
                     DeleteAttachmentDirect(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector);
             }
-        }
-
-        public struct AttachmentOrTombstone
-        {
-            public Attachment Attachment;
-            public Tombstone Tombstone;
-            public bool Missing => Attachment == null && Tombstone == null;
-        }
-
-        public AttachmentOrTombstone GetAttachmentOrTombstone(DocumentsOperationContext context, Slice attachmentKey)
-        {
-            var attachment = GetAttachmentByKey(context, attachmentKey);
-            if (attachment != null)
-            {
-                return new AttachmentOrTombstone
-                {
-                    Attachment = attachment
-                };
-            }
-
-            var tombstone = GetAttachmentTombstoneByKey(context, attachmentKey);
-            if (tombstone != null)
-            {
-                return new AttachmentOrTombstone
-                {
-                    Tombstone = tombstone
-                };
-            }
-
-            return new AttachmentOrTombstone();
         }
 
         private void DeleteAttachmentDirect(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,

@@ -1141,7 +1141,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             case AttachmentReplicationItem attachment:
 
-                                var result = database.DocumentsStorage.AttachmentsStorage.GetAttachmentOrTombstone(context, attachment.Key);
+                                var result = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachment.Key);
                                 if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentStream))
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
@@ -1157,8 +1157,7 @@ namespace Raven.Server.Documents.Replication
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                                var localChangeVector = result.Attachment?.ChangeVector ?? result.Tombstone?.ChangeVector;
-                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localChangeVector) switch
+                                var newChangeVector = AttachmentOrTombstone.GetConflictStatus(attachment.ChangeVector, result, out string localChangeVector) switch
                                 {
                                     // we don't need to worry about the *contents* of the attachments, that is handled by the conflict detection during document replication
                                     ConflictStatus.Conflict => ChangeVectorUtils.MergeVectors(attachment.ChangeVector, localChangeVector),
@@ -1176,9 +1175,8 @@ namespace Raven.Server.Documents.Replication
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
                                 
-                                var attachmentOrTombstone = database.DocumentsStorage.AttachmentsStorage.GetAttachmentOrTombstone(context, attachmentTombstone.Key);
-                                var existingChangeVector = attachmentOrTombstone.Attachment?.ChangeVector ?? attachmentOrTombstone.Tombstone?.ChangeVector;
-                                if (ChangeVectorUtils.GetConflictStatus(item.ChangeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                                var attachmentOrTombstone = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachmentTombstone.Key);
+                                if (AttachmentOrTombstone.GetConflictStatus(item.ChangeVector, attachmentOrTombstone, out _) == ConflictStatus.AlreadyMerged)
                                     continue;
 
                                 string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key); 
