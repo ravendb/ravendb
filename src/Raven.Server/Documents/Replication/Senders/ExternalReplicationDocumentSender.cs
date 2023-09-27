@@ -26,7 +26,12 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
-            item.ChangeVector = context.GetChangeVector(item.ChangeVector).Order.StripMoveTag(context);
+            var changeVector = context.GetChangeVector(item.ChangeVector);
+            var changeVectorOrder = changeVector.Order.StripMoveTag(context);
+            item.ChangeVector = changeVector.IsSingle ? 
+                changeVectorOrder : 
+                context.GetChangeVector(changeVector.Version, changeVectorOrder);
+
             return base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
         }
     }
