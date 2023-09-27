@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
@@ -27,10 +28,11 @@ namespace SlowTests.Client.Subscriptions
             Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionWorkerOptions("test").Strategy);
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ShouldRejectWhen_OpenIfFree_StrategyIsUsed()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldRejectWhen_OpenIfFree_StrategyIsUsed(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
@@ -58,11 +60,12 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed(Options options)
         {
             DoNotReuseServer();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Cluster.SuspendObserver(Server);
 
@@ -146,10 +149,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void ShouldOpenSubscriptionWith_WaitForFree_StrategyWhenItIsNotInUseByAnotherClient()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldOpenSubscriptionWith_WaitForFree_StrategyWhenItIsNotInUseByAnotherClient(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
@@ -175,10 +179,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create<User>();
 
@@ -257,21 +262,20 @@ namespace SlowTests.Client.Subscriptions
 
                         s.SaveChanges();
                     }
-
-                    User user;
-
-                    Assert.True(items.TryTake(out user, _reasonableWaitTime));
-                    Assert.Equal("users/" + (userId - 2), user.Id);
-                    Assert.True(items.TryTake(out user, _reasonableWaitTime));
-                    Assert.Equal("users/" + (userId - 1), user.Id);
-
+                    
+                    await WaitForAssertionAsync(() =>
+                    {
+                        var list = items.Select(x => x.Id).ToList();
+                        Assert.True(list.Contains("users/" + (userId - 2)), $"users/{userId - 2} missing");
+                        Assert.True(list.Contains("users/" + (userId - 1)), $"users/{userId - 1} missing");
+                        return Task.CompletedTask;
+                    }, _reasonableWaitTime);
+                    
                     Assert.True(await pendingBatchAcknowledgedMre.WaitAsync(_reasonableWaitTime)); // let it acknowledge the processed batch before we open another subscription
 
                     pendingSubscription.Dispose();
                 }
             }
         }
-
-
     }
 }

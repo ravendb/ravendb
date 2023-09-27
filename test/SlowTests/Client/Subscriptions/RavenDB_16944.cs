@@ -12,10 +12,11 @@ namespace SlowTests.Client.Subscriptions
     {
         public RavenDB_16944(ITestOutputHelper output) : base(output) { }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void SubscriptionIsDisabledWhenCreatedAsDisabled()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SubscriptionIsDisabledWhenCreatedAsDisabled(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -38,10 +39,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void SubscriptionIsEnabledWhenCreatedWithoutPassingDisabledArg()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SubscriptionIsEnabledWhenCreatedWithoutPassingDisabledArg(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

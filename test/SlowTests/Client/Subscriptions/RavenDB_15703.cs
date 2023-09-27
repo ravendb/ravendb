@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
-using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
@@ -13,10 +13,11 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [Fact]
-        public async Task MustNotFailOnExportingSubscriptions()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport | RavenTestCategory.Smuggler)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MustNotFailOnExportingSubscriptions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                 {

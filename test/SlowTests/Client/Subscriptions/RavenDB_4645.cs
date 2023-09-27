@@ -15,10 +15,11 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void ShouldStopPullingTaskWhenSubscriptionIsDeleted()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldStopPullingTaskWhenSubscriptionIsDeleted(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 // insert few documents and fetch them using subscription
                 using (var session = store.OpenSession())

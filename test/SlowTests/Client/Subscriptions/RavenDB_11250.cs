@@ -15,10 +15,11 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionShouldNotAllowStartWorkingIfItsStoreIsNotInitialized()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionShouldNotAllowStartWorkingIfItsStoreIsNotInitialized(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {                
                 using (var unInitializedStore = new DocumentStore
                 {

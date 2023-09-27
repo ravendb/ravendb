@@ -75,11 +75,12 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionShouldRespectDocumentsWithCompressedData()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionShouldRespectDocumentsWithCompressedData(Options options)
         {
             DoNotReuseServer();
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 Cluster.SuspendObserver(Server);
 
@@ -95,9 +96,9 @@ namespace SlowTests.Client.Subscriptions
                     await session.StoreAsync(originalDoc);
                     await session.SaveChangesAsync();
                 }
-
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(documentStore.Database);
-
+                
+                var database = await GetDocumentDatabaseInstanceForAsync(documentStore, options.DatabaseMode, "doc/1");
+                
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
