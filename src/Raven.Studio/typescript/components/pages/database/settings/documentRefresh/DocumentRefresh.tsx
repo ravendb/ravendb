@@ -246,7 +246,8 @@ const codeExample = `{
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "Refresh frequency limit (hours)",
+        featureName: "Min check frequency (hours)",
+        featureIcon: "clock",
         community: { value: 36 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },

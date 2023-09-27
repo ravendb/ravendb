@@ -430,14 +430,14 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         enterprise: { value: true },
     },
     {
-        featureName: "Max revisions",
+        featureName: "Max revisions to keep",
         featureIcon: "revisions",
         community: { value: 2 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
     {
-        featureName: "Max revision days",
+        featureName: "Max retention time",
         featureIcon: "clock",
         community: { value: 45 },
         professional: { value: Infinity },
