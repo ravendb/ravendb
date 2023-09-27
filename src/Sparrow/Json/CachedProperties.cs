@@ -186,6 +186,15 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PropertyName GetProperty(LazyStringValue propName)
         {
+            var prop = LikelyGetProperty(propName);
+            if (prop != null)
+                return prop;
+
+            return UnlikelyGetProperty(propName);
+        }
+
+        private PropertyName LikelyGetProperty(LazyStringValue propName)
+        {
             if (_propertyNameToId.TryGetValue(propName, out PropertyName prop))
             {
                 // PERF: This is the most common scenario, we need it to come first. 
@@ -200,17 +209,29 @@ namespace Sparrow.Json
                 return prop;
             }
 
-            return UnlikelyGetProperty(propName);
+            return null;
         }
 
         private PropertyName UnlikelyGetProperty(LazyStringValue propName)
         {
             var propIndex = _docPropNames.Count;
+            var hasEscapePositions = propName.EscapePositions is { Length: > 0 };
             propName = _context.GetLazyStringForFieldWithCaching(propName);
+
+            PropertyName prop;
+
+            // we are materializing prop name here, so all escape positions are gone
+            // because of that we need to retry checking the dictionary to avoid comparing apples and oranges
+            if (hasEscapePositions)
+            {
+                prop = LikelyGetProperty(propName);
+                if (prop != null)
+                    return prop;
+            }
 
             // PERF: The hash for the property needs to be a hash code, if its not
             //       we will be paying the cost of hash collisions in the sort checks.
-            var prop = new PropertyName(propName.GetHashCode(), propName, -1, propIndex);
+            prop = new PropertyName(propName.GetHashCode(), propName, -1, propIndex);
 
             _docPropNames.Add(prop);
             _propertiesSortOrder.Add(prop, prop);

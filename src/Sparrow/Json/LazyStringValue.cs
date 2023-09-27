@@ -47,13 +47,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(LazyStringValue obj)
         {
-            unsafe
-            {
-                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.
-                if (IntPtr.Size == 4)
-                    return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
-                return (int)Hashing.XXHash64.CalculateInline(obj.Buffer, (ulong)obj.Size);
-            }
+            return obj.GetHashCode();
         }
     }
 
