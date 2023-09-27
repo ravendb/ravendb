@@ -5,6 +5,7 @@ using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders
@@ -26,12 +27,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
-            var changeVector = context.GetChangeVector(item.ChangeVector);
-            var changeVectorOrder = changeVector.Order.StripMoveTag(context);
-            item.ChangeVector = changeVector.IsSingle ? 
-                changeVectorOrder : 
-                context.GetChangeVector(changeVector.Version, changeVectorOrder);
-
+            item.ChangeVector = ChangeVector.StripMoveTag(item.ChangeVector, context);
             return base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
         }
     }
