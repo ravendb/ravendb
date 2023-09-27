@@ -315,7 +315,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.DynamicJsonObject:
                 if (_index.Type.IsAuto())
                 {
-                    InsertRegularField(field, value.ToString(), indexContext, builder, sourceDocument, out shouldSkip);
+                    InsertRegularField(field, CoraxConstants.JsonValue, indexContext, builder, sourceDocument, out shouldSkip);
                     _index.SetFieldIsIndexedAsJsonViaCoraxAutoIndex(field);
 
                     return;
@@ -345,7 +345,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var jsonScope = Scope.CreateJson(json, indexContext);
                 if (_index.Type.IsAuto())
                 {
-                    InsertRegularField(field, jsonScope, indexContext, builder, sourceDocument, out shouldSkip);
+                    InsertRegularField(field, CoraxConstants.JsonValue, indexContext, builder, sourceDocument, out shouldSkip);
                     _index.SetFieldIsIndexedAsJsonViaCoraxAutoIndex(field);
                     return;
                 }
@@ -437,7 +437,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (_index.Type.IsAuto())
         {
             _index.SetFieldIsIndexedAsJsonViaCoraxAutoIndex(field);
-            InsertRegularField(field, val.ToString(), indexContext, builder, sourceDocument, out shouldSkip);
+            InsertRegularField(field, CoraxConstants.JsonValue, indexContext, builder, sourceDocument, out shouldSkip);
             return;
         }
         

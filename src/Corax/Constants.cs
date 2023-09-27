@@ -21,6 +21,7 @@ namespace Corax
         public const string IndexTimeFields = "@index_time_fields";
         public const string DocumentBoost = "@document_boost";
         public const string ProjectionNullValue = "NULL_VALUE";
+        public const string JsonValue = "JSON_VALUE";
 
         public static readonly Slice NullValueSlice, ProjectionNullValueSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice, IndexTimeFieldsSlice;
 

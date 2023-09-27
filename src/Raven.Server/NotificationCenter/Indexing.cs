@@ -211,8 +211,7 @@ namespace Raven.Server.NotificationCenter
 
         private AlertRaised GetComplexFieldAlert(ComplexFieldsWarning complexFieldsWarning)
         {
-            return AlertRaised.Create(_notificationCenter.Database, $"Complex field in AutoIndex", $"We detected complex field in AutoIndex. It may result in higher resource usage since its values will be processed as JSON objects. You should consider querying on individual fields of that object or using static index.", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning,
-                Source, complexFieldsWarning);
+            return AlertRaised.Create(_notificationCenter.Database, $"Complex field in Corax auto index", $"We have detected a complex field in an auto index. To avoid higher resources usage when processing JSON objects, the values of these fields will be replaced with 'JSON_VALUE'. Please consider querying on individual fields of that object or using a static index.", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
         }
 
         public void Dispose()
