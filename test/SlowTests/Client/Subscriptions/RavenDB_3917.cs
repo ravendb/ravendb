@@ -17,14 +17,15 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SmugglerShouldNotExportImportSubscribtionIdentities()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SmugglerShouldNotExportImportSubscribtionIdentities(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = x => x + "store1"
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = x => x + "store2"
             }))

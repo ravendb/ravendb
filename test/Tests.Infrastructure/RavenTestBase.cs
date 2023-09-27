@@ -507,6 +507,31 @@ namespace FastTests
             Assert.Equal(expectedVal, val);
         }
 
+        protected static Task WaitForAssertionAsync(Func<Task> action, int timeoutInMs = 15_000)
+        {
+            return WaitForAssertionAsync(action, TimeSpan.FromMilliseconds(timeoutInMs));
+        }
+
+        protected static async Task WaitForAssertionAsync(Func<Task> action, TimeSpan timeout)
+        {
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                try
+                {
+                    await action();
+                    return;
+                }
+                catch
+                {
+                    if (sp.Elapsed > timeout)
+                        throw;
+
+                    await Task.Delay(100);
+                }
+            }
+        }
+
         protected static async Task<T> AssertWaitForGreaterAsync<T>(Func<T> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
         {
             return await AssertWaitForGreaterAsync(() => Task.FromResult(act()), value, timeout, interval);

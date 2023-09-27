@@ -23,10 +23,11 @@ namespace SlowTests.Client.Subscriptions
             public int ZipCode { get; set; }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task StronglyTypedDataSubscriptions()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task StronglyTypedDataSubscriptions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -96,8 +97,6 @@ namespace SlowTests.Client.Subscriptions
                     }
 
                     Assert.False(users.TryTake(out userToTake, 50));
-
-
                 }
             }
         }

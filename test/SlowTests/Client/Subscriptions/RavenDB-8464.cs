@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -22,16 +23,16 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task AfterAckShouldHappenAfterTheEndOfBatchRun()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task AfterAckShouldHappenAfterTheEndOfBatchRun(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subsId = store.Subscriptions.Create<User>(x => true);
 
-                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 string cv;
-
+                
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subsId))
                 {
                     var amre = new AsyncManualResetEvent();
@@ -47,7 +48,7 @@ namespace SlowTests.Client.Subscriptions
                     using (var session = store.OpenSession())
                     {
                         var entity = new User();
-                        session.Store(entity);
+                        session.Store(entity, "users/1");
                         session.SaveChanges();
                         cv = (string)session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.ChangeVector];
                     }
@@ -67,13 +68,24 @@ namespace SlowTests.Client.Subscriptions
                         Query = "From Shipments"
                     }, subsId), context);
                 }
-
-                using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var s = db.SubscriptionStorage.GetSubscription(context, null, subsId, false);
-                    Assert.Equal(cv, s.ChangeVectorForNextBatchStartingPoint);
-                    Assert.Equal("From Shipments", s.Query);
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                    {
+                        var orch = Sharding.GetOrchestrator(store.Database);
+                        var s = orch.SubscriptionsStorage.GetSubscriptionByName(context, subsId);
+                        var docShard = await Sharding.GetShardNumberForAsync(store, "users/1");
+                        Assert.Equal(cv, s.ShardingState.ChangeVectorForNextBatchStartingPointPerShard[ShardHelper.ToShardName(store.Database, docShard)]);
+                        Assert.Equal("From Shipments", s.Query);
+                    }
+                    else
+                    {
+                        var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        var s = db.SubscriptionStorage.GetSubscription(context, null, subsId, false);
+                        Assert.Equal(cv, s.ChangeVectorForNextBatchStartingPoint);
+                        Assert.Equal("From Shipments", s.Query);
+                    }
                 }
             }
         }
