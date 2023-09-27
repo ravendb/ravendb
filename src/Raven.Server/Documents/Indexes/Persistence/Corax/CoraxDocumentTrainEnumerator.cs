@@ -236,8 +236,6 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
     private IEnumerable<ArraySegment<byte>> GetItems()
     {
-        var scope = new IndexingStatsScope(new IndexingRunStats());
-
         // RavenDB-21043: Track the total allocations that we will allow each collection to use. The idea is that multi-collection indexes
         // use this number to also ensure that all collections have the opportunity to give samples to the training process.
         var maxAllocatedMemoryPerCollection = _maxAllocatedMemory / _collections.Count;
@@ -249,7 +247,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             // We retrieve the baseline memory in order to calculate the difference.
             var atStartAllocated = new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes);
 
-            using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_docsContext, collection, _take, _token), collection, _indexContext, scope, _indexType);
+            using var itemEnumerator = _index.GetMapEnumerator(GetItemsEnumerator(_docsContext, collection, _take, _token), collection, _indexContext, _indexingStatsScope, _indexType);
             while (true)
             {
                 if (itemEnumerator.MoveNext(_docsContext, out var mapResults, out _) == false)
@@ -257,10 +255,6 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
                 var doc = (Document)itemEnumerator.Current.Item;
 
-                _indexingStatsScope.RecordMapAttempt();
-                _indexingStatsScope.RecordMapSuccess();
-                _indexingStatsScope.RecordDocumentSize(doc.Data.Size);
-                
                 foreach (var result in mapResults)
                 {
                     builder.Reset();
@@ -270,8 +264,16 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                         yield return item;
                 }
 
+                _indexingStatsScope.RecordMapAttempt();
+                _indexingStatsScope.RecordMapSuccess();
+                _indexingStatsScope.RecordDocumentSize(doc.Data.Size);
+                
                 // Check if we have already hit the threshold allocations.
-                var totalAllocated = new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes) - atStartAllocated;
+                var totalNativeAllocations = new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes);
+                var totalAllocated = totalNativeAllocations - atStartAllocated;
+                
+                _indexingStatsScope.SetAllocatedUnmanagedBytes(totalNativeAllocations.GetValue(SizeUnit.Bytes));
+                
                 if (totalAllocated > maxAllocatedMemoryPerCollection)
                     break;
             }
@@ -323,6 +325,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             catch 
             {
                 // Since there was an error, we will ignore this document and try again.
+                _indexingStatsScope.RecordMapError();
             }
         }
 
