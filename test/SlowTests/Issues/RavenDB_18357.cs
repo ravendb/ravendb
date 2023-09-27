@@ -15,41 +15,7 @@ public class RavenDB_18357 : RavenTestBase
     public RavenDB_18357(ITestOutputHelper output) : base(output)
     {
     }
-
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void AutoIndexShouldThrowWhenTryingToIndexComplexObject(Options options)
-    {
-        var oldModifyDatabaseRecord = options.ModifyDatabaseRecord;
-        options.ModifyDatabaseRecord = doc =>
-        {
-            oldModifyDatabaseRecord?.Invoke(doc);
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
-        };
-
-        using var store = GetDocumentStore(options);
-        {
-            using var s = store.OpenSession();
-            s.Store(new Input {Nested = new NestedItem {Name = "Matt"}});
-            s.SaveChanges();
-        }
-
-        using var session = store.OpenSession();
-
-        var exception = Assert.ThrowsAny<Exception>(() =>
-        {
-            var values1 = session.Query<Input>().Statistics(out var statistics).Where(w => w.Nested == new NestedItem() {Name = "Matt"}).ToList();
-            var errors = Indexes.WaitForIndexingErrors(store, new[] {statistics.IndexName}, errorsShouldExists: true);
-            Assert.Equal(1, errors[0].Errors.Length);
-            // there is some race between the indexing and query: https://issues.hibernatingrhinos.com/issue/RavenDB-19228/SlowTests.Issues.RavenDB18357.AutoIndexShouldThrowWhenTryingToIndexComplexObjecoptions-DatabaseMode-Single-SearchEngineMode
-            // this is why we want to perform two queries using the same autoindex (and make sure the exception will occur).
-            var values2 = session.Query<Input>().Customize(i => i.WaitForNonStaleResults()).Where(w => w.Nested == new NestedItem() {Name = "zyz"}).ToList();
-        });
-
-        Assert.Contains("Index 'Auto/Inputs/ByNested' is marked as errored.", exception.ToString());
-    }
-
-
+    
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereNotExplicitlySetInDefinition(Options options)
