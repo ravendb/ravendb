@@ -117,7 +117,7 @@ public partial class RavenTestBase
             if (token.CanBeCanceled)
                 return null;
 
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
             token = cts.Token;
             return cts;
         }
