@@ -59,7 +59,7 @@ namespace Corax.Queries.Meta
                 largerEndPtr = left + leftLength;
                 applyVectorization = leftLength > N && rightLength > 0;
             }
-            
+
             if (applyVectorization)
             {
                 while (true)
@@ -86,6 +86,9 @@ namespace Corax.Queries.Meta
 
                         continue;
                     }
+
+                    if (largerEndPtr - largerPtr < N)
+                        break; //In case when block is smaller than N we've to use scalar version.
 
                     Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
                     Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
