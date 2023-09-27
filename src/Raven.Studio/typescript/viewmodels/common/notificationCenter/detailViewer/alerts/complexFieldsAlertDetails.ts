@@ -25,10 +25,9 @@ class complexFieldsAlertDetails extends abstractAlertDetails {
 
         const warning = this.alert.details() as ComplexFieldsWarning;
         
-        for (let [index, fields] of Object.entries(warning.Fields))
+        for (const [index, fields] of Object.entries(warning.Fields)) {
             this.tableItems.push({indexName: index, complexFields: fields.join(", ")});
-        
-        
+        }
     }
 
     private fetcher(): JQueryPromise<pagedResult<WarningItem>> {
