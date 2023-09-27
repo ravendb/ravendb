@@ -571,9 +571,15 @@ public sealed partial class ClusterStateMachine
     {
         switch (attribute)
         {
-            case LicenseAttribute.ServerWideTasks:
-                if (serverStore.LicenseManager.LicenseStatus.HasServerWideCustomSorters == false)
-                    throw new LicenseLimitException(LimitType.ServerWideTasks, "Your license doesn't support adding server wide tasks.");
+            case LicenseAttribute.ServerWideBackups:
+                if (serverStore.LicenseManager.LicenseStatus.HasServerWideBackups == false)
+                    throw new LicenseLimitException(LimitType.ServerWideBackups, "Your license doesn't support adding server wide backups.");
+
+                break;
+
+            case LicenseAttribute.ServerWideExternalReplications:
+                if (serverStore.LicenseManager.LicenseStatus.HasServerWideExternalReplications == false)
+                    throw new LicenseLimitException(LimitType.ServerWideExternalReplication, "Your license doesn't support adding external replication.");
 
                 break;
 

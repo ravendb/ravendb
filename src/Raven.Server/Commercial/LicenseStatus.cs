@@ -35,7 +35,7 @@ namespace Raven.Server.Commercial
             return (T)value;
         }
 
-        public bool Enabled(LicenseAttribute attribute)
+        private bool Enabled(LicenseAttribute attribute)
         {
             return GetValue<bool>(attribute);
         }
@@ -222,7 +222,9 @@ namespace Raven.Server.Commercial
 
         public bool HasPostgreSqlIntegration => Enabled(LicenseAttribute.PostgreSqlIntegration);
 
-        public bool HasServerWideTasks => Enabled(LicenseAttribute.ServerWideTasks);
+        public bool HasServerWideBackups => Enabled(LicenseAttribute.ServerWideBackups);
+
+        public bool HasServerWideExternalReplications => Enabled(LicenseAttribute.ServerWideExternalReplications);
 
         public bool HasServerWideCustomSorters => Enabled(LicenseAttribute.ServerWideCustomSorters);
 
@@ -325,7 +327,8 @@ namespace Raven.Server.Commercial
                 [nameof(HasQueueEtl)] = HasQueueEtl,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
-                [nameof(HasServerWideTasks)] = HasServerWideTasks,
+                [nameof(HasServerWideBackups)] = HasServerWideBackups,
+                [nameof(HasServerWideExternalReplications)] = HasServerWideExternalReplications,
                 [nameof(HasServerWideCustomSorters)] = HasServerWideCustomSorters,
                 [nameof(HasServerWideAnalyzers)] = HasServerWideAnalyzers,
                 [nameof(HasIndexCleanup)] = HasIndexCleanup,
