@@ -9,16 +9,18 @@
                 <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             </div>
         </div>
-        <img src="../../../../../Content/img/license.svg" width="210" class="img-responsive"/>
         <div class="modal-body">
-            <p data-bind="html: licenseLimitNotification.message"></p>
+            <div class="alert alert-warning align-items-start d-flex gap-3 mb-0">
+                <img src="../../../../../Content/img/license.svg" width="60" class="img-responsive mx-auto"/>
+                <p data-bind="html: licenseLimitNotification.message"></p>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: close">
                 <i class="icon-cancel"></i><span>Close</span>
             </button>
             <a target="_blank" data-bind="click: register, attr: { 'href': requestLicenseUrl }" class="btn btn-primary">
-                <i class="icon-raven"></i>
+                <i class="icon-license"></i>
                 <span><span data-bind="text: licenseRequestType"></span> license</span>
             </a>
         </div>
