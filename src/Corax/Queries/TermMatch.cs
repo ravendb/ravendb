@@ -453,6 +453,9 @@ namespace Corax.Queries
                                     continue;
                                 }
 
+                                if (largerEndPtr - largerPtr < N)
+                                    break; // boundary guardian for vector load.
+                                
                                 Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
                                 Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
 
