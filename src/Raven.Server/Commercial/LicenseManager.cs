@@ -1001,6 +1001,7 @@ namespace Raven.Server.Commercial
             var encryptedBackupsCount = 0;
             var dynamicNodesDistributionCount = 0;
             var additionalAssembliesFromNuGetCount = 0;
+            var revisionCompressionCount = 0;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -1027,6 +1028,12 @@ namespace Raven.Server.Commercial
 
                     if (HasDocumentsCompression(databaseRecord.DocumentsCompression))
                         documentsCompressionCount++;
+
+                    var hasRevisionConfiguration = databaseRecord.Revisions is { Default.Disabled: false } ||
+                                                   databaseRecord.Revisions?.Collections is { Count: > 0 };
+
+                    if (HasRevisionCompression(databaseRecord.DocumentsCompression) && hasRevisionConfiguration)
+                        revisionCompressionCount++;
 
                     if (databaseRecord.SinkPullReplications != null &&
                         databaseRecord.SinkPullReplications.Count > 0)
@@ -1171,6 +1178,12 @@ namespace Raven.Server.Commercial
                 var message = GenerateDetails(documentsCompressionCount, "documents compression");
                 throw GenerateLicenseLimit(LimitType.DocumentsCompression, message);
             }
+
+            if (revisionCompressionCount > 0 && newLicenseStatus.HasDocumentsCompression == false)
+            {
+                var message = GenerateDetails(revisionCompressionCount, "Revision compression");
+                throw GenerateLicenseLimit(LimitType.DocumentsCompression, message);
+            }
         }
 
         private static string GenerateDetails(int count, string feature)
@@ -1204,9 +1217,13 @@ namespace Raven.Server.Commercial
 
         private static bool HasDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
         {
-            return documentsCompression?.CompressRevisions == true ||
-                   documentsCompression?.CompressAllCollections == true ||
+            return documentsCompression?.CompressAllCollections == true ||
                    documentsCompression?.Collections?.Length > 0;
+        }
+
+        private static bool HasRevisionCompression(DocumentsCompressionConfiguration documentsCompression)
+        {
+            return documentsCompression?.CompressRevisions == true;
         }
 
         private static bool HasTimeSeriesRollupsAndRetention(TimeSeriesConfiguration configuration)
