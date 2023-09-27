@@ -393,11 +393,29 @@ public sealed partial class ClusterStateMachine
         }
     }
 
+    private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand putSubscriptionCommand, ClusterOperationContext context)
+    {
+        Dictionary<string, List<string>> subscriptionsNamesPerDatabase = new()
+        {
+            {
+                putSubscriptionCommand.DatabaseName, new List<string> { putSubscriptionCommand.SubscriptionName }
+            }
+        };
+
+        if (AssertNumberOfSubscriptionsPerDatabaseLimits(serverStore, items, context, subscriptionsNamesPerDatabase))
+            return;
+
+        if (AssertNumberOfSubscriptionsPerClusterLimits(serverStore, items, context, subscriptionsNamesPerDatabase))
+            return;
+
+        var includeRevisions = putSubscriptionCommand.Query.Contains(DocumentSubscriptions.IncludeRevisionsRQL);
+        AssertSubscriptionRevisionFeatureLimits(serverStore, includeRevisions, context);
+    }
+
     private List<T> AssertSubscriptionsBatchLicenseLimits<T>(ServerStore serverStore, Table items, BlittableJsonReaderArray subscriptionCommands, string type, ClusterOperationContext context)
         where T: PutSubscriptionCommand
     {
         var includeRevisions = false;
-        var numberOfPutSubscriptionPerDatabase = new Dictionary<string, int>();
         var putSubscriptionCommandsList = new List<T>();
 
         foreach (BlittableJsonReaderObject command in subscriptionCommands)
@@ -411,65 +429,70 @@ public sealed partial class ClusterStateMachine
             if (includeRevisions == false &&
                 putSubscriptionCommand.Query.Contains(DocumentSubscriptions.IncludeRevisionsRQL))
                 includeRevisions = true;
-
-            if (numberOfPutSubscriptionPerDatabase.TryGetValue(putSubscriptionCommand.DatabaseName, out _) == false)
-                numberOfPutSubscriptionPerDatabase.Add(putSubscriptionCommand.DatabaseName, 0);
-
-            numberOfPutSubscriptionPerDatabase[putSubscriptionCommand.DatabaseName] += 1;
         }
 
         if (AssertSubscriptionRevisionFeatureLimits(serverStore, includeRevisions, context) == false)
             return putSubscriptionCommandsList;
 
-        if (AssertNumberOfSubscriptionsPerClusterLimits(serverStore, items, context, putSubscriptionCommandsList.Count))
-            return putSubscriptionCommandsList;
-
-        foreach ((string databaseName, int numberOfPutSubscription) in numberOfPutSubscriptionPerDatabase)
+        var subscriptionsNamesPerDatabase = new Dictionary<string, List<string>>();
+        foreach (var command in putSubscriptionCommandsList)
         {
-            if (AssertNumberOfSubscriptionsPerDatabaseLimits(serverStore, items, context, databaseName, numberOfPutSubscription))
-                break;
+            if (subscriptionsNamesPerDatabase.TryGetValue(command.DatabaseName, out _) == false)
+                subscriptionsNamesPerDatabase.Add(command.DatabaseName, new List<string>());
+
+            subscriptionsNamesPerDatabase[command.DatabaseName].Add(command.SubscriptionName);
         }
 
+        if (AssertNumberOfSubscriptionsPerClusterLimits(serverStore, items, context, subscriptionsNamesPerDatabase))
+            return putSubscriptionCommandsList;
+
+        AssertNumberOfSubscriptionsPerDatabaseLimits(serverStore, items, context, subscriptionsNamesPerDatabase);
         return putSubscriptionCommandsList;
     }
 
-    private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand putSubscriptionCommand, ClusterOperationContext context)
+    private bool AssertNumberOfSubscriptionsPerDatabaseLimits(
+        ServerStore serverStore,
+        Table items,
+        ClusterOperationContext context,
+        IReadOnlyDictionary<string, List<string>> subscriptionsNamesPerDatabase)
     {
-        if (AssertNumberOfSubscriptionsPerDatabaseLimits(serverStore, items, context, putSubscriptionCommand.DatabaseName, numberOfPutSubscriptionPerDatabase: 1))
-            return;
+        foreach ((string databaseName, List<string> subscriptionsNames) in subscriptionsNamesPerDatabase)
+        {
+            var subscriptionsCount = GetSubscriptionsCountForDatabase(context.Allocator, items, databaseName, subscriptionsNames);
 
-        if (AssertNumberOfSubscriptionsPerClusterLimits(serverStore, items, context, numberOfPutSubscriptionPerDatabase: 1))
-            return;
+            var maxSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
+            if (maxSubscriptionsPerDatabase is not >= 0)
+                return false;
 
-        var includeRevisions = putSubscriptionCommand.Query.Contains(DocumentSubscriptions.IncludeRevisionsRQL);
-        AssertSubscriptionRevisionFeatureLimits(serverStore, includeRevisions, context);
+            if (subscriptionsCount + subscriptionsNames.Count > maxSubscriptionsPerDatabase == false)
+                return false;
+
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                return true;
+
+            throw new LicenseLimitException(LimitType.Subscriptions,
+                $"The maximum number of subscriptions per database cannot exceed the limit of: {maxSubscriptionsPerDatabase}");
+        }
+
+        return false;
     }
 
-    private bool AssertNumberOfSubscriptionsPerDatabaseLimits(ServerStore serverStore, Table items, ClusterOperationContext context, string databaseName, int numberOfPutSubscriptionPerDatabase)
-    {
-        var maxSubscriptionsPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerDatabase;
-        if (maxSubscriptionsPerDatabase is not >= 0)
-            return false;
-
-        var subscriptionsCount = GetSubscriptionsCountForDatabase(context.Allocator, items, databaseName);
-        if (subscriptionsCount + numberOfPutSubscriptionPerDatabase > maxSubscriptionsPerDatabase == false)
-            return false;
-
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-            return true;
-
-        throw new LicenseLimitException(LimitType.Subscriptions,
-            $"The maximum number of subscriptions per database cannot exceed the limit of: {maxSubscriptionsPerDatabase}");
-    }
-
-    private bool AssertNumberOfSubscriptionsPerClusterLimits(ServerStore serverStore, Table items, ClusterOperationContext context, int numberOfPutSubscriptionPerDatabase)
+    private bool AssertNumberOfSubscriptionsPerClusterLimits(
+        ServerStore serverStore,
+        Table items,
+        ClusterOperationContext context,
+        IReadOnlyDictionary<string, List<string>> subscriptionsNamesPerDatabase)
     {
         var maxSubscriptionsPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfSubscriptionsPerCluster;
         if (maxSubscriptionsPerCluster is not >= 0)
             return false;
 
-        var clusterSubscriptionsCounts = GetDatabaseNames(context).Sum(name => GetSubscriptionsCountForDatabase(context.Allocator, items, name));
-        if (clusterSubscriptionsCounts + numberOfPutSubscriptionPerDatabase > maxSubscriptionsPerCluster == false)
+        var clusterSubscriptionsCounts =
+            GetDatabaseNames(context)
+                .Sum(databaseName => GetSubscriptionsCountForDatabase(context.Allocator, items, databaseName, subscriptionsNamesPerDatabase[databaseName]));
+
+        var subscriptionCommandsCount = subscriptionsNamesPerDatabase.Sum(x => x.Value.Count);
+        if (clusterSubscriptionsCounts + subscriptionCommandsCount > maxSubscriptionsPerCluster == false)
             return false;
 
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
@@ -491,13 +514,27 @@ public sealed partial class ClusterStateMachine
             "Your license doesn't include the subscription revisions feature.");
     }
 
-    public static int GetSubscriptionsCountForDatabase(ByteStringContext allocator, Table items, string name)
+    public static int GetSubscriptionsCountForDatabase(ByteStringContext allocator, Table items, string databaseName, List<string> subscriptionNames = null)
     {
-        var subscriptionPrefix = Client.Documents.Subscriptions.SubscriptionState.SubscriptionPrefix(name).ToLowerInvariant();
-
+        var subscriptionPrefix = Client.Documents.Subscriptions.SubscriptionState.SubscriptionPrefix(databaseName).ToLowerInvariant();
         using (Slice.From(allocator, subscriptionPrefix, out Slice loweredPrefix))
         {
-            return items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0).Count();
+            var subscriptionsCount = items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0).Count();
+
+            if (subscriptionNames == null)
+                return subscriptionsCount;
+
+            foreach (string subscriptionName in subscriptionNames)
+            {
+                var subscriptionItemName = Raven.Client.Documents.Subscriptions.SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, subscriptionName);
+                using (Slice.From(allocator, subscriptionItemName.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    if (items.ReadByKey(valueNameLowered, out _))
+                        subscriptionsCount -= 1;
+                }
+            }
+
+            return subscriptionsCount;
         }
     }
 
