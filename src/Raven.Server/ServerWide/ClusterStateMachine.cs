@@ -21,7 +21,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
@@ -771,7 +770,7 @@ namespace Raven.Server.ServerWide
         private void ExecutePutSubscriptionBatch<T>(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type, ServerStore serverStore)
             where T : PutSubscriptionCommand
         {
-            if (cmd.TryGet(nameof(PutSubscriptionBatchCommand.Commands), out BlittableJsonReaderArray subscriptionCommands) == false)
+            if (cmd.TryGet(nameof(PutSubscriptionBatchCommand.Commands), out BlittableJsonReaderArray subscriptionCommandsBlittable) == false)
             {
                 throw new RachisApplyException($"'{nameof(PutSubscriptionBatchCommand.Commands)}' is missing in '{type}'.");
             }
@@ -782,17 +781,10 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             try
             {
-                foreach (BlittableJsonReaderObject command in subscriptionCommands)
+                var subscriptionCommands = AssertSubscriptionsBatchLicenseLimits<T>(serverStore, items, subscriptionCommandsBlittable, type, context);
+                foreach (var command in subscriptionCommands)
                 {
-                    if (command.TryGet("Type", out string putSubscriptionType) == false && putSubscriptionType != nameof(T))
-                    {
-                        throw new RachisApplyException($"Cannot execute {type} command, wrong format");
-                    }
-
-                    updateCommand = (T)JsonDeserializationCluster.Commands[typeof(T).Name](command);
-
-                    AssertSubscriptionsLicenseLimits(serverStore, items, updateCommand, context);
-
+                    updateCommand = command;
                     var database = updateCommand.DatabaseName;
                     if (DatabaseExists(context, database) == false)
                     {
