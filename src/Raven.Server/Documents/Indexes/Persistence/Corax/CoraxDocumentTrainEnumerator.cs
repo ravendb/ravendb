@@ -253,6 +253,8 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                 if (itemEnumerator.MoveNext(_docsContext, out var mapResults, out _) == false)
                     break;
 
+                _indexingStatsScope.RecordMapAttempt();
+                
                 var doc = (Document)itemEnumerator.Current.Item;
 
                 foreach (var result in mapResults)
@@ -263,8 +265,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                     foreach (var item in builder.Buffer)
                         yield return item;
                 }
-
-                _indexingStatsScope.RecordMapAttempt();
+                
                 _indexingStatsScope.RecordMapSuccess();
                 _indexingStatsScope.RecordDocumentSize(doc.Data.Size);
                 
