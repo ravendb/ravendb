@@ -20,8 +20,6 @@ const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterB
         offline = 0,
         disabled = 0,
         online = 0,
-        sharded = 0,
-        nonSharded = 0,
         local = 0,
         remote = 0;
 
@@ -52,12 +50,6 @@ const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterB
                 break;
             default:
                 assertUnreachable(state);
-        }
-
-        if (db.sharded) {
-            sharded++;
-        } else {
-            nonSharded++;
         }
 
         if (perNodeState.some((x) => x.location.nodeTag === localNodeTag)) {
@@ -110,15 +102,6 @@ const isDatabaseInFilterState = (
     db: DatabaseSharedInfo,
     filterStates: DatabaseFilterByStateOption[]
 ): boolean => {
-    const matchesSharding =
-        !filterStates.some((x) => ["Sharded", "NonSharded"].includes(x)) ||
-        (filterStates.includes("Sharded") && db.sharded) ||
-        (filterStates.includes("NonSharded") && !db.sharded);
-
-    if (!matchesSharding) {
-        return false;
-    }
-
     const perNodeStates = selectDatabaseState(db.name)(store);
     const databaseState = DatabaseUtils.getDatabaseState(db, perNodeStates);
 
