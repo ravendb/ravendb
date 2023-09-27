@@ -66,12 +66,7 @@ export interface ShardedDatabaseSharedInfo extends DatabaseSharedInfo {
     shards: DatabaseSharedInfo[];
 }
 
-export type DatabaseFilterByStateOption =
-    | Exclude<MergedDatabaseState, "Partially Online">
-    | "Sharded"
-    | "NonSharded"
-    | "Local"
-    | "Remote";
+export type DatabaseFilterByStateOption = Exclude<MergedDatabaseState, "Partially Online"> | "Local" | "Remote";
 
 export interface DatabaseFilterCriteria {
     name: string;
