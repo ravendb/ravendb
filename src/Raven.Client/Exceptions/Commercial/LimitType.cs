@@ -94,8 +94,11 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("TCP Data Compression")]
         TcpDataCompression,
         
-        [Description("Server Wide Tasks")]
-        ServerWideTasks,
+        [Description("Server Wide Backups")]
+        ServerWideBackups,
+
+        [Description("Server Wide External Replications")]
+        ServerWideExternalReplication,
 
         [Description("Server Wide Custom Sorters")]
         ServerWideCustomSorters,
