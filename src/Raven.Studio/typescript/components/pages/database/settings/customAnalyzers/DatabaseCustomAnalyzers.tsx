@@ -63,6 +63,10 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                 featureName: defaultFeatureAvailability[1].featureName,
                 value: licenseClusterLimit,
             },
+            {
+                featureName: defaultFeatureAvailability[2].featureName,
+                value: hasServerWideCustomAnalyzers,
+            },
         ],
     });
 
@@ -80,6 +84,25 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
 
     return (
         <>
+            {databaseLimitReachStatus !== "notReached" && (
+                <Alert
+                    color={databaseLimitReachStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center mb-3"
+                >
+                    <Icon icon="database" />
+                    Database {databaseLimitReachStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                    <strong>maximum number of Custom Analyzers</strong> allowed per database by your license{" "}
+                    <strong>
+                        ({databaseResultsCount}/{licenseDatabaseLimit})
+                    </strong>
+                    <br /> Delete unused analyzers or{" "}
+                    <strong>
+                        <a href={upgradeLicenseLink} target="_blank">
+                            upgrade your license
+                        </a>
+                    </strong>
+                </Alert>
+            )}
             {clusterLimitReachStatus !== "notReached" && (
                 <Alert
                     color={clusterLimitReachStatus === "limitReached" ? "danger" : "warning"}

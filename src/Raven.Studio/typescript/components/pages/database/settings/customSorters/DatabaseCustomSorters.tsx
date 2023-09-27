@@ -98,6 +98,25 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
 
     return (
         <>
+            {databaseLimitReachStatus !== "notReached" && (
+                <Alert
+                    color={databaseLimitReachStatus === "limitReached" ? "danger" : "warning"}
+                    className="text-center mb-3"
+                >
+                    <Icon icon="database" />
+                    Database {databaseLimitReachStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
+                    <strong>maximum number of Custom Sorters</strong> allowed per database by your license{" "}
+                    <strong>
+                        ({databaseResultsCount}/{licenseDatabaseLimit})
+                    </strong>
+                    <br /> Delete unused sorters or{" "}
+                    <strong>
+                        <a href={upgradeLicenseLink} target="_blank">
+                            upgrade your license
+                        </a>
+                    </strong>
+                </Alert>
+            )}
             {clusterLimitReachStatus !== "notReached" && (
                 <Alert
                     color={clusterLimitReachStatus === "limitReached" ? "danger" : "warning"}
