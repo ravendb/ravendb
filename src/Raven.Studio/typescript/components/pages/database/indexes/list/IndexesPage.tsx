@@ -452,25 +452,25 @@ export function IndexesPage(props: IndexesPageProps) {
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "Cluster auto indexes limit",
+        featureName: "Auto indexes limit per cluster",
         community: { value: 120 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
     {
-        featureName: "Cluster static indexes limit",
+        featureName: "Static indexes limit per cluster",
         community: { value: 60 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
     {
-        featureName: "Database auto indexes limit",
+        featureName: "Auto indexes limit per database",
         community: { value: 24 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
     {
-        featureName: "Database static indexes limit",
+        featureName: "Static indexes limit per database",
         community: { value: 12 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
