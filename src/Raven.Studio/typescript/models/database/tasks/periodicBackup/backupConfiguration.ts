@@ -13,7 +13,6 @@ import snapshot = require("models/database/tasks/periodicBackup/snapshot");
 import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
 import generalUtils = require("common/generalUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
-import licenseModel from "models/auth/licenseModel";
 
 abstract class backupConfiguration {
 
