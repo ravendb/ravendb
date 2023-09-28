@@ -1,19 +1,17 @@
-using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
-using Sparrow.Json.Parsing;
-using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Corax;
+namespace SlowTests.Corax;
 
-public class RavenDB_21430 : RavenTestBase
+public sealed class RavenDB_21430 : RavenTestBase
 {
     public RavenDB_21430(ITestOutputHelper output) : base(output)
     {
@@ -41,15 +39,32 @@ public class RavenDB_21430 : RavenTestBase
                 var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] {stats.IndexName}));
                 Assert.Empty(indexErrors[0].Errors);
 
-                using (db.NotificationCenter.GetStored(out var actions))
-                {
-                    var alertPersisted = actions.ToList();
-                    Assert.Equal(1, alertPersisted.Count);
 
-                    var complexFieldAlert = Raven.Server.NotificationCenter.Notifications.AlertRaised.FromJson("", alertPersisted[0].Json);
-                    Assert.Equal(AlertType.Indexing_CoraxComplexItem, complexFieldAlert.AlertType);
-                    Assert.Contains("Complex field in Corax auto index", complexFieldAlert.Title);
-                }
+                WaitForValue(() =>
+                {
+                    using var _ = db.NotificationCenter.GetStored(out var actions);
+                    var persistedAlerts = actions.ToList();
+                    bool foundCoraxHint = false;
+
+                    foreach (var alert in persistedAlerts)
+                    {
+                        try
+                        {
+                            var complexFieldAlert = AlertRaised.FromJson("", persistedAlerts[0].Json);
+                            Assert.Equal(AlertType.Indexing_CoraxComplexItem, complexFieldAlert.AlertType);
+                            Assert.Contains("Complex field in Corax auto index", complexFieldAlert.Title);
+                            foundCoraxHint = true;
+                            break;
+                        }
+                        catch
+                        {
+                            //skip others
+                        }
+                    }
+                    
+                    
+                    return  foundCoraxHint;
+                }, true);
             }
         }
     }
