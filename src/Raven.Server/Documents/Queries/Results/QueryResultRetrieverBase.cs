@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -226,10 +226,9 @@ namespace Raven.Server.Documents.Queries.Results
                                 if (TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
                                     continue; // here we try again, for `id()` fields
 
-                                FieldsToFetch.Projection
-                                    .ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(
-                                        fieldToFetch.Name
-                                            .Value);
+                                FieldsToFetch
+                                    .Projection
+                                    .ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(fieldToFetch.Name.Value);
                             }
 
                             continue;
@@ -238,26 +237,23 @@ namespace Raven.Server.Documents.Queries.Results
                         if (doc == null)
                         {
                             using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
+                            {
                                 doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
 
-                            if (doc == null)
-                            {
-                                if (FieldsToFetch.Projection.MustExtractFromDocument)
+                                if (doc == null)
                                 {
+                                    if (!FieldsToFetch.Projection.MustExtractFromDocument) 
+                                        return default; // we don't return partial results
+
                                     if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                        FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId,
-                                            fieldToFetch.Name.Value);
+                                        FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId, fieldToFetch.Name.Value);
 
                                     break;
                                 }
-
-                                // we don't return partial results
-                                return default;
                             }
                         }
 
-                        if (TryGetValue(fieldToFetch, doc, ref retrieverInput, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key,
-                                out var fieldVal, token))
+                        if (TryGetValue(fieldToFetch, doc, ref retrieverInput, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token))
                         {
                             if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
                             {
@@ -281,23 +277,17 @@ namespace Raven.Server.Documents.Queries.Results
                         }
                         else
                         {
-                            if (FieldsToFetch.Projection.MustExtractFromDocument)
+                            if (FieldsToFetch.Projection is { MustExtractFromDocument: true, MustExtractOrThrow: true })
                             {
-                                if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                    FieldsToFetch.Projection
-                                        .ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(lowerId, fieldToFetch.Name.Value);
+                                FieldsToFetch
+                                    .Projection
+                                    .ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(lowerId, fieldToFetch.Name.Value);
                             }
                         }
                     }
                 }
 
-                if (doc == null)
-                {
-                    // the fields were projected from the index
-                    doc = new Document { Id = _context.GetLazyString(lowerId) };
-                }
-
-
+                doc ??= new Document { Id = _context.GetLazyString(lowerId) };
 
                 return (ReturnProjection(result, doc, _context, ref retrieverInput), null);
             }
@@ -339,13 +329,10 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (TryGetValue(fieldToFetch, doc, ref retrieverInput, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token) == false)
                 {
-                    if (FieldsToFetch.Projection.MustExtractFromDocument)
-                    {
-                        if (FieldsToFetch.Projection.MustExtractOrThrow)
-                            throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document, because document does not contain such a field.");
-                    }
+                    if (FieldsToFetch.Projection.MustExtractFromDocument && FieldsToFetch.Projection.MustExtractOrThrow)
+                        throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document, because document does not contain such a field.");
 
-                    if (fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)
+                    if (fieldToFetch.QueryField is { HasSourceAlias: true })
                         continue;
                 }
 

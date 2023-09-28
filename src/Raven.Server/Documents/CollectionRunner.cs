@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents
 
                 isStartsWithOrIdQuery = true;
 
-                return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, new FieldsToFetch(_operationQuery, null, IndexType.None),
+                return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, new FieldsToFetch(_operationQuery, null, IndexType.None, SearchEngineType.None),
                     collectionName, _operationQuery, null, context, null, null, null, new Reference<long>(), new Reference<int>(), new Reference<long>(), token)
                 {
                     Fields = fields, StartAfterId = startAfterId, AlreadySeenIdsCount = alreadySeenIdsCount

@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Highlightings
 {
-    public sealed class HighlightingField
+    public sealed class HighlightingField : SelectField
     {
         private string _optionsAsStringOrParameterName;
 
@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Queries.Highlightings
         public HighlightingField(QueryFieldName field)
         {
             Field = field;
+            Name = field;
         }
 
         public readonly QueryFieldName Field;
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Queries.Highlightings
 
             var options = FieldOptionsHelper.GetOptions<HighlightingOptions>(_optionsAsStringOrParameterName, _optionsType, parameters, context);
 
-            if (_optionsType == ValueTokenType.String)
+            if (_optionsType == AST.ValueTokenType.String)
                 _options = options;
 
             return options;
@@ -52,7 +53,7 @@ namespace Raven.Server.Documents.Queries.Highlightings
 
         public void AddFragmentLength(string fragmentLengthAsString, ValueTokenType type)
         {
-            if (type != ValueTokenType.Long)
+            if (type != AST.ValueTokenType.Long)
                 throw new InvalidOperationException($"FragmentLength can only be passed as long, but was '{type}'.");
 
             if (int.TryParse(fragmentLengthAsString, out _fragmentLength) == false)
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Highlightings
 
         public void AddFragmentCount(string fragmentCountAsString, ValueTokenType type)
         {
-            if (type != ValueTokenType.Long)
+            if (type != AST.ValueTokenType.Long)
                 throw new InvalidOperationException($"FragmentCount can only be passed as long, but was '{type}'.");
 
             if (int.TryParse(fragmentCountAsString, out _fragmentCount) == false)

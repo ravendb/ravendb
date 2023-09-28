@@ -550,7 +550,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             THasProjection hasProjections = default;
             THighlighting highlightings = default;
-            CoraxQueryBuilder.Parameters builderParameters = null;
             highlightings.Initialize(query, queryTimings);
 
             long docsToLoad = pageSize;
@@ -560,6 +559,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 IQueryMatch queryMatch;
                 OrderMetadata[] orderByFields;
 
+                CoraxQueryBuilder.Parameters builderParameters;
                 using (queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false)?.Start())
                 {
                     IDisposable releaseServerContext = null;

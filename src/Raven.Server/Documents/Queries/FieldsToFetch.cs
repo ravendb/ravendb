@@ -36,13 +36,13 @@ namespace Raven.Server.Documents.Queries
 
         public readonly ProjectionOptions Projection;
 
-        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, SearchEngineType searchEngineType = SearchEngineType.None)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, SearchEngineType searchEngineType)
         {
             Projection = new ProjectionOptions(query);
-            Fields = GetFieldsToFetch(query.Metadata, query.ProjectionBehavior, indexDefinition, searchEngineType, indexType, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias, out AnyTimeSeries);
+            Fields = GetFieldsToFetch(query.Metadata, query.ProjectionBehavior, indexDefinition, indexType, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias, out AnyTimeSeries);
             IsProjection = Fields != null && Fields.Count > 0;
             IndexFields = indexDefinition?.IndexFields;
-            AnyDynamicIndexFields = indexDefinition != null && indexDefinition.HasDynamicFields;
+            AnyDynamicIndexFields = indexDefinition is { HasDynamicFields: true };
 
             if (extractAllStoredFields)
             {
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries
                     canExtractFromIndex: false, isDocumentId: false, isTimeSeries: false);
                 if (selectField.FunctionArgs != null)
                 {
-                    fieldToFetch.FunctionArgs = new FieldToFetch[0];
+                    fieldToFetch.FunctionArgs = Array.Empty<FieldToFetch>();
                 }
 
                 return fieldToFetch;
@@ -134,13 +134,11 @@ namespace Raven.Server.Documents.Queries
                 if (selectField.GroupByKeys.Length == 1)
                 {
                     selectFieldName = selectField.GroupByKeys[0].Name;
-
-                    if (selectFieldKey == null)
-                        selectFieldKey = selectFieldName;
+                    selectFieldKey ??= selectFieldName;
                 }
                 else
                 {
-                    selectFieldKey = selectFieldKey ?? "Key";
+                    selectFieldKey ??= "Key";
                     return new FieldToFetch(selectFieldKey, selectField.GroupByKeyNames);
                 }
             }
@@ -217,11 +215,43 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidOperationException("Cannot fetch all stored path from a nested method");
         }
 
+        public static Dictionary<string, FieldToFetch> GetFieldsToHighlight(
+            QueryMetadata metadata,
+            ProjectionBehavior? projectionBehavior,
+            IndexDefinitionBaseServerSide indexDefinition,
+            IndexType indexType)
+        {
+
+            var result = new Dictionary<string, FieldToFetch>(StringComparer.Ordinal);
+            
+            if (metadata.HasHighlightings)
+            {
+                var anyExtractableFromIndex = false;
+                var extractAllStoredFields = false;
+                var anyTimeSeries = false;
+
+                foreach (var highlightingField in metadata.Highlightings)
+                {
+                    if (result.TryGetValue(highlightingField.Field.Value, out _) == false)
+                    {
+                        var val = GetFieldToFetch(indexDefinition, metadata, projectionBehavior, highlightingField, result, indexType, out var key, ref anyExtractableFromIndex, ref extractAllStoredFields, ref anyTimeSeries);
+                        if (val == null)
+                            continue;
+
+                        result[key] = val;
+                    }
+                }
+
+                return result;
+            }
+
+            return new Dictionary<string, FieldToFetch>();
+        }
+
         private static Dictionary<string, FieldToFetch> GetFieldsToFetch(
             QueryMetadata metadata,
             ProjectionBehavior? projectionBehavior,
             IndexDefinitionBaseServerSide indexDefinition,
-            SearchEngineType searchEngineType,
             IndexType indexType,
             out bool anyExtractableFromIndex,
             out bool extractAllStoredFields,
@@ -246,15 +276,17 @@ namespace Raven.Server.Documents.Queries
 
             var result = new Dictionary<string, FieldToFetch>(StringComparer.Ordinal);
 
-            for (var i = 0; i < metadata.SelectFields.Length; i++)
+            foreach (var selectField in metadata.SelectFields)
             {
-                var selectField = metadata.SelectFields[i];
                 var val = GetFieldToFetch(indexDefinition, metadata, projectionBehavior, selectField, result, indexType,
                     out var key, ref anyExtractableFromIndex, ref extractAllStoredFields, ref anyTimeSeries);
+
                 if (extractAllStoredFields)
                     return result;
+
                 if (val == null)
                     continue;
+
                 result[key] = val;
             }
 
