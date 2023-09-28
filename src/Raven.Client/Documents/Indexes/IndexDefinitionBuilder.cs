@@ -165,7 +165,6 @@ namespace Raven.Client.Documents.Indexes
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
             CompoundFields = new List<Expression<Func<TReduceResult, object>>[]>();
-            CompoundFieldsStrings = new List<string[]>();
             Configuration = new IndexConfiguration();
         }
 
@@ -178,7 +177,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 if (Reduce != null)
                     IndexDefinitionHelper.ValidateReduce(Reduce);
-
+                CompoundFieldsStrings ??= new();
                 var indexDefinition = new TIndexDefinition
                 {
                     Name = _indexName,

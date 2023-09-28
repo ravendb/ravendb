@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Indexes
             _definition.Priority = Priority;
             _definition.State = State;
             _definition.DeploymentMode = DeploymentMode;
-
+            _definition.CompoundFields = CompoundFieldsStrings;
             var definition = new IndexDefinition();
             _definition.CopyTo(definition);
 

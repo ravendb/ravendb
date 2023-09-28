@@ -204,7 +204,18 @@ namespace Raven.Client.Documents.Indexes
         {
             AsyncHelpers.RunSync(() => ExecuteAsync(store, conventions, database));
         }
-
+        
+        /// <summary>
+        /// Expert: List of compound fields that Corax can use to optimize certain queries
+        /// </summary>
+        public List<string[]> CompoundFieldsStrings { get; set; }
+        
+        protected void CompoundField(string firstField, string secondField)
+        {
+            CompoundFieldsStrings ??= new();
+            CompoundFieldsStrings.Add(new[]{firstField, secondField});
+        }
+        
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>

@@ -28,14 +28,9 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
-            CompoundFieldsStrings = new List<string[]>();
             CompoundFields = new List<Expression<Func<TReduceResult, object>>[]>();
         }
 
-        /// <summary>
-        /// Expert: List of compound fields that Corax can use to optimize certain queries
-        /// </summary>
-        public List<string[]> CompoundFieldsStrings { get; set; }
         
         /// <summary>
         /// Expert: List of compound fields that Corax can use to optimize certain queries
@@ -222,11 +217,6 @@ namespace Raven.Client.Documents.Indexes
                 AdditionalAssemblies = new HashSet<AdditionalAssembly>();
 
             AdditionalAssemblies.Add(assembly);
-        }
-
-        protected void CompoundField(string firstField, string secondField)
-        {
-            CompoundFieldsStrings.Add(new[]{firstField, secondField});
         }
         
         protected void CompoundField(Expression<Func<TReduceResult, object>> first, Expression<Func<TReduceResult, object>> second)
