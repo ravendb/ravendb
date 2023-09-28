@@ -2,7 +2,7 @@ import { Meta } from "@storybook/react";
 import Select from "./Select";
 import SelectCreatable from "./SelectCreatable";
 import React from "react";
-import { SelectOption } from "../Select";
+import { SelectOption } from "./Select";
 import { Col, Label } from "reactstrap";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 

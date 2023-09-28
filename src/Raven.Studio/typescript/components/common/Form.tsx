@@ -6,11 +6,11 @@ import { Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle";
 import AceEditor, { AceEditorProps } from "./AceEditor";
-import Select, { SelectOption, SelectProps } from "./Select";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
 import { GroupBase, OptionsOrGroups } from "react-select";
+import Select, { SelectOption } from "./select/Select";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -117,37 +117,19 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
     return <FormCheckbox type="radio" {...props} />;
 }
 
+interface SelectGeneralProps<T extends string | number> {
+    options: OptionsOrGroups<SelectOption<T>, GroupBase<SelectOption<T>>>;
+}
+
 export function FormSelect<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(props: FormElementProps<TFieldValues, TName> & Omit<SelectProps<TFieldValues[TName]>, "setSelectedValue">) {
-    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
-
-    const {
-        field: { onChange, value },
-        fieldState: { invalid, error },
-    } = useController({
-        name,
-        control,
-        rules,
-        defaultValue,
-        shouldUnregister,
-    });
-
-    return (
-        <div className="flex-grow">
-            <div className="form-dropdown-select">
-                <Select
-                    setSelectedValue={onChange}
-                    outline
-                    selectedValue={value}
-                    className="d-flex justify-content-between align-items-center"
-                    {...rest}
-                />
-            </div>
-            {invalid && <div className="text-danger small">{error.message}</div>}
-        </div>
-    );
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        SelectGeneralProps<TFieldValues[TName]> &
+        ComponentProps<typeof Select>
+) {
+    return <FormSelectGeneral {...props} isCreatable={false} />;
 }
 
 export function FormSelectCreatable<
@@ -155,37 +137,10 @@ export function FormSelectCreatable<
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(
     props: FormElementProps<TFieldValues, TName> &
-        ComponentProps<typeof SelectCreatable> & {
-            options: OptionsOrGroups<SelectOption<string | number>, GroupBase<SelectOption<string | number>>>;
-        }
+        SelectGeneralProps<TFieldValues[TName]> &
+        ComponentProps<typeof SelectCreatable>
 ) {
-    type Option = SelectOption<TFieldValues[TName]>;
-
-    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
-
-    const {
-        field: { onChange, value: formValues },
-        fieldState: { invalid, error },
-    } = useController({
-        name,
-        control,
-        rules,
-        defaultValue,
-        shouldUnregister,
-    });
-
-    const selectedOptions = Array.isArray(formValues)
-        ? formValues.map((formValue: TFieldValues[TName]) =>
-              rest.options.find((option: Option) => option.value === formValue)
-          )
-        : rest.options.find((option: Option) => option.value === formValues);
-
-    return (
-        <div className="flex-grow">
-            <SelectCreatable {...rest} value={selectedOptions} onChange={(option: Option) => onChange(option.value)} />
-            {invalid && <div className="text-danger small">{error.message}</div>}
-        </div>
-    );
+    return <FormSelectGeneral {...props} isCreatable />;
 }
 
 export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
@@ -356,5 +311,52 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
             />
             {invalid && <div className="text-danger small">{error.message}</div>}
         </>
+    );
+}
+
+function FormSelectGeneral<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        SelectGeneralProps<TFieldValues[TName]> &
+        ComponentProps<typeof Select | typeof SelectCreatable> & {
+            isCreatable: boolean;
+        }
+) {
+    type Option = SelectOption<TFieldValues[TName]>;
+
+    const { name, control, defaultValue, rules, shouldUnregister, isCreatable, ...rest } = props;
+
+    const SelectComponent = isCreatable ? SelectCreatable : Select;
+
+    const {
+        field: { onChange, value: formValues },
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    const selectedOptions = Array.isArray(formValues)
+        ? formValues.map((formValue: TFieldValues[TName]) =>
+              rest.options.find((option: Option) => option.value === formValue)
+          )
+        : rest.options.find((option: Option) => option.value === formValues);
+
+    return (
+        <div className="flex-grow">
+            <SelectComponent
+                {...rest}
+                defaultValue={selectedOptions}
+                onChange={(option: Option | Option[]) => {
+                    onChange(Array.isArray(option) ? option.map((x) => x.value) : option.value);
+                }}
+            />
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
     );
 }
