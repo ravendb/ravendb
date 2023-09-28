@@ -2,19 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,6 +24,85 @@ namespace SlowTests.Server.Replication
     {
         public ReplicationRevisionsTests(ITestOutputHelper output) : base(output)
         {
+        }
+        
+        [Fact]
+        public async Task ReplicationsGetTcpInfoRequestExecutorWillNotTryToUpdateTopology_RavenDB_21366()
+        {
+            var cluster = await CreateRaftCluster(2, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 1
+            }))
+            {
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration()
+                }));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete("foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        PurgeOnDelete = true
+                    }
+                }));
+                
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges();
+                    await session.StoreAsync(new User(), "foo/bar2");
+                    await session.SaveChangesAsync();
+                }
+                
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    foreach (var server in cluster.Nodes)
+                    {
+                        var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var _ = new Reference<long> { Value = 0 };
+                            var docs = database.DocumentsStorage.GetDocuments(context, new List<string>() { "foo/bar2" }, 0, long.MaxValue, _).ToList();
+                            return docs.Exists(x => x.Id == "foo/bar2");
+                        }
+                    }
+
+                    return false;
+                }, true);
+                
+                foreach (var server in cluster.Nodes)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    if (database.ReplicationLoader._incomingRejectionStats.Count >= 1)
+                    {
+                        var connectionErrorQueue = database.ReplicationLoader._incomingRejectionStats.First().Value;
+                        foreach (var info in connectionErrorQueue)
+                        {
+                            if (info.Reason.Contains("Cannot have replication with source and destination being the same database"))
+                            {
+                                Assert.False(true, "Cannot have replication with source and destination being the same database");
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         [Fact]
