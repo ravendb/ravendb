@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime =
             new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
 
-        private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>
+        internal readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>
             _incomingRejectionStats =
                 new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
