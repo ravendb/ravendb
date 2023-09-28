@@ -348,7 +348,7 @@ function FormSelectGeneral<
         : rest.options.find((option: Option) => option.value === formValues);
 
     return (
-        <div className="flex-grow">
+        <div>
             <SelectComponent
                 {...rest}
                 defaultValue={selectedOptions}

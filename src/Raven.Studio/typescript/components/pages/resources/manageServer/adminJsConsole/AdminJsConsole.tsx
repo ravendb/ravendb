@@ -94,7 +94,12 @@ export default function AdminJSConsole() {
                                 <Card>
                                     <CardHeader className="hstack gap-4 flex-wrap">
                                         <h3 className="m-0">Script target</h3>
-                                        <FormSelect control={control} name="target" options={allTargets} />
+                                        <FormSelect
+                                            control={control}
+                                            name="target"
+                                            options={allTargets}
+                                            maxMenuHeight={200}
+                                        />
                                         <div className="text-info">
                                             Accessible within the script under <code>{accessibleVariable}</code>{" "}
                                             variable
