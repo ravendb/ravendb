@@ -121,6 +121,9 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
 }
 
 class migrateDatabaseModel {
+    
+    static allowedMongoDbPrefixes = ["mongodb://", "mongodb+srv://"];
+    
     selectMigrationOption = ko.observable<migrationOptions>();
     
     migratorFullPath = ko.observable<string>();
@@ -197,9 +200,20 @@ class migrateDatabaseModel {
                         if (!this.showMongoDbOptions()) {
                             return true;
                         }
-                        const prefix = "mongodb://";
-                        return value && value.toLowerCase().startsWith(prefix) &&
-                            value.length > prefix.length + 1;
+                        
+                        if (!value) {
+                            return false;
+                        }
+                        
+                        const valueLower = value.toLowerCase();
+
+                        for (const prefix of migrateDatabaseModel.allowedMongoDbPrefixes) {
+                            if (valueLower.startsWith(prefix)) {
+                                return value.length > prefix.length + 1;
+                            }
+                        }
+                        
+                        return false;
                     },
                     message: "Invalid MongoDB connection string"
                 }
