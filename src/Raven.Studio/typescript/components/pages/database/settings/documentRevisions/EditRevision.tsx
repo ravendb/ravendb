@@ -1,7 +1,7 @@
 ﻿import { Icon } from "components/common/Icon";
 import React from "react";
 import { Alert, Button, Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
-import { FormDurationPicker, FormInput, FormSelect, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
     EditDocumentRevisionsCollectionConfig,
@@ -19,11 +19,10 @@ import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelect
 import useEditRevisionFormController from "./useEditRevisionFormController";
 import IconName from "typings/server/icons";
 import { useAppSelector } from "components/store";
-import { SelectOption } from "components/common/Select";
+import { SelectOption } from "components/common/select/Select";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import genUtils from "common/generalUtils";
 import generalUtils from "common/generalUtils";
-import { todo } from "common/developmentHelper";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import moment from "moment";
 
@@ -41,8 +40,6 @@ interface EditRevisionProps {
     config?: DocumentRevisionsConfig;
 }
 
-todo("Other", "Damian", "Use select with autocomplete for collections");
-
 export default function EditRevision(props: EditRevisionProps) {
     const { toggle, configType, taskType, config, onConfirm } = props;
 
@@ -52,14 +49,12 @@ export default function EditRevision(props: EditRevisionProps) {
     const collectionConfigsNames = useAppSelector(documentRevisionsSelectors.allConfigsNames);
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
-    const allCollectionOptions: SelectOption<string>[] = allCollectionNames.map((name) => ({
-        label: name,
-        value: name,
-    }));
-
-    const newCollectionOptions: SelectOption<string>[] = allCollectionOptions.filter(
-        (option) => !collectionConfigsNames.includes(option.value)
-    );
+    const newCollectionOptions: SelectOption[] = allCollectionNames
+        .filter((name) => !collectionConfigsNames.includes(name))
+        .map((name) => ({
+            label: name,
+            value: name,
+        }));
 
     const { control, formState, setValue, handleSubmit } = useForm<EditDocumentRevisionsCollectionConfig>({
         resolver: isForNewCollection
@@ -114,11 +109,16 @@ export default function EditRevision(props: EditRevisionProps) {
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
                             <Label className="mb-0 md-label">Collection</Label>
-                            <FormSelect
+                            <FormSelectCreatable
+                                placeholder="Select collection"
                                 control={control}
                                 name="collectionName"
-                                options={isForNewCollection ? newCollectionOptions : allCollectionOptions}
-                                disabled={!isForNewCollection}
+                                options={
+                                    isForNewCollection
+                                        ? newCollectionOptions
+                                        : [{ label: config.Name, value: config.Name }]
+                                }
+                                isDisabled={!isForNewCollection}
                             />
                         </InputGroup>
                     )}

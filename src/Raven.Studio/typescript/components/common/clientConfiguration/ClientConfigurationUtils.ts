@@ -4,7 +4,7 @@ import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
 import LoadBalanceBehavior = Raven.Client.Http.LoadBalanceBehavior;
 import assertUnreachable from "components/utils/assertUnreachable";
 import { exhaustiveStringTuple } from "components/utils/common";
-import { SelectOption } from "../Select";
+import { SelectOption } from "../select/Select";
 
 export default class ClientConfigurationUtils {
     static allReadBalanceBehaviors = exhaustiveStringTuple<ReadBalanceBehavior>()("None", "RoundRobin", "FastestNode");

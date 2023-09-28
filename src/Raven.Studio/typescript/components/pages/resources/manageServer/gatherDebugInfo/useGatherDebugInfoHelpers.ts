@@ -1,5 +1,5 @@
 import { FormCheckboxesOption } from "components/common/Form";
-import { SelectOption } from "components/common/Select";
+import { SelectOption } from "components/common/select/Select";
 import {
     GatherDebugInfoFormData,
     allGatherDebugInfoPackageDataTypes,

@@ -1,6 +1,6 @@
 import { exhaustiveStringTuple } from "components/utils/common";
 import StudioEnvironment = Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment;
-import { SelectOption } from "../Select";
+import { SelectOption } from "../select/Select";
 
 export const allStudioEnvironments = exhaustiveStringTuple<StudioEnvironment>()(
     "None",
