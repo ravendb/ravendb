@@ -129,6 +129,7 @@ export default function StudioGlobalConfiguration() {
                                             control={control}
                                             name="environment"
                                             options={studioEnvironmentOptions}
+                                            isSearchable={false}
                                         ></FormSelect>
                                     </InputGroup>
                                     <InputGroup className="gap-1 flex-wrap flex-column">
