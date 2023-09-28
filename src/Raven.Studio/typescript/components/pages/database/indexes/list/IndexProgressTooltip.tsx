@@ -18,7 +18,7 @@ import {
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
 import copyToClipboard from "common/copyToClipboard";
-import { Badge, Button } from "reactstrap";
+import { Button } from "reactstrap";
 
 interface IndexProgressTooltipProps {
     target: HTMLElement;

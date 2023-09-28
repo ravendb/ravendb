@@ -24,6 +24,10 @@ type FormInputProps = InputProps & {
     addonText?: string;
 };
 
+interface SelectGeneralProps<T extends string | number> {
+    options: OptionsOrGroups<SelectOption<T>, GroupBase<SelectOption<T>>>;
+}
+
 export interface FormCheckboxesOption<T extends string | number = string> {
     value: T;
     label: string;
@@ -115,10 +119,6 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
     props: FormToggleProps<TFieldValues, TName>
 ) {
     return <FormCheckbox type="radio" {...props} />;
-}
-
-interface SelectGeneralProps<T extends string | number> {
-    options: OptionsOrGroups<SelectOption<T>, GroupBase<SelectOption<T>>>;
 }
 
 export function FormSelect<
@@ -331,7 +331,7 @@ function FormSelectGeneral<
     const SelectComponent = isCreatable ? SelectCreatable : Select;
 
     const {
-        field: { onChange, value: formValues },
+        field: { onChange, value: formValue },
         fieldState: { invalid, error },
     } = useController({
         name,
@@ -341,11 +341,11 @@ function FormSelectGeneral<
         shouldUnregister,
     });
 
-    const selectedOptions = Array.isArray(formValues)
-        ? formValues.map((formValue: TFieldValues[TName]) =>
+    const selectedOptions = Array.isArray(formValue)
+        ? formValue.map((formValue: TFieldValues[TName]) =>
               rest.options.find((option: Option) => option.value === formValue)
           )
-        : rest.options.find((option: Option) => option.value === formValues);
+        : rest.options.find((option: Option) => option.value === formValue);
 
     return (
         <div>
