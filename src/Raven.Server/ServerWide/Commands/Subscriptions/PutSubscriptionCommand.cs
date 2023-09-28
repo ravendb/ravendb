@@ -191,6 +191,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new NotImplementedException();
         }
 
+        public bool IncludesRevisions() => Query.Contains(DocumentSubscriptions.IncludeRevisionsRQL);
+
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Query)] = Query;
