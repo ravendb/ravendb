@@ -1,0 +1,75 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+// TODO @mateusz add all missing styles
+.react-select-container {
+    border: 1px solid colors.$border-color-light;
+    border-radius: sizes.$border-radius;
+
+    .react-select__control {
+        border: none;
+        background-color: colors.$well-bg;
+        box-shadow: none;
+
+        &:hover {
+            box-shadow: 0 0 0 0.25rem rgba(colors.$primary, 0.25);
+        }
+
+        .react-select__value-container {
+            * {
+                color: colors.$text-color;
+            }
+
+            .react-select__single-value--is-disabled {
+                color: colors.$text-muted-color;
+            }
+
+            .react-select__multi-value {
+                background-color: colors.$panel-bg-2;
+
+                .react-select__multi-value__remove {
+                    background-color: colors.$panel-bg-2;
+
+                    &:hover {
+                        background-color: colors.$panel-bg-3;
+                    }
+                }
+            }
+        }
+
+        .react-select__indicator-separator {
+            display: none;
+        }
+    }
+
+    .react-select__control--is-disabled {
+        background-color: colors.$panel-bg-1;
+
+        .react-select__dropdown-indicator {
+            color: colors.$text-muted-color;
+        }
+    }
+
+    .react-select__menu {
+        border: 1px solid colors.$border-color-light;
+        background-color: colors.$panel-bg-2;
+
+        .react-select__menu-list {
+            .react-select__option {
+                padding: sizes.$gutter-xxs sizes.$gutter-xs;
+                background-color: transparent;
+                color: colors.$text-color;
+
+                &:hover {
+                    background-color: colors.$panel-bg-3;
+                    color: colors.$link-color;
+                }
+            }
+
+            hr {
+                margin: 0 sizes.$gutter-xs;
+            }
+        }
+    }
+}
