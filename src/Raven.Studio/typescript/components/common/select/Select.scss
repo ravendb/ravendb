@@ -1,38 +1,38 @@
-@use "Content/scss/bs5variables";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
-// TODO @mateusz add all missing styles
+// TODO @mateusz add missing styles
 .react-select-container {
-    border: 1px solid colors.$border-color-light;
+    border: 1px solid colors.$border-color-light-var;
     border-radius: sizes.$border-radius;
 
     .react-select__control {
         border: none;
-        background-color: colors.$well-bg;
+        background-color: colors.$well-bg-var;
         box-shadow: none;
+        min-width: 200px;
 
         &:hover {
-            box-shadow: 0 0 0 0.25rem rgba(colors.$primary, 0.25);
+            box-shadow: 0 0 0 0.25rem rgba(colors.$primary-var, 0.25);
         }
 
         .react-select__value-container {
             * {
-                color: colors.$text-color;
+                color: colors.$text-color-var;
             }
 
             .react-select__single-value--is-disabled {
-                color: colors.$text-muted-color;
+                color: colors.$text-muted-var;
             }
 
             .react-select__multi-value {
-                background-color: colors.$panel-bg-2;
+                background-color: colors.$panel-bg-2-var;
 
                 .react-select__multi-value__remove {
-                    background-color: colors.$panel-bg-2;
+                    background-color: colors.$panel-bg-2-var;
 
                     &:hover {
-                        background-color: colors.$panel-bg-3;
+                        background-color: colors.$panel-bg-3-var;
                     }
                 }
             }
@@ -44,31 +44,33 @@
     }
 
     .react-select__control--is-disabled {
-        background-color: colors.$panel-bg-1;
+        background-color: colors.$panel-bg-1-var;
 
         .react-select__dropdown-indicator {
-            color: colors.$text-muted-color;
+            color: colors.$text-muted-var;
         }
     }
 
     .react-select__menu {
-        border: 1px solid colors.$border-color-light;
-        background-color: colors.$panel-bg-2;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius;
+        background-color: colors.$panel-bg-2-var;
+        z-index: 5;
 
         .react-select__menu-list {
             .react-select__option {
                 padding: sizes.$gutter-xxs sizes.$gutter-xs;
                 background-color: transparent;
-                color: colors.$text-color;
+                color: colors.$text-color-var;
 
                 &:hover {
-                    background-color: colors.$panel-bg-3;
+                    background-color: colors.$panel-bg-3-var;
                     color: colors.$link-color;
                 }
             }
 
             hr {
-                margin: 0 sizes.$gutter-xs;
+                margin: 0 sizes.$gutter-xxs;
             }
         }
     }
