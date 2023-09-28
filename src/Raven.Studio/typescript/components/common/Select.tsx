@@ -3,11 +3,13 @@ import { UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem } from
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
 import classNames from "classnames";
+import { TextColor } from "components/models/common";
 
-export interface SelectOption<T extends string | number> {
+export interface SelectOption<T extends string | number = string> {
     value: T;
     label: string;
     icon?: IconName;
+    iconColor?: TextColor;
     horizontalSeparatorLine?: boolean;
 }
 

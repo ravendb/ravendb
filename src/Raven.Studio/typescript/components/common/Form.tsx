@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ComponentProps } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
@@ -6,9 +6,11 @@ import { Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle";
 import AceEditor, { AceEditorProps } from "./AceEditor";
-import Select, { SelectProps } from "./Select";
+import Select, { SelectOption, SelectProps } from "./Select";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
+import SelectCreatable from "./select/SelectCreatable";
+import { GroupBase, OptionsOrGroups } from "react-select";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -143,6 +145,44 @@ export function FormSelect<
                     {...rest}
                 />
             </div>
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
+    );
+}
+
+export function FormSelectCreatable<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        ComponentProps<typeof SelectCreatable> & {
+            options: OptionsOrGroups<SelectOption<string | number>, GroupBase<SelectOption<string | number>>>;
+        }
+) {
+    type Option = SelectOption<TFieldValues[TName]>;
+
+    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value: formValues },
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    const selectedOptions = Array.isArray(formValues)
+        ? formValues.map((formValue: TFieldValues[TName]) =>
+              rest.options.find((option: Option) => option.value === formValue)
+          )
+        : rest.options.find((option: Option) => option.value === formValues);
+
+    return (
+        <div className="flex-grow">
+            <SelectCreatable {...rest} value={selectedOptions} onChange={(option: Option) => onChange(option.value)} />
             {invalid && <div className="text-danger small">{error.message}</div>}
         </div>
     );
