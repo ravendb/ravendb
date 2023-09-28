@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -14,6 +18,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Utils;
+using Sparrow.Binary;
 using Sparrow.Json;
 using CoraxLib = global::Corax;
 using JavaScriptFieldName = Raven.Client.Constants.Documents.Indexing.Fields.JavaScript;
@@ -57,6 +62,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         if (TryGetBoostedValue(documentToProcess, out var boostedValue, builder))
             documentToProcess = boostedValue.AsObject();
 
+        if (CompoundFields != null)
+            HandleCompoundFields();
+        
         bool hasFields = false;
         var indexingScope = CurrentIndexingScope.Current;
         foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
@@ -225,8 +233,52 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
             shouldProcessAsBlittable = true;
         }
-    }
+        
+        void HandleCompoundFields()
+        {
+            _compoundFieldsBuffer ??= new byte[128];
+            // a bit yucky, but we put the compound fields in the end, and we need to account for the id() field, etc
+            var baseLine = _index.Definition.IndexFields.Count - CompoundFields.Count + 1;
+            for (int i = 0; i < CompoundFields.Count; i++)
+            {
+                var fields = CompoundFields[i];
+                if (fields.Length != 2)
+                    throw new NotSupportedInCoraxException("Currently compound indexes are only supporting exactly 2 fields");
 
+                if (documentToProcess.TryGetValue(new JsString(fields[0]), out var v) == false)
+                    ThrowFieldInCompoundFieldNotFound(fields[0]);                   
+                
+                var firstValueLen = AppendFieldValue(fields[0], v.ToObject(), 0, builder);
+                
+                if (documentToProcess.TryGetValue(new JsString(fields[1]), out v) == false)
+                    ThrowFieldInCompoundFieldNotFound(fields[1]);
+
+                var totalLen = AppendFieldValue(fields[1], v.ToObject(), firstValueLen, builder);
+                
+                Debug.Assert(firstValueLen <= byte.MaxValue, "firstValueLen <= byte.MaxValue, checked in the AppendFieldValue already");
+                Debug.Assert(totalLen < _compoundFieldsBuffer.Length, "totalLen < _compoundFieldsBuffer.Length, ensured by AppendFieldValue");
+                _compoundFieldsBuffer[totalLen++] = (byte)firstValueLen;
+
+                const int maxLength = global::Corax.Constants.Terms.MaxLength;
+                if (totalLen > maxLength)
+                    throw new ArgumentOutOfRangeException(
+                        $"Compound Field total size cannot exceed {maxLength}, but was {totalLen} for {string.Join(", ", CompoundFields[i])}");
+                
+                var fieldId = baseLine + i;
+                
+                builder.Write( fieldId, _compoundFieldsBuffer.AsSpan()[..totalLen]);
+            }
+
+            if (_compoundFieldsBuffer.Length > 64 * 1024)
+            {
+                // let's ensure that we aren't holding on to really big buffers forever
+                // in general, the limit is 256 per term with 2 max, so unlikely to hit that, but 
+                // to be future-proof..
+                _compoundFieldsBuffer = null;
+            }
+        }
+    }
+    
     private IndexField GetFieldObjectForProcessing(in string propertyAsString, CurrentIndexingScope indexingScope)
     {
         if (_fields.TryGetValue(propertyAsString, out var field) == false)
