@@ -160,9 +160,9 @@ public static class CoraxQueryBuilder
 
             if (cbi.Field.Equals(SortField.Field) == false)
             {
-                if ( builderParameters.Index.HasCompoundField(cbi.Field.FieldName, SortField.Field.FieldName, out var offset))
+                if ( builderParameters.Index.HasCompoundField(cbi.Field.FieldName, SortField.Field.FieldName, out var bindingId))
                 {
-                    var indexFieldBinding = builderParameters.IndexFieldsMapping.GetByFieldId(builderParameters.IndexFieldsMapping.Count - offset);
+                    var indexFieldBinding = builderParameters.IndexFieldsMapping.GetByFieldId(bindingId);
                     CompoundField = FieldMetadata.Build(indexFieldBinding.FieldName, indexFieldBinding.FieldTermTotalSumField,
                         indexFieldBinding.FieldId, indexFieldBinding.FieldIndexingMode, indexFieldBinding.Analyzer);
                     MatchedByCompoundField = true;
