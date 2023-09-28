@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Corax.Queries;
@@ -20,20 +21,45 @@ public class CompoundFieldsOnIndex : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
-    public void CanDefineIndexWithCompoundFieldAndReadItBack()
+    public void CanDefineIndexWithCompoundFieldAndReadItBack() => CanDefineIndexWithCompoundFieldAndReadItBack<Users_Idx>();
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void CanDefineIndexWithCompoundFieldAndReadItBackMapReduce() => CanDefineIndexWithCompoundFieldAndReadItBack<MapReduceUsers_Idx>();
+    
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void CanDefineIndexWithCompoundFieldAndReadItBackJavaScript() => CanDefineIndexWithCompoundFieldAndReadItBack<Js_Users_Idx>();
+    
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void CanDefineIndexWithCompoundFieldAndReadItBackMapReduceJavaScript() => CanDefineIndexWithCompoundFieldAndReadItBack<MapReduceUsers_Idx>();
+    
+    private void CanDefineIndexWithCompoundFieldAndReadItBack<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
-        var index = new Users_Idx();
+        var index = new TIndex();
         index.Execute(store);
         var definition = store.Maintenance.Send(new GetIndexOperation(index.IndexName));
         Assert.NotEmpty(definition.CompoundFields);
     }
+
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void CanIndexWithCompoundField() => CanIndexWithCompoundField<Users_Idx>();
     
     [RavenFact(RavenTestCategory.Indexes)]
-    public void CanIndexWithCompoundField()
+    public void CanIndexWithCompoundFieldMapReduce() => CanIndexWithCompoundField<MapReduceUsers_Idx>();
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void CanIndexWithCompoundFieldJavaScript() => CanIndexWithCompoundField<Js_Users_Idx>();
+    
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void CanIndexWithCompoundFieldJavaScriptMapReduce() => CanIndexWithCompoundField<MapReduceJs_Users_Idx>();
+    
+    private void CanIndexWithCompoundField<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
-        var index = new Users_Idx();
+        var index = new TIndex();
+        var i2 = new Users_Idx();
+        i2.Execute(store);
         index.Execute(store);
         using (var s = store.OpenSession())
         {
@@ -50,13 +76,16 @@ public class CompoundFieldsOnIndex : RavenTestBase
             
             s.SaveChanges();
         }
+        
         Indexes.WaitForIndexing(store);
         using (var s = store.OpenSession())
         {
-            var users = s.Query<User, Users_Idx>()
+            var users = s.Query<User, TIndex>()
                 .Where(x => x.Name == "Corax")
                 .OrderBy(x => x.Birthday)
                 .ToList();
+            WaitForUserToContinueTheTest(store);
+
             Assert.Equal(2, users.Count);
             Assert.Equal(2014, users[0].Birthday.Year);
             Assert.Equal(2021, users[1].Birthday.Year);
@@ -64,7 +93,7 @@ public class CompoundFieldsOnIndex : RavenTestBase
         
         using (var s = store.OpenSession())
         {
-            var users = s.Query<User, Users_Idx>()
+            var users = s.Query<User, TIndex>()
                 .Where(x => x.Location == "IL")
                 .OrderBy(x => x.Name)
                 .ThenBy(x=>x.Birthday)
@@ -80,7 +109,7 @@ public class CompoundFieldsOnIndex : RavenTestBase
         
         using (var s = store.OpenSession())
         {
-            var users = s.Query<User, Users_Idx>()
+            var users = s.Query<User, TIndex>()
                 .Where(x => x.Location == "Hadera")
                 .OrderBy(x => x.Name)
                 .ToList();
@@ -88,17 +117,30 @@ public class CompoundFieldsOnIndex : RavenTestBase
             Assert.Equal("Corax", users[0].Name);
             Assert.Equal("Lucene", users[1].Name);
         }
+        
+        WaitForUserToContinueTheTest(store);
     }
 
     [RavenFact(RavenTestCategory.Querying)]
-    public async Task CanOptimizeToSkipSorting()
+    public async Task CanOptimizeToSkipSorting() => await CanOptimizeToSkipSorting<Users_Idx>();
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public async Task CanOptimizeToSkipSortingMapReduce() => await CanOptimizeToSkipSorting<MapReduceUsers_Idx>();
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public async Task CanOptimizeToSkipSortingJavaScript() => await CanOptimizeToSkipSorting<Js_Users_Idx>();
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public async Task CanOptimizeToSkipSortingJavaScriptMapReduce() => await CanOptimizeToSkipSorting<MapReduceJs_Users_Idx>();
+    
+    private async Task CanOptimizeToSkipSorting<TIndex>()  where TIndex : AbstractIndexCreationTask, new()
     {
-        await TestQueryBuilder<MultiTermMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+        await TestQueryBuilder<MultiTermMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Location, "Hadera")
             .OrderBy(x => x.Name)
             .GetIndexQuery()
         );
-        await TestQueryBuilder<MultiTermMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+        await TestQueryBuilder<MultiTermMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Name, "Corax")
             .OrderBy(x => x.Birthday)
             .GetIndexQuery()
@@ -106,9 +148,20 @@ public class CompoundFieldsOnIndex : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Querying)]
-    public async Task Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex()
+    public async Task Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex() => await Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex<Users_Idx>();
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public async Task Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndexMapReduce() => await Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex<MapReduceUsers_Idx>();
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public async Task Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex_JavaScript() => await Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex<Js_Users_Idx>();
+
+    [RavenFact(RavenTestCategory.Querying)]
+    public async Task Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex_JavaScriptMapReduce() => await Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex<MapReduceUsers_Idx>();
+
+    private async Task Will_NOT_OptimizeQueryIfThereIsNoMatchingCompoundIndex<TIndex>()  where TIndex : AbstractIndexCreationTask, new()
     {
-        await TestQueryBuilder<SortingMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+        await TestQueryBuilder<SortingMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Name, "Lucene")
             .AndAlso()
             .WhereEquals(x=>x.Location, "Hadera")
@@ -116,13 +169,13 @@ public class CompoundFieldsOnIndex : RavenTestBase
             .GetIndexQuery()
         );
         
-        await TestQueryBuilder<SortingMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+        await TestQueryBuilder<SortingMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Name, "Lucene")
             .OrderBy(x => x.Location)
             .GetIndexQuery()
         );
         
-        await TestQueryBuilder<SortingMultiMatch>(s => s.Advanced.AsyncDocumentQuery<User, Users_Idx>()
+        await TestQueryBuilder<SortingMultiMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Location, "Hadera")
             .OrderBy(nameof(User.Name))
             .OrderBy(nameof(User.Birthday))
@@ -130,14 +183,32 @@ public class CompoundFieldsOnIndex : RavenTestBase
         );
     }
 
-    private Task TestQueryBuilder<TExpected>(Func<IAsyncDocumentSession, IndexQuery> query)
+    private Task TestQueryBuilder<TExpected, TIndex>(Func<IAsyncDocumentSession, IndexQuery> query)  where TIndex : AbstractIndexCreationTask, new()
     {
-        return StreamingOptimization_QueryBuilder.TestQueryBuilder<TExpected,Users_Idx>(this, false, query);
+        return StreamingOptimization_QueryBuilder.TestQueryBuilder<TExpected,TIndex>(this, false, query);
     }
 
 
-    private record User(string Name, string Location, DateTime Birthday);
+    private record User(string Name, string Location, DateTime Birthday, string Id = null);
 
+    private class MapReduceUsers_Idx : AbstractIndexCreationTask<User, User>
+    {
+        public MapReduceUsers_Idx()
+        {
+            Map  = users => 
+                from u in users 
+                select new { u.Name, u.Location, u.Birthday, u.Id };
+
+            Reduce = users => from u in users
+                group u by u.Id
+                into g
+                select new {g.First().Name, g.First().Location, g.First().Birthday, g.First().Id};
+            
+            CompoundField("Name", "Birthday");
+            CompoundField("Location", "Name");
+        }
+    }
+    
     private class Users_Idx : AbstractIndexCreationTask<User>
     {
         public Users_Idx()
@@ -146,8 +217,51 @@ public class CompoundFieldsOnIndex : RavenTestBase
                 from u in users 
                 select new { u.Name, u.Location, u.Birthday };
 
-            CompoundField(x => x.Name, x => x.Birthday);
-            CompoundField(x => x.Location, x => x.Name);
+            CompoundField("Name", "Birthday");
+            CompoundField("Location", "Name");
+        }
+    }
+    
+    private class Js_Users_Idx : AbstractJavaScriptIndexCreationTask
+    {
+        public Js_Users_Idx()
+        {
+            Maps = new HashSet<string>() { @"map('Users', (user) => {
+                    return {
+                        Name: user.Name,
+                        Location: user.Location,
+                        Birthday: user.Birthday
+                    };
+})"};
+            
+            CompoundField("Name", "Birthday");
+            CompoundField("Location", "Name");
+        }
+    }
+    
+    private class MapReduceJs_Users_Idx : AbstractJavaScriptIndexCreationTask
+    {
+        public MapReduceJs_Users_Idx()
+        {
+            Maps = new HashSet<string>() { @"map('Users', (user) => {
+                    return {
+                        Name: user.Name,
+                        Location: user.Location,
+                        Birthday: user.Birthday,
+                        Id: id(user)
+                    };
+})"};
+            
+            Reduce = @"groupBy(x => ( { Id: x.Id } ))
+                                .aggregate(g => {return {
+                                    Name: g.values[0].Name,
+                                    Location: g.values[0].Location,
+                                    Birthday: g.values[0].Birthday,
+                                    Id: g.values[0].Id
+                               };})";
+            
+            CompoundField("Name", "Birthday");
+            CompoundField("Location", "Name");
         }
     }
 }

@@ -25,7 +25,6 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 {
     private readonly bool _isMultiMap;
     private IPropertyAccessor _propertyAccessor;
-    private byte[] _compoundFieldsBuffer;
 
     public AnonymousCoraxDocumentConverterBase(Index index, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, bool canContainSourceDocumentId = false) : base(index, storeValue, indexImplicitNull: index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, 1, keyFieldName, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, canContainSourceDocumentId)
     {
@@ -108,8 +107,9 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 if (fields.Length != 2)
                     throw new NotSupportedInCoraxException("Currently compound indexes are only supporting exactly 2 fields");
                 
-                var firstValueLen = AppendFieldValue(fields[0], 0);
-                var totalLen = AppendFieldValue(fields[1], firstValueLen);
+                var firstValueLen = AppendFieldValue(fields[0], accessor.GetValue(fields[0], doc), 0, builder);
+                var totalLen = AppendFieldValue(fields[1], accessor.GetValue(fields[1], doc), firstValueLen, builder);
+                
                 Debug.Assert(firstValueLen <= byte.MaxValue, "firstValueLen <= byte.MaxValue, checked in the AppendFieldValue already");
                 Debug.Assert(totalLen < _compoundFieldsBuffer.Length, "totalLen < _compoundFieldsBuffer.Length, ensured by AppendFieldValue");
                 _compoundFieldsBuffer[totalLen++] = (byte)firstValueLen;
@@ -131,138 +131,6 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 // to be future-proof..
                 _compoundFieldsBuffer = null;
             }
-        }
-
-        int AppendFieldValue(string field, int index)
-        {
-            object v = accessor.GetValue(field, doc);
-            var indexFieldId = _index.Definition.IndexFields[field].Id;
-
-            var initialIndex = index;
-            ValueType valueType = GetValueType(v);
-            switch (valueType)
-            {
-                case ValueType.EmptyString:
-                case ValueType.DynamicNull:
-                case ValueType.Null:
-                    // for nulls, we put no value and it will sort at the beginning
-                    break;
-                case ValueType.Enum:
-                case ValueType.String:
-                {
-                    string s = v.ToString();
-                    var buffer = EnsureHasSpace(Encoding.UTF8.GetMaxByteCount(s.Length));
-                    var bytes = Encoding.UTF8.GetBytes(s, buffer[index..]);
-                    index += AppendAnalyzedTerm(buffer.Slice(index, bytes));
-                    break;
-                }
-                case ValueType.LazyString:
-                    var lazyStringValue = ((LazyStringValue)v);
-                    EnsureHasSpace(lazyStringValue.Length);
-                    index += AppendAnalyzedTerm(lazyStringValue.AsSpan());
-                    break;
-                case ValueType.LazyCompressedString:
-                    v = ((LazyCompressedStringValue)v).ToLazyStringValue();
-                    goto case ValueType.LazyString;
-                case ValueType.DateTime:
-                    AppendLong(((DateTime)v).Ticks);
-                    break;
-                case ValueType.DateTimeOffset:
-                    AppendLong(((DateTimeOffset)v).Ticks);
-                    break;
-                case ValueType.DateOnly:
-                    AppendLong(((DateOnly)v).ToDateTime(TimeOnly.MinValue).Ticks);
-                    break;
-                case ValueType.TimeOnly:
-                    AppendLong(((TimeOnly)v).Ticks);
-                    break;
-                case ValueType.TimeSpan:
-                    AppendLong(((TimeSpan)v).Ticks);
-                    break;
-                case ValueType.Convertible:
-                    v = Convert.ToDouble(v);
-                    goto case ValueType.Double;
-                case ValueType.Boolean:
-                    EnsureHasSpace(1);
-                    _compoundFieldsBuffer[index++] = (bool)v ? (byte)1 : (byte)0;
-                    break;
-                case ValueType.Numeric:
-                    var l = v switch
-                    {
-                        long ll => ll,
-                        ulong ul => (long)ul,
-                        int ii => ii,
-                        short ss => ss,
-                        ushort us => us,
-                        byte b => b,
-                        sbyte sb => sb,
-                        _ => Convert.ToInt64(v)
-                    };
-                    AppendLong(l);
-                    break;
-                case ValueType.Char:
-                    unsafe
-                    {
-                        char value = (char)v;
-                        var span = new ReadOnlySpan<byte>((byte*)&value, sizeof(char));
-                        span = span[1] == 0 ? span : span.Slice(0, 1);
-                        EnsureHasSpace(span.Length);
-                        span.CopyTo(_compoundFieldsBuffer.AsSpan(index));
-                        index += span.Length;
-                    }
-                    break;
-                case ValueType.Double:
-                    var d = v switch
-                    {
-                        LazyNumberValue ldv => ldv.ToDouble(CultureInfo.InvariantCulture),
-                        double dd => dd,
-                        float f => f,
-                        decimal m => (double)m,
-                        _ => Convert.ToDouble(v)
-                    };
-                    AppendLong(Bits.DoubleToSortableLong(d));
-                    break;
-                default:
-                    throw new NotSupportedException(
-                        $"Unable to create compound index with value of type: {valueType} ({v}) for compound field: {field}");
-            }
-
-            int termLen = index - initialIndex;
-            if(termLen > byte.MaxValue)
-                throw new ArgumentOutOfRangeException($"Unable to create compound index with value of type: {valueType} ({v}) for compound field: {field} because it exceeded the 256 max size for a compound index value (was {termLen}).");
-
-            EnsureHasSpace(1); // for the len
-            return index;
-
-
-            Span<byte> EnsureHasSpace(int additionalSize)
-            {
-                if (additionalSize + index >= _compoundFieldsBuffer.Length)
-                {
-                    var newSize = Bits.PowerOf2(additionalSize + index + 1);
-                    Array.Resize(ref _compoundFieldsBuffer, newSize);
-                }
-
-                return _compoundFieldsBuffer;
-            }
-            
-
-            int AppendAnalyzedTerm(Span<byte> term)
-            {
-                var analyzedTerm = builder.AnalyzeSingleTerm(indexFieldId, term);
-                var buffer = EnsureHasSpace(analyzedTerm.Length - term.Length); // just in case the analyze is _larger_
-                analyzedTerm.CopyTo(buffer[index..]);
-                return analyzedTerm.Length;
-            }
-
-            void AppendLong(long l)
-            {
-                EnsureHasSpace(sizeof(long));
-                BitConverter.TryWriteBytes(_compoundFieldsBuffer.AsSpan()[index..], Bits.SwapBytes(l));
-                index += sizeof(long);
-            }
-
-            
         }
     }
 }
