@@ -480,6 +480,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                 name="loadBalancerValue"
                                                 isDisabled={!formValues.loadBalancerEnabled || !canEditDatabaseConfig}
                                                 options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
+                                                isSearchable={false}
                                             />
                                         </InputGroup>
                                         {(globalConfig?.loadBalancerSeedValue ||
@@ -565,6 +566,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                     !formValues.readBalanceBehaviorEnabled || !canEditDatabaseConfig
                                                 }
                                                 options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
+                                                isSearchable={false}
                                             />
                                         </InputGroup>
                                     </RichPanel>

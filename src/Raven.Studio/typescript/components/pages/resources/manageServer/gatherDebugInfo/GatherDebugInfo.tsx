@@ -76,6 +76,7 @@ function GatherDebugInfo() {
                                             control={control}
                                             name="packageScope"
                                             options={packageScopeOptions}
+                                            isSearchable={false}
                                         />
                                         <ButtonWithSpinner
                                             type="submit"

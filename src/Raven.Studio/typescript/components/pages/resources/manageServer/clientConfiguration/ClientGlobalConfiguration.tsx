@@ -213,6 +213,7 @@ export default function ClientGlobalConfiguration() {
                                                 name="loadBalancerValue"
                                                 isDisabled={!formValues.loadBalancerEnabled}
                                                 options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
+                                                isSearchable={false}
                                             />
                                         </InputGroup>
                                     </Col>
@@ -287,6 +288,7 @@ export default function ClientGlobalConfiguration() {
                                                 name="readBalanceBehaviorValue"
                                                 isDisabled={!formValues.readBalanceBehaviorEnabled}
                                                 options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
+                                                isSearchable={false}
                                             />
                                         </InputGroup>
                                     </Col>

@@ -127,6 +127,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
                                             control={control}
                                             name="Environment"
                                             options={studioEnvironmentOptions}
+                                            isSearchable={false}
                                         ></FormSelect>
                                     </InputGroup>
                                 </CardBody>
