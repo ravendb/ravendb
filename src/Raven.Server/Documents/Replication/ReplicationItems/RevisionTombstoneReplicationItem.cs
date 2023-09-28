@@ -76,10 +76,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             {
                 stats.RecordRevisionTombstoneRead();
                 LastModifiedTicks = *(long*)Reader.ReadExactly(sizeof(long));
-
-                var size = *(int*)Reader.ReadExactly(sizeof(int));
-                Id = context.AllocateStringValue(null, Reader.ReadExactly(size), size);
-
+                
+                SetLazyStringValue(context, ref Id);
                 SetLazyStringValueFromString(context, out Collection);
                 Debug.Assert(Collection != null);
             }
