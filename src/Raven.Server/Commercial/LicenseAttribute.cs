@@ -39,6 +39,7 @@ public enum LicenseAttribute
     CanBeActivatedUntil,
     QueueEtl,
     ServerWideBackups,
+    ServerWideExternalReplications,
     ServerWideCustomSorters,
     ServerWideAnalyzers,
     IndexCleanup,
@@ -66,5 +67,4 @@ public enum LicenseAttribute
     MaxNumberOfCustomSortersPerCluster,
     MaxNumberOfCustomAnalyzersPerDatabase,
     MaxNumberOfCustomAnalyzersPerCluster,
-    ServerWideExternalReplications
 }
