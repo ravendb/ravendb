@@ -859,9 +859,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool HasCompoundField(Slice first, Slice second, out int offset)
+        public bool HasCompoundField(Slice first, Slice second, out int bindingId)
         {
-            offset = 0;
+            bindingId = 0;
             if (_compoundFields == null)
                 return false;
             var span = CollectionsMarshal.AsSpan(_compoundFields);
@@ -871,7 +871,7 @@ namespace Raven.Server.Documents.Indexes
                 if (cur.First.AsSpan().SequenceEqual(first.AsSpan()) &&
                     cur.Second.AsSpan().SequenceEqual(second.AsSpan()))
                 {
-                    offset = span.Length - i;
+                    bindingId = 1 + Definition.IndexFields.Count - span.Length + i; // 1 is ID()/hash(key) field.
                     return true;
                 }
             }
