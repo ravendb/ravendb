@@ -31,7 +31,7 @@ class editServerWideBackup extends viewModelBase {
     editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
 
-    hasPeriodicBackup = licenseModel.getStatusValue("HasPeriodicBackup");
+    hasServerWideBackups = licenseModel.getStatusValue("HasServerWideBackups");
     hasCloudBackups = licenseModel.getStatusValue("HasCloudBackups");
     hasSnapshotBackups = licenseModel.getStatusValue("HasSnapshotBackups");
     

@@ -4,7 +4,7 @@
             <div class="flex-horizontal gap-2">
                 <i class="icon-server-wide-replication"></i>
                 <h2 data-bind="text: $root.isAddingNewExternalReplicationTask() ? `New Server-Wide External Replication` : `Edit Server-Wide External Replication`" class="mb-0"></h2>
-                <span class="badge license-restricted-badge professional" data-bind="if: !$root.hasExternalReplication">Professional +</span>
+                <span class="badge license-restricted-badge professional" data-bind="if: !$root.hasServerWideExternalReplications">Professional +</span>
             </div>
             <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
         </div>
@@ -12,7 +12,7 @@
             <div class="col-xs-12 col-lg-6 flex-vertical">
                 <div class="flex-header">
                     <span data-placement="right" data-toggle="tooltip" data-html="true" data-animation="true"
-                        data-bind="tooltipText: $root.hasExternalReplication ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        data-bind="tooltipText: $root.hasServerWideExternalReplications ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
                         <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save() || !dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }">
                             <i class="icon-save"></i><span>Save</span>
                         </button>
@@ -21,7 +21,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasExternalReplication }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasServerWideExternalReplications }">
                     <div class="panel-body" data-bind="with: editedTask">
                         <div class="form-group margin-top" data-bind="validationElement: taskName">
                             <label for="taskName" class="control-label">Task Name</label>

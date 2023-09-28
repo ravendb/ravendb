@@ -3,13 +3,13 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-server-wide-backup"></i>
             <h2 data-bind="text: $parent.isAddingNewBackupTask() ? `New Server-Wide Backup Task` : `Edit Server-Wide Backup Task`" class="mb-0"></h2>
-            <span class="badge license-restricted-badge professional" data-bind="if: !$root.hasPeriodicBackup">Professional +</span>
+            <span class="badge license-restricted-badge professional" data-bind="if: !$root.hasServerWideBackups">Professional +</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
     </div>
     <div class="toolbar" data-bind="with: $root">
         <span data-placement="right" data-toggle="tooltip" data-html="true" data-animation="true"
-                        data-bind="tooltipText: $root.hasPeriodicBackup ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        data-bind="tooltipText: $root.hasServerWideBackups ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
             <button type="submit" class="btn btn-primary"
                 data-bind="click: saveBackupSettings, disable: spinners.save() || !dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }">
                 <i class="icon-save"></i><span>Save</span>
@@ -19,7 +19,7 @@
             <i class="icon-cancel"></i><span>Cancel</span>
         </button>
     </div>
-    <div data-bind="css: { 'pe-none item-disabled': !$root.hasPeriodicBackup }">
+    <div data-bind="css: { 'pe-none item-disabled': !$root.hasServerWideBackups }">
         <div class="panel">
             <div class="padding">
                 <div class="row margin-bottom" data-bind="validationElement: name">
