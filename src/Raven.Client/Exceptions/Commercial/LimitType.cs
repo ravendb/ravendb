@@ -98,7 +98,7 @@ namespace Raven.Client.Exceptions.Commercial
         ServerWideBackups,
 
         [Description("Server Wide External Replications")]
-        ServerWideExternalReplication,
+        ServerWideExternalReplications,
 
         [Description("Server Wide Custom Sorters")]
         ServerWideCustomSorters,

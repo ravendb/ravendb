@@ -579,7 +579,7 @@ public sealed partial class ClusterStateMachine
 
             case LicenseAttribute.ServerWideExternalReplications:
                 if (serverStore.LicenseManager.LicenseStatus.HasServerWideExternalReplications == false)
-                    throw new LicenseLimitException(LimitType.ServerWideExternalReplication, "Your license doesn't support adding external replication.");
+                    throw new LicenseLimitException(LimitType.ServerWideExternalReplications, "Your license doesn't support adding external replication.");
 
                 break;
 
