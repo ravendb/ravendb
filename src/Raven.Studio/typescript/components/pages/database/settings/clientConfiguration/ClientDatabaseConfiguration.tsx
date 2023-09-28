@@ -482,7 +482,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             <FormSelect
                                                 control={control}
                                                 name="loadBalancerValue"
-                                                disabled={!formValues.loadBalancerEnabled || !canEditDatabaseConfig}
+                                                isDisabled={!formValues.loadBalancerEnabled || !canEditDatabaseConfig}
                                                 options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
                                             />
                                         </InputGroup>
@@ -565,7 +565,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             <FormSelect
                                                 control={control}
                                                 name="readBalanceBehaviorValue"
-                                                disabled={
+                                                isDisabled={
                                                     !formValues.readBalanceBehaviorEnabled || !canEditDatabaseConfig
                                                 }
                                                 options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}

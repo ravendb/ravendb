@@ -221,7 +221,7 @@ export default function ClientGlobalConfiguration() {
                                             <FormSelect
                                                 control={control}
                                                 name="loadBalancerValue"
-                                                disabled={!formValues.loadBalancerEnabled}
+                                                isDisabled={!formValues.loadBalancerEnabled}
                                                 options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
                                             />
                                         </InputGroup>
@@ -295,7 +295,7 @@ export default function ClientGlobalConfiguration() {
                                             <FormSelect
                                                 control={control}
                                                 name="readBalanceBehaviorValue"
-                                                disabled={!formValues.readBalanceBehaviorEnabled}
+                                                isDisabled={!formValues.readBalanceBehaviorEnabled}
                                                 options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
                                             />
                                         </InputGroup>

@@ -13,7 +13,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { FormAceEditor, FormSelect } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { SelectOption } from "components/common/Select";
+import { SelectOption } from "components/common/select/Select";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import "./AdminJsConsole.scss";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
