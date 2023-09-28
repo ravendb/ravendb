@@ -10,7 +10,7 @@ import {
 } from "components/utils/licenseLimitsUtils";
 
 export function EditServerWideBackupInfoHub() {
-    const hasServerWideTasks = useAppSelector(licenseSelectors.statusValue("HasServerWideTasks"));
+    const hasServerWideBackups = useAppSelector(licenseSelectors.statusValue("HasServerWideBackups"));
     const hasSnapshotBackups = useAppSelector(licenseSelectors.statusValue("HasSnapshotBackups"));
 
     const featureAvailability = useLimitedFeatureAvailability({
@@ -18,7 +18,7 @@ export function EditServerWideBackupInfoHub() {
         overwrites: [
             {
                 featureName: defaultFeatureAvailability[0].featureName,
-                value: hasServerWideTasks,
+                value: hasServerWideBackups,
             },
             {
                 featureName: defaultFeatureAvailability[1].featureName,
@@ -30,7 +30,7 @@ export function EditServerWideBackupInfoHub() {
     const backupTasksDocsLink = useRavenLink({ hash: "SXSM33" });
 
     return (
-        <AboutViewFloating defaultOpen={hasServerWideTasks ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasServerWideBackups ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -73,7 +73,7 @@ export function EditServerWideBackupInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasServerWideTasks && hasSnapshotBackups}
+                isUnlimited={hasServerWideBackups && hasSnapshotBackups}
                 data={featureAvailability}
             />
         </AboutViewFloating>
