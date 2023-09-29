@@ -224,23 +224,23 @@ namespace Corax
                 Updates.Initialize(context);
             }
 
-            public void Addition([NotNull] ByteStringContext context, long entryId, int termsPerEntry, short freq = 1)
+            public void Addition([NotNull] ByteStringContext context, long entryId, int termsPerEntryIndex, short freq)
             {
                 if (Additions.HasCapacityFor(1) == false)
                     Additions.Grow(context, 1);
 
-                AddToList(ref Additions, entryId,termsPerEntry, freq);
+                AddToList(ref Additions, entryId,termsPerEntryIndex, freq);
             }
             
-            public void Removal([NotNull] ByteStringContext context, long entryId, int termsPerEntry,short freq = 1)
+            public void Removal([NotNull] ByteStringContext context, long entryId, int termsPerEntryIndex,short freq)
             {
                 if (Removals.HasCapacityFor(1) == false)
                     Removals.Grow(context, 1);
 
-                AddToList(ref Removals, entryId, termsPerEntry, freq);
+                AddToList(ref Removals, entryId, termsPerEntryIndex, freq);
             }
 
-            private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, int termsPerEntry, short freq )
+            private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, int termsPerEntryIndex, short freq )
             {
                 AssertPreparationIsNotFinished();
                 NeedToUpdate = true;
@@ -266,7 +266,7 @@ namespace Corax
                     }
                 }
 
-                var term = new TermInEntryModification { EntryId = entryId, TermsPerEntryIndex = termsPerEntry, Frequency = freq };
+                var term = new TermInEntryModification { EntryId = entryId, TermsPerEntryIndex = termsPerEntryIndex, Frequency = freq };
                 list.PushUnsafe(term);
             }
 
@@ -741,7 +741,7 @@ namespace Corax
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex);
+                term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
 
                 if (field.HasSuggestions)
                     _parent.AddSuggestions(field, slice);
@@ -770,10 +770,10 @@ namespace Corax
                 }
 
                 ref var doublesTerm = ref field.Storage.GetAsRef(doublesTermsLocation);
-                doublesTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex);
+                doublesTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
 
                 ref var longsTerm = ref field.Storage.GetAsRef(longsTermsLocation);
-                longsTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex);
+                longsTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
             }
 
             private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
@@ -1403,7 +1403,7 @@ namespace Corax
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1);
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
@@ -1413,7 +1413,7 @@ namespace Corax
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1);
             }
         }
 
@@ -2290,9 +2290,9 @@ namespace Corax
         
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ref NativeList<RecordedTerm> GetEntryTerms(int termsPerEntry)
+        private ref NativeList<RecordedTerm> GetEntryTerms(int termsPerEntryIndex)
         {
-            return ref _termsPerEntryId.ToSpan()[termsPerEntry];
+            return ref _termsPerEntryId.ToSpan()[termsPerEntryIndex];
         }
 
         private void ClearEntriesForTerm()
@@ -2512,7 +2512,7 @@ namespace Corax
                 }
 
                 if (isIncluded == false)
-                    entries.Addition(_entriesAllocator, existingEntryId, existingFrequency);
+                    entries.Addition(_entriesAllocator, existingEntryId,-1,  existingFrequency);
             }
             
             
