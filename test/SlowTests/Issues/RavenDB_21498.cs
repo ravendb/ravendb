@@ -66,6 +66,48 @@ public sealed class RavenDB_21498 : RavenTestBase
 
         string TextGen(int count) => string.Join(" ", Enumerable.Range(0, count).Select(_ => "Maciej"));
     }
+    
+    
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void ProperlyUpdateSmallPostingListWithDifferentFrequencies2()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new User(TextGen(32)), "doc/1");
+            session.Store(new User(TextGen(32)), "doc/2");
+            session.SaveChanges();
+
+            var results = session.Query<User>()
+                .Search(x => x.Text, "maciej")
+                .ToList();
+            
+            Indexes.WaitForIndexing(store);
+            
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var userToUpdate = session.Load<User>("doc/1");
+            userToUpdate.Text = TextGen(64);
+            session.Store(userToUpdate);
+            session.SaveChanges();
+
+            Indexes.WaitForIndexing(store);
+
+            var results = session.Query<User>()
+                .Search(x => x.Text, "maciej")
+                .Count(); // will do not check by Raven's ids but results from Corax :
+            
+            Assert.Equal(2, results);
+        }
+        
+
+        string TextGen(int count) => string.Join(" ", Enumerable.Range(0, count).Select(_ => "Maciej"));
+    }
+
 
     private sealed class User 
     {

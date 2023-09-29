@@ -223,7 +223,7 @@ public unsafe struct EntryTermsReader
         }
         else
         {
-            Frequency = (byte)(termContainerId >> 3);
+            Frequency = EntryIdEncodings.FrequencyReconstructionFromQuantization((byte)(termContainerId >> 3));
             TermId = (termContainerId >> 8) & ~0b111;
         }
 
