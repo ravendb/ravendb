@@ -127,8 +127,6 @@ public unsafe struct NativeIntegersList : IDisposable
 
         var bufferPtr = outputBufferPtr;
         var bufferEndPtr = bufferPtr + Count - 1;
-        Debug.Assert((*bufferPtr & 1) == 0,
-            "Removal as first item means that we have an orphaned removal, not supposed to happen!");
         while (bufferPtr < bufferEndPtr)
         {
             // here we check equality without caring if this is removal or not, skipping moving
@@ -141,8 +139,21 @@ public unsafe struct NativeIntegersList : IDisposable
 
             bufferPtr++;
         }
+        var count = (int)(outputBufferPtr - RawItems + 1);
 
-        Count = (int)(outputBufferPtr - RawItems + 1);
+        // Need to handle scenario where we have removal without addition, which can happen if the frequency
+        // is different, so we'll remove the item with the old frequency and add the new one
+        // This code assumes that the branch predictor would work well here, since those are fairly rare scenarios
+        var idx = 0;
+        outputBufferPtr = RawItems;
+        for (int i = 0; i < count; i++)
+        {
+            if ((outputBufferPtr[i] & 1) != 0) 
+                continue;
+            
+            outputBufferPtr[idx++] = outputBufferPtr[i];
+        }
+        Count = idx;
     }
 
     public int MoveTo(Span<long> matches)
