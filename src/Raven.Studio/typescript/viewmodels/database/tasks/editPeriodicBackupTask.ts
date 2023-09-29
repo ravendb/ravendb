@@ -154,6 +154,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
 
         if (this.db.isSharded()) {
             this.configuration().backupType("Backup");
+            this.dirtyFlag().reset();
         }
     }
 
