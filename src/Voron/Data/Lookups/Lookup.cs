@@ -948,10 +948,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             // here we insert a minimum value as the first item of the branch
             var k = TLookupKey.FromLong<TLookupKey>(separatorKey);
-            RemoveEntryFromPage(ref newPageState, ref k, 0, out var pageNum);
-            var childPage = _llt.GetPage(pageNum);
             // we need to update the separator key here...
-            (separatorKey,_) = GetFirstActualKeyAndValue((LookupPageHeader*)childPage.Pointer);
+            (separatorKey,_) = GetFirstActualKeyAndValue(newPageState.Header);
+            RemoveEntryFromPage(ref newPageState, ref k, 0, out var pageNum);
             var requiredSize = EncodeEntry(newPageState.Header, TLookupKey.MinValue, pageNum, entryBufferPtr);
             newPageState.LastSearchPosition = 0;
             AddEntryToPage(ref newPageState, requiredSize, entryBufferPtr, false);
