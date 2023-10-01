@@ -41,18 +41,6 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
     }
 
-    public class AdoptOrphanedResult : OperationResult
-    {
-        public int DeleteRevisionsCreated { get; set; }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(DeleteRevisionsCreated)] = DeleteRevisionsCreated;
-            return json;
-        }
-    }
-
     public class RevertResult : OperationResult
     {
         public int RevertedDocuments { get; set; }

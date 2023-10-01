@@ -76,7 +76,7 @@ namespace SlowTests.Issues
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using(var tx = context.OpenWriteTransaction())
             {
-                database.DocumentsStorage.RevisionsStorage.DeleteLastRevisionFor(context, user1.Id);
+                database.DocumentsStorage.RevisionsStorage.ForTestingPurposesOnly().DeleteLastRevisionFor(context, user1.Id, "Users");
                 tx.Commit();
             }
 
