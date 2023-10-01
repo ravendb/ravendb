@@ -266,7 +266,7 @@ namespace Raven.Server.Web.System
 
             if(details != null)
             {
-                json[nameof(ServerNode.ServerVersionFromDatabaseTopology)] =
+                json[nameof(ServerNode.ServerVersion)] =
                     details.BuildInfo.AssemblyVersion ?? details.BuildInfo.ProductVersion;
             }
 
