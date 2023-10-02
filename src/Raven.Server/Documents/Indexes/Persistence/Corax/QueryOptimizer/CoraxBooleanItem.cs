@@ -1,13 +1,14 @@
 using System;
 using System.Runtime.CompilerServices;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
-using Corax.Queries;
-using Corax.Queries.Meta;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using Raven.Server.Documents.Queries;
 using Sparrow.Binary;
 using Sparrow.Extensions;
 using Voron;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 

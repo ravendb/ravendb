@@ -1,5 +1,5 @@
 ﻿using System;
-using Corax.Queries.Meta;
+using Corax.Querying.Matches.Meta;
 using Xunit;
 using Xunit.Abstractions;
 

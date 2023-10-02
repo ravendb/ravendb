@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Corax.Queries.Meta;
+using Corax.Querying.Matches.Meta;
 using Xunit;
 using Xunit.Abstractions;
 

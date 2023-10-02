@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Corax.IndexSearcher;
-using Corax.Queries.Meta;
+using Corax.Querying;
+using Corax.Querying.Matches.Meta;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Voron.Benchmark.Corax
 {

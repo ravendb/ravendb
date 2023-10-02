@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
+using Corax.Indexing;
 
 namespace Corax.Utils;
 

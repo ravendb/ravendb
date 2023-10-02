@@ -4,11 +4,11 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
-using Corax.Queries;
-using Corax.Queries.Meta;
-using Corax.Queries.SortingMatches;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches;
 using FastTests.Voron;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
@@ -27,6 +27,7 @@ using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace FastTests.Corax;
 

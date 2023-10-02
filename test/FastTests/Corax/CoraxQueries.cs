@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Corax.Queries;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
-using Corax.Queries.Meta;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Server;
@@ -14,6 +14,8 @@ using Voron;
 using Xunit.Abstractions;
 using Xunit;
 using Sparrow.Threading;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 
 namespace FastTests.Corax

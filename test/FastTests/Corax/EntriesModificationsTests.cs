@@ -1,5 +1,6 @@
 using System;
 using Corax;
+using Corax.Indexing;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
@@ -17,7 +18,7 @@ public class EntriesModificationsTests : NoDisposalNeeded
     public void EntriesModificationsWillEraseOddDuplicates()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        var entries = new IndexWriter.EntriesModifications(bsc, 0);
+        var entries = new EntriesModifications(bsc, 0);
         
         entries.Addition(bsc, 2, -1, 1);
         entries.Removal(bsc, 1, -1,1);
@@ -29,7 +30,7 @@ public class EntriesModificationsTests : NoDisposalNeeded
         Assert.Equal(1, entries.Updates.Count);
         Assert.Equal(2, entries.Updates.ToSpan()[0].EntryId);
     }
-    private static void AssertEntriesCase(ref IndexWriter.EntriesModifications entries)
+    private static void AssertEntriesCase(ref EntriesModifications entries)
     {
         var additions = entries.Additions;
         var removals = entries.Removals;

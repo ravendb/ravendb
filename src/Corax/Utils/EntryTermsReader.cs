@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Json;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Corax.Utils;
 
@@ -322,12 +321,12 @@ public unsafe struct EntryTermsReader
         IsNull = false;
     }
 
-    public string Debug(IndexWriter w)
+    public string Debug(Indexing.IndexWriter w)
     {
         return Debug(w.GetIndexedFieldNamesByRootPage());
     }
 
-    public string Debug(IndexSearcher.IndexSearcher r)
+    public string Debug(Querying.IndexSearcher r)
     {
         return Debug(r.GetIndexedFieldNamesByRootPage());
     }

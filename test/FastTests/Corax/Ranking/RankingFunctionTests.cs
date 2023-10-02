@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Text;
 using Corax;
 using Corax.Analyzers;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -14,6 +14,8 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace FastTests.Corax.Ranking;
 

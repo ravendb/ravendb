@@ -3,7 +3,7 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Jint;
 using Jint.Native;
@@ -18,6 +18,7 @@ using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Patch
 {

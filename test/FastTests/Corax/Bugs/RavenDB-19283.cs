@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Text;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -9,6 +9,8 @@ using Sparrow.Threading;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace FastTests.Corax.Bugs;
 

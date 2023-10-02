@@ -5,6 +5,7 @@ using System.Text.Unicode;
 using System.Threading;
 using Corax;
 using Corax.Analyzers;
+using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 {
-    private sealed class Builder : IndexWriter.IIndexEntryBuilder
+    private sealed class Builder : IIndexEntryBuilder
     {
         private int _storageIdx;
 
