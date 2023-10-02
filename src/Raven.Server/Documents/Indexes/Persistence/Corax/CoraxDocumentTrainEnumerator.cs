@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Unicode;
 using System.Threading;
 using Corax;
@@ -11,7 +9,6 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Enumerators;
 using Sparrow;
