@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Raven.Server.Utils;
+using SlowTests.Corax;
 using SlowTests.Sharding.Cluster;
 using Xunit;
 
@@ -28,10 +29,10 @@ public static class Program
             {
                 TryRemoveDatabasesFolder();
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new ShardedClusterObserverTests(testOutputHelper))
+                using (var test = new RavenDB_21519(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.ClusterObserverWillSkipCommandIfChangingTheSameDatabaseRecordTwiceInOneIteration();
+                    test.Fuzzy(956465115);
                 }
             }
             catch (Exception e)
