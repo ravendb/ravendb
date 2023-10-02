@@ -134,13 +134,7 @@ namespace SlowTests.Issues
                 var arava = await session2.LoadAsync<User>("users/arava");
                 var cv = session2.Advanced.GetChangeVectorFor(arava);
                 var cti = cv.ToChangeVectorList().Where(x => x.NodeTag == ChangeVectorParser.TrxnInt).ToList();
-                if (options.DatabaseMode == RavenDatabaseMode.Single)
-                    Assert.Equal(2, cti.Count);
-                else
-                {
-                    // for sharded we have the following TRXN:12-aaa, RAFT:12-bbb | TRXN:12-aaa, RAFT:12-bbb, TRXN:44-xxx, RAFT:44-yyyy
-                    Assert.Equal(3, cti.Count);
-                }
+                Assert.Equal(2, cti.Count);
                 Assert.Equal("Arava", arava.Name);
             }
         }
