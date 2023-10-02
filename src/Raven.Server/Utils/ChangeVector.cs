@@ -183,7 +183,6 @@ public sealed class ChangeVector
         if (changeVector == null)
             return databaseChangeVector;
 
-        context.LastDatabaseChangeVector = databaseChangeVector.MergeOrderWith(changeVector, context);
         return changeVector.MergeOrderWith(context.LastDatabaseChangeVector, context);
     }
 
@@ -203,6 +202,13 @@ public sealed class ChangeVector
 
         if (changeVector == null)
             return databaseChangeVector;
+
+        if (changeVector.IsSingle == false)
+        {
+            var version = MergeWithDatabaseChangeVector(context, changeVector.Version);
+            var order = changeVector.Order.MergeOrderWith(databaseChangeVector, context);
+            return new ChangeVector(version, order);
+        }
 
         return MergeWithDatabaseChangeVector(context, changeVector);
     }
