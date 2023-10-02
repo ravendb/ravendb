@@ -3,11 +3,12 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Text;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 

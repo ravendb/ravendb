@@ -12,12 +12,14 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
-using Corax.Queries.SortingMatches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Sparrow.Server;
 using Sparrow.Threading;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace Voron.Benchmark.Corax
 {

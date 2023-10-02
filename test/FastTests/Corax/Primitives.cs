@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.Intrinsics.X86;
-using Corax.Queries.Meta;
+using Corax.Querying.Matches.Meta;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

@@ -15,6 +15,7 @@ using Sparrow.Server;
 using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {

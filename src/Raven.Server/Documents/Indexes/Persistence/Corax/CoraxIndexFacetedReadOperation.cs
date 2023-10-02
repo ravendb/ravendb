@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
@@ -19,6 +19,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
 using Voron.Impl;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 using RangeType = Raven.Client.Documents.Indexes.RangeType;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;

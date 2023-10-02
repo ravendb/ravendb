@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Corax.Queries;
+using Corax.Querying.Matches;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Sparrow;

@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using Corax.Queries.SortingMatches;
+using Corax.Querying.Matches.SortingMatches;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

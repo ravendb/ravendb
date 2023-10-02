@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Corax.Indexing;
 using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Impl;
@@ -20,7 +21,7 @@ public unsafe struct EntryTermsWriter : IDisposable
         _scope = _bsc.Allocate(512, out _bs);
     }
     
-    public int Encode(in NativeList<IndexWriter.RecordedTerm> terms)
+    public int Encode(in NativeList<RecordedTerm> terms)
     {
         const int maxItemSize = 32; // that should be more than enough to fit everything 
         if (terms.Count * maxItemSize > _bs.Length)
@@ -80,7 +81,7 @@ public unsafe struct EntryTermsWriter : IDisposable
     }
     
 #if DEBUG
-    public string Debug(LowLevelTransaction llt, in NativeList<IndexWriter.RecordedTerm> terms, IndexWriter r)
+    public string Debug(LowLevelTransaction llt, in NativeList<RecordedTerm> terms, Indexing.IndexWriter r)
     {
         var fields = r.GetIndexedFieldNamesByRootPage();
         var sb = new StringBuilder();

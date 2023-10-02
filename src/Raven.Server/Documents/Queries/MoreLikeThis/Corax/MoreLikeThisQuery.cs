@@ -1,4 +1,4 @@
-using Corax.Queries.Meta;
+using Corax.Querying.Matches.Meta;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 

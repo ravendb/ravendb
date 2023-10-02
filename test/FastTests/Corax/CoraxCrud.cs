@@ -1,8 +1,8 @@
 ﻿using System;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
-using Corax.Queries.SortingMatches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -11,6 +11,8 @@ using Sparrow.Server;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace FastTests.Corax;
 

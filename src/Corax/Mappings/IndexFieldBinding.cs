@@ -1,6 +1,7 @@
 using System;
 using Corax.Analyzers;
 using Voron;
+using Corax.Indexing;
 
 namespace Corax.Mappings;
 

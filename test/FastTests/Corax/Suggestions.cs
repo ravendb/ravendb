@@ -3,15 +3,18 @@ using System.Collections.Generic;
 using System.Text;
 using Corax;
 using Corax.Analyzers;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Pipeline;
+using Corax.Querying;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace FastTests.Corax
 {

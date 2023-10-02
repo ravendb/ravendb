@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Utils;
 using Assert = Xunit.Assert;
@@ -13,6 +13,8 @@ using Voron;
 using Xunit;
 using Xunit.Abstractions;
 using Sparrow.Threading;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace FastTests.Corax;
 
