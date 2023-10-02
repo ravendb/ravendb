@@ -624,7 +624,7 @@ namespace Raven.Server.Documents.TransactionMerger
             }
             catch
             {
-                if (current.Transaction != null)
+                if (current?.Transaction != null)
                 {
                     _recording.State?.TryRecord(current, TxInstruction.DisposeTx, current.Transaction.Disposed == false);
                     current.Transaction.Dispose();
