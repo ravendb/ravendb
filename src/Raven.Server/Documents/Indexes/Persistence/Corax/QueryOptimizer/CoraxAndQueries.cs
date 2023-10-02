@@ -100,6 +100,8 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
         bool ShouldPerformScan(Span<CoraxBooleanItem> queries, out int pos)
         {
             pos = -1;
+            return false;
+
             if (IsBoosting)
                 return false;
             
