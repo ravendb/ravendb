@@ -386,7 +386,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                             target="SetLoadBalanceSeedBehavior"
                                                             trigger="hover"
                                                             container="PopoverContainer"
-                                                            placement="top"
+                                                            placement="right"
                                                         >
                                                             <div className="p-3">
                                                                 An optional seed number.
@@ -498,7 +498,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                         target="SetLoadBalanceSeedBehavior"
                                                         trigger="hover"
                                                         container="PopoverContainer"
-                                                        placement="top"
+                                                        placement="right"
                                                     >
                                                         <div className="p-3">
                                                             An optional seed number.
