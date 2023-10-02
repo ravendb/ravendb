@@ -50,13 +50,19 @@
     font-weight: 600 !important;
 }
 
-.about-view-dropdown .popover {
-    width: 540px;
-    max-width: 90vw;
-    font-size: bs5variables.$font-size-sm;
-    border: none;
-    color: bs5variables.$text-color-var;
-    border-radius: bs5variables.$border-radius-lg;
+.about-view-dropdown {
+    .popover {
+        width: 540px;
+        max-width: 90vw;
+        font-size: bs5variables.$font-size-sm;
+        border: none;
+        color: bs5variables.$text-color-var;
+        border-radius: bs5variables.$border-radius-lg;
+    }
+    .popover-inner {
+        max-height: calc(100vh - 180px);
+        overflow: auto;
+    }
 }
 
 .about-view-accordion {
@@ -68,11 +74,16 @@
         top: 3px;
         font-size: 1.5rem;
     }
+
+    .license-accordion {
+        border-radius: sizes.$gutter-xs !important;
+    }
     .accordion-button {
         border-radius: sizes.$gutter-xs !important;
         background: var(--panel-bg-1);
         display: flex;
         align-items: baseline;
+        transition: background-color 0.4s ease;
         &:focus {
             outline: none;
             box-shadow: none;

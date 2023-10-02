@@ -64,7 +64,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                             {licenseTypes.map((licenseType) => {
                                 if (currentLicense === "Essential" && licenseType === "Community") {
                                     return (
-                                        <th key="Essential" className="community current">
+                                        <th key="Essential" className="community current bg-faded-primary">
                                             <Icon icon="circle-filled" className="license-dot" /> Essential
                                         </th>
                                     );
@@ -73,7 +73,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                     <th
                                         key={licenseType}
                                         className={classNames("position-relative", licenseType.toLowerCase(), {
-                                            current:
+                                            "current bg-faded-primary":
                                                 currentLicense === licenseType ||
                                                 (currentLicense === "None" && licenseType === "Community") ||
                                                 (currentLicense === "Community" && licenseType === "Free") ||
@@ -131,7 +131,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                 </th>
                                 <td
                                     className={classNames("community", {
-                                        current:
+                                        "current bg-faded-primary":
                                             currentLicense === "Community" ||
                                             currentLicense === "Essential" ||
                                             currentLicense === "None",
@@ -142,18 +142,24 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                 {!isCloud && (
                                     <td
                                         className={classNames("professional", {
-                                            current: currentLicense === "Professional",
+                                            "current bg-faded-primary": currentLicense === "Professional",
                                         })}
                                     >
                                         {formatAvailabilityValue(data.professional)}
                                     </td>
                                 )}
-                                <td className={classNames("enterprise", { current: currentLicense === "Enterprise" })}>
+                                <td
+                                    className={classNames("enterprise", {
+                                        "current bg-faded-primary": currentLicense === "Enterprise",
+                                    })}
+                                >
                                     {formatAvailabilityValue(data.enterprise, isCloud)}
                                 </td>
                                 {currentLicense === "Developer" && (
                                     <td
-                                        className={classNames("developer", { current: currentLicense === "Developer" })}
+                                        className={classNames("developer", {
+                                            current: currentLicense === "Developer",
+                                        })}
                                     >
                                         {formatAvailabilityValue(data.enterprise, isCloud)}
                                     </td>
@@ -177,7 +183,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                     <td
                                         key={licenseType}
                                         className={classNames(licenseType.toLowerCase(), {
-                                            current:
+                                            "current bg-faded-primary":
                                                 currentLicense === licenseType ||
                                                 (currentLicense === "Community" && licenseType === "Free") ||
                                                 (currentLicense === "Enterprise" && licenseType === "Production"),
