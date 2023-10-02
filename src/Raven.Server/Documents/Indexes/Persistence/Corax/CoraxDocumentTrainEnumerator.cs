@@ -282,13 +282,14 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
                     builder.Reset();
                     _converter.SetDocument(doc.LowerId, null, enumerator.Current, _indexContext, builder);
+                    
+                    _indexingStatsScope.RecordMapSuccess();
 
                     foreach (var item in builder.Buffer)
                         yield return item;
                 } 
                 while (true);
 
-                _indexingStatsScope.RecordMapSuccess();
                 _indexingStatsScope.RecordDocumentSize(doc.Data.Size);
                 
                 // Check if we have already hit the threshold allocations.
