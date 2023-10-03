@@ -30,15 +30,32 @@ public class EntriesModificationsTests : NoDisposalNeeded
         Assert.Equal(1, entries.Updates.Count);
         Assert.Equal(2, entries.Updates.ToSpan()[0].EntryId);
     }
-    private static void AssertEntriesCase(ref EntriesModifications entries)
+    private static unsafe void AssertEntriesCase(ref EntriesModifications entries)
     {
         var additions = entries.Additions;
         var removals = entries.Removals;
 
         foreach (var add in additions.ToSpan())
-            Assert.True(0 > removals.ToSpan().BinarySearch(add));
+        {
+            bool found = false;
+            for (int i = 0; i < removals.Count; i++)
+            {
+                if (add.EntryId == removals.RawItems[i].EntryId)
+                    found = true;
+            }
+            Assert.False(found);
+        }
+
 
         foreach (var removal in removals.ToSpan())
-            Assert.True(0 > additions.ToSpan().BinarySearch(removal));
+        {
+            bool found = false;
+            for (int i = 0; i < additions.Count; i++)
+            {
+                if (removal.EntryId == additions.RawItems[i].EntryId)
+                    found = true;
+            }
+            Assert.False(found);
+        }
     }
 }
