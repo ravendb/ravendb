@@ -11,7 +11,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static FastTests.RavenTestBase;
 
 namespace SlowTests.Client
 {
@@ -21,7 +20,7 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         public async Task MissingRevisionTombstone()
         {
             var cluster = await CreateRaftCluster(2, watcherCluster: true);
@@ -78,7 +77,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.TimeSeries)]
         public async Task MissingTimeSeriesSnapshot()
         {
             var cluster = await CreateRaftCluster(2, watcherCluster: true);
@@ -139,7 +138,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Counters)]
         public async Task MissingCounterSnapshot()
         {
             var cluster = await CreateRaftCluster(2, watcherCluster: true);
