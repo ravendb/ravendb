@@ -122,6 +122,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             exception = null;
             reason = null;
             result = item;
+            string id = item.Id; // we convert the Id to string since item might get disposed
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
@@ -131,32 +132,40 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
-                    reason = $"{item.Id} is already merged";
+                    reason = $"{id} is already merged";
                     return false;
                 }
 
-                if (SubscriptionConnectionsState.IsDocumentInActiveBatch(ClusterContext, item.Id, Active))
+                if (SubscriptionConnectionsState.IsDocumentInActiveBatch(ClusterContext, id, Active))
                 {
-                    reason = $"{item.Id} exists in an active batch";
+                    reason = $"{id} exists in an active batch";
                     return false;
                 }
             }
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
             {
-                var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, item.Id, throwOnConflict: false);
-                if (ShouldFetchFromResend(item.Id, current, item.ChangeVector) == false)
+                var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, id, throwOnConflict: false);
+                if (ShouldFetchFromResend(id, current, item.ChangeVector) == false)
                 {
                     item.ChangeVector = string.Empty;
-                    reason = $"Skip {item.Id} from resend";
+                    current.Document?.Dispose();
+                    current.Tombstone?.Dispose();
+                    reason = $"Skip {id} from resend";
                     return false;
                 }
 
                 Debug.Assert(current.Document != null, "Document does not exist");
-                result.Id = current.Document.Id; // use proper casing
-                result.Data = current.Document.Data;
-                result.Etag = current.Document.Etag;
-                result.ChangeVector = current.Document.ChangeVector;
+
+                result.Dispose();
+                result = new Document()
+                {
+                    Id = current.Document.Id, // use proper casing
+                    Data = current.Document.Data,
+                    LowerId = current.Document.LowerId,
+                    Etag = current.Document.Etag,
+                    ChangeVector = current.Document.ChangeVector
+                };
             }
 
             if (Patch == null)
@@ -170,10 +179,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 if (match == false)
                 {
                     if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
-                        ItemsToRemoveFromResend.Add(item.Id);
+                        ItemsToRemoveFromResend.Add(id);
 
                     result.Data = null;
-                    reason = $"{item.Id} filtered out by criteria";
+                    reason = $"{id} filtered out by criteria";
                     return false;
                 }
                 
@@ -182,7 +191,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             catch (Exception ex)
             {
                 exception = ex;
-                reason = $"Criteria script threw exception for document id {item.Id}";
+                reason = $"Criteria script threw exception for document id {id}";
                 return false;
             }
         }

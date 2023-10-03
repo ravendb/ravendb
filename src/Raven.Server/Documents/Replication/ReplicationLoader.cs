@@ -1574,6 +1574,7 @@ namespace Raven.Server.Documents.Replication
             {
                 string[] remoteDatabaseUrls;
                 // fetch hub cluster node urls
+                // use short term request executor that doesn't execute FirstTopologyUpdate because we do not have the authentication for that at this point
                 using (var requestExecutor = RequestExecutor.CreateForShortTermUse(pullReplicationAsSink.ConnectionString.TopologyDiscoveryUrls, pullReplicationAsSink.ConnectionString.Database,
                     certificate, DocumentConventions.DefaultForServer))
                 {

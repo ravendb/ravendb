@@ -3,17 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
@@ -298,9 +293,14 @@ namespace Raven.Server.Documents.Replication
 
             SaveConflictedDocumentsAsRevisions(context, resolved.Id, incoming);
 
-            // Resolved document should generate a new change vector, since it was changed locally.
-            // In a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
-            var changeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
+            // RavenDB-20608 
+            // put the resolved document change vector (merged change vector) when resolvedToLatest == true
+            // to avoid feature conflicts on the document due to one-way external replication
+            // if this is not the case (resolvedToLatest == false), we should generate a new change vector since it was changed locally.
+            // in a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
+            var changeVector = resolvedToLatest ?
+                resolved.ChangeVector :
+                _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
 
             if (resolved.Doc == null)
             {

@@ -46,5 +46,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(64 * 1024)]
         [ConfigurationEntry("ETL.OLAP.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int? OlapMaxNumberOfExtractedDocuments { get; protected set; }
+
+        [Description("Timeout to initialize transactions for the Kafka producer")]
+        [DefaultValue(60)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("ETL.Queue.Kafka.InitTransactionsTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting KafkaInitTransactionsTimeout { get; set; }
     }
 }

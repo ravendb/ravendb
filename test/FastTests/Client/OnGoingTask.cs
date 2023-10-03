@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -7,6 +8,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -61,12 +63,16 @@ namespace FastTests.Client
             };
 
             using (var store = GetDocumentStore())
+            using (var dest = GetDocumentStore(new Options()
+               {
+                   ModifyDatabaseName = _ => "Watcher1"
+               }))
             {
                 var result = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = watcher.ConnectionStringName,
                     Database = watcher.Database,
-                    TopologyDiscoveryUrls = store.Urls
+                    TopologyDiscoveryUrls = dest.Urls
                 }));
                 Assert.NotNull(result.RaftCommandIndex);
 
@@ -75,18 +81,41 @@ namespace FastTests.Client
                 
                 var taskId = replication.TaskId;
 
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                var res = WaitForValue(() =>
+                {
+                    using (var session = dest.OpenSession())
+                    {
+                        try
+                        {
+                            return session.Load<User>("users/1") != null;
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    }
+                }, true);
+                
+                Assert.True(res);
+
                 var op = new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Replication);
                 var replicationResult = (OngoingTaskReplication)store.Maintenance.Send(op);
 
                 Assert.Equal(watcher.Database, replicationResult.DestinationDatabase);
-                Assert.Equal(watcher.Url, replicationResult.DestinationUrl);
+                Assert.Equal(dest.Urls.Single(), replicationResult.DestinationUrl);
                 Assert.Equal(watcher.Name, replicationResult.TaskName);
 
                 op = new GetOngoingTaskInfoOperation("MyExternalReplication", OngoingTaskType.Replication);
                 replicationResult = (OngoingTaskReplication)store.Maintenance.Send(op);
 
                 Assert.Equal(watcher.Database, replicationResult.DestinationDatabase);
-                Assert.Equal(watcher.Url, replicationResult.DestinationUrl);
+                Assert.Equal(dest.Urls.Single(), replicationResult.DestinationUrl);
                 Assert.Equal(taskId, replicationResult.TaskId);
             }
         }

@@ -1257,8 +1257,8 @@ namespace SlowTests.Server.Replication
                     var rev3 = await session3.Advanced.Revisions.GetMetadataForAsync("foo/bar");
 
                     Assert.True(rev3.Count == rev2.Count, $"On the fly has {rev3.Count}, while from background has {rev2.Count}");
-                    Assert.Equal(4, rev3.Count);
-                    Assert.Equal(4, rev2.Count);
+                    Assert.Equal(3, rev3.Count);
+                    Assert.Equal(3, rev2.Count);
                 }
             }
         }

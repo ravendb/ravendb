@@ -45,12 +45,12 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool IsConcurrent => _connections.FirstOrDefault()?.Strategy == SubscriptionOpeningStrategy.Concurrent;
 
-        private readonly ConcurrentSet<SubscriptionConnection> _pendingConnections = new ();
-        private readonly ConcurrentQueue<SubscriptionConnection> _recentConnections = new ();
-        private readonly ConcurrentQueue<SubscriptionConnection> _rejectedConnections = new ();
-        public IEnumerable<SubscriptionConnection> RecentConnections => _recentConnections;
-        public IEnumerable<SubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
-        public ConcurrentSet<SubscriptionConnection> PendingConnections => _pendingConnections;
+        internal ConcurrentSet<SubscriptionConnectionInfo> _pendingConnections = new ();
+        private readonly ConcurrentQueue<SubscriptionConnectionInfo> _recentConnections = new ();
+        private readonly ConcurrentQueue<SubscriptionConnectionInfo> _rejectedConnections = new ();
+        public IEnumerable<SubscriptionConnectionInfo> RecentConnections => _recentConnections;
+        public IEnumerable<SubscriptionConnectionInfo> RecentRejectedConnections => _rejectedConnections;
+        public IEnumerable<SubscriptionConnectionInfo> PendingConnections => _pendingConnections;
 
         public CancellationTokenSource CancellationTokenSource;
 
@@ -264,9 +264,11 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     while (_recentConnections.Count > _maxConcurrentConnections + 10)
                     {
-                        _recentConnections.TryDequeue(out SubscriptionConnection _);
+                        _recentConnections.TryDequeue(out SubscriptionConnectionInfo _);
                     }
-                    _recentConnections.Enqueue(incomingConnection);
+
+                    _recentConnections.Enqueue(new SubscriptionConnectionInfo(incomingConnection));
+
                     DropSingleConnection(incomingConnection);
                 });
             }
@@ -378,9 +380,10 @@ namespace Raven.Server.Documents.Subscriptions
 
             while (_rejectedConnections.Count > 10)
             {
-                _rejectedConnections.TryDequeue(out SubscriptionConnection _);
+                _rejectedConnections.TryDequeue(out SubscriptionConnectionInfo _);
             }
-            _rejectedConnections.Enqueue(connection);
+
+            _rejectedConnections.Enqueue(new SubscriptionConnectionInfo(connection));
         }
 
         public SubscriptionConnectionsDetails GetSubscriptionConnectionsDetails()
@@ -412,7 +415,6 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 connection.ConnectionException = ex;
                 connection.CancellationTokenSource.Cancel();
-                RegisterRejectedConnection(connection, ex);
             }
             catch
             {
@@ -449,7 +451,7 @@ namespace Raven.Server.Documents.Subscriptions
                 });
         }
 
-        public SubscriptionConnection MostRecentEndedConnection()
+        public SubscriptionConnectionInfo MostRecentEndedConnection()
         {
             if (_recentConnections.TryPeek(out var recentConnection))
                 return recentConnection;

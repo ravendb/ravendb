@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -35,14 +34,12 @@ using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
 using Exception = System.Exception;
@@ -68,6 +65,8 @@ namespace Raven.Server.Documents.TcpHandlers
     {
         public static long NonExistentBatch = -1;
         internal static int WaitForChangedDocumentsTimeoutInMs = 3000;
+        private static readonly int MaxBatchSizeInBytes = Constants.Size.Megabyte;
+        private static readonly int MaxBufferCapacityInBytes = 2 * MaxBatchSizeInBytes;
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
         private static readonly StringSegment CounterIncludesSegment = new StringSegment(nameof(QueryResult.CounterIncludes));
@@ -251,7 +250,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
             _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy, WorkerId);
 
-            _subscriptionConnectionsState.PendingConnections.Add(this);
+            var connectionInfo = new SubscriptionConnectionInfo(this);
+
+            _subscriptionConnectionsState._pendingConnections.Add(connectionInfo);
 
             try
             {
@@ -284,7 +285,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             finally
             {
-                _subscriptionConnectionsState.PendingConnections.TryRemove(this);
+                _subscriptionConnectionsState._pendingConnections.TryRemove(connectionInfo);
             }
         }
 
@@ -726,6 +727,13 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     AssertCloseWhenNoDocsLeft();
 
+                                    // we might wait for new documents for a long times, lets reduce the stream capacity
+                                    if (_buffer.Capacity > MaxBufferCapacityInBytes)
+                                    {
+                                        Debug.Assert(_buffer.Length <= MaxBufferCapacityInBytes, $"{_buffer.Length} <= {MaxBufferCapacityInBytes}");
+                                        _buffer.Capacity = MaxBufferCapacityInBytes;
+                                    }
+
                                     if (await WaitForChangedDocs(replyFromClientTask))
                                         continue;
                                 }
@@ -956,7 +964,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 TcpConnection._lastEtagSent = -1;
                                 // perform flush for current batch after 1000ms of running or 1 MB
-                                if (_buffer.Length > Constants.Size.Megabyte ||
+                                if (_buffer.Length > MaxBatchSizeInBytes ||
                                     sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                 {
                                     await FlushDocsToClient(writer, docsToFlush);
@@ -1215,8 +1223,18 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 RecentSubscriptionStatuses?.Clear();
 
+                _pendingConnectionScope?.Dispose();
                 _activeConnectionScope?.Dispose();
                 _connectionScope.Dispose();
+
+                try
+                {
+                   _buffer.Dispose();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
             }
         }
 
