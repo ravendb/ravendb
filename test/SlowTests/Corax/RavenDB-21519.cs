@@ -15,17 +15,51 @@ public sealed class RavenDB_21519 : RavenTestBase
     public RavenDB_21519(ITestOutputHelper output) : base(output)
     {
     }
+    
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void UpdateDocumentWithBiggerFrequencyButTheSameAsAlreadyIndexedAfterQuantization(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        
+        using (var session = store.OpenSession())
+        {
+            var results = session.Query<User>()
+                .Search(x => x.Text, "maciej")
+                .ToList();
+            session.Store(new User(TextGen(10)), "doc1");
+            session.Store(new User(TextGen(100)), "doc2");
+            session.SaveChanges();
+        }
 
-    public static IEnumerable<object[]> RandomSeeds => new[] { new object[] { Random.Shared.Next() } };
-
+        Indexes.WaitForIndexing(store);
+        
+        using (var session = store.OpenSession())
+        {
+            var prevUser = session.Load<User>("doc2");
+            prevUser.Text = TextGen(101); //changing reference, there will be update
+            session.Store(new User(TextGen(10)), "doc3");
+            session.SaveChanges();
+        }        
+        
+        Indexes.WaitForIndexing(store);
+        using (var session = store.OpenSession())
+        {
+            var results = session.Query<User>()
+                .Search(x => x.Text, "maciej")
+                .Count();
+            
+            Assert.Equal(3, results);
+        }
+        
+        
+        string TextGen(int count) => string.Join(" ", Enumerable.Range(0, count).Select(_ => "Maciej"));
+    }
+    
     [RavenTheory(RavenTestCategory.Indexes)]
     [InlineData(956465115)]
-    [MemberData(nameof(RandomSeeds))]
     public void Fuzzy(int seed)
     {
-        // Console.WriteLine(seed);
-        // Output.WriteLine($"{seed}");
-
         var random = new Random(seed);
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
 
@@ -39,7 +73,6 @@ public sealed class RavenDB_21519 : RavenTestBase
                 .ToList();
         }
 
-        var totalOperations = operationCount;
         while (operationCount-- >= 0)
         {
             Indexes.WaitForIndexing(store);
@@ -94,16 +127,7 @@ public sealed class RavenDB_21519 : RavenTestBase
 
                 }
             }
-
-            if (totalOperations - operationCount == 2)
-            {
-                WaitForUserToContinueTheTest(store);
-                Debugger.Break();
-            }
-
-            //     Console.WriteLine($"Operation no {totalOperations - operationCount} executed.");
-            //          Output.WriteLine($"Operation no {totalOperations - operationCount} executed.");
-            //     iterationRequired = totalOperations - operationCount;
+            
             session.SaveChanges();
             foreach (var newUsers in users)
                 existingIds.Add(newUsers.Id);
@@ -125,7 +149,7 @@ public sealed class RavenDB_21519 : RavenTestBase
         Update = 3
     }
 
-    internal class User
+    private class User
     {
         public User()
         {
