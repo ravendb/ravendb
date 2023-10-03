@@ -84,40 +84,43 @@ namespace SlowTests.Tests
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
                         from test in GetAssemblyTypes(assembly)
-                        where Filter(test)
-                        select test;
+                        from method in test.GetMethods()
+                        where Filter(method)
+                        select method;
 
             var array = types.ToArray();
-            const int numberToTolerate = 2695;
+            const int numberToTolerate = 8071;
             if (array.Length == numberToTolerate)
                 return;
 
-            var userMessage = $"We have detected '{array.Length}' tests file(s) that do not have {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attribute. Please check if tests that you have added have those attributes. List of test files:{Environment.NewLine}{string.Join(Environment.NewLine, array.Select(x => x.FullName))}";
+            var userMessage = $"We have detected '{array.Length}' test(s) that do not have {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attribute. Please check if tests that you have added have those attributes. List of test files:{Environment.NewLine}{string.Join(Environment.NewLine, array.Select(x => GetTestName(x)))}";
             throw new Exception(userMessage);
 
-            static bool Filter(Type test)
+            static string GetTestName(MethodInfo method)
             {
-                foreach (var method in test.GetMethods())
+                return $"{method.DeclaringType?.FullName}.{method.Name}";
+            }
+
+            static bool Filter(MethodInfo method)
+            {
+                var factAttributes = method.GetCustomAttribute(typeof(FactAttribute), false);
+
+                if (factAttributes != null)
                 {
-                    var factAttributes = method.GetCustomAttribute(typeof(FactAttribute), false);
+                    if (factAttributes.GetType() == typeof(RavenFactAttribute))
+                        return false;
 
-                    if (factAttributes != null)
-                    {
-                        if (factAttributes.GetType() == typeof(RavenFactAttribute))
-                            continue;
+                    return true;
+                }
 
-                        return true;
-                    }
+                var theoryAttributes = method.GetCustomAttribute(typeof(TheoryAttribute), false);
 
-                    var theoryAttributes = method.GetCustomAttribute(typeof(TheoryAttribute), false);
+                if (theoryAttributes != null)
+                {
+                    if (theoryAttributes.GetType() == typeof(RavenTheoryAttribute))
+                        return false;
 
-                    if (theoryAttributes != null)
-                    {
-                        if (theoryAttributes.GetType() == typeof(RavenTheoryAttribute))
-                            continue;
-
-                        return true;
-                    }
+                    return true;
                 }
 
                 return false;
