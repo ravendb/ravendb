@@ -60,7 +60,7 @@ public class RavenDB_21173 : ClusterTestBase
         }
     }
 
-    public class Doc
+    private class Doc
     {
         public string Id { get; set; }
         public int Progress { get; set; }
