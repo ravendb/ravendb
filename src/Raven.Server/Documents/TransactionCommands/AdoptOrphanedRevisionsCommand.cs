@@ -8,26 +8,19 @@ using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide;
 using Sparrow.Json.Parsing;
+using static Raven.Server.Documents.TransactionCommands.AdoptOrphanedRevisionsCommand;
 
 namespace Raven.Server.Documents.TransactionCommands
 {
-    internal class AdoptOrphanedRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand
+    internal class AdoptOrphanedRevisionsCommand : RevisionsScanningOperationCommand<AdoptOrphanedResult>
     {
-        private readonly RevisionsStorage _revisionsStorage;
-        private readonly List<string> _ids;
-        private readonly AdoptOrphanedResult _result;
-        private readonly OperationCancelToken _token;
-
         public AdoptOrphanedRevisionsCommand(
             RevisionsStorage revisionsStorage,
             List<string> ids,
             AdoptOrphanedResult result,
-            OperationCancelToken token)
+            OperationCancelToken token) : base(revisionsStorage, ids, result, token)
         {
-            _revisionsStorage = revisionsStorage;
-            _ids = ids;
-            _result = result;
-            _token = token;
+            MoreWork = false;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)

@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/revisions/adopt_orphans", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/revisions/orphaned/adopt", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task AdoptOrphans()
         {
             var token = CreateTimeLimitedBackgroundOperationToken();
