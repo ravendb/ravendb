@@ -31,9 +31,9 @@ namespace Raven.Client.Json
             }
 
 #if NETSTANDARD2_0 || NETCOREAPP2_1
-            using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
+            using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
 #else
-            await using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
+            await using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
 #endif
             {
                 await _asyncTaskWriter(gzipStream).ConfigureAwait(false);
