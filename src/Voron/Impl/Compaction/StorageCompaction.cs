@@ -12,6 +12,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Platform;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -460,9 +462,11 @@ namespace Voron.Impl.Compaction
             var copiedEntries = 0;
 
             // It is very important that these slices be allocated in the
-            // txr.Allocator, as the intermediate write transactions on
-            // the compacted environment will be destroyed between each
-            // loop.
+            // dedicated ByteStringContext, as the intermediate write transactions on
+            // the compacted environment will be destroyed between each loop and
+            // the read transaction can be closed after reaching certain scratch buffers size or
+            // 4MB allocations when running on 32-bits
+            using var lastSliceAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
             var lastSlice = Slices.BeforeAllKeys;
             long lastFixedIndex = 0L;
 
@@ -477,7 +481,6 @@ namespace Voron.Impl.Compaction
 
             while (copiedEntries < numberOfEntries)
             {
-                
                 token.ThrowIfCancellationRequested();
                 using(var innerTxr = txr.LowLevelTransaction.Environment.ReadTransaction())
                 using (var txw = compactedEnv.WriteTransaction(context))
@@ -517,7 +520,7 @@ namespace Voron.Impl.Compaction
                                 // size before a flush
                                 if (lastSlice.Equals(tvr.Key) == false && transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                                 {
-                                    lastSlice = tvr.Key.Clone(txr.Allocator);
+                                    lastSlice = tvr.Key.Clone(lastSliceAllocator);
                                     break;
                                 }
                                 innerTxr.ForgetAbout(tvr.Result.Reader.Id);
@@ -563,7 +566,8 @@ namespace Voron.Impl.Compaction
                             // size before a flush
                             if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                             {
-                                schema.Key.GetSlice(txr.Allocator, ref entry.Reader, out lastSlice);
+                                schema.Key.GetSlice(txr.Allocator, ref entry.Reader, out var slice);
+                                lastSlice = slice.Clone(lastSliceAllocator);
                                 break;
                             }
 
