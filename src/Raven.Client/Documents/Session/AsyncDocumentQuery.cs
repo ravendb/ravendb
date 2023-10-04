@@ -1067,7 +1067,7 @@ namespace Raven.Client.Documents.Session
                 FilterModeStack = new Stack<bool>(FilterModeStack),
                 Start = Start,
                 Timeout = Timeout,
-                QueryStats = QueryStats,
+                QueryStats = queryData?.QueryStatistics ?? QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 Negate = Negate,
                 DocumentIncludes = new HashSet<string>(DocumentIncludes),

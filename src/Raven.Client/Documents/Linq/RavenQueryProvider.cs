@@ -315,7 +315,8 @@ namespace Raven.Client.Documents.Linq
                 _isMapReduce,
                 OriginalQueryType,
                 _conventions,
-                IsProjectInto);
+                IsProjectInto,
+                _queryStatistics);
         }
 
         /// <summary>
