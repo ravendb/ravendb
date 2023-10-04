@@ -171,8 +171,6 @@ namespace Raven.Client.Documents.Session
 
         private string _includesAlias;
 
-        private bool _statsRequested;
-
         private TimeSpan DefaultTimeout
         {
             get
@@ -1183,7 +1181,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public void Statistics(out QueryStatistics stats)
         {
             stats = QueryStats;
-            _statsRequested = true;
+            stats.RequestedByUser = true;
         }
 
         /// <summary>
@@ -1219,7 +1217,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 QueryParameters = QueryParameters,
                 DisableCaching = DisableCaching,
                 ProjectionBehavior = ProjectionBehavior,
-                SkipStatistics = _statsRequested == false
+                SkipStatistics = QueryStats.RequestedByUser == false
             };
 
             return indexQuery;
