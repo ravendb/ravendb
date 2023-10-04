@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Http
@@ -181,6 +182,14 @@ namespace Raven.Client.Http
                     dic[node.Key] = node.Value;
                 }
                 return dic;
+            }
+        }
+
+        public override string ToString()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                return ctx.ReadObject(ToJson(), "cluster-topology").ToString();
             }
         }
 

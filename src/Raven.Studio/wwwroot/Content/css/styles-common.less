@@ -2155,6 +2155,30 @@ ul.properties {
     line-height: 1.5!important;
 }
 
+.license-restricted-badge {
+    font-weight: 600 !important;
+    letter-spacing: 0;
+    text-transform: capitalize;
+    background-color: @bg-faded-primary;
+    color: @text-faded-primary;
+}
+
+.pe-none {
+    pointer-events: none;
+}
+
+.hub-btn {
+    font-size: 0.875rem;
+    color: var(--text-color);
+    background-color: var(--panel-bg-2);
+    &:before {
+        inset: -0.1rem;
+    }
+    &:focus, &:hover {
+        background-color: var(--panel-bg-3);
+    }
+}
+
 @import "prism.less";
 @import "ace.less";
 @import "leaflet.less";

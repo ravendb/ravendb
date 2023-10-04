@@ -112,5 +112,10 @@ namespace Raven.Client.Http
 
             return nodes;
         }
+
+        public override string ToString()
+        {
+            return $"{{Url: {Url}, Database: {Database}, ClusterTag: {ClusterTag}, ServerRole: {ServerRole}}}";
+        }
     }
 }

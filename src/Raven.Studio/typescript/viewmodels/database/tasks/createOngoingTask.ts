@@ -1,12 +1,15 @@
 import eventsCollector = require("common/eventsCollector");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase"); 
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import licenseModel from "models/auth/licenseModel";
 
 class createOngoingTask extends dialogViewModelBase {
 
     view = require("views/database/tasks/createOngoingTask.html");
-
+    
+    licenseType = licenseModel.licenseStatus().Type; //TODO Get feature availability form API
+    
     newReplicationTask() {
         eventsCollector.default.reportEvent("ExternalReplication", "new");
         const url = appUrl.forEditExternalReplication(this.activeDatabase());

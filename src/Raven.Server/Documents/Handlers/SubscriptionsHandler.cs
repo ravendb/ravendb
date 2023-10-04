@@ -22,6 +22,7 @@ using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -416,26 +417,10 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(SubscriptionState.Disabled)] = x.Disabled,
                         [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
                         [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
-                        ["Connection"] = GetSubscriptionConnectionJson(x.Connection),
-                        ["Connections"] = GetSubscriptionConnectionsJson(x.Connections),
-                        ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
-                        {
-                            ["State"] = new DynamicJsonValue()
-                            {
-                                ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                ["Query"] = r.SubscriptionState.Query
-                            },
-                            ["Connection"] = GetSubscriptionConnectionJson(r)
-                        }),
-                        ["FailedConnections"] = x.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
-                        {
-                            ["State"] = new DynamicJsonValue()
-                            {
-                                ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                ["Query"] = r.SubscriptionState.Query
-                            },
-                            ["Connection"] = GetSubscriptionConnectionJson(r)
-                        }).ToList()
+                        [nameof(SubscriptionGeneralDataAndStats.Connections)] = GetSubscriptionConnectionsJson(x.Connections),
+                        [nameof(SubscriptionGeneralDataAndStats.RecentConnections)] = x.RecentConnections == null ? Array.Empty<SubscriptionConnectionInfo>() : x.RecentConnections.Select(r => r.ToJson()),
+                        [nameof(SubscriptionGeneralDataAndStats.RecentRejectedConnections)] = x.RecentRejectedConnections == null ? Array.Empty<SubscriptionConnectionInfo>() : x.RecentRejectedConnections.Select(r => r.ToJson()),
+                        [nameof(SubscriptionGeneralDataAndStats.CurrentPendingConnections)] = x.CurrentPendingConnections == null ? Array.Empty<SubscriptionConnectionInfo>() : x.CurrentPendingConnections.Select(r => r.ToJson())
                     });
 
                     writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) => c.Write(w, subscription));
