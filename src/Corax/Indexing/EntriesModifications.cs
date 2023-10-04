@@ -210,8 +210,7 @@ internal unsafe struct EntriesModifications
 
             //We've to delete exactly same item in additions and removals and delete those.
             //This is made for Set structure.
-            if (currentAdd.EntryId == currentRemoval.EntryId &&
-                EntryIdEncodings.FrequencyQuantization(currentAdd.Frequency) == EntryIdEncodings.FrequencyQuantization(currentRemoval.Frequency))
+            if (currentAdd.Equals(currentRemoval))
             {
                 if (Updates.TryPush(currentAdd) == false)
                 {
