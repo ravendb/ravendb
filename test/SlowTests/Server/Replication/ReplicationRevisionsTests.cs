@@ -22,7 +22,7 @@ namespace SlowTests.Server.Replication
         public ReplicationRevisionsTests(ITestOutputHelper output) : base(output)
         {
         }
-
+        
         [Fact]
         public async Task ReplicateRevision_WhenSourceDataFromExportAndDocDeleted_ShouldNotRecreateTheDoc()
         {

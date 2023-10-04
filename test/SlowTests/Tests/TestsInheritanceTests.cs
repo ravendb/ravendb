@@ -16,6 +16,7 @@ using Raven.TestDriver;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.Issues.RavenDB_13335;
 
 namespace SlowTests.Tests
 {
@@ -78,6 +79,54 @@ namespace SlowTests.Tests
 
             var userMessage = string.Join(Environment.NewLine, array.Select(x => x.FullName));
             throw new Exception(userMessage);
+        }
+
+        [Fact]
+        public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
+        {
+            var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
+                        from test in GetAssemblyTypes(assembly)
+                        from method in test.GetMethods()
+                        where Filter(method)
+                        select method;
+
+            var array = types.ToArray();
+            const int numberToTolerate = 8020;
+            if (array.Length == numberToTolerate)
+                return;
+
+            var userMessage = $"We have detected '{array.Length}' test(s) that do not have {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attribute. Please check if tests that you have added have those attributes. List of test files:{Environment.NewLine}{string.Join(Environment.NewLine, array.Select(x => GetTestName(x)))}";
+            throw new Exception(userMessage);
+
+            static string GetTestName(MethodInfo method)
+            {
+                return $"{method.DeclaringType?.FullName}.{method.Name}";
+            }
+
+            static bool Filter(MethodInfo method)
+            {
+                var factAttributes = method.GetCustomAttribute(typeof(FactAttribute), false);
+
+                if (factAttributes != null)
+                {
+                    if (factAttributes.GetType() == typeof(RavenFactAttribute))
+                        return false;
+
+                    return true;
+                }
+
+                var theoryAttributes = method.GetCustomAttribute(typeof(TheoryAttribute), false);
+
+                if (theoryAttributes != null)
+                {
+                    if (theoryAttributes.GetType() == typeof(RavenTheoryAttribute))
+                        return false;
+
+                    return true;
+                }
+
+                return false;
+            }
         }
 
         private IEnumerable<Assembly> GetAssemblies(Assembly assemblyToScan)
