@@ -87,5 +87,7 @@ namespace Raven.Client.Documents.Session
             ResultEtag = qr.ResultEtag;
             NodeTag = qr.NodeTag;
         }
+
+        internal bool RequestedByUser { get; set; }
     }
 }
