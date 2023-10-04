@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
@@ -12,6 +14,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
@@ -21,11 +24,41 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
+using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
+    internal static Stream GetDecompressionStream(Stream stream)
+    {
+        var b = (byte)stream.ReadByte();
+
+        return b switch
+        {
+            31 => new GZipStream(new BackupStream(stream, b), CompressionMode.Decompress),
+            40 => ZstdStream.Decompress(new BackupStream(stream, b)),
+            _ => throw new NotSupportedException()
+        };
+    }
+
+    internal static Stream GetCompressionStream(Stream stream, Raven.Server.Config.Categories.BackupConfiguration configuration)
+    {
+        switch (configuration.CompressionAlgorithm)
+        {
+            case BackupCompressionAlgorithm.None:
+                return stream;
+                break;
+            case BackupCompressionAlgorithm.Gzip:
+                return new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
+            case BackupCompressionAlgorithm.Zstd:
+                return ZstdStream.Compress(stream);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
     internal static BackupInfo GetBackupInfo(BackupInfoParameters parameters)
     {
         var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, taskId: 0L);
@@ -70,7 +103,7 @@ internal static class BackupUtils
             });
             if (nextBackup == null)
                 continue;
-            
+
             if (nextBackup.TimeSpan.Ticks < intervalUntilNextBackupInSec)
                 intervalUntilNextBackupInSec = nextBackup.TimeSpan.Ticks;
         }
@@ -163,7 +196,7 @@ internal static class BackupUtils
 
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
-        var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag );
+        var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag);
         var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
         var nowLocalTime = SystemTime.UtcNow.ToLocalTime();
         var timeSpan = nextBackupTimeLocal - nowLocalTime;
@@ -236,8 +269,8 @@ internal static class BackupUtils
             nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
 
         return delayUntil.HasValue && delayUntil.Value.ToLocalTime() > nextBackup.Value
-            ? delayUntil.Value.ToLocalTime() 
-            : nextBackup.Value;              
+            ? delayUntil.Value.ToLocalTime()
+            : nextBackup.Value;
     }
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,
@@ -290,7 +323,7 @@ internal static class BackupUtils
             };
         }
     }
-    
+
     public static PathSetting GetBackupTempPath(RavenConfiguration configuration, string dir, out PathSetting basePath)
     {
         basePath = configuration.Backup.TempPath ?? configuration.Storage.TempPath ?? configuration.Core.DataDirectory;
@@ -326,8 +359,8 @@ internal static class BackupUtils
         // we will always wake up the database for a full backup.
         // but for incremental we will wake the database only if there were changes made.
 
-        if (parameters.Configuration.Disabled || 
-            parameters.Configuration.IncrementalBackupFrequency == null && parameters.Configuration.FullBackupFrequency == null || 
+        if (parameters.Configuration.Disabled ||
+            parameters.Configuration.IncrementalBackupFrequency == null && parameters.Configuration.FullBackupFrequency == null ||
             parameters.Configuration.HasBackup() == false)
             return null;
 
@@ -594,7 +627,7 @@ internal static class BackupUtils
 
     public class EarliestIdleDatabaseActivityParameters
     {
-                public string DatabaseName { get; set; }
+        public string DatabaseName { get; set; }
 
         public DateTime? DatabaseWakeUpTimeUtc { get; set; }
 

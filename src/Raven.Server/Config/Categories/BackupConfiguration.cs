@@ -64,6 +64,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.Azure.Legacy", ConfigurationEntryScope.ServerWideOnly)]
         public bool AzureLegacy { get; set; }
 
+        [Description("Compression algorithm that is used to perform backups.")]
+        [DefaultValue(BackupCompressionAlgorithm.Zstd)]
+        [ConfigurationEntry("Backup.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public BackupCompressionAlgorithm CompressionAlgorithm { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
@@ -146,5 +151,12 @@ namespace Raven.Server.Config.Categories
 
             throw new ArgumentException($"The selected backup destination '{dest}' is not allowed in this RavenDB server. Contact the administrator for more information. Allowed backup destinations: {string.Join(", ", AllowedDestinations)}");
         }
+    }
+
+    public enum BackupCompressionAlgorithm
+    {
+        None,
+        Gzip,
+        Zstd
     }
 }

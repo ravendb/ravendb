@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -40,30 +39,33 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Smuggler.Documents
 {
     public class StreamDestination : ISmugglerDestination
     {
         private readonly Stream _stream;
-        private GZipStream _gzipStream;
+        private Stream _outputStream;
         private readonly DocumentsOperationContext _context;
         private readonly DatabaseSource _source;
+        private readonly Raven.Server.Config.Categories.BackupConfiguration _configuration;
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
 
-        public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source)
+        public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source, Raven.Server.Config.Categories.BackupConfiguration configuration)
         {
             _stream = stream;
             _context = context;
             _source = source;
+            _configuration = configuration;
         }
 
         public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
-            _gzipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
-            _writer = new AsyncBlittableJsonTextWriter(_context, _gzipStream);
+            _outputStream = BackupUtils.GetCompressionStream(_stream, _configuration);
+            _writer = new AsyncBlittableJsonTextWriter(_context, _outputStream);
             _options = options;
 
             SetupMetadataFilterMethod(_context);
@@ -77,7 +79,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _writer.WriteEndObject();
                 await _writer.DisposeAsync();
-                await _gzipStream.DisposeAsync();
+                await _outputStream.DisposeAsync();
             });
         }
 

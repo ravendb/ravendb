@@ -53,6 +53,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Util.Settings;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
@@ -1366,7 +1367,7 @@ namespace Raven.Server.Web.System
                                 onProgress(overallProgress);
                                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                                 await using (var reader = File.OpenRead(configuration.OutputFilePath))
-                                await using (var stream = new GZipStream(reader, CompressionMode.Decompress))
+                                await using (var stream = BackupUtils.GetDecompressionStream(reader))
                                 using (var source = new StreamSource(stream, context, database))
                                 {
                                     var destination = new DatabaseDestination(database);
