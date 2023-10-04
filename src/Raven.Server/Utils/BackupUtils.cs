@@ -44,18 +44,19 @@ internal static class BackupUtils
             if (read == 0)
                 throw new InvalidOperationException("Empty stream");
 
+            var backupStream = new BackupStream(stream, buffer[0]);
+
             return buffer[0] switch
             {
-                31 => new GZipStream(new BackupStream(stream, buffer[0]), CompressionMode.Decompress),
-                40 => ZstdStream.Decompress(new BackupStream(stream, buffer[0])),
-                _ => throw new NotSupportedException()
+                31 => new GZipStream(backupStream, CompressionMode.Decompress),
+                40 => ZstdStream.Decompress(backupStream),
+                _ => backupStream
             };
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
         }
-
     }
 
     internal static Stream GetCompressionStream(Stream stream, Raven.Server.Config.Categories.BackupConfiguration configuration)
