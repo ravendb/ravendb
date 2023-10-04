@@ -7,7 +7,6 @@ using System.Threading;
 using Corax.Querying;
 using Corax.Mappings;
 using Corax.Pipeline;
-using Corax.Querying;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;

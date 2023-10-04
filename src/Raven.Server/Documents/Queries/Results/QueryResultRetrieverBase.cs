@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Querying;
-using Corax.Querying;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;

@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Threading;
 using Corax.Querying;
 using Corax.Mappings;
-using Corax.Querying;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches;

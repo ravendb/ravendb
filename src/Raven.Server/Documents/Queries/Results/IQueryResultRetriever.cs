@@ -2,7 +2,6 @@
 using System.Threading;
 using Corax.Querying;
 using Corax.Mappings;
-using Corax.Querying;
 using Corax.Utils;
 using Lucene.Net.Search;
 using Lucene.Net.Store;

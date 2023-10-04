@@ -2,7 +2,6 @@ using System.IO;
 using Corax;
 using Corax.Querying;
 using Corax.Mappings;
-using Corax.Querying;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
