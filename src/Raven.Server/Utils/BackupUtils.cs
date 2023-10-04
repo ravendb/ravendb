@@ -50,7 +50,7 @@ internal static class BackupUtils
             {
                 31 => new GZipStream(backupStream, CompressionMode.Decompress),
                 40 => ZstdStream.Decompress(backupStream),
-                _ => backupStream
+                _ => throw new NotSupportedException()
             };
         }
         finally
@@ -63,9 +63,6 @@ internal static class BackupUtils
     {
         switch (configuration.CompressionAlgorithm)
         {
-            case BackupCompressionAlgorithm.None:
-                return stream;
-                break;
             case BackupCompressionAlgorithm.Gzip:
                 return new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
             case BackupCompressionAlgorithm.Zstd:

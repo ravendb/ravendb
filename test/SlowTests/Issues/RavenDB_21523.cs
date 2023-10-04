@@ -23,7 +23,6 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(BackupCompressionAlgorithm.None)]
     [InlineData(BackupCompressionAlgorithm.Gzip)]
     [InlineData(BackupCompressionAlgorithm.Zstd)]
     public async Task CanExportImport(BackupCompressionAlgorithm algorithm)
@@ -55,9 +54,6 @@ public class RavenDB_21523 : RavenTestBase
 
                 switch (algorithm)
                 {
-                    case BackupCompressionAlgorithm.None:
-                        Assert.IsType<BackupStream>(backupStream);
-                        break;
                     case BackupCompressionAlgorithm.Gzip:
                         Assert.IsType<GZipStream>(backupStream);
                         break;

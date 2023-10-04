@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
-using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
@@ -64,7 +63,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.Azure.Legacy", ConfigurationEntryScope.ServerWideOnly)]
         public bool AzureLegacy { get; set; }
 
-        [Description("Compression algorithm that is used to perform backups.")]
+        [Description("Compression algorithm that is used to perform backups and exports.")]
         [DefaultValue(BackupCompressionAlgorithm.Zstd)]
         [ConfigurationEntry("Backup.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public BackupCompressionAlgorithm CompressionAlgorithm { get; set; }
@@ -98,7 +97,7 @@ namespace Raven.Server.Config.Categories
                 throw new ArgumentException($"The backup path '{LocalRootPath.FullPath}' defined in the configuration under '{RavenConfiguration.GetKey(x => x.Backup.LocalRootPath)}' doesn't exist.");
             }
         }
-        
+
         internal void ValidateAllowedDestinations()
         {
             if (AllowedDestinations == null)
@@ -155,8 +154,7 @@ namespace Raven.Server.Config.Categories
 
     public enum BackupCompressionAlgorithm
     {
-        None,
-        Gzip,
-        Zstd
+        Zstd,
+        Gzip
     }
 }
