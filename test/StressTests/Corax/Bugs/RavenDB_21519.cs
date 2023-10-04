@@ -70,7 +70,9 @@ public class RavenDB_21519 : RavenTestBase
             Text = text;
         }
 
+#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
         public string Id;
+#pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
         public string Text;
     }
 }
