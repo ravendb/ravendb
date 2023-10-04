@@ -6,5 +6,10 @@ namespace Raven.Client.Http
     {
         public long Etag;
         public List<ServerNode> Nodes;
+
+        public override string ToString()
+        {
+            return $"{{{nameof(Nodes)}: [{string.Join(",", Nodes ?? new List<ServerNode>())}], {nameof(Etag)}: {Etag}}}";
+        }
     }
 }

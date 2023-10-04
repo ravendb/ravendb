@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Kafka;
 using Confluent.Kafka;
@@ -46,19 +47,45 @@ public class KafkaEtl : QueueEtl<KafkaItem>
 
             try
             {
-                producer.InitTransactions(TimeSpan.FromSeconds(60));
+                var sw = Stopwatch.StartNew();
+
+                do
+                {
+                    try
+                    {
+                        producer.InitTransactions(TimeSpan.FromSeconds(10)); // let's wait up to 10 second so we can check if cancellation was requested meanwhile
+                        break;
+                    }
+                    catch (KafkaRetriableException e)
+                    {
+                        if (sw.Elapsed < Database.Configuration.Etl.KafkaInitTransactionsTimeout.AsTimeSpan)
+                        {
+                            // let it retry up to configured timeout
+
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"ETL process: {Name}. Failed to init transactions for the producer instance. Already waited: {sw.Elapsed}", e);
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+
+                    CancellationToken.ThrowIfCancellationRequested();
+
+                } while (true);
             }
             catch (Exception e)
             {
+                producer.Dispose();
+
                 string msg = $" ETL process: {Name}. Failed to initialize transactions for the producer instance. " +
                              $"If you are using a single node Kafka cluster then the following settings might be required:{Environment.NewLine}" +
                              $"- transaction.state.log.replication.factor: 1 {Environment.NewLine}" +
                              "- transaction.state.log.min.isr: 1";
 
-                if (Logger.IsOperationsEnabled)
-                {
+                if (Logger.IsOperationsEnabled) 
                     Logger.Operations(msg, e);
-                }
 
                 throw new QueueLoadException(msg, e);
             }

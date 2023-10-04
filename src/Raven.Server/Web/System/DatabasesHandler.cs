@@ -220,32 +220,41 @@ namespace Raven.Server.Web.System
 
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
+                    var dbNodes = GetNodes(rawRecord.Topology.Members, ServerNode.Role.Member).Concat(GetNodes(rawRecord.Topology.Rehabs, ServerNode.Role.Rehab));
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, new DynamicJsonValue
+                        context.Write(writer,
+                            new DynamicJsonValue
+                            {
+                                [nameof(Topology.Nodes)] = new DynamicJsonArray(dbNodes),
+                                [nameof(Topology.Etag)] = rawRecord.Topology.Stamp?.Index ?? -1
+                            });
+                    }
+
+                    IEnumerable<DynamicJsonValue> GetNodes(List<string> nodes, ServerNode.Role serverRole)
+                    {
+                        foreach (var node in nodes)
                         {
-                            [nameof(Topology.Nodes)] = new DynamicJsonArray(
-                                rawRecord.Topology.Members.Select(x => new DynamicJsonValue
-                                {
-                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                    [nameof(ServerNode.ClusterTag)] = x,
-                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
-                                    [nameof(ServerNode.Database)] = rawRecord.DatabaseName
-                                })
-                                .Concat(rawRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
-                                {
-                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                    [nameof(ServerNode.ClusterTag)] = x,
-                                    [nameof(ServerNode.Database)] = rawRecord.DatabaseName,
-                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab
-                                })
-                                )
-                            ),
-                            [nameof(Topology.Etag)] = rawRecord.Topology.Stamp?.Index ?? -1
-                        });
+                            var url = GetUrl(node, clusterTopology);
+                            if (url == null)
+                                continue;
+
+                            yield return TopologyNodeToJson(node, url, name, serverRole);
+                        }
                     }
                 }
             }
+        }
+
+        private DynamicJsonValue TopologyNodeToJson(string tag, string url, string name, ServerNode.Role role)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ServerNode.Url)] = url,
+                [nameof(ServerNode.ClusterTag)] = tag,
+                [nameof(ServerNode.ServerRole)] = role,
+                [nameof(ServerNode.Database)] = name
+            };
         }
 
         private void AlertIfDocumentStoreCreationRateIsNotReasonable(string applicationIdentifier, string name)

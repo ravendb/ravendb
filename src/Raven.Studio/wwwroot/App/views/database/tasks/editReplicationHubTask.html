@@ -94,8 +94,12 @@
                                         <label for="allowHubToSink">Allow replication from Hub to Sink</label>
                                     </div>
                                     <div class="toggle">
-                                        <div data-placement="right" data-toggle="tooltip" title="Server must be secured in order to use Sink to Hub mode" data-animation="true" data-bind="visible: !$root.canDefineCertificates">
-                                            <input id="allowSinkToHub" type="checkbox" data-bind="checked: allowReplicationFromSinkToHub, disable: !$root.canDefineCertificates" />
+                                        <div data-bind="visible: !$root.canDefineCertificates" data-placement="right" data-toggle="tooltip" title="Server must be secured in order to use Sink to Hub mode" data-animation="true">
+                                            <input type="checkbox" data-bind="checked: false, disable: true" />
+                                            <label>Allow replication from Sink to Hub</label>
+                                        </div>
+                                        <div data-bind="visible: $root.canDefineCertificates">
+                                            <input id="allowSinkToHub" type="checkbox" data-bind="checked: allowReplicationFromSinkToHub" />
                                             <label for="allowSinkToHub">Allow replication from Sink to Hub</label>
                                         </div>
                                     </div>
