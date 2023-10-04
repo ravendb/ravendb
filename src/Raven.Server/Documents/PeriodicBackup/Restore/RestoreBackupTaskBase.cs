@@ -908,7 +908,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             await using (var fileStream = await GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
-            await using (var gzipStream = RavenServerBackupUtils.GetDecompressionStream(inputStream))
+            await using (var gzipStream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
             using (var source = new StreamSource(gzipStream, context, database))
             {
                 var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
@@ -956,7 +956,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         await using (var input = entry.Open())
                         await using (var inputStream = GetSnapshotInputStream(input, database.Name))
-                        await using (var uncompressed = RavenServerBackupUtils.GetDecompressionStream(inputStream))
+                        await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                         {
                             var source = new StreamSource(uncompressed, context, database);
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,

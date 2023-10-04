@@ -239,7 +239,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
 
-                await using (var stream = BackupUtils.GetDecompressionStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte)))
+                await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte)))
                 using (var token = CreateHttpRequestBoundOperationToken())
                 using (var source = new StreamSource(stream, context, Database))
                 {
@@ -318,7 +318,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         await using (var file = await getFile())
-                        await using (var stream = Utils.BackupUtils.GetDecompressionStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
+                        await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
                         using (var source = new StreamSource(stream, context, Database))
                         {
                             var destination = new DatabaseDestination(Database);
@@ -720,7 +720,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     ApplyBackwardCompatibility(options);
 
                                     var inputStream = GetInputStream(section.Body, options);
-                                    var stream = BackupUtils.GetDecompressionStream(inputStream);
+                                    var stream = await BackupUtils.GetDecompressionStreamAsync(inputStream);
                                     await DoImportInternalAsync(context, stream, options, result, onProgress, token);
                                 }
                             }

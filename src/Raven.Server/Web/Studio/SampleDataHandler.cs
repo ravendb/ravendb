@@ -77,7 +77,7 @@ namespace Raven.Server.Web.Studio
                 await using (var sampleData = typeof(SampleDataHandler).Assembly
                     .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
                 {
-                    await using (var stream = Raven.Server.Utils.BackupUtils.GetDecompressionStream(sampleData))
+                    await using (var stream = await Raven.Server.Utils.BackupUtils.GetDecompressionStreamAsync(sampleData))
                     using (var source = new StreamSource(stream, context, Database))
                     {
                         var destination = new DatabaseDestination(Database);
