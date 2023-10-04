@@ -51,7 +51,7 @@ namespace Raven.Client.Http
 
         public string LastServerVersion { get; private set; }
 
-        internal string ServerVersion
+        public string ServerVersion
         {
             get
             {
