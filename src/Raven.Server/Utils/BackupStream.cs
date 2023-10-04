@@ -19,7 +19,19 @@ public sealed class BackupStream : Stream
 
     public override void Flush()
     {
-        _inner.Flush();
+        throw new NotSupportedException();
+    }
+
+    public override int Read(Span<byte> buffer)
+    {
+        if (_hasRead == false)
+        {
+            _hasRead = true;
+            buffer[0] = _b;
+            return 1;
+        }
+
+        return _inner.Read(buffer);
     }
 
     public override int Read(byte[] buffer, int offset, int count)
