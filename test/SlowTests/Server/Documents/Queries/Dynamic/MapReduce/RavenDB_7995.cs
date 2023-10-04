@@ -24,7 +24,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     var ex = Assert.Throws<InvalidQueryException>(() => session.Advanced.DocumentQuery<User>().GroupBy("Country").SelectCount().WhereEquals("City", "London").ToList());
 
-                    Assert.Contains("Field 'City' isn't neither an aggregation operation nor part of the group by key", ex.Message);
+                    Assert.Contains("Field 'City' is neither an aggregation operation nor part of the group by key", ex.Message);
                 }
             }
         }
