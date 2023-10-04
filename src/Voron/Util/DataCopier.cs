@@ -11,7 +11,6 @@ using System.Threading;
 using Sparrow;
 using Voron.Global;
 using Voron.Impl.Journal;
-using Voron.Impl.Paging;
 
 namespace Voron.Util
 {
@@ -36,23 +35,19 @@ namespace Voron.Util
             }
         }
 
-        public void ToStream(AbstractPager src, long startPage, long numberOfPages, 
-            Stream output, Action<string> infoNotify, CancellationToken cancellationToken)
+        public static void ToStream(AbstractPager src, long startPage, long numberOfPages, Stream output, Action<string> infoNotify, CancellationToken cancellationToken)
         {
             // In case of encryption, we don't want to decrypt the data for backup, 
             // so let's work directly with the underlying encrypted data (Inner pager).
-         
-            if ((_buffer.Length % Constants.Storage.PageSize) != 0)
-                throw new ArgumentException("The buffer length must be a multiple of the page size");
 
-            var steps = _buffer.Length/ Constants.Storage.PageSize;
+            var toCopyInBytes = new Size(1, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            var steps = toCopyInBytes / Constants.Storage.PageSize;
             long totalCopied = 0;
             var toBeCopied = new Size(numberOfPages * Constants.Storage.PageSize, SizeUnit.Bytes).ToString();
             var totalSw = Stopwatch.StartNew();
             var sw = Stopwatch.StartNew();
 
             using (var tempTx = new TempPagerTransaction())
-            fixed (byte* pBuffer = _buffer)
             {
                 for (var i = startPage; i < startPage + numberOfPages; i += steps)
                 {
@@ -61,9 +56,9 @@ namespace Voron.Util
                     var pagesToCopy = (int) (i + steps > numberOfPages ? numberOfPages - i : steps);
                     src.EnsureMapped(tempTx, i, pagesToCopy);
                     var ptr = src.AcquireRawPagePointer(tempTx, i);
+
                     var copiedInBytes = pagesToCopy * Constants.Storage.PageSize;
-                    Memory.Copy(pBuffer, ptr, copiedInBytes);
-                    output.Write(_buffer, 0, copiedInBytes);
+                    output.Write(new Span<byte>(ptr, copiedInBytes));
 
                     totalCopied += copiedInBytes;
 
@@ -79,7 +74,6 @@ namespace Voron.Util
             infoNotify?.Invoke($"Finshed copying {new Size(totalCopied, SizeUnit.Bytes)}, " +
                                 $"{new Size((long)(totalCopied / totalSecElapsed), SizeUnit.Bytes)}/sec");
         }
-
 
         public void ToStream(StorageEnvironment env, JournalFile journal, long start4Kb, 
             long numberOf4KbsToCopy, Stream output, Action<string> infoNotify = null, CancellationToken cancellationToken = default)

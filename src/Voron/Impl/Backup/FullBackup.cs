@@ -97,8 +97,10 @@ namespace Voron.Impl.Backup
             try
             {
                 long allocatedPages;
+
                 var writePersistentContext = new TransactionPersistentContext(true);
                 var readPersistentContext = new TransactionPersistentContext(true);
+
                 using (env.Journal.Applicator.TakeFlushingLock()) // prevent from running JournalApplicator.UpdateDatabaseStateAfterSync() concurrently
                 using (var txw = env.NewLowLevelTransaction(writePersistentContext, TransactionFlags.ReadWrite)) // so no new journal files will be created
                 {
@@ -164,8 +166,9 @@ namespace Voron.Impl.Backup
                     using (var dataStream = dataPart.Open())
                     {
                         // now can copy everything else
-                        copier.ToStream(dataPager, 0, allocatedPages, dataStream, message => infoNotify((message, 0)), cancellationToken);
+                        DataCopier.ToStream(dataPager, 0, allocatedPages, dataStream, message => infoNotify((message, 0)), cancellationToken);
                     }
+
                     infoNotify(("Voron copy data file", 1));
                 }
 
