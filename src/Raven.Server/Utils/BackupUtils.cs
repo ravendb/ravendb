@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -31,16 +34,28 @@ namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
-    internal static Stream GetDecompressionStream(Stream stream)
+    internal static async ValueTask<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
     {
-        var b = (byte)stream.ReadByte();
+        var buffer = ArrayPool<byte>.Shared.Rent(1);
 
-        return b switch
+        try
         {
-            31 => new GZipStream(new BackupStream(stream, b), CompressionMode.Decompress),
-            40 => ZstdStream.Decompress(new BackupStream(stream, b)),
-            _ => throw new NotSupportedException()
-        };
+            var read = await stream.ReadAsync(buffer, 0, 1, token);
+            if (read == 0)
+                throw new InvalidOperationException("Empty stream");
+
+            return buffer[0] switch
+            {
+                31 => new GZipStream(new BackupStream(stream, buffer[0]), CompressionMode.Decompress),
+                40 => ZstdStream.Decompress(new BackupStream(stream, buffer[0])),
+                _ => throw new NotSupportedException()
+            };
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+
     }
 
     internal static Stream GetCompressionStream(Stream stream, Raven.Server.Config.Categories.BackupConfiguration configuration)
@@ -51,7 +66,7 @@ internal static class BackupUtils
                 return stream;
                 break;
             case BackupCompressionAlgorithm.Gzip:
-                return new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
+                return new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
             case BackupCompressionAlgorithm.Zstd:
                 return ZstdStream.Compress(stream);
             default:

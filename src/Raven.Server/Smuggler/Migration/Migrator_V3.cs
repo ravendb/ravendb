@@ -319,7 +319,7 @@ namespace Raven.Server.Smuggler.Migration
             }
 
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
-            await using (var stream = BackupUtils.GetDecompressionStream(responseStream))
+            await using (var stream = await BackupUtils.GetDecompressionStreamAsync(responseStream))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(stream, context, Parameters.Database))
             {

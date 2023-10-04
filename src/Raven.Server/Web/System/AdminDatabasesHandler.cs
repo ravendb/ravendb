@@ -1367,7 +1367,7 @@ namespace Raven.Server.Web.System
                                 onProgress(overallProgress);
                                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                                 await using (var reader = File.OpenRead(configuration.OutputFilePath))
-                                await using (var stream = BackupUtils.GetDecompressionStream(reader))
+                                await using (var stream = await BackupUtils.GetDecompressionStreamAsync(reader))
                                 using (var source = new StreamSource(stream, context, database))
                                 {
                                     var destination = new DatabaseDestination(database);
