@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using Corax.Querying;
-using Corax.Querying;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
