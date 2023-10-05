@@ -362,7 +362,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
                 {
                     await _handleStreamResponse(stream).ConfigureAwait(false);
                 }

@@ -142,7 +142,7 @@ namespace Raven.Client.Http
             if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
                 return ResponseDisposeHandling.Automatic;
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+            using (var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
             {
                 if (ResponseType == RavenCommandResponseType.Object)
                 {

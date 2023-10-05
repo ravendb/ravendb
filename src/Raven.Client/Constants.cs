@@ -97,9 +97,15 @@ namespace Raven.Client
 
                 public const string Gzip = "gzip";
 
+#if FEATURE_BROTLI_SUPPORT
                 public const string Brotli = "br";
+#endif
 
                 public const string Deflate = "deflate";
+
+#if FEATURE_ZSTD_SUPPORT
+                public const string Zstd = "zstd";
+#endif
             }
         }
 
@@ -193,7 +199,7 @@ namespace Raven.Client
             {
                 internal const string IndexingStaticSearchEngineType = "Indexing.Static.SearchEngineType";
             }
-            
+
             public const string ClientId = "Configuration/Client";
 
             public const string StudioId = "Configuration/Studio";
@@ -280,7 +286,7 @@ namespace Raven.Client
                 public const string Refresh = "@refresh";
 
                 public const string ArchiveAt = "@archive-at";
-                
+
                 public const string Archived = "@archived";
 
                 public const string HasValue = "HasValue";
@@ -364,15 +370,15 @@ namespace Raven.Client
                         private JavaScript()
                         {
                         }
-                        
+
                         public const string ValuePropertyName = "$value";
-                        
+
                         public const string OptionsPropertyName = "$options";
-                        
+
                         public const string NamePropertyName = "$name";
-                        
+
                         public const string SpatialPropertyName = "$spatial";
-                        
+
                         public const string BoostPropertyName = "$boost";
                     }
                 }

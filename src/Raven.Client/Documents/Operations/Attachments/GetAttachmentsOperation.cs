@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
                 var state = new JsonParserState();
-                Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                Stream stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
 
                 using (context.GetMemoryBuffer(out var buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "attachments/receive"))

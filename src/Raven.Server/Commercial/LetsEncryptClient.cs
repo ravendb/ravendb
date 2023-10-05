@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Utils;
 using Sparrow.Platform;
@@ -158,13 +159,13 @@ namespace Raven.Server.Commercial
 
             if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
             {
-                var problemJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var problemJson = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
                 var problem = JsonConvert.DeserializeObject<Problem>(problemJson);
                 problem.RawJson = problemJson;
                 throw new LetsEncryptException(problem, response);
             }
 
-            var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var responseText = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
 
             if (typeof(TResult) == typeof(string)
                 && response.Content.Headers.ContentType.MediaType == "application/pem-certificate-chain")
@@ -233,7 +234,7 @@ namespace Raven.Server.Commercial
 
                 if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
                 {
-                    var problemJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var problemJson = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
 
                     if (retries-- > 0)
                     {

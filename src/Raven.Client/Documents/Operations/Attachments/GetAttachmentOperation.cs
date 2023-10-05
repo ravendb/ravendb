@@ -114,7 +114,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     DocumentId = _documentId
                 };
 
-                var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
                 var streamReader = new StreamWithTimeout(responseStream);
                 var stream = new AttachmentStream(response, streamReader);
 

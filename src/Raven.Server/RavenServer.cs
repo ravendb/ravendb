@@ -247,16 +247,27 @@ namespace Raven.Server
                             services.Configure<ResponseCompressionOptions>(options =>
                             {
                                 options.EnableForHttps = Configuration.Http.AllowResponseCompressionOverHttps;
+#if FEATURE_ZSTD_SUPPORT
+                                options.Providers.Add(typeof(ZstdCompressionProvider));
+#endif
+#if FEATURE_BROTLI_SUPPORT
                                 options.Providers.Add(typeof(BrotliCompressionProvider));
+#endif
                                 options.Providers.Add(typeof(GzipCompressionProvider));
                                 options.Providers.Add(typeof(DeflateCompressionProvider));
                             });
 
+#if FEATURE_ZSTD_SUPPORT
+                            services.Configure<ZstdCompressionProviderOptions>(options => { });
+#endif
+
+#if FEATURE_BROTLI_SUPPORT
+                            services.Configure<BrotliCompressionProviderOptions>(options => { options.Level = Configuration.Http.BrotliResponseCompressionLevel; });
+#endif
+
                             services.Configure<GzipCompressionProviderOptions>(options => { options.Level = Configuration.Http.GzipResponseCompressionLevel; });
 
                             services.Configure<DeflateCompressionProviderOptions>(options => { options.Level = Configuration.Http.DeflateResponseCompressionLevel; });
-
-                            services.Configure<BrotliCompressionProviderOptions>(options => { options.Level = Configuration.Http.BrotliResponseCompressionLevel; });
 
                             services.AddResponseCompression();
                         }
@@ -1316,7 +1327,7 @@ namespace Raven.Server
                 throw new InvalidOperationException($"Failed to validate user's license '{userLicense}' as part of Let's Encrypt certificate refresh", e);
             }
 
-            var userDomainsResult = JsonConvert.DeserializeObject<UserDomainsResult>(await response.Content.ReadAsStringAsync());
+            var userDomainsResult = JsonConvert.DeserializeObject<UserDomainsResult>(await response.Content.ReadAsStringWithZstdSupportAsync());
 
             string usedRootDomain = null;
             foreach (var rd in userDomainsResult.RootDomains)

@@ -575,7 +575,7 @@ namespace Raven.Server.Commercial
 
         public static async Task<LeasedLicense> ConvertResponseToLeasedLicense(HttpResponseMessage httpResponseMessage)
         {
-            var leasedLicenseAsStream = await httpResponseMessage.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            var leasedLicenseAsStream = await httpResponseMessage.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var json = await context.ReadForMemoryAsync(leasedLicenseAsStream, "leased license info");
@@ -678,7 +678,7 @@ namespace Raven.Server.Commercial
                     if (license != null)
                         return license;
 
-                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var responseString = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
                     AddLeaseLicenseError($"status code: {response.StatusCode}, response: {responseString}");
                     return null;
                 }
@@ -782,7 +782,7 @@ namespace Raven.Server.Commercial
                     new StringContent(JsonConvert.SerializeObject(license), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
 
-            var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var responseString = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
                 throw new InvalidOperationException($"Failed to renew license, error: {responseString}");
 
@@ -1842,7 +1842,7 @@ namespace Raven.Server.Commercial
 
                     if (response.IsSuccessStatusCode == false)
                     {
-                        var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        var responseString = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
 
                         var message = $"Couldn't get license support info, response: {responseString}, status code: {response.StatusCode}";
                         if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
@@ -1851,7 +1851,7 @@ namespace Raven.Server.Commercial
                         return GetDefaultLicenseSupportInfo();
                     }
 
-                    var licenseSupportStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                    var licenseSupportStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
                     using (var context = JsonOperationContext.ShortTermSingleUse())
                     {
                         var json = await context.ReadForMemoryAsync(licenseSupportStream, "license support info");

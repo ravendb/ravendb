@@ -312,7 +312,7 @@ namespace Raven.Client.Documents.Conventions
 
             _httpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
 #if FEATURE_BROTLI_SUPPORT
-            _httpCompressionAlgorithm = HttpCompressionAlgorithm.Brotli; // temp
+            _httpCompressionAlgorithm = HttpCompressionAlgorithm.Zstd; // temp
 #endif
         }
 
