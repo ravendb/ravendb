@@ -240,7 +240,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                 <Row className="gy-sm">
                     <TaskItem
                         title="Create new Backup task"
-                        href={appUrl.forEditPeriodicBackupTask(db)}
+                        href={appUrl.forEditPeriodicBackupTask(db, "OngoingTasks")}
                         className="backup"
                         target="PeriodicBackup"
                     >
