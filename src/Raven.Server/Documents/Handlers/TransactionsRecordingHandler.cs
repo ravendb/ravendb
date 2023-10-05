@@ -68,14 +68,8 @@ namespace Raven.Server.Documents.Handlers
 
                                 if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition))
                                 {
-                                    if (section.Headers.ContainsKey(Constants.Headers.ContentEncoding) && section.Headers[Constants.Headers.ContentEncoding] == "gzip")
-                                    {
-                                        await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
-                                        {
-                                            return await DoReplayAsync(progress, gzipStream, token.Token);
-                                        }
-                                    }
-                                    return await DoReplayAsync(progress, section.Body, token.Token);
+                                    await using (var stream = GetDecompressedStream(section.Body, section.Headers))
+                                        return await DoReplayAsync(progress, stream, token.Token);
                                 }
                             }
 

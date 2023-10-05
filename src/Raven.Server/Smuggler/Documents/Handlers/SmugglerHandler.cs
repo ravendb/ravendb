@@ -483,17 +483,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             continue;
 
                                         BlittableJsonReaderObject blittableJson;
-                                        if (section.Headers.ContainsKey(Constants.Headers.ContentEncoding) && section.Headers[Constants.Headers.ContentEncoding] == "gzip")
-                                        {
-                                            await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
-                                            {
-                                                blittableJson = await context.ReadForMemoryAsync(gzipStream, Constants.Smuggler.CsvImportOptions);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            blittableJson = await context.ReadForMemoryAsync(section.Body, Constants.Smuggler.CsvImportOptions);
-                                        }
+
+                                        await using (var stream = GetDecompressedStream(section.Body, section.Headers))
+                                            blittableJson = await context.ReadForMemoryAsync(stream, Constants.Smuggler.CsvImportOptions);
 
                                         try
                                         {
@@ -526,17 +518,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                                         var options = new DatabaseSmugglerOptionsServerSide();
 
-                                        if (section.Headers.ContainsKey(Constants.Headers.ContentEncoding) && section.Headers[Constants.Headers.ContentEncoding] == "gzip")
-                                        {
-                                            await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
-                                            {
-                                                await ImportDocumentsFromCsvStreamAsync(gzipStream, context, collection, options, result, onProgress, token, csvConfig);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            await ImportDocumentsFromCsvStreamAsync(section.Body, context, collection, options, result, onProgress, token, csvConfig);
-                                        }
+                                        await using (var stream = GetDecompressedStream(section.Body, section.Headers))
+                                            await ImportDocumentsFromCsvStreamAsync(stream, context, collection, options, result, onProgress, token, csvConfig);
                                     }
                                 }
                             }
