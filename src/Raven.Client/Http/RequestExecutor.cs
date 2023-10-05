@@ -33,6 +33,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Client.Http
 {
@@ -1247,6 +1248,11 @@ namespace Raven.Client.Http
             if (_disableClientConfigurationUpdates == false)
                 request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
 
+#if FEATURE_ZSTD_SUPPORT
+            if (Conventions.UseHttpCompression && Conventions.HttpCompressionAlgorithm == HttpCompressionAlgorithm.Zstd)
+                request.Headers.TryAddWithoutValidation(Constants.Headers.AcceptEncoding, Constants.Headers.Encodings.Zstd);
+#endif
+
             if (sessionInfo?.LastClusterTransactionIndex != null)
             {
                 request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.LastClusterTransactionIndex.ToString());
@@ -1653,7 +1659,7 @@ namespace Raven.Client.Http
         {
             try
             {
-                return (await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                return (await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -1671,6 +1677,10 @@ namespace Raven.Client.Http
 #if FEATURE_BROTLI_SUPPORT
             if (encoding != null && encoding.Contains(Constants.Headers.Encodings.Brotli))
                 return new BrotliStream(stream, CompressionMode.Decompress);
+#endif
+#if FEATURE_ZSTD_SUPPORT
+            if (encoding != null && encoding.Contains(Constants.Headers.Encodings.Zstd))
+                return ZstdStream.Decompress(stream);
 #endif
             if (encoding != null && encoding.Contains(Constants.Headers.Encodings.Deflate))
                 return new DeflateStream(stream, CompressionMode.Decompress);
@@ -2005,7 +2015,7 @@ namespace Raven.Client.Http
         {
             if (response != null)
             {
-                var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
                 var ms = new MemoryStream(); // todo: have a pool of those
                 await stream.CopyToAsync(ms).ConfigureAwait(false);
                 try

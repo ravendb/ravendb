@@ -16,6 +16,7 @@
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
     <TieredPGO>false</TieredPGO>
+    <DefineConstants>$(DefineConstants);FEATURE_BROTLI_SUPPORT;FEATURE_ZSTD_SUPPORT</DefineConstants>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />

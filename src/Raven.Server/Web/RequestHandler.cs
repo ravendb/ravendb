@@ -39,6 +39,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web
 {
@@ -149,8 +150,14 @@ namespace Raven.Server.Web
             {
                 case HttpCompressionAlgorithm.Gzip:
                     return GetGzipStream(stream, CompressionMode.Decompress);
+#if FEATURE_BROTLI_SUPPORT
                 case HttpCompressionAlgorithm.Brotli:
                     return new BrotliStream(stream, CompressionMode.Decompress);
+#endif
+#if FEATURE_ZSTD_SUPPORT
+                case HttpCompressionAlgorithm.Zstd:
+                    return ZstdStream.Decompress(stream);
+#endif
                 case null:
                     return stream;
                 default:
@@ -187,8 +194,15 @@ namespace Raven.Server.Web
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var encoding in acceptedContentEncodings)
             {
+#if FEATURE_ZSTD_SUPPORT
+                if (encoding.Contains(Constants.Headers.Encodings.Zstd))
+                    return HttpCompressionAlgorithm.Zstd;
+#endif
+
+#if FEATURE_BROTLI_SUPPORT
                 if (encoding.Contains(Constants.Headers.Encodings.Brotli))
                     return HttpCompressionAlgorithm.Brotli;
+#endif
 
                 if (encoding.Contains(Constants.Headers.Encodings.Gzip))
                     return HttpCompressionAlgorithm.Gzip;

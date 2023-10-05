@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Http;
 using Sparrow.Json;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.BulkInsert;
 
@@ -149,6 +150,11 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
 #if FEATURE_BROTLI_SUPPORT
                 case HttpCompressionAlgorithm.Brotli:
                     stream = new BrotliStream(stream, compressionLevel, leaveOpen: true);
+                    break;
+#endif
+#if FEATURE_ZSTD_SUPPORT
+                case HttpCompressionAlgorithm.Zstd:
+                    stream = ZstdStream.Compress(stream);
                     break;
 #endif
                 default:

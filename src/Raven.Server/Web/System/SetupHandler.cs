@@ -16,6 +16,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
 using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -61,7 +62,7 @@ namespace Raven.Server.Web.System
                         var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
 
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
-                        responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        responseString = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
 
                         if ((int)response.StatusCode >= 500 && (int)response.StatusCode <= 599)
                         {
@@ -149,7 +150,7 @@ namespace Raven.Server.Web.System
                         var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
-                        responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        responseString = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
 
                         if (response.IsSuccessStatusCode == false)
                         {

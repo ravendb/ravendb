@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Sparrow.Utils;
 
 namespace Raven.Client.Json
 {
@@ -48,6 +49,14 @@ namespace Raven.Client.Json
                     await using (var brotliStream = new BrotliStream(stream, CompressionLevel.Fastest, leaveOpen: true))
                     {
                         await _asyncTaskWriter(brotliStream).ConfigureAwait(false);
+                    }
+                    break;
+#endif
+#if FEATURE_ZSTD_SUPPORT
+                case HttpCompressionAlgorithm.Zstd:
+                    await using (var zstdStream = ZstdStream.Compress(stream))
+                    {
+                        await _asyncTaskWriter(zstdStream).ConfigureAwait(false);
                     }
                     break;
 #endif

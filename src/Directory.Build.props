@@ -26,7 +26,7 @@
     <NoWarn>CS0419,CS1591,CS1572,CS1573,CS1574,CS1723</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0'">
-    <DefineConstants>$(DefineConstants);NETCOREAPP;FEATURE_DATEONLY_TIMEONLY_SUPPORT;FEATURE_BROTLI_SUPPORT</DefineConstants>
+    <DefineConstants>$(DefineConstants);NETCOREAPP;FEATURE_DATEONLY_TIMEONLY_SUPPORT;FEATURE_BROTLI_SUPPORT;FEATURE_ZSTD_SUPPORT</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
     <IsAnyOS>true</IsAnyOS>

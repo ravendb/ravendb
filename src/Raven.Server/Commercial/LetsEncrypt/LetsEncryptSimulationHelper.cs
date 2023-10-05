@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Client;
+using Raven.Client.Http;
 using Raven.Server.Config;
 using Raven.Server.Https;
 using Raven.Server.ServerWide;
@@ -146,7 +147,7 @@ public sealed class LetsEncryptSimulationHelper
                         {
                             response = await client.GetAsync("/are-you-there?", cts.Token);
                             response.EnsureSuccessStatusCode();
-                            result = await response.Content.ReadAsStringAsync(cts.Token);
+                            result = await response.Content.ReadAsStringWithZstdSupportAsync(cts.Token);
                             if (result != guid)
                             {
                                 throw new InvalidOperationException($"Expected result guid: {guid} but got {result}.");

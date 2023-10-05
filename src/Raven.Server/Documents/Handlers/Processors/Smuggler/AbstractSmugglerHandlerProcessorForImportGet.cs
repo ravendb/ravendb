@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Handlers;
 using Raven.Server.Utils;
@@ -66,7 +67,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
                     {
                         Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(HttpContext.Request.ContentType) }
                     });
-                return await msg.Content.ReadAsStreamAsync();
+                return await msg.Content.ReadAsStreamWithZstdSupportAsync();
             }
 
             return await SmugglerHandler.HttpClient.GetStreamAsync(url);
