@@ -146,7 +146,7 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
                 case HttpCompressionAlgorithm.Gzip:
                     stream = new GZipStream(stream, compressionLevel, leaveOpen: true);
                     break;
-#if NET6_0_OR_GREATER
+#if FEATURE_BROTLI_SUPPORT
                 case HttpCompressionAlgorithm.Brotli:
                     stream = new BrotliStream(stream, compressionLevel, leaveOpen: true);
                     break;
