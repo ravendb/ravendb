@@ -670,8 +670,8 @@
         <div class="help-block" data-bind="validationMessage: orchestrators"></div>
     </div>
     
-    <div>
-        <table class="table table-striped">
+    <div class="table-responsive">
+        <table class="table table-striped m-0">
             <thead>
                 <tr>
                     <th>&nbsp;</th>
@@ -709,9 +709,9 @@
             <!-- /ko -->
             </tbody>
         </table>
-        <div data-bind="validationElement: shardTopology">
-            <div class="help-block" data-bind="validationMessage: shardTopology"></div>
-        </div>
+    </div>
+    <div data-bind="validationElement: shardTopology">
+        <div class="help-block" data-bind="validationMessage: shardTopology"></div>
     </div>
 </script>
 
