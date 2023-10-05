@@ -39,7 +39,7 @@ namespace Raven.Server.Web.System
                         [nameof(BuildNumber.BuildVersion)] = ServerVersion.Build,
                         [nameof(BuildNumber.ProductVersion)] = ServerVersion.Version,
                         [nameof(BuildNumber.CommitHash)] = ServerVersion.CommitHash,
-                        [nameof(BuildNumber.FullVersion)] = ServerVersion.FullVersion
+                        [nameof(BuildNumber.FullVersion)] = "5.4.111"
                     });
                 }
 
