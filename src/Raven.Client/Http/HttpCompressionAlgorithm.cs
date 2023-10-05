@@ -17,10 +17,10 @@ internal static class HttpCompressionAlgorithmExtensions
         switch (compressionAlgorithm)
         {
             case HttpCompressionAlgorithm.Gzip:
-                return "gzip";
+                return Constants.Headers.Encodings.Gzip;
 #if FEATURE_BROTLI_SUPPORT
             case HttpCompressionAlgorithm.Brotli:
-                return "br";
+                return Constants.Headers.Encodings.Brotli;
 #endif
             default:
                 throw new ArgumentOutOfRangeException(nameof(compressionAlgorithm), compressionAlgorithm, null);

@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Server.Extensions;
 using Raven.Server.Utils;
 
@@ -120,8 +121,8 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
                 httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
                 httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "UTF-8" });
 
-                httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
-                httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+                httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue(Constants.Headers.Encodings.Deflate));
+                httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue(Constants.Headers.Encodings.Gzip));
 
                 if (string.IsNullOrEmpty(apiKey) == false)
                     httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Api-Key", apiKey);

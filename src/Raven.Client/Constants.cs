@@ -88,6 +88,19 @@ namespace Raven.Client
             public const string AttachmentSize = "Attachment-Size";
 
             internal const string DatabaseMissing = "Database-Missing";
+
+            internal class Encodings
+            {
+                private Encodings()
+                {
+                }
+
+                public const string Gzip = "gzip";
+
+                public const string Brotli = "br";
+
+                public const string Deflate = "deflate";
+            }
         }
 
         public sealed class Platform

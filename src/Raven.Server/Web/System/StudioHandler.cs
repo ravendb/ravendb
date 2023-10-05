@@ -442,7 +442,7 @@ namespace Raven.Server.Web.System
             byte[] contentsToServe;
             if (ClientAcceptsGzipResponse() && metadata.CompressedContents != null)
             {
-                HttpContext.Response.Headers[Constants.Headers.ContentEncoding] = "gzip";
+                HttpContext.Response.Headers[Constants.Headers.ContentEncoding] = Constants.Headers.Encodings.Gzip;
                 contentsToServe = metadata.CompressedContents;
             }
             else
