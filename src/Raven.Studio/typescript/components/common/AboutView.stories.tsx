@@ -23,14 +23,16 @@ interface FloatingButtonProps {
     licenseType: Raven.Server.Commercial.LicenseType;
     isCloud: boolean;
     isEnabled: boolean;
+    isIsv: boolean;
 }
 
-const FloatingButton = ({ isCloud, licenseType, isEnabled }: FloatingButtonProps) => {
+const FloatingButton = ({ isCloud, licenseType, isEnabled, isIsv }: FloatingButtonProps) => {
     const { license } = mockStore;
 
     license.with_License({
         Type: licenseType,
         IsCloud: isCloud,
+        IsIsv: isIsv,
     });
 
     const availabilityData = getLicenseAvailabilityData({
@@ -188,6 +190,7 @@ export const Floating = boundCopy(FloatingButton, {
     licenseType: "Community",
     isCloud: false,
     isEnabled: false,
+    isIsv: false,
 });
 
 export const Anchored = boundCopy(AnchoredHub, {

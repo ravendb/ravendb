@@ -34,6 +34,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
 
     const currentLicense = useAppSelector(licenseSelectors.licenseType);
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+    const isIsv = useAppSelector(licenseSelectors.statusValue("IsIsv"));
 
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
@@ -62,9 +63,14 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                         <tr>
                             <th className="p-0"></th>
                             {licenseTypes.map((licenseType) => {
-                                if (currentLicense === "Essential" && licenseType === "Community") {
+                                if (isIsv && licenseType === "Community") {
                                     return (
-                                        <th key="Essential" className="community current bg-faded-primary">
+                                        <th
+                                            key="Essential"
+                                            className={classNames("community", {
+                                                "current bg-faded-primary": currentLicense === "Essential",
+                                            })}
+                                        >
                                             <Icon icon="circle-filled" className="license-dot" /> Essential
                                         </th>
                                     );
