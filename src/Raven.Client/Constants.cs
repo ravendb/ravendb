@@ -69,6 +69,8 @@ namespace Raven.Client
 
             public const string ContentEncoding = "Content-Encoding";
 
+            public const string AcceptEncoding = "Accept-Encoding";
+
             public const string ContentDisposition = "Content-Disposition";
 
             public const string ContentType = "Content-Type";

@@ -309,6 +309,8 @@ namespace Raven.Client.Documents.Conventions
             _createHttpClient = handler => new HttpClient(handler);
 
             _disposeCertificate = true;
+
+            _httpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
         }
 
         private bool _frozen;
@@ -356,6 +358,7 @@ namespace Raven.Client.Documents.Conventions
         private Size _maxHttpCacheSize;
         private bool? _useHttpDecompression;
         private bool? _useHttpCompression;
+        private HttpCompressionAlgorithm _httpCompressionAlgorithm;
         private Func<MemberInfo, string> _propertyNameConverter;
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private Func<MemberInfo, bool> _shouldApplyPropertyNameConverter;
@@ -612,6 +615,16 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
+        public HttpCompressionAlgorithm HttpCompressionAlgorithm
+        {
+            get => _httpCompressionAlgorithm;
+            set
+            {
+                AssertNotFrozen();
+                _httpCompressionAlgorithm = value;
+            }
+        }
+
         /// <summary>
         /// Use gzip compression when sending content of HTTP request
         /// </summary>
@@ -628,7 +641,7 @@ namespace Raven.Client.Documents.Conventions
         internal bool HasExplicitlySetDecompressionUsage => _useHttpDecompression.HasValue;
 
         /// <summary>
-        /// Can accept compressed HTTP response content and will use gzip/deflate decompression methods
+        /// Can accept compressed HTTP response content and will use brotli/gzip/deflate decompression methods
         /// </summary>
         public bool UseHttpDecompression
         {

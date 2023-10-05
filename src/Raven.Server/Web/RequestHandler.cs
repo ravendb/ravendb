@@ -141,11 +141,21 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Stream GetDecompressedStream(Stream stream, IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers)
+        private static Stream GetDecompressedStream(Stream stream, IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers)
         {
-            if (HeadersAllowGzip(headers, Constants.Headers.ContentEncoding) == false)
-                return stream;
-            return GetGzipStream(stream, CompressionMode.Decompress);
+            var httpCompressionAlgorithm = GetHttpCompressionAlgorithmFromHeaders(headers, Constants.Headers.ContentEncoding);
+
+            switch (httpCompressionAlgorithm)
+            {
+                case HttpCompressionAlgorithm.Gzip:
+                    return GetGzipStream(stream, CompressionMode.Decompress);
+                case HttpCompressionAlgorithm.Brotli:
+                    return new BrotliStream(stream, CompressionMode.Decompress);
+                case null:
+                    return stream;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -166,23 +176,25 @@ namespace Raven.Server.Web
                 Server.Configuration.Http.UseResponseCompression &&
                 (HttpContext.Request.IsHttps == false ||
                     (HttpContext.Request.IsHttps && Server.Configuration.Http.AllowResponseCompressionOverHttps)) &&
-                HeadersAllowGzip(HttpContext.Request.Headers, "Accept-Encoding");
+                GetHttpCompressionAlgorithmFromHeaders(HttpContext.Request.Headers, Constants.Headers.AcceptEncoding) == HttpCompressionAlgorithm.Gzip;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HeadersAllowGzip(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
+        private static HttpCompressionAlgorithm? GetHttpCompressionAlgorithmFromHeaders(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
         {
             if (headers.TryGetValue(encodingsHeader, out Microsoft.Extensions.Primitives.StringValues acceptedContentEncodings) == false)
-                return false;
+                return null;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var encoding in acceptedContentEncodings)
             {
+                if (encoding.Contains("br"))
+                    return HttpCompressionAlgorithm.Brotli;
+
                 if (encoding.Contains("gzip"))
-                    return true;
+                    return HttpCompressionAlgorithm.Gzip;
             }
 
-            return false;
+            return null;
         }
 
         public static void ValidateNodeForAddingToDb(string databaseName, string node, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, RavenServer server, string baseMessage = null)
