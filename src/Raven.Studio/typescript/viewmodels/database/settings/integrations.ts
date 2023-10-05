@@ -17,6 +17,7 @@ class integrations extends shardViewModelBase {
 
     view = require("views/database/settings/integrations.html");
     
+    isDataFetched = ko.observable<boolean>(false);
     postgreSqlCredentials = ko.observableArray<string>([]);
     
     editedPostgreSqlCredentials = ko.observable<postgreSqlCredentialsModel>(null);
@@ -61,7 +62,7 @@ class integrations extends shardViewModelBase {
         });
     }
 
-    activate(args: any) {
+    async activate(args: any) {
         super.activate(args);
 
         if (!this.canUseIntegrations) {
@@ -76,9 +77,14 @@ class integrations extends shardViewModelBase {
             return ;
         }  
         
-        return $.when<any>(this.getAllIntegrationsCredentials(), this.getPostgreSqlSupportStatus());
+        try {
+            await Promise.all([this.getAllIntegrationsCredentials(), this.getPostgreSqlSupportStatus()]);
+            this.isDataFetched(true);
+        } catch (_) {
+            this.isDataFetched(false);
+        }
     }
-    
+
     private getPostgreSqlSupportStatus(): JQueryPromise<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlServerStatus> {
         return new getIntegrationsPostgreSqlSupportCommand(this.db)
             .execute()
