@@ -141,7 +141,7 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Stream GetDecompressedStream(Stream stream, IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers)
+        internal Stream GetDecompressedStream(Stream stream, IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers)
         {
             var httpCompressionAlgorithm = GetHttpCompressionAlgorithmFromHeaders(headers, Constants.Headers.ContentEncoding);
 

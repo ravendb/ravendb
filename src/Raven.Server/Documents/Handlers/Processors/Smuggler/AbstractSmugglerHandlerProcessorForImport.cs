@@ -9,6 +9,7 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Http;
 using Raven.Client.Properties;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
@@ -101,18 +102,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                                     if (key != Constants.Smuggler.ImportOptions)
                                         continue;
 
-
-                                    if (section.Headers.ContainsKey(Constants.Headers.ContentEncoding) && section.Headers[Constants.Headers.ContentEncoding] == "gzip")
-                                    {
-                                        await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
-                                        {
-                                            blittableJson = await context.ReadForMemoryAsync(gzipStream, Constants.Smuggler.ImportOptions);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        blittableJson = await context.ReadForMemoryAsync(section.Body, Constants.Smuggler.ImportOptions);
-                                    }
+                                    await using (var stream = RequestHandler.GetDecompressedStream(section.Body, section.Headers))
+                                        blittableJson = await context.ReadForMemoryAsync(stream, Constants.Smuggler.ImportOptions);
 
                                     IgnoreDatabaseItemTypesIfCurrentVersionIsOlderThenClientVersion(context, ref blittableJson);
 
