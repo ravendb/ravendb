@@ -187,10 +187,10 @@ namespace Raven.Server.Web
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var encoding in acceptedContentEncodings)
             {
-                if (encoding.Contains("br"))
+                if (encoding.Contains(Constants.Headers.Encodings.Brotli))
                     return HttpCompressionAlgorithm.Brotli;
 
-                if (encoding.Contains("gzip"))
+                if (encoding.Contains(Constants.Headers.Encodings.Gzip))
                     return HttpCompressionAlgorithm.Gzip;
             }
 
