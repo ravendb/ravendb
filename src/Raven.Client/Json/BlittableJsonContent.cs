@@ -20,21 +20,7 @@ namespace Raven.Client.Json
             _conventions = conventions;
 
             if (_conventions.UseHttpCompression)
-            {
-                switch (_conventions.HttpCompressionAlgorithm)
-                {
-                    case HttpCompressionAlgorithm.Gzip:
-                        Headers.ContentEncoding.Add("gzip");
-                        break;
-#if FEATURE_BROTLI_SUPPORT
-                    case HttpCompressionAlgorithm.Brotli:
-                        Headers.ContentEncoding.Add("br");
-                        break;
-#endif
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
+                Headers.ContentEncoding.Add(_conventions.HttpCompressionAlgorithm.GetContentEncoding());
         }
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)

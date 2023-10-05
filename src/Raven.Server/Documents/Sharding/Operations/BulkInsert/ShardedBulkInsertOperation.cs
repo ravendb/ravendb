@@ -96,18 +96,7 @@ internal sealed class ShardedBulkInsertOperation : BulkInsertOperationBase<Shard
     {
         if (CompressionLevel != CompressionLevel.NoCompression)
         {
-            string contentEncoding;
-            switch (DocumentConventions.DefaultForServer.HttpCompressionAlgorithm)
-            {
-                case HttpCompressionAlgorithm.Gzip:
-                    contentEncoding = "gzip";
-                    break;
-                case HttpCompressionAlgorithm.Brotli:
-                    contentEncoding = "br";
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            var contentEncoding = DocumentConventions.DefaultForServer.HttpCompressionAlgorithm.GetContentEncoding();
 
             foreach (var shardNumber in _databaseContext.ShardsTopology.Keys)
             {

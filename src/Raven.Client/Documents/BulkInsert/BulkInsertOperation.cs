@@ -417,21 +417,7 @@ namespace Raven.Client.Documents.BulkInsert
         protected override async Task EnsureStreamAsync()
         {
             if (CompressionLevel != CompressionLevel.NoCompression)
-            {
-                switch (_requestExecutor.Conventions.HttpCompressionAlgorithm)
-                {
-                    case HttpCompressionAlgorithm.Gzip:
-                        _writer.StreamExposer.Headers.ContentEncoding.Add("gzip");
-                        break;
-#if FEATURE_BROTLI_SUPPORT
-                    case HttpCompressionAlgorithm.Brotli:
-                        _writer.StreamExposer.Headers.ContentEncoding.Add("br");
-                        break;
-#endif
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
+                _writer.StreamExposer.Headers.ContentEncoding.Add(_requestExecutor.Conventions.HttpCompressionAlgorithm.GetContentEncoding());
 
             var bulkCommand = new BulkInsertCommand(
                 OperationId,
