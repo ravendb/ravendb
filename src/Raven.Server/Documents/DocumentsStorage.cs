@@ -1559,6 +1559,7 @@ namespace Raven.Server.Documents
                 ValidateId(context, lowerId, type: DocumentChangeTypes.Delete, newFlags);
 
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
+            var fromResharding = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding);
 
             var local = GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
             var modifiedTicks = GetOrCreateLastModifiedTicks(lastModifiedTicks);
@@ -1680,12 +1681,11 @@ namespace Raven.Server.Documents
 
                 EnsureLastEtagIsPersisted(context, etag);
 
+                var tombstoneChangeVector = context.GetChangeVector(changeVector ?? local.Tombstone?.ChangeVector);
+                var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
                 if (fromReplication == false)
                 {
-                    var tombstoneChangeVector = context.GetChangeVector(changeVector ?? local.Tombstone?.ChangeVector);
-                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
-
                     if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                     {
                         var shouldVersion = DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
@@ -1712,12 +1712,6 @@ namespace Raven.Server.Documents
                         {
                             revisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
                         }
-
-                        if (revisionsStorage.Configuration != null)
-                        {
-                            revisionsStorage.Delete(context, id, lowerId, collectionName, tombstoneChangeVector,
-                                modifiedTicks, nonPersistentFlags, newFlags);
-                        }
                     }
 
                     if (flags.Contain(DocumentFlags.HasAttachments))
@@ -1728,6 +1722,12 @@ namespace Raven.Server.Documents
 
                     if (flags.Contain(DocumentFlags.HasTimeSeries))
                         TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName, flags);
+                }
+                
+                if (fromResharding && revisionsStorage.Configuration != null)
+                {
+                    revisionsStorage.Delete(context, id, lowerId, collectionName, tombstoneChangeVector,
+                        modifiedTicks, nonPersistentFlags, newFlags);
                 }
 
                 table.Delete(doc.StorageId);

@@ -549,7 +549,7 @@ namespace Raven.Server.Documents.Revisions
 
         private DeleteOldRevisionsResult DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, CollectionName collectionName,
             RevisionsCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags, ChangeVector changeVector, long lastModifiedTicks,
-            bool documentDeleted, bool skipForceCreated)
+            bool documentDeleted, bool skipForceCreated, DocumentFlags flags = DocumentFlags.None)
         {
             var result = new DeleteOldRevisionsResult();
             result.PreviousCount = GetRevisionsCount(context, lowerIdPrefix);
@@ -580,7 +580,7 @@ namespace Raven.Server.Documents.Revisions
                     configuration, result.PreviousCount, result);
             }
 
-            var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result, tombstoneFlags: DocumentFlags.None);
+            var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result, tombstoneFlags: flags);
 
             IncrementCountOfRevisions(context, lowerIdPrefix, -deleted);
             result.Remaining = result.PreviousCount - deleted;
@@ -1312,6 +1312,7 @@ namespace Raven.Server.Documents.Revisions
             flags |= DocumentFlags.HasRevisions;
 
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
+            var fromResharding = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding);
 
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
             if (configuration.Disabled && hadRevisions == false && fromReplication == false)
@@ -1330,11 +1331,11 @@ namespace Raven.Server.Documents.Revisions
 
                 using var _ = GetKeyPrefix(context, lowerId, out Slice lowerIdPrefix);
 
-                if (configuration.PurgeOnDelete && fromReplication == false)
+                if (configuration.PurgeOnDelete && (fromResharding || fromReplication == false))
                 {
                     DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration,
                         NonPersistentDocumentFlags.None,
-                        changeVector, lastModifiedTicks, documentDeleted: true, skipForceCreated: false);
+                        changeVector, lastModifiedTicks, documentDeleted: true, skipForceCreated: false, flags);
                     return;
                 }
 

@@ -305,6 +305,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
+            protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => NonPersistentDocumentFlags.FromReplication;
+
             protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
             {
                 if (docId != null)
@@ -524,7 +526,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     }
                                 }
 
-                                var nonPersistentFlags = NonPersistentDocumentFlags.FromReplication;
+                                var nonPersistentFlags = GetNonPersistentDocumentFlags();
                                 if (doc.Flags.Contain(DocumentFlags.Revision))
                                 {
                                     database.DocumentsStorage.RevisionsStorage.Put(
