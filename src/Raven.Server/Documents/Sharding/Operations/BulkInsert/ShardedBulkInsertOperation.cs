@@ -107,7 +107,7 @@ internal sealed class ShardedBulkInsertOperation : BulkInsertOperationBase<Shard
 
         foreach(var writer in _writers.Values)
         {
-            await writer.EnsureStreamAsync(CompressionLevel);
+            await writer.EnsureStreamAsync(HttpCompressionAlgorithm.Gzip, CompressionLevel);
         }
     }
 
