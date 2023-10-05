@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Http;
 using Sparrow.Json;
 using Sparrow.Threading;
 
@@ -134,13 +135,25 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         }
     }
 
-    public async Task EnsureStreamAsync(CompressionLevel compression)
+    public async Task EnsureStreamAsync(HttpCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
     {
         var stream = await StreamExposer.OutputStream.ConfigureAwait(false);
 
-        if (compression != CompressionLevel.NoCompression)
+        if (compressionLevel != CompressionLevel.NoCompression)
         {
-            stream = new GZipStream(stream, compression, leaveOpen: true);
+            switch (compressionAlgorithm)
+            {
+                case HttpCompressionAlgorithm.Gzip:
+                    stream = new GZipStream(stream, compressionLevel, leaveOpen: true);
+                    break;
+#if NET6_0_OR_GREATER
+                case HttpCompressionAlgorithm.Brotli:
+                    stream = new BrotliStream(stream, compressionLevel, leaveOpen: true);
+                    break;
+#endif
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(compressionAlgorithm), compressionAlgorithm, null);
+            }
         }
 
         _requestBodyStream = stream;
