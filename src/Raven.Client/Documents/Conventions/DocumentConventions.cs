@@ -311,6 +311,9 @@ namespace Raven.Client.Documents.Conventions
             _disposeCertificate = true;
 
             _httpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+#if FEATURE_BROTLI_SUPPORT
+            _httpCompressionAlgorithm = HttpCompressionAlgorithm.Brotli; // temp
+#endif
         }
 
         private bool _frozen;
