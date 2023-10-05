@@ -1670,6 +1670,10 @@ namespace Raven.Client.Http
                 return new GZipStream(stream, CompressionMode.Decompress);
             if (encoding != null && encoding.Contains("deflate"))
                 return new DeflateStream(stream, CompressionMode.Decompress);
+#if NET6_0_OR_GREATER
+            if (encoding != null && encoding.Contains("br"))
+                return new BrotliStream(stream, CompressionMode.Decompress);
+#endif
 
             return serverStream;
         }
@@ -2072,7 +2076,11 @@ namespace Raven.Client.Http
             {
                 httpMessageHandler.AutomaticDecompression =
                     useHttpDecompression ?
-                        DecompressionMethods.GZip | DecompressionMethods.Deflate
+                        DecompressionMethods.GZip
+                        | DecompressionMethods.Deflate
+#if NET6_0_OR_GREATER
+                        | DecompressionMethods.Brotli
+#endif
                         : DecompressionMethods.None;
             }
             else if (useHttpDecompression && hasExplicitlySetDecompressionUsage)

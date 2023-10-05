@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
 
 namespace Raven.Client.Json
 {
@@ -19,7 +20,21 @@ namespace Raven.Client.Json
             _conventions = conventions;
 
             if (_conventions.UseHttpCompression)
-                Headers.ContentEncoding.Add("gzip");
+            {
+                switch (_conventions.HttpCompressionAlgorithm)
+                {
+                    case HttpCompressionAlgorithm.Gzip:
+                        Headers.ContentEncoding.Add("gzip");
+                        break;
+#if NET6_0_OR_GREATER
+                    case HttpCompressionAlgorithm.Brotli:
+                        Headers.ContentEncoding.Add("br");
+                        break;
+#endif
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
         }
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -30,14 +45,31 @@ namespace Raven.Client.Json
                 return;
             }
 
-#if NETSTANDARD2_0 || NETCOREAPP2_1
-            using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
-#else
-            await using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
-#endif
+            switch (_conventions.HttpCompressionAlgorithm)
             {
-                await _asyncTaskWriter(gzipStream).ConfigureAwait(false);
+                case HttpCompressionAlgorithm.Gzip:
+#if NETSTANDARD2_0 || NETCOREAPP2_1
+                    using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
+#else
+                    await using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
+#endif
+                    {
+                        await _asyncTaskWriter(gzipStream).ConfigureAwait(false);
+                    }
+                    break;
+#if NET6_0_OR_GREATER
+                case HttpCompressionAlgorithm.Brotli:
+                    await using (var brotliStream = new BrotliStream(stream, CompressionLevel.Fastest, leaveOpen: true))
+                    {
+                        await _asyncTaskWriter(brotliStream).ConfigureAwait(false);
+                    }
+                    break;
+#endif
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
+
+
         }
 
         protected override bool TryComputeLength(out long length)
