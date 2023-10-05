@@ -8,7 +8,7 @@ namespace Sparrow.Json
     public abstract unsafe class BlittableJsonReaderBase
     {
         protected BlittableJsonReaderObject _parent;
-        protected byte* _mem;
+        protected internal byte* _mem;
         protected internal JsonOperationContext _context;
 
         protected BlittableJsonReaderBase(JsonOperationContext context)
