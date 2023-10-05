@@ -4,6 +4,7 @@ import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import { DatabaseSharedInfo } from "components/models/databases";
+import { EditPeriodicBackupTaskSourceView } from "components/models/common";
 
 class appUrl {
 
@@ -41,7 +42,7 @@ class appUrl {
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         editReplicationHub: (taskId?: number) => ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase(), taskId)),
         editReplicationSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase(), taskId)),
-        editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
+        editPeriodicBackupTask: (sourceView: EditPeriodicBackupTaskSourceView, taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), sourceView, taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
         editSqlEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId)),
@@ -596,10 +597,11 @@ class appUrl {
         return "#databases/tasks/editReplicationSinkTask?" + databasePart + taskPart;
     }
 
-    static forEditPeriodicBackupTask(db: database, taskId?: number): string {
+    static forEditPeriodicBackupTask(db: database, sourceView: EditPeriodicBackupTaskSourceView,taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
+        const sourceViewPart = "&sourceView=" + sourceView;
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editPeriodicBackupTask?" + databasePart + taskPart;
+        return "#databases/tasks/editPeriodicBackupTask?" + databasePart + sourceViewPart + taskPart;
     }
     
     static forEditManualBackup(db: database): string {
