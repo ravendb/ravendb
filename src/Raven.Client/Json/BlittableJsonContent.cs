@@ -26,7 +26,7 @@ namespace Raven.Client.Json
                     case HttpCompressionAlgorithm.Gzip:
                         Headers.ContentEncoding.Add("gzip");
                         break;
-#if NET6_0_OR_GREATER
+#if FEATURE_BROTLI_SUPPORT
                     case HttpCompressionAlgorithm.Brotli:
                         Headers.ContentEncoding.Add("br");
                         break;
@@ -57,7 +57,7 @@ namespace Raven.Client.Json
                         await _asyncTaskWriter(gzipStream).ConfigureAwait(false);
                     }
                     break;
-#if NET6_0_OR_GREATER
+#if FEATURE_BROTLI_SUPPORT
                 case HttpCompressionAlgorithm.Brotli:
                     await using (var brotliStream = new BrotliStream(stream, CompressionLevel.Fastest, leaveOpen: true))
                     {

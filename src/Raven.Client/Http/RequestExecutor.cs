@@ -1668,7 +1668,7 @@ namespace Raven.Client.Http
             var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
             if (encoding != null && encoding.Contains("gzip"))
                 return new GZipStream(stream, CompressionMode.Decompress);
-#if NET6_0_OR_GREATER
+#if FEATURE_BROTLI_SUPPORT
             if (encoding != null && encoding.Contains("br"))
                 return new BrotliStream(stream, CompressionMode.Decompress);
 #endif

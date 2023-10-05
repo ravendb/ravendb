@@ -423,7 +423,7 @@ namespace Raven.Client.Documents.BulkInsert
                     case HttpCompressionAlgorithm.Gzip:
                         _writer.StreamExposer.Headers.ContentEncoding.Add("gzip");
                         break;
-#if NET6_0_OR_GREATER
+#if FEATURE_BROTLI_SUPPORT
                     case HttpCompressionAlgorithm.Brotli:
                         _writer.StreamExposer.Headers.ContentEncoding.Add("br");
                         break;
