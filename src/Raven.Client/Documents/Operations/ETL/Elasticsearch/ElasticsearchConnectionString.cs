@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
@@ -12,7 +13,8 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         public Authentication Authentication;
 
         public override ConnectionStringType Type => ConnectionStringType.ElasticSearch;
-
+        
+        [Obsolete("Elasticsearch compatibility isn't required anymore to connect with Elasticsearch server v8.x.")]
         public bool EnableCompatibilityMode { get; set; }
 
         protected override void ValidateImpl(ref List<string> errors)
