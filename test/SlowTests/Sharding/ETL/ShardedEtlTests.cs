@@ -7,9 +7,11 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.IndexManagement;
+using Elastic.Transport.Products.Elasticsearch;
 using FastTests;
 using FastTests.Client;
-using Nest;
 using Parquet;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -1568,8 +1570,8 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 EnsureNonStaleElasticResults(client);
 
-                var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrderIndexName)));
+                var orderLinesCount = client.Count<object>(c => c.Indices(OrderLinesIndexName));
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -1587,8 +1589,8 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 EnsureNonStaleElasticResults(client);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderIndexName)));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -1634,7 +1636,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 var ordersCount = await WaitForValueAsync(async () =>
                 {
                     EnsureNonStaleElasticResults(client);
-                    return (await client.CountAsync<object>(c => c.Index(OrderIndexName))).Count;
+                    return (await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderIndexName)))).Count;
                 }, expectedVal: numberOfOrders, timeout: 60_000);
 
                 Assert.True(ordersCount == numberOfOrders, await AddDebugInfoOnFailure(store, numberOfOrders, ordersCount));
@@ -1642,7 +1644,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 var orderLinesCount = await WaitForValueAsync(async () =>
                 {
                     EnsureNonStaleElasticResults(client);
-                    return (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
+                    return (await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)))).Count;
                 }, expectedVal: numberOfOrders * numberOfLinesPerOrder, timeout: 60_000);
 
                 Assert.True(orderLinesCount == numberOfOrders * numberOfLinesPerOrder, await AddDebugInfoOnFailure(store, numberOfOrders * numberOfLinesPerOrder, orderLinesCount));
@@ -1660,7 +1662,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 var ordersCountAfterDelete = await WaitForValueAsync(async () =>
                 {
                     EnsureNonStaleElasticResults(client);
-                    return (await client.CountAsync<object>(c => c.Index(OrderIndexName))).Count;
+                    return (await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderIndexName)))).Count;
                 }, expectedVal: 0, timeout: 60_000);
 
                 Assert.True(ordersCountAfterDelete == 0, await AddDebugInfoOnFailure(store, 0, ordersCountAfterDelete));
@@ -1668,7 +1670,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 var orderLinesCountAfterDelete = await WaitForValueAsync(async () =>
                 {
                     EnsureNonStaleElasticResults(client);
-                    return (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
+                    return (await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)))).Count;
                 }, expectedVal: 0, timeout: 60_000);
 
                 Assert.True(orderLinesCountAfterDelete == 0, await AddDebugInfoOnFailure(store, 0, orderLinesCountAfterDelete));
@@ -2255,7 +2257,7 @@ loadToAddresses(this.Address);
             };
         }
 
-        private IDisposable GetElasticClient(out ElasticClient client)
+        private IDisposable GetElasticClient(out ElasticsearchClient client)
         {
             var localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
 
@@ -2267,12 +2269,24 @@ loadToAddresses(this.Address);
             });
         }
 
-        private static void CleanupIndexes(ElasticClient client)
+        private static void CleanupIndexes(ElasticsearchClient client)
         {
-            var response = client.Indices.Delete(Indices.All);
+            var indices = client.Indices.Get(new GetIndexRequestDescriptor(Indices.All));
+            foreach (var indexName in indices.Indices.Keys)
+            {
+                var response = client.Indices.Delete(Indices.Index(indexName));
+                
+                if (response.IsValidResponse)
+                    continue;
+                
+                response.TryGetOriginalException(out var originalException);
+                response.TryGetElasticsearchServerError(out var elasticsearchServerError);
+                throw new InvalidOperationException($"Failed to delete elasticsearch index '{indexName}'. Elasticsearch Server Error: {elasticsearchServerError.Error}",
+                    originalException);
+            }
         }
 
-        private static void EnsureNonStaleElasticResults(ElasticClient client)
+        private static void EnsureNonStaleElasticResults(ElasticsearchClient client)
         {
             client.Indices.Refresh(new RefreshRequest(Indices.All));
         }

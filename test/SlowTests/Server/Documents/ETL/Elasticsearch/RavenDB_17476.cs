@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using Orders;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -67,11 +68,11 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
-                Assert.True(ordersCount.IsValid);
-                Assert.True(orderLinesCount.IsValid);
+                Assert.True(ordersCount.IsValidResponse);
+                Assert.True(orderLinesCount.IsValidResponse);
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -87,11 +88,11 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
-                Assert.True(ordersCount.IsValid);
-                Assert.True(orderLinesCount.IsValid);
+                Assert.True(ordersCount.IsValidResponse);
+                Assert.True(orderLinesCount.IsValidResponse);
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);

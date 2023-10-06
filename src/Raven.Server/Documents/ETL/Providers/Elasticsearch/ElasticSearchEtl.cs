@@ -4,8 +4,11 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
-using Elasticsearch.Net;
-using Nest;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.IndexManagement;
+using Elastic.Clients.Elasticsearch.Mapping;
+using Elastic.Clients.Elasticsearch.QueryDsl;
+using Elastic.Transport.Products.Elasticsearch;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -19,7 +22,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
@@ -49,7 +51,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
         protected override bool ShouldTrackAttachmentTombstones() => false;
 
-        private ElasticClient _client;
+        private ElasticsearchClient _client;
 
         protected override EtlStatsScope CreateScope(EtlRunStats stats)
         {
@@ -103,7 +105,10 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             int count = 0;
 
             _client ??= ElasticSearchHelper.CreateClient(Configuration.Connection);
-
+            
+            if (_client.SourceSerializer is BlittableJsonElasticSerializer elasticSerializer)
+                elasticSerializer.Context = context;
+            
             foreach (var index in records)
             {
                 string indexName = index.IndexName.ToLower();
@@ -113,36 +118,28 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 if (index.InsertOnlyMode == false)
                     count += DeleteByQueryOnIndexIdProperty(index);
 
-                if (index.Inserts.Count > 0)
+                if (index.Inserts.Count == 0)
                 {
-                    var streamHandler = PostData.StreamHandler(index.Inserts, (inserts, stream) =>
-                    {
-                        foreach (ElasticSearchItem insert in inserts)
-                        {
-                            if (insert.TransformationResult == null)
-                                continue;
-
-                            stream.Write(IndexBulkActionBytes);
-
-                            using (var json = EnsureLowerCasedIndexIdProperty(context, insert.TransformationResult, index))
-                            using (var writer = new BlittableJsonTextWriter(context, stream))
-                            {
-                                writer.WriteNewLine();
-                                writer.WriteObject(json);
-                                writer.WriteNewLine();
-                            }
-
-                            count++;
-                        }
-                    }, (i, s, token) => throw new NotSupportedException("We don't use async bulk method"));
-
-                    
-                    var bulkIndexResponse = _client.LowLevel.Bulk<BulkResponse>(indexName, streamHandler, new BulkRequestParameters { Refresh = Elasticsearch.Net.Refresh.WaitFor});
-
-                    if (bulkIndexResponse.IsValid == false)
-                        ThrowElasticSearchLoadException($"Failed to index data to '{indexName}' index", bulkIndexResponse.ServerError, bulkIndexResponse.OriginalException,
-                            bulkIndexResponse.DebugInformation);
+                    continue; // we avoid requesting bulk without body (with no create clauses), it causes an error  
                 }
+
+                var bulkRequestDescriptor = new BulkRequestDescriptor().Index(indexName).Refresh(Elastic.Clients.Elasticsearch.Refresh.WaitFor);
+                foreach (var insert in index.Inserts.Where(insert => insert.TransformationResult != null))
+                {
+                    var json = EnsureLowerCasedIndexIdProperty(context, insert.TransformationResult, index);
+                    count++;
+                    bulkRequestDescriptor.Create(json);
+                }
+                
+                var bulkIndexResponse = _client.Bulk(bulkRequestDescriptor);
+
+                if (bulkIndexResponse.IsValidResponse)
+                    continue;
+                
+                bulkIndexResponse.TryGetOriginalException(out var originalException);
+                bulkIndexResponse.TryGetElasticsearchServerError(out var serverError);
+                ThrowElasticSearchLoadException($"Failed to index data to '{indexName}' index", serverError, originalException,
+                    bulkIndexResponse.DebugInformation);
             }
 
             return count;
@@ -179,27 +176,30 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         {
             string indexName = index.IndexName.ToLower();
 
-            var idsToDelete = new List<string>();
-
+            var idsToDelete = new List<FieldValue>();
             foreach (ElasticSearchItem delete in index.Deletes)
             {
-                idsToDelete.Add(LowerCaseDocumentIdProperty(delete.DocumentId));
+                var lowerCasedId = LowerCaseDocumentIdProperty(delete.DocumentId);
+                idsToDelete.Add(FieldValue.String(lowerCasedId));
             }
 
-            var deleteResponse = _client.DeleteByQuery<string>(d => d
-                .Index(indexName)
+            var deleteResponse = _client.DeleteByQuery<string>(Indices.Index(indexName), d => d
                 .Refresh()
                 .Query(q => q
                     .Terms(p => p
                         .Field(index.DocumentIdProperty)
-                        .Terms((IEnumerable<string>)idsToDelete))
+                        .Terms(new TermsQueryField(idsToDelete)))
                 )
             );
 
-            if (deleteResponse.IsValid == false)
+            if (deleteResponse.IsValidResponse == false)
+            {
+                deleteResponse.TryGetOriginalException(out var originalException);
+                deleteResponse.TryGetElasticsearchServerError(out var elasticsearchServerError);
                 ThrowElasticSearchLoadException($"Failed to delete by query from index '{index}'. Documents IDs: {string.Join(',', idsToDelete)}",
-                    deleteResponse.ServerError, deleteResponse.OriginalException, deleteResponse.DebugInformation);
-
+                    elasticsearchServerError, originalException, deleteResponse.DebugInformation);
+            }
+            
             return (int)deleteResponse.Deleted;
         }
 
@@ -207,13 +207,13 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         {
             if (_existingIndexes.Contains(indexName) == false)
             {
-                var indexResponse = _client.Indices.Get(new GetIndexDescriptor(Indices.Index(indexName)));
+                var indexResponse = _client.Indices.Get(new GetIndexRequestDescriptor(Indices.Index(indexName)));
 
                 if (indexResponse.Indices.TryGetValue(indexName, out var state))
                 {
                     var mappingsProperties = state.Mappings.Properties;
 
-                    if (mappingsProperties.TryGetValue(new PropertyName(index.DocumentIdProperty), out var propertyDefinition) == false)
+                    if (mappingsProperties.TryGetProperty(new PropertyName(index.DocumentIdProperty), out var propertyDefinition) == false)
                         throw new ElasticSearchLoadException(
                             $"The index '{indexName}' doesn't contain the mapping for '{index.DocumentIdProperty}' property. " +
                             "This property is meant to store RavenDB document ID so it needs to be defined as a non-analyzed field, with type 'keyword' to avoid having full-text-search on it.");
@@ -235,19 +235,18 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         private void CreateDefaultIndex(string indexName, ElasticSearchIndexWithRecords index)
         {
             var response = _client.Indices.Create(indexName, c => c
-                .Map(m => m
-                    .Properties(p => p
-                        .Keyword(t => t
-                            .Name(index.DocumentIdProperty)))));
+                .Mappings(m => m
+                    .Properties<KeywordPropertyDescriptor<object>>(p => p
+                        .Keyword(index.DocumentIdProperty))));
 
             // The request made it to the server but something went wrong in ElasticSearch (query parsing exception, non-existent index, etc)
-            if (response.ServerError != null)
+            if (response.TryGetElasticsearchServerError(out var elasticsearchServerError))
                 throw new ElasticSearchLoadException(
-                    $"Failed to create '{indexName}' index. Error: {response.ServerError.Error}. Debug Information: {response.DebugInformation}");
+                    $"Failed to create '{indexName}' index. Error: {elasticsearchServerError}. Debug Information: {response.DebugInformation}");
 
             // ElasticSearch error occurred or a connection error (the server could not be reached, request timed out, etc)
-            if (response.OriginalException != null)
-                throw new ElasticSearchLoadException($"Failed to create '{indexName}' index. Debug Information: {response.DebugInformation}", response.OriginalException);
+            if (response.TryGetOriginalException(out var originalException))
+                throw new ElasticSearchLoadException($"Failed to create '{indexName}' index. Debug Information: {response.DebugInformation}", originalException);
         }
 
         internal static string LowerCaseDocumentIdProperty(LazyStringValue id)
@@ -256,7 +255,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         }
 
         [DoesNotReturn]
-        private void ThrowElasticSearchLoadException(string message, ServerError serverError, Exception originalException, string debugInformation)
+        private void ThrowElasticSearchLoadException(string message, ElasticsearchServerError serverError, Exception originalException, string debugInformation)
         {
             if (serverError != null)
                 message += $". Server error: {serverError}";
