@@ -51,7 +51,6 @@ namespace Corax.Querying.Matches
         }
 
         string DebugView => Inspect().ToString();
- //       public bool RequireSorting => _inner.DoNotSortResults()
 
         internal sealed class FunctionTable
         {

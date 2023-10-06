@@ -244,9 +244,12 @@ public static class CoraxQueryBuilder
                 var maxTermToScan = builderParameters.Take switch
                 {
                     < 0 => int.MaxValue, // meaning, take all
-                    int.MaxValue => int.MaxValue, // avoid overflow
-                    var take => take + 1
+                    // We cannot apply this optimization when we are returning statistics (RavenDB-21525).
+                    var take when builderParameters.Query.SkipStatistics => (long)take + 1, 
+                    int.MaxValue => (long)int.MaxValue + 1, // avoid overflow
+                    _ => int.MaxValue
                 };
+
                 // We have no where clause and a sort by index, can just scan over the relevant index if there is a single order by clause
                 // if we have multiple clauses, we'll get the first $TAKE+1 terms from the index, then sort just those, leading to the same
                 // behavior, but far faster

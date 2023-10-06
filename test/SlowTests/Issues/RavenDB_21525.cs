@@ -17,12 +17,11 @@ public class RavenDB_21525 : RavenTestBase
     {
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public async Task OrderByWithPaginationVsUnordered(Options options)
-    {
-        int size = 10_000;
 
+    [RavenTheory(RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task OrderByWithPaginationVsUnordered(Options options, int size = 10000)
+    {
         using (var store = GetDocumentStore(options))
         {
             using (var bulkInsert = store.BulkInsert())
@@ -51,6 +50,8 @@ public class RavenDB_21525 : RavenTestBase
                         .Customize(i => i.WaitForNonStaleResults().NoCaching())
                         .ToList();
 
+                    Assert.Equal(resultsOrdered.Count, resultsUnordered.Count);
+
                     long totalOrdered = orderedStats.TotalResults;
                     long totalUnordered = unorderedStats.TotalResults;
                     Assert.Equal(totalUnordered, totalOrdered);
@@ -72,11 +73,13 @@ public class RavenDB_21525 : RavenTestBase
                         .Customize(i => i.WaitForNonStaleResults().NoCaching())
                         .ToListAsync();
 
+                    Assert.Equal(resultsOrdered.Count, resultsUnordered.Count);
+
                     long totalOrdered = orderedStats.TotalResults;
                     long totalUnordered = unorderedStats.TotalResults;
                     Assert.Equal(totalUnordered, totalOrdered);
                 }
-                
+
             }
         }
     }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
+using Sparrow;
 
 namespace Voron.Data.CompactTrees;
 
@@ -12,17 +14,44 @@ unsafe partial class CompactTree
         public static void WriteCommit(CompactTree tree)
         {
 #if ENABLE_COMPACT_DUMPER
-            using var writer = File.AppendText(tree.Name.ToString());
+            using var writer = File.AppendText(tree._inner.Name.ToString());
             writer.WriteLine("###");
 #endif
         }
 
         [Conditional("ENABLE_COMPACT_DUMPER")]
-        public static void WriteAddition(CompactTree tree, ReadOnlySpan<byte> key, long value)
+        public static void WriteAddition(CompactTree tree, ref CompactKeyLookup lookup, long value)
         {
 #if ENABLE_COMPACT_DUMPER
-            using var writer = File.AppendText(tree.Name.ToString());
-            writer.WriteLine($"+{Encodings.Utf8.GetString(key)}|{value}");
+            using var writer = File.AppendText(tree._inner.Name.ToString());
+            writer.WriteLine($"+{Encodings.Utf8.GetString(lookup.Key.Decoded())}|{value}");
+#endif
+        }
+
+        [Conditional("ENABLE_COMPACT_DUMPER")]
+        public static void WriteBulkSet(CompactTree tree, ref CompactKeyLookup lookup, long value)
+        {
+#if ENABLE_COMPACT_DUMPER
+            using var writer = File.AppendText(tree._inner.Name.ToString());
+            writer.WriteLine($"*{Encodings.Utf8.GetString(lookup.Key.Decoded())}|{value}");
+#endif
+        }
+
+        [Conditional("ENABLE_COMPACT_DUMPER")]
+        public static void WriteRemoval(CompactTree tree, ref CompactKeyLookup lookup, long oldValue)
+        {
+#if ENABLE_COMPACT_DUMPER
+            using var writer = File.AppendText(tree._inner.Name.ToString());
+            writer.WriteLine($"-{Encodings.Utf8.GetString(lookup.Key.Decoded())}|{oldValue}");
+#endif
+        }
+
+        [Conditional("ENABLE_COMPACT_DUMPER")]
+        public static void WriteBulkRemoval(CompactTree tree, ref CompactKeyLookup lookup, long oldValue)
+        {
+#if ENABLE_COMPACT_DUMPER
+            using var writer = File.AppendText(tree._inner.Name.ToString());
+            writer.WriteLine($"/{Encodings.Utf8.GetString(lookup.Key.Decoded())}|{oldValue}");
 #endif
         }
     }
