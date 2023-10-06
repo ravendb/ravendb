@@ -142,7 +142,11 @@ namespace Raven.Client.Http
             if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
                 return ResponseDisposeHandling.Automatic;
 
+#if NETSTANDARD2_0
             using (var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
+#else
+            await using (var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
+#endif
             {
                 if (ResponseType == RavenCommandResponseType.Object)
                 {
@@ -152,7 +156,7 @@ namespace Raven.Client.Http
 
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
-                    using (var stream = new StreamWithTimeout(responseStream))
+                    await using (var stream = new StreamWithTimeout(responseStream))
                     {
                         var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
                         if (cache != null) //precaution
@@ -165,8 +169,12 @@ namespace Raven.Client.Http
                 }
 
                 // We do not cache the stream response.
+#if NETSTANDARD2_0
                 using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
-                using (var stream = new StreamWithTimeout(uncompressedStream))
+#else
+                await using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
+#endif
+                await using (var stream = new StreamWithTimeout(uncompressedStream))
                     SetResponseRaw(response, stream, context);
             }
             return ResponseDisposeHandling.Automatic;

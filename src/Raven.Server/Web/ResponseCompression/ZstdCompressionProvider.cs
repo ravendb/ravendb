@@ -25,7 +25,7 @@ namespace Raven.Server.Web.ResponseCompression
 
         public Stream CreateStream(Stream outputStream)
         {
-            return ZstdStream.Compress(outputStream);
+            return ZstdStream.Compress(outputStream, Options.Level);
         }
 
         public string EncodingName => Constants.Headers.Encodings.Zstd;

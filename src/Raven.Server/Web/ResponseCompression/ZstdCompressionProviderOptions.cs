@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using System.IO.Compression;
+using Microsoft.Extensions.Options;
 
 namespace Raven.Server.Web.ResponseCompression
 {
@@ -8,6 +9,8 @@ namespace Raven.Server.Web.ResponseCompression
     /// </summary>
     public sealed class ZstdCompressionProviderOptions : IOptions<ZstdCompressionProviderOptions>
     {
+        public int Level { get; set; } = 1;
+
         /// <inheritdoc />
         ZstdCompressionProviderOptions IOptions<ZstdCompressionProviderOptions>.Value => this;
     }

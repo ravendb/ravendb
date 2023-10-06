@@ -54,7 +54,7 @@ namespace Raven.Client.Json
 #endif
 #if FEATURE_ZSTD_SUPPORT
                 case HttpCompressionAlgorithm.Zstd:
-                    await using (var zstdStream = ZstdStream.Compress(stream, leaveOpen: true))
+                    await using (var zstdStream = ZstdStream.Compress(stream, level: 1, leaveOpen: true))
                     {
                         await _asyncTaskWriter(zstdStream).ConfigureAwait(false);
                     }

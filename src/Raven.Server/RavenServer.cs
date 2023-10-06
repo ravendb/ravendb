@@ -258,7 +258,7 @@ namespace Raven.Server
                             });
 
 #if FEATURE_ZSTD_SUPPORT
-                            services.Configure<ZstdCompressionProviderOptions>(options => { });
+                            services.Configure<ZstdCompressionProviderOptions>(options => { options.Level = Configuration.Http.ZstdResponseCompressionLevel; });
 #endif
 
 #if FEATURE_BROTLI_SUPPORT
