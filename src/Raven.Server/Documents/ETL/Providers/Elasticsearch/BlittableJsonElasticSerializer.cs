@@ -9,15 +9,30 @@ using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch;
 
-internal class BlittableJsonElasticSerializer : Serializer
+internal class BlittableJsonElasticSerializer : Serializer, IDisposable
 {
-    public DocumentsOperationContext Context { private get; set; }
+    private DocumentsOperationContext Context { get; set; }
+
+    public BlittableJsonElasticSerializer SetContext(DocumentsOperationContext context)
+    {
+        Context = context;
+        return this;
+    }
+    
+    public void Dispose()
+    {
+        Context = null;
+    }
 
     public override void Serialize<T>(T data, Stream stream, SerializationFormatting formatting = SerializationFormatting.None)
     {
+        if (Context is null)
+        {
+            throw new InvalidOperationException("Context cannot be null");
+        }
         if (data is not BlittableJsonReaderObject json)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
         
         using (var writer = new BlittableJsonTextWriter(Context, stream))
@@ -28,17 +43,17 @@ internal class BlittableJsonElasticSerializer : Serializer
 
     public override Task SerializeAsync<T>(T data, Stream stream,
         SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        throw new NotSupportedException();
         
     public override object Deserialize(Type type, Stream stream) =>
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     
     public override T Deserialize<T>(Stream stream) =>
-        throw new NotImplementedException();
+        throw new NotSupportedException();
 
     public override ValueTask<object> DeserializeAsync(Type type, Stream stream, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        throw new NotSupportedException();
 
     public override ValueTask<T> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        throw new NotSupportedException();
 }

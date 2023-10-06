@@ -105,43 +105,50 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             int count = 0;
 
             _client ??= ElasticSearchHelper.CreateClient(Configuration.Connection);
-            
-            if (_client.SourceSerializer is BlittableJsonElasticSerializer elasticSerializer)
-                elasticSerializer.Context = context;
-            
-            foreach (var index in records)
+
+            using (((BlittableJsonElasticSerializer)_client.SourceSerializer).SetContext(context))
             {
-                string indexName = index.IndexName.ToLower();
-
-                EnsureIndexExistsAndValidateIfNeeded(indexName, index);
-
-                if (index.InsertOnlyMode == false)
-                    count += DeleteByQueryOnIndexIdProperty(index);
-
-                if (index.Inserts.Count == 0)
+                foreach (var index in records)
                 {
-                    continue; // we avoid requesting bulk without body (with no create clauses), it causes an error  
-                }
+                    string indexName = index.IndexName.ToLower();
+    
+                    EnsureIndexExistsAndValidateIfNeeded(indexName, index);
+    
+                    if (index.InsertOnlyMode == false)
+                        count += DeleteByQueryOnIndexIdProperty(index);
+    
+                    if (index.Inserts.Count == 0)
+                    {
+                        continue; // we avoid requesting bulk without body (with no create clauses), it causes an error  
+                    }
+    
+                    var bulkRequestDescriptor = new BulkRequestDescriptor().Index(indexName).Refresh(Elastic.Clients.Elasticsearch.Refresh.WaitFor);
+                    var toDispose = new List<BlittableJsonReaderObject>();
+                    foreach (var insert in index.Inserts.Where(insert => insert.TransformationResult != null))
+                    {
+                        var json = EnsureLowerCasedIndexIdProperty(context, insert.TransformationResult, index);
+                        toDispose.Add(json);
+                        bulkRequestDescriptor.Create(json);
+                        count++;
+                    }
+                    
+                    var bulkIndexResponse = _client.Bulk(bulkRequestDescriptor);
+                    
+                    foreach (BlittableJsonReaderObject blittable in toDispose)
+                    {
+                        blittable.Dispose();
+                    }
 
-                var bulkRequestDescriptor = new BulkRequestDescriptor().Index(indexName).Refresh(Elastic.Clients.Elasticsearch.Refresh.WaitFor);
-                foreach (var insert in index.Inserts.Where(insert => insert.TransformationResult != null))
-                {
-                    var json = EnsureLowerCasedIndexIdProperty(context, insert.TransformationResult, index);
-                    count++;
-                    bulkRequestDescriptor.Create(json);
+                    if (bulkIndexResponse.IsValidResponse == false)
+                    {
+                        bulkIndexResponse.TryGetOriginalException(out var originalException);
+                        bulkIndexResponse.TryGetElasticsearchServerError(out var serverError);
+                        ThrowElasticSearchLoadException($"Failed to index data to '{indexName}' index", serverError, originalException,
+                            bulkIndexResponse.DebugInformation);
+                    }
+                   
                 }
-                
-                var bulkIndexResponse = _client.Bulk(bulkRequestDescriptor);
-
-                if (bulkIndexResponse.IsValidResponse)
-                    continue;
-                
-                bulkIndexResponse.TryGetOriginalException(out var originalException);
-                bulkIndexResponse.TryGetElasticsearchServerError(out var serverError);
-                ThrowElasticSearchLoadException($"Failed to index data to '{indexName}' index", serverError, originalException,
-                    bulkIndexResponse.DebugInformation);
             }
-
             return count;
         }
 
