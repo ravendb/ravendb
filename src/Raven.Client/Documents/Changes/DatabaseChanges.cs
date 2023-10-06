@@ -546,7 +546,7 @@ namespace Raven.Client.Documents.Changes
                             .ToLower()
                             .ToWebSocketPath(), UriKind.Absolute);
                         var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(new[] { _cts.Token, new CancellationTokenSource(TimeSpan.FromSeconds(15)).Token });
-                        await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
+                        await _client.ConnectAsync(_url, timeoutCts.Token).ConfigureAwait(false);
                         wasConnected = true;
                         Interlocked.Exchange(ref _immediateConnection, 1);
 
