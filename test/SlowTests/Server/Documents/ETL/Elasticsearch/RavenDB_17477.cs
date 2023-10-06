@@ -22,10 +22,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (GetElasticClient(out var client))
             {
                 client.Indices.Create(OrdersIndexName, c => c
-                    .Map(m => m
-                        .Properties(p => p
-                            .MatchOnlyText(t => t
-                                .Name("Id")))));
+                    .Mappings(m => m
+                        .Properties<object>(p => p
+                            .MatchOnlyText("Id"))));
 
                 var config = SetupElasticEtl(store, @"
 var orderData = {

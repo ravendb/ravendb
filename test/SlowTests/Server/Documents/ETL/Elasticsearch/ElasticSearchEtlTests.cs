@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
+using Elastic.Clients.Elasticsearch;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -22,13 +23,8 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.ElasticSearch
 {
-    public class ElasticSearchEtlTests : ElasticSearchEtlTestBase
+    public class ElasticSearchEtlTests(ITestOutputHelper output) : ElasticSearchEtlTestBase(output)
     {
-
-        public ElasticSearchEtlTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         protected string UsersIndexName => $"Users{IndexSuffix}".ToLower();
 
         protected List<ElasticSearchIndex> UsersIndex => new()
@@ -59,11 +55,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
-
-                Assert.True(ordersCount.IsValid);
-                Assert.True(orderLinesCount.IsValid);
+                var ordersCount = client.Count<object>(descriptor => descriptor.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = client.Count<object>(descriptor => descriptor.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -79,11 +72,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(descriptor => descriptor.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = client.Count<object>(descriptor => descriptor.Indices(Indices.Index(OrderLinesIndexName)));
 
-                Assert.True(ordersCount.IsValid);
-                Assert.True(orderLinesCount.IsValid);
+                Assert.True(ordersCount.IsValidResponse);
+                Assert.True(orderLinesCount.IsValidResponse);
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -124,8 +117,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
                 
                 Assert.Equal(numberOfOrders, ordersCount.Count);
                 Assert.Equal(numberOfOrders * numberOfLinesPerOrder, orderLinesCount.Count);
@@ -144,8 +137,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -244,13 +237,13 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 );
 
                 Assert.Equal(1, orderResponse.Documents.Count);
-                Assert.Equal("orders/1-a", JObject.FromObject(orderResponse.Documents.First()).ToObject<Dictionary<string, object>>()?["Id"]);
+                Assert.Equal("orders/1-a", ((JsonElement)orderResponse.Documents.First()).GetProperty("Id").ToString());
 
                 Assert.Equal(2, orderLineResponse.Documents.Count);
 
                 foreach (var document in orderLineResponse.Documents)
                 {
-                    Assert.Equal("orders/1-a", JObject.FromObject(document).ToObject<Dictionary<string, object>>()?["OrderId"]);
+                    Assert.Equal("orders/1-a", ((JsonElement)document).GetProperty("OrderId").ToString());
                 }
 
                 etlDone.Reset();
@@ -268,8 +261,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 client.Indices.Refresh(OrderLinesIndexName);
 
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -302,8 +295,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 client.Indices.Refresh(OrdersIndexName);
                 client.Indices.Refresh(OrderLinesIndexName);
 
-                var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -322,8 +315,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 client.Indices.Refresh(OrdersIndexName);
                 client.Indices.Refresh(OrderLinesIndexName);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(1, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -366,12 +359,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 Assert.Equal(1, orderResponse.Documents.Count);
 
-                var orderObject = JObject.FromObject(orderResponse.Documents.First()).ToObject<Dictionary<string, object>>();
-
+                var orderObject = orderResponse.Documents.First();
                 Assert.NotNull(orderObject);
-                Assert.Equal("orders/1-a", orderObject["Id"]);
-                Assert.Equal(2, (int)(long)orderObject["OrderLinesCount"]);
-                Assert.Equal(20, (int)(long)orderObject["TotalCost"]);
+                Assert.Equal("orders/1-a", ((JsonElement)orderObject).GetProperty("Id").ToString());
+                Assert.Equal("2", ((JsonElement)orderObject).GetProperty("OrderLinesCount").ToString());
+                Assert.Equal("20", ((JsonElement)orderObject).GetProperty("TotalCost").ToString());
 
                 etlDone.Reset();
 
@@ -404,12 +396,12 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 Assert.Equal(1, orderResponse1.Documents.Count);
 
-                var orderObject1 = JObject.FromObject(orderResponse1.Documents.First()).ToObject<Dictionary<string, object>>();
+                var orderObject1 = orderResponse1.Documents.First();
 
                 Assert.NotNull(orderObject1);
-                Assert.Equal("orders/1-a", orderObject1["Id"]);
-                Assert.Equal(2, (int)(long)orderObject1["OrderLinesCount"]);
-                Assert.Equal(30, (int)(long)orderObject1["TotalCost"]);
+                Assert.Equal("orders/1-a", ((JsonElement)orderObject1).GetProperty("Id").ToString());
+                Assert.Equal("2", ((JsonElement)orderObject1).GetProperty("OrderLinesCount").ToString());
+                Assert.Equal("30", ((JsonElement)orderObject1).GetProperty("TotalCost").ToString());
             }
         }
 
@@ -445,9 +437,10 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 );
 
                 Assert.Equal(1, userResponse1.Documents.Count);
-                var userObject1 = JObject.FromObject(userResponse1.Documents.First()).ToObject<Dictionary<string, object>>();
+                
+                var userObject1 = userResponse1.Documents.First();
                 Assert.NotNull(userObject1);
-                Assert.Equal("Joe Doe", userObject1["Name"]);
+                Assert.Equal("Joe Doe", ((JsonElement)userObject1).GetProperty("Name").ToString());
 
                 client.Indices.Refresh(UsersIndexName);
 
@@ -462,9 +455,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
 
                 Assert.Equal(1, userResponse2.Documents.Count);
-                var userObject2 = JObject.FromObject(userResponse2.Documents.First()).ToObject<Dictionary<string, object>>();
+                var userObject2 = userResponse2.Documents.First();
                 Assert.NotNull(userObject2);
-                Assert.Equal("James Smith", userObject2["Name"]);
+                Assert.Equal("James Smith", ((JsonElement)userObject2).GetProperty("Name").ToString());
 
                 // update
                 etlDone.Reset();
@@ -492,9 +485,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 );
 
                 Assert.Equal(1, userResponse3.Documents.Count);
-                var userObject3 = JObject.FromObject(userResponse3.Documents.First()).ToObject<Dictionary<string, object>>();
+                var userObject3 = userResponse3.Documents.First();
                 Assert.NotNull(userObject3);
-                Assert.Equal("Doe Joe", userObject3["Name"]);
+                Assert.Equal("Doe Joe", ((JsonElement)userObject3).GetProperty("Name").ToString());
 
                 client.Indices.Refresh(UsersIndexName);
 
@@ -509,9 +502,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
 
                 Assert.Equal(1, userResponse4.Documents.Count);
-                var userObject4 = JObject.FromObject(userResponse4.Documents.First()).ToObject<Dictionary<string, object>>();
+                var userObject4 = userResponse4.Documents.First();
                 Assert.NotNull(userObject4);
-                Assert.Equal("Smith James", userObject4["Name"]);
+                Assert.Equal("Smith James", ((JsonElement)userObject4).GetProperty("Name").ToString());
             }
         }
 
@@ -546,7 +539,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     )
                 );
 
-                Assert.Equal("users/1", JObject.FromObject(userResponse.Documents.First()).ToObject<Dictionary<string, object>>()?["UserId"]);
+                Assert.Equal("users/1", ((JsonElement)userResponse.Documents.First()).GetProperty("UserId").ToString());
             }
         }
 
@@ -602,8 +595,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                             .Value("users/1"))
                     )
                 );
-
-                Assert.Equal(0, userResponse.Documents.Count);
+                Assert.NotNull(userResponse.ElasticsearchServerError); // empty index has been deleted
+                Assert.Equal(userResponse.ElasticsearchServerError.Error.Type, "index_not_found_exception");
             }
         }
 
@@ -727,9 +720,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 );
 
                 Assert.Equal(1, userResponse1.Documents.Count);
-                var userObject1 = JObject.FromObject(userResponse1.Documents.First()).ToObject<Dictionary<string, object>>();
+                var userObject1 = userResponse1.Documents.First();
                 Assert.NotNull(userObject1);
-                Assert.Equal("Joe Doe", userObject1["Name"]);
+                Assert.Equal("Joe Doe", ((JsonElement)userObject1).GetProperty("Name").ToString());
             }
         }
 
@@ -968,11 +961,11 @@ output('test output')"
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
-                Assert.True(ordersCount.IsValid);
-                Assert.True(orderLinesCount.IsValid);
+                Assert.True(ordersCount.IsValidResponse);
+                Assert.True(orderLinesCount.IsValidResponse);
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -988,11 +981,11 @@ output('test output')"
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
-                Assert.True(ordersCount.IsValid);
-                Assert.True(orderLinesCount.IsValid);
+                Assert.True(ordersCount.IsValidResponse);
+                Assert.True(orderLinesCount.IsValidResponse);
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);

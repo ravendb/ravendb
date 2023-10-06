@@ -1,5 +1,5 @@
 ﻿using System;
-using Nest;
+using Elastic.Clients.Elasticsearch;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 
@@ -62,8 +62,8 @@ namespace Tests.Infrastructure.ConnectionString
 
             if (TryConnect(Nodes.Value, out pingResponse))
                 return Nodes.Value;
-
-            throw new InvalidOperationException($"Can't ping Elastic Search instance. Provided urls: {string.Join(',', Nodes.Value)}", pingResponse?.OriginalException);
+            pingResponse.TryGetOriginalException(out var originalException);
+            throw new InvalidOperationException($"Can't ping Elastic Search instance. Provided urls: {string.Join(',', Nodes.Value)}", originalException);
 
 
             bool TryConnect(string[] nodes, out PingResponse response)
@@ -74,7 +74,7 @@ namespace Tests.Infrastructure.ConnectionString
 
                     response = client.Ping();
 
-                    return response.IsValid;
+                    return response.IsValidResponse;
                 }
                 catch
                 {

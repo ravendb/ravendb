@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
-using Nest;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Server.Documents.Handlers.Processors;
@@ -29,11 +29,11 @@ internal sealed class ElasticSearchEtlConnectionHandlerForTestConnection<TOperat
             string authenticationJson = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
             Authentication authentication = JsonConvert.DeserializeObject<Authentication>(authenticationJson);
 
-            ElasticClient client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = new[] { url }, Authentication = authentication });
+            ElasticsearchClient client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = new[] { url }, Authentication = authentication });
 
             PingResponse pingResult = await client.PingAsync();
 
-            if (pingResult.IsValid)
+            if (pingResult.IsValidResponse)
             {
                 DynamicJsonValue result = new() { [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = url, };
 
