@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -53,8 +54,10 @@ public class RavenDB_19852 : RavenTestBase
 
         public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-            // Automatic decompression clears info about content-encodings. We've to assert by ContentType.
-            Assert.Contains("GZip", response.Content.GetType().Name);
+            var streamWithTimeout = (StreamWithTimeout)stream;
+            var innerStream = streamWithTimeout._stream;
+            var contentTypeName = innerStream.GetType().Name;
+            Assert.True(contentTypeName.Contains("GZip") || contentTypeName.Contains("Brotli") || contentTypeName.Contains("Zstd"), $"{contentTypeName}.Contains('GZip') || {contentTypeName}.Contains('Brotli') || {contentTypeName}.Contains('Zstd')");
         }
     }
 }

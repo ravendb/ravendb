@@ -10,7 +10,7 @@ namespace Raven.Client.Util
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         internal static TimeSpan DefaultReadTimeout { get; } = TimeSpan.FromSeconds(120);
 
-        private readonly Stream _stream;
+        internal readonly Stream _stream;
         private int _writeTimeout;
         private int _readTimeout;
         private bool _canBaseStreamTimeoutOnWrite;
