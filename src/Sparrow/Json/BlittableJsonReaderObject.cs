@@ -37,6 +37,9 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
+            if (_mem == null)
+                return "Disposed";
+
             AssertContextNotDisposed();
 
             using (var memoryStream = new MemoryStream())

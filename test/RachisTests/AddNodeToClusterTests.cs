@@ -1133,5 +1133,53 @@ namespace RachisTests
             var topology = cluster.Leader.ServerStore.GetClusterTopology();
             Assert.Equal(3, topology.AllNodes.Count);
         }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task UseProperCommandVersionWhenSingleMember()
+        {
+            var (_, raft1) = await CreateRaftCluster(1, shouldRunInMemory: false);
+
+            await raft1.ServerStore.AddNodeToClusterAsync("http://foo.bar", "B", validateNotInTopology: false);
+            await raft1.ServerStore.AddNodeToClusterAsync("http://foo.baz", "C", validateNotInTopology: false);
+
+            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(raft1);
+
+            raft1 = Servers[0] = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), result.Url }, 
+                    { RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url }
+                },
+                RunInMemory = false,
+                DeletePrevious = false,
+                DataDirectory = result.DataDirectory
+            });
+
+            using (var store = GetDocumentStore(new Options { Server = raft1, }))
+            {
+
+            }
+        }
+
+        private static async Task WaitForAssertionAsync(Func<Task> action, int timeoutInMs = 15_000)
+        {
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                try
+                {
+                    await action();
+                    return;
+                }
+                catch
+                {
+                    if (sp.ElapsedMilliseconds > timeoutInMs)
+                        throw;
+
+                    await Task.Delay(100);
+                }
+            }
+        }
     }
 }

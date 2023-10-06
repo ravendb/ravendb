@@ -47,6 +47,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _migrationIndex = migrationIndex;
             }
 
+            protected override NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => base.GetNonPersistentDocumentFlags() | NonPersistentDocumentFlags.FromResharding;
+
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 switch (item)

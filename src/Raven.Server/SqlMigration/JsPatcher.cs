@@ -28,6 +28,7 @@ namespace Raven.Server.SqlMigration
             if (_runner == null)
                 return document;
 
+            using (document)
             using (var runner = _runner.Run(_context, _context, "execute", new object[] {document}))
             {
                 return runner.TranslateToObject(_context);

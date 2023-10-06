@@ -21,6 +21,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
+            
+            if (Flags.Contain(DocumentFlags.Revision))
+            {
+                djv[nameof(Type)] = "Revision";
+            }
+
             djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture) ?? CollectionName.GetCollectionName(Data);
             djv[nameof(Id)] = Id.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Flags)] = Flags;
@@ -214,6 +220,16 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override string ToString()
         {
             var type = Data == null ? "Tombstone" : "Document";
+            
+            if (Flags.Contain(DocumentFlags.Revision))
+            {
+                type = "Revision";
+            }
+            if (Flags.Contain(DocumentFlags.DeleteRevision))
+            {
+                type = "Deleted Revision";
+            }
+
             return $"{Id} : {ChangeVector} ({type})";
         }
 

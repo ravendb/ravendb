@@ -785,6 +785,7 @@ namespace Raven.Server.ServerWide
                 foreach (var command in subscriptionCommands)
                 {
                     updateCommand = command;
+                    
                     var database = updateCommand.DatabaseName;
                     if (DatabaseExists(context, database) == false)
                     {

@@ -10,6 +10,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Commercial;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
@@ -133,12 +134,9 @@ namespace Raven.Server.Web.System
                         await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             context.Write(writer,
-                                new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Message"] = "Database " + name + " wasn't found"
-                                });
+                                new DynamicJsonValue { ["Type"] = "Error", ["Message"] = "Database " + name + " wasn't found" });
                         }
+
                         return;
                     }
 
@@ -158,17 +156,14 @@ namespace Raven.Server.Web.System
                         HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = name;
                         await using (var writer = new AsyncBlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Type"] = "Error",
-                                ["Message"] = "Database " + name + " was deleted"
-                            });
+                            context.Write(writer, new DynamicJsonValue { ["Type"] = "Error", ["Message"] = "Database " + name + " was deleted" });
                         }
 
                         return;
                     }
 
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
+                    var license = ServerStore.LoadLicenseLimits();
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -192,12 +187,14 @@ namespace Raven.Server.Web.System
                         if (includePromotables)
                             promotables = GetNodes(topology.Promotables, ServerNode.Role.Promotable);
 
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(Topology.Promotables)] = new DynamicJsonArray(promotables ?? new List<DynamicJsonValue>()),
-                            [nameof(Topology.Nodes)] = new DynamicJsonArray(dbNodes),
-                            [nameof(Topology.Etag)] = stampIndex
-                        });
+                        context.Write(writer,
+                            new DynamicJsonValue
+                            {
+                                [nameof(Topology.Promotables)] = new DynamicJsonArray(promotables ?? new List<DynamicJsonValue>()),
+                                [nameof(Topology.Nodes)] = new DynamicJsonArray(dbNodes),
+                                [nameof(Topology.Etag)] = stampIndex
+                            });
+
 
                         IEnumerable<DynamicJsonValue> GetNodes(List<string> nodes, ServerNode.Role serverRole)
                         {
@@ -207,7 +204,12 @@ namespace Raven.Server.Web.System
                                 if (url == null)
                                     continue;
 
-                                yield return TopologyNodeToJson(node, url, name, serverRole);
+                                if (license == null || license.NodeLicenseDetails.TryGetValue(node, out DetailsPerNode nodeDetails) == false)
+                                {
+                                    nodeDetails = null;
+                                }
+
+                                yield return TopologyNodeToJson(node, url, name, serverRole, nodeDetails);
                             }
                         }
                     }
@@ -215,15 +217,23 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private DynamicJsonValue TopologyNodeToJson(string tag, string url, string name, ServerNode.Role role)
+        private DynamicJsonValue TopologyNodeToJson(string tag, string url, string name, ServerNode.Role role, DetailsPerNode details)
         {
-            return new DynamicJsonValue
+            var json = new DynamicJsonValue
             {
                 [nameof(ServerNode.Url)] = url,
                 [nameof(ServerNode.ClusterTag)] = tag,
                 [nameof(ServerNode.ServerRole)] = role,
                 [nameof(ServerNode.Database)] = name
             };
+
+            if(details != null)
+            {
+                json[nameof(ServerNode.ServerVersion)] =
+                    details.BuildInfo.AssemblyVersion ?? details.BuildInfo.ProductVersion;
+            }
+
+            return json;
         }
 
         private void AlertIfDocumentStoreCreationRateIsNotReasonable(string applicationIdentifier, string name)
