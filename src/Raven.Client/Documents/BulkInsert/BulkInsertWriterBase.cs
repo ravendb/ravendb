@@ -154,7 +154,7 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
 #endif
 #if FEATURE_ZSTD_SUPPORT
                 case HttpCompressionAlgorithm.Zstd:
-                    stream = ZstdStream.Compress(stream);
+                    stream = ZstdStream.Compress(stream, leaveOpen: true);
                     break;
 #endif
                 default:
