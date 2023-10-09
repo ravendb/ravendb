@@ -50,7 +50,7 @@ internal static class BackupUtils
             {
                 31 => new GZipStream(backupStream, CompressionMode.Decompress),
                 40 => ZstdStream.Decompress(backupStream),
-                _ => throw new NotSupportedException()
+                _ => throw new NotSupportedException($"Unknown stream format ({buffer[0]})")
             };
         }
         finally
