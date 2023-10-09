@@ -11,6 +11,7 @@ using System.Threading;
 using Sparrow;
 using Voron.Global;
 using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 
 namespace Voron.Util
 {
@@ -71,7 +72,7 @@ namespace Voron.Util
             }
 
             var totalSecElapsed = Math.Max((double)totalSw.ElapsedMilliseconds / 1000, 0.0001);
-            infoNotify?.Invoke($"Finshed copying {new Size(totalCopied, SizeUnit.Bytes)}, " +
+            infoNotify?.Invoke($"Finished copying {new Size(totalCopied, SizeUnit.Bytes)}, " +
                                 $"{new Size((long)(totalCopied / totalSecElapsed), SizeUnit.Bytes)}/sec");
         }
 
@@ -120,7 +121,7 @@ namespace Voron.Util
             }
 
             var totalSecElapsed = Math.Max((double)totalSw.ElapsedMilliseconds / 1000, 0.0001);
-            infoNotify?.Invoke($"Finshed copying {new Size(totalCopied, SizeUnit.Bytes)}, " +
+            infoNotify?.Invoke($"Finished copying {new Size(totalCopied, SizeUnit.Bytes)}, " +
                                 $"{new Size((long)(totalCopied / totalSecElapsed), SizeUnit.Bytes)}/sec");
 
             Debug.Assert(numberOf4KbsToCopy == 0);
