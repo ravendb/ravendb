@@ -72,7 +72,8 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
                 [nameof(Authentication.ApiKey)] = Authentication.ApiKey == null ? null : new DynamicJsonValue()
                 {
                     [nameof(Authentication.ApiKey.ApiKeyId)] = Authentication?.ApiKey?.ApiKeyId,
-                    [nameof(Authentication.ApiKey.ApiKey)] = Authentication?.ApiKey?.ApiKey
+                    [nameof(Authentication.ApiKey.ApiKey)] = Authentication?.ApiKey?.ApiKey,
+                    [nameof(Authentication.ApiKey.EncodedApiKey)] = Authentication?.ApiKey?.EncodedApiKey
                 },
                 [nameof(Authentication.Certificate)] = Authentication.Certificate == null ? null : new DynamicJsonValue()
                 {
@@ -105,6 +106,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         public string ApiKeyId { get; set; }
         
         public string ApiKey { get; set; }
+        public string EncodedApiKey { get; set; }
     }
     
     public sealed class BasicAuthentication
