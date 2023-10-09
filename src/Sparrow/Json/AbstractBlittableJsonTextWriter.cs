@@ -114,7 +114,7 @@ namespace Sparrow.Json
                     }
 
                     obj.GetPropertyByIndex(buffer.Properties[i], ref prop);
-                    WritePropertyName((string)prop.Name);
+                    WritePropertyName(prop.Name);
 
                     WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
