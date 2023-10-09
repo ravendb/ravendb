@@ -124,8 +124,10 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
     
                     var bulkRequestDescriptor = new BulkRequestDescriptor().Index(indexName).Refresh(Elastic.Clients.Elasticsearch.Refresh.WaitFor);
                     var toDispose = new List<BlittableJsonReaderObject>();
-                    foreach (var insert in index.Inserts.Where(insert => insert.TransformationResult != null))
+                    foreach (var insert in index.Inserts)
                     {
+                        if (insert.TransformationResult == null)
+                            continue;
                         var json = EnsureLowerCasedIndexIdProperty(context, insert.TransformationResult, index);
                         toDispose.Add(json);
                         bulkRequestDescriptor.Create(json);
