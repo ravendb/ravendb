@@ -603,10 +603,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task PromoteNode()
         {
+            var nodeTag = GetStringQueryString("nodeTag");
+
             if (ServerStore.LeaderTag == null)
             {
-                NoContentStatus();
-                return;
+                throw new NoLeaderException(
+                    $"Failed to promote node {nodeTag} because there is no leader in the cluster topology");
             }
 
             if (ServerStore.IsLeader() == false)
@@ -615,7 +617,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 return;
             }
 
-            var nodeTag = GetStringQueryString("nodeTag");
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -637,10 +638,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task DemoteNode()
         {
+            var nodeTag = GetStringQueryString("nodeTag");
+
             if (ServerStore.LeaderTag == null)
             {
-                NoContentStatus();
-                return;
+                throw new NoLeaderException(
+                    $"Failed to demote node {nodeTag} because there is no leader in the cluster topology");
             }
 
             if (ServerStore.IsLeader() == false)
@@ -649,7 +652,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 return;
             }
 
-            var nodeTag = GetStringQueryString("nodeTag");
             if (nodeTag == ServerStore.LeaderTag)
             {
                 throw new InvalidOperationException(
