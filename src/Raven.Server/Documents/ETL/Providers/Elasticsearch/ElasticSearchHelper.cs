@@ -35,9 +35,17 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 }
                 else if (connectionString.Authentication.ApiKey != null)
                 {
-                    var apiKeyMergedBytes = Encodings.Utf8.GetBytes($"{connectionString.Authentication.ApiKey.ApiKeyId}:{connectionString.Authentication.ApiKey.ApiKey}");
-                    var encodedApiKey = Convert.ToBase64String(apiKeyMergedBytes);
-                    settings.Authentication(new ApiKey(encodedApiKey));
+                    if (connectionString.Authentication.ApiKey.EncodedApiKey != null)
+                    {
+                        settings.Authentication(new ApiKey(connectionString.Authentication.ApiKey.EncodedApiKey));
+                    }
+                    else
+                    { 
+                        var apiKeyMergedBytes = Encodings.Utf8.GetBytes($"{connectionString.Authentication.ApiKey.ApiKeyId}:{connectionString.Authentication.ApiKey.ApiKey}");
+                        var encodedApiKey = Convert.ToBase64String(apiKeyMergedBytes);
+                        settings.Authentication(new ApiKey(encodedApiKey));    
+                    }
+                    
                 }
                 else if (connectionString.Authentication.Certificate != null)
                 {
