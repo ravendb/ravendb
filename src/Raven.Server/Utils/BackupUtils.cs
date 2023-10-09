@@ -59,13 +59,13 @@ internal static class BackupUtils
         }
     }
 
-    internal static Stream GetCompressionStream(Stream stream, Raven.Server.Config.Categories.BackupConfiguration configuration)
+    internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm)
     {
-        switch (configuration.CompressionAlgorithm)
+        switch (compressionAlgorithm)
         {
-            case BackupCompressionAlgorithm.Gzip:
+            case ExportCompressionAlgorithm.Gzip:
                 return new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
-            case BackupCompressionAlgorithm.Zstd:
+            case ExportCompressionAlgorithm.Zstd:
                 return ZstdStream.Compress(stream);
             default:
                 throw new ArgumentOutOfRangeException();
