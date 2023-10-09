@@ -3,39 +3,36 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Elastic.Transport;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch;
 
-internal class BlittableJsonElasticSerializer : Serializer, IDisposable
+internal class BlittableJsonElasticSerializer : Serializer
 {
-    private DocumentsOperationContext Context { get; set; }
+    private DocumentsOperationContext _context;
 
-    public BlittableJsonElasticSerializer SetContext(DocumentsOperationContext context)
+    public DisposableAction SetContext(DocumentsOperationContext context)
     {
-        Context = context;
-        return this;
+        _context = context;
+        return new DisposableAction(() => _context = null);
     }
     
-    public void Dispose()
-    {
-        Context = null;
-    }
-
     public override void Serialize<T>(T data, Stream stream, SerializationFormatting formatting = SerializationFormatting.None)
     {
-        if (Context is null)
+        if (_context is null)
         {
             throw new InvalidOperationException("Context cannot be null");
         }
         if (data is not BlittableJsonReaderObject json)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException(
+                $"Blittable elastic serializer cannot serialize object of type '{data.GetType()}'. Object type needs to be '{typeof(BlittableJsonReaderObject)}'");
         }
         
-        using (var writer = new BlittableJsonTextWriter(Context, stream))
+        using (var writer = new BlittableJsonTextWriter(_context, stream))
         {
             writer.WriteObject(json);
         }
