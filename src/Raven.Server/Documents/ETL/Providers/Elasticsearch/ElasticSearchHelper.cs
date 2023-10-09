@@ -3,7 +3,9 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
+using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Sparrow;
 using BasicAuthentication = Elastic.Transport.BasicAuthentication;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
@@ -18,7 +20,6 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             var settings = useCustomBlittableSerializer
                 ? new ElasticsearchClientSettings(pool, sourceSerializer: (@in, values) => new BlittableJsonElasticSerializer())
                 : new ElasticsearchClientSettings(pool);
-                
 
             if (requestTimeout != null)
                 settings.RequestTimeout(requestTimeout.Value);
@@ -34,7 +35,9 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 }
                 else if (connectionString.Authentication.ApiKey != null)
                 {
-                    settings.Authentication(new ApiKey(connectionString.Authentication.ApiKey.ApiKey)); //connectionString.Authentication.ApiKey.ApiKeyId ??
+                    var apiKeyMergedBytes = Encodings.Utf8.GetBytes($"{connectionString.Authentication.ApiKey.ApiKeyId}:{connectionString.Authentication.ApiKey.ApiKey}");
+                    var encodedApiKey = Convert.ToBase64String(apiKeyMergedBytes);
+                    settings.Authentication(new ApiKey(encodedApiKey));
                 }
                 else if (connectionString.Authentication.Certificate != null)
                 {
