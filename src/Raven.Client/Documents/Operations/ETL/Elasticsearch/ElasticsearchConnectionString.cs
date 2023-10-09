@@ -61,7 +61,9 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             DynamicJsonValue json = base.ToJson();
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
+#pragma warning disable CS0618 // Type or member is obsolete
             json[nameof(EnableCompatibilityMode)] = EnableCompatibilityMode;
+#pragma warning restore CS0618 // Type or member is obsolete
             json[nameof(Authentication)] = Authentication == null ? null : new DynamicJsonValue()
             {
                 [nameof(Authentication.Basic)] = Authentication.Basic == null ? null : new DynamicJsonValue()
@@ -88,7 +90,9 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             DynamicJsonValue json = base.ToAuditJson();
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
+#pragma warning disable CS0618 // Type or member is obsolete
             json[nameof(EnableCompatibilityMode)] = EnableCompatibilityMode;
+#pragma warning restore CS0618 // Type or member is obsolete
 
             return json;
         }
