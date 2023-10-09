@@ -27,6 +27,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
@@ -49,22 +50,22 @@ namespace Raven.Server.Smuggler.Documents
         private Stream _outputStream;
         private readonly DocumentsOperationContext _context;
         private readonly DatabaseSource _source;
-        private readonly Raven.Server.Config.Categories.BackupConfiguration _configuration;
+        private readonly ExportCompressionAlgorithm _compressionAlgorithm;
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
 
-        public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source, Raven.Server.Config.Categories.BackupConfiguration configuration)
+        public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source, ExportCompressionAlgorithm compressionAlgorithm)
         {
             _stream = stream;
             _context = context;
             _source = source;
-            _configuration = configuration;
+            _compressionAlgorithm = compressionAlgorithm;
         }
 
         public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
-            _outputStream = BackupUtils.GetCompressionStream(_stream, _configuration);
+            _outputStream = BackupUtils.GetCompressionStream(_stream, _compressionAlgorithm);
             _writer = new AsyncBlittableJsonTextWriter(_context, _outputStream);
             _options = options;
 

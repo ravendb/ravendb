@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
-using Org.BouncyCastle.Bcpg.Sig;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
@@ -27,9 +26,9 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(BackupCompressionAlgorithm.Gzip)]
-    [InlineData(BackupCompressionAlgorithm.Zstd)]
-    public async Task CanExportImport(BackupCompressionAlgorithm algorithm)
+    [InlineData(ExportCompressionAlgorithm.Gzip)]
+    [InlineData(ExportCompressionAlgorithm.Zstd)]
+    public async Task CanExportImport(ExportCompressionAlgorithm algorithm)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
@@ -37,7 +36,7 @@ public class RavenDB_21523 : RavenTestBase
 
         using (var store = GetDocumentStore(new Options
         {
-            ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Backup.CompressionAlgorithm)] = algorithm.ToString()
+            ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = algorithm.ToString()
         }))
         {
             using (var session = store.OpenAsyncSession())
@@ -60,10 +59,10 @@ public class RavenDB_21523 : RavenTestBase
 
                 switch (algorithm)
                 {
-                    case BackupCompressionAlgorithm.Gzip:
+                    case ExportCompressionAlgorithm.Gzip:
                         Assert.IsType<GZipStream>(backupStream);
                         break;
-                    case BackupCompressionAlgorithm.Zstd:
+                    case ExportCompressionAlgorithm.Zstd:
                         Assert.IsType<ZstdStream>(backupStream);
                         break;
                     default:
@@ -88,11 +87,11 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(BackupCompressionAlgorithm.Gzip, BackupType.Backup)]
-    [InlineData(BackupCompressionAlgorithm.Zstd, BackupType.Backup)]
+    [InlineData(ExportCompressionAlgorithm.Gzip, BackupType.Backup)]
+    [InlineData(ExportCompressionAlgorithm.Zstd, BackupType.Backup)]
     //[InlineData(BackupCompressionAlgorithm.Gzip, BackupType.Snapshot)]
     //[InlineData(BackupCompressionAlgorithm.Zstd, BackupType.Snapshot)]
-    public async Task CanBackupRestore(BackupCompressionAlgorithm algorithm, BackupType backupType)
+    public async Task CanBackupRestore(ExportCompressionAlgorithm algorithm, BackupType backupType)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
@@ -132,10 +131,10 @@ public class RavenDB_21523 : RavenTestBase
 
                 switch (algorithm)
                 {
-                    case BackupCompressionAlgorithm.Gzip:
+                    case ExportCompressionAlgorithm.Gzip:
                         Assert.IsType<GZipStream>(backupStream);
                         break;
-                    case BackupCompressionAlgorithm.Zstd:
+                    case ExportCompressionAlgorithm.Zstd:
                         Assert.IsType<ZstdStream>(backupStream);
                         break;
                     default:

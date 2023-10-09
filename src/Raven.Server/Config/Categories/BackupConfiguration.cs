@@ -63,10 +63,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.Azure.Legacy", ConfigurationEntryScope.ServerWideOnly)]
         public bool AzureLegacy { get; set; }
 
-        [Description("Compression algorithm that is used to perform backups (does not apply to snapshot backups) and exports.")]
-        [DefaultValue(BackupCompressionAlgorithm.Zstd)]
+        [Description("Compression algorithm that is used to perform backups (does not apply to snapshot backups).")]
+        [DefaultValue(ExportCompressionAlgorithm.Zstd)]
         [ConfigurationEntry("Backup.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public BackupCompressionAlgorithm CompressionAlgorithm { get; set; }
+        public ExportCompressionAlgorithm CompressionAlgorithm { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
@@ -152,7 +152,7 @@ namespace Raven.Server.Config.Categories
         }
     }
 
-    public enum BackupCompressionAlgorithm
+    public enum ExportCompressionAlgorithm
     {
         Zstd,
         Gzip
