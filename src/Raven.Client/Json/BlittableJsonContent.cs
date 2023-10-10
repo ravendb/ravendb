@@ -46,7 +46,7 @@ namespace Raven.Client.Json
                     break;
 #if FEATURE_BROTLI_SUPPORT
                 case HttpCompressionAlgorithm.Brotli:
-                    await using (var brotliStream = new BrotliStream(stream, CompressionLevel.Fastest, leaveOpen: true))
+                    await using (var brotliStream = new BrotliStream(stream, CompressionLevel.Optimal, leaveOpen: true))
                     {
                         await _asyncTaskWriter(brotliStream).ConfigureAwait(false);
                     }
@@ -54,7 +54,7 @@ namespace Raven.Client.Json
 #endif
 #if FEATURE_ZSTD_SUPPORT
                 case HttpCompressionAlgorithm.Zstd:
-                    await using (var zstdStream = ZstdStream.Compress(stream, level: 1, leaveOpen: true))
+                    await using (var zstdStream = ZstdStream.Compress(stream, CompressionLevel.Fastest, leaveOpen: true))
                     {
                         await _asyncTaskWriter(zstdStream).ConfigureAwait(false);
                     }

@@ -78,14 +78,14 @@ namespace Raven.Server.Config.Categories
         public CompressionLevel DeflateResponseCompressionLevel { get; set; }
 
         [Description("Compression level to be used when compressing HTTP responses with Brotli")]
-        [DefaultValue(CompressionLevel.Fastest)]
+        [DefaultValue(CompressionLevel.Optimal)]
         [ConfigurationEntry("Http.BrotliResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
         public CompressionLevel BrotliResponseCompressionLevel { get; set; }
 
         [Description("Compression level to be used when compressing HTTP responses with Zstd")]
-        [DefaultValue(1)]
+        [DefaultValue(CompressionLevel.Fastest)]
         [ConfigurationEntry("Http.ZstdResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
-        public int ZstdResponseCompressionLevel { get; set; }
+        public CompressionLevel ZstdResponseCompressionLevel { get; set; }
 
         [Description("Compression level to be used when compressing static files")]
         [DefaultValue(CompressionLevel.Optimal)]
