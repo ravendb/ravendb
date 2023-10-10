@@ -31,7 +31,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     {
     }
 
-    [LicenseRequiredFact]
+    [MultiplatformFact(RavenPlatform.Windows, LicenseRequired = true)]
     public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_Three_Nodes()
     {
         DoNotReuseServer();
@@ -206,7 +206,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
 
     }
 
-    [LicenseRequiredFact]
+    [MultiplatformFact(RavenPlatform.Windows, LicenseRequired = true)]
     public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_One_Node()
     {
         DoNotReuseServer();
@@ -309,7 +309,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
 
     }
 
-    [LicenseRequiredRetryFact(delayBetweenRetriesMs: 1000)]
+    [MultiplatformFact(RavenPlatform.Windows, LicenseRequired = true)]
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_One_Node()
     {
         DoNotReuseServer();
@@ -437,7 +437,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
     }
 
-    [LicenseRequiredRetryFact(delayBetweenRetriesMs: 1000)]
+    [MultiplatformFact(RavenPlatform.Windows, LicenseRequired = true)]
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_Three_Nodes()
     {
         DoNotReuseServer();
