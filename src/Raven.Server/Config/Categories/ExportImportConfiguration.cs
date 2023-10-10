@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config.Attributes;
 
 namespace Raven.Server.Config.Categories
@@ -7,7 +8,7 @@ namespace Raven.Server.Config.Categories
     public class ExportImportConfiguration : ConfigurationCategory
     {
         [Description("Compression algorithm that is used to perform exports.")]
-        [DefaultValue(Categories.ExportCompressionAlgorithm.Zstd)]
+        [DefaultValue(ExportCompressionAlgorithm.Zstd)]
         [ConfigurationEntry("Export.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public ExportCompressionAlgorithm CompressionAlgorithm { get; set; }
     }
