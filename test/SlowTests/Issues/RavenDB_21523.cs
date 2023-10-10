@@ -87,6 +87,69 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData(ExportCompressionAlgorithm.Gzip, ExportCompressionAlgorithm.Zstd)]
+    [InlineData(ExportCompressionAlgorithm.Gzip, ExportCompressionAlgorithm.Gzip)]
+    [InlineData(ExportCompressionAlgorithm.Gzip, null)]
+    public async Task CanExportImport_Client(ExportCompressionAlgorithm defaultAlgorithm, ExportCompressionAlgorithm? exportAlgorithm)
+    {
+        var backupPath = NewDataPath(suffix: "BackupFolder");
+        IOExtensions.DeleteDirectory(backupPath);
+        var exportFile = Path.Combine(backupPath, "export.ravendbdump");
+
+        using (var store = GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = defaultAlgorithm.ToString()
+        }))
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company { Name = "HR" }, "companies/1");
+                await session.SaveChangesAsync();
+            }
+
+            var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { CompressionAlgorithm = exportAlgorithm }, exportFile);
+            await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+
+            Assert.True(File.Exists(exportFile));
+
+            await using (var fileStream = File.OpenRead(exportFile))
+            await using (var backupStream = await BackupUtils.GetDecompressionStreamAsync(fileStream))
+            {
+                var buffer = new byte[1024];
+                var read = await backupStream.ReadAsync(buffer, 0, buffer.Length); // validates if we picked appropriate decompression algorithm
+                Assert.True(read > 0);
+
+                switch (exportAlgorithm)
+                {
+                    case null:
+                    case ExportCompressionAlgorithm.Gzip:
+                        Assert.IsType<GZipStream>(backupStream);
+                        break;
+                    case ExportCompressionAlgorithm.Zstd:
+                        Assert.IsType<ZstdStream>(backupStream);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(defaultAlgorithm), defaultAlgorithm, null);
+                }
+            }
+        }
+
+        using (var store = GetDocumentStore())
+        {
+            var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+            await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<Company>("companies/1");
+
+                Assert.NotNull(company);
+                Assert.Equal("HR", company.Name);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
     [InlineData(ExportCompressionAlgorithm.Gzip, BackupType.Backup)]
     [InlineData(ExportCompressionAlgorithm.Zstd, BackupType.Backup)]
     //[InlineData(BackupCompressionAlgorithm.Gzip, BackupType.Snapshot)]

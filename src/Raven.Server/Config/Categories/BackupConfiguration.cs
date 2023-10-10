@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
@@ -150,11 +151,5 @@ namespace Raven.Server.Config.Categories
 
             throw new ArgumentException($"The selected backup destination '{dest}' is not allowed in this RavenDB server. Contact the administrator for more information. Allowed backup destinations: {string.Join(", ", AllowedDestinations)}");
         }
-    }
-
-    public enum ExportCompressionAlgorithm
-    {
-        Zstd,
-        Gzip
     }
 }
