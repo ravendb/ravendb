@@ -996,6 +996,11 @@ namespace Sparrow.Json
             return StartsWith(value.ToString());
         }
 
+        public char[] ToArray()
+        {
+            return ToString().ToArray();
+        }
+
         public char[] ToCharArray()
         {
             return ToString().ToCharArray();
