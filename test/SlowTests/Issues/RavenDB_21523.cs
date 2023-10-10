@@ -2,6 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -9,7 +10,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -26,18 +26,17 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(ExportCompressionAlgorithm.Gzip)]
-    [InlineData(ExportCompressionAlgorithm.Zstd)]
-    public async Task CanExportImport(ExportCompressionAlgorithm algorithm)
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Zstd })]
+    public async Task CanExportImport(Options options, ExportCompressionAlgorithm algorithm)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
         var exportFile = Path.Combine(backupPath, "export.ravendbdump");
 
-        using (var store = GetDocumentStore(new Options
-        {
-            ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = algorithm.ToString()
-        }))
+        options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = algorithm.ToString();
+
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -71,7 +70,7 @@ public class RavenDB_21523 : RavenTestBase
             }
         }
 
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
@@ -87,19 +86,20 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(ExportCompressionAlgorithm.Gzip, ExportCompressionAlgorithm.Zstd)]
-    [InlineData(ExportCompressionAlgorithm.Gzip, ExportCompressionAlgorithm.Gzip)]
-    [InlineData(ExportCompressionAlgorithm.Gzip, null)]
-    public async Task CanExportImport_Client(ExportCompressionAlgorithm defaultAlgorithm, ExportCompressionAlgorithm? exportAlgorithm)
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, ExportCompressionAlgorithm.Zstd })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, ExportCompressionAlgorithm.Gzip })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, null })]
+    public async Task CanExportImport_Client(Options options, ExportCompressionAlgorithm defaultAlgorithm, object exportAlgorithmAsObject)
     {
+        ExportCompressionAlgorithm? exportAlgorithm = exportAlgorithmAsObject == null ? null : (ExportCompressionAlgorithm)exportAlgorithmAsObject;
+
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
         var exportFile = Path.Combine(backupPath, "export.ravendbdump");
 
-        using (var store = GetDocumentStore(new Options
-        {
-            ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = defaultAlgorithm.ToString()
-        }))
+        options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = defaultAlgorithm.ToString();
+
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -134,7 +134,7 @@ public class RavenDB_21523 : RavenTestBase
             }
         }
 
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
@@ -171,6 +171,7 @@ public class RavenDB_21523 : RavenTestBase
             }
 
             var config = Backup.CreateBackupConfiguration(backupPath, backupType);
+
             await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
             var databaseName = GetDatabaseName() + "restore";
