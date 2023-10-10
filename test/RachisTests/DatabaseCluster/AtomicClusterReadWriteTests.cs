@@ -337,7 +337,7 @@ namespace RachisTests.DatabaseCluster
                     .Where(BackupUtils.IsBackupFile)
                     .OrderBackups()
                     .ToArray();
-                
+
                 Assert.Equal(3, files.Length);
 
                 var smugglerOptions = new DatabaseSmugglerImportOptions();
@@ -381,7 +381,7 @@ namespace RachisTests.DatabaseCluster
                 sb.AppendLine("import results :");
                 for (int i = 0; i < importResults.Count; i++)
                 {
-                    sb.AppendLine($"file #{i+1}");
+                    sb.AppendLine($"file #{i + 1}");
                     var result = importResults[i];
                     if (result == null)
                         continue;
@@ -460,7 +460,7 @@ namespace RachisTests.DatabaseCluster
                 return await session.LoadAsync<TestObj>(notDelete);
             });
             var r = await WaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")));
-            Assert.True(r.Count == 1, AddDebugInfo(backupPath, r.Count));
+            Assert.True(r.Count == 1, AddDebugInfoAsync(backupPath, r.Count).Result);
             Assert.EndsWith(notDelete, r.Single().Key, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -636,10 +636,10 @@ namespace RachisTests.DatabaseCluster
             });
         }
 
-        private static IEnumerable<object[]>  GetMetadataStaticFields()
+        private static IEnumerable<object[]> GetMetadataStaticFields()
         {
             return typeof(Constants.Documents.Metadata)
-                .GetFields( System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
+                .GetFields(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
                 .Select(p => p.GetValue(null).ToString())
                 .Distinct()
                 .SelectMany(s =>
@@ -647,10 +647,10 @@ namespace RachisTests.DatabaseCluster
                     var builder = new StringBuilder(s);
                     //Just replacing one char in the end
                     builder[^1] = builder[^1] == 'a' ? 'b' : 'a';
-                    return new[] {new object[] {builder.ToString()}};
+                    return new[] { new object[] { builder.ToString() } };
                 });
         }
-        
+
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenMemberData(nameof(GetMetadataStaticFields), DatabaseMode = RavenDatabaseMode.All)]
         public async Task StoreDocument_WheHasUserMetadataPropertyWithLengthEqualsToInternalRavenDbMetadataPropertyLength(Options options, string metadataPropNameToTest)
@@ -660,7 +660,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = GetDocumentStore(options))
             {
-                using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var executor = store.GetRequestExecutor();
                     using var dis = executor.ContextPool.AllocateOperationContext(out var context);
@@ -752,7 +752,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        private static string AddDebugInfo(string backupPath, int count)
+        private static async Task<string> AddDebugInfoAsync(string backupPath, int count)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"Expected to have a single compare exchange value after restore from incremental, but got {count}");
@@ -766,7 +766,7 @@ namespace RachisTests.DatabaseCluster
             {
                 sb.AppendLine($"backup file {Path.GetFileName(file)} :");
                 using (var inputStream = File.Open(file, FileMode.Open))
-                using (var stream = new GZipStream(inputStream, CompressionMode.Decompress))
+                using (var stream = await Raven.Server.Utils.BackupUtils.GetDecompressionStreamAsync(inputStream))
                 {
                     var text = stream.ReadStringWithoutPrefix();
                     sb.AppendLine(JsonConvert.SerializeObject(text)).AppendLine();
