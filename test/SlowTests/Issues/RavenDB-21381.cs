@@ -14,6 +14,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
@@ -26,7 +27,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task AdoptOrphanedRevisionsTest()
         {
             using var store = GetDocumentStore();

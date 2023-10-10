@@ -31,7 +31,6 @@ using static Raven.Server.Documents.DocumentsStorage;
 using static Voron.Data.Tables.Table;
 using static Raven.Server.NotificationCenter.ConflictRevisionsExceeded;
 using Constants = Raven.Client.Constants;
-using Nest;
 
 namespace Raven.Server.Documents.Revisions
 {
@@ -1907,7 +1906,7 @@ namespace Raven.Server.Documents.Revisions
             MinimumRevisionsToKeep = 0
         };
 
-        private long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
+        internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
@@ -1974,7 +1973,7 @@ namespace Raven.Server.Documents.Revisions
                 if (ShouldAdoptRevision(context, lowerId, lowerIdPrefix, collectionName, out var table, out var lastRevision))
                 {
                     var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-                    return CreateDeleteRevision(context, table, id, collectionName, lastModifiedTicks, lastRevision.Flags) - 1;
+                    return CreateDeletedRevision(context, table, id, collectionName, lastModifiedTicks, lastRevision.Flags) - 1;
                 }
 
                 return 0;
@@ -2016,7 +2015,7 @@ namespace Raven.Server.Documents.Revisions
             return ForTestingPurposes = new TestingStuff(this);
         }
 
-        private unsafe long CreateDeleteRevision(DocumentsOperationContext context, Table table, string id, CollectionName collectionName, 
+        private unsafe long CreateDeletedRevision(DocumentsOperationContext context, Table table, string id, CollectionName collectionName, 
             long lastModifiedTicks, DocumentFlags flags)
         {
             var deleteRevisionDocument = context.ReadObject(new DynamicJsonValue
@@ -2065,58 +2064,6 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 return IncrementCountOfRevisions(context, lowerIdPrefix, 1);
-            }
-        }
-
-
-        private class EnforceRevisionConfigurationCommand : RevisionsScanningOperationCommand<EnforceConfigurationResult>
-        {
-            private readonly bool _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration;
-
-            public EnforceRevisionConfigurationCommand(
-                RevisionsStorage revisionsStorage,
-                List<string> ids,
-                EnforceConfigurationResult result,
-                bool includeForceCreated,
-                OperationCancelToken token) : base(revisionsStorage, ids, result, token)
-            {
-                _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration = includeForceCreated;
-            }
-
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                MoreWork = false;
-                foreach (var id in _ids)
-                {
-                    _token.ThrowIfCancellationRequested();
-                    _result.RemovedRevisions += (int)_revisionsStorage.EnforceConfigurationFor(context, id, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration == false, ref MoreWork);
-                }
-
-                return _ids.Count;
-            }
-
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
-            {
-                return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration);
-            }
-
-            private class EnforceRevisionConfigurationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<EnforceRevisionConfigurationCommand>
-            {
-                private readonly RevisionsStorage _revisionsStorage;
-                private readonly List<string> _ids;
-                private readonly bool _includeForceCreated;
-
-                public EnforceRevisionConfigurationCommandDto(RevisionsStorage revisionsStorage, List<string> ids, bool includeForceCreated)
-                {
-                    _revisionsStorage = revisionsStorage;
-                    _ids = ids;
-                    _includeForceCreated = includeForceCreated;
-                }
-
-                public EnforceRevisionConfigurationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-                {
-                    return new EnforceRevisionConfigurationCommand(_revisionsStorage, _ids,  new EnforceConfigurationResult(), _includeForceCreated, OperationCancelToken.None);
-                }
             }
         }
 

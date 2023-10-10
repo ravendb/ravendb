@@ -96,7 +96,8 @@ namespace SlowTests
             {
                 Default = new RevisionsCollectionConfiguration
                 {
-                    Disabled = false
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
                 }
             };
             await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
