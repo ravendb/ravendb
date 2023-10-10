@@ -9,7 +9,7 @@ namespace Raven.Server.Web.ResponseCompression
     /// </summary>
     public sealed class ZstdCompressionProviderOptions : IOptions<ZstdCompressionProviderOptions>
     {
-        public int Level { get; set; } = 1;
+        public CompressionLevel Level { get; set; } = CompressionLevel.Fastest;
 
         /// <inheritdoc />
         ZstdCompressionProviderOptions IOptions<ZstdCompressionProviderOptions>.Value => this;
