@@ -15,6 +15,8 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public bool SkipRevisionCreation { get; set; }
         
+        public ExportCompressionAlgorithm? CompressionAlgorithm { get; set; }
+
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
         {
             var result = new DatabaseSmugglerOptionsServerSide();

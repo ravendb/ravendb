@@ -52,7 +52,7 @@ namespace Raven.Server.Config
         public HttpConfiguration Http { get; }
 
         public EtlConfiguration Etl { get; }
-        
+
         public QueueSinkConfiguration QueueSink { get; }
 
         public ReplicationConfiguration Replication { get; }
@@ -95,13 +95,15 @@ namespace Raven.Server.Config
 
         public MigrationConfiguration Migration { get; }
 
-        public IntegrationsConfiguration Integrations { get;  }
+        public IntegrationsConfiguration Integrations { get; }
 
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
         internal IConfigurationRoot Settings { get; set; }
 
         public TrafficWatchConfiguration TrafficWatch { get; }
+
+        public ExportImportConfiguration ExportImport { get; }
 
         public ShardingConfiguration Sharding { get; set; }
 
@@ -120,7 +122,7 @@ namespace Raven.Server.Config
             _customConfigPath = customConfigPath;
             PathSettingBase<string>.ValidatePath(_customConfigPath);
             _configBuilder = new ConfigurationBuilder();
-            if(skipEnvironmentVariables == false)
+            if (skipEnvironmentVariables == false)
                 AddEnvironmentVariables();
             AddJsonConfigurationVariables(customConfigPath);
 
@@ -155,6 +157,7 @@ namespace Raven.Server.Config
             Migration = new MigrationConfiguration();
             TrafficWatch = new TrafficWatchConfiguration();
             Integrations = new IntegrationsConfiguration();
+            ExportImport = new ExportImportConfiguration();
             QueueSink = new QueueSinkConfiguration();
             Sharding = new ShardingConfiguration();
         }
@@ -218,6 +221,7 @@ namespace Raven.Server.Config
             Migration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             TrafficWatch.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Integrations.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            ExportImport.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             QueueSink.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Sharding.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 

@@ -40,5 +40,7 @@ namespace Raven.Server.Config.Categories
         TrafficWatch,
         [Description("Queue Sink")]
         QueueSink,
+        [Description("Export & Import")]
+        ExportImport
     }
 }

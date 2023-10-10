@@ -22,6 +22,8 @@ using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using Index = Raven.Server.Documents.Indexes.Index;
+using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
+using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -251,7 +253,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         await using (var input = entry.Open())
                         await using (var inputStream = GetSnapshotInputStream(input, database.Name))
-                        await using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
+                        await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                         {
                             var source = new StreamSource(uncompressed, context, database.Name);
 

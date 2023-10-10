@@ -18,6 +18,8 @@ using Raven.Server.Smuggler;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
+using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 {
@@ -123,7 +125,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 
                                 ApplyBackwardCompatibility(options);
                                 await using (var inputStream = GetInputStream(section.Body, options))
-                                await using (var stream = new GZipStream(inputStream, CompressionMode.Decompress))
+                                await using (var stream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                                 {
                                     await onImport(context, stream, options, result, onProgress, operationId, token);
                                 }

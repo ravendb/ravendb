@@ -1380,7 +1380,7 @@ namespace Raven.Server.Documents
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
-                            var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
+                            var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, Configuration.Backup.CompressionAlgorithm);
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                             {
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,

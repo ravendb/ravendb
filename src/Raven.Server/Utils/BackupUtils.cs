@@ -1,11 +1,17 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -22,11 +28,51 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
+using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
+    internal static async ValueTask<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(1);
+
+        try
+        {
+            var read = await stream.ReadAsync(buffer, 0, 1, token);
+            if (read == 0)
+                throw new InvalidOperationException("Empty stream");
+
+            var backupStream = new BackupStream(stream, buffer[0]);
+
+            return buffer[0] switch
+            {
+                31 => new GZipStream(backupStream, CompressionMode.Decompress),
+                40 => ZstdStream.Decompress(backupStream),
+                _ => throw new NotSupportedException($"Unknown stream format ({buffer[0]})")
+            };
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
+    {
+        switch (compressionAlgorithm)
+        {
+            case ExportCompressionAlgorithm.Gzip:
+                return new GZipStream(stream, compressionLevel, leaveOpen: true);
+            case ExportCompressionAlgorithm.Zstd:
+                return ZstdStream.Compress(stream);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
     internal static BackupInfo GetBackupInfo(BackupInfoParameters parameters)
     {
         var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, taskId: 0L);
@@ -238,8 +284,8 @@ internal static class BackupUtils
             nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
 
         return delayUntil.HasValue && delayUntil.Value.ToLocalTime() > nextBackup.Value
-            ? delayUntil.Value.ToLocalTime() 
-            : nextBackup.Value;              
+            ? delayUntil.Value.ToLocalTime()
+            : nextBackup.Value;
     }
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,
