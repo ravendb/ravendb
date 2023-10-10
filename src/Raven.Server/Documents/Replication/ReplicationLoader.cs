@@ -117,12 +117,15 @@ namespace Raven.Server.Documents.Replication
 
         public long GetMinimalEtagForReplication()
         {
+            DatabaseTopology topology;
             long minEtag = long.MaxValue;
 
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var externals = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name).ExternalReplications;
+                var dbRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name);
+                topology = dbRecord.Topology;
+                var externals = dbRecord.ExternalReplications;
                 if (externals != null)
                 {
                     foreach (var external in externals)
@@ -133,10 +136,20 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
+            var replicationNodes = new List<ReplicationNode>();
 
-            var replicationNodes = Destinations?.ToList();
-            if (replicationNodes == null || replicationNodes.Count == 0)
-                return minEtag;
+            foreach (var node in topology.AllNodes)
+            {
+                if (node == _server.NodeTag)
+                    continue;
+                var internalReplication = new InternalReplication
+                {
+                    NodeTag = node,
+                    Url = _clusterTopology.GetUrlFromTag(node),
+                    Database = Database.Name
+                };
+                replicationNodes.Add(internalReplication);
+            }
 
             foreach (var lastEtagPerDestination in _lastSendEtagPerDestination)
             {

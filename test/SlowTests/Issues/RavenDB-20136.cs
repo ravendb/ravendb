@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public async void DeletingDocumentWithRevisionsDoesntCorruptETLProcess()
+        public async void DeletingDocumentWithRevisionsDoesntCorruptEtlProcess()
         {
             using (var src = GetDocumentStore())
             using (var dst = GetDocumentStore())

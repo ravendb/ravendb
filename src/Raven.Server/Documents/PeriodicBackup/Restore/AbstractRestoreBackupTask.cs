@@ -30,6 +30,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
+using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -466,7 +467,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             await using (var fileStream = await RestoreSource.GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
-            await using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            await using (var gzipStream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
             using (var source = new StreamSource(gzipStream, context, database.Name))
             {
                 var smuggler = database.Smuggler.CreateForRestore(RestoreSettings.DatabaseRecord, source, destination, context, options, restoreResult, onProgress);

@@ -91,7 +91,7 @@ namespace SlowTests.Tests
                         select method;
 
             var array = types.ToArray();
-            const int numberToTolerate = 8020;
+            const int numberToTolerate = 4712;
             if (array.Length == numberToTolerate)
                 return;
 
@@ -105,21 +105,19 @@ namespace SlowTests.Tests
 
             static bool Filter(MethodInfo method)
             {
-                var factAttributes = method.GetCustomAttribute(typeof(FactAttribute), false);
-
-                if (factAttributes != null)
+                var factAttribute = method.GetCustomAttribute(typeof(FactAttribute), false);
+                if (factAttribute != null)
                 {
-                    if (factAttributes.GetType() == typeof(RavenFactAttribute))
+                    if (ValidNamespace(factAttribute.GetType().Namespace))
                         return false;
 
                     return true;
                 }
 
-                var theoryAttributes = method.GetCustomAttribute(typeof(TheoryAttribute), false);
-
-                if (theoryAttributes != null)
+                var theoryAttribute = method.GetCustomAttribute(typeof(TheoryAttribute), false);
+                if (theoryAttribute != null)
                 {
-                    if (theoryAttributes.GetType() == typeof(RavenTheoryAttribute))
+                    if (ValidNamespace(theoryAttribute.GetType().Namespace))
                         return false;
 
                     return true;
@@ -127,6 +125,11 @@ namespace SlowTests.Tests
 
                 return false;
             }
+
+            static bool ValidNamespace(string @namespace)
+            {
+                return @namespace == null || @namespace.StartsWith("FastTests") || @namespace.StartsWith("SlowTests") || @namespace.StartsWith("Tests.Infrastructure");
+        }
         }
 
         private IEnumerable<Assembly> GetAssemblies(Assembly assemblyToScan)

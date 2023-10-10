@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Raven.Client.Exceptions.Security;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Handlers;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler;
@@ -34,7 +35,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
         operationId ??= GetOperationId();
         var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
         await using (var file = await GetImportStream())
-        await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
+        await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var result = await DoImport(context, stream, options, result: null, onProgress: null, operationId.Value, token);

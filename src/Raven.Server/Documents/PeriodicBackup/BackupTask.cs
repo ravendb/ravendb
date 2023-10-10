@@ -761,7 +761,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext smugglerContext))
             {
                 var smugglerSource = _database.Smuggler.CreateSource(startDocumentEtag.Value, startRaftIndex.Value, _logger);
-                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
+                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, _database.Configuration.Backup.CompressionAlgorithm);
                 var smuggler = _database.Smuggler.Create(
                     smugglerSource,
                     smugglerDestination,

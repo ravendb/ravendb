@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -1511,7 +1512,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (FileStream fs = file.OpenRead())
                 {
                     using (var stream = new MemoryStream())
-                    using (var gz = new GZipStream(fs, CompressionMode.Decompress))
+                    using (var gz = ZstdStream.Decompress(fs))
                     {
                         gz.CopyTo(stream);
                         stream.Position = 0;
