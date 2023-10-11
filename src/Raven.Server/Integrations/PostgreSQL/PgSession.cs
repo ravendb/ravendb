@@ -72,6 +72,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                     await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                     {
+                        ServerCertificate = _serverCertificate.Certificate,
                         ServerCertificateContext = _serverCertificate.CertificateContext,
                         ClientCertificateRequired = false
                     }, _token);

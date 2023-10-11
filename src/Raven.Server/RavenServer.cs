@@ -2476,6 +2476,7 @@ namespace Raven.Server
 
                 await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                 {
+                    ServerCertificate = Certificate.Certificate,
                     ServerCertificateContext = Certificate.CertificateContext,
                     ClientCertificateRequired = true,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
