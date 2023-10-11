@@ -101,12 +101,8 @@ namespace Raven.Server.Web.Studio
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var updated = await ServerStore.LicenseManager.LeaseLicense(GetRaftRequestIdFromQuery(), throwOnError: true);
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Updated"] = updated,
-                    ["Message"] = updated ? "License was updated Successfully" : "The license wasn't modified"
-                });
+                var licenseLeaseResult = await ServerStore.LicenseManager.LeaseLicense(GetRaftRequestIdFromQuery(), throwOnError: true);
+                context.Write(writer, licenseLeaseResult.ToJson());
             }
         }
 
