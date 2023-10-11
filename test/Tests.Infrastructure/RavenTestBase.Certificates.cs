@@ -168,11 +168,7 @@ public partial class RavenTestBase
                 {
                     CertificateUtils.CreateSelfSignedClientCertificate(
                         name,
-                        new CertificateUtils.CertificateHolder
-                        {
-                            Certificate = serverCertificate,
-                            PrivateKey = pk
-                        },
+                        new CertificateUtils.CertificateHolder(serverCertificate, pk),
                         out var certBytes, DateTime.UtcNow.Date.AddYears(5));
 
                     try

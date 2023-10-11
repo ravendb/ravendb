@@ -158,7 +158,7 @@ namespace Raven.Server
 
             EchoServer.StartEchoSockets(Configuration.Core.EchoSocketPort);
 
-            Certificate = LoadCertificateAtStartup() ?? new CertificateUtils.CertificateHolder();
+            Certificate = LoadCertificateAtStartup() ?? CertificateUtils.CertificateHolder.CreateEmpty();
             ReadWellKnownIssuers();
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
@@ -2476,7 +2476,7 @@ namespace Raven.Server
 
                 await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                 {
-                    ServerCertificate = Certificate.Certificate,
+                    ServerCertificateContext = Certificate.CertificateContext,
                     ClientCertificateRequired = true,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                     EncryptionPolicy = EncryptionPolicy.RequireEncryption,
