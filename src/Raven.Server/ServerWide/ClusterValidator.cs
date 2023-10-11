@@ -43,11 +43,11 @@ namespace Raven.Server.ServerWide
                 RejectSendToFollowerException.Throw("Rachis entry has no type!");
             }
 
-            var myCommandVersion = ClusterCommandsVersionManager.ClusterCommandsVersions[type];
-
-            if (myCommandVersion > version)
+            if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(type, out var myCommandVersion) == false || 
+                myCommandVersion > version)
             {
-                RejectSendToFollowerException.Throw($"The command '{type}' with the version {myCommandVersion} is not supported on follower {follower} with version build {version}.");
+                RejectSendToFollowerException.Throw($"The command '{type}' {(myCommandVersion > 0 ? $"with the version {myCommandVersion} " : null)}" +
+                                                    $"is not supported on follower {follower} with version build {version}.");
             }
         }
     }
