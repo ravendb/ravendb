@@ -768,6 +768,7 @@ namespace Raven.Server.Rachis
                                 continue;
                             }
 
+                            list.Add(cmd.Tcs);
                             _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
 
                             if (_engine.LogHistory.HasHistoryLog(context, cmd.Command.UniqueRequestId, out var index, out var result, out var exception))
@@ -791,6 +792,7 @@ namespace Raven.Server.Rachis
 
                                         cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
                                     }
+                                    list.Remove(cmd.Tcs);
                                     continue;
                                 }
                             }
@@ -800,7 +802,6 @@ namespace Raven.Server.Rachis
                                 var cmdJson = context.ReadObject(djv, "raft/command");
                                 index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
                             }
-                            list.Add(cmd.Tcs);
 
                             if (_entries.TryGetValue(index, out var state) == false)
                             {
