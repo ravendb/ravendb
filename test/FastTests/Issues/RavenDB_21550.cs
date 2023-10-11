@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Should_Handle_ToArray()
         {
             using (var store = GetDocumentStore())
