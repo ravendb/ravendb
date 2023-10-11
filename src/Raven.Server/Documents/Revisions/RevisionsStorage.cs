@@ -33,7 +33,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Revisions
 {
-    public class RevisionsStorage
+    public partial class RevisionsStorage
     {
         private static readonly Slice IdAndEtagSlice;
         public static readonly Slice DeleteRevisionEtagSlice;
@@ -1990,41 +1990,6 @@ namespace Raven.Server.Documents.Revisions
 
                 return 0;
             }
-        }
-
-        internal class TestingStuff
-        {
-            private RevisionsStorage _parent;
-
-            public TestingStuff(RevisionsStorage revisionsStorage)
-            {
-                _parent = revisionsStorage;
-            }
-
-            internal void DeleteLastRevisionFor(DocumentsOperationContext context, string id, string collection)
-            {
-                var collectionName = new CollectionName(collection);
-                using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
-                using (_parent.GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
-                using (GetKeyWithEtag(context, lowerId, etag: long.MaxValue, out var compoundPrefix))
-                {
-                    var table = _parent.EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-                    var holder = table.SeekOneBackwardFrom(RevisionsStorage.RevisionsSchema.Indexes[RevisionsStorage.IdAndEtagSlice], lowerIdPrefix, compoundPrefix);
-                    var lastRevision = TableValueToRevision(context, ref holder.Reader, DocumentFields.ChangeVector | DocumentFields.LowerId);
-                    _parent.DeleteRevisionFromTable(context, table, new Dictionary<string, Table>(), lastRevision, collectionName, lastRevision.ChangeVector, _parent._database.Time.GetUtcNow().Ticks);
-                    IncrementCountOfRevisions(context, lowerIdPrefix, -1);
-                }
-            }
-        }
-
-        internal TestingStuff ForTestingPurposes;
-
-        internal TestingStuff ForTestingPurposesOnly()
-        {
-            if (ForTestingPurposes != null)
-                return ForTestingPurposes;
-
-            return ForTestingPurposes = new TestingStuff(this);
         }
 
         private unsafe long CreateDeletedRevision(DocumentsOperationContext context, Table table, string id, CollectionName collectionName, 
