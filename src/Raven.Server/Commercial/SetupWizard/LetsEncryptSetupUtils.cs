@@ -11,9 +11,10 @@ namespace Raven.Server.Commercial.SetupWizard;
 
 public static class LetsEncryptSetupUtils
 {
-        private const string AcmeClientUrl = "https://acme-v02.api.letsencrypt.org/directory";
+        public const string ProductionAcmeClientUrl = "https://acme-v02.api.letsencrypt.org/directory";
+        public const string StagingAcmeClientUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
 
-        public static async Task<byte[]> Setup(SetupInfo setupInfo,  SetupProgressAndResult progress, bool registerTcpDnsRecords, CancellationToken token)
+        public static async Task<byte[]> Setup(SetupInfo setupInfo,  SetupProgressAndResult progress, bool registerTcpDnsRecords, bool useProduction, CancellationToken token)
         {
             progress.Processed++;
             progress?.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
@@ -21,7 +22,7 @@ public static class LetsEncryptSetupUtils
             if (EmailValidator.IsValid(setupInfo.Email) == false)
                 throw new ArgumentException("Invalid e-mail format" + setupInfo.Email);
 
-            var acmeClient = new LetsEncryptClient(AcmeClientUrl);
+            var acmeClient = new LetsEncryptClient(useProduction ? ProductionAcmeClientUrl : StagingAcmeClientUrl);
 
             await acmeClient.Init(setupInfo.Email, token);
 

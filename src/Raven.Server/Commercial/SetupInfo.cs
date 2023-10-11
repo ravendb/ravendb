@@ -136,7 +136,7 @@ namespace Raven.Server.Commercial
             }
             case  "lets-encrypt":
             {
-                return await LetsEncryptSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.RegisterTcpDnsRecords, parameters.CancellationToken);
+                return await LetsEncryptSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.RegisterTcpDnsRecords, useProduction: true, parameters.CancellationToken);
             }
             default: throw new InvalidOperationException("Invalid mode provided.");
         }

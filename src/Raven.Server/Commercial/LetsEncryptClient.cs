@@ -18,9 +18,6 @@ namespace Raven.Server.Commercial
 {
     public sealed class LetsEncryptClient
     {
-        public const string StagingV2 = "https://acme-staging-v02.api.letsencrypt.org/directory";
-        public const string ProductionV2 = "https://acme-v02.api.letsencrypt.org/directory";
-
         private static readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
         {
             NullValueHandling = NullValueHandling.Ignore,
