@@ -41,11 +41,34 @@ namespace Raven.Server.Web.System
                     first = false;
                     writer.WritePropertyName(alloc.Type);
                     writer.WriteStartObject();
-                    writer.WritePropertyName("Memory");
+                    writer.WritePropertyName("Allocated");
                     writer.WriteString(new Size((long)alloc.Allocations, SizeUnit.Bytes).ToString());
+
+                    var additionalLogging = alloc.Allocations != alloc.SmallObjectAllocations;
+                    if (additionalLogging)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName("AllocatedSmallObjects");
+                        writer.WriteString(new Size((long)alloc.SmallObjectAllocations, SizeUnit.Bytes).ToString());
+                        writer.WriteComma();
+                        writer.WritePropertyName("AllocatedLargeObjects");
+                        writer.WriteString(new Size((long)alloc.LargeObjectAllocations, SizeUnit.Bytes).ToString());
+                    }
+                    
                     writer.WriteComma();
-                    writer.WritePropertyName("Allocations");
+                    writer.WritePropertyName("NumberOfAllocations");
                     writer.WriteInteger(alloc.NumberOfAllocations);
+
+                    if (additionalLogging)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName("NumberOfSmallObjectAllocations");
+                        writer.WriteInteger(alloc.NumberOfSmallObjectAllocations);
+                        writer.WriteComma();
+                        writer.WritePropertyName("NumberOfLargeObjectAllocations");
+                        writer.WriteInteger(alloc.NumberOfLargeObjectAllocations);
+                    }
+
                     writer.WriteEndObject();
                 }
 
@@ -126,9 +149,25 @@ namespace Raven.Server.Web.System
 
             public class AllocationInfo
             {
+                private ulong? _allocations;
+
                 public string Type;
-                public ulong Allocations;
-                public long NumberOfAllocations;
+                public ulong SmallObjectAllocations;
+                public ulong LargeObjectAllocations;
+                public long NumberOfSmallObjectAllocations;
+                public long NumberOfLargeObjectAllocations;
+
+                public ulong Allocations
+                {
+                    get
+                    {
+                        // used for ordering
+                        _allocations ??= SmallObjectAllocations + LargeObjectAllocations;
+                        return _allocations.Value;
+                    }
+                }
+
+                public long NumberOfAllocations => NumberOfSmallObjectAllocations + NumberOfLargeObjectAllocations;
             }
 
             protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -144,8 +183,20 @@ namespace Raven.Server.Web.System
                                 Type = type
                             };
                         }
-                        info.Allocations += (ulong)eventData.Payload[3];
-                        info.NumberOfAllocations++;
+                        var allocations = (ulong)eventData.Payload[3];
+
+                        var smallObjectAllocation = (uint)eventData.Payload[1] == 0x0;
+                        if (smallObjectAllocation)
+                        {
+                            _allocations[type].SmallObjectAllocations += allocations;
+                            _allocations[type].NumberOfSmallObjectAllocations++;
+                        }
+                        else
+                        {
+                            _allocations[type].LargeObjectAllocations += allocations;
+                            _allocations[type].NumberOfLargeObjectAllocations++;
+                        }
+
                         break;
                 }
             }
