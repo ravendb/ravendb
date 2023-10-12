@@ -19,7 +19,6 @@ import { NonShardedViewProps } from "components/models/common";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import { DevTool } from "@hookform/devtools";
 import classNames from "classnames";
 import { tryHandleSubmit } from "components/utils/common";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
@@ -34,14 +33,24 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 todo("Styling", "ANY", "Collection list item hover");
 todo("Styling", "ANY", "Remove collection button");
 todo("Styling", "ANY", "RadioToggleWithIcon when disabled");
+todo("Styling", "ANY", "Blink only after adding new collection");
 
 export default function DocumentCompression({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
-    const asyncGetConfig = useAsyncCallback(() => databasesService.getDocumentsCompressionConfiguration(db));
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
         (x) => x !== "@empty" && x !== "@hilo"
     );
+
+    const [customCollectionOptions, setCustomCollectionOptions] = useState<SelectOption[]>([]);
+
+    const asyncGetConfig = useAsyncCallback(() => databasesService.getDocumentsCompressionConfiguration(db), {
+        onSuccess: (result) => {
+            setCustomCollectionOptions(
+                result.Collections.filter((x) => !allCollectionNames.includes(x)).map((x) => ({ value: x, label: x }))
+            );
+        },
+    });
 
     const { formState, control, setValue, reset, handleSubmit } = useForm<DocumentsCompressionConfiguration>({
         defaultValues: async () =>
@@ -64,10 +73,6 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
     const { reportEvent } = useEventsCollector();
     const docsLink = useRavenLink({ hash: "WRSDA7" });
 
-    const [collectionOptions, setCollectionOptions] = useState<SelectOption[]>(
-        allCollectionNames.map((x) => ({ label: x, value: x }))
-    );
-
     if (asyncGetConfig.status === "not-requested" || asyncGetConfig.status === "loading") {
         return <LoadingView />;
     }
@@ -76,19 +81,17 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
         return <LoadError error="Unable to load document compression configuration" refresh={asyncGetConfig.execute} />;
     }
 
-    const onCreateOption = (name: string) => {
-        const newOption: SelectOption = { value: name, label: name };
-
-        setCollectionOptions((options) => [...options, newOption]);
-        setValue("Collections", [...Collections, name], { shouldDirty: true });
-    };
-
-    const onRemoveCollection = (name: string) => {
+    const removeCollection = (name: string) => {
         setValue(
             "Collections",
             Collections.filter((x) => x !== name),
             { shouldDirty: true }
         );
+    };
+
+    const addAllCollections = () => {
+        const remainingCollectionNames = allCollectionNames.filter((name) => !Collections.includes(name));
+        setValue("Collections", [...Collections, ...remainingCollectionNames], { shouldDirty: true });
     };
 
     const onSave: SubmitHandler<DocumentsCompressionConfiguration> = async (formData) => {
@@ -103,7 +106,6 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
 
     return (
         <div className="content-margin">
-            <DevTool control={control} />
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col className="gy-sm">
@@ -158,19 +160,17 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                                 <FormSelectCreatable
                                                     control={control}
                                                     name="Collections"
-                                                    options={collectionOptions}
-                                                    onCreateOption={onCreateOption}
+                                                    options={allCollectionNames.map((x) => ({ label: x, value: x }))}
+                                                    customOptions={customCollectionOptions}
                                                     isMulti
                                                     controlShouldRenderValue={false}
                                                     isClearable={false}
                                                     placeholder="Select collection (or enter new collection)"
+                                                    maxMenuHeight={300}
                                                 />
                                             </Col>
                                             <Col sm="auto" className="d-flex">
-                                                <Button
-                                                    color="info"
-                                                    onClick={() => setValue("Collections", allCollectionNames)}
-                                                >
+                                                <Button color="info" onClick={addAllCollections}>
                                                     <Icon icon="documents" addon="plus" /> Add All
                                                 </Button>
                                             </Col>
@@ -186,7 +186,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                                         <Button
                                                             color="link"
                                                             size="xs"
-                                                            onClick={() => onRemoveCollection(name)}
+                                                            onClick={() => removeCollection(name)}
                                                         >
                                                             <Icon icon="trash" />
                                                         </Button>
