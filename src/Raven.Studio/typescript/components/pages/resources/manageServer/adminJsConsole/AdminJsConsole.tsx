@@ -13,7 +13,11 @@ import { useAsyncCallback } from "react-async-hook";
 import { FormAceEditor, FormSelect } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { SelectOption } from "components/common/select/Select";
+import {
+    OptionWithIconAndSeparator,
+    SelectOptionWithIconAndSeparator,
+    SingleValueWithIcon,
+} from "components/common/select/Select";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import "./AdminJsConsole.scss";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
@@ -38,14 +42,16 @@ export default function AdminJSConsole() {
 
     const adminJsConsoleDocsLink = useRavenLink({ hash: "IBUJ7M" });
 
-    const allTargets: SelectOption<string>[] = [
+    const allTargets: SelectOptionWithIconAndSeparator[] = [
         {
             value: serverTargetValue,
             label: "Server",
             icon: "server",
             horizontalSeparatorLine: allDatabaseNames.length > 0,
         },
-        ...allDatabaseNames.map((x) => ({ value: x, label: x, icon: "database" } satisfies SelectOption<string>)),
+        ...allDatabaseNames.map(
+            (x) => ({ value: x, label: x, icon: "database" } satisfies SelectOptionWithIconAndSeparator)
+        ),
     ];
 
     const { handleSubmit, control, reset, formState, watch } = useForm<AdminJsConsoleFormData>({
@@ -99,6 +105,10 @@ export default function AdminJSConsole() {
                                             name="target"
                                             options={allTargets}
                                             maxMenuHeight={200}
+                                            components={{
+                                                Option: OptionWithIconAndSeparator,
+                                                SingleValue: SingleValueWithIcon,
+                                            }}
                                         />
                                         <div className="text-info">
                                             Accessible within the script under <code>{accessibleVariable}</code>{" "}

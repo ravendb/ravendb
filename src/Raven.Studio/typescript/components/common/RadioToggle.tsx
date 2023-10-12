@@ -9,22 +9,24 @@ export interface RadioToggleWithIconInputItem<T extends string | number | boolea
     iconName: IconName;
 }
 
-export interface RadioToggleWithIconProps<T extends string | number = string> {
+export interface RadioToggleWithIconProps<T extends string | number | boolean = string> {
     name: string;
     leftItem: RadioToggleWithIconInputItem<T>;
     rightItem: RadioToggleWithIconInputItem<T>;
     selectedValue: T;
     setSelectedValue: (x: T) => void;
     className?: string;
+    disabled?: boolean;
 }
 
-export function RadioToggleWithIcon<T extends string | number = string>({
+export function RadioToggleWithIcon<T extends string | number | boolean = string>({
     name,
     leftItem,
     rightItem,
     selectedValue,
     setSelectedValue,
     className,
+    disabled,
 }: RadioToggleWithIconProps<T>) {
     useEffect(() => {
         if (selectedValue == null) {
@@ -33,12 +35,11 @@ export function RadioToggleWithIcon<T extends string | number = string>({
     }, [leftItem.value, selectedValue, setSelectedValue]);
 
     return (
-        <div className={classNames("radio-toggle", className)}>
+        <div className={classNames("radio-toggle", { "item-disabled pe-none": disabled }, className)}>
             <input
                 type="radio"
                 id="radio-toggle-left"
                 name={name}
-                value={leftItem.value}
                 checked={selectedValue === leftItem.value}
                 onChange={() => setSelectedValue(leftItem.value)}
             />
@@ -48,7 +49,6 @@ export function RadioToggleWithIcon<T extends string | number = string>({
                 type="radio"
                 id="radio-toggle-right"
                 name={name}
-                value={rightItem.value}
                 checked={selectedValue === rightItem.value}
                 onChange={() => setSelectedValue(rightItem.value)}
             />

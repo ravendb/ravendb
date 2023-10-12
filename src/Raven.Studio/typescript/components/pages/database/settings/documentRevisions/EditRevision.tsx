@@ -1,5 +1,5 @@
 ﻿import { Icon } from "components/common/Icon";
-import React from "react";
+import React, { useState } from "react";
 import { Alert, Button, Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -25,6 +25,7 @@ import genUtils from "common/generalUtils";
 import generalUtils from "common/generalUtils";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import moment from "moment";
+import { DevTool } from "@hookform/devtools";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
@@ -67,9 +68,20 @@ export default function EditRevision(props: EditRevisionProps) {
     const formValues = useEditRevisionFormController(control, setValue);
     useDirtyFlag(formState.isDirty);
 
+    const [collectionOptions, setCollectionOptions] = useState<SelectOption[]>(
+        isForNewCollection ? newCollectionOptions : [{ label: config.Name, value: config.Name }]
+    );
+
     const onSubmit: SubmitHandler<EditDocumentRevisionsCollectionConfig> = (formData) => {
         onConfirm(mapToDocumentRevisionsConfig(formData, configType));
         toggle();
+    };
+
+    const onCreateOption = (name: string) => {
+        const newOption: SelectOption = { value: name, label: name };
+
+        setCollectionOptions((options) => [...options, newOption]);
+        setValue("collectionName", name, { shouldDirty: true });
     };
 
     const formattedMinimumRevisionAgeToKeep = formValues.minimumRevisionAgeToKeep
@@ -104,20 +116,18 @@ export default function EditRevision(props: EditRevisionProps) {
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info">
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
+                <DevTool control={control} />
                 <ModalBody className="vstack gap-2">
                     <h4>{getTitle(taskType, configType)}</h4>
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
                             <Label className="mb-0 md-label">Collection</Label>
                             <FormSelectCreatable
-                                placeholder="Select collection"
+                                placeholder="Select collection (or enter new collection)"
                                 control={control}
                                 name="collectionName"
-                                options={
-                                    isForNewCollection
-                                        ? newCollectionOptions
-                                        : [{ label: config.Name, value: config.Name }]
-                                }
+                                options={collectionOptions}
+                                onCreateOption={onCreateOption}
                                 isDisabled={!isForNewCollection}
                             />
                         </InputGroup>
