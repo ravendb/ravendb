@@ -16,7 +16,7 @@ class saveDocumentsCompressionCommand extends commandBase {
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
 
         const url = endpoint.databases.documentsCompression.adminDocumentsCompressionConfig;
-        const args = ko.toJSON(this.config);
+        const args = this.config;
         
         return this.post<updateDatabaseConfigurationsResult>(url, args, this.db)
             .done(() => this.reportSuccess("Documents compression configuration was successfully saved"))
