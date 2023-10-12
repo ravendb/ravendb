@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
@@ -256,8 +255,7 @@ namespace Raven.Server.Documents.Handlers
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
                 ClusterTransactionCompletionResult reply;
-                using (var timeout = new CancellationTokenSource(ServerStore.Engine.OperationTimeout))
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, HttpContext.RequestAborted))
+                using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Engine.OperationTimeout))
                 {
                     reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
                 }

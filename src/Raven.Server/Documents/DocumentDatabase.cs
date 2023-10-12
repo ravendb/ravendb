@@ -54,7 +54,6 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using static Raven.Server.Monitoring.Snmp.SnmpOids;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -295,8 +294,7 @@ namespace Raven.Server.Documents
 
                 _addToInitLog("Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
-                _addToInitLog("Starting Transaction Merger");
-                TxMerger.Start();
+               
                 _addToInitLog("Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
 
@@ -315,6 +313,12 @@ namespace Raven.Server.Documents
 
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
+
+                DatabaseGroupId ??= record!.Topology.DatabaseTopologyIdBase64;
+                ClusterTransactionId ??= record!.Topology.ClusterTransactionIdBase64;
+
+                _addToInitLog("Starting Transaction Merger");
+                TxMerger.Start();
 
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
@@ -1384,6 +1388,8 @@ namespace Raven.Server.Documents
         {
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                 return;
+
+            _serverStore.DatabasesLandlord.ForTestingPurposes?.DelayNotifyFeaturesAboutStateChange?.Invoke();
 
             var taken = false;
             Stopwatch sp = default;
