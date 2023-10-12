@@ -12,6 +12,7 @@ import DocumentRevisions from "components/pages/database/settings/documentRevisi
 import TombstonesState from "components/pages/database/settings/tombstones/TombstonesState";
 import DatabaseCustomSorters from "components/pages/database/settings/customSorters/DatabaseCustomSorters";
 import DatabaseCustomAnalyzers from "components/pages/database/settings/customAnalyzers/DatabaseCustomAnalyzers";
+import DocumentCompression from "components/pages/database/settings/documentCompression/DocumentCompression";
 
 export = getSettingsMenuItem;
 
@@ -107,7 +108,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/documentsCompression',
-            moduleId: require('viewmodels/database/settings/documentsCompression'),
+            moduleId: bridgeToReact(DocumentCompression, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Document Compression',
             nav: true,

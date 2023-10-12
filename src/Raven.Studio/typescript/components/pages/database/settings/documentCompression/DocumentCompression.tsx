@@ -1,193 +1,228 @@
 import React, { useState } from "react";
-import { Col, Button, Row, Input, InputGroup, Card, Collapse } from "reactstrap";
+import { Col, Button, Row, Card, Collapse, Form } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import classNames from "classnames";
-import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/RadioToggle";
-import { Switch } from "components/common/Checkbox";
-import useBoolean from "components/hooks/useBoolean";
+import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { EmptySet } from "components/common/EmptySet";
 import { FlexGrow } from "components/common/FlexGrow";
-import {
-    AboutViewAnchored,
-    AboutViewHeading,
-    AccordionItemLicensing,
-    AccordionItemWrapper,
-} from "components/common/AboutView";
+import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { todo } from "common/developmentHelper";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import { SubmitHandler, useForm, useWatch } from "react-hook-form";
+import { FormRadioToggleWithIcon, FormSelectCreatable, FormSwitch } from "components/common/Form";
+import { useServices } from "components/hooks/useServices";
+import { useAsyncCallback } from "react-async-hook";
+import { NonShardedViewProps } from "components/models/common";
+import { LoadError } from "components/common/LoadError";
+import { LoadingView } from "components/common/LoadingView";
+import { useRavenLink } from "components/hooks/useRavenLink";
+import { DevTool } from "@hookform/devtools";
+import classNames from "classnames";
+import { tryHandleSubmit } from "components/utils/common";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import DocumentsCompressionConfiguration = Raven.Client.ServerWide.DocumentsCompressionConfiguration;
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { SelectOption } from "components/common/select/Select";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
-export default function DocumentCompression() {
-    const leftRadioToggleItem: RadioToggleWithIconInputItem = {
-        label: "Compress selected collections",
-        value: "selected",
-        iconName: "document",
+todo("Styling", "ANY", "Collection list item hover");
+todo("Styling", "ANY", "Remove collection button");
+todo("Styling", "ANY", "RadioToggleWithIcon when disabled");
+
+export default function DocumentCompression({ db }: NonShardedViewProps) {
+    const { databasesService } = useServices();
+    const asyncGetConfig = useAsyncCallback(() => databasesService.getDocumentsCompressionConfiguration(db));
+
+    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
+        (x) => x !== "@empty" && x !== "@hilo"
+    );
+
+    const { formState, control, setValue, reset, handleSubmit } = useForm<DocumentsCompressionConfiguration>({
+        defaultValues: async () =>
+            (await asyncGetConfig.execute()) ?? {
+                Collections: [],
+                CompressAllCollections: false,
+                CompressRevisions: false,
+            },
+    });
+
+    const { Collections, CompressAllCollections } = useWatch({ control });
+
+    const hasDocumentsCompression = useAppSelector(licenseSelectors.statusValue("HasDocumentsCompression"));
+    const featureAvailability = useEnterpriseLicenseAvailability(hasDocumentsCompression);
+    const isDatabaseAdmin =
+        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+
+    useDirtyFlag(formState.isDirty);
+    const { appUrl } = useAppUrls();
+    const { reportEvent } = useEventsCollector();
+    const docsLink = useRavenLink({ hash: "WRSDA7" });
+
+    const [collectionOptions, setCollectionOptions] = useState<SelectOption[]>(
+        allCollectionNames.map((x) => ({ label: x, value: x }))
+    );
+
+    if (asyncGetConfig.status === "not-requested" || asyncGetConfig.status === "loading") {
+        return <LoadingView />;
+    }
+
+    if (asyncGetConfig.status === "error") {
+        return <LoadError error="Unable to load document compression configuration" refresh={asyncGetConfig.execute} />;
+    }
+
+    const onCreateOption = (name: string) => {
+        const newOption: SelectOption = { value: name, label: name };
+
+        setCollectionOptions((options) => [...options, newOption]);
+        setValue("Collections", [...Collections, name], { shouldDirty: true });
     };
 
-    const rightRadioToggleItem: RadioToggleWithIconInputItem = {
-        label: "Compress all collections",
-        value: "all",
-        iconName: "documents",
+    const onRemoveCollection = (name: string) => {
+        setValue(
+            "Collections",
+            Collections.filter((x) => x !== name),
+            { shouldDirty: true }
+        );
     };
 
-    const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
-    const [animateNewItem, setAnimateNewItem] = useState(false);
-
-    const onAnimationEnd = () => {
-        setAnimateNewItem(false);
-    };
-    const [newCollection, setNewCollection] = useState("");
-    const addCollection = () => {
-        if (newCollection !== "" && !selectedCollections.includes(newCollection)) {
-            setSelectedCollections([newCollection, ...selectedCollections]);
-            setNewCollection("");
-            setAnimateNewItem(true);
-        }
+    const onSave: SubmitHandler<DocumentsCompressionConfiguration> = async (formData) => {
+        return tryHandleSubmit(async () => {
+            reportEvent("documents-compression", "save");
+            await databasesService.saveDocumentsCompression(db, formData);
+            reset(formData);
+        });
     };
 
-    const removeCollection = (removedCollection: string) => {
-        const newSellectedCollections = selectedCollections.filter((collection) => collection !== removedCollection);
-        setSelectedCollections(newSellectedCollections);
-    };
-
-    const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === "Enter") {
-            addCollection();
-        }
-    };
-
-    const [radioToggleSelectedValue, setRadioToggleSelectedValue] = useState(leftRadioToggleItem.value);
-
-    const { value: compressRevisions, toggle } = useBoolean(false);
-
-    todo("Feature", "Damian", "Add the logic");
-    todo("Feature", "Damian", "Connect to the Studio");
-    todo("Feature", "Damian", "Add logic for Licensing");
-    todo("Feature", "Damian", "Remove legacy code");
+    const infoTextSuffix = CompressAllCollections ? "all collections" : "the selected collections";
 
     return (
         <div className="content-margin">
+            <DevTool control={control} />
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col className="gy-sm">
                         <AboutViewHeading
                             title="Document Compression"
                             icon="documents-compression"
-                            badge
-                            badgeText="Enterprise"
+                            licenseBadgeText={hasDocumentsCompression ? null : "Enterprise"}
                         />
-                        <div className="hstack mb-3">
-                            <Button color="primary">
-                                <Icon icon="save" /> Save
-                            </Button>
-                            <FlexGrow />
-                            <Button color="link" href="#">
-                                <Icon icon="link" /> Storage Report
-                            </Button>
-                        </div>
-                        <Card className="p-4">
-                            <RadioToggleWithIcon
-                                name="some-name"
-                                leftItem={leftRadioToggleItem}
-                                rightItem={rightRadioToggleItem}
-                                selectedValue={radioToggleSelectedValue}
-                                setSelectedValue={(x) => setRadioToggleSelectedValue(x)}
-                                className="mb-4"
-                            />
-                            <Collapse isOpen={radioToggleSelectedValue === "selected"}>
-                                <div className="pb-2">
-                                    <Row>
-                                        <Col>
-                                            <InputGroup>
-                                                <Input
-                                                    invalid={selectedCollections.includes(newCollection)}
-                                                    value={newCollection}
-                                                    onChange={(e) => setNewCollection(e.target.value)}
-                                                    onKeyDownCapture={handleKeyPress}
+                        <Form
+                            onSubmit={handleSubmit(onSave)}
+                            className={classNames({ "item-disabled pe-none": !hasDocumentsCompression })}
+                        >
+                            <div className="hstack mb-3">
+                                {isDatabaseAdmin && (
+                                    <>
+                                        <div id="saveConfigButton" className="w-fit-content">
+                                            <ButtonWithSpinner
+                                                type="submit"
+                                                color="primary"
+                                                className="mb-3"
+                                                icon="save"
+                                                disabled={!formState.isDirty}
+                                                isSpinning={formState.isSubmitting}
+                                            >
+                                                Save
+                                            </ButtonWithSpinner>
+                                        </div>
+                                        {!hasDocumentsCompression && (
+                                            <FeatureNotAvailableInYourLicensePopover target="saveConfigButton" />
+                                        )}
+                                    </>
+                                )}
+                                <FlexGrow />
+                                <a href={appUrl.forStatusStorageReport(db)}>
+                                    <Icon icon="link" /> Storage Report
+                                </a>
+                            </div>
+
+                            <Card className="p-4">
+                                <FormRadioToggleWithIcon
+                                    control={control}
+                                    name="CompressAllCollections"
+                                    leftItem={leftRadioToggleItem}
+                                    rightItem={rightRadioToggleItem}
+                                    className="mb-4 d-flex justify-content-center"
+                                    disabled={!isDatabaseAdmin}
+                                />
+                                <Collapse isOpen={!CompressAllCollections} className="pb-2">
+                                    {isDatabaseAdmin && (
+                                        <Row>
+                                            <Col>
+                                                <FormSelectCreatable
+                                                    control={control}
+                                                    name="Collections"
+                                                    options={collectionOptions}
+                                                    onCreateOption={onCreateOption}
+                                                    isMulti
+                                                    controlShouldRenderValue={false}
+                                                    isClearable={false}
                                                     placeholder="Select collection (or enter new collection)"
                                                 />
-                                                <div
-                                                    className={classNames("invalid-tooltip", {
-                                                        "d-block": selectedCollections.includes(newCollection),
-                                                    })}
+                                            </Col>
+                                            <Col sm="auto" className="d-flex">
+                                                <Button
+                                                    color="info"
+                                                    onClick={() => setValue("Collections", allCollectionNames)}
                                                 >
-                                                    Collection already added
-                                                </div>
-                                                <Button color="success" onClick={addCollection}>
-                                                    <Icon icon="document" addon="plus" /> Add
+                                                    <Icon icon="documents" addon="plus" /> Add All
                                                 </Button>
-                                            </InputGroup>
-                                        </Col>
-                                        <Col sm="auto" className="d-flex">
-                                            <Button color="info">
-                                                <Icon icon="documents" addon="plus" /> Add All
-                                            </Button>
-                                        </Col>
-                                    </Row>
+                                            </Col>
+                                        </Row>
+                                    )}
                                     <h3 className="mt-3">Selected Collections:</h3>
                                     <div className="well p-2">
                                         <div className="simple-item-list">
-                                            {selectedCollections.map((collection, index) => (
-                                                <div
-                                                    key={collection}
-                                                    className={classNames("p-1 hstack add-hover", {
-                                                        "blink-style": index === 0 && animateNewItem,
-                                                    })}
-                                                    onAnimationEnd={onAnimationEnd}
-                                                >
-                                                    <div className="flex-grow-1 pl-2">{collection}</div>
-
-                                                    <Button
-                                                        color="link"
-                                                        size="xs"
-                                                        onClick={() => removeCollection(collection)}
-                                                    >
-                                                        <Icon icon="trash" />
-                                                    </Button>
+                                            {Collections.map((name) => (
+                                                <div key={name} className="p-1 hstack blink-style">
+                                                    <div className="flex-grow-1 pl-2">{name}</div>
+                                                    {isDatabaseAdmin && (
+                                                        <Button
+                                                            color="link"
+                                                            size="xs"
+                                                            onClick={() => onRemoveCollection(name)}
+                                                        >
+                                                            <Icon icon="trash" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
-                                        <Collapse isOpen={selectedCollections.length === 0}>
+                                        <Collapse isOpen={Collections.length === 0}>
                                             <EmptySet>No collections have been selected</EmptySet>
                                         </Collapse>
                                     </div>
-                                </div>
-                            </Collapse>
-                            <Collapse isOpen={radioToggleSelectedValue === "all" || selectedCollections.length !== 0}>
-                                <div className="bg-faded-info hstack gap-3 p-3 mt-3">
-                                    <Icon icon="documents-compression" className="fs-1" />
-                                    <div>
-                                        Documents that will be compressed:
-                                        <ul className="m-0">
-                                            <li>
-                                                New documents created in{" "}
-                                                {radioToggleSelectedValue === "selected" ||
-                                                selectedCollections.length !== 0 ? (
-                                                    <span>the selected collections</span>
-                                                ) : (
-                                                    <span>all collections</span>
-                                                )}
-                                            </li>
-                                            <li>
-                                                Existing documents that are modified & saved in{" "}
-                                                {radioToggleSelectedValue === "selected" ||
-                                                selectedCollections.length !== 0 ? (
-                                                    <span>the selected collections</span>
-                                                ) : (
-                                                    <span>all collections</span>
-                                                )}
-                                            </li>
-                                        </ul>
+                                </Collapse>
+                                <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
+                                    <div className="bg-faded-info hstack gap-3 p-3 mt-3">
+                                        <Icon icon="documents-compression" className="fs-1" />
+                                        <div>
+                                            Documents that will be compressed:
+                                            <ul className="m-0">
+                                                <li>New documents created in {infoTextSuffix}</li>
+                                                <li>
+                                                    Existing documents that are modified & saved in {infoTextSuffix}
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
-                                </div>
-                            </Collapse>
-                        </Card>
-                        <Card className="p-4 mt-3">
-                            <Switch selected={compressRevisions} toggleSelection={toggle} color="primary">
-                                Compress revisions for all collections
-                            </Switch>
-                        </Card>
+                                </Collapse>
+                            </Card>
+                            <Card className="p-4 mt-3">
+                                <FormSwitch control={control} name="CompressRevisions" disabled={!isDatabaseAdmin}>
+                                    Compress revisions for all collections
+                                </FormSwitch>
+                            </Card>
+                        </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <AboutViewAnchored>
+                        <AboutViewAnchored defaultOpen={hasDocumentsCompression ? null : "licensing"}>
                             <AccordionItemWrapper
                                 targetId="aboutView"
                                 icon="about"
@@ -208,45 +243,14 @@ export default function DocumentCompression() {
                                 </ul>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="https://ravendb.net/l/WRSDA7/6.0/Csharp" target="_blank">
+                                <a href={docsLink} target="_blank">
                                     <Icon icon="newtab" /> Docs - Document Compression
                                 </a>
                             </AccordionItemWrapper>
-                            <AccordionItemWrapper
-                                targetId="licensing"
-                                icon="license"
-                                color="warning"
-                                heading="Licensing"
-                                description="See which plans offer this and more exciting features"
-                                pill
-                                pillText="Upgrade available"
-                                pillIcon="star-filled"
-                            >
-                                <AccordionItemLicensing
-                                    description="This feature is not available in your license. Unleash the full potential and upgrade your plan."
-                                    featureName="Document Compression"
-                                    featureIcon="documents-compression"
-                                    checkedLicenses={["Enterprise"]}
-                                >
-                                    <p className="lead fs-4">Get your license expanded</p>
-                                    <div className="mb-3">
-                                        <Button
-                                            color="primary"
-                                            href="https://ravendb.net/contact"
-                                            target="_blank"
-                                            className="rounded-pill"
-                                        >
-                                            <Icon icon="notifications" />
-                                            Contact us
-                                        </Button>
-                                    </div>
-                                    <small>
-                                        <a href="https://ravendb.net/buy" target="_blank" className="text-muted">
-                                            See pricing plans
-                                        </a>
-                                    </small>
-                                </AccordionItemLicensing>
-                            </AccordionItemWrapper>
+                            <FeatureAvailabilitySummaryWrapper
+                                isUnlimited={hasDocumentsCompression}
+                                data={featureAvailability}
+                            />
                         </AboutViewAnchored>
                     </Col>
                 </Row>
@@ -254,3 +258,15 @@ export default function DocumentCompression() {
         </div>
     );
 }
+
+const leftRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
+    label: "Compress selected collections",
+    value: false,
+    iconName: "document",
+};
+
+const rightRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
+    label: "Compress all collections",
+    value: true,
+    iconName: "documents",
+};

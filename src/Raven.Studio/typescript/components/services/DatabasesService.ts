@@ -45,6 +45,8 @@ import getCustomSortersCommand = require("commands/database/settings/getCustomSo
 import deleteCustomSorterCommand = require("commands/database/settings/deleteCustomSorterCommand");
 import deleteCustomAnalyzerCommand = require("commands/database/settings/deleteCustomAnalyzerCommand");
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
+import getDocumentsCompressionConfigurationCommand = require("commands/database/documents/getDocumentsCompressionConfigurationCommand");
+import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -182,5 +184,13 @@ export default class DatabasesService {
 
     async deleteCustomSorter(db: database, name: string) {
         return new deleteCustomSorterCommand(db, name).execute();
+    }
+
+    async getDocumentsCompressionConfiguration(db: database) {
+        return new getDocumentsCompressionConfigurationCommand(db).execute();
+    }
+
+    async saveDocumentsCompression(db: database, dto: Raven.Client.ServerWide.DocumentsCompressionConfiguration) {
+        return new saveDocumentsCompressionCommand(db, dto).execute();
     }
 }

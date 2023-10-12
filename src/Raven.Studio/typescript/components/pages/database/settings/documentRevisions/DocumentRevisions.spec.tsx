@@ -1,5 +1,5 @@
 import React from "react";
-import { rtlRender } from "test/rtlTestUtils";
+import { RtlScreen, rtlRender } from "test/rtlTestUtils";
 import * as stories from "./DocumentRevisions.stories";
 import { composeStories } from "@storybook/testing-react";
 import { documentRevisionsConfigNames } from "./store/documentRevisionsSlice";
@@ -8,10 +8,8 @@ const { DefaultDocumentRevisions } = composeStories(stories);
 
 const upgradeLicenseText = "Upgrade License";
 
-type Screen = ReturnType<typeof rtlRender>["screen"];
-
 describe("DocumentRevisions", () => {
-    async function waitForLoad(screen: Screen) {
+    async function waitForLoad(screen: RtlScreen) {
         await screen.findByText(documentRevisionsConfigNames.defaultConflicts);
     }
 

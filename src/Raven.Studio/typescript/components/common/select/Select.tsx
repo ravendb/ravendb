@@ -13,7 +13,7 @@ export interface SelectOption<T extends SelectValue = string> {
 }
 
 export interface SelectOptionIcon {
-    icon: IconName;
+    icon?: IconName;
     iconColor?: TextColor;
 }
 

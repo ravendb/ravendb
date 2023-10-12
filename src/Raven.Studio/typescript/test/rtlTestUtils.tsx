@@ -99,3 +99,5 @@ export * from "@testing-library/react";
 export const commonSelectors = {
     loadingError: "Error loading data",
 };
+
+export type RtlScreen = ReturnType<typeof rtlRender>["screen"];

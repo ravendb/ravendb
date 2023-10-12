@@ -5,10 +5,13 @@ const collectionNames = {
     allDocuments: "All Documents",
     revisionsBin: "Revisions Bin",
     hilo: "@hilo",
+    empty: "@empty",
 } as const;
 
+type CollectionName = (typeof collectionNames)[keyof typeof collectionNames] | (string & NonNullable<unknown>);
+
 interface Collection {
-    name: (typeof collectionNames)[keyof typeof collectionNames] | (string & NonNullable<unknown>);
+    name: CollectionName;
     documentCount: number;
     lastDocumentChangeVector: string;
     sizeClass: string;
@@ -47,5 +50,5 @@ export const collectionsTrackerSelectors = {
     collectionNames: (store: RootState) =>
         collectionsSelectors
             .selectIds(store.collectionsTracker.collections)
-            .filter((name) => name !== collectionNames.allDocuments) as string[],
+            .filter((name) => name !== collectionNames.allDocuments) as CollectionName[],
 };
