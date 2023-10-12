@@ -1,4 +1,4 @@
-import React, { ComponentProps } from "react";
+import React, { ComponentProps, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
@@ -114,6 +114,25 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
     return <FormCheckbox type="radio" {...props} />;
 }
 
+export function getFormSelectedOptions<Option>(
+    formValues: SelectValue | SelectValue[],
+    optionsOrGroups: OptionsOrGroups<Option, GroupBase<Option>>,
+    valueAccessor: GetOptionValue<Option>
+): Option | GroupBase<Option> | (Option | GroupBase<Option>)[] {
+    const optionsFromGroups: Option[] = optionsOrGroups
+        .filter((x: GroupBase<Option>) => x.options != null)
+        .map((x: GroupBase<Option>) => x.options)
+        .flat();
+
+    const basicOptions = optionsOrGroups.filter((x: GroupBase<Option>) => x.options == null) as Option[];
+
+    const allOptions: Option[] = [...optionsFromGroups, ...basicOptions];
+
+    return Array.isArray(formValues)
+        ? formValues.map((value) => allOptions.find((option) => valueAccessor(option) === value))
+        : allOptions.find((option) => valueAccessor(option) === formValues);
+}
+
 export function FormSelect<
     Option,
     IsMulti extends boolean = false,
@@ -121,7 +140,35 @@ export function FormSelect<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(props: FormElementProps<TFieldValues, TName> & ComponentProps<typeof Select<Option, IsMulti, Group>>) {
-    return <FormSelectGeneral<Option, IsMulti, Group, TFieldValues, TName> {...props} isCreatable={false} />;
+    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value: formValues },
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
+
+    const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
+
+    return (
+        <div>
+            <Select
+                value={selectedOptions}
+                onChange={(options: OnChangeValue<Option, IsMulti>) => {
+                    onChange(Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options));
+                }}
+                {...rest}
+            />
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
+    );
 }
 
 export function FormSelectCreatable<
@@ -133,10 +180,52 @@ export function FormSelectCreatable<
 >(
     props: FormElementProps<TFieldValues, TName> &
         ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
-            onCreateOption?: (value: string) => void;
+            customOptions?: OptionsOrGroups<Option, Group>;
+            optionCreator?: (value: string) => any;
         }
 ) {
-    return <FormSelectGeneral<Option, IsMulti, Group, TFieldValues, TName> {...props} isCreatable />;
+    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value: formValues },
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    const [customOptions, setCustomOptions] = useState<OptionsOrGroups<Option, Group>>(rest.customOptions ?? []);
+
+    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
+    const optionCreator = rest.optionCreator ?? ((value: string) => ({ value, label: value }));
+
+    const selectedOptions = getFormSelectedOptions<Option>(
+        formValues,
+        [...rest.options, ...customOptions],
+        valueAccessor
+    );
+
+    const onCreateOption = (value: string) => {
+        setCustomOptions((options) => [...options, optionCreator(value)]);
+        onChange(rest.isMulti ? [...formValues, value] : value);
+    };
+
+    return (
+        <div>
+            <SelectCreatable
+                value={selectedOptions}
+                onChange={(options: OnChangeValue<Option, IsMulti>) => {
+                    onChange(Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options));
+                }}
+                onCreateOption={onCreateOption}
+                {...rest}
+            />
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
+    );
 }
 
 export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
@@ -301,66 +390,4 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
             {invalid && <div className="text-danger small">{error.message}</div>}
         </>
     );
-}
-
-function FormSelectGeneral<
-    Option,
-    IsMulti extends boolean = false,
-    Group extends GroupBase<Option> = GroupBase<Option>,
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(
-    props: FormElementProps<TFieldValues, TName> &
-        ComponentProps<typeof Select<Option, IsMulti, Group> | typeof SelectCreatable<Option, IsMulti, Group>> & {
-            isCreatable: boolean;
-        }
-) {
-    const { name, control, defaultValue, rules, shouldUnregister, isCreatable, ...rest } = props;
-
-    const {
-        field: { onChange, value: formValues },
-        fieldState: { invalid, error },
-    } = useController({
-        name,
-        control,
-        rules,
-        defaultValue,
-        shouldUnregister,
-    });
-
-    const SelectComponent = isCreatable ? SelectCreatable : Select;
-    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
-
-    const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
-    return (
-        <div>
-            <SelectComponent
-                value={selectedOptions}
-                onChange={(options: OnChangeValue<Option, IsMulti>) => {
-                    onChange(Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options));
-                }}
-                {...rest}
-            />
-            {invalid && <div className="text-danger small">{error.message}</div>}
-        </div>
-    );
-}
-
-export function getFormSelectedOptions<Option>(
-    formValues: SelectValue | SelectValue[],
-    optionsOrGroups: OptionsOrGroups<Option, GroupBase<Option>>,
-    valueAccessor: GetOptionValue<Option>
-): Option | GroupBase<Option> | (Option | GroupBase<Option>)[] {
-    const optionsFromGroups: Option[] = optionsOrGroups
-        .filter((x: GroupBase<Option>) => x.options != null)
-        .map((x: GroupBase<Option>) => x.options)
-        .flat();
-
-    const basicOptions = optionsOrGroups.filter((x: GroupBase<Option>) => x.options == null) as Option[];
-
-    const allOptions: Option[] = [...optionsFromGroups, ...basicOptions];
-
-    return Array.isArray(formValues)
-        ? formValues.map((value) => allOptions.find((option) => valueAccessor(option) === value))
-        : allOptions.find((option) => valueAccessor(option) === formValues);
 }
