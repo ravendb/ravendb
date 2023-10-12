@@ -15,6 +15,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 
@@ -154,7 +155,25 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);
             var defaultDictionary = new PersistentDictionary(llt.GetPage(defaultDictionaryId));
 
-            PersistentDictionary.Create(llt, enumerator);
+            var trainedDictionary = PersistentDictionary.Create(llt, enumerator);
+
+            if (defaultDictionaryId != trainedDictionary.DictionaryId)
+            {
+                var previousDictionaryPage = llt.GetPage(defaultDictionary.DictionaryId);
+                if (previousDictionaryPage.IsOverflow == false)
+                {
+                    llt.FreePage(defaultDictionaryId);
+                }
+                else
+                {
+                    var overflowPageNumber = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(previousDictionaryPage.OverflowSize);
+                    for (long pageToRelease = defaultDictionaryId; pageToRelease < defaultDictionaryId + overflowPageNumber; ++pageToRelease)
+                    {
+                        llt.FreePage(pageToRelease);
+                    }
+                }
+            }
+            
             tx.Commit();
         }
     }
