@@ -35,13 +35,14 @@ export function RadioToggleWithIcon<T extends string | number | boolean = string
     }, [leftItem.value, selectedValue, setSelectedValue]);
 
     return (
-        <div className={classNames("radio-toggle", { "item-disabled pe-none": disabled }, className)}>
+        <div className={classNames("radio-toggle", className)}>
             <input
                 type="radio"
                 id="radio-toggle-left"
                 name={name}
                 checked={selectedValue === leftItem.value}
                 onChange={() => setSelectedValue(leftItem.value)}
+                disabled={disabled}
             />
             <label htmlFor="radio-toggle-left">{leftItem.label}</label>
 
@@ -51,6 +52,7 @@ export function RadioToggleWithIcon<T extends string | number | boolean = string
                 name={name}
                 checked={selectedValue === rightItem.value}
                 onChange={() => setSelectedValue(rightItem.value)}
+                disabled={disabled}
             />
             <label htmlFor="radio-toggle-right">{rightItem.label}</label>
 

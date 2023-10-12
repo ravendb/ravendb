@@ -332,16 +332,11 @@ function FormSelectGeneral<
     const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
 
     const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
-
-    console.log("kalczur selectedOptions", selectedOptions);
-
     return (
         <div>
             <SelectComponent
                 value={selectedOptions}
                 onChange={(options: OnChangeValue<Option, IsMulti>) => {
-                    console.log("kalczur onChange", options);
-
                     onChange(Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options));
                 }}
                 {...rest}
@@ -364,8 +359,6 @@ export function getFormSelectedOptions<Option>(
     const basicOptions = optionsOrGroups.filter((x: GroupBase<Option>) => x.options == null) as Option[];
 
     const allOptions: Option[] = [...optionsFromGroups, ...basicOptions];
-
-    console.log("kalczur allOptions", allOptions);
 
     return Array.isArray(formValues)
         ? formValues.map((value) => allOptions.find((option) => valueAccessor(option) === value))
