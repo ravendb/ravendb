@@ -1,5 +1,5 @@
 import React from "react";
-import { rtlRender, RtlScreen } from "test/rtlTestUtils";
+import { rtlRender, RtlScreen, within } from "test/rtlTestUtils";
 import * as stories from "./DocumentCompression.stories";
 import { composeStories } from "@storybook/testing-react";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
@@ -20,7 +20,7 @@ describe("DocumentCompression", () => {
 
         await waitForLoad(screen);
 
-        expect(screen.queryByText(licenseBadgeText)).not.toBeInTheDocument();
+        expect(screen.queryByClassName("badge")).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /Save/ })).toBeInTheDocument();
     });
 
@@ -31,7 +31,7 @@ describe("DocumentCompression", () => {
 
         await waitForLoad(screen);
 
-        expect(screen.queryByText(licenseBadgeText)).not.toBeInTheDocument();
+        expect(screen.queryByClassName("badge")).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /Save/ })).not.toBeInTheDocument();
     });
 
@@ -42,7 +42,7 @@ describe("DocumentCompression", () => {
 
         await waitForLoad(screen);
 
-        expect(screen.queryByText(licenseBadgeText)).toBeInTheDocument();
+        expect(within(screen.queryByClassName("badge")).queryByText(licenseBadgeText)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /Save/ })).toBeInTheDocument();
     });
 
@@ -53,7 +53,7 @@ describe("DocumentCompression", () => {
 
         await waitForLoad(screen);
 
-        expect(screen.queryByText(licenseBadgeText)).toBeInTheDocument();
+        expect(within(screen.queryByClassName("badge")).queryByText(licenseBadgeText)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /Save/ })).not.toBeInTheDocument();
     });
 });

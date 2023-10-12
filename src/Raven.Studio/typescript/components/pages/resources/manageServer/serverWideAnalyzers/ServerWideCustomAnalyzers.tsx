@@ -1,5 +1,5 @@
 import React from "react";
-import { Col, Row, UncontrolledPopover } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";

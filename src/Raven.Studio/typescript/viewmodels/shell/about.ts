@@ -12,7 +12,6 @@ import appUrl = require("common/appUrl");
 import popoverUtils = require("common/popoverUtils");
 import app = require("durandal/app");
 import feedback from "viewmodels/shell/feedback";
-import licenseModel from "models/auth/licenseModel";
 
 class about extends viewModelBase {
 

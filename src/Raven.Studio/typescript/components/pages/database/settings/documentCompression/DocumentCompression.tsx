@@ -114,10 +114,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                             icon="documents-compression"
                             licenseBadgeText={hasDocumentsCompression ? null : "Enterprise"}
                         />
-                        <Form
-                            onSubmit={handleSubmit(onSave)}
-                            className={classNames({ "item-disabled pe-none": !hasDocumentsCompression })}
-                        >
+                        <Form onSubmit={handleSubmit(onSave)}>
                             <div className="hstack mb-3">
                                 {isDatabaseAdmin && (
                                     <>
@@ -144,7 +141,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                 </a>
                             </div>
 
-                            <Card className="p-4">
+                            <Card className={classNames("p-4", { "item-disabled pe-none": !hasDocumentsCompression })}>
                                 <FormRadioToggleWithIcon
                                     control={control}
                                     name="CompressAllCollections"
@@ -214,7 +211,11 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                     </div>
                                 </Collapse>
                             </Card>
-                            <Card className="p-4 mt-3">
+                            <Card
+                                className={classNames("p-4 mt-3", {
+                                    "item-disabled pe-none": !hasDocumentsCompression,
+                                })}
+                            >
                                 <FormSwitch control={control} name="CompressRevisions" disabled={!isDatabaseAdmin}>
                                     Compress revisions for all collections
                                 </FormSwitch>
