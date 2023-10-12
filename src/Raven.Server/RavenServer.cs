@@ -216,8 +216,7 @@ namespace Raven.Server
 
                     if (Certificate.Certificate != null)
                     {
-                        _httpsConnectionMiddleware = new HttpsConnectionMiddleware(this, options);
-                        _httpsConnectionMiddleware.SetCertificate(Certificate.Certificate);
+                        _httpsConnectionMiddleware = new HttpsConnectionMiddleware(this, options, Certificate.Certificate);
 
                         foreach (var address in ListenEndpoints.Addresses)
                         {
@@ -1041,9 +1040,11 @@ namespace Raven.Server
 
                 if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
                 {
+                    HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(newCertificate.Certificate);
+                    
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
-                        _httpsConnectionMiddleware.SetCertificate(newCertificate.Certificate);
-                    ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+                        ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+
                     return;
                 }
 
@@ -2350,9 +2351,11 @@ namespace Raven.Server
         {
             var certificateHolder = Certificate;
             var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore.GetLicenseType(), true);
+            
+            HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(certificate);
+
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
             {
-                _httpsConnectionMiddleware.SetCertificate(certificate);
                 ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -2476,7 +2479,6 @@ namespace Raven.Server
 
                 await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                 {
-                    ServerCertificate = Certificate.Certificate,
                     ServerCertificateContext = Certificate.CertificateContext,
                     ClientCertificateRequired = true,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
