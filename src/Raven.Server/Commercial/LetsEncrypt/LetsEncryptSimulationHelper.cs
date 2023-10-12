@@ -65,8 +65,7 @@ public class LetsEncryptSimulationHelper
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(options =>
                     {
-                        var httpsConnectionMiddleware = new HttpsConnectionMiddleware(serverStore.Server, options);
-                        httpsConnectionMiddleware.SetCertificate(serverCertificate);
+                        var httpsConnectionMiddleware = new HttpsConnectionMiddleware(serverStore.Server, options, serverCertificate);
 
                         if (addresses.Length == 0)
                         {
