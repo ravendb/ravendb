@@ -12,7 +12,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
-using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
@@ -22,7 +21,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres Server");
         internal ConcurrentDictionary<string, PgQuery> NamedStatements { get; private set; }
         private readonly TcpClient _client;
-        private readonly CertificateUtils.CertificateHolder _serverCertificate;
+        private readonly X509Certificate2 _serverCertificate;
         private readonly int _identifier;
         private readonly int _processId;
         private readonly DatabasesLandlord _databasesLandlord;
@@ -31,7 +30,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public PgSession(
             TcpClient client,
-            CertificateUtils.CertificateHolder serverCertificate,
+            X509Certificate2 serverCertificate,
             int identifier,
             int processId,
             DatabasesLandlord databasesLandlord,
@@ -72,8 +71,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                     await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                     {
-                        ServerCertificate = _serverCertificate.Certificate,
-                        ServerCertificateContext = _serverCertificate.CertificateContext,
+                        ServerCertificate = _serverCertificate,
                         ClientCertificateRequired = false
                     }, _token);
 
