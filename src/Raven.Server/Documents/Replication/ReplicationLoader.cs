@@ -1504,7 +1504,7 @@ namespace Raven.Server.Documents.Replication
             }
             catch (Exception e)
             {
-                if (_shutdownToken.IsCancellationRequested)
+                if (_server.ServerShutdown.IsCancellationRequested || _shutdownToken.IsCancellationRequested)
                     return null;
 
                 // will try to fetch it again later
