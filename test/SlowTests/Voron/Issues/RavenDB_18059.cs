@@ -2,6 +2,9 @@
 using System.IO;
 using System.Threading;
 using FastTests.Voron;
+using Raven.Client.Documents.Operations.Backups;
+using Sparrow.Backups;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
@@ -25,8 +28,10 @@ public class RavenDB_18059 : StorageTest
         options.ManualSyncing = true;
     }
 
-    [Fact]
-    public void RaceConditionBetweenFullBackupAndUpdateDatabaseStateAfterSync()
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData(BackupCompressionAlgorithm.Gzip)]
+    [InlineData(BackupCompressionAlgorithm.Zstd)]
+    public void RaceConditionBetweenFullBackupAndUpdateDatabaseStateAfterSync(BackupCompressionAlgorithm compressionAlgorithm)
     {
         RequireFileBasedPager();
         var random = new Random(2);
@@ -69,7 +74,7 @@ public class RavenDB_18059 : StorageTest
             Assert.False(syncOperation.Join(TimeSpan.FromSeconds(5)));
         };
 
-        BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"));
+        BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"), compressionAlgorithm);
 
         BackupMethods.Full.Restore(voronDataDir.Combine("voron-test.backup"), voronDataDir.Combine("backup-test.data"));
 
@@ -94,8 +99,10 @@ public class RavenDB_18059 : StorageTest
     }
 
 
-    [Fact]
-    public void FullBackupMustNotDeadlockWithFlush()
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData(BackupCompressionAlgorithm.Gzip)]
+    [InlineData(BackupCompressionAlgorithm.Zstd)]
+    public void FullBackupMustNotDeadlockWithFlush(BackupCompressionAlgorithm compressionAlgorithm)
     {
         RequireFileBasedPager();
         var random = new Random(2);
@@ -123,7 +130,7 @@ public class RavenDB_18059 : StorageTest
         {
             try
             {
-                BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"));
+                BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"), compressionAlgorithm);
 
                 backupCompleted = true;
             }

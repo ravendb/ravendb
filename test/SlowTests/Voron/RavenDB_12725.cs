@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
 using FastTests.Voron;
+using Raven.Client.Documents.Operations.Backups;
+using Sparrow.Backups;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Backup;
@@ -77,8 +80,10 @@ namespace SlowTests.Voron
             RestartDatabase();
         }
 
-        [Fact]
-        public void Full_backup_must_backup_journals_that_we_havent_synced_yet()
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
+        [InlineData(BackupCompressionAlgorithm.Gzip)]
+        [InlineData(BackupCompressionAlgorithm.Zstd)]
+        public void Full_backup_must_backup_journals_that_we_havent_synced_yet(BackupCompressionAlgorithm compressionAlgorithm)
         {
             RequireFileBasedPager();
 
@@ -132,7 +137,7 @@ namespace SlowTests.Voron
 
             var voronDataDir = new VoronPathSetting(DataDir);
 
-            BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"));
+            BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"), compressionAlgorithm);
 
             BackupMethods.Full.Restore(voronDataDir.Combine("voron-test.backup"), voronDataDir.Combine("backup-test.data"));
 

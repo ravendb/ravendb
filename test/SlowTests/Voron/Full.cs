@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
 using FastTests.Voron;
+using Raven.Client.Documents.Operations.Backups;
+using Sparrow.Backups;
+using Tests.Infrastructure;
 using Xunit;
 using Voron;
 using Voron.Global;
@@ -22,8 +25,10 @@ namespace SlowTests.Voron
             options.ManualFlushing = true;
         }
 
-        [Fact]
-        public void CanBackupAndRestore()
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
+        [InlineData(BackupCompressionAlgorithm.Gzip)]
+        [InlineData(BackupCompressionAlgorithm.Zstd)]
+        public void CanBackupAndRestore(BackupCompressionAlgorithm compressionAlgorithm)
         {
             RequireFileBasedPager();
             var random = new Random();
@@ -65,7 +70,7 @@ namespace SlowTests.Voron
             {
                 var voronDataDir = new VoronPathSetting(DataDir);
 
-                BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"), infoNotify: info => sw.WriteLine(info.Message));
+                BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"), compressionAlgorithm, infoNotify: info => sw.WriteLine(info.Message));
 
                 BackupMethods.Full.Restore(voronDataDir.Combine("voron-test.backup"), voronDataDir.Combine("backup-test.data"));
                 sw.WriteLine();
