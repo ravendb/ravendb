@@ -600,6 +600,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
                             {backups.map((x) => (
                                 <PeriodicBackupPanel
+                                    sourceView="OngoingTasks"
                                     forceReload={reload}
                                     allowSelect
                                     {...sharedPanelProps}

@@ -37,6 +37,7 @@ import useBoolean from "components/hooks/useBoolean";
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
     allowSelect: boolean;
+    sourceView: EditPeriodicBackupTaskSourceView;
 }
 
 const neverBackedUpText = "Never backed up";
@@ -228,13 +229,23 @@ function BackupEncryption(props: { encrypted: boolean }) {
 }
 
 export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
-    const { db, data, allowSelect, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
+    const {
+        db,
+        data,
+        allowSelect,
+        toggleSelection,
+        isSelected,
+        onTaskOperation,
+        isDeleting,
+        isTogglingState,
+        sourceView,
+    } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editPeriodicBackupTask(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editPeriodicBackupTask(sourceView, data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 

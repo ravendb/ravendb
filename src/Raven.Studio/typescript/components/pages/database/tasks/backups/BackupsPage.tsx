@@ -382,6 +382,7 @@ export function BackupsPage(props: BackupsPageProps) {
                                 <>
                                     {backups.map((x) => (
                                         <PeriodicBackupPanel
+                                            sourceView="Backups"
                                             forceReload={reload}
                                             allowSelect={false}
                                             {...sharedPanelProps}

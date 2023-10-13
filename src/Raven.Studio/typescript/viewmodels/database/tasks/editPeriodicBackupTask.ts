@@ -16,7 +16,6 @@ import database from "models/resources/database";
 import licenseModel from "models/auth/licenseModel";
 import { EditPeriodicBackupTaskInfoHub } from "./EditPeriodicBackupTaskInfoHub";
 import { EditManualBackupTaskInfoHub } from "./EditManualBackupTaskInfoHub";
-import { EditPeriodicBackupTaskSourceView } from "components/models/common";
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 

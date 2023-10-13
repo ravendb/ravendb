@@ -4,7 +4,6 @@ import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import { DatabaseSharedInfo } from "components/models/databases";
-import { EditPeriodicBackupTaskSourceView } from "components/models/common";
 
 class appUrl {
 
@@ -597,7 +596,7 @@ class appUrl {
         return "#databases/tasks/editReplicationSinkTask?" + databasePart + taskPart;
     }
 
-    static forEditPeriodicBackupTask(db: database, sourceView: EditPeriodicBackupTaskSourceView,taskId?: number): string {
+    static forEditPeriodicBackupTask(db: database, sourceView: EditPeriodicBackupTaskSourceView, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const sourceViewPart = "&sourceView=" + sourceView;
         const taskPart = taskId ? "&taskId=" + taskId : "";
