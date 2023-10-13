@@ -1,6 +1,5 @@
 ﻿import moment from "moment";
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
-import { LicenseStatus } from "components/models/common";
 
 export class LicenseStubs {
     static getStatus(): LicenseStatus {

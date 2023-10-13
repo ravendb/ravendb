@@ -8,7 +8,6 @@ import messagePublisher = require("common/messagePublisher");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import renewLicenseCommand = require("commands/licensing/renewLicenseCommand");
 import getServerCertificateSetupModeCommand = require("commands/auth/getServerCertificateSetupModeCommand");
-import { LicenseStatus } from "components/models/common";
 
 class licenseKeyModel {
 

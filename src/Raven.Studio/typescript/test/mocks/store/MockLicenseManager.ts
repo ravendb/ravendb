@@ -1,7 +1,6 @@
 ﻿import { globalDispatch } from "components/storeCompat";
 import { licenseActions } from "components/common/shell/licenseSlice";
 import { LicenseStubs } from "test/stubs/LicenseStubs";
-import { LicenseStatus } from "components/models/common";
 
 export class MockLicenseManager {
     with_License(override?: Partial<LicenseStatus>) {

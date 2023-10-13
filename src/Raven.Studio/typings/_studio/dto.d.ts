@@ -1004,3 +1004,6 @@ interface taskInfo {
 
 type TombstoneItem = Raven.Server.Documents.TombstoneCleaner.StateHolder & { Collection: string };
 type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.TombstonesState, "Tombstones"> & { Results: TombstoneItem[] };
+
+// Server ToJson() method converts the version object to a string
+type LicenseStatus = Omit<Raven.Server.Commercial.LicenseStatus, "Version"> & { Version: string };

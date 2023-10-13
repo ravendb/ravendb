@@ -55,6 +55,3 @@ export interface ShardedViewProps extends NonShardedViewProps {
 }
 
 export type EditPeriodicBackupTaskSourceView = "Backups" | "OngoingTasks";
-
-// Server ToJson() method converts the version object to a string
-export type LicenseStatus = Omit<Raven.Server.Commercial.LicenseStatus, "Version"> & { Version: string };
