@@ -798,14 +798,16 @@ class query extends viewModelBase {
             if (currentIndex) {
                 this.queriedIndexInfo(currentIndex);
             } else {
-                // fetch indexes since this view may not be up-to-date if index was defined outside of studio
-                this.fetchAllIndexes(this.activeDatabase())
-                    .done(() => {
-                        this.queriedIndexInfo(this.indexes() ? this.indexes().find(i => i.Name === indexName) : null);
-                    })
-                    .fail(() => {
-                        this.queriedIndexInfo(null);
-                    });
+                if (!indexName.startsWith(queryUtil.DynamicPrefix)) {
+                    // fetch indexes since this view may not be up-to-date if index was defined outside of studio
+                    this.fetchAllIndexes(this.activeDatabase())
+                        .done(() => {
+                            this.queriedIndexInfo(this.indexes() ? this.indexes().find(i => i.Name === indexName) : null);
+                        })
+                        .fail(() => {
+                            this.queriedIndexInfo(null);
+                        });
+                }
             }
         }
     }
