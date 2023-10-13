@@ -87,7 +87,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                         })}
                                     >
                                         <Icon icon="circle-filled" className="license-dot" />
-                                        {licenseType}
+                                        {licenseType === "Developer" ? <span>Dev</span> : licenseType}
                                         {licenseType === "Developer" && (
                                             <>
                                                 <div className="corner-info" id="DevTooltip">
@@ -164,7 +164,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                 {currentLicense === "Developer" && (
                                     <td
                                         className={classNames("developer", {
-                                            current: currentLicense === "Developer",
+                                            "current bg-faded-primary": currentLicense === "Developer",
                                         })}
                                     >
                                         {formatAvailabilityValue(data.enterprise, isCloud)}
@@ -207,7 +207,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                 </Table>
             </div>
             {currentLicense === "None" && (
-                <div className="hstack gap-4 justify-content-center mt-4">
+                <div className="hstack gap-4 justify-content-center mt-4 flex-wrap">
                     <a
                         href={buyLink}
                         target="_blank"
@@ -220,7 +220,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                 </div>
             )}
             {currentLicense !== "Enterprise" && currentLicense !== "None" && (
-                <div className="hstack gap-4 justify-content-center mt-4">
+                <div className="hstack gap-4 justify-content-center mt-4 flex-wrap">
                     Upgrade License
                     <a
                         href={buyLink}
@@ -272,11 +272,13 @@ function formatAvailabilityValue(data: ValueData, canBeEnabledInCloud?: boolean)
 
     return (
         <>
-            {formattedValue}
-            <Icon id={id} icon="info" color="info" />
-            <UncontrolledTooltip target={id}>
-                Default value for your license is {data.value.toString()}.
-            </UncontrolledTooltip>
+            <div className="overwritten-value">
+                {formattedValue}
+                <Icon id={id} icon="info" color="info" />
+                <UncontrolledTooltip target={id}>
+                    Default value for your license is {data.value.toString()}.
+                </UncontrolledTooltip>
+            </div>
         </>
     );
 }

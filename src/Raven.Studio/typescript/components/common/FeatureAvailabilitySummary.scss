@@ -1,4 +1,5 @@
 @use "Content/scss/bs5variables";
+@use "Content/scss/sizes";
 
 .license-limited {
     .current {
@@ -10,10 +11,12 @@
     $table-border-radius: bs5variables.$border-radius-md;
     $table-border-style: bs5variables.$border-width solid bs5variables.$border-color-light-var;
     padding: 1px;
-    border-radius: $table-border-radius;
     text-align: center;
-    margin-bottom: bs5variables.$gutter-md;
     overflow-x: auto;
+
+    table {
+        margin-bottom: 0 !important;
+    }
 
     --license-color: var(--bs-secondary);
 
@@ -40,10 +43,17 @@
         position: absolute;
         right: 0;
         top: 0;
+        font-size: 0.75rem;
         background-color: bs5variables.$panel-bg-1-var;
         padding: 3px 3px bs5variables.$gutter-sm bs5variables.$gutter-sm;
         color: var(--decoration-color);
-        clip-path: polygon(0% 0%, 100% 0%, 100% 100%);
+        clip-path: polygon(15% 0%, 100% 0%, 100% 85%);
+        border-radius: 0 $table-border-radius 0 0;
+
+        i {
+            top: -0.1rem;
+            right: -0.01rem;
+        }
     }
 
     table {
@@ -59,25 +69,33 @@
         th {
             color: bs5variables.$text-muted-var;
         }
+        .overwritten-value {
+            position: relative;
+            [id^="overwritten-availability-value-"] {
+                position: absolute;
+                font-size: 0.875rem;
+            }
+        }
 
         thead {
             th {
-                padding-top: bs5variables.$gutter-sm !important;
+                padding-top: bs5variables.$gutter-xs !important;
                 border-top: $table-border-style;
                 font-weight: normal;
                 font-size: bs5variables.$font-size-xs;
+                white-space: nowrap;
                 .license-dot {
                     color: var(--license-color);
                 }
 
                 &:first-of-type {
-                    border-left: $table-border-style;
                     border-radius: $table-border-radius 0 0 0;
+                    border-left: $table-border-style;
                 }
 
                 &:last-of-type {
-                    border-right: $table-border-style;
                     border-radius: 0 $table-border-radius 0 0;
+                    border-right: $table-border-style;
                 }
 
                 &.current {
