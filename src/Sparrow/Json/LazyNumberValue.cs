@@ -161,6 +161,19 @@ namespace Sparrow.Json
             return -(decimal)y;
         }
 
+        public static bool operator !=(LazyNumberValue self, LazyNumberValue lnv) => !(self == lnv);
+        
+        public static bool operator ==(LazyNumberValue self, LazyNumberValue lnv)
+        {
+            if (ReferenceEquals(self, null))
+                return ReferenceEquals(lnv, null);
+            
+            if (ReferenceEquals(lnv, null))
+                return false;
+
+            return self.Equals(lnv);
+        }
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
