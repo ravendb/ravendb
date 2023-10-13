@@ -77,6 +77,10 @@ public struct Int64LookupKey : ILookupKey
     {
     }
 
+    public void IncreaseReferenceCount<T>(Lookup<T> parent) where T : struct, ILookupKey
+    {
+    }
+
     public string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey
     {
         return ToString();

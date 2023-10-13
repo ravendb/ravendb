@@ -1119,7 +1119,7 @@ namespace Voron
                         {
                             case RootObjectType.VariableSizeTree:
                                 var tree = tx.ReadTree(currentKey);
-                                RegisterPages(tree.AllPages(), name);
+                                RegisterPages(tree.AllPages(), name + " (VST)");
                                 if (tree.State.Flags.HasFlag(TreeFlags.CompactTrees) ||
                                     tree.State.Flags.HasFlag(TreeFlags.Lookups))
                                 {
@@ -1133,7 +1133,7 @@ namespace Voron
                                             {
                                                 case RootObjectType.Lookup:
                                                     var lookup = tree.LookupFor<Int64LookupKey>(it.CurrentKey);
-                                                    RegisterLookup(lookup, name);
+                                                    RegisterLookup(lookup, name + $"/{it.CurrentKey}");
                                                     break;
                                                 case RootObjectType.EmbeddedFixedSizeTree:
                                                     continue; // already accounted for
@@ -1275,6 +1275,7 @@ namespace Voron
 
             void RegisterContainer(long container, string name)
             {
+                r.Add(container, name);
                 var overflowName = $"{name}/OverflowPage";
                 var (allPages, freePages) = Container.GetPagesFor(tx.LowLevelTransaction, container);
                 RegisterPages(allPages.AllPages(), name + "/AllPagesSet");

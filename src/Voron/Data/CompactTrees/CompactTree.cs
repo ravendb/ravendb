@@ -164,6 +164,11 @@ public sealed partial class CompactTree : IPrepareForCommit
             DecrementTermReferenceCount(parent.Llt, ContainerId, ref parent.State);
         }
 
+        public void IncreaseReferenceCount<T>(Lookup<T> parent) where T : struct, ILookupKey
+        { 
+            IncrementTermReferenceCount(parent.Llt, ContainerId);
+        }
+
         public string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
             return GetKey(parent).ToString();

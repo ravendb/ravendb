@@ -57,8 +57,6 @@ namespace Corax.Indexing
         private Token[] _tokensBufferHandler;
         private byte[] _encodingBufferHandler;
         private byte[] _utf8ConverterBufferHandler;
-        
-       
 
         private bool _hasSuggestions;
         private readonly IndexedField[] _knownFieldsTerms;
@@ -415,8 +413,7 @@ namespace Corax.Indexing
             }
         }
 
-        internal static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value,
-            out Slice slice)
+        internal static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value, out Slice slice)
         {
             if (value.Length <= Constants.Terms.MaxLength)
                 return Slice.From(context, value, ByteStringType.Mutable, out slice);
@@ -468,8 +465,7 @@ namespace Corax.Indexing
             }
         }
         
-        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, long dicId,
-            long entryToDelete, int termsPerEntryIndex)
+        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
         {
             var reader = new EntryTermsReader(llt, nullTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
             reader.Reset();
