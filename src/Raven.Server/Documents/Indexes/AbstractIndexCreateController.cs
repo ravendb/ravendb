@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -68,6 +69,8 @@ public abstract class AbstractIndexCreateController
 
         definition.RemoveDefaultValues();
         ValidateAnalyzers(definition);
+        
+        ValidateConfiguration(definition);
 
         var databaseConfiguration = GetDatabaseConfiguration();
         var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion); // pre-compile it and validate
@@ -220,6 +223,64 @@ public abstract class AbstractIndexCreateController
             catch (Exception e)
             {
                 throw new IndexCompilationException(e.Message, e);
+            }
+        }
+    }
+    
+    private static readonly List<string> ValidPerIndexConfigurationKeys = new List<string>()
+    {
+        "Indexing.Analyzers.Default",
+        "Indexing.Analyzers.Exact.Default",
+        "Indexing.Analyzers.Lucene.NGram.MaxGram",
+        "Indexing.Analyzers.Lucene.NGram.MinGram",
+        "Indexing.Analyzers.Search.Default",
+        "Indexing.QueryClauseCache.Disabled",
+        "Indexing.QueryClauseCache.RepeatedQueriesTimeFrameInSec",
+        "Indexing.Encrypted.TransactionSizeLimitInMb",
+        "Indexing.IndexEmptyEntries",
+        "Indexing.IndexMissingFieldsAsNull",
+        "Indexing.Lucene.LargeSegmentSizeToMergeInMb",
+        "Indexing.ManagedAllocationsBatchSizeLimitInMb",
+        "Indexing.MapBatchSize",
+        "Indexing.MapTimeoutAfterEtagReachedInMin",
+        "Indexing.MapTimeoutInSec",
+        "Indexing.Lucene.MaximumSizePerSegmentInMb",
+        "Indexing.MaxStepsForScript",
+        "Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec",
+        "Indexing.Lucene.MaxTimeForMergesToKeepRunningInSec",
+        "Indexing.Lucene.MergeFactor",
+        "Indexing.Metrics.Enabled",
+        "Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory",
+        "Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory",
+        "Indexing.Lucene.NumberOfLargeSegmentsToMergeInSingleBatch",
+        "Indexing.ScratchSpaceLimitInMb",
+        "Indexing.Throttling.TimeIntervalInMs",
+        "Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin",
+        "Indexing.TransactionSizeLimitInMb",
+        "Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved",
+        "Indexing.Lucene.UseCompoundFileInMerging",
+        "Indexing.Lucene.IndexInputType",
+        "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec",
+        "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb",
+        "Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved",
+        "Query.RegexTimeoutInMs",
+        "Indexing.Lucene.ReaderTermsIndexDivisor",
+        "Indexing.Corax.IncludeDocumentScore",
+        "Indexing.Corax.IncludeSpatialDistance",
+        "Indexing.Corax.MaxMemoizationSizeInMb",
+        "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb"
+    };
+
+    private static void ValidateConfiguration(IndexDefinition definition)
+    {
+        if (definition.Configuration == null)
+            return;
+        
+        foreach (var kvp in definition.Configuration)
+        {
+            if (kvp.Key.In(ValidPerIndexConfigurationKeys) == false)
+            {
+                throw new IndexCreationException($"Could not create index '{definition.Name}' because the configuration option key '{kvp.Key}' is not recognized");
             }
         }
     }
