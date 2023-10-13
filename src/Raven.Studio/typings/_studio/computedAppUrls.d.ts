@@ -1,3 +1,6 @@
+
+type EditPeriodicBackupTaskSourceView = "Backups" | "OngoingTasks";
+
 // Interface
 interface computedAppUrls {
     adminSettingsCluster: KnockoutComputed<string>;
@@ -19,7 +22,7 @@ interface computedAppUrls {
     editExternalReplication: (taskId?: number) => KnockoutComputed<string>;
     editReplicationHub: (taskId?: number) => KnockoutComputed<string>;
     editReplicationSink: (taskId?: number) => KnockoutComputed<string>;
-    editPeriodicBackupTask: (sourceView: PeriodicBackupSourceView, taskId?: number) => KnockoutComputed<string>;
+    editPeriodicBackupTask: (sourceView: EditPeriodicBackupTaskSourceView, taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editSqlEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
