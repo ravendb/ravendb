@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
-import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
+import { LicenseStatus } from "components/models/common";
 
 interface LicenseState {
     status: LicenseStatus;

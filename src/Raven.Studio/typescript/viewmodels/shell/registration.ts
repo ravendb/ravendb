@@ -8,6 +8,7 @@ import messagePublisher = require("common/messagePublisher");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import renewLicenseCommand = require("commands/licensing/renewLicenseCommand");
 import getServerCertificateSetupModeCommand = require("commands/auth/getServerCertificateSetupModeCommand");
+import { LicenseStatus } from "components/models/common";
 
 class licenseKeyModel {
 
@@ -73,7 +74,7 @@ class registration extends dialogViewModelBase {
     error = ko.observable<string>();
 
     private licenseKeyModel = ko.validatedObservable(new licenseKeyModel());
-    private licenseStatus: Raven.Server.Commercial.LicenseStatus;
+    private licenseStatus: LicenseStatus;
 
     private hasInvalidLicense = ko.observable<boolean>(false);
     private letsEncryptMode = ko.observable<boolean>(false); 
@@ -84,7 +85,7 @@ class registration extends dialogViewModelBase {
         renewLicense: ko.observable<boolean>(false)      
     };
 
-    constructor(licenseStatus: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
+    constructor(licenseStatus: LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
         super();
         
         this.licenseStatus = licenseStatus;
@@ -156,7 +157,7 @@ class registration extends dialogViewModelBase {
              });
     }
     
-    static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus, skipIfNoLicense = false) {
+    static showRegistrationDialogIfNeeded(license: LicenseStatus, skipIfNoLicense = false) {
         switch (license.Type) {
             case "Invalid":
                 registration.showRegistrationDialog(license, false, false);
@@ -202,7 +203,7 @@ class registration extends dialogViewModelBase {
         }
     }
 
-    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
+    static showRegistrationDialog(license: LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
         if ($("#licenseModal").is(":visible") && $("#enterLicenseKey").is(":visible")) {
             return;
         }

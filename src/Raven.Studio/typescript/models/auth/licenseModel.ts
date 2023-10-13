@@ -5,9 +5,10 @@ import buildInfo = require("models/resources/buildInfo");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 import licenseSupportInfoCommand = require("commands/licensing/licenseSupportInfoCommand");
+import { LicenseStatus } from "components/models/common";
 
 class licenseModel {
-    static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
+    static licenseStatus = ko.observable<LicenseStatus>();
     static supportCoverage = ko.observable<Raven.Server.Commercial.LicenseSupportInfo>();
 
     private static baseUrl = "https://ravendb.net/license/request";
@@ -85,10 +86,10 @@ class licenseModel {
             });
     }
     
-    static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
+    static fetchLicenseStatus(): JQueryPromise<LicenseStatus> {
         return new getLicenseStatusCommand()
             .execute()
-            .done((result: Raven.Server.Commercial.LicenseStatus) => {
+            .done((result: LicenseStatus) => {
                 if (result.Status.includes("AGPL")) {
                     result.Status = "Development Only";
                 }
@@ -120,7 +121,7 @@ class licenseModel {
         return licenseModel.licenseStatus()?.Type ?? null;
     });
 
-    static getStatusValue<T extends keyof Raven.Server.Commercial.LicenseStatus>(key: T) {
+    static getStatusValue<T extends keyof LicenseStatus>(key: T) {
         return licenseModel.licenseStatus()?.[key] ?? null;
     }
 
