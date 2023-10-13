@@ -115,9 +115,7 @@ export function OngoingTaskName(props: { task: OngoingTaskInfo; canEdit: boolean
                     {task.shared.taskName}
                 </a>
             ) : (
-                <span className="text-primary" color="link">
-                    {task.shared.taskName}
-                </span>
+                <span className="text-primary">{task.shared.taskName}</span>
             )}
         </RichPanelName>
     );
