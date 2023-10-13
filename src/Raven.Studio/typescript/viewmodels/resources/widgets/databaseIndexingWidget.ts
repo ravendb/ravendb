@@ -37,16 +37,19 @@ class databaseIndexingWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
     protected prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
-            new textColumn<indexingSpeedItem>(grid, x => x.hideDatabaseName ? "" : DatabaseUtils.formatName(x.database), "Database", "35%"),
+            new textColumn<indexingSpeedItem>(grid, x => x.hideDatabaseName && !grid.sortEnabled() ? "" : DatabaseUtils.formatName(x.database), "Database", "35%"),
             new nodeTagColumn<indexingSpeedItem>(grid, item => this.prepareUrl(item, "Indexing Performance View")),
             new textColumn<indexingSpeedItem>(grid, x => widget.formatNumber(x.indexedPerSecond), "Indexed/s", "15%", {
-                headerTitle: "Indexed items per second"
+                headerTitle: "Indexed items per second",
+                sortable: "number"
             }),
             new textColumn<indexingSpeedItem>(grid, x => widget.formatNumber(x.mappedPerSecond), "Mapped/s", "15%", {
-                headerTitle: "Mapped items per second"
+                headerTitle: "Mapped items per second",
+                sortable: "number"
             }),
             new textColumn<indexingSpeedItem>(grid, x => widget.formatNumber(x.reducedPerSecond), "Reduced/s", "15%", {
-                headerTitle: "Reduced mapped entries per second"
+                headerTitle: "Reduced mapped entries per second",
+                sortable: "number"
             })
         ];
     }
