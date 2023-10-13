@@ -1,13 +1,11 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
-import generalUtils = require("common/generalUtils");
-
 class databaseDiskUsage implements databaseAndNodeAwareStats {
     database: string;
     nodeTag: string;
-    size: string;
-    tempBuffersSize: string;
-    total: string;
+    size: number;
+    tempBuffersSize: number;
+    total: number;
     noData: boolean;
     
     hideDatabaseName: boolean;
@@ -20,9 +18,9 @@ class databaseDiskUsage implements databaseAndNodeAwareStats {
         if (data) {
             this.noData = false;
             this.database = data.Database;
-            this.size = generalUtils.formatBytesToSize(data.Size);
-            this.tempBuffersSize = generalUtils.formatBytesToSize(data.TempBuffersSize);
-            this.total = generalUtils.formatBytesToSize(data.Size + data.TempBuffersSize);    
+            this.size = data.Size;
+            this.tempBuffersSize = data.TempBuffersSize;
+            this.total = data.Size + data.TempBuffersSize;    
         } else {
             this.noData = true;
         }
