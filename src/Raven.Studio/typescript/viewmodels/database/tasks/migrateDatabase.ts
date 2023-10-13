@@ -8,6 +8,7 @@ import defaultAceCompleter = require("common/defaultAceCompleter");
 import popoverUtils = require("common/popoverUtils");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
+import license = require("models/auth/licenseModel");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import lastUsedAutocomplete = require("common/storage/lastUsedAutocomplete");
 import getMigratorPathConfigurationCommand = require("commands/database/tasks/getMigratorPathConfigurationCommand");
@@ -21,6 +22,8 @@ class migrateDatabase extends viewModelBase {
     
     submitButtonEnabled: KnockoutComputed<boolean>;
     submitButtonText: KnockoutComputed<string>;
+    
+    suggestDeployingToolsForCloudProduct: KnockoutComputed<boolean>;
     
     databaseNameHasFocus = ko.observable<boolean>(false);
     
@@ -90,6 +93,13 @@ class migrateDatabase extends viewModelBase {
             }
 
             return true;
+        });
+        
+        this.suggestDeployingToolsForCloudProduct = ko.pureComputed(() => {
+            const isCloud = license.cloudLicense();
+            const hasTools = this.model.migratorPathInConfiguration();
+            
+            return isCloud && !hasTools;
         });
     }
     
