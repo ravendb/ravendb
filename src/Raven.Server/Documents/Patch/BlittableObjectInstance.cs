@@ -170,11 +170,12 @@ namespace Raven.Server.Documents.Patch
              
                 while (reader.FindNextStored(fieldRootPage))
                 {
-                    if (reader.IsList && // stored value is an array 
-                        value is null)   // and we haven't initialized it yet 
+                    // check if stored value is an array and we haven't initialized it yet
+                    if (reader.IsList)
                     {
-                        value = new JsArray(_parent.Engine);
+                        value ??= new JsArray(_parent.Engine);
                     }
+
                     if (reader.StoredField == null)
                     {
                         SetValue(ref value, Null);
@@ -184,7 +185,10 @@ namespace Raven.Server.Documents.Patch
                     var span = reader.StoredField.Value;
                     if (span.Length == 0)
                     {
-                        SetValue(ref value, string.Empty);
+                        if (reader.IsList == false)
+                        {
+                            SetValue(ref value, string.Empty);
+                        }
                         continue;
                     }
 
