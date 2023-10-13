@@ -314,6 +314,7 @@ $progress-color: $color-2-3;
 
 $professional: $color-4-2;
 $enterprise: $color-5;
+$developer: #c7ff6b;
 
 // Color system
 // scss-docs-end gray-color-variables
@@ -381,6 +382,7 @@ $theme-colors: (
     "progress": $progress-color,
     "professional": $professional,
     "enterprise": $enterprise,
+    "developer": $developer,
 ) !default;
 
 // scss-docs-end theme-colors-map

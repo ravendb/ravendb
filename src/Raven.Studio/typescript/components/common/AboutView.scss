@@ -52,6 +52,7 @@
 
 .about-view-dropdown {
     .popover {
+        padding: sizes.$gutter-xxs;
         width: 540px;
         max-width: 90vw;
         font-size: bs5variables.$font-size-sm;
@@ -60,8 +61,13 @@
         border-radius: bs5variables.$border-radius-lg;
     }
     .popover-inner {
-        max-height: calc(100vh - 180px);
+        max-height: calc(100vh - 240px);
         overflow: auto;
+    }
+    .popover-arrow {
+        &:before {
+            border: transparent;
+        }
     }
 }
 
@@ -97,7 +103,7 @@
         background: var(--panel-bg-1);
         border: none;
         &:not(:first-of-type) {
-            margin-top: sizes.$gutter-xs;
+            margin-top: sizes.$gutter-xxs;
         }
         $shadow-classes: (
             info: 0 0 100px 0 inset rgba(var(--bs-info-rgb), 0.2),
@@ -114,7 +120,7 @@
             font-weight: 700;
         }
         .accordion-body {
-            padding: sizes.$gutter-xs sizes.$gutter sizes.$gutter sizes.$gutter;
+            padding: sizes.$gutter-xs sizes.$gutter-sm sizes.$gutter sizes.$gutter-sm;
         }
     }
     .license-name {

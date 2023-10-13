@@ -67,7 +67,7 @@ const AboutViewFloating = (props: AboutViewProps) => {
                     offset={[-215, 10]}
                     defaultOpen={!!defaultOpen}
                 >
-                    <PopoverBody className="p-1">
+                    <PopoverBody className="p-0">
                         <AboutViewAnchored defaultOpen={defaultOpen ? "licensing" : null}>{children}</AboutViewAnchored>
                     </PopoverBody>
                 </UncontrolledPopover>
