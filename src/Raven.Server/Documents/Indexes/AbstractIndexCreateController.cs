@@ -26,11 +26,14 @@ namespace Raven.Server.Documents.Indexes;
 
 public abstract class AbstractIndexCreateController
 {
+    private readonly HashSet<string> _validConfigurationKeys;
+    
     protected readonly ServerStore ServerStore;
 
     protected AbstractIndexCreateController([NotNull] ServerStore serverStore)
     {
         ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
+        _validConfigurationKeys = GetValidConfigurationKeys();
     }
 
     protected abstract string GetDatabaseName();
@@ -232,18 +235,23 @@ public abstract class AbstractIndexCreateController
     {
         if (definition.Configuration == null)
             return;
-
-        var indexingConfigurationProperties = ServerStore.Configuration.Indexing.GetConfigurationProperties();
-
-        var validPerIndexConfigurationKeys = indexingConfigurationProperties.SelectMany(configurationProperty => configurationProperty.ConfigurationEntryAttributes.Select(configurationEntryAttribute => configurationEntryAttribute.Key).ToList());
         
         foreach (var kvp in definition.Configuration)
         {
-            if (kvp.Key.In(validPerIndexConfigurationKeys) == false)
+            if (_validConfigurationKeys.Contains(kvp.Key) == false)
             {
                 throw new IndexCreationException($"Could not create index '{definition.Name}' because the configuration option key '{kvp.Key}' is not recognized");
             }
         }
+    }
+
+    private HashSet<string> GetValidConfigurationKeys()
+    {
+        var configurationProperties = ServerStore.Configuration.Indexing.GetConfigurationProperties();
+        
+        var validPerIndexConfigurationKeys = configurationProperties.SelectMany(configurationProperty => configurationProperty.ConfigurationEntryAttributes.Select(configurationEntryAttribute => configurationEntryAttribute.Key)).ToHashSet();
+
+        return validPerIndexConfigurationKeys;
     }
 
     private bool NeedToCheckIfCollectionEmpty(IndexDefinition definition, RavenConfiguration databaseConfiguration)
