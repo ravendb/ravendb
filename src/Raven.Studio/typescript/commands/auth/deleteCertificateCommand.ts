@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import { LicenseStatus } from "components/models/common";
 import endpoints = require("endpoints");
 
 class deleteCertificateCommand extends commandBase {

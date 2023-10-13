@@ -60,7 +60,6 @@ import databasesManager from "common/shell/databasesManager";
 import { globalDispatch } from "components/storeCompat";
 import { accessManagerActions } from "components/common/shell/accessManagerSlice";
 import UpgradeModal from "./shell/UpgradeModal";
-import { LicenseStatus } from "components/models/common";
 
 class shell extends viewModelBase {
 

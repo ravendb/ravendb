@@ -5,7 +5,6 @@ import buildInfo = require("models/resources/buildInfo");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 import licenseSupportInfoCommand = require("commands/licensing/licenseSupportInfoCommand");
-import { LicenseStatus } from "components/models/common";
 
 class licenseModel {
     static licenseStatus = ko.observable<LicenseStatus>();
