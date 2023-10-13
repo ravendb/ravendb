@@ -37,6 +37,7 @@ body {
     grid-template-areas: "alert alert" "navbar navbar" "menu content" "footer footer";
 
     .top-alert {
+        z-index: @zindex-topalert;
         grid-area: alert;
         padding: @gutter-xxs @gutter !important;
         display: block;

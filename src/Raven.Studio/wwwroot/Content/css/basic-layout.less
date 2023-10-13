@@ -454,6 +454,11 @@
     align-items: center;
     z-index: @zindex-navbar-fixed;
 
+    @supports (backdrop-filter: blur(24px)) {
+        background-color: transparent;
+        backdrop-filter: blur(24px);
+    }
+
     @media (min-width:@screen-md) {
         height: @navbar-height;
     }
