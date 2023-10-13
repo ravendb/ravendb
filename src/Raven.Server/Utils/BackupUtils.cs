@@ -67,7 +67,7 @@ internal static class BackupUtils
             case ExportCompressionAlgorithm.Gzip:
                 return new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
             case ExportCompressionAlgorithm.Zstd:
-                return ZstdStream.Compress(stream);
+                return ZstdStream.Compress(stream, leaveOpen: true);
             default:
                 throw new ArgumentOutOfRangeException();
         }

@@ -611,9 +611,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         var totalSw = Stopwatch.StartNew();
                         var sw = Stopwatch.StartNew();
+                        var compressionAlgorithm = _configuration.SnapshotSettings?.CompressionAlgorithm ?? _database.Configuration.Backup.CompressionAlgorithm;
                         var compressionLevel = _configuration.SnapshotSettings?.CompressionLevel ?? CompressionLevel.Optimal;
                         var excludeIndexes = _configuration.SnapshotSettings?.ExcludeIndexes ?? false;
-                        var smugglerResult = _database.FullBackupTo(tempBackupFilePath, compressionLevel, excludeIndexes,
+                        var smugglerResult = _database.FullBackupTo(tempBackupFilePath, compressionAlgorithm, compressionLevel, excludeIndexes,
                             info =>
                             {
                                 AddInfo(info.Message);
@@ -759,7 +760,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value, startRaftIndex.Value, _logger);
-                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, _database.Configuration.Backup.CompressionAlgorithm);
+                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, _database.Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm());
                 var smuggler = new DatabaseSmuggler(_database,
                     smugglerSource,
                     smugglerDestination,

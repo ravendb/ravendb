@@ -9,6 +9,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
+using Sparrow.Backups;
 
 namespace Raven.Server.Config.Categories
 {
@@ -64,10 +65,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.Azure.Legacy", ConfigurationEntryScope.ServerWideOnly)]
         public bool AzureLegacy { get; set; }
 
-        [Description("Compression algorithm that is used to perform backups (does not apply to snapshot backups).")]
-        [DefaultValue(ExportCompressionAlgorithm.Zstd)]
+        [Description("Compression algorithm that is used to perform backups.")]
+        [DefaultValue(BackupCompressionAlgorithm.Zstd)]
         [ConfigurationEntry("Backup.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public ExportCompressionAlgorithm CompressionAlgorithm { get; set; }
+        public BackupCompressionAlgorithm CompressionAlgorithm { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {

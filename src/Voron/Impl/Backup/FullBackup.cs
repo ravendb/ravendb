@@ -13,6 +13,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using Sparrow;
+using Sparrow.Backups;
 using Sparrow.Utils;
 using Voron.Data.Tables;
 using Voron.Global;
@@ -33,8 +34,11 @@ namespace Voron.Impl.Backup
             public StorageEnvironment Env { get; set; }
         }
 
-        public void ToFile(StorageEnvironment env, VoronPathSetting backupPath,
-            CompressionLevel compression = CompressionLevel.Optimal,
+        public void ToFile(
+            StorageEnvironment env,
+            VoronPathSetting backupPath,
+            BackupCompressionAlgorithm compressionAlgorithm,
+            CompressionLevel compressionLevel = CompressionLevel.Optimal,
             Action<(string Message, int FilesCount)> infoNotify = null)
         {
             infoNotify ??= _ => { };
@@ -48,7 +52,7 @@ namespace Voron.Impl.Backup
                     infoNotify(("Voron backup started", 0));
                     var dataPager = env.Options.DataPager;
                     var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                    Backup(env, compression, dataPager, package, string.Empty, copier, infoNotify);
+                    Backup(env, compressionAlgorithm, compressionLevel, dataPager, package, string.Empty, copier, infoNotify);
 
                     file.Flush(true); // make sure that we fully flushed to disk
                 }
@@ -61,11 +65,12 @@ namespace Voron.Impl.Backup
         /// </summary>
         public void ToFile(IEnumerable<StorageEnvironmentInformation> envs,
             ZipArchive archive,
+            BackupCompressionAlgorithm compressionAlgorithm,
             CompressionLevel compressionLevel,
             Action<(string Message, int FilesCount)> infoNotify = null,
             CancellationToken cancellationToken = default)
         {
-            infoNotify = infoNotify ?? (_ => { });
+            infoNotify ??= (_ => { });
             infoNotify(("Voron backup db started", 0));
 
             foreach (var e in envs)
@@ -76,15 +81,20 @@ namespace Voron.Impl.Backup
                 var env = e.Env;
                 var dataPager = env.Options.DataPager;
                 var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                Backup(env, compressionLevel, dataPager, archive, basePath, copier, infoNotify, cancellationToken);
+                Backup(env, compressionAlgorithm, compressionLevel, dataPager, archive, basePath, copier, infoNotify, cancellationToken);
             }
 
             infoNotify(("Voron backup db finished", 0));
         }
 
         private static void Backup(
-            StorageEnvironment env, CompressionLevel compressionLevel, AbstractPager dataPager,
-            ZipArchive package, string basePath, DataCopier copier,
+            StorageEnvironment env,
+            BackupCompressionAlgorithm compressionAlgorithm,
+            CompressionLevel compressionLevel,
+            AbstractPager dataPager,
+            ZipArchive zipArchive,
+            string basePath,
+            DataCopier copier,
             Action<(string Message, int FilesCount)> infoNotify,
             CancellationToken cancellationToken = default)
         {
@@ -93,6 +103,8 @@ namespace Voron.Impl.Backup
             long lastWrittenLogFile = -1;
             LowLevelTransaction txr = null;
             var backupSuccess = false;
+
+            var package = new BackupZipArchive(zipArchive, compressionAlgorithm, compressionLevel);
 
             try
             {
@@ -107,7 +119,7 @@ namespace Voron.Impl.Backup
 
                     Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
                     infoNotify(($"Voron copy headers for {basePath}", 2));
-                    env.HeaderAccessor.CopyHeaders(compressionLevel, package, copier, env.Options, basePath);
+                    env.HeaderAccessor.CopyHeaders(package, copier, env.Options, basePath);
 
                     env._forTestingPurposes?.ActionToCallDuringFullBackupRighAfterCopyHeaders?.Invoke();
 
@@ -156,7 +168,7 @@ namespace Voron.Impl.Backup
                 }
 
                 // data file backup
-                var dataPart = package.CreateEntry(Path.Combine(basePath, Constants.DatabaseFilename), compressionLevel);
+                var dataPart = package.CreateEntry(Path.Combine(basePath, Constants.DatabaseFilename));
                 Debug.Assert(dataPart != null);
 
                 if (allocatedPages > 0) //only true if dataPager is still empty at backup start
@@ -191,7 +203,7 @@ namespace Voron.Impl.Backup
                             {
                                 var srcFileName = Path.GetFileName(recoveryFile);
 
-                                var recoveryPart = package.CreateEntry(Path.Combine(basePath, srcFileName), compressionLevel);
+                                var recoveryPart = package.CreateEntry(Path.Combine(basePath, srcFileName));
                                 using var dst = recoveryPart.Open();
                                 src.CopyTo(dst);
                             }
@@ -205,7 +217,7 @@ namespace Voron.Impl.Backup
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var entryName = StorageEnvironmentOptions.JournalName(journalFile.Number);
-                        var journalPart = package.CreateEntry(Path.Combine(basePath, entryName), compressionLevel);
+                        var journalPart = package.CreateEntry(Path.Combine(basePath, entryName));
 
                         Debug.Assert(journalPart != null);
 
@@ -279,7 +291,7 @@ namespace Voron.Impl.Backup
             Action<string> onProgress = null,
             CancellationToken cancellationToken = default)
         {
-            journalDir = journalDir ?? voronDataDir.Combine("Journals");
+            journalDir ??= voronDataDir.Combine("Journals");
 
             if (Directory.Exists(voronDataDir.FullPath) == false)
                 Directory.CreateDirectory(voronDataDir.FullPath);
@@ -302,7 +314,7 @@ namespace Voron.Impl.Backup
                 if (Directory.Exists(dst.FullPath) == false)
                     Directory.CreateDirectory(dst.FullPath);
 
-                using (var input = entry.Open())
+                using (var input = GetDecompressionStream(entry.Open()))
                 using (var output = SafeFileStream.Create(dst.Combine(entry.Name).FullPath, FileMode.CreateNew))
                 {
                     input.CopyTo(output, readCount =>
@@ -320,6 +332,27 @@ namespace Voron.Impl.Backup
                                    $"size: {new Size(entry.Length, SizeUnit.Bytes)}, " +
                                    $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
             }
+        }
+
+        internal static Stream GetDecompressionStream(Stream stream)
+        {
+            var buffer = new byte[4];
+
+            var read = stream.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+                throw new InvalidOperationException("Empty stream");
+
+            var backupStream = new ZipBackupStream(stream, buffer);
+
+            if (read != buffer.Length)
+                return backupStream;
+
+            const uint zstdMagicNumber = 0xFD2FB528;
+            var readMagicNumber = BitConverter.ToUInt32(buffer);
+            if (readMagicNumber == zstdMagicNumber)
+                return ZstdStream.Decompress(backupStream);
+
+            return backupStream;
         }
     }
 }

@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Commercial;
@@ -40,6 +41,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
 using Sparrow;
+using Sparrow.Backups;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -516,11 +518,11 @@ namespace Raven.Server.Documents
                 //_nextClusterCommand refers to each individual put/delete while batch size refers to number of transaction (each contains multiple commands)
                 _logger.Info($"Read {batch.Count:#,#;;0} cluster transaction commands - fromCount: {_nextClusterCommand}, take: {batchSize}");
             }
-            
+
             if (batch.Count == 0)
             {
                 var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
-                
+
                 if (RachisLogIndexNotifications.LastModifiedIndex != index)
                     RachisLogIndexNotifications.NotifyListenersAbout(index, null);
 
@@ -575,7 +577,7 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled && stopwatch != null)
                     _logger.Info($"cluster transaction batch took {stopwatch.Elapsed:c}");
             }
-            
+
             return batch;
         }
 
@@ -895,7 +897,7 @@ namespace Raven.Server.Documents
             {
                 var clusterTransactions = _clusterTransactionsThread;
                 _clusterTransactionsThread = null;
-                
+
                 if (clusterTransactions != null && PoolOfThreads.LongRunningWork.Current != clusterTransactions)
                     clusterTransactions.Join(int.MaxValue);
             });
@@ -1121,7 +1123,7 @@ namespace Raven.Server.Documents
                                 new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
                                     documentsStorage.Environment);
                         break;
-                    
+
                     case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
                         var configurationStorage = ConfigurationStorage;
                         if (configurationStorage != null)
@@ -1195,7 +1197,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public SmugglerResult FullBackupTo(string backupPath, CompressionLevel compressionLevel = CompressionLevel.Optimal,
+        public SmugglerResult FullBackupTo(string backupPath, BackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel = CompressionLevel.Optimal,
             bool excludeIndexes = false, Action<(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
@@ -1213,14 +1215,14 @@ namespace Raven.Server.Documents
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
-                    var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, compressionLevel);
+                    var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.NoCompression);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     {
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         {
-                            var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource, Configuration.Backup.CompressionAlgorithm);
+                            var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource, compressionAlgorithm.ToExportCompressionAlgorithm());
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                             {
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
@@ -1241,7 +1243,7 @@ namespace Raven.Server.Documents
 
                     infoNotify?.Invoke(("Backed up Database Record", 1));
 
-                    zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, compressionLevel);
+                    zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, CompressionLevel.Optimal);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     using (var writer = new BlittableJsonTextWriter(serverContext, outputStream))
@@ -1292,8 +1294,7 @@ namespace Raven.Server.Documents
 
                 infoNotify?.Invoke(("Backed up database values", 1));
 
-                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), package, compressionLevel,
-                    infoNotify: infoNotify, cancellationToken: cancellationToken);
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), package, compressionAlgorithm, compressionLevel, infoNotify: infoNotify, cancellationToken: cancellationToken);
 
                 file.Flush(true); // make sure that we fully flushed to disk
             }
@@ -1371,7 +1372,7 @@ namespace Raven.Server.Documents
             {
                 DatabaseDisabledException throwShutDown = null;
 
-                if ((_serverStore.ServerShutdown.IsCancellationRequested || _databaseShutdown.IsCancellationRequested) && e is DatabaseDisabledException == false) 
+                if ((_serverStore.ServerShutdown.IsCancellationRequested || _databaseShutdown.IsCancellationRequested) && e is DatabaseDisabledException == false)
                     e = throwShutDown = CreateDatabaseShutdownException(e);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);
@@ -1844,8 +1845,8 @@ namespace Raven.Server.Documents
                         return;
                     break;
             }
-            
-            if (ioChange.MeterItem.RateOfWritesInMbPerSec > 1) 
+
+            if (ioChange.MeterItem.RateOfWritesInMbPerSec > 1)
                 return;
 
             NotificationCenter.SlowWrites.Add(ioChange);
