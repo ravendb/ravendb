@@ -10,6 +10,7 @@ interface ClusterState {
     localNodeTag: string;
     nodes: EntityState<ClusterNode>;
     clientVersion: string;
+    serverVersion: serverBuildVersionDto;
 }
 
 const clusterNodesAdapter = createEntityAdapter<ClusterNode>({
@@ -31,6 +32,7 @@ const initialState: ClusterState = {
     localNodeTag: "A",
     nodes: clusterNodesAdapter.getInitialState(),
     clientVersion: null,
+    serverVersion: null,
 };
 
 export const clusterSlice = createSlice({
@@ -47,6 +49,9 @@ export const clusterSlice = createSlice({
         clientVersionLoaded: (state, { payload: version }: PayloadAction<string>) => {
             state.clientVersion = version;
         },
+        serverVersionLoaded: (state, { payload: version }: PayloadAction<serverBuildVersionDto>) => {
+            state.serverVersion = version;
+        },
     },
 });
 
@@ -59,4 +64,5 @@ export const clusterSelectors = {
     localNode: selectLocalNode,
     localNodeTag: selectLocalNodeTag,
     clientVersion: (store: RootState) => store.cluster.clientVersion,
+    serverVersion: (store: RootState) => store.cluster.serverVersion,
 };
