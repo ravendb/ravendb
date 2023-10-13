@@ -1,11 +1,12 @@
 import commandBase = require("commands/commandBase");
+import { LicenseStatus } from "components/models/common";
 import endpoints = require("endpoints");
 
 class getLicenseStatusCommand extends commandBase {
 
-    execute(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
+    execute(): JQueryPromise<LicenseStatus> {
         const url = endpoints.global.license.licenseStatus;
-        return this.query<Raven.Server.Commercial.LicenseStatus>(url, null)
+        return this.query<LicenseStatus>(url, null)
             .fail((response: JQueryXHR) => this.reportError("Failed to get license status", response.responseText));
     }
 }
