@@ -710,6 +710,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     IsFullBackup = _isFullBackup,
                     FolderName = folderName,
                     FileName = fileName,
+                    RetentionPolicyParameters = _retentionPolicyParameters,
                     OnProgress = AddInfo
                 });
             }
