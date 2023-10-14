@@ -675,7 +675,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_backupToLocalFolder)
             {
                 // we'll do the local backup and then upload it
-                return GetForLocalBackup();
+                return GetStreamForLocalBackup();
+            }
+
+            if (_database.Configuration.Backup.DisableDirectUpload)
+            {
+                // disabled by configuration
+                return GetStreamForLocalBackup();
             }
 
             var hasAws = BackupConfiguration.CanBackupUsing(_configuration.S3Settings);
@@ -688,7 +694,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (destinations.Count(x => x) != 1)
             {
                 // direct upload is supported only for 1 destination
-                return GetForLocalBackup();
+                return GetStreamForLocalBackup();
             }
 
             if (hasAws)
@@ -709,9 +715,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             // all other destinations are currently not supported
-            return GetForLocalBackup();
+            return GetStreamForLocalBackup();
 
-            FileStream GetForLocalBackup()
+            FileStream GetStreamForLocalBackup()
             {
                 return SafeFileStream.Create(filePath, FileMode.Create);
             }

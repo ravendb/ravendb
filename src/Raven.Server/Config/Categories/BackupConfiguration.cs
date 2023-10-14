@@ -58,6 +58,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.CloudStorageOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting CloudStorageOperationTimeout { get; set; }
 
+        [Description("Disable the direct upload to an external destination, instead use a temp file to create the backup first.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Backup.DisableDirectUpload", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool DisableDirectUpload { get; set; }
 
         [Description("EXPERT: Indicates which library to use when doing Azure backups.")]
         [DefaultValue(false)]
