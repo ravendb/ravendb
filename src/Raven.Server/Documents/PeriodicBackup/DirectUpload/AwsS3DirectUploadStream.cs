@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Retention;
 using Sparrow;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
@@ -10,6 +11,7 @@ namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 public class AwsS3DirectUploadStream : DirectUploadStream
 {
     private readonly RavenAwsS3Client _client;
+    private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
 
     protected override IMultiPartUploader MultiPartUploader { get; }
 
@@ -23,21 +25,22 @@ public class AwsS3DirectUploadStream : DirectUploadStream
         };
 
         _client = new RavenAwsS3Client(parameters.Settings, parameters.Configuration);
+        _retentionPolicyParameters = parameters.RetentionPolicyParameters;
 
         var key = BackupUploader.CombinePathAndKey(parameters.Settings.RemoteFolderName, parameters.FolderName, parameters.FileName);
         MultiPartUploader = _client.GetUploader(key, metadata);
         MaxPartSizeInBytes = _client.MinOnePartUploadSizeLimit.GetValue(SizeUnit.Bytes);
-
-        //TODO:
-        //var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
-        //runner.Execute();
     }
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
+        using (_client)
+        {
+            base.Dispose(disposing);
 
-        _client.Dispose();
+            var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, _client);
+            runner.Execute();
+        }
     }
 
     public class Parameters
@@ -53,6 +56,8 @@ public class AwsS3DirectUploadStream : DirectUploadStream
         public string FolderName { get; set; }
 
         public string FileName { get; set; }
+
+        public RetentionPolicyBaseParameters RetentionPolicyParameters { get; set; }
 
         public Action<string> OnProgress { get; set; }
     }
