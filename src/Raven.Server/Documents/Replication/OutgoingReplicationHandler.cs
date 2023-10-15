@@ -1239,7 +1239,7 @@ namespace Raven.Server.Documents.Replication
         private void OnChangeInternal(bool triggeredByReplicationThread)
         {
             if (triggeredByReplicationThread &&
-                (ReplicationType != ReplicationLatestEtagRequest.ReplicationType.External ||
+                (ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal ||
                  ForTestingPurposes?.DisableWaitForChangesForExternalReplication == true))
                 return;
 
