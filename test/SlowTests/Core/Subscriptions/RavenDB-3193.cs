@@ -17,10 +17,11 @@ namespace SlowTests.Core.Subscriptions
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ShouldRespectCollectionCriteria()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldRespectCollectionCriteria(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

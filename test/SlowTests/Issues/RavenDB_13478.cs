@@ -17,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Counters)]
-        public async Task CanIncludeCountersInSubscriptions()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanIncludeCountersInSubscriptions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

@@ -18,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanUseSubscriptionIncludesViaStronglyTypedApi()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseSubscriptionIncludesViaStronglyTypedApi(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -73,10 +74,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanUseSubscriptionIncludesOnArraysViaStronglyTypedApi()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseSubscriptionIncludesOnArraysViaStronglyTypedApi(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

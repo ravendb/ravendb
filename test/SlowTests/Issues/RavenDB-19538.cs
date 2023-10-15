@@ -18,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanModifyMetadataInSubscriptionBatch()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanModifyMetadataInSubscriptionBatch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var sub = store.Subscriptions.Create(new SubscriptionCreationOptions<User> { Filter = user => user.Count > 0 });
 

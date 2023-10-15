@@ -19,10 +19,11 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void CanNameAndOpenWithNameOnly()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanNameAndOpenWithNameOnly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionCreationParams = new SubscriptionCreationOptions
                 {
@@ -65,10 +66,11 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void WaitOnSubscriptionTaskWhenSubscriptionIsOvertaken()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void WaitOnSubscriptionTaskWhenSubscriptionIsOvertaken(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
 
@@ -143,10 +145,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task WaitOnSubscriptionTaskWhenSubscriptionIsDeleted()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task WaitOnSubscriptionTaskWhenSubscriptionIsDeleted(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionId = await store.Subscriptions.CreateAsync<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
@@ -183,10 +186,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void WaitOnSubscriptionTaskWhenSubscriptionCompleted()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void WaitOnSubscriptionTaskWhenSubscriptionCompleted(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
@@ -222,10 +226,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task WaitOnSubscriptionStopDueToSubscriberError()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task WaitOnSubscriptionStopDueToSubscriberError(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionId = await store.Subscriptions.CreateAsync<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));

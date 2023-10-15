@@ -23,8 +23,9 @@ namespace SlowTests.Client.Subscriptions
             public List<Node> Children = new List<Node>();
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void PositivePathWithCollectionsTyped()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void PositivePathWithCollectionsTyped(Options options)
         {
             var nestedNode = new Node
             {
@@ -45,7 +46,7 @@ namespace SlowTests.Client.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -69,8 +70,9 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void PositivePathWithCollectionsUntyped()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void PositivePathWithCollectionsUntyped(Options options)
         {
             var nestedNode = new Node
             {
@@ -91,7 +93,7 @@ namespace SlowTests.Client.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -129,8 +131,9 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void NegativePathWithCollectionsTyped()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void NegativePathWithCollectionsTyped(Options options)
         {
             var nestedNode = new Node
             {
@@ -151,7 +154,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -175,8 +178,9 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void NegativePathWithCollectionsUntyped()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void NegativePathWithCollectionsUntyped(Options options)
         {
             var nestedNode = new Node
             {
@@ -197,7 +201,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

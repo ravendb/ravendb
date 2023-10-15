@@ -17,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Counters)]
-        public async Task SubscriptionsWorksWithCounter()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsWorksWithCounter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {                    
@@ -56,10 +57,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.CompareExchange)]
-        public async Task SubscriptionsWorksWithCompareExchange()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionsWorksWithCompareExchange(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string userId;
                 string cmpxValueOriginal;

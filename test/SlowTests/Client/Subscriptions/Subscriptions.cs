@@ -21,10 +21,11 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CreateSubscription()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CreateSubscription(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionCreationParams = new SubscriptionCreationOptions
                 {
@@ -327,10 +328,12 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void CanDisableSubscription()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21544")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanDisableSubscription(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string s = store.Subscriptions.Create<Order>();
                 var ongoingTask = (OngoingTaskSubscription)store.Maintenance.Send(new GetOngoingTaskInfoOperation(s, OngoingTaskType.Subscription));

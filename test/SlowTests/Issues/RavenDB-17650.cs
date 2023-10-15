@@ -20,10 +20,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Should_Retry_When_DatabaseDisabledException_Was_Thrown()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21556")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task Should_Retry_When_DatabaseDisabledException_Was_Thrown(Options options)
         {
-            using var store = GetDocumentStore(new Options()
+            using var store = GetDocumentStore(new Options(options)
             {
                 ReplicationFactor = 1,
                 RunInMemory = false
@@ -73,11 +75,12 @@ namespace SlowTests.Issues
             Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Should_Retry_When_AllTopologyNodesDownException_Was_Thrown()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Should_Retry_When_AllTopologyNodesDownException_Was_Thrown(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, shouldRunInMemory: false);
-            using var store = GetDocumentStore(new Options()
+            using var store = GetDocumentStore(new Options(options)
             {
                 ReplicationFactor = 2,
                 RunInMemory = false,
@@ -138,10 +141,12 @@ namespace SlowTests.Issues
             });
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Should_Throw_DatabaseDisabledException_When_MaxErroneousPeriod_Was_Passed()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21555")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task Should_Throw_DatabaseDisabledException_When_MaxErroneousPeriod_Was_Passed(Options options)
         {
-            using var store = GetDocumentStore(new Options()
+            using var store = GetDocumentStore(new Options(options)
             {
                 ReplicationFactor = 1,
                 RunInMemory = false
@@ -193,11 +198,13 @@ namespace SlowTests.Issues
             Assert.True(subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown);
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Should_Throw_AllTopologyNodesDownException_When_MaxErroneousPeriod_Was_Passed()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21554")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task Should_Throw_AllTopologyNodesDownException_When_MaxErroneousPeriod_Was_Passed(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, shouldRunInMemory: false);
-            using var store = GetDocumentStore(new Options()
+            using var store = GetDocumentStore(new Options(options)
             {
                 ReplicationFactor = 2,
                 RunInMemory = false,

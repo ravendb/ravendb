@@ -31,10 +31,11 @@ namespace SlowTests.Issues
 #pragma warning restore 414
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanUseSubscriptionWithTcpProtocol40()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseSubscriptionWithTcpProtocol40(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -69,10 +70,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CannotUseSubscriptionWithIncludesWhenProtocolDoesNotSupportIt()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CannotUseSubscriptionWithIncludesWhenProtocolDoesNotSupportIt(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
