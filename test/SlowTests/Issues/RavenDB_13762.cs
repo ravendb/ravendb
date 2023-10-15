@@ -24,10 +24,11 @@ namespace SlowTests.Issues
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
-        public async Task SessionInSubscriptionsShouldNotTrackRevisions()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task SessionInSubscriptionsShouldNotTrackRevisions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>();
 

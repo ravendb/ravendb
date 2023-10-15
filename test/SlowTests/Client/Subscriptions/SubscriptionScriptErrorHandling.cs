@@ -23,10 +23,12 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void ValidateFailedSubscriptionScriptExceptionHandling()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21548")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ValidateFailedSubscriptionScriptExceptionHandling(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -84,10 +86,11 @@ select project(d)
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
-        public void ValidateFailedRevisionsSubscriptionScriptExceptionHandling()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ValidateFailedRevisionsSubscriptionScriptExceptionHandling(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {

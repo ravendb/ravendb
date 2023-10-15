@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Replication;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 using Company = SlowTests.Core.Utils.Entities.Company;
 using User = SlowTests.Core.Utils.Entities.User;
-using Xunit.Abstractions;
 
 namespace SlowTests.Core.Session
 {

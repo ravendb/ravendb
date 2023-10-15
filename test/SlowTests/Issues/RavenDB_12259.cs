@@ -17,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ProjectionsShouldHaveProperMetadataSetInSubscriptions()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ProjectionsShouldHaveProperMetadataSetInSubscriptions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

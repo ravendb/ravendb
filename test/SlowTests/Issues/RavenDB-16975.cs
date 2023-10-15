@@ -15,11 +15,12 @@ namespace SlowTests.Issues
         public RavenDB_16975(ITestOutputHelper output) : base(output)
         {
         }
-        
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Should_Not_Send_Include_Message()
+
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Should_Not_Send_Include_Message(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -57,10 +58,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Should_Not_Send_Include_Message_Via_JavaScript()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Should_Not_Send_Include_Message_Via_JavaScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

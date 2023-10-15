@@ -17,10 +17,11 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleAny()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleAny(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -90,10 +91,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleAll()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleAll(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -162,10 +164,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleAll_Nested()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleAll_Nested(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -245,10 +248,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleWhere()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -318,10 +322,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleSelect()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleSelect(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -430,11 +435,12 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleBooleanConstantsAndCount()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleBooleanConstantsAndCount(Options options)
         {
             //RavenDB-7866
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -507,10 +513,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleCountAsProperty()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleCountAsProperty(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -585,10 +592,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleDates_Today()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleDates_Today(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -641,10 +649,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleDates_Now()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleDates_Now(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -698,10 +707,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleDates_UtcNow()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleDates_UtcNow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var utcTicks = DateTime.UtcNow.Ticks;
                 using (var session = store.OpenAsyncSession())
@@ -755,10 +765,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleDates_New()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleDates_New(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -811,10 +822,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleDates_Year()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleDates_Year(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -867,10 +879,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanHandleNestedDates()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHandleNestedDates(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

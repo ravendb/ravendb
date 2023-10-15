@@ -18,11 +18,12 @@ namespace SlowTests.Client.Subscriptions
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
-        
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task NewConnectionWithNoWorkShouldNotResetClient()
+
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task NewConnectionWithNoWorkShouldNotResetClient(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
