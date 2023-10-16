@@ -34,7 +34,7 @@
                         <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
                     </p>
-                    <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChange">
+                    <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChange() && !displayDocumentDeleted()">
                         <small>
                             <i class="icon-warning"></i>
                             <span>This document has been modified outside of Studio.</span>
