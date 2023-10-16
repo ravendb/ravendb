@@ -256,7 +256,8 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
             flex-grow: 1;
         }
         .kilo,
-        .mega {
+        .mega,
+        .giga {
             padding: 0 4px;
             font-weight: 800;
             line-height: $gutter-sm;
@@ -273,6 +274,12 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                 content: "M";
             }
         }
+        
+        .giga {
+            background-color: fadeout(@label-default-bg,50%);
+
+            &::before {
+                content: 'G';
     }
     .btn-collapse-menu,
     .btn-expand-menu {

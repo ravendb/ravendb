@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -19,7 +20,6 @@ using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config.Categories;
@@ -104,14 +104,34 @@ namespace Raven.Server.Utils
 
         public sealed class CertificateHolder : IDisposable
         {
-            public string CertificateForClients;
-            public X509Certificate2 Certificate;
-            public AsymmetricKeyEntry PrivateKey;
+            public readonly string CertificateForClients;
+            public readonly X509Certificate2 Certificate;
+            public readonly SslStreamCertificateContext CertificateContext;
+            public readonly AsymmetricKeyEntry PrivateKey;
+
+            private CertificateHolder()
+            {
+            }
+
+            public CertificateHolder(X509Certificate2 certificate, AsymmetricKeyEntry privateKey)
+                : this(certificate, privateKey, certificateForClients: null)
+            {
+            }
+
+            public CertificateHolder(X509Certificate2 certificate, AsymmetricKeyEntry privateKey, string certificateForClients)
+            {
+                Certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
+                CertificateContext = SslStreamCertificateContext.Create(Certificate, additionalCertificates: null);
+                PrivateKey = privateKey ?? throw new ArgumentNullException(nameof(privateKey));
+                CertificateForClients = certificateForClients;
+            }
 
             public void Dispose()
             {
                 Certificate?.Dispose();
             }
+
+            public static CertificateHolder CreateEmpty() => new();
         }
         public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {
@@ -327,10 +347,10 @@ namespace Raven.Server.Utils
             certificateGenerator.SetSubjectDN(subjectDN);
             log?.AppendLine($"issuerDN = {issuerDN}");
             log?.AppendLine($"subjectDN = {subjectDN}");
-            
+
             certificateGenerator.AddExtension(
                 X509Extensions.BasicConstraints.Id, true, new BasicConstraints(true));
-            certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true, 
+            certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true,
                 new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.CrlSign | KeyUsage.KeyCertSign));
             certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true,
                 new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth));
@@ -361,7 +381,7 @@ namespace Raven.Server.Utils
                     serialNumber);
             certificateGenerator.AddExtension(
                 X509Extensions.AuthorityKeyIdentifier.Id, false, authorityKeyIdentifier);
-            
+
             var subjectKeyIdentifier =
                 new SubjectKeyIdentifier(
                     SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(subjectKeyPair.Public));
@@ -505,7 +525,7 @@ namespace Raven.Server.Utils
                 }
             }
         }
-        
+
         public static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(CompleteAuthorizationAndGetCertificateParameters parameters)
         {
             if (parameters.ChallengeResult.Challange == null && parameters.ChallengeResult.Cache != null)
@@ -562,7 +582,7 @@ namespace Raven.Server.Utils
                 if (item.Certificate.Thumbprint == certificate.Thumbprint)
                 {
                     var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.GetRSAPrivateKey()).Private);
-                    store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] {new X509CertificateEntry(x509Certificate)});
+                    store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] { new X509CertificateEntry(x509Certificate) });
                     continue;
                 }
 
@@ -572,7 +592,7 @@ namespace Raven.Server.Utils
             var memoryStream = new MemoryStream();
             store.Save(memoryStream, Array.Empty<char>(), new SecureRandom(new CryptoApiRandomGenerator()));
             var certBytes = memoryStream.ToArray();
-            
+
             Debug.Assert(certBytes != null);
             setupInfo.Certificate = Convert.ToBase64String(certBytes);
 

@@ -785,6 +785,7 @@ class query extends shardViewModelBase {
             if (currentIndex) {
                 this.queriedIndexInfo(currentIndex);
             } else {
+                if (!indexName.startsWith(queryUtil.DynamicPrefix)) {
                 // fetch indexes since this view may not be up-to-date if index was defined outside of studio
                 this.fetchAllIndexes(this.db)
                     .done(() => {
@@ -795,6 +796,7 @@ class query extends shardViewModelBase {
                     });
             }
         }
+    }
     }
     
     private getTimeSeriesColumns(grid: virtualGridController<any>, tab: timeSeriesTableDetails): virtualColumn[] {
@@ -959,9 +961,11 @@ class query extends shardViewModelBase {
         this.effectiveFetcher = this.queryFetcher;
         this.currentTab("results");
         this.includesCache.removeAll();
-        this.includesRevisionsCache(new includedRevisions());
-        this.highlightsCache.removeAll();
-        this.explanationsCache.length = 0;
+
+        this.clearHighlightsCache();
+        this.clearIncludesRevisionsCache();
+        this.clearExplanationsCache();
+        
         this.timings(null);
         this.showFanOutWarning(false);
         
@@ -1551,14 +1555,26 @@ class query extends shardViewModelBase {
 
         // since we merge records based on fragments
         // remove all existing highlights & included revisions when going back to 'results' tab
-        this.highlightsCache.removeAll();
-        this.includesRevisionsCache(new includedRevisions());
-
-        this.explanationsCache.length = 0;
-        this.totalExplanations(0);
+        
+        this.clearHighlightsCache(); 
+        this.clearIncludesRevisionsCache();
+        this.clearExplanationsCache();
         
         this.columnsSelector.reset();
         this.refresh();
+    }
+    
+    private clearHighlightsCache() {
+        this.highlightsCache.removeAll();
+    }
+
+    private clearExplanationsCache() {
+        this.explanationsCache.length = 0;
+        this.totalExplanations(0);
+    }
+        
+    private clearIncludesRevisionsCache() {
+        this.includesRevisionsCache(new includedRevisions());
     }
     
     goToIncludesRevisionsTab(): void {
