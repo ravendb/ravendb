@@ -5,7 +5,6 @@ import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { EmptySet } from "components/common/EmptySet";
 import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
-import { todo } from "common/developmentHelper";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
@@ -93,15 +92,20 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
         setValue("Collections", [...Collections, ...remainingCollectionNames], { shouldDirty: true });
     };
 
-    const isAddAllCollectionsDisabled = allCollectionNames.filter((name) => !Collections.includes(name)).length === 0;
-
     const onSave: SubmitHandler<DocumentsCompressionConfiguration> = async (formData) => {
         return tryHandleSubmit(async () => {
             reportEvent("documents-compression", "save");
-            await databasesService.saveDocumentsCompression(db, formData);
+
+            await databasesService.saveDocumentsCompression(db, {
+                ...formData,
+                Collections: formData.CompressAllCollections ? [] : formData.Collections,
+            });
+
             reset(formData);
         });
     };
+
+    const isAddAllCollectionsDisabled = allCollectionNames.filter((name) => !Collections.includes(name)).length === 0;
 
     const infoTextSuffix = CompressAllCollections ? "all collections" : "the selected collections";
 
@@ -150,7 +154,6 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                         leftItem={leftRadioToggleItem}
                                         rightItem={rightRadioToggleItem}
                                         className="mb-4 d-flex justify-content-center"
-                                        disabled={!isDatabaseAdmin}
                                     />
                                 )}
                                 <Collapse isOpen={!CompressAllCollections}>
@@ -187,7 +190,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                             <Button
                                                 color="link"
                                                 size="xs"
-                                                onClick={() => removeAllCollections()}
+                                                onClick={removeAllCollections}
                                                 className="p-0"
                                             >
                                                 Remove all
