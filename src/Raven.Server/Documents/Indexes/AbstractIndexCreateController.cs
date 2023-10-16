@@ -245,11 +245,11 @@ public abstract class AbstractIndexCreateController
         }
     }
 
-    private HashSet<string> GetValidConfigurationKeys()
+    private static HashSet<string> GetValidConfigurationKeys()
     {
-        var configurationProperties = ServerStore.Configuration.Indexing.GetConfigurationProperties();
+        var allConfigurationEntries = RavenConfiguration.AllConfigurationEntries.Value;
         
-        var validPerIndexConfigurationKeys = configurationProperties.SelectMany(configurationProperty => configurationProperty.ConfigurationEntryAttributes.Select(configurationEntryAttribute => configurationEntryAttribute.Key)).ToHashSet();
+        var validPerIndexConfigurationKeys = allConfigurationEntries.Where(configurationEntry => configurationEntry.Category == "Indexing").SelectMany(configurationEntry => configurationEntry.Keys).ToHashSet();
 
         return validPerIndexConfigurationKeys;
     }
