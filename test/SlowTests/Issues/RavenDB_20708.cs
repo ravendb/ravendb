@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Database;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -37,7 +38,7 @@ namespace SlowTests.Issues
                     await session.StoreAsync(user1, "users/1");
                     await session.StoreAsync(user2, "users/2");
 
-                    await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await session.SaveChangesAsync());
+                    await Assert.ThrowsAsync<DatabaseDisabledException>(async () => await session.SaveChangesAsync());
 
                     Assert.True(await WaitForValueAsync(() => Server.ServerStore.DatabasesLandlord.IsDatabaseLoaded(store.Database),
                         true, 10_000));
