@@ -1956,7 +1956,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        internal long AdoptOrphanedFor(DocumentsOperationContext context, string id)
+        internal bool AdoptOrphanedFor(DocumentsOperationContext context, string id)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
@@ -1965,22 +1965,23 @@ namespace Raven.Server.Documents.Revisions
                 if (collectionName == null)
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Tried to delete revisions for '{id}' but no revisions found.");
-                    return 0;
+                        _logger.Info($"Tried to delete revisions for '{id}' but no collection was found.");
+                    return false;
                 }
 
 
                 if (ShouldAdoptRevision(context, lowerId, lowerIdPrefix, collectionName, out var table, out var lastRevision))
                 {
                     var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-                    return CreateDeletedRevision(context, table, id, collectionName, lastModifiedTicks, lastRevision.Flags) - 1;
+                    CreateDeletedRevision(context, table, id, collectionName, lastModifiedTicks, lastRevision.Flags);
+                    return true;
                 }
 
-                return 0;
+                return false;
             }
         }
 
-        private unsafe long CreateDeletedRevision(DocumentsOperationContext context, Table table, string id, CollectionName collectionName, 
+        private unsafe void CreateDeletedRevision(DocumentsOperationContext context, Table table, string id, CollectionName collectionName, 
             long lastModifiedTicks, DocumentFlags flags)
         {
             var deleteRevisionDocument = context.ReadObject(new DynamicJsonValue
@@ -2028,7 +2029,7 @@ namespace Raven.Server.Documents.Revisions
                     table.Insert(tvb);
                 }
 
-                return IncrementCountOfRevisions(context, lowerIdPrefix, 1);
+                IncrementCountOfRevisions(context, lowerIdPrefix, 1);
             }
         }
 
