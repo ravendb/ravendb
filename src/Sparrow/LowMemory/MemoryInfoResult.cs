@@ -2,19 +2,6 @@
 {
     public struct MemoryInfoResult
     {
-        public class MemoryUsageIntervals
-        {
-            public Size LastOneMinute;
-            public Size LastFiveMinutes;
-            public Size SinceStartup;
-        }
-
-        public class MemoryUsageLowHigh
-        {
-            public MemoryUsageIntervals High;
-            public MemoryUsageIntervals Low;
-        }
-
         public string Remarks;
         public Size TotalCommittableMemory;
         public Size CurrentCommitCharge;
