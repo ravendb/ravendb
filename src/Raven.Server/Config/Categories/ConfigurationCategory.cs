@@ -395,7 +395,7 @@ namespace Raven.Server.Config.Categories
             throw new InvalidOperationException($"The {nameof(DefaultValueAttribute)} is missing for '{property.Name}' property.");
         }
 
-        public List<ConfigurationProperty> GetConfigurationProperties()
+        protected List<ConfigurationProperty> GetConfigurationProperties()
         {
             var configurationProperties = _configurationPropertiesCache.GetOrAdd(GetType(), GetConfigurationPropertiesInternal);
 
