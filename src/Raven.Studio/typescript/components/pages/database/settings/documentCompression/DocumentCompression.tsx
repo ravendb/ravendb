@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Col, Button, Row, Card, Collapse, Form } from "reactstrap";
+import { Col, Button, Row, Card, Collapse, Form, Alert } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { EmptySet } from "components/common/EmptySet";
@@ -29,11 +29,6 @@ import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { SelectOption } from "components/common/select/Select";
 import { useAppUrls } from "components/hooks/useAppUrls";
-
-todo("Styling", "ANY", "Collection list item hover");
-todo("Styling", "ANY", "Remove collection button");
-todo("Styling", "ANY", "RadioToggleWithIcon when disabled");
-todo("Styling", "ANY", "Blink only after adding new collection");
 
 export default function DocumentCompression({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -89,10 +84,16 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
         );
     };
 
+    const removeAllCollections = () => {
+        setValue("Collections", [], { shouldDirty: true });
+    };
+
     const addAllCollections = () => {
         const remainingCollectionNames = allCollectionNames.filter((name) => !Collections.includes(name));
         setValue("Collections", [...Collections, ...remainingCollectionNames], { shouldDirty: true });
     };
+
+    const isAddAllCollectionsDisabled = allCollectionNames.filter((name) => !Collections.includes(name)).length === 0;
 
     const onSave: SubmitHandler<DocumentsCompressionConfiguration> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -142,17 +143,19 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                             </div>
 
                             <Card className={classNames("p-4", { "item-disabled pe-none": !hasDocumentsCompression })}>
-                                <FormRadioToggleWithIcon
-                                    control={control}
-                                    name="CompressAllCollections"
-                                    leftItem={leftRadioToggleItem}
-                                    rightItem={rightRadioToggleItem}
-                                    className="mb-4 d-flex justify-content-center"
-                                    disabled={!isDatabaseAdmin}
-                                />
-                                <Collapse isOpen={!CompressAllCollections} className="pb-2">
+                                {isDatabaseAdmin && (
+                                    <FormRadioToggleWithIcon
+                                        control={control}
+                                        name="CompressAllCollections"
+                                        leftItem={leftRadioToggleItem}
+                                        rightItem={rightRadioToggleItem}
+                                        className="mb-4 d-flex justify-content-center"
+                                        disabled={!isDatabaseAdmin}
+                                    />
+                                )}
+                                <Collapse isOpen={!CompressAllCollections}>
                                     {isDatabaseAdmin && (
-                                        <Row>
+                                        <Row className="mb-4">
                                             <Col>
                                                 <FormSelectCreatable
                                                     control={control}
@@ -167,25 +170,43 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                                 />
                                             </Col>
                                             <Col sm="auto" className="d-flex">
-                                                <Button color="info" onClick={addAllCollections}>
-                                                    <Icon icon="documents" addon="plus" /> Add All
+                                                <Button
+                                                    color="info"
+                                                    onClick={addAllCollections}
+                                                    disabled={isAddAllCollectionsDisabled}
+                                                >
+                                                    <Icon icon="documents" addon="plus" /> Add all
                                                 </Button>
                                             </Col>
                                         </Row>
                                     )}
-                                    <h3 className="mt-3">Selected Collections:</h3>
+                                    <div className="d-flex flex-wrap mb-1 align-items-center">
+                                        <h4 className="m-0">Selected collections</h4>
+                                        <FlexGrow />
+                                        {Collections.length > 0 && isDatabaseAdmin && (
+                                            <Button
+                                                color="link"
+                                                size="xs"
+                                                onClick={() => removeAllCollections()}
+                                                className="p-0"
+                                            >
+                                                Remove all
+                                            </Button>
+                                        )}
+                                    </div>
                                     <div className="well p-2">
                                         <div className="simple-item-list">
                                             {Collections.map((name) => (
-                                                <div key={name} className="p-1 hstack blink-style">
-                                                    <div className="flex-grow-1 pl-2">{name}</div>
+                                                <div key={name} className="p-1 hstack slidein-style">
+                                                    <div className="flex-grow-1">{name}</div>
                                                     {isDatabaseAdmin && (
                                                         <Button
                                                             color="link"
                                                             size="xs"
                                                             onClick={() => removeCollection(name)}
+                                                            className="p-0"
                                                         >
-                                                            <Icon icon="trash" />
+                                                            <Icon icon="trash" margin="m-0" />
                                                         </Button>
                                                     )}
                                                 </div>
@@ -197,7 +218,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                     </div>
                                 </Collapse>
                                 <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
-                                    <div className="bg-faded-info hstack gap-3 p-3 mt-3">
+                                    <Alert color="info" className="hstack gap-3 p-3 mt-4">
                                         <Icon icon="documents-compression" className="fs-1" />
                                         <div>
                                             Documents that will be compressed:
@@ -208,7 +229,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                                 </li>
                                             </ul>
                                         </div>
-                                    </div>
+                                    </Alert>
                                 </Collapse>
                             </Card>
                             <Card
