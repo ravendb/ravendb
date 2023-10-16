@@ -17,18 +17,19 @@ public class AwsS3DirectUploadStream : DirectUploadStream
 
     protected override long MaxPartSizeInBytes { get; }
 
-    public AwsS3DirectUploadStream(Parameters parameters)
+    public AwsS3DirectUploadStream(Parameters parameters) : base(parameters.OnProgress)
     {
-        var metadata = new Dictionary<string, string>
-        {
-            { "Description", BackupUploader.GetBackupDescription(parameters.BackupType, parameters.IsFullBackup) }
-        };
-
         _client = new RavenAwsS3Client(parameters.Settings, parameters.Configuration);
         _retentionPolicyParameters = parameters.RetentionPolicyParameters;
 
         var key = BackupUploader.CombinePathAndKey(parameters.Settings.RemoteFolderName, parameters.FolderName, parameters.FileName);
-        MultiPartUploader = _client.GetUploader(key, metadata);
+        MultiPartUploader = _client.GetUploader(key, new Dictionary<string, string>
+        {
+            {
+                "Description", BackupUploader.GetBackupDescription(parameters.BackupType, parameters.IsFullBackup)
+            }
+        });
+
         MaxPartSizeInBytes = _client.MinOnePartUploadSizeLimit.GetValue(SizeUnit.Bytes);
     }
 

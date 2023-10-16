@@ -3,11 +3,15 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Sparrow;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
 public abstract class DirectUploadStream : Stream
 {
+    private readonly Action<string> _onProgress;
+
     protected abstract IMultiPartUploader MultiPartUploader { get; }
     protected abstract long MaxPartSizeInBytes { get; }
 
@@ -16,6 +20,11 @@ public abstract class DirectUploadStream : Stream
     private MemoryStream _writeStream = new();
     private MemoryStream _uploadStream = new();
     private Task _uploadTask;
+
+    protected DirectUploadStream(Action<string> onProgress)
+    {
+        _onProgress = onProgress;
+    }
 
     public override void Flush()
     {
@@ -53,6 +62,8 @@ public abstract class DirectUploadStream : Stream
             if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
                 AsyncHelpers.RunSync(() => _uploadTask);
 
+            _onProgress.Invoke($"Uploaded {new Size(_writeStream.Position, SizeUnit.Bytes)}");
+
             (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
 
             _writeStream.Position = _uploadStream.Position = 0;
@@ -70,7 +81,7 @@ public abstract class DirectUploadStream : Stream
 
         _position += count;
 
-        await _writeStream.WriteAsync(buffer, offset, count, cancellationToken);
+        await _writeStream.WriteAsync(new ReadOnlyMemory<byte>(buffer, offset, count), cancellationToken);
 
         if (_writeStream.Position > MaxPartSizeInBytes)
         {
@@ -79,9 +90,7 @@ public abstract class DirectUploadStream : Stream
                 if (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false)
                     await _uploadTask;
 
-                //TODO
-                //_backupResult.AddInfo(message);
-                //_onProgress.Invoke(_backupResult.Progress);
+                _onProgress.Invoke($"Uploaded {new Size(_writeStream.Position, SizeUnit.Bytes)}");
             }
 
             (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
@@ -107,6 +116,8 @@ public abstract class DirectUploadStream : Stream
         }
 
         MultiPartUploader.CompleteUpload();
+
+        _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
     }
 
     public override bool CanRead => false;
