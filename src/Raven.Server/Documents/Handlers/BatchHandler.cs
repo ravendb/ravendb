@@ -254,17 +254,28 @@ namespace Raven.Server.Documents.Handlers
             var array = new DynamicJsonArray();
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
-                ClusterTransactionCompletionResult reply;
-                using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Engine.OperationTimeout))
+                try
                 {
-                    reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
-                }
-                if (reply.IndexTask != null)
-                {
-                    await reply.IndexTask;
-                }
+                    ClusterTransactionCompletionResult reply;
+                    using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Engine.OperationTimeout))
+                    {
+                        reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
+                    }
 
-                array = reply.Array;
+                    if (reply.IndexTask != null)
+                    {
+                        await reply.IndexTask;
+                    }
+
+                    array = reply.Array;
+                }
+                catch (Exception e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        Database.ThrowDatabaseShutdown(e);
+
+                    throw;
+                }
             }
 
             foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
