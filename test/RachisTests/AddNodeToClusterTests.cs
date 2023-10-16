@@ -1161,25 +1161,5 @@ namespace RachisTests
 
             }
         }
-
-        private static async Task WaitForAssertionAsync(Func<Task> action, int timeoutInMs = 15_000)
-        {
-            var sp = Stopwatch.StartNew();
-            while (true)
-            {
-                try
-                {
-                    await action();
-                    return;
-                }
-                catch
-                {
-                    if (sp.ElapsedMilliseconds > timeoutInMs)
-                        throw;
-
-                    await Task.Delay(100);
-                }
-            }
-        }
     }
 }
