@@ -144,13 +144,13 @@ class documentBasedColumnsProvider {
             
             if (this.createHyperlinks) {
                 if (p === "__metadata") {
-                    return new hyperlinkColumn(this.gridController, document.createDocumentIdProvider(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth, this.columnOptions);
+                    return new hyperlinkColumn(this.gridController, document.createDocumentIdProvider(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "@id", columnWidth, this.columnOptions);
                 }
 
                 return new hyperlinkColumn(this.gridController, p, _.partial(this.findLink, _, p).bind(this), generalUtils.escapeHtml(p), columnWidth, this.columnOptions);
             } else {
                 if (p === "__metadata") {
-                    return new textColumn(this.gridController, document.createDocumentIdProvider(), "Id", columnWidth, this.columnOptions);
+                    return new textColumn(this.gridController, document.createDocumentIdProvider(), "@id", columnWidth, this.columnOptions);
                 }
                 return new textColumn(this.gridController, p, generalUtils.escapeHtml(p), columnWidth, this.columnOptions);
             }
