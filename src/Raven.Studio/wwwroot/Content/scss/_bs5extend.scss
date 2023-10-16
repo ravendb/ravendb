@@ -368,3 +368,13 @@ select {
     overflow-y: scroll;
     position: relative;
 }
+
+.simple-item-list {
+    .hstack {
+        transition: background-color 0.1s ease;
+        border-radius: $border-radius;
+        &:hover {
+            background-color: lighten($well-bg, 5%);
+        }
+    }
+}
