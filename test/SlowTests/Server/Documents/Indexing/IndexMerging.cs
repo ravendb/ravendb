@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.Indexes.IndexMerging;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -150,7 +151,7 @@ namespace SlowTests.Server.Documents.Indexing
 
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void IndexMergeWithField()
         {
             using (var store = GetDocumentStore())
@@ -183,7 +184,7 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void IndexMergerShouldNotTakeIntoAccountExpressionVariableName()
         {
             var index1 = new Person_ByName_1();
@@ -219,7 +220,7 @@ namespace SlowTests.Server.Documents.Indexing
             Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void IndexMergerShouldNotTakeIntoAccountExpressionVariableNameForComplexTypes()
         {
             var index1 = new Complex_Person_ByName_1();
@@ -255,7 +256,7 @@ namespace SlowTests.Server.Documents.Indexing
             Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void IndexMergeWithQueryExpressionSyntax()
         {
             using (var store = GetDocumentStore())
@@ -306,7 +307,7 @@ select new
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void IndexMergerWithQueryExpressionSyntaxShouldNotTakeIntoAccountExpressionVariableName()
         {
             using (var store = GetDocumentStore())
@@ -341,7 +342,7 @@ select new
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void CannotMergeWhenIndexContainsWhereClause()
         {
             var index1 = new IndexDefinition
@@ -376,7 +377,7 @@ select new
             Assert.Equal("Cannot merge indexes that have a where clause", results.Unmergables[index1.Name]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void CanMergeSimpleIndexAndReplaceInnerNamesCorrectly()
         {
             var index1 = new IndexDefinition
@@ -418,7 +419,7 @@ select new
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void ProposeDeleteWhenOneIndexIsSubsetOfAnother()
         {
             var index1 = new IndexDefinition
@@ -452,9 +453,74 @@ select new
             Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
             Assert.Equal("Orders/Totals", results.Suggestions[0].CanDelete[0]);
         }
+        
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
+        public void ProposeDeleteWhenOneIndexIsSubsetOfAnotherButUseDifferentDocIdentifier()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "Big",
+                Maps = { @"docs.Orders.Select(i => new {
+    Id = Id(i),
+    ShipToLocation = this.CreateSpatialField(((double ? ) i.ShipTo.Location.Latitude), ((double ? ) i.ShipTo.Location.Longitude)),
+    ShipToCountry = i.ShipTo.Country,
+    FullTextSearch = i.Lines.Select(i0 => i0.ProductName)
+})
+" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "Small",
+                Maps = { @"docs.Orders.Select(order => new {
+    Id = Id(order)
+})
+" },
+                Type = IndexType.Map
+            };
+
+            var results = GetMergeReportOfTwoIndexes(index2, index1);
+            Assert.Equal(0, results.Suggestions[0].CanMerge.Count);
+            Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
+            Assert.Equal("Small", results.Suggestions[0].CanDelete[0]);
+        }
+        
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
+        public void ProposeDeleteWhenOneIndexIsSubsetOfAnother2()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "Big",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    order.Company,
+    Count = 1,
+    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}
+" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "Small",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    order.Company
+}
+" },
+                Type = IndexType.Map
+            };
+
+            var results = GetMergeReportOfTwoIndexes(index2, index1);
+            Assert.Equal(0, results.Suggestions[0].CanMerge.Count);
+            Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
+            Assert.Equal("Small", results.Suggestions[0].CanDelete[0]);
+        }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void CanMergeCorrectlyWithDifferentDocumentIdentifiers()
         {
             var index1 = new IndexDefinition
@@ -495,7 +561,7 @@ select new
 }", results.Suggestions.First().MergedIndex.Maps.First());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void CanMergeWhenBinaryExpressionIsInsideIndex()
         {
             var index1 = new IndexDefinition
@@ -535,7 +601,7 @@ select new
 }", results.Suggestions.First().MergedIndex.Maps.First());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void CannotMergeSameIndexesWhenCollectionsDoesntMatch()
         {
             var index1 = new IndexDefinition
@@ -569,7 +635,7 @@ select new
         }
 
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void CanRewriteDictAccessorAndCoalescingExpression()
         {
             var index1 = new IndexDefinition
@@ -610,7 +676,7 @@ select new
 }", results.Suggestions.First().MergedIndex.Maps.First());
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void AutoIndexesWillNotBeIncludedInOperationOutput()
         {
             using var store = GetDocumentStore();
@@ -661,7 +727,7 @@ select new
             }
         }
     
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public async Task TestCase()
         {
             using var store = GetDocumentStore();
@@ -707,13 +773,13 @@ select new
             Assert.Equal(1, merger.ProposeIndexMergeSuggestions().Unmergables.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void IndexDefinitionCanContainWhereInInvocationExpressionSyntax() => AssertIndexIsNotCorruptingIndexMerger<IndexWithWhere>();
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void IndexDefinitionCanContainLetInInvocationExpressionSyntax() => AssertIndexIsNotCorruptingIndexMerger<IndexWithSyntaxQueryLet>();
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
         public void CanMergeWithConditionalStatementsAndParenthesis()
         {
             using var store = GetDocumentStore();

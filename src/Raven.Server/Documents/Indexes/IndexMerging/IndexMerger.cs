@@ -242,15 +242,21 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 if (y.SelectExpressions.TryGetValue(pair.Key, out ExpressionSyntax expressionValue) == false)
                     continue;
                 // for the same key, they have to be the same
-                var ySelectExpr = ExtractValueFromExpression(expressionValue);
-                var xSelectExpr = ExtractValueFromExpression(pair.Value);
-                if (xSelectExpr.Inner != ySelectExpr.Inner)
+                var ySelectExpr = TransformAndExtractValueFromExpression(y, expressionValue);
+                var xSelectExpr = TransformAndExtractValueFromExpression(x, pair.Value);
+                if (xSelectExpr != ySelectExpr)
                 {
                     return false;
                 }
             }
 
             return true;
+            
+            string TransformAndExtractValueFromExpression(IndexData index, ExpressionSyntax expr) => expr switch
+            {
+                InvocationExpressionSyntax ies => RecursivelyTransformInvocationExpressionSyntax(index, ies, out var _).ToString(),
+                _ => ExtractValueFromExpression(expr).Inner
+            };
         }
 
         private static bool AreSelectClausesTheSame(IndexData index, Dictionary<string, ExpressionSyntax> selectExpressionDict)
