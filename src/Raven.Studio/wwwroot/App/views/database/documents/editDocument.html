@@ -275,8 +275,11 @@
                         <dd>
                              <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
                                    data-bind="tooltipText: '<div><strong>Archival Date</strong></div>' + archiveAtDateFullDate()">
-                                <span data-bind="text: archiveAtDateInterval"></span>
+                                <span data-bind="text: archiveAtDateInterval, visible: !archiveAtInPast() || $root.documentArchivalEnabled()"></span>
+                                <s data-bind="text: archiveAtDateInterval, visible: archiveAtInPast() && !$root.documentArchivalEnabled()"></s>
                             </span>
+                            <br data-bind="visible: archiveAtInPast() && !$root.documentArchivalEnabled()" /> 
+                            <span class="text-warning" data-bind="visible: archiveAtInPast() && !$root.documentArchivalEnabled()">Document Archival  is turned off</span>
                             <span data-toggle="tooltip" data-animation="true" data-html="true" data-placement="bottom"
                                   data-bind="visible: !$root.documentArchivalEnabled(), tooltipText: 'Document Archival is turned off. <Br />This document won\'t be archived on specified point in time.'">
                                 <i class="icon-danger text-warning"></i>
