@@ -540,11 +540,10 @@ public static class QueryBuilderHelper
             if (fieldName is "score" or "score()")
                 return default;
         }
-
-        var shouldTurnOffAnalyzersForTime = index.IndexFieldsPersistence.HasTimeValues(fieldName) && isSorting == false;
+        
         if (indexMapping.TryGetByFieldName(allocator, fieldName, out var indexFinding))
         {
-            if (exact || shouldTurnOffAnalyzersForTime) //When field has exact let's change the analyzer to do nothing
+            if (exact) //When field has exact let's change the analyzer to do nothing
                 metadata = indexFinding.Metadata.ChangeAnalyzer(FieldIndexingMode.Exact);
             else if (indexFinding.FieldIndexingMode is FieldIndexingMode.Search) // in case of search
                 metadata = handleSearch
@@ -560,7 +559,7 @@ public static class QueryBuilderHelper
             if (hasDynamics == false)
                 ThrowNotFoundInIndex();
 
-            var mode = shouldTurnOffAnalyzersForTime || exact
+            var mode = exact
                 ? FieldIndexingMode.Exact
                 : FieldIndexingMode.Normal;
             metadata = FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, indexMapping.DefaultAnalyzer, hasBoost: hasBoost);
