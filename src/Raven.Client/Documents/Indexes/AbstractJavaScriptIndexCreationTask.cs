@@ -74,6 +74,12 @@ namespace Raven.Client.Documents.Indexes
             _definition.State = State;
             _definition.DeploymentMode = DeploymentMode;
             _definition.CompoundFields = CompoundFieldsStrings;
+
+            if (SearchEngineType.HasValue)
+            {
+                _definition.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
+            }
+
             var definition = new IndexDefinition();
             _definition.CopyTo(definition);
 

@@ -72,7 +72,7 @@ namespace Raven.Client.Documents.Indexes
             if (Conventions == null)
                 Conventions = new DocumentConventions();
 
-            var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>(IndexName)
+            IndexDefinitionBuilder<object,TReduceResult> builder = new(IndexName)
             {
                 Indexes = Indexes,
                 Analyzers = Analyzers,
@@ -99,7 +99,14 @@ namespace Raven.Client.Documents.Indexes
                 CompoundFields = CompoundFields,
                 CompoundFieldsStrings = CompoundFieldsStrings,
                 ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
-            }.ToIndexDefinition(Conventions, validateMap: false);
+            };
+
+            if (SearchEngineType.HasValue)
+            {
+                builder.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
+            }
+
+            var indexDefinition = builder.ToIndexDefinition(Conventions, validateMap: false);
 
             foreach (var map in _maps.Select(generateMap => generateMap()))
             {
