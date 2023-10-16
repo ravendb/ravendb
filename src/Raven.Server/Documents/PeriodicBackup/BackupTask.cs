@@ -6,8 +6,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
-using Google.Api.Gax.ResourceNames;
-using Org.BouncyCastle.Utilities.Zlib;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -62,6 +60,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly string _taskName;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
+        private readonly DirectUploadDestination _directUploadDestination;
+
         public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _database = database;
@@ -79,6 +79,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
             _forTestingPurposes = forTestingPurposes;
             _backupResult = GenerateBackupResult();
+            _directUploadDestination = GetDirectUploadDestination();
+
             TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown, CancellationToken.None);
 
             _retentionPolicyParameters = new RetentionPolicyBaseParameters
@@ -672,16 +674,44 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private Stream GetStreamForBackupDestination(string filePath, string folderName, string fileName)
         {
+            switch (_directUploadDestination)
+            {
+                case DirectUploadDestination.Disabled:
+                    return SafeFileStream.Create(filePath, FileMode.Create);
+
+                    case DirectUploadDestination.S3:
+                        var s3Settings = GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+                            settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
+
+                        return new AwsS3DirectUploadStream(new AwsS3DirectUploadStream.Parameters
+                        {
+                            Settings = s3Settings,
+                            Configuration = _database.Configuration.Backup,
+                            BackupType = _configuration.BackupType,
+                            IsFullBackup = _isFullBackup,
+                            FolderName = folderName,
+                            FileName = fileName,
+                            RetentionPolicyParameters = _retentionPolicyParameters,
+                            OnProgress = AddInfo
+                        });
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private DirectUploadDestination GetDirectUploadDestination()
+        {
             if (_backupToLocalFolder)
             {
                 // we'll do the local backup and then upload it
-                return GetStreamForLocalBackup();
+                return DirectUploadDestination.Disabled;
             }
 
             if (_database.Configuration.Backup.DisableDirectUpload)
             {
                 // disabled by configuration
-                return GetStreamForLocalBackup();
+                return DirectUploadDestination.Disabled;
             }
 
             var hasAws = BackupConfiguration.CanBackupUsing(_configuration.S3Settings);
@@ -694,34 +724,22 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (destinations.Count(x => x) != 1)
             {
                 // direct upload is supported only for 1 destination
-                return GetStreamForLocalBackup();
+                return DirectUploadDestination.Disabled;
             }
 
             if (hasAws)
             {
-                var s3Settings = GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
-                    settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
-
-                return new AwsS3DirectUploadStream(new AwsS3DirectUploadStream.Parameters
-                {
-                    Settings = s3Settings,
-                    Configuration = _database.Configuration.Backup,
-                    BackupType = _configuration.BackupType,
-                    IsFullBackup = _isFullBackup,
-                    FolderName = folderName,
-                    FileName = fileName,
-                    RetentionPolicyParameters = _retentionPolicyParameters,
-                    OnProgress = AddInfo
-                });
+                return DirectUploadDestination.S3;
             }
 
             // all other destinations are currently not supported
-            return GetStreamForLocalBackup();
+            return DirectUploadDestination.Disabled;
+        }
 
-            FileStream GetStreamForLocalBackup()
-            {
-                return SafeFileStream.Create(filePath, FileMode.Create);
-            }
+        private enum DirectUploadDestination
+        {
+            Disabled,
+            S3
         }
 
         public static string GetBackupDescription(BackupType backupType, bool isFull)
@@ -746,6 +764,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void ValidateFreeSpaceForSnapshot(string filePath)
         {
+            if (_directUploadDestination != DirectUploadDestination.Disabled)
+            {
+                // we're uploading directly without using a local file.
+                return;
+            }
+
             long totalUsedSpace = 0;
             foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
             {
