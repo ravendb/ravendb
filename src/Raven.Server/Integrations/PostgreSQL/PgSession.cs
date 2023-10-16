@@ -12,6 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
@@ -21,7 +22,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres Server");
         internal ConcurrentDictionary<string, PgQuery> NamedStatements { get; private set; }
         private readonly TcpClient _client;
-        private readonly X509Certificate2 _serverCertificate;
+        private readonly CertificateUtils.CertificateHolder _serverCertificateHolder;
         private readonly int _identifier;
         private readonly int _processId;
         private readonly DatabasesLandlord _databasesLandlord;
@@ -30,14 +31,14 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public PgSession(
             TcpClient client,
-            X509Certificate2 serverCertificate,
+            CertificateUtils.CertificateHolder serverCertificateHolder,
             int identifier,
             int processId,
             DatabasesLandlord databasesLandlord,
             CancellationToken token)
         {
             _client = client;
-            _serverCertificate = serverCertificate;
+            _serverCertificateHolder = serverCertificateHolder;
             _identifier = identifier;
             _processId = processId;
             _databasesLandlord = databasesLandlord;
@@ -59,7 +60,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             if (initialMessage is SSLRequest)
             {
-                if (_serverCertificate == null)
+                if (_serverCertificateHolder.Certificate == null)
                 {
                     await writer.WriteAsync(messageBuilder.SSLResponse(false), _token);
                     initialMessage = await messageReader.ReadInitialMessage(reader, _token);
@@ -71,7 +72,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                     await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                     {
-                        ServerCertificate = _serverCertificate,
+                        ServerCertificateContext = _serverCertificateHolder.CertificateContext,
                         ClientCertificateRequired = false
                     }, _token);
 
@@ -156,7 +157,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 using var transaction = new PgTransaction(database, new MessageReader(), username,this);
 
-                if (_serverCertificate != null)
+                if (_serverCertificateHolder.Certificate != null)
                 {
                     // Authentication is required only when running in secured mode
 
