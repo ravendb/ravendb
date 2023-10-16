@@ -128,11 +128,9 @@ namespace FastTests.Server.Documents.Indexing.Static
         [RavenExplicitData]
         public async Task CanPersist(RavenTestParameters config)
         {
-
             IndexDefinition indexDefinition1, indexDefinition2;
             string dbName;
-
-
+            
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
                 dbName = database.Name;
@@ -143,7 +141,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Configuration =
                     {
-                        { "TestKey", "TestValue" }
+                        { "Indexing.Disable", "false" }
                     }
                 };
 
