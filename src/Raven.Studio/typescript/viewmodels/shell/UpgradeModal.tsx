@@ -30,13 +30,14 @@ export default function UpgradeModal() {
             centered
             contentClassName="modal-border bulge-warning"
             zIndex={1080}
+            size="lg"
         >
             <ModalBody className="vstack gap-3 position-relative justify-content-center">
-                <div className="d-flex justify-content-center">
+                <div className="d-flex justify-content-center mb-3">
                     <img src={upgradeLicenseImg} alt="Upgrade license" width="120" />
                 </div>
-                <h3 className="text-warning text-center">It&apos;s time to upgrade!</h3>
-                <p className="text-center">
+                <h3 className="text-warning text-center mb-0">It&apos;s time to upgrade!</h3>
+                <p className="text-center mb-0">
                     Your server is running version <strong>{productVersion}</strong> while the latest version is{" "}
                     <strong>{latestVersion}</strong>.
                     <br />
