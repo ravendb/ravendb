@@ -135,7 +135,7 @@ function Details(props: PeriodicBackupPanelProps) {
 
     const { isAdminAccessOrAbove } = useAccessManager();
 
-    const backupNowVisible = !(!data.shared.serverWide && !isAdminAccessOrAbove(db));
+    const backupNowVisible = data.shared.serverWide || isAdminAccessOrAbove(db);
 
     const onBackupNow = () => {
         if (onGoingBackup && onGoingBackup.RunningBackupTaskId) {
