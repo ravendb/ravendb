@@ -976,9 +976,11 @@ class query extends viewModelBase {
         this.effectiveFetcher = this.queryFetcher;
         this.currentTab("results");
         this.includesCache.removeAll();
-        this.includesRevisionsCache(new includedRevisions());
-        this.highlightsCache.removeAll();
-        this.explanationsCache.length = 0;
+
+        this.clearHighlightsCache();
+        this.clearIncludesRevisionsCache();
+        this.clearExplanationsCache();
+        
         this.timings(null);
         this.showFanOutWarning(false);
         
@@ -1568,14 +1570,26 @@ class query extends viewModelBase {
 
         // since we merge records based on fragments
         // remove all existing highlights & included revisions when going back to 'results' tab
-        this.highlightsCache.removeAll();
-        this.includesRevisionsCache(new includedRevisions());
-
-        this.explanationsCache.length = 0;
-        this.totalExplanations(0);
+        
+        this.clearHighlightsCache(); 
+        this.clearIncludesRevisionsCache();
+        this.clearExplanationsCache();
         
         this.columnsSelector.reset();
         this.refresh();
+    }
+    
+    private clearHighlightsCache() {
+        this.highlightsCache.removeAll();
+    }
+    
+    private clearExplanationsCache() {
+        this.explanationsCache.length = 0;
+        this.totalExplanations(0);
+    }
+    
+    private clearIncludesRevisionsCache() {
+        this.includesRevisionsCache(new includedRevisions());
     }
     
     goToIncludesRevisionsTab(): void {
