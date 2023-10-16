@@ -28,7 +28,8 @@ namespace Raven.Server.Documents.TransactionCommands
             foreach (var id in _ids)
             {
                 _token.ThrowIfCancellationRequested();
-                _result.AdoptedRevisionsCount += _revisionsStorage.AdoptOrphanedFor(context, id);
+                if(_revisionsStorage.AdoptOrphanedFor(context, id))
+                    _result.AdoptedDocsCount++;
             }
 
             return _ids.Count;
@@ -59,12 +60,12 @@ namespace Raven.Server.Documents.TransactionCommands
 
         public class AdoptOrphanedResult : OperationResult
         {
-            public long AdoptedRevisionsCount { get; set; }
+            public long AdoptedDocsCount { get; set; }
 
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
-                json[nameof(AdoptedRevisionsCount)] = AdoptedRevisionsCount;
+                json[nameof(AdoptedDocsCount)] = AdoptedDocsCount;
                 return json;
             }
         }
