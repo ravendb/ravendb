@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -36,7 +35,6 @@ using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
-using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -1431,16 +1429,32 @@ namespace Raven.Server.Documents.Replication
                         foreach (var (docId, cv, modifiedTicks) in pendingAttachmentsTombstoneUpdates)
                         {
                             var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector, throwOnConflict: false);
-                            
-                            // RavenDB-19421: if the document doesn't exist, the tombstone doesn't matter
+
+                            // RavenDB-19421: if the document doesn't exist and a conflict for the document doesn't exist, the tombstone doesn't matter
                             // and if the change vector is already merged, we should also check if we had a previous conflict on the existing document
                             // if not, then it is already taken into consideration
                             // we need to force an update when this is _not_ the case, because this replication batch gave us the tombstone only, without
                             // the related document update, so we need to simulate that locally
-                            if (doc != null &&
-                                (ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged 
-                                 || doc.Flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved)))
-                            {   
+
+                            if (doc == null)
+                            {
+                                var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
+                                foreach (var documentConflict in conflicts)
+                                {
+                                    if (documentConflict.Flags.Contain(DocumentFlags.HasAttachments) == false ||
+                                        ChangeVectorUtils.GetConflictStatus(cv, documentConflict.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                        continue;
+
+                                    // recreate attachments reference
+                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentRevert(context, documentConflict.Id, documentConflict.Doc, out _);
+                                }
+
+                                continue;
+                            }
+
+                            if (ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged || 
+                                doc.Flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved))
+                            {
                                 // have to load the full document
                                 doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, fields: DocumentFields.All, throwOnConflict: false);
                                 long lastModifiedTicks = Math.Max(modifiedTicks, doc.LastModified.Ticks); // old versions may send with 0 in the tombstone ticks
