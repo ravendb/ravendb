@@ -20,6 +20,7 @@ using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config.Categories;
