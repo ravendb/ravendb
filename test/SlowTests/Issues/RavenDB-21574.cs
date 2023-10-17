@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -74,7 +75,7 @@ public class RavenDB_21574 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public async Task Setting_Index_SearchEngineType_Should_Work()
     {
         using (var store = GetDocumentStore())
