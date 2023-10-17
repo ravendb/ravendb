@@ -350,24 +350,23 @@ namespace Raven.Server.Documents.ETL
 
             if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel == false)
             {
-                LogConfigurationError(config,
-                    new List<string>
-                    {
-                        $"{_database.Name} is encrypted, but connection to ETL destination {config.GetDestination()} does not use encryption, so ETL is not allowed. " +
-                        $"You can change this behavior by setting {nameof(config.AllowEtlOnNonEncryptedChannel)} when creating the ETL configuration"
-                    });
-                return false;
-            }
+                if (config.AllowEtlOnNonEncryptedChannel == false)
+                {
+                    LogConfigurationError(config,
+                        new List<string>
+                        {
+                            $"{_database.Name} is encrypted, but connection to ETL destination {config.GetDestination()} does not use encryption, so ETL is not allowed. " +
+                            $"You can change this behavior by setting {nameof(config.AllowEtlOnNonEncryptedChannel)} when creating the ETL configuration"
+                        });
+                    return false;
+                }
 
-            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel)
-            {
                 LogConfigurationWarning(config,
                     new List<string>
                     {
                         $"{_database.Name} is encrypted and connection to ETL destination {config.GetDestination()} does not use encryption, " +
                         $"but {nameof(config.AllowEtlOnNonEncryptedChannel)} is set to true, so ETL is allowed"
                     });
-                return true;
             }
 
             if (_databaseRecord.Encrypted && config is ElasticSearchEtlConfiguration esConfig && esConfig.Connection.Authentication == null)
@@ -377,7 +376,6 @@ namespace Raven.Server.Documents.ETL
                     {
                         $"{_database.Name} is encrypted and connection to ETL destination {config.GetDestination()} does not use authentication, but ETL is allowed."
                     });
-                return true;
             }
 
             if (uniqueNames.Add(config.Name) == false)
