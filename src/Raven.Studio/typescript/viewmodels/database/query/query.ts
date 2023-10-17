@@ -786,17 +786,17 @@ class query extends shardViewModelBase {
                 this.queriedIndexInfo(currentIndex);
             } else {
                 if (!indexName.startsWith(queryUtil.DynamicPrefix)) {
-                // fetch indexes since this view may not be up-to-date if index was defined outside of studio
-                this.fetchAllIndexes(this.db)
-                    .done(() => {
-                        this.queriedIndexInfo(this.indexes() ? this.indexes().find(i => i.Name === indexName) : null);
-                    })
-                    .fail(() => {
-                        this.queriedIndexInfo(null);
-                    });
+                    // fetch indexes since this view may not be up-to-date if index was defined outside of studio
+                    this.fetchAllIndexes(this.db)
+                        .done(() => {
+                            this.queriedIndexInfo(this.indexes() ? this.indexes().find(i => i.Name === indexName) : null);
+                        })
+                        .fail(() => {
+                            this.queriedIndexInfo(null);
+                        });
+                }
             }
         }
-    }
     }
     
     private getTimeSeriesColumns(grid: virtualGridController<any>, tab: timeSeriesTableDetails): virtualColumn[] {
