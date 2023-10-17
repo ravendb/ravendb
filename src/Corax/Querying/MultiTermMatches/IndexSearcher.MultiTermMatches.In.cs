@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Mappings;
@@ -8,6 +9,7 @@ using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.TermProviders;
 using Corax.Utils;
 using Voron;
+using InParameter = (string Term, bool Exact);
 
 namespace Corax.Querying;
 
@@ -17,12 +19,18 @@ public partial class IndexSearcher
     /// <summary>
     /// Test API only
     /// </summary>
-    public MultiTermMatch InQuery(string field, List<string> inTerms) => InQuery(FieldMetadataBuilder(field), inTerms);
+    public MultiTermMatch InQuery(string field, List<string> inTerms) => InQuery(FieldMetadataBuilder(field), inTerms, default);
+    public MultiTermMatch InQuery(in FieldMetadata field, List<string> inTerms) => InQuery(field, inTerms, default);
 
-    public MultiTermMatch InQuery(in FieldMetadata field, List<string> inTerms, in CancellationToken token = default) => InQuery<string>(in field, inTerms, token);
+    public MultiTermMatch InQuery(in FieldMetadata field, List<InParameter> inTerms, in CancellationToken token = default) => InQuery<InParameter>(in field, inTerms, token);
     
     private MultiTermMatch InQuery<TTermType>(in FieldMetadata field, List<TTermType> inTerms, CancellationToken token)
     {
+        if (typeof(TTermType) != typeof(InParameter) && typeof(TTermType) != typeof(Slice) && typeof(TTermType) != typeof(string))
+            throw new NotSupportedException($"Type {typeof(TTermType)} is not supported.");
+        
+        var exactField = field.ChangeAnalyzer(FieldIndexingMode.Exact);
+        
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
         {
@@ -35,17 +43,28 @@ public partial class IndexSearcher
             var stack = new BinaryMatch[inTerms.Count / 2];
             for (int i = 0; i < inTerms.Count / 2; i++)
             {
-                if (typeof(TTermType) == typeof(string))
-                    stack[i] = Or(TermQuery(field, (string)(object)inTerms[i * 2], terms), TermQuery(field, (string)(object)inTerms[i * 2 + 1], terms));
+                if (typeof(TTermType) == typeof(InParameter))
+                {
+                    var first = (InParameter)(object)(inTerms[i * 2]);
+                    var second = (InParameter)(object)(inTerms[i * 2 + 1]);
+                    stack[i] = Or(
+                        TermQuery(first.Exact ? exactField : field, first.Term, terms), 
+                        TermQuery(second.Exact ? exactField : field, second.Term), token);
+                    
+                }
+                else if (typeof(TTermType) == typeof(string))
+                    stack[i] = Or(TermQuery(field, (string)(object)inTerms[i * 2], terms), TermQuery(field, (string)(object)inTerms[i * 2 + 1], terms), token);
                 else 
-                    stack[i] = Or(TermQuery(field, (Slice)(object)inTerms[i * 2], terms), TermQuery(field, (Slice)(object)inTerms[i * 2 + 1], terms));
+                    stack[i] = Or(TermQuery(field, (Slice)(object)inTerms[i * 2], terms), TermQuery(field, (Slice)(object)inTerms[i * 2 + 1], terms), token);
                     
             }
 
             if (inTerms.Count % 2 == 1)
             {
                 // We need even values to make the last work. 
-                if (typeof(TTermType) == typeof(string))
+                if (typeof(TTermType) == typeof(InParameter) && (object)inTerms[^1] is InParameter inParameter)
+                    stack[^1] = Or(stack[^1], TermQuery(inParameter.Exact ? exactField : field, inParameter.Term,terms), token);
+                else if (typeof(TTermType) == typeof(string))
                     stack[^1] = Or(stack[^1], TermQuery(field, (string)(object)inTerms[^1], terms), token);
                 else
                     stack[^1] = Or(stack[^1], TermQuery(field, (Slice)(object)inTerms[^1], terms), token);
@@ -71,11 +90,12 @@ public partial class IndexSearcher
 
         return MultiTermMatch.Create(new MultiTermMatch<InTermProvider<TTermType>>(this, field, _transaction.Allocator, new InTermProvider<TTermType>(this, field, inTerms), streamingEnabled: false, token: token));
     }
-
-    public IQueryMatch AllInQuery(string field, HashSet<string> allInTerms, in CancellationToken token = default) => AllInQuery(FieldMetadataBuilder(field), allInTerms, token: token);
-
+    
     public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<string> allInTerms, bool skipEmptyItems = false, in CancellationToken token = default) =>
         AllInQuery<string>(field, allInTerms, skipEmptyItems, token);
+    
+    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<InParameter> allInTerms, bool skipEmptyItems = false, in CancellationToken token = default) =>
+        AllInQuery<(string, bool)>(field, allInTerms, skipEmptyItems, token);
 
     public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<Slice> allInTerms, bool skipEmptyItems = false, in CancellationToken token = default) => AllInQuery<Slice>(field, allInTerms, skipEmptyItems, token);
 
@@ -84,6 +104,9 @@ public partial class IndexSearcher
     //In this case, when we get more conditions, we have to quit building the tree and manually check the entries with UnaryMatch.
     private IQueryMatch AllInQuery<TTerm>(in FieldMetadata field, HashSet<TTerm> allInTerms, bool skipEmptyItems = false, in CancellationToken cancellationToken = default)
     {
+        if (typeof(TTerm) != typeof(InParameter) && typeof(TTerm) != typeof(Slice) && typeof(TTerm) != typeof(string))
+            throw new NotSupportedException($"Type {typeof(TTerm)} is not supported.");
+        
         const int maximumTermMatchesHandledAsTermMatches = 4;
         
         var canUseUnaryMatch = field.HasBoost == false;
@@ -105,7 +128,19 @@ public partial class IndexSearcher
 
         foreach (var item in allInTerms)
         {
-            Slice itemSlice = typeof(TTerm) == typeof(string) ? EncodeAndApplyAnalyzer(field, (string)(object)item) : (Slice)(object)item;
+            Slice itemSlice;
+            if (typeof(TTerm) == typeof(InParameter))
+            {
+                var casted = (InParameter)(object)item;
+                itemSlice = casted.Exact 
+                    ? EncodeAndApplyAnalyzer(default, casted.Term) 
+                    : EncodeAndApplyAnalyzer(field, casted.Term);
+            }
+            else if (typeof(TTerm) == typeof(string))
+                itemSlice = EncodeAndApplyAnalyzer(field, (string)(object)item);
+            else
+                itemSlice = (Slice)(object)item;
+            
             if (itemSlice.Size == 0 && skipEmptyItems)
                 continue;
 
@@ -144,8 +179,6 @@ public partial class IndexSearcher
             var term = TermQuery(field, queryTerms[^1].Item, terms);
             binaryMatchOfTermMatches[^1] = And(binaryMatchOfTermMatches[^1], term, cancellationToken);
         }
-
-        
         
         int currentTerms = binaryMatchOfTermMatches.Length;
         while (currentTerms > 1)
@@ -161,7 +194,6 @@ public partial class IndexSearcher
 
             currentTerms = termsToProcess;
         }
-
 
         //Just perform normal And.
         if (termsCount == termMatchCount)

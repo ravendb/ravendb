@@ -26,6 +26,7 @@ using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxConstants = Corax.Constants;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.Corax;
+using InParameter = (string Term, bool Exact);
 
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -604,25 +605,29 @@ public static class CoraxQueryBuilder
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping, builderParameters.FieldsToFetch, builderParameters.HasDynamics,
             builderParameters.DynamicFields, exact: exact);
-
+        
+        var hasTime = builderParameters.Index.IndexFieldsPersistence.HasTimeValues(fieldName);
+        
         if (ie.All)
         {
-            var uniqueMatches = new HashSet<string>();
+            var uniqueMatches = new HashSet<InParameter>();
             foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
             {
                 if (exact && builderParameters.Metadata.IsDynamic)
                     fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
-
-                uniqueMatches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
+                
+                bool isTime = hasTime && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);
+                uniqueMatches.Add((QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
             }
 
             return builderParameters.IndexSearcher.AllInQuery(fieldMetadata, uniqueMatches);
         }
 
-        var matches = new List<string>();
+        var matches = new List<InParameter>();
         foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
         {
-            matches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
+            bool isTime = hasTime && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);
+            matches.Add((QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
         }
 
         if (highlightingTerm != null)

@@ -6,20 +6,24 @@ using System.IO;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Voron;
+using InParameter = (string Term, bool Exact);
 
 namespace Corax.Querying.Matches.TermProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public struct InTermProvider<TTermsType> : ITermProvider
     {
-        private readonly Querying.IndexSearcher _searcher;
+        private readonly IndexSearcher _searcher;
         private readonly List<TTermsType> _terms;
         private int _termIndex;
         private readonly FieldMetadata _field;
+        private readonly FieldMetadata _exactField;
 
-        public InTermProvider(Querying.IndexSearcher searcher, FieldMetadata field, List<TTermsType> terms)
+        public InTermProvider(IndexSearcher searcher, FieldMetadata field, List<TTermsType> terms)
         {
             _field = field;
+            _exactField = field.ChangeAnalyzer(FieldIndexingMode.Exact);
+            
             _searcher = searcher;
             _terms = terms;
             _termIndex = -1;
@@ -41,8 +45,11 @@ namespace Corax.Querying.Matches.TermProviders
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
-            
-            if (typeof(TTermsType) == typeof(string))
+
+
+            if (typeof(TTermsType) == typeof(InParameter) && (object)_terms[_termIndex] is InParameter inParam)
+                term = _searcher.TermQuery(inParam.Exact ? _exactField : _field, inParam.Term);
+            else if (typeof(TTermsType) == typeof(string))
                 term = _searcher.TermQuery(_field, (string)(object)_terms[_termIndex]);
             else if (typeof(TTermsType) == typeof(Slice))
                 term = _searcher.TermQuery(_field, (Slice)(object)_terms[_termIndex]);
