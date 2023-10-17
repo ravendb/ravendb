@@ -134,6 +134,7 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
                 }
                 else
                 {
+                    
                     AddToQueryTree(IndexSearcher.InQuery(field, terms));
                 }
             }
