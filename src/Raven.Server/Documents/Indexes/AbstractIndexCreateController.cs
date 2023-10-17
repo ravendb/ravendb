@@ -26,14 +26,11 @@ namespace Raven.Server.Documents.Indexes;
 
 public abstract class AbstractIndexCreateController
 {
-    private readonly HashSet<string> _validConfigurationKeys;
-    
     protected readonly ServerStore ServerStore;
 
     protected AbstractIndexCreateController([NotNull] ServerStore serverStore)
     {
         ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
-        _validConfigurationKeys = GetValidConfigurationKeys();
     }
 
     protected abstract string GetDatabaseName();
@@ -231,27 +228,18 @@ public abstract class AbstractIndexCreateController
         }
     }
     
-    private void ValidateConfiguration(IndexDefinition definition)
+    private static void ValidateConfiguration(IndexDefinition definition)
     {
         if (definition.Configuration == null)
             return;
         
         foreach (var kvp in definition.Configuration)
         {
-            if (_validConfigurationKeys.Contains(kvp.Key) == false)
+            if (IndexingConfiguration.ValidIndexingConfigurationKeys.Value.Contains(kvp.Key) == false)
             {
                 throw new IndexCreationException($"Could not create index '{definition.Name}' because the configuration option key '{kvp.Key}' is not recognized");
             }
         }
-    }
-
-    private static HashSet<string> GetValidConfigurationKeys()
-    {
-        var allConfigurationEntries = RavenConfiguration.AllConfigurationEntries.Value;
-        
-        var validPerIndexConfigurationKeys = allConfigurationEntries.Where(configurationEntry => configurationEntry.Category == "Indexing").SelectMany(configurationEntry => configurationEntry.Keys).ToHashSet();
-
-        return validPerIndexConfigurationKeys;
     }
 
     private bool NeedToCheckIfCollectionEmpty(IndexDefinition definition, RavenConfiguration databaseConfiguration)
