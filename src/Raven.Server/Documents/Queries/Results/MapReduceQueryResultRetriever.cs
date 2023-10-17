@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Queries.Results
         public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
         {
             if (FieldsToFetch.IsProjection)
-                return GetProjection(ref retrieverInput, null, token);
+                return GetProjection(ref retrieverInput, FieldsToFetch,null, token);
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
