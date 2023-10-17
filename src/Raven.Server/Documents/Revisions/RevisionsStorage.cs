@@ -672,7 +672,9 @@ namespace Raven.Server.Documents.Revisions
             else
             {
                 revisionsToDelete = GetRevisionsForCollectionOrDefault(context, table, lowerIdPrefix,
-                    configuration, result.PreviousCount, result);
+                    configuration, result.PreviousCount,
+                    stopWhenReachingAge: nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration)==false, 
+                    result);
             }
 
             var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result);
@@ -824,6 +826,7 @@ namespace Raven.Server.Documents.Revisions
             Slice prefixSlice,
             RevisionsCollectionConfiguration configuration,
             long revisionsCount,
+            bool stopWhenReachingAge,
             DeleteOldRevisionsResult result)
         {
             result.HasMore = false;
@@ -874,6 +877,13 @@ namespace Raven.Server.Documents.Revisions
                         _database.Time.GetUtcNow() - revision.LastModified <= configuration.MinimumRevisionAgeToKeep.Value)
                     {
                         revision.Dispose();
+
+                        if (stopWhenReachingAge == false)
+                        {
+                            result.Skip++;
+                            ended = false;
+                        }
+
                         break;
                     }
 
