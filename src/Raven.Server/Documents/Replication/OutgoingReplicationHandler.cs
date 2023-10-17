@@ -1238,9 +1238,8 @@ namespace Raven.Server.Documents.Replication
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnChangeInternal(bool triggeredByReplicationThread)
         {
-            if (triggeredByReplicationThread &&
-                (ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal ||
-                 ForTestingPurposes?.DisableWaitForChangesForExternalReplication == true))
+            if (triggeredByReplicationThread || 
+                ForTestingPurposes?.DisableWaitForChangesForExternalReplication == true)
                 return;
 
             _waitForChanges.Set();
