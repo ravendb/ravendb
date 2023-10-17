@@ -1496,7 +1496,7 @@ namespace Raven.Server.Documents
             {
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
-                if (_databaseShutdown.IsCancellationRequested)
+                if (_serverStore.ServerShutdown.IsCancellationRequested || _databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
                 throw;
@@ -1550,7 +1550,7 @@ namespace Raven.Server.Documents
             {
                 DatabaseDisabledException throwShutDown = null;
 
-                if (_databaseShutdown.IsCancellationRequested && e is DatabaseDisabledException == false)
+                if ((_serverStore.ServerShutdown.IsCancellationRequested || _databaseShutdown.IsCancellationRequested) && e is DatabaseDisabledException == false) 
                     e = throwShutDown = CreateDatabaseShutdownException(e);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);

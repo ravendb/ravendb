@@ -789,20 +789,21 @@ namespace Raven.Server.Commercial
             return JsonConvert.DeserializeObject<LicenseRenewalResult>(responseString);
         }
 
-        public async Task LeaseLicense(string raftRequestId, bool throwOnError)
+        public async Task<LicenseLeaseResult> LeaseLicense(string raftRequestId, bool throwOnError)
         {
+            var leaseStatus = new LicenseLeaseResult() { Status = LeaseStatus.NotModified };
             if (await _leaseLicenseSemaphore.WaitAsync(0) == false)
-                return;
+                return leaseStatus;
 
             try
             {
                 var loadedLicense = _serverStore.LoadLicense();
                 if (loadedLicense == null)
-                    return;
+                    return leaseStatus;
 
                 var updatedLicense = await GetUpdatedLicenseForActivation(loadedLicense);
                 if (updatedLicense == null)
-                    return;
+                    return leaseStatus;
 
                 var licenseStatus = GetLicenseStatus(updatedLicense);
 
@@ -826,6 +827,8 @@ namespace Raven.Server.Commercial
                     NotificationSeverity.Info);
 
                 _serverStore.NotificationCenter.Add(alert);
+
+                leaseStatus.Status = LeaseStatus.Updated;
             }
             catch (Exception e)
             {
@@ -839,6 +842,8 @@ namespace Raven.Server.Commercial
             {
                 _leaseLicenseSemaphore.Release();
             }
+
+            return leaseStatus;
         }
 
         private void ValidateLicenseStatus()
