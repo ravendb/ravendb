@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Raven.Client;
@@ -13,6 +14,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Features;
 using Sparrow;
 using Sparrow.Platform;
@@ -28,6 +30,8 @@ namespace Raven.Server.Config.Categories
         private readonly RavenConfiguration _root;
 
         private PathSetting _indexStoragePath;
+
+        public static readonly Lazy<HashSet<string>> ValidIndexingConfigurationKeys = new Lazy<HashSet<string>>(GetValidIndexingConfigurationKeys);
 
         public IndexingConfiguration(RavenConfiguration root)
         {
@@ -70,6 +74,11 @@ namespace Raven.Server.Config.Categories
             
             EncryptedTransactionSizeLimit = defaultEncryptedTransactionSizeLimit;
             MaxAllocationsAtDictionaryTraining = defaultMaxAllocationsAtDictionaryTraining;
+        }
+        
+        private static HashSet<string> GetValidIndexingConfigurationKeys()
+        {
+            return RavenConfiguration.AllConfigurationEntries.Value.Where(configurationEntry => configurationEntry.Category == ConfigurationCategoryType.Indexing.GetDescription()).SelectMany(configurationEntry => configurationEntry.Keys).ToHashSet();
         }
 
         [DefaultValue(false)]
@@ -577,6 +586,6 @@ namespace Raven.Server.Config.Categories
             Immediate,
             Pause,
             Delay
+        }
     }
-}
 }
