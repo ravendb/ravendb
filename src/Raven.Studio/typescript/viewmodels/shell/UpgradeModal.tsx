@@ -1,4 +1,3 @@
-import { todo } from "common/developmentHelper";
 import { Icon } from "components/common/Icon";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -8,8 +7,6 @@ import React from "react";
 import { Modal, ModalBody, ModalFooter } from "reactstrap";
 
 const upgradeLicenseImg = require("Content/img/upgrade-license.svg");
-
-todo("Styling", "ANY", "scale for larger screens?");
 
 export default function UpgradeModal() {
     const downloadLink = useRavenLink({ hash: "44DYH5", isDocs: false });
