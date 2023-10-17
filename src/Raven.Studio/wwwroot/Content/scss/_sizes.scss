@@ -1,4 +1,5 @@
 @use "sass:math";
+$prefix: bs- !default;
 
 @function decimal-round($number, $digits: 0, $mode: round) {
     $n: 1;
@@ -72,10 +73,15 @@ $font-size-xs: $font-size-base * 0.7 !default;
 $border-width: 1px;
 $btn-border-width: 2px;
 
-$border-radius: 2px !default;
-$border-radius-sm: 2px !default;
-$border-radius-md: $gutter-xxs !default;
+// scss-docs-start border-radius-variables
+$border-radius-sm: decimal-round((math.div($gutter-xxs, $gutter-ratio)), 1) !default;
+$border-radius: $gutter-xxs !default;
+$border-radius-md: $gutter-xs !default;
 $border-radius-lg: $gutter-sm !default;
+$border-radius-xl: $gutter !default;
+$border-radius-xxl: $gutter-md !default;
+$border-radius-pill: 50rem !default;
+// scss-docs-end border-radius-variables
 
 $global-easing: cubic-bezier(0, 0.5, 0.5, 1);
 $global-easing-in-out: cubic-bezier(0.6, 0, 0.6, 1);

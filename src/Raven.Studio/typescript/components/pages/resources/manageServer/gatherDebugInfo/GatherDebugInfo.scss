@@ -30,7 +30,7 @@
             border-radius: sizes.$gutter-sm;
             font-size: 24px;
             line-height: 64px;
-            background: colors.$well-bg;
+            background: colors.$well-bg-var;
             margin-bottom: sizes.$gutter-sm;
         }
         @for $i from 1 through 6 {

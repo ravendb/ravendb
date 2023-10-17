@@ -387,6 +387,40 @@ $theme-colors: (
 
 // scss-docs-end theme-colors-map
 
+//Bootstrap 5.3 color variants
+// scss-docs-start theme-text-variables
+$primary-text-emphasis: shade-color($primary, 60%) !default;
+$secondary-text-emphasis: shade-color($secondary, 60%) !default;
+$success-text-emphasis: shade-color($success, 60%) !default;
+$info-text-emphasis: shade-color($info, 60%) !default;
+$warning-text-emphasis: shade-color($warning, 60%) !default;
+$danger-text-emphasis: shade-color($danger, 60%) !default;
+$light-text-emphasis: $gray-700 !default;
+$dark-text-emphasis: $gray-700 !default;
+// scss-docs-end theme-text-variables
+
+// scss-docs-start theme-bg-subtle-variables
+$primary-bg-subtle: tint-color($primary, 80%) !default;
+$secondary-bg-subtle: tint-color($secondary, 80%) !default;
+$success-bg-subtle: tint-color($success, 80%) !default;
+$info-bg-subtle: tint-color($info, 80%) !default;
+$warning-bg-subtle: tint-color($warning, 80%) !default;
+$danger-bg-subtle: tint-color($danger, 80%) !default;
+$light-bg-subtle: mix($gray-100, $white) !default;
+$dark-bg-subtle: $gray-400 !default;
+// scss-docs-end theme-bg-subtle-variables
+
+// scss-docs-start theme-border-subtle-variables
+$primary-border-subtle: tint-color($primary, 60%) !default;
+$secondary-border-subtle: tint-color($secondary, 60%) !default;
+$success-border-subtle: tint-color($success, 60%) !default;
+$info-border-subtle: tint-color($info, 60%) !default;
+$warning-border-subtle: tint-color($warning, 60%) !default;
+$danger-border-subtle: tint-color($danger, 60%) !default;
+$light-border-subtle: $gray-200 !default;
+$dark-border-subtle: $gray-500 !default;
+// scss-docs-end theme-border-subtle-variables
+
 $primary-var: var(--bs-primary);
 $secondary-var: var(--bs-secondary);
 $success-var: var(--bs-success);
