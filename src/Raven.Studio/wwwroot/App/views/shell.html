@@ -414,5 +414,7 @@
     </div>
     <div class="graph-helper" data-bind="compose: $root.graphHelperView"></div>
     
-    <div data-bind="react: $root.upgradeModalView"></div>
+    <div data-bind="if: isUpgradeModalVisible()">
+        <div data-bind="react: $root.upgradeModalView"></div>
+    </div>
 </div>
