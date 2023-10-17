@@ -189,11 +189,11 @@ namespace Raven.Server.Documents.Replication
         }
 
         [ThreadStatic]
-        public static bool IsIncomingReplication;
+        public static bool IsIncomingInternalReplication;
 
         static IncomingReplicationHandler()
         {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingReplication = false;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingInternalReplication = false;
         }
 
         private readonly AsyncManualResetEvent _replicationFromAnotherSource;
@@ -579,7 +579,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (stats.For(ReplicationOperation.Incoming.Storage))
                     {
-                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag, _incomingPullReplicationParams.Mode);
+                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag, _incomingPullReplicationParams.Mode, ReplicationType);
                         replicationCommand.BeforeSendingToTxMerger(_incomingPullReplicationParams?.PreventDeletionsMode, documentsContext);
                         task = _database.TxMerger.Enqueue(replicationCommand);
                         //We need a new context here
@@ -1066,14 +1066,17 @@ namespace Raven.Server.Documents.Replication
             private readonly DataForReplicationCommand _replicationInfo;
             private readonly bool _isHub;
             private readonly bool _isSink;
+            private readonly ReplicationLatestEtagRequest.ReplicationType _replicationType;
 
-            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, PullReplicationMode mode)
+            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, PullReplicationMode mode,
+                ReplicationLatestEtagRequest.ReplicationType replicationType)
             {
                 _replicationInfo = replicationInfo;
                 _lastEtag = lastEtag;
                 _mode = mode;
                 _isHub = mode == PullReplicationMode.SinkToHub;
                 _isSink = mode == PullReplicationMode.HubToSink;
+                _replicationType = replicationType;
             }
 
             public void BeforeSendingToTxMerger(PreventDeletionsMode? preventDeletionsMode, DocumentsOperationContext ctx)
@@ -1101,7 +1104,7 @@ namespace Raven.Server.Documents.Replication
 
                 try
                 {
-                    IsIncomingReplication = true;
+                    IsIncomingInternalReplication = _replicationType == ReplicationLatestEtagRequest.ReplicationType.Internal;
 
                     var operationsCount = 0;
 
@@ -1394,7 +1397,7 @@ namespace Raven.Server.Documents.Replication
                                             // it is a case of a conflict between documents which were modified in a cluster transaction
                                             // in two _different clusters_, so we will treat it as a "normal" conflict
 
-                                            IsIncomingReplication = false;
+                                            IsIncomingInternalReplication = false;
                                             _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
                                                 document, rcvdChangeVector, doc.Flags);
                                             continue;
@@ -1485,7 +1488,7 @@ namespace Raven.Server.Documents.Replication
                         item.Dispose();
                     }
 
-                    IsIncomingReplication = false;
+                    IsIncomingInternalReplication = false;
                 }
             }
 
@@ -1672,6 +1675,7 @@ namespace Raven.Server.Documents.Replication
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
         public string SourceDatabaseId;
         public KeyValuePair<string, Stream>[] ReplicatedAttachmentStreams;
+        public ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         public IncomingReplicationHandler.MergedDocumentReplicationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
@@ -1706,7 +1710,7 @@ namespace Raven.Server.Documents.Replication
                 Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
             };
 
-            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag, Mode);
+            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag, Mode, ReplicationType);
         }
 
         private AttachmentReplicationItem CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
