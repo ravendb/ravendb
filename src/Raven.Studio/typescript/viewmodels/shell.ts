@@ -70,8 +70,6 @@ class shell extends viewModelBase {
     notificationCenterView = require("views/notifications/notificationCenter.html");
     graphHelperView = require("views/common/graphHelper.html");
 
-    upgradeModalView: ReactInKnockout<typeof UpgradeModal>;
-
     static studioConfigDocumentId = "Raven/StudioConfig";
     
     static showConnectionLost = connectionStatus.showConnectionLost;
@@ -108,8 +106,6 @@ class shell extends viewModelBase {
     allShardsUrl: KnockoutObservable<string>;
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
-    
-    
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
@@ -130,6 +126,7 @@ class shell extends viewModelBase {
     
     private onBootstrapFinishedTask = $.Deferred<void>();
 
+    upgradeModalView: ReactInKnockout<typeof UpgradeModal>;
     isUpgradeModalVisible = ko.observable<boolean>(false);
     
     constructor() {
@@ -214,11 +211,7 @@ class shell extends viewModelBase {
 
         this.bindToCurrentInstance("toggleMenu");
 
-        this.upgradeModalView = ko.pureComputed(() => {
-            return this.isUpgradeModalVisible()
-                ? { component: UpgradeModal }
-                : null;
-        })
+        this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
