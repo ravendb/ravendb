@@ -1,4 +1,6 @@
 // CSS custom properties for font color (outside .bs5 to fix regressions)
+$prefix: "bs-";
+
 :root {
     --text-color: #{$base-text-color};
     --text-muted: #{$base-text-muted-color};
@@ -20,6 +22,8 @@
     --license-community: #{$color-4};
     --license-professional: #{$color-4-2};
     --license-enterprise: #{$color-5};
+
+    --#{$prefix}border-radius-md: #{$border-radius-md}; //fix missing size in bootstrap 5.3
 
     @each $key, $value in $theme-colors {
         --faded-#{$key}: #{mix($panel-bg-1, $value, 80%)};
