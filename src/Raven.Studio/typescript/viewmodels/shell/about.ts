@@ -173,7 +173,7 @@ class about extends viewModelBase {
     });
 
     formatLicenseStatusValue(
-        name: Exclude<keyof LicenseStatus, "Attributes" | "Version">
+        name: Exclude<keyof LicenseStatus, "Attributes">
     ): string | number {
         const value = license.getStatusValue(name);
 
