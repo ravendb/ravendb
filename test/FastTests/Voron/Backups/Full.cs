@@ -25,9 +25,9 @@ namespace FastTests.Voron.Backups
         }
 
         [RavenTheory(RavenTestCategory.BackupExportImport)]
-        [InlineData(BackupCompressionAlgorithm.Gzip)]
-        [InlineData(BackupCompressionAlgorithm.Zstd)]
-        public void CanBackupAndRestoreSmall(BackupCompressionAlgorithm compressionAlgorithm)
+        [InlineData(SnapshotBackupCompressionAlgorithm.Deflate)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Zstd)]
+        public void CanBackupAndRestoreSmall(SnapshotBackupCompressionAlgorithm compressionAlgorithm)
         {
             RequireFileBasedPager();
             var random = new Random();

@@ -56,6 +56,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
+using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -1197,7 +1198,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public SmugglerResult FullBackupTo(string backupPath, BackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel = CompressionLevel.Optimal,
+        public SmugglerResult FullBackupTo(string backupPath, SnapshotBackupCompressionAlgorithm snapshotCompressionAlgorithm, CompressionLevel compressionLevel = CompressionLevel.Optimal,
             bool excludeIndexes = false, Action<(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
@@ -1222,7 +1223,7 @@ namespace Raven.Server.Documents
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         {
-                            var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource, compressionAlgorithm.ToExportCompressionAlgorithm());
+                            var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource, Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm());
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                             {
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
@@ -1294,7 +1295,7 @@ namespace Raven.Server.Documents
 
                 infoNotify?.Invoke(("Backed up database values", 1));
 
-                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), package, compressionAlgorithm, compressionLevel, infoNotify: infoNotify, cancellationToken: cancellationToken);
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), package, snapshotCompressionAlgorithm, compressionLevel, infoNotify: infoNotify, cancellationToken: cancellationToken);
 
                 file.Flush(true); // make sure that we fully flushed to disk
             }

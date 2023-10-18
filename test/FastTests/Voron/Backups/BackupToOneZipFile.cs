@@ -81,7 +81,7 @@ namespace FastTests.Voron.Backups
 
                 var voronTempFileName = new VoronPathSetting(tempFileName);
 
-                database.FullBackupTo(voronTempFileName.Combine("backup-test.backup").FullPath, BackupCompressionAlgorithm.Gzip);
+                database.FullBackupTo(voronTempFileName.Combine("backup-test.backup").FullPath, SnapshotBackupCompressionAlgorithm.Deflate);
                 BackupMethods.Full.Restore(voronTempFileName.Combine("backup-test.backup"), voronTempFileName.Combine("backup-test.data"));
             }
             using (CreatePersistentDocumentDatabase(Path.Combine(tempFileName, "backup-test.data"), out var database))

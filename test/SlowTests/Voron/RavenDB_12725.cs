@@ -81,9 +81,9 @@ namespace SlowTests.Voron
         }
 
         [RavenTheory(RavenTestCategory.BackupExportImport)]
-        [InlineData(BackupCompressionAlgorithm.Gzip)]
-        [InlineData(BackupCompressionAlgorithm.Zstd)]
-        public void Full_backup_must_backup_journals_that_we_havent_synced_yet(BackupCompressionAlgorithm compressionAlgorithm)
+        [InlineData(SnapshotBackupCompressionAlgorithm.Deflate)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Zstd)]
+        public void Full_backup_must_backup_journals_that_we_havent_synced_yet(SnapshotBackupCompressionAlgorithm compressionAlgorithm)
         {
             RequireFileBasedPager();
 
