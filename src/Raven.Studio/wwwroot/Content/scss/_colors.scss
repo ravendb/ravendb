@@ -134,6 +134,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $base-well-bg: $black;
 
     $link-color: $primary;
+    $shadow-color: $gray-500;
 
     $hover-filter: brightness(1.03) saturate(1.3);
 }
@@ -208,7 +209,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $base-well-bg: $body-bg;
 
     $link-color: $primary;
-    $shadow-color: $gray-700;
+    $shadow-color: $gray-600;
 
     $hover-filter: brightness(1.03) saturate(1.4);
 }
