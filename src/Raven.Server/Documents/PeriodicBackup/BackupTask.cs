@@ -611,7 +611,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         var totalSw = Stopwatch.StartNew();
                         var sw = Stopwatch.StartNew();
-                        var compressionAlgorithm = _configuration.SnapshotSettings?.CompressionAlgorithm ?? _database.Configuration.Backup.CompressionAlgorithm;
+                        var compressionAlgorithm = _configuration.SnapshotSettings?.CompressionAlgorithm ?? _database.Configuration.Backup.SnapshotCompressionAlgorithm;
                         var compressionLevel = _configuration.SnapshotSettings?.CompressionLevel ?? CompressionLevel.Optimal;
                         var excludeIndexes = _configuration.SnapshotSettings?.ExcludeIndexes ?? false;
                         var smugglerResult = _database.FullBackupTo(tempBackupFilePath, compressionAlgorithm, compressionLevel, excludeIndexes,

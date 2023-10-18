@@ -70,6 +70,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public BackupCompressionAlgorithm CompressionAlgorithm { get; set; }
 
+        [Description("Compression algorithm that is used to perform snapshot backups.")]
+        [DefaultValue(SnapshotBackupCompressionAlgorithm.Zstd)]
+        [ConfigurationEntry("Backup.Snapshot.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public SnapshotBackupCompressionAlgorithm SnapshotCompressionAlgorithm { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);

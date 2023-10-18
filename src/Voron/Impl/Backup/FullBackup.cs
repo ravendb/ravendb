@@ -37,7 +37,7 @@ namespace Voron.Impl.Backup
         public void ToFile(
             StorageEnvironment env,
             VoronPathSetting backupPath,
-            BackupCompressionAlgorithm compressionAlgorithm,
+            SnapshotBackupCompressionAlgorithm compressionAlgorithm,
             CompressionLevel compressionLevel = CompressionLevel.Optimal,
             Action<(string Message, int FilesCount)> infoNotify = null)
         {
@@ -65,7 +65,7 @@ namespace Voron.Impl.Backup
         /// </summary>
         public void ToFile(IEnumerable<StorageEnvironmentInformation> envs,
             ZipArchive archive,
-            BackupCompressionAlgorithm compressionAlgorithm,
+            SnapshotBackupCompressionAlgorithm compressionAlgorithm,
             CompressionLevel compressionLevel,
             Action<(string Message, int FilesCount)> infoNotify = null,
             CancellationToken cancellationToken = default)
@@ -89,7 +89,7 @@ namespace Voron.Impl.Backup
 
         private static void Backup(
             StorageEnvironment env,
-            BackupCompressionAlgorithm compressionAlgorithm,
+            SnapshotBackupCompressionAlgorithm compressionAlgorithm,
             CompressionLevel compressionLevel,
             AbstractPager dataPager,
             ZipArchive zipArchive,

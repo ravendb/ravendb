@@ -9,10 +9,10 @@ namespace Voron.Impl.Backup;
 public sealed class BackupZipArchiveEntry
 {
     private readonly ZipArchiveEntry _zipEntry;
-    private readonly BackupCompressionAlgorithm _compressionAlgorithm;
+    private readonly SnapshotBackupCompressionAlgorithm _compressionAlgorithm;
     private readonly CompressionLevel _compressionLevel;
 
-    public BackupZipArchiveEntry(ZipArchiveEntry zipEntry, BackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
+    public BackupZipArchiveEntry(ZipArchiveEntry zipEntry, SnapshotBackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
     {
         _zipEntry = zipEntry;
         _compressionAlgorithm = compressionAlgorithm;
@@ -25,12 +25,12 @@ public sealed class BackupZipArchiveEntry
 
         switch (_compressionAlgorithm)
         {
-            case BackupCompressionAlgorithm.Zstd:
+            case SnapshotBackupCompressionAlgorithm.Zstd:
                 if (_compressionLevel == CompressionLevel.NoCompression)
                     return stream;
 
                 return ZstdStream.Compress(stream, _compressionLevel);
-            case BackupCompressionAlgorithm.Gzip:
+            case SnapshotBackupCompressionAlgorithm.Deflate:
                 return stream;
             default:
                 throw new ArgumentOutOfRangeException();

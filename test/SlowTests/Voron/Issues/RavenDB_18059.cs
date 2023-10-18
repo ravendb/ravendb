@@ -29,9 +29,9 @@ public class RavenDB_18059 : StorageTest
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(BackupCompressionAlgorithm.Gzip)]
-    [InlineData(BackupCompressionAlgorithm.Zstd)]
-    public void RaceConditionBetweenFullBackupAndUpdateDatabaseStateAfterSync(BackupCompressionAlgorithm compressionAlgorithm)
+    [InlineData(SnapshotBackupCompressionAlgorithm.Deflate)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Zstd)]
+    public void RaceConditionBetweenFullBackupAndUpdateDatabaseStateAfterSync(SnapshotBackupCompressionAlgorithm compressionAlgorithm)
     {
         RequireFileBasedPager();
         var random = new Random(2);
@@ -100,9 +100,9 @@ public class RavenDB_18059 : StorageTest
 
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(BackupCompressionAlgorithm.Gzip)]
-    [InlineData(BackupCompressionAlgorithm.Zstd)]
-    public void FullBackupMustNotDeadlockWithFlush(BackupCompressionAlgorithm compressionAlgorithm)
+    [InlineData(SnapshotBackupCompressionAlgorithm.Deflate)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Zstd)]
+    public void FullBackupMustNotDeadlockWithFlush(SnapshotBackupCompressionAlgorithm compressionAlgorithm)
     {
         RequireFileBasedPager();
         var random = new Random(2);
