@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -83,8 +83,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         protected readonly IndexSearcher IndexSearcher;
+
         private readonly IndexFieldsMapping _fieldMappings;
-        protected Page _lastPage;
         private readonly ByteStringContext _allocator;
 
         private readonly int _maxNumberOfOutputsPerDocument;
@@ -230,7 +230,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     foreach (var current in query.Metadata.Highlightings)
                     {
                         // We get the actual highlight description. 
-
                         var fieldName = current.Field.Value;
                         if (highlightingTerms.TryGetValue(fieldName, out var fieldDescription) == false)
                             continue;
@@ -252,7 +251,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         // We need to get the actual field, not the dynamic field. 
                         int propIdx = document.Data.GetPropertyIndex(fieldDescription.FieldName);
                         if (propIdx < 0)
-                            continue; // The property does not exist in the data object, there is nothing to highlight.
+                        {
+                            // The property does not exist in the data object, there is nothing to highlight.
+                            // RavenDB-21484: Because we are getting the data from a property that has not been
+                            // projected into the select statement, it wont be available in the actual document
+                            // data. Therefore, we need to do a direct get to retrieve the field value.
+
+
+                            continue;
+                        }
 
                         BlittableJsonReaderObject.PropertyDetails property = default;
                         document.Data.GetPropertyByIndex(propIdx, ref property);
@@ -277,40 +284,32 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 maxFragments -= ProcessHighlightings(current, fieldDescription, fieldValue, fragments, maxFragments);
                             }
                         }
-                        else
+                        else continue;
+
+                        if (fragments.Count <= 0) 
                             continue;
 
-                        if (fragments.Count > 0)
+                        string key = document.Id;
+                        if (string.IsNullOrWhiteSpace(fieldDescription.GroupKey) == false)
                         {
-                            string key;
-                            if (string.IsNullOrWhiteSpace(fieldDescription.GroupKey) == false)
+                            int groupKey;
+                            if ((groupKey = document.Data.GetPropertyIndex(fieldDescription.GroupKey)) != -1)
                             {
-                                int groupKey;
-                                if ((groupKey = document.Data.GetPropertyIndex(fieldDescription.GroupKey)) != -1)
-                                {
-                                    document.Data.GetPropertyByIndex(groupKey, ref property);
+                                document.Data.GetPropertyByIndex(groupKey, ref property);
 
-                                    key = property.Token switch
-                                    {
-                                        BlittableJsonToken.String => ((LazyStringValue)property.Value).ToString(CultureInfo.InvariantCulture),
-                                        BlittableJsonToken.CompressedString => ((LazyCompressedStringValue)property.Value).ToString(),
-                                        _ => throw new NotSupportedException($"The token type '{property.Token.ToString()}' is not supported.")
-                                    };
-                                }
-                                else
+                                key = property.Token switch
                                 {
-                                    key = document.Id;
-                                }
+                                    BlittableJsonToken.String => ((LazyStringValue)property.Value).ToString(CultureInfo.InvariantCulture),
+                                    BlittableJsonToken.CompressedString => ((LazyCompressedStringValue)property.Value).ToString(),
+                                    _ => throw new NotSupportedException($"The token type '{property.Token.ToString()}' is not supported.")
+                                };
                             }
-                            else
-                                key = document.Id;
-
-
-                            if (tokensDictionary.TryGetValue(key, out var existingHighlights))
-                                throw new NotSupportedInCoraxException("Multiple highlightings for the same field and group key are not supported.");
-
-                            tokensDictionary[key] = fragments.ToArray();
                         }
+
+                        if (tokensDictionary.TryGetValue(key, out var existingHighlights))
+                            throw new NotSupportedInCoraxException("Multiple highlightings for the same field and group key are not supported.");
+
+                        tokensDictionary[key] = fragments.ToArray();
                     }
 
                     return highlightings;
@@ -344,7 +343,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             public long QueryStart;
             private TermsReader _documentIdReader;
 
-            public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, TermsReader documentIdReader, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever)
+            public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, TermsReader documentIdReader, IndexFieldsMapping fieldsMapping, IQueryResultRetriever retriever)
             {
                 _index = index;
                 _query = query;
@@ -375,9 +374,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     else
                         limit = ids.Length;
                 }
-                // else we left it behind, so we are going to continue going for 0. 
-                else
-                    return 0;
+                else return 0; // we left it behind, so we are going to continue going for 0. 
 
                 var distinctIds = ids.Slice(0, (int)limit);
 
@@ -499,7 +496,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private static bool WillAlwaysIncludeInResults(IndexType indexType, FieldsToFetch fieldsToFetch, IndexQueryServerSide query)
         {
-            return fieldsToFetch.IsDistinct || indexType.IsMapReduce() || query.SkipDuplicateChecking;
+            return fieldsToFetch.IsDistinct || query.SkipDuplicateChecking || indexType.IsMapReduce();
         }
 
         private IEnumerable<QueryResult> QueryInternal<THighlighting, TQueryFilter, THasProjection, TDistinct>(
@@ -527,7 +524,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
 
             var identityTracker = new IdentityTracker<TDistinct>();
-            identityTracker.Initialize(_index, query, IndexSearcher, _documentIdReader, _fieldMappings, fieldsToFetch, retriever);
+            identityTracker.Initialize(_index, query, IndexSearcher, _documentIdReader, _fieldMappings, retriever);
 
             long pageSize = query.PageSize;
 
@@ -653,7 +650,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             goto Include;
 
                         // Ok, we will need to check for duplicates, then we will have to work. In some cases (like TimeSeries) we don't "have" unique identifier so we skip checking.
-                        var identityExists = retriever.TryGetKeyCorax(_documentIdReader, ids[i], out var rawIdentity);
+                        var identityExists = retriever.TryGetKeyCorax(_documentIdReader, indexEntryId, out var rawIdentity);
 
                         // If we have figured out that this document identity has already been seen, we are skipping it.
                         if (identityExists && identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity) == false)
@@ -669,11 +666,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                         // actual data and apply the rest of the filters. 
                         Include:
-                        EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
-                        var key = _documentIdReader.GetTermFor(ids[i]);
+
                         float? documentScore = sortingData.IncludeScores ? sortingData.ScoresBuffer[i] : null;
                         CoraxSpatialResult? documentDistance = hasOrderByDistance ? sortingData.DistancesBuffer[i] : null;
-                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, entryTermsReader, key, documentScore, documentDistance);
+
+                        var key = _documentIdReader.GetTermFor(indexEntryId);
+                        EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref page);
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, in entryTermsReader, key, documentScore, documentDistance);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
@@ -690,8 +689,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         var fetchedDocument = retriever.Get(ref retrieverInput, token);
                         if (fetchedDocument.Document != null)
                         {
-                            var qr = CreateQueryResult(ref identityTracker, fetchedDocument.Document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults,
-                                ref hasProjections, ref markedAsSkipped);
+                            var qr = CreateQueryResult(ref identityTracker, fetchedDocument.Document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
                             if (qr.Result is null)
                             {
                                 docsToLoad++;
@@ -704,8 +702,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         {
                             foreach (Document item in fetchedDocument.List)
                             {
-                                var qr = CreateQueryResult(ref identityTracker, item, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections,
-                                    ref markedAsSkipped);
+                                var qr = CreateQueryResult(ref identityTracker, item, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
                                 if (qr.Result is null)
                                 {
                                     docsToLoad++;

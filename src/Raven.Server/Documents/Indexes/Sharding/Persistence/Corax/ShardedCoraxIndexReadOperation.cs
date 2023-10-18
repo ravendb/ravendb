@@ -14,12 +14,15 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Corax;
 
 public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 {
+    private Page _lastPage;
+
     public ShardedCoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query)
     {
@@ -27,32 +30,31 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
     protected override QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
         IndexQueryServerSide query,
-        DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, ref THighlighting highlightings, Reference<long> skippedResults,
+        DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, 
+        ref THighlighting highlightings, Reference<long> skippedResults,
         ref THasProjection hasProjections,
         ref bool markedAsSkipped)
     {
         var result = base.CreateQueryResult(ref tracker, document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
+        if (result.Result == null || query.ReturnOptions == null) 
+            return result;
 
-        if (result.Result != null && query.ReturnOptions != null)
+        if (query.ReturnOptions.AddOrderByFieldsMetadata && _index.Type.IsMapReduce() == false)
         {
-            if (query.ReturnOptions.AddOrderByFieldsMetadata)
-            {
-                if (_index.Type.IsMapReduce() == false) // for a map-reduce index the returned results already have fields that are used for sorting
-                    result.Result = AddOrderByFields(result.Result, query, indexEntryId, orderByFields);
-            }
-
-            if (query.ReturnOptions.AddDataHashMetadata) 
-                result.Result = result.Result.EnsureDataHashInQueryResultMetadata();
+            // for a map-reduce index the returned results already have fields that are used for sorting
+            EntryTermsReader reader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref _lastPage);
+            result.Result = AddOrderByFields(result.Result, query, ref reader, orderByFields);
         }
+
+        if (query.ReturnOptions.AddDataHashMetadata) 
+            result.Result = result.Result.EnsureDataHashInQueryResultMetadata();
 
         return result;
     }
 
-    private ShardedQueryResultDocument AddOrderByFields(Document queryResult, IndexQueryServerSide query, long indexEntryId, OrderMetadata[] orderByFields)
+    private ShardedQueryResultDocument AddOrderByFields(Document queryResult, IndexQueryServerSide query, ref EntryTermsReader reader, OrderMetadata[] orderByFields)
     {
         var result = ShardedQueryResultDocument.From(queryResult);
-
-        var reader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref _lastPage);
 
         for (int i = 0; i < query.Metadata.OrderBy.Length; i++)
         {
