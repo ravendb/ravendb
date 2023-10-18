@@ -1548,10 +1548,10 @@ namespace Raven.Server
                 // worried about race conditions here if we move to HTTP 2.0 at some point. At that point,
                 // we'll probably want to handle this concurrently, and the cost of adding it in this manner
                 // is pretty small for most cases anyway
-                _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>(_caseSensitiveAuthorizedDatabases)
-                {
-                    {database, mode}
-                };
+                _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>(_caseSensitiveAuthorizedDatabases);
+                if (_caseSensitiveAuthorizedDatabases.TryAdd(database,mode) == false)
+                    return CheckAccess(mode, requireAdmin, requireWrite);
+
 
                 return CheckAccess(mode, requireAdmin, requireWrite);
 
