@@ -722,7 +722,8 @@ namespace FastTests.Client.Subscriptions
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21581")]
         public async Task RavenDB_3452_ShouldStopPullingDocsIfReleased(Options options)
         {
             DoNotReuseServer();
