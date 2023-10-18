@@ -338,6 +338,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         database.ClusterTransactionId = databaseRecord.Topology.ClusterTransactionIdBase64;
                         database.DatabaseGroupId = databaseRecord.Topology.DatabaseTopologyIdBase64;
 
+                        database.TxMerger.Start();
+
                         result.Files.FileCount = filesToRestore.Count + (snapshotRestore ? 1 : 0);
                         
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
