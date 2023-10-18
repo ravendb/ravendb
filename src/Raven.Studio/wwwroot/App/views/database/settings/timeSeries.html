@@ -238,7 +238,7 @@
                                     <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: namedValues">
                                         <div class="help-block margin-bottom" data-bind="validationMessage: namedValues"></div>
                                     </div>
-                                    <button class="btn btn-default" data-bind="click: addMapping">
+                                    <button class="btn btn-default" data-bind="click: addMapping, disable: namedValues().length > 31">
                                         <i class="icon-plus"> </i><span>Add Name</span>
                                     </button>
                                 </div>
