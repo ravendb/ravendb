@@ -18,7 +18,7 @@ public class CompareExchangeTests : RavenTestBase
     {
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.CompareExchange)]
     public async Task AddOrUpdateCompareExchangeCommand_WhenCommandSentTwice_SecondAttemptShouldNotReturnNull()
     {
         var leader = GetNewServer();
