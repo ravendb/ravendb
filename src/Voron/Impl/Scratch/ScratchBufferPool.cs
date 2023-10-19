@@ -205,12 +205,6 @@ namespace Voron.Impl.Scratch
 
             return item;
         }
-        public PagerState GetPagerState(int scratchNumber)
-        {
-            // Not thread-safe but only called by a single writer.
-            var bufferFile = _scratchBuffers[scratchNumber].File;
-            return bufferFile.PagerState;
-        }
 
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages)
         {
@@ -413,12 +407,12 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointerWithOverflowHandling(IPagerLevelTransactionState tx, int scratchNumber, long p)
+        public byte* AcquirePagePointerWithOverflowHandling(IPagerLevelTransactionState tx, int scratchNumber, long p, PagerState pagerState)
         {
             var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.AcquirePagePointerWithOverflowHandling(tx, p);
+            return bufferFile.AcquirePagePointerWithOverflowHandling(tx, p, pagerState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
