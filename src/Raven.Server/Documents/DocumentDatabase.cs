@@ -365,11 +365,11 @@ namespace Raven.Server.Documents
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
                 }, null);
-
+                var clusterTransactionThreadName = ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread {Name}", Name));
                 _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
-                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal,
-                        ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread {Name}", Name)),
+                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, clusterTransactionThreadName
+                        ,
                         _logger);
                     try
                     {
@@ -387,7 +387,9 @@ namespace Raven.Server.Documents
                             _logger.Info("An unhandled exception closed the cluster transaction task", e);
                         }
                     }
-                }, null, ThreadNames.ForClusterTransactions($"Cluster Transaction {Name}", Name));
+                }, null, ThreadNames.ForClusterTransactions(
+                    clusterTransactionThreadName,
+                    Name));
 
 
 
