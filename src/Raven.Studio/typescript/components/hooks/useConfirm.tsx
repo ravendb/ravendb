@@ -76,7 +76,7 @@ function ConfirmationModal({
                 {message ? message : null}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={onCancel} className="text-muted">
+                <Button color="link" onClick={onCancel} className="link-muted">
                     Cancel
                 </Button>
                 <Button color={actionColor} onClick={onConfirm} className="rounded-pill">

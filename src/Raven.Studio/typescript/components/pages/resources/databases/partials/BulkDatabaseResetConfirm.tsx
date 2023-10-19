@@ -30,7 +30,7 @@ export default function BulkDatabaseResetConfirm({
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5">
+        <Modal isOpen centered wrapClassName="bs5">
             <ModalBody>
                 <div className="text-right">
                     <CloseButton onClick={toggle} />
@@ -65,7 +65,7 @@ export default function BulkDatabaseResetConfirm({
                 </div>
             </ModalBody>
             <ModalFooter>
-                <Button color="secondary" onClick={toggle}>
+                <Button color="link" className="link-muted" onClick={toggle}>
                     Cancel
                 </Button>
                 <Button color="danger" onClick={onSubmit}>

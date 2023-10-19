@@ -27,7 +27,7 @@ export default function GatherDebugInfoAbortConfirm({ isOpen, toggle, onConfirm 
                 <div className="text-center lead">Do you want to abort package creation?</div>
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="text-muted">
+                <Button color="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
                 <Button color="warning" onClick={onSubmit} className="rounded-pill">

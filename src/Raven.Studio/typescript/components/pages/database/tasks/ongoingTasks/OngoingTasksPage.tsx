@@ -358,10 +358,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                         <Button
                             color="link"
                             size="sm"
-                            outline
                             target="_blank"
                             href={serverWideTasksUrl}
                             title="Go to the Server-Wide Tasks view"
+                            className="link-muted"
                         >
                             <Icon icon="server-wide-tasks" />
                             Server-Wide Tasks
