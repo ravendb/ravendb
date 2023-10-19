@@ -645,7 +645,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                                 $"took: {totalSw.ElapsedMilliseconds:#,#;;0}ms");
                     }
 
-                    IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
+                    if (_directUploadDestination == DirectUploadDestination.Disabled)
+                        IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
 
                     status.LocalBackup.Exception = null;
                 }
@@ -653,8 +654,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     status.LocalBackup.Exception = e.ToString();
 
-                    // deleting the temp backup file if the backup failed
-                    DeleteFile(tempBackupFilePath);
+                    if (_directUploadDestination == DirectUploadDestination.Disabled)
+                    {
+                        // deleting the temp backup file if the backup failed
+                        DeleteFile(tempBackupFilePath);
+                    }
                     throw;
                 }
             }
@@ -691,7 +695,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                             FolderName = folderName,
                             FileName = fileName,
                             RetentionPolicyParameters = _retentionPolicyParameters,
-                            OnProgress = AddInfo
+                            OnProgress = AddInfo,
+                            CancellationToken = TaskCancelToken.Token
                         });
 
                 default:
