@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ public abstract class DirectUploadStream : Stream
     private readonly Action<string> _onProgress;
 
     protected abstract IMultiPartUploader MultiPartUploader { get; }
+
     protected abstract long MaxPartSizeInBytes { get; }
 
     private long _position;
@@ -20,6 +22,7 @@ public abstract class DirectUploadStream : Stream
     private MemoryStream _writeStream = new();
     private MemoryStream _uploadStream = new();
     private Task _uploadTask;
+    private bool _disposed;
 
     protected DirectUploadStream(Action<string> onProgress)
     {
@@ -57,18 +60,27 @@ public abstract class DirectUploadStream : Stream
 
         _writeStream.Write(buffer, offset, count);
 
-        if (_writeStream.Position > MaxPartSizeInBytes)
+        var toUpload = _writeStream.Position;
+        if (toUpload <= MaxPartSizeInBytes)
+            return;
+
+        if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
         {
-            if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
-                AsyncHelpers.RunSync(() => _uploadTask);
-
-            _onProgress.Invoke($"Uploaded {new Size(_writeStream.Position, SizeUnit.Bytes)}");
-
-            (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
-
-            _writeStream.Position = _uploadStream.Position = 0;
-            _uploadTask = MultiPartUploader.UploadPartAsync(_uploadStream, _uploadStream.Length);
+            _onProgress.Invoke("Waiting for previous upload task to finish");
+            AsyncHelpers.RunSync(() => _uploadTask);
         }
+
+        (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
+        
+        _writeStream.Position = _uploadStream.Position = 0;
+            
+        var sp = Stopwatch.StartNew();
+        _uploadTask = MultiPartUploader.UploadPartAsync(_uploadStream, toUpload);
+        _ = _uploadTask.ContinueWith(task =>
+        {
+            if (task.IsCompletedSuccessfully)
+                _onProgress.Invoke($"Uploaded {new Size(toUpload, SizeUnit.Bytes)}, took: {sp.ElapsedMilliseconds}ms");
+        });
     }
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -83,35 +95,53 @@ public abstract class DirectUploadStream : Stream
 
         await _writeStream.WriteAsync(new ReadOnlyMemory<byte>(buffer, offset, count), cancellationToken);
 
-        if (_writeStream.Position > MaxPartSizeInBytes)
+        var toUpload = _writeStream.Position;
+        if (toUpload <= MaxPartSizeInBytes)
+            return;
+
+        if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
         {
-            if (_uploadTask != null)
-            {
-                if (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false)
-                    await _uploadTask;
-
-                _onProgress.Invoke($"Uploaded {new Size(_writeStream.Position, SizeUnit.Bytes)}");
-            }
-
-            (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
-
-            _writeStream.Position = _uploadStream.Position = 0;
-            _uploadTask = MultiPartUploader.UploadPartAsync(_uploadStream, _uploadStream.Length);
+            _onProgress.Invoke("Waiting for previous upload task to finish");
+            await _uploadTask;
         }
+
+        (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
+
+        _writeStream.Position = _uploadStream.Position = 0;
+
+        var sp = Stopwatch.StartNew();
+        _uploadTask = MultiPartUploader.UploadPartAsync(_uploadStream, toUpload);
+        _ = _uploadTask.ContinueWith(task =>
+        {
+            if (task.IsCompletedSuccessfully)
+                _onProgress.Invoke($"Uploaded {new Size(toUpload, SizeUnit.Bytes)}, took: {sp.ElapsedMilliseconds}ms");
+        }, cancellationToken);
     }
 
     protected override void Dispose(bool disposing)
     {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+
         using (_uploadStream)
         using (_writeStream)
         {
-            if (_uploadTask != null && _uploadTask.IsCompleted == false)
+            if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
+            {
+                _onProgress.Invoke("Waiting for previous upload task to finish");
                 AsyncHelpers.RunSync(() => _uploadTask);
+            }
 
-            if (_writeStream.Position > 0)
+            var toUpload = _writeStream.Position;
+            if (toUpload > 0)
             {
                 _writeStream.Position = 0;
-                MultiPartUploader.UploadPart(_writeStream, _writeStream.Length);
+
+                var sp = Stopwatch.StartNew();
+                MultiPartUploader.UploadPart(_writeStream, toUpload);
+                _onProgress.Invoke($"Uploaded {new Size(toUpload, SizeUnit.Bytes)}, took: {sp.ElapsedMilliseconds}ms");
             }
         }
 
