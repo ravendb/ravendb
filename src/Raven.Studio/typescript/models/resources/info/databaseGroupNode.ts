@@ -1,5 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import generalUtils = require("common/generalUtils");
+import accessManager = require("common/shell/accessManager");
 
 class databaseGroupNode {
     tag = ko.observable<string>();
@@ -48,6 +49,8 @@ class databaseGroupNode {
                 return "Catching up";
         }
     });
+
+    canBePromoted = ko.pureComputed(() => this.type() === "Promotable" && accessManager.default.databaseGroupView.canPromoteNode());
 
     static for(tag: string, serverUrl: string, responsibleNode: string, type: databaseGroupNodeType) {
         const node = new databaseGroupNode();
