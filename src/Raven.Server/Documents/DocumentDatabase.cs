@@ -365,7 +365,7 @@ namespace Raven.Server.Documents
                 _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
                     ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal,
-                        ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread", Name)),
+                        ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread {Name}", Name)),
                         _logger);
                     try
                     {
@@ -383,7 +383,7 @@ namespace Raven.Server.Documents
                             _logger.Info("An unhandled exception closed the cluster transaction task", e);
                         }
                     }
-                }, null, ThreadNames.ForClusterTransactions("Cluster Transaction", Name));
+                }, null, ThreadNames.ForClusterTransactions($"Cluster Transaction {Name}", Name));
 
 
 
