@@ -194,6 +194,10 @@ class accessManager {
         canDisableIndexing: this.isOperatorOrAbove,
         canCompactDatabase: this.isOperatorOrAbove
     };
+
+    databaseGroupView = {
+        canPromoteNode: this.isOperatorOrAbove
+    };
     
     certificatesView = {
         canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNode,

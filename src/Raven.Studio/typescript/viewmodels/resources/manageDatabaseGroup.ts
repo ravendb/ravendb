@@ -1,10 +1,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-
 import app = require("durandal/app");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import deleteDatabaseFromNodeCommand = require("commands/resources/deleteDatabaseFromNodeCommand");
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
@@ -19,6 +17,7 @@ import generalUtils = require("common/generalUtils");
 import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 import jsonUtil = require("common/jsonUtil");
 import Sortable from "sortablejs";
+import promoteDatabaseNodeCommand = require("commands/database/dbGroup/promoteDatabaseNodeCommand");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -53,6 +52,10 @@ class manageDatabaseGroup extends viewModelBase {
     dynamicDatabaseDistributionWarning: KnockoutComputed<string>;
     
     anyNodeHasError: KnockoutComputed<boolean>;
+
+    spinners = {
+        promote: ko.observableArray<string>([]),
+    };
 
     dirtyFlag: () => DirtyFlag;
 
@@ -308,6 +311,19 @@ class manageDatabaseGroup extends viewModelBase {
         app.showBootstrapDialog(new showDataDialog("Error details. Node: " + tag, node.lastError(), "plain"));
     }
 
+    promote(nodeTag: string) {
+        this.confirmationMessage("Are you sure?", `Do you want to promote node ${nodeTag} to become a member?`, {
+            buttons: ["Cancel", "Yes, promote"],
+        }).done((result) => {
+            if (result.can) {
+                this.spinners.promote.push(nodeTag);
+
+                new promoteDatabaseNodeCommand(this.activeDatabase().name, nodeTag)
+                    .execute()
+                    .always(() => this.spinners.promote.remove(nodeTag));
+            }
+        });
+    }
 }
 
 export = manageDatabaseGroup;
