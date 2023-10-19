@@ -790,6 +790,11 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 
+        public virtual bool IsShutdownRequested() => ServerStore.ServerShutdown.IsCancellationRequested;
+
+        [DoesNotReturn]
+        public virtual void ThrowShutdownException(Exception inner = null) => throw new OperationCanceledException($"Server on node {ServerStore.NodeTag} is shutting down", inner);
+
         public virtual OperationCancelToken CreateHttpRequestBoundOperationToken()
         {
             return new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted);

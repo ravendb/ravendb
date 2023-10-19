@@ -13,6 +13,7 @@ using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -74,8 +75,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             DynamicJsonArray result;
             if (clusterTransactionCommand.DatabaseCommands.Count > 0)
             {
-                using var timeout = new CancellationTokenSource(RequestHandler.ServerStore.Engine.OperationTimeout);
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, RequestHandler.HttpContext.RequestAborted);
+                using var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout);
                 var databaseResult = await RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.WaitForResults(taskId, cts.Token);
 
                 if (databaseResult.IndexTask != null)

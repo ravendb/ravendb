@@ -1542,6 +1542,8 @@ namespace Raven.Server.Documents
                     : Constants.Identities.DefaultSeparator;
                 StudioConfiguration = record.Studio;
 
+                ServerStore.DatabasesLandlord.ForTestingPurposes?.DelayNotifyFeaturesAboutStateChange?.Invoke();
+
                 DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
