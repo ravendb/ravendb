@@ -93,7 +93,7 @@
                                     </div>
                                     <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
@@ -451,7 +451,7 @@
                                         <small title="Backup is not encrypted" data-bind="visible: !isBackupEncrypted()"><i class="icon-unlock text-gray"></i></small>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
@@ -805,7 +805,7 @@
 <script type="text/html" id="state-template">
     <div class="btn-group">
         <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false" 
-                data-bind="requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
+                data-bind="disable: isServerWide(), requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
             <!--set-size-->
             <span data-bind="text: stateText()"></span><span class="caret"></span>
         </button>
