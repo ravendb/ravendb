@@ -188,8 +188,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         FileName = fileName
                     };
 
-                    // if user did not specify local folder we delete the temporary file
-                    if (_backupToLocalFolder == false)
+                    // if user did not specify local folder and it's isn't a direct upload, we delete the temporary file
+                    if (_backupToLocalFolder == false && _directUploadDestination == DirectUploadDestination.Disabled)
                     {
                         DeleteFile(backupFilePath);
                     }
