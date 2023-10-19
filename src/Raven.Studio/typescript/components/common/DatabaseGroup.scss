@@ -33,6 +33,13 @@
                 min-height: 45px;
             }
 
+            .dbgroup-actions {
+                display: flex;
+                flex-direction: column;
+                gap: sizes.$gutter-xs;
+                justify-content: center;
+            }
+
             .dbgroup-error {
                 border-radius: 0 0 sizes.$gutter-xxs sizes.$gutter-xxs;
             }

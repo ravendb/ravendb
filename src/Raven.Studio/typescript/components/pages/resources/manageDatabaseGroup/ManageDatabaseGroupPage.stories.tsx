@@ -54,7 +54,7 @@ export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = (
 export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    mockStore.databases.with_Cluster();
+    mockStore.databases.with_Cluster((x) => (x.nodes[0].type = "Promotable"));
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
@@ -67,7 +67,7 @@ export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     const { cluster } = mockStore;
     cluster.with_Cluster();
 
-    mockStore.databases.with_Sharded();
+    mockStore.databases.with_Sharded((x) => (x.nodes[0].type = "Promotable"));
 
     const db = DatabasesStubs.shardedDatabase();
 

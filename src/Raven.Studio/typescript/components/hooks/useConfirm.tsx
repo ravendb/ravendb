@@ -10,6 +10,7 @@ interface UseConfirmProps {
     title: string;
     icon: IconName;
     confirmText?: string;
+    confirmIcon?: IconName;
     actionColor: TextColor;
 }
 
@@ -54,8 +55,9 @@ function ConfirmationModal({
     title,
     message,
     icon,
-    confirmText,
     actionColor,
+    confirmText,
+    confirmIcon,
 }: ConfirmationModalProps): React.JSX.Element {
     return (
         <Modal
@@ -80,7 +82,7 @@ function ConfirmationModal({
                     Cancel
                 </Button>
                 <Button color={actionColor} onClick={onConfirm} className="rounded-pill">
-                    <Icon icon={icon} />
+                    {confirmIcon && <Icon icon={confirmIcon} />}
                     {confirmText ?? "Yes"}
                 </Button>
             </ModalFooter>
