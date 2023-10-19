@@ -346,10 +346,10 @@ export function BackupsPage(props: BackupsPageProps) {
                                 <Button
                                     size="xs"
                                     target="_blank"
-                                    outline
                                     color="link"
                                     title="Navigate to the Server-Wide Tasks View"
                                     href={serverWideTasksUrl}
+                                    className="link-muted"
                                 >
                                     Go to Server-Wide Tasks View
                                 </Button>

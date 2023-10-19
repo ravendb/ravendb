@@ -102,7 +102,7 @@ export default function EditRevision(props: EditRevisionProps) {
             (revisionsToKeepLimit > 0 && formValues.minimumRevisionsToKeep > revisionsToKeepLimit));
 
     return (
-        <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info">
+        <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info" centered>
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
                 <ModalBody className="vstack gap-2">
                     <h4>{getTitle(taskType, configType)}</h4>
@@ -250,7 +250,7 @@ export default function EditRevision(props: EditRevisionProps) {
                     </Alert>
                 </ModalBody>
                 <ModalFooter>
-                    <Button type="button" color="secondary" onClick={toggle}>
+                    <Button type="button" color="link" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
                     <Button type="submit" color="success" disabled={isLimitExceeded} title="Add this configuration">

@@ -59,7 +59,7 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                 )}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="text-muted">
+                <Button color="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
                 <Button color="warning" onClick={onSubmit} className="rounded-pill">

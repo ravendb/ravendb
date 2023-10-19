@@ -172,7 +172,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <CarouselItem key="carousel-0" onEntering={() => carousel.setHeight(0)}>
                                     <div ref={(el) => (carousel.carouselRefs.current[0] = el)}>
                                         <Card>
-                                            <Card className="bg-faded-primary p-4 d-block">
+                                            <Card className="bg-faded-primary p-4 m-1 d-block">
                                                 <div className="text-limit-width">
                                                     <h2>Merge indexes</h2>
                                                     Combining several indexes with similar purposes into a single index
@@ -295,7 +295,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <CarouselItem key="carousel-1" onEntering={() => carousel.setHeight(1)}>
                                     <div ref={(el) => (carousel.carouselRefs.current[1] = el)}>
                                         <Card>
-                                            <Card className="bg-faded-primary p-4">
+                                            <Card className="bg-faded-primary m-1 p-4">
                                                 <div className="text-limit-width">
                                                     <h2>Remove sub-indexes</h2>
                                                     If an index is completely covered by another index (i.e., all its
@@ -439,7 +439,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <CarouselItem key="carousel-2" onEntering={() => carousel.setHeight(2)}>
                                     <div ref={(el) => (carousel.carouselRefs.current[2] = el)}>
                                         <Card>
-                                            <Card className="bg-faded-primary p-4">
+                                            <Card className="bg-faded-primary m-1 p-4">
                                                 <div className="text-limit-width">
                                                     <h2>Remove unused indexes</h2>
                                                     Unused indexes still consume resources. Indexes that have not been
@@ -559,7 +559,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <CarouselItem key="carousel-3" onEntering={() => carousel.setHeight(3)}>
                                     <div ref={(el) => (carousel.carouselRefs.current[3] = el)}>
                                         <Card>
-                                            <Card className="bg-faded-primary p-4">
+                                            <Card className="bg-faded-primary m-1 p-4">
                                                 <div className="text-limit-width">
                                                     <h2>Unmergable indexes</h2>
                                                     The following indexes cannot be merged. See the specific reason

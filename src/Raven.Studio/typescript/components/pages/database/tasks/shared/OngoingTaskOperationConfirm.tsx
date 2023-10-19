@@ -106,7 +106,7 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                 {warningMessage && <Alert color="warning">{warningMessage}</Alert>}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="text-muted">
+                <Button color="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
                 <Button color={getTypeColor(type)} onClick={onSubmit} className="rounded-pill">
