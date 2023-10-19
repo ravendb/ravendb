@@ -10,7 +10,7 @@ import {
 import useId from "hooks/useId";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useDraggableItem } from "hooks/useDraggableItem";
-import { NodeInfo } from "components/models/databases";
+import { DatabaseSharedInfo, NodeInfo } from "components/models/databases";
 import appUrl from "common/appUrl";
 import {
     DatabaseGroupActions,
@@ -20,21 +20,72 @@ import {
     DatabaseGroupType,
 } from "components/common/DatabaseGroup";
 import { Icon } from "components/common/Icon";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { useAsyncCallback } from "react-async-hook";
+import { useServices } from "components/hooks/useServices";
+import useConfirm from "components/hooks/useConfirm";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
-    canDelete: boolean;
     deleteFromGroup: (nodeTag: string) => void;
+    db: DatabaseSharedInfo;
+}
+
+interface PromoteButtonProps {
+    databaseName: string;
+    nodeTag: string;
+}
+
+function PromoteButton({ databaseName, nodeTag }: PromoteButtonProps) {
+    const { databasesService } = useServices();
+    const asyncPromoteImmediately = useAsyncCallback(() => databasesService.promoteDatabaseNode(databaseName, nodeTag));
+
+    const [PromoteConfirm, confirmPromote] = useConfirm({
+        title: `Do you want to promote node ${nodeTag} to become a member?`,
+        icon: "promote",
+        actionColor: "primary",
+        confirmText: "Promote",
+    });
+
+    const promote = async () => {
+        if (await confirmPromote()) {
+            await asyncPromoteImmediately.execute();
+            // TODO update database topology?
+        }
+    };
+
+    return (
+        <>
+            <ButtonWithSpinner
+                className="rounded-pill justify-content-center"
+                title="Promote to become a member"
+                icon="promote"
+                size="sm"
+                onClick={promote}
+                isSpinning={asyncPromoteImmediately.status === "loading"}
+            >
+                Promote
+            </ButtonWithSpinner>
+            <PromoteConfirm />
+        </>
+    );
 }
 
 export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps) {
-    const { node, deleteFromGroup, canDelete } = props;
+    const { node, deleteFromGroup, db } = props;
+
+    const { isOperatorOrAbove } = useAccessManager();
+
+    const canPromote = isOperatorOrAbove() && node.type === "Promotable";
+    const canDelete = db.nodes.length > 1;
 
     return (
         <DatabaseGroupItem>
             <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
             <DatabaseGroupType node={node} />
             <DatabaseGroupActions>
+                {canPromote && <PromoteButton databaseName={db.name} nodeTag={node.tag} />}
                 <Button
                     size="xs"
                     color="danger"
@@ -53,16 +104,18 @@ export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps)
 
 interface NodeInfoComponentProps {
     node: NodeInfo;
-    databaseLockMode: DatabaseLockMode;
     deleteFromGroup: (nodeTag: string, hardDelete: boolean) => void;
+    db: DatabaseSharedInfo;
 }
 
 export function NodeInfoComponent(props: NodeInfoComponentProps) {
-    const { node, databaseLockMode, deleteFromGroup } = props;
+    const { node, db, deleteFromGroup } = props;
 
     const deleteLockId = useId("delete-lock");
+    const { isOperatorOrAbove } = useAccessManager();
 
-    const canDelete = databaseLockMode === "Unlock";
+    const canPromote = isOperatorOrAbove() && node.type === "Promotable";
+    const canDelete = db.lockMode === "Unlock";
 
     return (
         <DatabaseGroupItem>
@@ -70,6 +123,7 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
 
             <DatabaseGroupType node={node} />
             <DatabaseGroupActions>
+                {canPromote && <PromoteButton databaseName={db.name} nodeTag={node.tag} />}
                 {canDelete ? (
                     <UncontrolledDropdown key="can-delete">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
@@ -94,10 +148,8 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                     <React.Fragment key="cannot-delete">
                         <UncontrolledDropdown id={deleteLockId}>
                             <DropdownToggle color="danger" caret disabled size="xs" className="rounded-pill">
-                                {databaseLockMode === "PreventDeletesError" && (
-                                    <Icon icon="trash" addon="exclamation" />
-                                )}
-                                {databaseLockMode === "PreventDeletesIgnore" && <Icon icon="trash" addon="cancel" />}
+                                {db.lockMode === "PreventDeletesError" && <Icon icon="trash" addon="exclamation" />}
+                                {db.lockMode === "PreventDeletesIgnore" && <Icon icon="trash" addon="cancel" />}
                                 Delete from group
                             </DropdownToggle>
                         </UncontrolledDropdown>

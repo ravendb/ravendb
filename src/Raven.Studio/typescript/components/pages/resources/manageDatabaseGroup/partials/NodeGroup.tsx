@@ -154,8 +154,8 @@ export function NodeGroup(props: NodeGroupProps) {
                                 <NodeInfoComponent
                                     key={node.tag}
                                     node={node}
-                                    databaseLockMode={db.lockMode}
                                     deleteFromGroup={deleteNodeFromGroup}
+                                    db={db}
                                 />
                             ))}
 
