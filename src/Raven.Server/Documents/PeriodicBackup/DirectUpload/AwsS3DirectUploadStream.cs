@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Retention;
@@ -19,7 +20,7 @@ public class AwsS3DirectUploadStream : DirectUploadStream
 
     public AwsS3DirectUploadStream(Parameters parameters) : base(parameters.OnProgress)
     {
-        _client = new RavenAwsS3Client(parameters.Settings, parameters.Configuration);
+        _client = new RavenAwsS3Client(parameters.Settings, parameters.Configuration, cancellationToken: parameters.CancellationToken);
         _retentionPolicyParameters = parameters.RetentionPolicyParameters;
 
         var key = BackupUploader.CombinePathAndKey(parameters.Settings.RemoteFolderName, parameters.FolderName, parameters.FileName);
@@ -61,5 +62,7 @@ public class AwsS3DirectUploadStream : DirectUploadStream
         public RetentionPolicyBaseParameters RetentionPolicyParameters { get; set; }
 
         public Action<string> OnProgress { get; set; }
+
+        public CancellationToken CancellationToken { get; set; }
     }
 }
