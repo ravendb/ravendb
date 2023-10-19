@@ -26,7 +26,7 @@ export default function UpgradeModal() {
             wrapClassName="bs5"
             centered
             contentClassName="modal-border bulge-warning"
-            zIndex={1080}
+            zIndex={1085}
             size="lg"
         >
             <ModalBody className="vstack gap-3 position-relative justify-content-center">
