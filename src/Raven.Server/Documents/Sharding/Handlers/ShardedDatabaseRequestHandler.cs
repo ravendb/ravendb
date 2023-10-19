@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Executors;
@@ -116,6 +118,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
             }
         }
+
+        public override bool IsShutdownRequested() => base.IsShutdownRequested() || DatabaseContext.DatabaseShutdown.IsCancellationRequested;
+
+        [DoesNotReturn]
+        public override void ThrowShutdownException(Exception inner = null) => throw new DatabaseDisabledException("The database " + DatabaseName + " is shutting down", inner);
 
         public override OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken()
         {

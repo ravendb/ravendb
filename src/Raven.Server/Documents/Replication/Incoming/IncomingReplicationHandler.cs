@@ -61,11 +61,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
 
         [ThreadStatic]
-        public static bool IsIncomingReplication;
+        public static bool IsIncomingInternalReplication;
 
         static IncomingReplicationHandler()
         {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingReplication = false;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingInternalReplication = false;
         }
 
         protected override ByteStringContext GetContextAllocator(DocumentsOperationContext context) => context.Allocator;
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return new MergedDocumentReplicationCommand(data, lastDocumentEtag);
+            return new MergedDocumentReplicationCommand(data, lastDocumentEtag, isInternal: ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal);
         }
 
         internal class MergedUpdateDatabaseChangeVectorCommand : DocumentMergedTransactionCommand
@@ -292,12 +292,14 @@ namespace Raven.Server.Documents.Replication.Incoming
         internal class MergedDocumentReplicationCommand : DocumentMergedTransactionCommand
         {
             private readonly long _lastEtag;
+            private readonly bool _isInternal;
             private readonly DataForReplicationCommand _replicationInfo;
 
-            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag)
+            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool isInternal = false)
             {
                 _replicationInfo = replicationInfo;
                 _lastEtag = lastEtag;
+                _isInternal = isInternal;
             }
 
             protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
@@ -322,7 +324,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected virtual void SetIsIncomingReplication()
             {
-                IsIncomingReplication = true;
+                IsIncomingInternalReplication = _isInternal;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -614,7 +616,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             // it is a case of a conflict between documents which were modified in a cluster transaction
                                             // in two _different clusters_, so we will treat it as a "normal" conflict
 
-                                            IsIncomingReplication = false;
+                                            IsIncomingInternalReplication = false;
 
                                             conflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
                                                 document, incomingChangeVector, doc.Flags);
@@ -704,7 +706,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                         item.Dispose();
                     }
 
-                    IsIncomingReplication = false;
+                    IsIncomingInternalReplication = false;
                 }
             }
 

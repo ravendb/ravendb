@@ -38,6 +38,22 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
     public override async ValueTask ExecuteAsync()
     {
+        try
+        {
+            await ExecuteInternalAsync();
+        }
+        catch
+        {
+            // TODO: this logic should probably be global for any request
+            if (RequestHandler.IsShutdownRequested())
+                RequestHandler.ThrowShutdownException();
+
+            throw;
+        }
+    }
+
+    public async ValueTask ExecuteInternalAsync()
+    {
         var indexBatchOptions = GetIndexBatchOptions();
         var replicationBatchOptions = GetReplicationBatchOptions();
 
