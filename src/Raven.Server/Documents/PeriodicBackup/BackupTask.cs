@@ -641,7 +641,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                             EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
                         }
-                        
 
                         AddInfo($"Backed up {_backupResult.SnapshotBackup.ReadCount} files, " +
                                 $"took: {totalSw.ElapsedMilliseconds:#,#;;0}ms");
@@ -907,6 +906,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToServer(string backupPath, string folderName, string fileName)
         {
+            if (_directUploadDestination != DirectUploadDestination.Disabled)
+            {
+                // already uploaded during the creation of the backup
+                return;
+            }
+
             var s3Settings = GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                 settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
             var glacierSettings = GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
