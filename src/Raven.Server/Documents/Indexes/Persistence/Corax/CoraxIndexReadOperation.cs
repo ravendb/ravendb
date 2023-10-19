@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -116,7 +116,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             void Initialize(IndexQueryServerSide query, QueryTimingsScope scope);
             void Setup(IndexQueryServerSide query, DocumentsOperationContext context);
 
-            Dictionary<string, Dictionary<string, string[]>> Execute(IndexQueryServerSide query, DocumentsOperationContext context, IndexFieldsMapping fieldMappings, Document document);
+            Dictionary<string, Dictionary<string, string[]>> Execute(IndexQueryServerSide query, DocumentsOperationContext context, IndexFieldsMapping fieldMappings,
+                ref EntryTermsReader entryReader, FieldsToFetch highlightingFields, Document document, IndexSearcher indexSearcher);
         }
 
         private struct NoHighlighting : ISupportsHighlighting
@@ -126,9 +127,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             public void Initialize(IndexQueryServerSide query, QueryTimingsScope scope) { }
             public void Setup(IndexQueryServerSide query, DocumentsOperationContext context) { }
 
-            public Dictionary<string, Dictionary<string, string[]>> Execute(
-                IndexQueryServerSide query, DocumentsOperationContext context,
-                IndexFieldsMapping fieldMappings, Document document)
+            public Dictionary<string, Dictionary<string, string[]>> Execute(IndexQueryServerSide query, DocumentsOperationContext context,
+                IndexFieldsMapping fieldMappings, ref EntryTermsReader entryReader, FieldsToFetch highlightingFields, Document document, IndexSearcher indexSearcher)
                 => null;
         }
 
@@ -217,7 +217,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
             }
 
-            public Dictionary<string, Dictionary<string, string[]>> Execute(IndexQueryServerSide query, DocumentsOperationContext context, IndexFieldsMapping fieldMappings, Document document)
+            public Dictionary<string, Dictionary<string, string[]>> Execute(IndexQueryServerSide query, DocumentsOperationContext context,
+                IndexFieldsMapping fieldMappings, ref EntryTermsReader entryReader, FieldsToFetch highlightingFields, Document document, IndexSearcher indexSearcher)
             {
                 using (_timingsScope?.For(nameof(QueryTimingsScope.Names.Fill)))
                 {
@@ -231,34 +232,66 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         // We get the actual highlight description. 
                         var fieldName = current.Field.Value;
-                        if (highlightingTerms.TryGetValue(fieldName, out var fieldDescription) == false)
-                            continue;
+                        string key = document.Id;
 
+                        if (highlightingTerms.TryGetValue(fieldName, out var fieldDescription) == false)
+                        {
+                            continue;
+                        }
+
+                        
                         //We have to get analyzer so dynamic field have priority over normal name
                         // We get the field binding to ensure that we are running the analyzer to find the actual tokens.
                         if (fieldMappings.TryGetByFieldName(allocator, fieldDescription.DynamicFieldName ?? fieldDescription.FieldName, out var fieldBinding) == false)
                             continue;
 
                         // We will get the actual tokens dictionary for this field. If it exists we get it immediately, if not we create
-                        if (!highlightings.TryGetValue(fieldDescription.FieldName, out var tokensDictionary))
+                        if (highlightings.TryGetValue(fieldDescription.FieldName, out var tokensDictionary) == false)
                         {
                             tokensDictionary = new(StringComparer.OrdinalIgnoreCase);
                             highlightings[fieldDescription.FieldName] = tokensDictionary;
                         }
 
                         List<string> fragments = new();
-
+                        
                         // We need to get the actual field, not the dynamic field. 
                         int propIdx = document.Data.GetPropertyIndex(fieldDescription.FieldName);
                         if (propIdx < 0)
                         {
-                            // The property does not exist in the data object, there is nothing to highlight.
-                            // RavenDB-21484: Because we are getting the data from a property that has not been
-                            // projected into the select statement, it wont be available in the actual document
-                            // data. Therefore, we need to do a direct get to retrieve the field value.
+                            bool isDirectlyFromIndex = false;
+                            
+                            long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage(fieldName);
+                            entryReader.Reset();
+                            int maxFragments = current.FragmentCount;
+                            while (entryReader.MoveNextStoredField())
+                            {
+                                if (entryReader.FieldRootPage != fieldRootPage)
+                                    continue;
 
+                                isDirectlyFromIndex = true;
+                                
+                                if (entryReader.StoredField == null)
+                                    break;
 
-                            continue;
+                                if (entryReader.IsRaw)
+                                    break;
+                                
+                                var span = entryReader.StoredField.Value;
+                                var fieldValue = span.ToStringValue();
+                                
+                                if (entryReader.IsList)
+                                {
+                                    maxFragments -= ProcessHighlightings(current, fieldDescription, fieldValue, fragments, maxFragments);
+                                    continue;
+                                }
+                                
+                                ProcessHighlightings(current, fieldDescription, fieldValue, fragments, current.FragmentCount);
+                            }
+
+                            if (isDirectlyFromIndex == false)
+                                continue;
+                            else
+                                goto Finish;
                         }
 
                         BlittableJsonReaderObject.PropertyDetails property = default;
@@ -286,10 +319,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else continue;
 
-                        if (fragments.Count <= 0) 
-                            continue;
-
-                        string key = document.Id;
                         if (string.IsNullOrWhiteSpace(fieldDescription.GroupKey) == false)
                         {
                             int groupKey;
@@ -305,7 +334,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 };
                             }
                         }
-
+                        
+                        Finish:
+                        if (fragments.Count <= 0) 
+                            continue;
+                            
                         if (tokensDictionary.TryGetValue(key, out var existingHighlights))
                             throw new NotSupportedInCoraxException("Multiple highlightings for the same field and group key are not supported.");
 
@@ -689,7 +722,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         var fetchedDocument = retriever.Get(ref retrieverInput, token);
                         if (fetchedDocument.Document != null)
                         {
-                            var qr = CreateQueryResult(ref identityTracker, fetchedDocument.Document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
+                            var qr = CreateQueryResult(ref identityTracker, fetchedDocument.Document, query, documentsContext, ref entryTermsReader, fieldsToFetch, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
                             if (qr.Result is null)
                             {
                                 docsToLoad++;
@@ -702,7 +735,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         {
                             foreach (Document item in fetchedDocument.List)
                             {
-                                var qr = CreateQueryResult(ref identityTracker, item, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
+                                var qr = CreateQueryResult(ref identityTracker, item, query, documentsContext, ref entryTermsReader, fieldsToFetch, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
                                 if (qr.Result is null)
                                 {
                                     docsToLoad++;
@@ -793,7 +826,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
-            IndexQueryServerSide query, DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, ref THighlighting highlightings,
+            IndexQueryServerSide query, DocumentsOperationContext documentsContext, ref EntryTermsReader entryReader, FieldsToFetch highlightingFields, OrderMetadata[] orderByFields, ref THighlighting highlightings,
             Reference<long> skippedResults,
             ref THasProjection hasProjections, ref bool markedAsSkipped)
             where TDistinct : struct, IHasDistinct
@@ -816,7 +849,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return new QueryResult
             {
                 Result = document,
-                Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
+                Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, ref entryReader, highlightingFields, document, IndexSearcher),
             };
         }
 

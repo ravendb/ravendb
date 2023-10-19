@@ -30,20 +30,19 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
     protected override QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
         IndexQueryServerSide query,
-        DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, 
+        DocumentsOperationContext documentsContext, ref EntryTermsReader entryReader, FieldsToFetch highlightingFields, OrderMetadata[] orderByFields, 
         ref THighlighting highlightings, Reference<long> skippedResults,
         ref THasProjection hasProjections,
         ref bool markedAsSkipped)
     {
-        var result = base.CreateQueryResult(ref tracker, document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
+        var result = base.CreateQueryResult(ref tracker, document, query, documentsContext, ref entryReader, highlightingFields, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
         if (result.Result == null || query.ReturnOptions == null) 
             return result;
 
         if (query.ReturnOptions.AddOrderByFieldsMetadata && _index.Type.IsMapReduce() == false)
         {
             // for a map-reduce index the returned results already have fields that are used for sorting
-            EntryTermsReader reader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref _lastPage);
-            result.Result = AddOrderByFields(result.Result, query, ref reader, orderByFields);
+            result.Result = AddOrderByFields(result.Result, query, ref entryReader, orderByFields);
         }
 
         if (query.ReturnOptions.AddDataHashMetadata) 
