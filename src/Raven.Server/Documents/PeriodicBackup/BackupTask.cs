@@ -696,6 +696,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             FolderName = folderName,
                             FileName = fileName,
                             RetentionPolicyParameters = _retentionPolicyParameters,
+                            CloudUploadStatus = _backupResult.S3Backup,
                             OnProgress = AddInfo,
                             CancellationToken = TaskCancelToken.Token
                         });

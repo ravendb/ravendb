@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Sparrow;
 using Size = Sparrow.Size;
@@ -11,6 +12,7 @@ namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
 public abstract class DirectUploadStream : Stream
 {
+    private readonly UploadToS3 _cloudUploadStatus;
     private readonly Action<string> _onProgress;
 
     protected abstract IMultiPartUploader MultiPartUploader { get; }
@@ -23,10 +25,15 @@ public abstract class DirectUploadStream : Stream
     private MemoryStream _uploadStream = new();
     private Task _uploadTask;
     private bool _disposed;
+    private readonly IDisposable _backupStatusIDisposable;
 
-    protected DirectUploadStream(Action<string> onProgress)
+    protected DirectUploadStream(bool isFullBackup, UploadToS3 cloudUploadStatus, Action<string> onProgress)
     {
+        _cloudUploadStatus = cloudUploadStatus;
         _onProgress = onProgress;
+
+        _cloudUploadStatus.Skipped = false;
+        _backupStatusIDisposable = _cloudUploadStatus.UpdateStats(isFullBackup);
     }
 
     public override void Flush()
@@ -125,29 +132,36 @@ public abstract class DirectUploadStream : Stream
 
         _disposed = true;
 
-        using (_uploadStream)
-        using (_writeStream)
+        using (_backupStatusIDisposable)
         {
-            if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
+            using (_uploadStream)
+            using (_writeStream)
             {
-                _onProgress.Invoke("Waiting for previous upload task to finish");
-                AsyncHelpers.RunSync(() => _uploadTask);
+                if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
+                {
+                    _onProgress.Invoke("Waiting for previous upload task to finish");
+                    AsyncHelpers.RunSync(() => _uploadTask);
+                }
+
+                var toUpload = _writeStream.Position;
+                if (toUpload > 0)
+                {
+                    _writeStream.Position = 0;
+
+                    var sp = Stopwatch.StartNew();
+                    MultiPartUploader.UploadPart(_writeStream, toUpload);
+                    _onProgress.Invoke($"Uploaded {new Size(toUpload, SizeUnit.Bytes)}, took: {sp.ElapsedMilliseconds}ms");
+                }
             }
 
-            var toUpload = _writeStream.Position;
-            if (toUpload > 0)
-            {
-                _writeStream.Position = 0;
+            MultiPartUploader.CompleteUpload();
 
-                var sp = Stopwatch.StartNew();
-                MultiPartUploader.UploadPart(_writeStream, toUpload);
-                _onProgress.Invoke($"Uploaded {new Size(toUpload, SizeUnit.Bytes)}, took: {sp.ElapsedMilliseconds}ms");
-            }
+            _cloudUploadStatus.UploadProgress.SetUploaded(_position);
+            _cloudUploadStatus.UploadProgress.SetTotal(_position);
+            _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Done);
+
+            _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
         }
-
-        MultiPartUploader.CompleteUpload();
-
-        _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
     }
 
     public override bool CanRead => false;
