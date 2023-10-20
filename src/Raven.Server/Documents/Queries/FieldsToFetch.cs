@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly ProjectionOptions Projection;
 
-        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, SearchEngineType searchEngineType)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition, IndexType indexType)
         {
             Projection = new ProjectionOptions(query);
             Fields = GetFieldsToFetch(query.Metadata, query.ProjectionBehavior, indexDefinition, indexType, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias, out AnyTimeSeries);
@@ -213,39 +213,6 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowInvalidFetchAllStoredDocuments()
         {
             throw new InvalidOperationException("Cannot fetch all stored path from a nested method");
-        }
-
-        public static Dictionary<string, FieldToFetch> GetFieldsToHighlight(
-            QueryMetadata metadata,
-            ProjectionBehavior? projectionBehavior,
-            IndexDefinitionBaseServerSide indexDefinition,
-            IndexType indexType)
-        {
-
-            var result = new Dictionary<string, FieldToFetch>(StringComparer.Ordinal);
-            
-            if (metadata.HasHighlightings)
-            {
-                var anyExtractableFromIndex = false;
-                var extractAllStoredFields = false;
-                var anyTimeSeries = false;
-
-                foreach (var highlightingField in metadata.Highlightings)
-                {
-                    if (result.TryGetValue(highlightingField.Field.Value, out _) == false)
-                    {
-                        var val = GetFieldToFetch(indexDefinition, metadata, projectionBehavior, highlightingField, result, indexType, out var key, ref anyExtractableFromIndex, ref extractAllStoredFields, ref anyTimeSeries);
-                        if (val == null)
-                            continue;
-
-                        result[key] = val;
-                    }
-                }
-
-                return result;
-            }
-
-            return new Dictionary<string, FieldToFetch>();
         }
 
         private static Dictionary<string, FieldToFetch> GetFieldsToFetch(

@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
 
                 if (FieldsToFetch.IsProjection)
-                    return GetProjection(ref retrieverInput, FieldsToFetch, id, token);
+                    return GetProjection(ref retrieverInput, id, token);
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {
