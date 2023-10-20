@@ -3389,7 +3389,7 @@ namespace Raven.Server.Documents.Indexes
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                                 IncludeRevisionsCommand includeRevisionsCommand = new(DocumentDatabase, queryContext.Documents, query.Metadata.RevisionIncludes);
 
-                                var fieldsToFetch = new FieldsToFetch(query, Definition, Type, SearchEngineType);
+                                var fieldsToFetch = new FieldsToFetch(query, Definition, Type);
 
                                 var includeDocumentsCommand = new IncludeDocumentsCommand(
                                     DocumentDatabase.DocumentsStorage, queryContext.Documents,
