@@ -1,4 +1,5 @@
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.Queue;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -7,6 +8,8 @@ namespace Raven.Server.Documents.ETL.Stats
         public string TaskName { get; set; }
 
         public EtlType EtlType { get; set; }
+        
+        public QueueBrokerType? QueueBrokerType { get; set; }
 
         public EtlProcessProgress[] ProcessesProgress { get; set; }
     }
@@ -14,6 +17,8 @@ namespace Raven.Server.Documents.ETL.Stats
     public class EtlProcessProgress
     {
         public string TransformationName { get; set; }
+        
+        public string TransactionalId { get; set; }
 
         public bool Completed { get; set; }
 
