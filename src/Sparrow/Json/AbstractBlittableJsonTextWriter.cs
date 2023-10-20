@@ -21,6 +21,7 @@ namespace Sparrow.Json
         private const byte Quote = (byte)'"';
         private const byte Colon = (byte)':';
 
+        public static ReadOnlySpan<byte> NewLineBuffer => "\r\n"u8;
         public static ReadOnlySpan<byte> NaNBuffer => "\"NaN\""u8;
         public static ReadOnlySpan<byte> PositiveInfinityBuffer => "\"Infinity\""u8;
         public static ReadOnlySpan<byte> NegativeInfinityBuffer => "\"-Infinity\""u8;
@@ -616,10 +617,9 @@ namespace Sparrow.Json
         public void WriteNull()
         {
             EnsureBuffer(4);
-            for (int i = 0; i < 4; i++)
-            {
-                _buffer[_pos++] = NullBuffer[i];
-            }
+
+            Unsafe.WriteUnaligned(_buffer + _pos, Unsafe.ReadUnaligned<int>(ref NullBuffer[0]));
+            _pos += sizeof(int);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -627,10 +627,16 @@ namespace Sparrow.Json
         {
             EnsureBuffer(5);
 
-            var buffer = val ? TrueBuffer : FalseBuffer;
-            for (int i = 0; i < buffer.Length; i++)
+            if (val)
             {
-                _buffer[_pos++] = buffer[i];
+                Unsafe.WriteUnaligned(_buffer + _pos, Unsafe.ReadUnaligned<int>(ref TrueBuffer[0]));
+                _pos += sizeof(int);
+            }
+            else
+            {
+                Unsafe.WriteUnaligned(_buffer + _pos, Unsafe.ReadUnaligned<int>(ref FalseBuffer[0]));
+                _pos += sizeof(int);
+                _buffer[_pos++] = FalseBuffer[sizeof(int)];
             }
         }
 
@@ -638,7 +644,8 @@ namespace Sparrow.Json
         public void WriteComma()
         {
             EnsureBuffer(1);
-            _buffer[_pos++] = Comma;
+            Unsafe.WriteUnaligned(_buffer + _pos, Comma);
+            _pos++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -652,8 +659,10 @@ namespace Sparrow.Json
         public void WritePropertyName(LazyStringValue prop)
         {
             WriteString(prop);
+
             EnsureBuffer(1);
-            _buffer[_pos++] = Colon;
+            Unsafe.WriteUnaligned(_buffer + _pos, Colon);
+            _pos++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -661,8 +670,10 @@ namespace Sparrow.Json
         {
             var lazyProp = _context.GetLazyStringForFieldWithCaching(prop);
             WriteString(lazyProp);
+
             EnsureBuffer(1);
-            _buffer[_pos++] = Colon;
+            Unsafe.WriteUnaligned(_buffer + _pos, Colon);
+            _pos++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -670,8 +681,10 @@ namespace Sparrow.Json
         {
             var lazyProp = _context.GetLazyStringForFieldWithCaching(prop);
             WriteString(lazyProp);
+
             EnsureBuffer(1);
-            _buffer[_pos++] = Colon;
+            Unsafe.WriteUnaligned(_buffer + _pos, Colon);
+            _pos++;
         }
 
         public void WriteInteger(long val)
@@ -679,7 +692,9 @@ namespace Sparrow.Json
             if (val == 0)
             {
                 EnsureBuffer(1);
-                _buffer[_pos++] = (byte)'0';
+                Unsafe.WriteUnaligned(_buffer + _pos, (byte)'0');
+                _pos++;
+
                 return;
             }
 
@@ -761,10 +776,8 @@ namespace Sparrow.Json
         public void WriteBufferFor(ReadOnlySpan<byte> buffer)
         {
             EnsureBuffer(buffer.Length);
-            for (int i = 0; i < buffer.Length; i++)
-            {
-                _buffer[_pos++] = buffer[i];
-            }
+            buffer.CopyTo(new Span<byte>(_buffer + _pos, buffer.Length));
+            _pos += buffer.Length;
         }
 
         public void WriteDouble(double val)
@@ -821,8 +834,8 @@ namespace Sparrow.Json
         public void WriteNewLine()
         {
             EnsureBuffer(2);
-            _buffer[_pos++] = (byte)'\r';
-            _buffer[_pos++] = (byte)'\n';
+            Unsafe.WriteUnaligned(_buffer + _pos, Unsafe.ReadUnaligned<short>(ref MemoryMarshal.GetReference(NewLineBuffer)));
+            _pos += sizeof(short);
         }
 
         public void WriteMemoryChunk(IntPtr ptr, int size)
