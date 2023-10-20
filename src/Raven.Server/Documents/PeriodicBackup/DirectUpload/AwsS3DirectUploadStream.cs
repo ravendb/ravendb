@@ -20,7 +20,7 @@ public class AwsS3DirectUploadStream : DirectUploadStream
 
     public AwsS3DirectUploadStream(Parameters parameters) : base(parameters.IsFullBackup, parameters.CloudUploadStatus, parameters.OnProgress)
     {
-        _client = new RavenAwsS3Client(parameters.Settings, parameters.Configuration, cancellationToken: parameters.CancellationToken);
+        _client = new RavenAwsS3Client(parameters.Settings, parameters.Configuration, Progress, parameters.CancellationToken);
         _retentionPolicyParameters = parameters.RetentionPolicyParameters;
 
         var key = BackupUploader.CombinePathAndKey(parameters.Settings.RemoteFolderName, parameters.FolderName, parameters.FileName);
