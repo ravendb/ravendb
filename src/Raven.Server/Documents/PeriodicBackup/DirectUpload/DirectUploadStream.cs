@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +18,8 @@ public abstract class DirectUploadStream : Stream
 
     protected abstract long MaxPartSizeInBytes { get; }
 
+    protected Progress Progress { get; }
+
     private long _position;
     private bool _initialized;
     private MemoryStream _writeStream = new();
@@ -34,6 +35,10 @@ public abstract class DirectUploadStream : Stream
 
         _cloudUploadStatus.Skipped = false;
         _backupStatusIDisposable = _cloudUploadStatus.UpdateStats(isFullBackup);
+
+        _cloudUploadStatus.UploadProgress.ChangeState(UploadState.PendingUpload);
+
+        Progress = Progress.Get(_cloudUploadStatus.UploadProgress, onProgress);
     }
 
     public override void Flush()
@@ -64,8 +69,8 @@ public abstract class DirectUploadStream : Stream
         }
 
         _position += count;
-
         _writeStream.Write(buffer, offset, count);
+        _cloudUploadStatus.UploadProgress.SetTotal(_position);
 
         var toUpload = _writeStream.Position;
         if (toUpload <= MaxPartSizeInBytes)
@@ -78,16 +83,8 @@ public abstract class DirectUploadStream : Stream
         }
 
         (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
-        
         _writeStream.Position = _uploadStream.Position = 0;
-            
-        var sp = Stopwatch.StartNew();
         _uploadTask = MultiPartUploader.UploadPartAsync(_uploadStream, toUpload);
-        _ = _uploadTask.ContinueWith(task =>
-        {
-            if (task.IsCompletedSuccessfully)
-                _onProgress.Invoke($"Uploaded {new Size(toUpload, SizeUnit.Bytes)}, took: {sp.ElapsedMilliseconds}ms");
-        });
     }
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -101,6 +98,7 @@ public abstract class DirectUploadStream : Stream
         _position += count;
 
         await _writeStream.WriteAsync(new ReadOnlyMemory<byte>(buffer, offset, count), cancellationToken);
+        _cloudUploadStatus.UploadProgress.SetTotal(_position);
 
         var toUpload = _writeStream.Position;
         if (toUpload <= MaxPartSizeInBytes)
@@ -113,16 +111,8 @@ public abstract class DirectUploadStream : Stream
         }
 
         (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
-
         _writeStream.Position = _uploadStream.Position = 0;
-
-        var sp = Stopwatch.StartNew();
         _uploadTask = MultiPartUploader.UploadPartAsync(_uploadStream, toUpload);
-        _ = _uploadTask.ContinueWith(task =>
-        {
-            if (task.IsCompletedSuccessfully)
-                _onProgress.Invoke($"Uploaded {new Size(toUpload, SizeUnit.Bytes)}, took: {sp.ElapsedMilliseconds}ms");
-        }, cancellationToken);
     }
 
     protected override void Dispose(bool disposing)
@@ -147,10 +137,7 @@ public abstract class DirectUploadStream : Stream
                 if (toUpload > 0)
                 {
                     _writeStream.Position = 0;
-
-                    var sp = Stopwatch.StartNew();
                     MultiPartUploader.UploadPart(_writeStream, toUpload);
-                    _onProgress.Invoke($"Uploaded {new Size(toUpload, SizeUnit.Bytes)}, took: {sp.ElapsedMilliseconds}ms");
                 }
             }
 

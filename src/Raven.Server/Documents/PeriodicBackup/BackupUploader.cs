@@ -284,32 +284,13 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                             AddInfo($"Starting the upload of backup file to {targetName}.");
 
-                            var bytesPutsPerSec = new MeterMetric();
-
-                            long lastUploadedInBytes = 0;
-                            var totalToUpload = new Size(uploadProgress.TotalInBytes, SizeUnit.Bytes).ToString();
-                            var sw = Stopwatch.StartNew();
-                            var progress = new Progress(uploadProgress)
-                            {
-                                OnUploadProgress = () =>
-                                {
-                                    if (sw.ElapsedMilliseconds <= 1000)
-                                        return;
-
-                                    var totalUploadedInBytes = uploadProgress.UploadedInBytes;
-                                    bytesPutsPerSec.MarkSingleThreaded(totalUploadedInBytes - lastUploadedInBytes);
-                                    lastUploadedInBytes = totalUploadedInBytes;
-                                    var uploaded = new Size(totalUploadedInBytes, SizeUnit.Bytes);
-                                    uploadProgress.BytesPutsPerSec = bytesPutsPerSec.MeanRate;
-                                    AddInfo($"Uploaded: {uploaded} / {totalToUpload}");
-                                    sw.Restart();
-                                }
-                            };
+                            var progress = Progress.Get(uploadProgress, AddInfo);
 
                             uploadProgress.ChangeState(UploadState.Uploading);
 
                             uploadToServer(settings, fileStream, progress);
 
+                            var totalToUpload = new Size(uploadProgress.TotalInBytes, SizeUnit.Bytes);
                             AddInfo($"Total uploaded: {totalToUpload}, took: {MsToHumanReadableString(uploadProgress.UploadTimeInMs)}");
                         }
                         finally
