@@ -502,20 +502,33 @@ namespace Sparrow.Json
 
         private void UnlikelyWriteLargeRawString(ReadOnlySpan<byte> buffer)
         {
+            ref byte bufferStart = ref MemoryMarshal.GetReference(buffer);
+            ref byte destination = ref Unsafe.AsRef<byte>(_buffer);
+
             // need to do this in pieces
             var posInStr = 0;
             while (posInStr < buffer.Length)
             {
-                var amountToCopy = Math.Min(buffer.Length - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize);
-                FlushInternal();
+                var amountToCopy = Math.Min(buffer.Length - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize - _pos);
+                if (amountToCopy == 0)
+                    goto End; // There is no space available to copy anything, let's just skip and move to flush. 
 
                 Unsafe.CopyBlockUnaligned(
-                    ref Unsafe.AsRef<byte>(_buffer), 
-                    ref Unsafe.AddByteOffset( ref MemoryMarshal.GetReference(buffer), (uint)posInStr ),
-                    (uint)buffer.Length);
+                    ref Unsafe.AddByteOffset(ref destination, (uint)_pos),
+                    ref Unsafe.AddByteOffset(ref bufferStart, (uint)posInStr),
+                    (uint)amountToCopy);
 
                 posInStr += amountToCopy;
-                _pos = amountToCopy;
+                _pos += amountToCopy;
+
+                // We are not gonna waste a buffer flush if we still have space for other things.
+                // Therefore, we will check if we are done (which is fast) and just break out if
+                // that's the case.
+                if (posInStr == buffer.Length)
+                    break;
+
+                End:
+                FlushInternal();
             }
         }
 
@@ -525,11 +538,22 @@ namespace Sparrow.Json
             var posInStr = 0;
             while (posInStr < size)
             {
-                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize);
-                FlushInternal();
-                Memory.Copy(_buffer, buffer + posInStr, amountToCopy);
+                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize - _pos);
+                if (amountToCopy == 0)
+                    goto End; // There is no space available to copy anything, let's just skip and move to flush. 
+
+                Memory.Copy(_buffer + _pos, buffer + posInStr, amountToCopy);
                 posInStr += amountToCopy;
-                _pos = amountToCopy;
+                _pos += amountToCopy;
+
+                // We are not gonna waste a buffer flush if we still have space for other things.
+                // Therefore, we will check if we are done (which is fast) and just break out if
+                // that's the case.
+                if (posInStr == size)
+                    break;
+
+                End:
+                FlushInternal();
             }
         }
 
@@ -839,13 +863,15 @@ namespace Sparrow.Json
 
         public void WriteMemoryChunk(byte* ptr, int size)
         {
-            FlushInternal();
             var leftToWrite = size;
+            if (leftToWrite >= JsonOperationContext.MemoryBuffer.DefaultSize - _pos)
+                FlushInternal();
+
             var totalWritten = 0;
             while (leftToWrite > 0)
             {
-                var toWrite = Math.Min(JsonOperationContext.MemoryBuffer.DefaultSize, leftToWrite);
-                Memory.Copy(_buffer, ptr + totalWritten, toWrite);
+                var toWrite = Math.Min(JsonOperationContext.MemoryBuffer.DefaultSize - _pos, leftToWrite);
+                Memory.Copy(_buffer + _pos, ptr + totalWritten, toWrite);
                 _pos += toWrite;
                 totalWritten += toWrite;
                 leftToWrite -= toWrite;
