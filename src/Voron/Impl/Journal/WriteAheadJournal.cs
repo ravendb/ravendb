@@ -28,6 +28,7 @@ using Sparrow.Threading;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
@@ -1478,9 +1479,10 @@ namespace Voron.Impl.Journal
                                 var scratchNumber = pagePosition.ScratchNumber;
                                 if (scratchPagerStates.TryGetValue(scratchNumber, out var pagerState) == false)
                                 {
-                                    pagerState = scratchBufferPool.GetPagerState(scratchNumber);
-                                    pagerState.AddRef();
-
+                                    // we're not under write transaction now, we need to acquire the pager state and use it for reading
+                                    var scratchBuffer = scratchBufferPool.GetScratchBufferFile(scratchNumber);
+                                    pagerState = scratchBuffer.File.Pager.GetPagerStateAndAddRefAtomically();
+                                   
                                     scratchPagerStates.Add(scratchNumber, pagerState);
                                 }
 
@@ -1488,7 +1490,7 @@ namespace Voron.Impl.Journal
                                 {
                                     using (tempTx) // release any resources, we just wanted to validate things
                                     {
-                                        var page = (PageHeader*)scratchBufferPool.AcquirePagePointerWithOverflowHandling(tempTx, scratchNumber, pagePosition.ScratchPage);
+                                        var page = (PageHeader*)scratchBufferPool.AcquirePagePointerWithOverflowHandling(tempTx, scratchNumber, pagePosition.ScratchPage, pagerState);
                                         var checksum = StorageEnvironment.CalculatePageChecksum((byte*)page, page->PageNumber, out var expectedChecksum);
                                         if (checksum != expectedChecksum)
                                             ThrowInvalidChecksumOnPageFromScratch(scratchNumber, pagePosition, page, checksum, expectedChecksum);
@@ -1834,7 +1836,7 @@ namespace Voron.Impl.Journal
             var pagesEncountered = 0;
             foreach (var txPage in txPages)
             {
-                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointerWithOverflowHandling(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointerWithOverflowHandling(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer, pagerState: null);
                 var pageHeader = (PageHeader*)scratchPage;
 
                 // When encryption is off, we do validation by checksum
