@@ -18,7 +18,7 @@ public class AwsS3DirectUploadStream : DirectUploadStream
 
     protected override long MaxPartSizeInBytes { get; }
 
-    public AwsS3DirectUploadStream(Parameters parameters) : base(parameters.OnProgress)
+    public AwsS3DirectUploadStream(Parameters parameters) : base(parameters.IsFullBackup, parameters.CloudUploadStatus, parameters.OnProgress)
     {
         _client = new RavenAwsS3Client(parameters.Settings, parameters.Configuration, cancellationToken: parameters.CancellationToken);
         _retentionPolicyParameters = parameters.RetentionPolicyParameters;
@@ -60,6 +60,8 @@ public class AwsS3DirectUploadStream : DirectUploadStream
         public string FileName { get; set; }
 
         public RetentionPolicyBaseParameters RetentionPolicyParameters { get; set; }
+
+        public UploadToS3 CloudUploadStatus { get; set; }
 
         public Action<string> OnProgress { get; set; }
 
