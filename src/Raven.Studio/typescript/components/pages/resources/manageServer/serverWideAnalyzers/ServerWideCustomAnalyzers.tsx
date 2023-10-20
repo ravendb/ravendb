@@ -11,8 +11,10 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import classNames from "classnames";
 import AnalyzersList from "./ServerWideCustomAnalyzersList";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function ServerWideCustomAnalyzers() {
@@ -23,7 +25,15 @@ export default function ServerWideCustomAnalyzers() {
     const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
 
     const hasServerWideCustomAnalyzers = useAppSelector(licenseSelectors.statusValue("HasServerWideAnalyzers"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasServerWideCustomAnalyzers);
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasServerWideCustomAnalyzers,
+            },
+        ],
+    });
 
     const resultsCount = asyncGetAnalyzers.result?.length ?? null;
 
@@ -122,3 +132,13 @@ export default function ServerWideCustomAnalyzers() {
         </div>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Server-Wide Custom Analyzers",
+        featureIcon: "server-wide-custom-analyzers",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

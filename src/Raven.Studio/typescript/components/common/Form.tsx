@@ -158,7 +158,7 @@ export function FormSelect<
     const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
 
     return (
-        <div>
+        <div className="d-flex flex-grow">
             <Select
                 value={selectedOptions}
                 onChange={(options: OnChangeValue<Option, IsMulti>) => {

@@ -3,18 +3,27 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import {useRavenLink} from "hooks/useRavenLink";
 
 export function EditExternalReplicationInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasExternalReplication,
+            },
+        ],
+    });
 
     const externalReplicationDocsLink = useRavenLink({ hash: "MZOBO3" });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasExternalReplication ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -58,9 +67,19 @@ export function EditExternalReplicationInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasExternalReplication}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "External Replication",
+        featureIcon: "external-replication",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

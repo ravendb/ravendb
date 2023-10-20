@@ -437,7 +437,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         enterprise: { value: Infinity },
     },
     {
-        featureName: "Max retention time",
+        featureName: "Max retention time (days)",
         featureIcon: "clock",
         community: { value: 45 },
         professional: { value: Infinity },

@@ -21,8 +21,10 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function ClientGlobalConfiguration() {
@@ -51,7 +53,15 @@ export default function ClientGlobalConfiguration() {
     useDirtyFlag(formState.isDirty);
 
     const hasClientConfiguration = useAppSelector(licenseSelectors.statusValue("HasClientConfiguration"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasClientConfiguration);
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasClientConfiguration,
+            },
+        ],
+    });
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -95,7 +105,7 @@ export default function ClientGlobalConfiguration() {
                             <FeatureNotAvailableInYourLicensePopover target="saveClientConfiguration" />
                         )}
                         <div className={hasClientConfiguration ? "" : "item-disabled pe-none"}>
-                            <Card className="card flex-column p-3 my-3">
+                            <Card className="flex-column p-3 my-3">
                                 <div className="d-flex flex-grow-1">
                                     <div className="md-label">
                                         Identity parts separator{" "}
@@ -112,8 +122,8 @@ export default function ClientGlobalConfiguration() {
                                         </div>
                                     </PopoverWithHover>
                                 </div>
-                                <Row className="flex-grow-1">
-                                    <Col className="d-flex">
+                                <Row>
+                                    <Col>
                                         <InputGroup>
                                             <InputGroupText>
                                                 <FormCheckbox control={control} name="identityPartsSeparatorEnabled" />
@@ -149,8 +159,8 @@ export default function ClientGlobalConfiguration() {
                                         </div>
                                     </PopoverWithHover>
                                 </div>
-                                <Row className="flex-grow-1">
-                                    <Col className="d-flex">
+                                <Row>
+                                    <Col>
                                         <InputGroup>
                                             <InputGroupText>
                                                 <FormCheckbox control={control} name="maximumNumberOfRequestsEnabled" />
@@ -212,9 +222,9 @@ export default function ClientGlobalConfiguration() {
                                         </PopoverWithHover>
                                     </div>
                                 </div>
-                                <Row className="mb-4">
-                                    <Col className="d-flex align-items-center gap-3">
-                                        <InputGroup className="d-flex flex-grow">
+                                <Row className="mb-3">
+                                    <Col>
+                                        <InputGroup>
                                             <InputGroupText>
                                                 <FormCheckbox control={control} name="loadBalancerEnabled" />
                                             </InputGroupText>
@@ -230,9 +240,8 @@ export default function ClientGlobalConfiguration() {
                                 </Row>
                                 {formValues.loadBalancerValue === "UseSessionContext" && (
                                     <>
-                                        <div className="d-flex flex-grow-1"></div>
-                                        <Row className="mb-4">
-                                            <Col className="d-flex align-items-center gap-3">
+                                        <Row className="mb-3">
+                                            <Col className="d-flex gap-3">
                                                 <FormSwitch
                                                     control={control}
                                                     name="loadBalancerSeedEnabled"
@@ -288,7 +297,7 @@ export default function ClientGlobalConfiguration() {
                                     </div>
                                 </div>
                                 <Row>
-                                    <Col className="d-flex">
+                                    <Col>
                                         <InputGroup>
                                             <InputGroupText>
                                                 <FormCheckbox control={control} name="readBalanceBehaviorEnabled" />
@@ -362,3 +371,13 @@ export default function ClientGlobalConfiguration() {
         </Form>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Client Configuration",
+        featureIcon: "client-configuration",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];
