@@ -4,17 +4,25 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditElasticSearchEtlInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
-    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+    const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasElasticSearchEtl,
+            },
+        ],
+    });
     
     const elasticSearchEtlDocsLink = useRavenLink({ hash: "AHPBTX" });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasElasticSearchEtl ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -69,9 +77,19 @@ export function EditElasticSearchEtlInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasElasticSearchEtl}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "ElasticSearch ETL",
+        featureIcon: "elastic-search-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

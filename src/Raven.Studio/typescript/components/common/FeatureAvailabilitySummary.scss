@@ -38,13 +38,15 @@
         --license-color: var(--license-enterprise);
         --decoration-color: var(--license-color);
     }
-
+    .current {
+        color: var(--license-color) !important;
+    }
     .corner-info {
         position: absolute;
         right: 0;
         top: 0;
         font-size: 0.75rem;
-        background-color: bs5variables.$panel-bg-1-var;
+        background-color: bs5variables.$well-bg-var;
         padding: 3px 3px bs5variables.$gutter-sm bs5variables.$gutter-sm;
         color: var(--decoration-color);
         clip-path: polygon(15% 0%, 100% 0%, 100% 85%);
@@ -73,7 +75,18 @@
             position: relative;
             [id^="overwritten-availability-value-"] {
                 position: absolute;
-                font-size: 0.875rem;
+                font-size: 0.75rem;
+                width: 16px;
+                height: 16px;
+                top: -4px;
+                &:before {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    width: 100%;
+                    height: 100%;
+                    padding-top: 4px;
+                }
             }
         }
 
@@ -107,6 +120,7 @@
                 }
             }
         }
+
         tbody {
             th {
                 font-size: bs5variables.$font-size-xs;
@@ -137,6 +151,12 @@
                 border-color: var(--decoration-color) !important;
                 border-top: 0;
                 border-bottom: 0;
+            }
+
+            tr:nth-last-child(2) {
+                td:last-of-type:not(.current) {
+                    border-radius: 0 0 $table-border-radius 0;
+                }
             }
 
             tr.current-indicator-row {

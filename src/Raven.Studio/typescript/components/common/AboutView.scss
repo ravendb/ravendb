@@ -74,7 +74,7 @@
 .about-view-accordion {
     .description {
         font-size: 0.75rem;
-        color: var(--text-muted);
+        color: colors.$text-muted-var;
     }
     .tab-icon {
         top: 3px;
@@ -86,7 +86,7 @@
     }
     .accordion-button {
         border-radius: sizes.$gutter-xs !important;
-        background: var(--panel-bg-1);
+        background-color: colors.$panel-bg-1-var;
         display: flex;
         align-items: baseline;
         transition: background-color 0.4s ease;
@@ -98,9 +98,12 @@
             background: transparent;
             box-shadow: none;
         }
+        h4 {
+            color: colors.$text-emphasis-var;
+        }
     }
     .accordion-item {
-        background: var(--panel-bg-1);
+        background-color: colors.$panel-bg-1-var;
         border: none;
         &:not(:first-of-type) {
             margin-top: sizes.$gutter-xxs;
@@ -153,15 +156,15 @@
         }
     }
     .licensing-cols {
-        background: var(--panel-bg-2);
+        background-color: colors.$panel-bg-2-var;
         padding: sizes.$gutter-sm sizes.$gutter;
         margin: sizes.$gutter;
         border-radius: sizes.$gutter-sm;
         .icon-cancel {
-            color: var(--bs-danger);
+            color: colors.$danger-var;
         }
         .icon-tick {
-            color: var(--bs-success);
+            color: colors.$success-var;
         }
     }
 }

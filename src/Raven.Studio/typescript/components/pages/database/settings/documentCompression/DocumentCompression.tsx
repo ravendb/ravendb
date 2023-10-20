@@ -7,8 +7,10 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { FormRadioToggleWithIcon, FormSelectCreatable, FormSwitch } from "components/common/Form";
@@ -58,7 +60,15 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
     const { Collections, CompressAllCollections } = useWatch({ control });
 
     const hasDocumentsCompression = useAppSelector(licenseSelectors.statusValue("HasDocumentsCompression"));
-    const featureAvailability = useEnterpriseLicenseAvailability(hasDocumentsCompression);
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasDocumentsCompression,
+            },
+        ],
+    });
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
@@ -295,3 +305,13 @@ const rightRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
     value: true,
     iconName: "documents",
 };
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Document Compression",
+        featureIcon: "documents-compression",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

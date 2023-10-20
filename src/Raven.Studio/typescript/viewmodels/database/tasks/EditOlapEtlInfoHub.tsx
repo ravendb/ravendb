@@ -4,17 +4,25 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditOlapEtlInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
-    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+    const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasOlapEtl,
+            },
+        ],
+    });
 
     const olapEtlDocsLink = useRavenLink({ hash: "LYZL56" });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasOlapEtl ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -70,9 +78,19 @@ export function EditOlapEtlInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasOlapEtl}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "OLAP ETL",
+        featureIcon: "olap-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

@@ -102,8 +102,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                                     <div className="p-2 text-center">
                                                         <div>
                                                             Developer license enables{" "}
-                                                            <strong>Enterprise License features</strong>
-                                                            <br /> but is{" "}
+                                                            <strong>Enterprise License features</strong> but is{" "}
                                                             <strong>not applicable for commercial use</strong>.
                                                         </div>
 
@@ -126,7 +125,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                     </thead>
                     <tbody>
                         {data.map((data, idx) => (
-                            <tr key={idx}>
+                            <tr key={idx} className="feature-row">
                                 <th className="p-0">
                                     {data.featureName && (
                                         <div className="p-2">
@@ -274,7 +273,7 @@ function formatAvailabilityValue(data: ValueData, canBeEnabledInCloud?: boolean)
         <>
             <div className="overwritten-value">
                 {formattedValue}
-                <Icon id={id} icon="info" color="info" />
+                <Icon id={id} icon="info" color="info" margin="m-0" />
                 <UncontrolledTooltip target={id}>
                     Default value for your license is {data.value.toString()}.
                 </UncontrolledTooltip>

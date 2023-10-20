@@ -4,17 +4,25 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditRavenEtlInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasRavenEtl"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasRavenEtl = useAppSelector(licenseSelectors.statusValue("HasRavenEtl"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasRavenEtl,
+            },
+        ],
+    });
     
     const ravenDbEtlDocsLink = useRavenLink({ hash: "GFSWLI" });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasRavenEtl ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -65,9 +73,19 @@ export function EditRavenEtlInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasRavenEtl}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "RavenDB ETL",
+        featureIcon: "ravendb-etl",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

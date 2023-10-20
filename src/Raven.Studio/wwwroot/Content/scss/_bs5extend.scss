@@ -121,6 +121,12 @@
     border-width: $spinner-border-width-xs;
 }
 
+.input-group {
+    .input-group-text ~ div > .input-group > input {
+        border-radius: 0 $input-border-radius $input-border-radius 0;
+    }
+}
+
 .form-control,
 .form-select {
     min-height: 37px;

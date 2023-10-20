@@ -22,8 +22,10 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
@@ -51,7 +53,15 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
     const { reportEvent } = useEventsCollector();
 
     const hasStudioConfiguration = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasStudioConfiguration);
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasStudioConfiguration,
+            },
+        ],
+    });
 
     const onSave: SubmitHandler<StudioDatabaseConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -200,3 +210,13 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
         </div>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Studio Configuration",
+        featureIcon: "studio-configuration",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];
