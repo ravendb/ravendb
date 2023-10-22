@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Client.Documents.Operations.Backups;
@@ -74,6 +75,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(SnapshotBackupCompressionAlgorithm.Zstd)]
         [ConfigurationEntry("Backup.Snapshot.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public SnapshotBackupCompressionAlgorithm SnapshotCompressionAlgorithm { get; set; }
+
+        [Description("Compression level that is used to perform snapshot backups.")]
+        [DefaultValue(CompressionLevel.Optimal)]
+        [ConfigurationEntry("Backup.Snapshot.Compression.Level", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public CompressionLevel SnapshotCompressionLevel { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
