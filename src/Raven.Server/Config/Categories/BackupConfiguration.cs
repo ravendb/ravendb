@@ -61,7 +61,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting CloudStorageOperationTimeout { get; set; }
 
         [Description("Disable the direct upload to an external destination, instead use a temp file to create the backup first.")]
-        [DefaultValue(false)]
+        [DefaultValue(true)]
         [ConfigurationEntry("Backup.DisableDirectUpload", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DisableDirectUpload { get; set; }
 
