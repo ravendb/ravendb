@@ -8,8 +8,6 @@ using Amazon.S3.Model;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
-using Sparrow;
-using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
