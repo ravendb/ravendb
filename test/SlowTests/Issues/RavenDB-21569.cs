@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static SlowTests.RavenDB_20425;
@@ -23,7 +24,7 @@ public class RavenDB_21569 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Revisions)]
     public async Task Delete_Outdated_Revisions_By_EnforceConfig_When_Revisions_Isnt_OrderedBy_LastModified()
     {
         using var store = GetDocumentStore();
@@ -67,7 +68,7 @@ public class RavenDB_21569 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Revisions)]
     public async Task Delete_Outdated_Revisions_By_EnforceConfig_WithMaxUponUpdate_When_Revisions_Isnt_OrderedBy_LastModified()
     {
         using var store = GetDocumentStore();

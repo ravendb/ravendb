@@ -672,7 +672,7 @@ namespace Raven.Server.Documents.Revisions
             {
                 revisionsToDelete = GetRevisionsForCollectionOrDefault(context, table, lowerIdPrefix,
                     configuration, result.PreviousCount,
-                    stopWhenReachingAge: nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration)==false, 
+                    stopWhenReachingAge: nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false,
                     result);
             }
 
