@@ -18,4 +18,17 @@ internal static class BackupCompressionAlgorithmExtensions
                 throw new ArgumentOutOfRangeException(nameof(compressionAlgorithm), compressionAlgorithm, null);
         }
     }
+
+    public static ExportCompressionAlgorithm ToExportCompressionAlgorithm(this SnapshotBackupCompressionAlgorithm compressionAlgorithm)
+    {
+        switch (compressionAlgorithm)
+        {
+            case SnapshotBackupCompressionAlgorithm.Zstd:
+                return ExportCompressionAlgorithm.Zstd;
+            case SnapshotBackupCompressionAlgorithm.Deflate:
+                return ExportCompressionAlgorithm.Gzip;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(compressionAlgorithm), compressionAlgorithm, null);
+        }
+    }
 }

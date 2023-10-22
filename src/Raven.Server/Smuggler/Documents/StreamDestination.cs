@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -51,21 +52,23 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentsOperationContext _context;
         private readonly DatabaseSource _source;
         private readonly ExportCompressionAlgorithm _compressionAlgorithm;
+        private readonly CompressionLevel _compressionLevel;
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
 
-        public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source, ExportCompressionAlgorithm compressionAlgorithm)
+        public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
         {
             _stream = stream;
             _context = context;
             _source = source;
             _compressionAlgorithm = compressionAlgorithm;
+            _compressionLevel = compressionLevel;
         }
 
         public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
-            _outputStream = BackupUtils.GetCompressionStream(_stream, _compressionAlgorithm);
+            _outputStream = BackupUtils.GetCompressionStream(_stream, _compressionAlgorithm, _compressionLevel);
             _writer = new AsyncBlittableJsonTextWriter(_context, _outputStream);
             _options = options;
 

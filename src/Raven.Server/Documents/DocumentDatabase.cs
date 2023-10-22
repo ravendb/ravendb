@@ -1214,18 +1214,16 @@ namespace Raven.Server.Documents
             using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             using (var zipArchive = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
             {
-                var backupZipArchive = new BackupZipArchive(zipArchive, compressionAlgorithm, compressionLevel);
-
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
-                    var zipArchiveEntry = backupZipArchive.CreateEntry(RestoreSettings.SmugglerValuesFileName);
+                    var zipArchiveEntry = zipArchive.CreateEntry(RestoreSettings.SmugglerValuesFileName);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     {
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         {
-                            var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource, Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm());
+                            var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource, compressionAlgorithm.ToExportCompressionAlgorithm(), compressionLevel);
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                             {
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
@@ -1246,7 +1244,7 @@ namespace Raven.Server.Documents
 
                     infoNotify?.Invoke(("Backed up Database Record", 1));
 
-                    zipArchiveEntry = backupZipArchive.CreateEntry(RestoreSettings.SettingsFileName);
+                    zipArchiveEntry = zipArchive.CreateEntry(RestoreSettings.SettingsFileName);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     using (var writer = new BlittableJsonTextWriter(serverContext, outputStream))
