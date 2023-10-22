@@ -854,7 +854,7 @@ namespace Raven.Server.Documents.ETL
                                     Logger.Operations($"{Tag} Failed to update state of ETL process '{Name}'", e);
 
                                 EnterFallbackMode(lastUpdateStateErrorTime);
-                                lastUpdateStateErrorTime = SystemTime.UtcNow;
+                                lastUpdateStateErrorTime = Database.Time.GetUtcNow();
 
                                 if (CancellationToken.WaitHandle.WaitOne(FallbackTime.Value))
                                     return;
