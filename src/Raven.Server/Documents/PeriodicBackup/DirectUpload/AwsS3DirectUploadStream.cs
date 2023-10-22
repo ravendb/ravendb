@@ -1,70 +1,30 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Sparrow;
-using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
-public class AwsS3DirectUploadStream : DirectUploadStream
+public class AwsS3DirectUploadStream : DirectUploadStream<RavenAwsS3Client>
 {
-    private readonly RavenAwsS3Client _client;
     private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
-
-    protected override IMultiPartUploader MultiPartUploader { get; }
 
     protected override long MaxPartSizeInBytes { get; }
 
-    public AwsS3DirectUploadStream(Parameters parameters) : base(parameters.IsFullBackup, parameters.CloudUploadStatus, parameters.OnProgress)
+    public AwsS3DirectUploadStream(Parameters parameters) : base(parameters)
     {
-        _client = new RavenAwsS3Client(parameters.Settings, parameters.Configuration, Progress, parameters.CancellationToken);
         _retentionPolicyParameters = parameters.RetentionPolicyParameters;
 
-        var key = BackupUploader.CombinePathAndKey(parameters.Settings.RemoteFolderName, parameters.FolderName, parameters.FileName);
-        MultiPartUploader = _client.GetUploader(key, new Dictionary<string, string>
-        {
-            {
-                "Description", BackupUploader.GetBackupDescription(parameters.BackupType, parameters.IsFullBackup)
-            }
-        });
-
-        MaxPartSizeInBytes = _client.MinOnePartUploadSizeLimit.GetValue(SizeUnit.Bytes);
+        MaxPartSizeInBytes = Client.MinOnePartUploadSizeLimit.GetValue(SizeUnit.Bytes);
     }
 
     protected override void Dispose(bool disposing)
     {
-        using (_client)
+        using (Client)
         {
             base.Dispose(disposing);
 
-            var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, _client);
+            var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, Client);
             runner.Execute();
         }
-    }
-
-    public class Parameters
-    {
-        public S3Settings Settings { get; set; }
-
-        public BackupConfiguration Configuration { get; set; }
-
-        public BackupType BackupType { get; set; }
-
-        public bool IsFullBackup { get; set; }
-
-        public string FolderName { get; set; }
-
-        public string FileName { get; set; }
-
-        public RetentionPolicyBaseParameters RetentionPolicyParameters { get; set; }
-
-        public UploadToS3 CloudUploadStatus { get; set; }
-
-        public Action<string> OnProgress { get; set; }
-
-        public CancellationToken CancellationToken { get; set; }
     }
 }

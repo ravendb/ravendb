@@ -13,6 +13,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
@@ -687,18 +688,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var s3Settings = GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                             settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
 
-                        return new AwsS3DirectUploadStream(new AwsS3DirectUploadStream.Parameters
+                        return new AwsS3DirectUploadStream(new DirectUploadStream<RavenAwsS3Client>.Parameters
                         {
-                            Settings = s3Settings,
-                            Configuration = _database.Configuration.Backup,
-                            BackupType = _configuration.BackupType,
+                            Client = progress => new RavenAwsS3Client(s3Settings, _database.Configuration.Backup, progress, TaskCancelToken.Token),
+                            Key = BackupUploader.CombinePathAndKey(s3Settings.RemoteFolderName, folderName, fileName),
+                            Metadata = new Dictionary<string, string>
+                            {
+                                { "Description", BackupUploader.GetBackupDescription(_configuration.BackupType, _isFullBackup) }
+                            },
                             IsFullBackup = _isFullBackup,
-                            FolderName = folderName,
-                            FileName = fileName,
                             RetentionPolicyParameters = _retentionPolicyParameters,
                             CloudUploadStatus = _backupResult.S3Backup,
                             OnProgress = AddInfo,
-                            CancellationToken = TaskCancelToken.Token
                         });
 
                 default:
@@ -887,7 +888,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     file.Flush(flushToDisk: true);
                     break;
 
-                case DirectUploadStream:
+                case DirectUploadStream<RavenAwsS3Client>:
                     break;
 
                 default:
