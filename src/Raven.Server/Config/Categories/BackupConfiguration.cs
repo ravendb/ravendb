@@ -77,7 +77,7 @@ namespace Raven.Server.Config.Categories
         public SnapshotBackupCompressionAlgorithm SnapshotCompressionAlgorithm { get; set; }
 
         [Description("Compression level that is used to perform snapshot backups.")]
-        [DefaultValue(CompressionLevel.Optimal)]
+        [DefaultValue(CompressionLevel.Fastest)]
         [ConfigurationEntry("Backup.Snapshot.Compression.Level", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public CompressionLevel SnapshotCompressionLevel { get; set; }
 
