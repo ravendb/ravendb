@@ -201,7 +201,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex, Logger);
                 await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
-                    var destination = new StreamDestination(outputStream, context, source, options.CompressionAlgorithm ?? Database.Configuration.ExportImport.CompressionAlgorithm);
+                    var destination = new StreamDestination(outputStream, context, source, options.CompressionAlgorithm ?? Database.Configuration.ExportImport.CompressionAlgorithm, options.CompressionLevel ?? Database.Configuration.ExportImport.CompressionLevel);
                     var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();
                 }

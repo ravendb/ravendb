@@ -60,14 +60,14 @@ internal static class BackupUtils
         }
     }
 
-    internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm)
+    internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
     {
         switch (compressionAlgorithm)
         {
             case ExportCompressionAlgorithm.Gzip:
-                return new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
+                return new GZipStream(stream, compressionLevel, leaveOpen: true);
             case ExportCompressionAlgorithm.Zstd:
-                return ZstdStream.Compress(stream, leaveOpen: true);
+                return ZstdStream.Compress(stream, compressionLevel, leaveOpen: true);
             default:
                 throw new ArgumentOutOfRangeException();
         }
