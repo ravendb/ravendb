@@ -160,7 +160,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 LastBatchAckTime: null,
                 MentorNode: null,
                 PinToMentorNode: false,
-                NodeTag: null
+                NodeTag: null,
+                RaftCommandIndex: 0
             });
     }
 }

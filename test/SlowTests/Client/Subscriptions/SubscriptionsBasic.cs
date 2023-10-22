@@ -26,7 +26,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
@@ -341,7 +340,7 @@ namespace SlowTests.Client.Subscriptions
 
                     Assert.True(await ackFirstCV.WaitAsync(_reasonableWaitTime));
 
-                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
+                    SubscriptionState subscriptionState;
                     using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {

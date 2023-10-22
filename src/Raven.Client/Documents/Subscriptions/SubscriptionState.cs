@@ -22,7 +22,9 @@ namespace Raven.Client.Documents.Subscriptions
         public string NodeTag { get; set; }
         public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
-        
+        // raft index used to create or update subscription task
+        public long RaftCommandIndex { get; set; }
+
         public bool Disabled { get; set; }
 
         public ulong GetTaskKey()
@@ -68,8 +70,9 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
-                [nameof(Disabled)] = Disabled
-            };
+                [nameof(Disabled)] = Disabled,
+                [nameof(RaftCommandIndex)] = RaftCommandIndex
+        };
 
             return djv;
         }
