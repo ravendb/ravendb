@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -43,8 +42,11 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string LegacyDateTimeFormat = "yyyy-MM-dd-HH-mm";
         private const string InProgressExtension = ".in-progress";
 
-        private readonly DocumentDatabase _database;
-        private readonly BackupConfiguration _configuration;
+        protected readonly DocumentDatabase Database;
+        protected readonly BackupConfiguration Configuration;
+        protected readonly BackupResult BackupResult;
+        protected readonly RetentionPolicyBaseParameters RetentionPolicyParameters;
+
         private readonly PeriodicBackupStatus _previousBackupStatus;
         internal readonly bool _isFullBackup;
         private readonly bool _isOneTimeBackup;
@@ -53,19 +55,16 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly PathSetting _tempBackupPath;
         private readonly Logger _logger;
         public readonly OperationCancelToken TaskCancelToken;
-        private readonly BackupResult _backupResult;
         private readonly bool _isServerWide;
         private readonly bool _isBackupEncrypted;
-        private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
         private Action<IOperationProgress> _onProgress;
         private readonly string _taskName;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
-        private readonly DirectUploadDestination _directUploadDestination;
 
         public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
-            _database = database;
+            Database = database;
             _taskName = backupParameters.Name;
             _operationId = backupParameters.OperationId;
             _previousBackupStatus = backupParameters.BackupStatus;
@@ -74,20 +73,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             _isFullBackup = backupParameters.IsFullBackup;
             _backupToLocalFolder = backupParameters.BackupToLocalFolder;
             _tempBackupPath = backupParameters.TempBackupPath;
-            _configuration = configuration;
+            Configuration = configuration;
             _logger = logger;
             _isServerWide = backupParameters.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
-            _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
+            _isBackupEncrypted = IsBackupEncrypted(Database, Configuration);
             _forTestingPurposes = forTestingPurposes;
-            _backupResult = GenerateBackupResult();
-            _directUploadDestination = GetDirectUploadDestination();
+            BackupResult = GenerateBackupResult();
 
-            TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown, CancellationToken.None);
+            TaskCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken.None);
 
-            _retentionPolicyParameters = new RetentionPolicyBaseParameters
+            RetentionPolicyParameters = new RetentionPolicyBaseParameters
             {
                 RetentionPolicy = backupParameters.RetentionPolicy,
-                DatabaseName = _database.Name,
+                DatabaseName = Database.Name,
                 IsFullBackup = _isFullBackup,
                 OnProgress = AddInfo,
                 CancellationToken = TaskCancelToken.Token
@@ -108,8 +106,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
                 if (_forTestingPurposes != null && _forTestingPurposes.OnBackupTaskRunHoldBackupExecution != null)
                     _forTestingPurposes.OnBackupTaskRunHoldBackupExecution.Task.Wait();
-                if (_database.ForTestingPurposes != null && _database.ForTestingPurposes.ActionToCallOnGetTempPath != null)
-                    _database.ForTestingPurposes.ActionToCallOnGetTempPath.Invoke(_tempBackupPath);
+                if (Database.ForTestingPurposes != null && Database.ForTestingPurposes.ActionToCallOnGetTempPath != null)
+                    Database.ForTestingPurposes.ActionToCallOnGetTempPath.Invoke(_tempBackupPath);
 
                 if (runningBackupStatus.LocalBackup == null)
                     runningBackupStatus.LocalBackup = new LocalBackup();
@@ -121,7 +119,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_logger.IsInfoEnabled)
                 {
-                    var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
+                    var fullBackupText = "a " + (Configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
                     _logger.Info($"Creating {(_isFullBackup ? fullBackupText : "an incremental backup")}");
                 }
 
@@ -131,7 +129,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _previousBackupStatus.LastRaftIndex ??= new LastRaftIndex();
 
                     // no-op if nothing has changed
-                    var (currentLastEtag, currentChangeVector) = _database.ReadLastEtagAndChangeVector();
+                    var (currentLastEtag, currentChangeVector) = Database.ReadLastEtagAndChangeVector();
                     var currentLastRaftIndex = GetDatabaseEtagForBackup();
 
                     // if we come from old version the _previousBackupStatus won't have LastRaftIndex
@@ -149,22 +147,22 @@ namespace Raven.Server.Documents.PeriodicBackup
                         runningBackupStatus.LastIncrementalBackup = _startTimeUtc;
                         runningBackupStatus.LocalBackup.LastIncrementalBackup = _startTimeUtc;
                         runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
-                        DatabaseSmuggler.EnsureProcessed(_backupResult);
+                        DatabaseSmuggler.EnsureProcessed(BackupResult);
                         AddInfo(message);
 
-                        return _backupResult;
+                        return BackupResult;
                     }
                 }
 
                 // update the local configuration before starting the local backup
-                var localSettings = GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
-                    settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, _database.Name));
+                var localSettings = GetBackupConfigurationFromScript(Configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
+                    settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, Database.Name));
 
                 GenerateFolderNameAndBackupDirectory(localSettings, _startTimeUtc, out var nowAsString, out var folderName, out var backupDirectory);
                 var startEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
 
-                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, nowAsString, _configuration.BackupType, out string backupFilePath);
+                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, nowAsString, Configuration.BackupType, out string backupFilePath);
                 var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, folderName, fileName, startEtag, startRaftIndex);
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
@@ -177,21 +175,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    runningBackupStatus.UploadToS3 = _backupResult.S3Backup;
-                    runningBackupStatus.UploadToAzure = _backupResult.AzureBackup;
-                    runningBackupStatus.UploadToGoogleCloud = _backupResult.GoogleCloudBackup;
-                    runningBackupStatus.UploadToGlacier = _backupResult.GlacierBackup;
-                    runningBackupStatus.UploadToFtp = _backupResult.FtpBackup;
+                    runningBackupStatus.UploadToS3 = BackupResult.S3Backup;
+                    runningBackupStatus.UploadToAzure = BackupResult.AzureBackup;
+                    runningBackupStatus.UploadToGoogleCloud = BackupResult.GoogleCloudBackup;
+                    runningBackupStatus.UploadToGlacier = BackupResult.GlacierBackup;
+                    runningBackupStatus.UploadToFtp = BackupResult.FtpBackup;
 
-                    _backupResult.LocalBackup = new LocalBackup
+                    BackupResult.LocalBackup = new LocalBackup
                     {
                         BackupDirectory = folderName,
                         FileName = fileName
                     };
 
-                    // if user did not specify local folder and it's isn't a direct upload, we delete the temporary file
-                    if (_backupToLocalFolder == false && _directUploadDestination == DirectUploadDestination.Disabled)
+                    if (_backupToLocalFolder == false)
                     {
+                        // if user did not specify a local folder, we delete the temporary file
                         DeleteFile(backupFilePath);
                     }
                 }
@@ -210,12 +208,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_logger.IsInfoEnabled)
                 {
-                    var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? " full backup" : " snapshot");
+                    var fullBackupText = "a " + (Configuration.BackupType == BackupType.Backup ? " full backup" : " snapshot");
                     _logger.Info($"Successfully created {(_isFullBackup ? fullBackupText : "an incremental backup")} " +
                                  $"in {totalSw.ElapsedMilliseconds:#,#;;0} ms");
                 }
 
-                return _backupResult;
+                return BackupResult;
             }
             catch (ObjectDisposedException)
             {
@@ -242,8 +240,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(message, e);
 
-                _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name,
+                Database.NotificationCenter.Add(AlertRaised.Create(
+                    Database.Name,
                     $"Periodic Backup task: '{_taskName}'",
                     message,
                     AlertType.PeriodicBackup,
@@ -264,7 +262,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     else
                         runningBackupStatus.LastIncrementalBackupInternal = _startTimeUtc;
 
-                    runningBackupStatus.NodeTag = _database.ServerStore.NodeTag;
+                    runningBackupStatus.NodeTag = Database.ServerStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
                     UpdateOperationId(runningBackupStatus);
 
@@ -274,17 +272,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // save the backup status
                         // create a local copy of ref `runningBackupStatus` so that it can be used in the anonymous method.
                         var status = runningBackupStatus;
-                        BackupUtils.SaveBackupStatus(status, _database.Name, _database.ServerStore, _logger, _backupResult, _onProgress, TaskCancelToken);
+                        BackupUtils.SaveBackupStatus(status, Database.Name, Database.ServerStore, _logger, BackupResult, _onProgress, TaskCancelToken);
                     }
                 }
             }
         }
 
-        private T GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc,
+        protected T GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc,
             Action<T> updateServerWideSettingsFunc)
             where T : BackupSettings
         {
-            return GetBackupConfigurationFromScript(backupSettings, deserializeSettingsFunc, _database, updateServerWideSettingsFunc, _isServerWide);
+            return GetBackupConfigurationFromScript(backupSettings, deserializeSettingsFunc, Database, updateServerWideSettingsFunc, _isServerWide);
         }
 
         internal static T GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc, DocumentDatabase documentDatabase,
@@ -388,10 +386,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private long GetDatabaseEtagForBackup()
         {
-            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(context, _database.Name);
+                var rawRecord = Database.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name);
 
                 return rawRecord.EtagForBackup;
             }
@@ -406,7 +404,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 while (true)
                 {
                     nowAsString = GetFormattedDate(nowInLocalTime);
-                    folderName = $"{nowAsString}.ravendb-{_database.Name}-{_database.ServerStore.NodeTag}-{_configuration.BackupType.ToString().ToLower()}";
+                    folderName = $"{nowAsString}.ravendb-{Database.Name}-{Database.ServerStore.NodeTag}-{Configuration.BackupType.ToString().ToLower()}";
                     backupDirectory = _backupToLocalFolder ? new PathSetting(localSettings.FolderPath).Combine(folderName) : _tempBackupPath;
 
                     if (_backupToLocalFolder == false || DirectoryContainsBackupFiles(backupDirectory.FullPath, IsAnyBackupFile) == false)
@@ -440,7 +438,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 SnapshotBackup =
                 {
-                    Skipped = _isFullBackup == false || _configuration.BackupType == BackupType.Backup
+                    Skipped = _isFullBackup == false || Configuration.BackupType == BackupType.Backup
                 },
                 S3Backup =
                 {
@@ -571,9 +569,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     BackupTypeValidation();
 
-                    AddInfo($"Started {GetBackupDescription(_configuration.BackupType, _isFullBackup)}");
-                    if (_configuration.BackupType == BackupType.Backup ||
-                        _configuration.BackupType == BackupType.Snapshot && _isFullBackup == false)
+                    AddInfo($"Started {GetBackupDescription(Configuration.BackupType, _isFullBackup)}");
+                    if (Configuration.BackupType == BackupType.Backup ||
+                        Configuration.BackupType == BackupType.Snapshot && _isFullBackup == false)
                     {
                         // smuggler backup
                         var options = new DatabaseSmugglerOptionsServerSide
@@ -593,8 +591,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                         else
                         {
-                            if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag &&
-                                _backupResult.GetLastRaftIndex() == _previousBackupStatus.LastRaftIndex.LastEtag)
+                            if (BackupResult.GetLastEtag() == _previousBackupStatus.LastEtag &&
+                                BackupResult.GetLastRaftIndex() == _previousBackupStatus.LastRaftIndex.LastEtag)
                             {
                                 internalBackupResult.LastEtag = startEtag ?? 0;
                                 internalBackupResult.LastDatabaseChangeVector = _previousBackupStatus.LastDatabaseChangeVector;
@@ -611,29 +609,29 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // snapshot backup
                         ValidateFreeSpaceForSnapshot(tempBackupFilePath);
 
-                        (internalBackupResult.LastEtag, internalBackupResult.LastDatabaseChangeVector) = _database.ReadLastEtagAndChangeVector();
+                        (internalBackupResult.LastEtag, internalBackupResult.LastDatabaseChangeVector) = Database.ReadLastEtagAndChangeVector();
                         internalBackupResult.LastRaftIndex = GetDatabaseEtagForBackup();
-                        var databaseSummary = _database.GetDatabaseSummary();
-                        var indexesCount = _database.IndexStore.Count;
+                        var databaseSummary = Database.GetDatabaseSummary();
+                        var indexesCount = Database.IndexStore.Count;
 
                         var totalSw = Stopwatch.StartNew();
                         var sw = Stopwatch.StartNew();
-                        var compressionAlgorithm = _configuration.SnapshotSettings?.CompressionAlgorithm ?? _database.Configuration.Backup.SnapshotCompressionAlgorithm;
-                        var compressionLevel = _configuration.SnapshotSettings?.CompressionLevel ?? _database.Configuration.Backup.SnapshotCompressionLevel;
-                        var excludeIndexes = _configuration.SnapshotSettings?.ExcludeIndexes ?? false;
+                        var compressionAlgorithm = Configuration.SnapshotSettings?.CompressionAlgorithm ?? _database.Configuration.Backup.SnapshotCompressionAlgorithm;
+                        var compressionLevel = Configuration.SnapshotSettings?.CompressionLevel ?? _database.Configuration.Backup.SnapshotCompressionLevel;
+                        var excludeIndexes = Configuration.SnapshotSettings?.ExcludeIndexes ?? false;
 
                         using (var stream = GetStreamForBackupDestination(tempBackupFilePath, folderName, fileName))
                         {
-                            var smugglerResult = _database.FullBackupTo(stream, compressionAlgorithm, compressionLevel, excludeIndexes,
+                            var smugglerResult = Database.FullBackupTo(stream, compressionAlgorithm, compressionLevel, excludeIndexes,
                                 info =>
                                 {
                                     AddInfo(info.Message);
 
-                                    _backupResult.SnapshotBackup.ReadCount += info.FilesCount;
+                                    BackupResult.SnapshotBackup.ReadCount += info.FilesCount;
                                     if (sw.ElapsedMilliseconds > 0 && info.FilesCount > 0)
                                     {
-                                        AddInfo($"Backed up {_backupResult.SnapshotBackup.ReadCount} " +
-                                                $"file{(_backupResult.SnapshotBackup.ReadCount > 1 ? "s" : string.Empty)}");
+                                        AddInfo($"Backed up {BackupResult.SnapshotBackup.ReadCount} " +
+                                                $"file{(BackupResult.SnapshotBackup.ReadCount > 1 ? "s" : string.Empty)}");
                                         sw.Restart();
                                     }
                                 }, TaskCancelToken.Token);
@@ -643,12 +641,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                             EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
                         }
 
-                        AddInfo($"Backed up {_backupResult.SnapshotBackup.ReadCount} files, " +
+                        AddInfo($"Backed up {BackupResult.SnapshotBackup.ReadCount} files, " +
                                 $"took: {totalSw.ElapsedMilliseconds:#,#;;0}ms");
                     }
 
-                    if (_directUploadDestination == DirectUploadDestination.Disabled)
-                        IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
+                    RenameFile(backupFilePath, tempBackupFilePath);
 
                     status.LocalBackup.Exception = null;
                 }
@@ -656,11 +653,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     status.LocalBackup.Exception = e.ToString();
 
-                    if (_directUploadDestination == DirectUploadDestination.Disabled)
-                    {
-                        // deleting the temp backup file if the backup failed
-                        DeleteFile(tempBackupFilePath);
-                    }
+                    // deleting the temp backup file if the backup failed
+                    DeleteFile(tempBackupFilePath);
+
                     throw;
                 }
             }
@@ -668,7 +663,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_backupToLocalFolder)
             {
                 var sp = Stopwatch.StartNew();
-                var localRetentionPolicy = new LocalRetentionPolicyRunner(_retentionPolicyParameters, _configuration.LocalSettings.FolderPath);
+                var localRetentionPolicy = new LocalRetentionPolicyRunner(RetentionPolicyParameters, Configuration.LocalSettings.FolderPath);
                 localRetentionPolicy.Execute();
                 sp.Stop();
                 status.LocalRetentionDurationInMs = sp.ElapsedMilliseconds;
@@ -677,76 +672,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             return internalBackupResult;
         }
 
-        private Stream GetStreamForBackupDestination(string filePath, string folderName, string fileName)
+        protected virtual void RenameFile(string backupFilePath, string tempBackupFilePath)
         {
-            switch (_directUploadDestination)
-            {
-                case DirectUploadDestination.Disabled:
-                    return SafeFileStream.Create(filePath, FileMode.Create);
-
-                    case DirectUploadDestination.S3:
-                        var s3Settings = GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
-                            settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
-
-                        return new AwsS3DirectUploadStream(new DirectUploadStream<RavenAwsS3Client>.Parameters
-                        {
-                            Client = progress => new RavenAwsS3Client(s3Settings, _database.Configuration.Backup, progress, TaskCancelToken.Token),
-                            Key = BackupUploader.CombinePathAndKey(s3Settings.RemoteFolderName, folderName, fileName),
-                            Metadata = new Dictionary<string, string>
-                            {
-                                { "Description", BackupUploader.GetBackupDescription(_configuration.BackupType, _isFullBackup) }
-                            },
-                            IsFullBackup = _isFullBackup,
-                            RetentionPolicyParameters = _retentionPolicyParameters,
-                            CloudUploadStatus = _backupResult.S3Backup,
-                            OnProgress = AddInfo,
-                        });
-
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
         }
 
-        private DirectUploadDestination GetDirectUploadDestination()
+        protected virtual Stream GetStreamForBackupDestination(string filePath, string folderName, string fileName)
         {
-            if (_backupToLocalFolder)
-            {
-                // we'll do the local backup and then upload it
-                return DirectUploadDestination.Disabled;
-            }
-
-            if (_database.Configuration.Backup.DisableDirectUpload)
-            {
-                // disabled by configuration
-                return DirectUploadDestination.Disabled;
-            }
-
-            var hasAws = BackupConfiguration.CanBackupUsing(_configuration.S3Settings);
-            var hasGlacier = BackupConfiguration.CanBackupUsing(_configuration.GlacierSettings);
-            var hasAzure = BackupConfiguration.CanBackupUsing(_configuration.GlacierSettings);
-            var hasGoogleCloud = BackupConfiguration.CanBackupUsing(_configuration.GoogleCloudSettings);
-            var hasFtp = BackupConfiguration.CanBackupUsing(_configuration.GoogleCloudSettings);
-
-            var destinations = new List<bool> { hasAws, hasGlacier, hasAzure, hasGoogleCloud, hasFtp };
-            if (destinations.Count(x => x) != 1)
-            {
-                // direct upload is supported only for 1 destination
-                return DirectUploadDestination.Disabled;
-            }
-
-            if (hasAws)
-            {
-                return DirectUploadDestination.S3;
-            }
-
-            // all other destinations are currently not supported
-            return DirectUploadDestination.Disabled;
-        }
-
-        private enum DirectUploadDestination
-        {
-            Disabled,
-            S3
+            return SafeFileStream.Create(filePath, FileMode.Create);
         }
 
         public static string GetBackupDescription(BackupType backupType, bool isFull)
@@ -756,7 +689,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return $"{isFullText} {backupTypeText}";
         }
 
-        private void DeleteFile(string path)
+        protected virtual void DeleteFile(string path)
         {
             try
             {
@@ -769,19 +702,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void ValidateFreeSpaceForSnapshot(string filePath)
+        protected virtual void ValidateFreeSpaceForSnapshot(string filePath)
         {
-            if (_directUploadDestination != DirectUploadDestination.Disabled)
-            {
-                // we're uploading directly without using a local file.
-                return;
-            }
-
             long totalUsedSpace = 0;
-            foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
+            foreach (var mountPointUsage in Database.GetMountPointsUsage(includeTempBuffers: false))
             {
                 if (mountPointUsage.Type == nameof(StorageEnvironmentType.Index) &&
-                   _configuration.SnapshotSettings is { ExcludeIndexes: true })
+                   Configuration.SnapshotSettings is { ExcludeIndexes: true })
                     continue;
 
                 totalUsedSpace += mountPointUsage.UsedSpace;
@@ -794,52 +721,52 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void BackupTypeValidation()
         {
-            if (_database.MasterKey == null &&
-                _configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
+            if (Database.MasterKey == null &&
+                Configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
                 throw new InvalidOperationException("Can't use database key for backup encryption, the key doesn't exist");
 
-            if (_configuration.BackupType == BackupType.Snapshot && _isFullBackup &&
-                _configuration.BackupEncryptionSettings != null &&
-                _configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey)
+            if (Configuration.BackupType == BackupType.Snapshot && _isFullBackup &&
+                Configuration.BackupEncryptionSettings != null &&
+                Configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey)
                 throw new InvalidOperationException("Can't snapshot an encrypted database with a different key");
         }
 
         private void EnsureSnapshotProcessed(DatabaseSummary databaseSummary, SmugglerResult snapshotSmugglerResult, long indexesCount)
         {
-            _backupResult.SnapshotBackup.Processed = true;
-            _backupResult.DatabaseRecord.Processed = true;
-            _backupResult.RevisionDocuments.Attachments.Processed = true;
-            _backupResult.Tombstones.Processed = true;
-            _backupResult.Indexes.Processed = true;
-            _backupResult.Indexes.ReadCount = indexesCount;
+            BackupResult.SnapshotBackup.Processed = true;
+            BackupResult.DatabaseRecord.Processed = true;
+            BackupResult.RevisionDocuments.Attachments.Processed = true;
+            BackupResult.Tombstones.Processed = true;
+            BackupResult.Indexes.Processed = true;
+            BackupResult.Indexes.ReadCount = indexesCount;
 
-            _backupResult.Documents.Processed = true;
-            _backupResult.Documents.ReadCount = databaseSummary.DocumentsCount;
-            _backupResult.Documents.Attachments.Processed = true;
-            _backupResult.Documents.Attachments.ReadCount = databaseSummary.AttachmentsCount;
-            _backupResult.Counters.Processed = true;
-            _backupResult.Counters.ReadCount = databaseSummary.CounterEntriesCount;
-            _backupResult.RevisionDocuments.Processed = true;
-            _backupResult.RevisionDocuments.ReadCount = databaseSummary.RevisionsCount;
-            _backupResult.Conflicts.Processed = true;
-            _backupResult.Conflicts.ReadCount = databaseSummary.ConflictsCount;
+            BackupResult.Documents.Processed = true;
+            BackupResult.Documents.ReadCount = databaseSummary.DocumentsCount;
+            BackupResult.Documents.Attachments.Processed = true;
+            BackupResult.Documents.Attachments.ReadCount = databaseSummary.AttachmentsCount;
+            BackupResult.Counters.Processed = true;
+            BackupResult.Counters.ReadCount = databaseSummary.CounterEntriesCount;
+            BackupResult.RevisionDocuments.Processed = true;
+            BackupResult.RevisionDocuments.ReadCount = databaseSummary.RevisionsCount;
+            BackupResult.Conflicts.Processed = true;
+            BackupResult.Conflicts.ReadCount = databaseSummary.ConflictsCount;
 
-            _backupResult.Identities.Processed = true;
-            _backupResult.Identities.ReadCount = snapshotSmugglerResult.Identities.ReadCount;
-            _backupResult.CompareExchange.Processed = true;
-            _backupResult.CompareExchange.ReadCount = snapshotSmugglerResult.CompareExchange.ReadCount;
-            _backupResult.CompareExchangeTombstones.Processed = true;
-            _backupResult.Subscriptions.Processed = true;
-            _backupResult.Subscriptions.ReadCount = snapshotSmugglerResult.Subscriptions.ReadCount;
+            BackupResult.Identities.Processed = true;
+            BackupResult.Identities.ReadCount = snapshotSmugglerResult.Identities.ReadCount;
+            BackupResult.CompareExchange.Processed = true;
+            BackupResult.CompareExchange.ReadCount = snapshotSmugglerResult.CompareExchange.ReadCount;
+            BackupResult.CompareExchangeTombstones.Processed = true;
+            BackupResult.Subscriptions.Processed = true;
+            BackupResult.Subscriptions.ReadCount = snapshotSmugglerResult.Subscriptions.ReadCount;
 
-            _backupResult.TimeSeries.Processed = true;
-            _backupResult.TimeSeries.ReadCount = databaseSummary.TimeSeriesSegmentsCount;
+            BackupResult.TimeSeries.Processed = true;
+            BackupResult.TimeSeries.ReadCount = databaseSummary.TimeSeriesSegmentsCount;
         }
 
-        private void AddInfo(string message)
+        protected void AddInfo(string message)
         {
-            _backupResult.AddInfo(message);
-            _onProgress.Invoke(_backupResult.Progress);
+            BackupResult.AddInfo(message);
+            _onProgress.Invoke(BackupResult.Progress);
         }
 
         private InternalBackupResult CreateBackup(DatabaseSmugglerOptionsServerSide options, string backupFilePath, string folderName, string fileName, long? startDocumentEtag, long? startRaftIndex)
@@ -851,16 +778,16 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             using (var stream = GetStreamForBackupDestination(backupFilePath, folderName, fileName))
             using (var outputStream = GetOutputStream(stream))
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value, startRaftIndex.Value, _logger);
-                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, _database.Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm(), _database.Configuration.Backup.CompressionLevel);
+                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, Database.Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm(), Database.Configuration.Backup.CompressionLevel);
                 var smuggler = new DatabaseSmuggler(_database,
                     smugglerSource,
                     smugglerDestination,
-                    _database.Time,
+                    Database.Time,
                     options: options,
-                    result: _backupResult,
+                    result: BackupResult,
                     onProgress: _onProgress,
                     token: TaskCancelToken.Token);
 
@@ -892,7 +819,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     break;
 
                 default:
-                    throw new InvalidOperationException($" {outputStream.GetType()} not supported");
+                    throw new NotSupportedException($" {outputStream.GetType()} not supported");
             }
         }
 
@@ -901,38 +828,32 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_isBackupEncrypted == false)
                 return fileStream;
 
-            if (_database.MasterKey != null && _configuration.BackupEncryptionSettings == null)
-                return new EncryptingXChaCha20Poly1305Stream(fileStream, _database.MasterKey);
+            if (Database.MasterKey != null && Configuration.BackupEncryptionSettings == null)
+                return new EncryptingXChaCha20Poly1305Stream(fileStream, Database.MasterKey);
 
-            if (_configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey)
-                return new EncryptingXChaCha20Poly1305Stream(fileStream, _database.MasterKey);
+            if (Configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey)
+                return new EncryptingXChaCha20Poly1305Stream(fileStream, Database.MasterKey);
 
             return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                Convert.FromBase64String(_configuration.BackupEncryptionSettings.Key));
+                Convert.FromBase64String(Configuration.BackupEncryptionSettings.Key));
         }
 
-        private void UploadToServer(string backupPath, string folderName, string fileName)
+        protected virtual void UploadToServer(string backupFilePath, string folderName, string fileName)
         {
-            if (_directUploadDestination != DirectUploadDestination.Disabled)
-            {
-                // already uploaded during the creation of the backup
-                return;
-            }
-
-            var s3Settings = GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
-                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
-            var glacierSettings = GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
-                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(settings, _database.Name));
-            var azureSettings = GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
-                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, _database.Name));
-            var googleCloudSettings = GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
-                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, _database.Name));
-            var ftpSettings = GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
-                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, _database.Name));
+            var s3Settings = GetBackupConfigurationFromScript(Configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, Database.Name));
+            var glacierSettings = GetBackupConfigurationFromScript(Configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(settings, Database.Name));
+            var azureSettings = GetBackupConfigurationFromScript(Configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, Database.Name));
+            var googleCloudSettings = GetBackupConfigurationFromScript(Configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, Database.Name));
+            var ftpSettings = GetBackupConfigurationFromScript(Configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, Database.Name));
 
             TaskCancelToken.Token.ThrowIfCancellationRequested();
 
-            var uploaderSettings = new UploaderSettings(_database.Configuration.Backup)
+            var uploaderSettings = new UploaderSettings(Database.Configuration.Backup)
             {
                 S3Settings = s3Settings,
                 GlacierSettings = glacierSettings,
@@ -940,16 +861,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                 GoogleCloudSettings = googleCloudSettings,
                 FtpSettings = ftpSettings,
 
-                FilePath = backupPath,
+                FilePath = backupFilePath,
                 FolderName = folderName,
                 FileName = fileName,
-                DatabaseName = _database.Name,
+                DatabaseName = Database.Name,
                 TaskName = _taskName,
 
-                BackupType = _configuration.BackupType
+                BackupType = Configuration.BackupType
             };
 
-            var backupUploader = new BackupUploader(uploaderSettings, _retentionPolicyParameters, _logger, _backupResult, _onProgress, TaskCancelToken);
+            var backupUploader = new BackupUploader(uploaderSettings, RetentionPolicyParameters, _logger, BackupResult, _onProgress, TaskCancelToken);
             backupUploader.ExecuteUpload();
         }
 
@@ -957,13 +878,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             runningBackupStatus.LastOperationId = _operationId;
             if (_previousBackupStatus.LastOperationId == null ||
-                _previousBackupStatus.NodeTag != _database.ServerStore.NodeTag ||
+                _previousBackupStatus.NodeTag != Database.ServerStore.NodeTag ||
                 _previousBackupStatus.Error != null)
                 return;
 
             // dismiss the previous operation
             var id = $"{NotificationType.OperationChanged}/{_previousBackupStatus.LastOperationId.Value}";
-            _database.NotificationCenter.Dismiss(id);
+            Database.NotificationCenter.Dismiss(id);
         }
 
         public static string GetDateTimeFormat(string fileName)
