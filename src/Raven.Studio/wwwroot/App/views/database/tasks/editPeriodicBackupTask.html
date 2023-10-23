@@ -46,7 +46,21 @@
             </div>
             <div data-bind="collapse: isSnapshot, with: snapshot">
                 <div class="row margin-bottom">
-                    <label class="control-label col-sm-4 col-lg-2">Compression</label>
+                    <label class="control-label col-sm-4 col-lg-2">Compression Algorithm</label>
+                    <div class="col-sm-4">
+                        <div class="dropdown btn-block">
+                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                <span data-bind="text: compressionAlgorithm"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: compressionAlgorithmOptions">
+                                <li><a href="#" data-bind="text: $data, click: $parent.useAlgorightm.bind($parent, $data)"></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="row margin-bottom">
+                    <label class="control-label col-sm-4 col-lg-2">Compression Level</label>
                     <div class="col-sm-4">
                         <div class="dropdown btn-block">
                             <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
