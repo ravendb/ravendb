@@ -25,11 +25,12 @@ import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import useConfirm from "components/hooks/useConfirm";
 import { useAccessManager } from "components/hooks/useAccessManager";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
     deleteFromGroup: (nodeTag: string) => void;
-    db: DatabaseSharedInfo;
+    canDelete: boolean;
 }
 
 interface PromoteButtonProps {
@@ -41,8 +42,11 @@ function PromoteButton({ databaseName, nodeTag }: PromoteButtonProps) {
     const { databasesService } = useServices();
     const asyncPromoteImmediately = useAsyncCallback(() => databasesService.promoteDatabaseNode(databaseName, nodeTag));
 
+    const shardNumber = DatabaseUtils.shardNumber(databaseName);
+    const locationText = shardNumber != null ? `shard #${shardNumber} on node ${nodeTag}` : `node ${nodeTag}`;
+
     const [PromoteConfirm, confirmPromote] = useConfirm({
-        title: `Do you want to promote node ${nodeTag} to become a member?`,
+        title: `Do you want to promote ${locationText} to become a member?`,
         icon: "promote",
         actionColor: "primary",
         confirmText: "Promote",
@@ -51,7 +55,6 @@ function PromoteButton({ databaseName, nodeTag }: PromoteButtonProps) {
     const promote = async () => {
         if (await confirmPromote()) {
             await asyncPromoteImmediately.execute();
-            // TODO update database topology?
         }
     };
 
@@ -73,19 +76,13 @@ function PromoteButton({ databaseName, nodeTag }: PromoteButtonProps) {
 }
 
 export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps) {
-    const { node, deleteFromGroup, db } = props;
-
-    const { isOperatorOrAbove } = useAccessManager();
-
-    const canPromote = isOperatorOrAbove() && node.type === "Promotable";
-    const canDelete = db.nodes.length > 1;
+    const { node, deleteFromGroup, canDelete } = props;
 
     return (
         <DatabaseGroupItem>
             <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
             <DatabaseGroupType node={node} />
             <DatabaseGroupActions>
-                {canPromote && <PromoteButton databaseName={db.name} nodeTag={node.tag} />}
                 <Button
                     size="xs"
                     color="danger"
@@ -169,23 +166,29 @@ interface ShardInfoComponentProps {
     databaseName: string;
     databaseLockMode: DatabaseLockMode;
     deleteFromGroup: (nodeTag: string, hardDelete: boolean) => void;
+    db: DatabaseSharedInfo;
 }
 
 export function ShardInfoComponent(props: ShardInfoComponentProps) {
-    const { node, databaseLockMode, deleteFromGroup, databaseName } = props;
+    const { node, databaseLockMode, deleteFromGroup, databaseName, db } = props;
 
     const deleteLockId = useId("delete-lock");
+
+    const { isOperatorOrAbove } = useAccessManager();
 
     const canDelete = databaseLockMode === "Unlock";
 
     const documentsUrl = appUrl.forDocuments(null, databaseName);
     const debugUrl = appUrl.toExternalUrl(node.nodeUrl, documentsUrl);
 
+    const canPromote = isOperatorOrAbove() && node.type === "Promotable";
+
     return (
         <DatabaseGroupItem>
             <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
             <DatabaseGroupType node={node} />
             <DatabaseGroupActions>
+                {canPromote && <PromoteButton databaseName={db.name} nodeTag={node.tag} />}
                 <UncontrolledDropdown key="advanced">
                     <DropdownToggle caret outline size="xs" color="secondary" className="rounded-pill">
                         <Icon icon="debug-advanced" />
@@ -198,7 +201,7 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                     </DropdownMenu>
                 </UncontrolledDropdown>
                 {canDelete ? (
-                    <UncontrolledDropdown key="can-delete" className="mt-1">
+                    <UncontrolledDropdown key="can-delete">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
                             <Icon icon="disconnected" />
                             Delete from group
@@ -219,7 +222,7 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                     </UncontrolledDropdown>
                 ) : (
                     <React.Fragment key="cannot-delete">
-                        <UncontrolledDropdown id={deleteLockId} className="mt-1">
+                        <UncontrolledDropdown id={deleteLockId}>
                             <DropdownToggle color="danger" caret disabled outline size="xs" className="rounded-pill">
                                 {databaseLockMode === "PreventDeletesError" && (
                                     <Icon icon="trash" addon="exclamation" />

@@ -149,7 +149,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                                     key={node.tag}
                                     node={node}
                                     deleteFromGroup={deleteOrchestratorFromGroup}
-                                    db={db}
+                                    canDelete={db.nodes.length > 1}
                                 />
                             ))}
 
