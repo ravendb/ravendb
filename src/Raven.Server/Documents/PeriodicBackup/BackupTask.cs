@@ -27,11 +27,11 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
-using Logger = Sparrow.Logging.Logger;
 using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
 
 namespace Raven.Server.Documents.PeriodicBackup

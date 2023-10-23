@@ -4,5 +4,5 @@ namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
 public interface IDirectUploader
 {
-    public AwsS3MultiPartUploader GetUploader(string key, Dictionary<string, string> metadata);
+    public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata);
 }
