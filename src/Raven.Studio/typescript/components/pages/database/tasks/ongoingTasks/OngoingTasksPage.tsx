@@ -1,5 +1,4 @@
-﻿import database from "models/resources/database";
-import React, { useCallback, useEffect, useReducer, useState } from "react";
+﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
 import { useAccessManager } from "hooks/useAccessManager";
@@ -45,7 +44,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import OngoingTasksFilter, { OngoingTaskFilterType, OngoingTasksFilterCriteria } from "./OngoingTasksFilter";
 import { exhaustiveStringTuple } from "components/utils/common";
-import { InputItem } from "components/models/common";
+import { InputItem, NonShardedViewProps } from "components/models/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
 import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
@@ -62,20 +61,16 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 
-interface OngoingTasksPageProps {
-    database: database;
-}
-
-export function OngoingTasksPage(props: OngoingTasksPageProps) {
-    const { database } = props;
+export function OngoingTasksPage(props: NonShardedViewProps) {
+    const { db } = props;
 
     const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
     const { tasksService } = useServices();
-    const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
+    const [tasks, dispatch] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
 
     const { value: isNewTaskModalOpen, toggle: toggleIsNewTaskModalOpen } = useBoolean(false);
     const { value: progressEnabled, setTrue: startTrackingProgress } = useBoolean(false);
-    const [definitionCache] = useState(() => new etlScriptDefinitionCache(database));
+    const [definitionCache] = useState(() => new etlScriptDefinitionCache(db));
     const [filter, setFilter] = useState<OngoingTasksFilterCriteria>({
         searchText: "",
         types: [],
@@ -87,7 +82,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
             try {
-                const tasks = await tasksService.getOngoingTasks(database, location);
+                const tasks = await tasksService.getOngoingTasks(db, location);
                 dispatch({
                     type: "TasksLoaded",
                     location,
@@ -101,28 +96,28 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                 });
             }
         },
-        [database, tasksService, dispatch]
+        [db, tasksService, dispatch]
     );
 
     const reload = useCallback(async () => {
         // if database is sharded we need to load from both orchestrator and target node point of view
         // in case of non-sharded - we have single level: node
 
-        if (database.isSharded()) {
-            const orchestratorTasks = database.nodes().map((node) => fetchTasks({ nodeTag: node.tag }));
+        if (db.isSharded()) {
+            const orchestratorTasks = db.nodes().map((node) => fetchTasks({ nodeTag: node.tag }));
             await Promise.all(orchestratorTasks);
         }
 
         const loadTasks = tasks.locations.map(fetchTasks);
         await Promise.all(loadTasks);
-    }, [tasks, fetchTasks, database]);
+    }, [tasks, fetchTasks, db]);
 
     useInterval(reload, 10_000);
 
     useEffect(() => {
         reload();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [database]);
+    }, [db]);
 
     const onEtlProgress = useCallback(
         (progress: EtlTaskProgress[], location: databaseLocationSpecifier) => {
@@ -196,9 +191,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         tasks.subscriptions.length;
 
     const refreshSubscriptionInfo = async (taskId: number, taskName: string) => {
-        const loadTasks = database.nodes().map(async (nodeInfo) => {
+        const loadTasks = db.nodes().map(async (nodeInfo) => {
             const nodeTag = nodeInfo.tag;
-            const task = await tasksService.getSubscriptionTaskInfo(database, taskId, taskName, nodeTag);
+            const task = await tasksService.getSubscriptionTaskInfo(db, taskId, taskName, nodeTag);
 
             dispatch({
                 type: "SubscriptionInfoLoaded",
@@ -217,7 +212,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
             // ask only responsible node for connection details
             // if case of sharded database it points to responsible orchestrator
             const details = await tasksService.getSubscriptionConnectionDetails(
-                database,
+                db,
                 taskId,
                 taskName,
                 targetNode.ResponsibleNode.NodeTag
@@ -238,7 +233,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     };
 
     const dropSubscription = async (taskId: number, taskName: string, nodeTag: string, workerId: string) => {
-        await tasksService.dropSubscription(database, taskId, taskName, nodeTag, workerId);
+        await tasksService.dropSubscription(db, taskId, taskName, nodeTag, workerId);
     };
 
     const {
@@ -249,10 +244,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         isDeleting,
         isTogglingStateAny,
         isDeletingAny,
-    } = useOngoingTasksOperations(database, reload);
+    } = useOngoingTasksOperations(db, reload);
 
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
-        db: database,
+        db: db,
         onTaskOperation,
         isSelected: (id: number) => selectedTaskIds.includes(id),
         toggleSelection: (checked: boolean, taskShardedInfo: OngoingTaskSharedInfo) => {
@@ -330,15 +325,15 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                 </Alert>
             )}
 
-            {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
+            {progressEnabled && <OngoingTaskProgressProvider db={db} onEtlProgress={onEtlProgress} />}
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>
                 <div className="hstack gap-3 flex-wrap">
-                    {canReadWriteDatabase(database) && (
+                    {canReadWriteDatabase(db) && (
                         <>
                             {isNewTaskModalOpen && (
                                 <OngoingTaskAddModal
-                                    db={database}
+                                    db={db}
                                     toggle={toggleIsNewTaskModalOpen}
                                     subscriptionsDatabaseCount={subscriptionsDatabaseCount}
                                 />
@@ -424,7 +419,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     </div>
                 )}
 
-                {allTasksCount > 0 && isAdminAccessOrAbove(database) && (
+                {allTasksCount > 0 && isAdminAccessOrAbove(db) && (
                     <OngoingTaskSelectActions
                         allTasks={filteredDatabaseTaskIds}
                         selectedTasks={selectedTaskIds}
