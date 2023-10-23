@@ -59,7 +59,7 @@ internal static class BackupUtils
                 return null;
             }
 
-            if (database.Configuration.Backup.DisableDirectUpload)
+            if (configuration.SupportDirectUpload == false)
             {
                 // disabled by configuration
                 return null;
