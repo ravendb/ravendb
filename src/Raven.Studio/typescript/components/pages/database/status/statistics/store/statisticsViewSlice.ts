@@ -242,26 +242,33 @@ export const statisticsViewSlice = createSlice({
             ) => {
                 state.ui.detailsVisible = false;
 
-                if (state.databaseName !== action.payload.databaseName) {
-                    state.essentialStats = initialState.essentialStats;
-                    state.databaseName = action.payload.databaseName;
+                const payloadLocationIds = action.payload.locations.map((x) => selectId(x));
+                const isForCurrentLocations = _.isEqual(state.databaseDetails.ids, payloadLocationIds);
 
-                    databaseStatsAdapter.setAll(
-                        state.databaseDetails,
-                        action.payload.locations.map((location) => ({
-                            location,
-                            ...createIdleState(),
-                        }))
-                    );
+                const isForCurrentDatabase = state.databaseName === action.payload.databaseName;
 
-                    state.indexDetailsLoadStatus = action.payload.locations.map((location) => ({
-                        location,
-                        loadError: null,
-                        status: "idle",
-                    }));
-
-                    state.indexDetails = indexStatsAdapter.getInitialState();
+                if (isForCurrentDatabase && isForCurrentLocations) {
+                    return;
                 }
+
+                state.essentialStats = initialState.essentialStats;
+                state.databaseName = action.payload.databaseName;
+
+                databaseStatsAdapter.setAll(
+                    state.databaseDetails,
+                    action.payload.locations.map((location) => ({
+                        location,
+                        ...createIdleState(),
+                    }))
+                );
+
+                state.indexDetailsLoadStatus = action.payload.locations.map((location) => ({
+                    location,
+                    loadError: null,
+                    status: "idle",
+                }));
+
+                state.indexDetails = indexStatsAdapter.getInitialState();
             },
             prepare: (databaseName: string, locations: databaseLocationSpecifier[]) => {
                 return {
