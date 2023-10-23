@@ -957,10 +957,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     if (entry.Name == RestoreSettings.SmugglerValuesFileName)
                     {
                         await using (var input = entry.Open())
-                        await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(input))
-                        await using (var inputStream = GetSnapshotInputStream(uncompressed, database.Name))
+                        await using (var inputStream = GetSnapshotInputStream(input, database.Name))
+                        await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                         {
-                            var source = new StreamSource(inputStream, context, database);
+                            var source = new StreamSource(uncompressed, context, database);
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
                                 database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token)
                             {
