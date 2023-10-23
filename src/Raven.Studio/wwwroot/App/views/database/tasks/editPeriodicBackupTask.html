@@ -128,6 +128,18 @@
                     </div>
                 </div>
             </div>
+            <div class="row margin-bottom">
+                <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
+                    <div class="toggle">
+                        <div class="toggle" data-placement="right" data-toggle="tooltip"
+                             title="Support direct upload to a single cloud destination without using a temp file."
+                             data-animation="true">
+                            <input id="directUpload" type="checkbox" data-bind="checked: directUpload">
+                            <label for="directUpload">Direct Upload</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div data-bind="if: backupOperation === 'periodic'">
