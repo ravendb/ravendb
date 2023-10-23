@@ -85,7 +85,7 @@ export default function AdminJSConsole() {
                     <Col>
                         <AboutViewHeading title="Admin JS Console" icon="administrator-js-console" />
                         <Col>
-                            <Alert color="warning hstack gap-4">
+                            <Alert color="warning hstack gap-4 mb-3">
                                 <div className="flex-shrink-0">
                                     <Icon icon="warning" /> WARNING
                                 </div>
