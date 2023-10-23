@@ -42,7 +42,7 @@ export const EmptyView: ComponentStory<typeof BackupsPage> = () => {
 
     tasksService.withGetManualBackup((x) => (x.Status = null));
 
-    return <BackupsPage database={db} />;
+    return <BackupsPage db={db} />;
 };
 
 export const FullView: ComponentStory<typeof BackupsPage> = () => {
@@ -56,7 +56,7 @@ export const FullView: ComponentStory<typeof BackupsPage> = () => {
     tasksService.withGetProgress();
     tasksService.withGetManualBackup();
 
-    return <BackupsPage database={db} />;
+    return <BackupsPage db={db} />;
 };
 
 export const PeriodicBackupTemplate = (args: {
@@ -82,7 +82,7 @@ export const PeriodicBackupTemplate = (args: {
 
     tasksService.withGetManualBackup();
 
-    return <BackupsPage {...forceStoryRerender()} database={db} />;
+    return <BackupsPage {...forceStoryRerender()} db={db} />;
 };
 
 export const PeriodicBackupDisabled = boundCopy(PeriodicBackupTemplate, {
