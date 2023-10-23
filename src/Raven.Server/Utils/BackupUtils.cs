@@ -59,7 +59,7 @@ internal static class BackupUtils
                 return null;
             }
 
-            if (configuration.SupportDirectUpload == false)
+            if (configuration.DirectUpload == false)
             {
                 // disabled by configuration
                 return null;

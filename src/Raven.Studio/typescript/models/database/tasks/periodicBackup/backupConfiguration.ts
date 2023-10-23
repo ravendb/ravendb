@@ -30,7 +30,9 @@ abstract class backupConfiguration {
     snapshot = ko.observable<snapshot>();
     
     mentorNode = ko.observable<string>();
-    
+
+    directUpload = ko.observable<boolean>();
+
     encryptionSettings = ko.observable<encryptionSettings>();
     
     localSettings = ko.observable<localSettings>();
@@ -60,6 +62,7 @@ abstract class backupConfiguration {
                 isServerWide = false) {
         this.taskId(dto.TaskId);
         this.backupType(dto.BackupType);
+        this.directUpload(dto.DirectUpload);
         this.localSettings(!dto.LocalSettings ? localSettings.empty("backup") : new localSettings(dto.LocalSettings, "backup"));
         this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions, "Backup") : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions, "Backup"));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty("Backup") : new azureSettings(dto.AzureSettings, "Backup"));
@@ -201,6 +204,7 @@ abstract class backupConfiguration {
             GoogleCloudSettings: null,
             FtpSettings: null,
             MentorNode: null,
+            DirectUpload: false,
             PinToMentorNode: false,
             BackupEncryptionSettings: null,
             SnapshotSettings: null,

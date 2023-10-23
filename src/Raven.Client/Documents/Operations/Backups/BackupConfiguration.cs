@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.Backups
     public class BackupConfiguration : IDynamicJson
     {
         public BackupType BackupType { get; set; }
-        public bool SupportDirectUpload { get; set; }
+        public bool DirectUpload { get; set; }
         public SnapshotSettings SnapshotSettings { get; set; }
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
         public LocalSettings LocalSettings { get; set; }
@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return new DynamicJsonValue
             {
                 [nameof(BackupType)] = BackupType,
-                [nameof(SupportDirectUpload)] = SupportDirectUpload,
+                [nameof(DirectUpload)] = DirectUpload,
                 [nameof(SnapshotSettings)] = SnapshotSettings?.ToJson(),
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToJson(),
                 [nameof(LocalSettings)] = LocalSettings?.ToJson(),
