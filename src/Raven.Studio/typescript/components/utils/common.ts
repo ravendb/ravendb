@@ -1,6 +1,15 @@
 ﻿import { MouseEvent, MouseEventHandler } from "react";
 import { Story, StoryFn } from "@storybook/react";
 import { loadableData } from "components/models/common";
+import database from "models/resources/database";
+
+export interface NonShardedViewProps {
+    db: database;
+}
+
+export interface ShardedViewProps extends NonShardedViewProps {
+    location?: databaseLocationSpecifier;
+}
 
 export function withPreventDefault(action: (...args: any[]) => void): MouseEventHandler<HTMLElement> {
     return (e: MouseEvent<HTMLElement>) => {

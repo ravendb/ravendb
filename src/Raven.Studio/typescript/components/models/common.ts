@@ -1,4 +1,15 @@
-﻿export type loadStatus = "idle" | "loading" | "success" | "failure";
+﻿import database from "models/resources/database";
+import { ReactNode } from "react";
+
+export interface NonShardedViewProps {
+    db: database;
+}
+
+export interface ShardedViewProps extends NonShardedViewProps {
+    location?: databaseLocationSpecifier;
+}
+
+export type loadStatus = "idle" | "loading" | "success" | "failure";
 
 export type TextColor =
     | "primary"
