@@ -578,7 +578,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                         ? Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey)
                                         : null;
 
-                                    await using (var stream = GetInputStream(entryStream, snapshotEncryptionKey))
+                                    await using (var decompressionStream = FullBackup.GetDecompressionStream(entryStream))
+                                    await using (var stream = GetInputStream(decompressionStream, snapshotEncryptionKey))
                                     {
                                         var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
                                         json.BlittableValidation();
