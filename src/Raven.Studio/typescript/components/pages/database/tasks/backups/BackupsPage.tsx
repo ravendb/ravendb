@@ -266,7 +266,7 @@ export function BackupsPage(props: NonShardedViewProps) {
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
 
     return (
-        <div className="flex-grow-1 flex-stretch-items">
+        <div className="content-margin flex-grow-1 flex-stretch-items">
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
 
             <div className="flex-vertical">

@@ -282,7 +282,7 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
     );
 
     return (
-        <div>
+        <div className="content-margin">
             {subscriptionsClusterLimitStatus !== "notReached" && (
                 <Alert
                     color={subscriptionsClusterLimitStatus === "limitReached" ? "danger" : "warning"}
