@@ -161,7 +161,7 @@ namespace Sparrow.Json.Parsing
                 // 34 => '"'  => 0010 0010
                 // 92 => '\\' => 0101 1100
 
-                if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
+                if (value == 92 || value == 34 || (value is >= 8 and <= 13 && value != 11))
                 {
                     buffer.Add(i - lastEscape);
                     lastEscape = i + 1;
@@ -184,10 +184,7 @@ namespace Sparrow.Json.Parsing
                     Buffer.MemoryCopy(from, to, (uint)sizeToCopy, (uint)sizeToCopy);
                     str[i] = (byte)'\\';
                     str[i + 1] = (byte)'u';
-                    fixed (byte* controlString = AsyncBlittableJsonTextWriter.ControlCodeEscapes[value])
-                    {
-                        Memory.Copy(str + i + 2, controlString, 4);
-                    }
+                    *(int*)(str + i + 2) = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value];
                     //The original string already had one byte so we only added 5.
                     len += ControlCharacterItemSize;
                     i += ControlCharacterItemSize;
