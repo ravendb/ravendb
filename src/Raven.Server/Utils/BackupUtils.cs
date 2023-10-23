@@ -20,6 +20,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -34,6 +35,58 @@ namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
+    internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+    {
+        var destination = GetDestination();
+
+        switch (destination)
+        {
+            case DirectUploadBackupTask.SupportedDirectUploadDestination.S3:
+                return new DirectUploadBackupTask(destination.Value, database, backupParameters, configuration, logger, forTestingPurposes);
+
+            case null:
+                return new BackupTask(database, backupParameters, configuration, logger, forTestingPurposes);
+
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        DirectUploadBackupTask.SupportedDirectUploadDestination? GetDestination()
+        {
+            if (backupParameters.BackupToLocalFolder)
+            {
+                // we'll do the local backup and then upload it
+                return null;
+            }
+
+            if (database.Configuration.Backup.DisableDirectUpload)
+            {
+                // disabled by configuration
+                return null;
+            }
+
+            var hasAws = BackupConfiguration.CanBackupUsing(configuration.S3Settings);
+            var hasGlacier = BackupConfiguration.CanBackupUsing(configuration.GlacierSettings);
+            var hasAzure = BackupConfiguration.CanBackupUsing(configuration.GlacierSettings);
+            var hasGoogleCloud = BackupConfiguration.CanBackupUsing(configuration.GoogleCloudSettings);
+            var hasFtp = BackupConfiguration.CanBackupUsing(configuration.GoogleCloudSettings);
+
+            var destinations = new List<bool> { hasAws, hasGlacier, hasAzure, hasGoogleCloud, hasFtp };
+            if (destinations.Count(x => x) != 1)
+            {
+                // direct upload is supported only for 1 destination
+                return null;
+            }
+
+            if (hasAws)
+            {
+                return DirectUploadBackupTask.SupportedDirectUploadDestination.S3;
+            }
+
+            // all other destinations are currently not supported
+            return null;
+        }
+    }
     internal static async Task<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
     {
         var buffer = new byte[4];
