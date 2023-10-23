@@ -8,17 +8,9 @@ namespace Sparrow.Json.Parsing
 {
     public sealed unsafe class UnmanagedJsonParser : IJsonParser
     {
-        private static readonly byte[] NaN = { (byte)'N', (byte)'a', (byte)'N' };
-
-        private static readonly byte[] PositiveInfinity =
-        {
-            (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y'
-        };
-
-        private static readonly byte[] NegativeInfinity =
-        {
-            (byte)'-', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y'
-        };
+        private static readonly byte[] NaN = "NaN"u8.ToArray();
+        private static readonly byte[] PositiveInfinity = "Infinity"u8.ToArray();
+        private static readonly byte[] NegativeInfinity = "-Infinity"u8.ToArray();
 
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
 
@@ -366,7 +358,7 @@ namespace Sparrow.Json.Parsing
                 case (byte)'n':
                     {
                         _state.CurrentTokenType = JsonParserToken.Null;
-                        _expectedTokenBuffer = AsyncBlittableJsonTextWriter.NullBuffer;
+                        _expectedTokenBuffer = AbstractBlittableJsonTextWriter.NullBuffer;
                         _expectedTokenBufferPosition = 1;
                         _expectedTokenString = "null";
                         if (EnsureRestOfToken(ref pos) == false)
@@ -382,7 +374,7 @@ namespace Sparrow.Json.Parsing
                 case (byte)'t':
                     {
                         _state.CurrentTokenType = JsonParserToken.True;
-                        _expectedTokenBuffer = AsyncBlittableJsonTextWriter.TrueBuffer;
+                        _expectedTokenBuffer = AbstractBlittableJsonTextWriter.TrueBuffer;
                         _expectedTokenBufferPosition = 1;
                         _expectedTokenString = "true";
                         if (EnsureRestOfToken(ref pos) == false)
@@ -398,7 +390,7 @@ namespace Sparrow.Json.Parsing
                 case (byte)'f':
                     {
                         _state.CurrentTokenType = JsonParserToken.False;
-                        _expectedTokenBuffer = AsyncBlittableJsonTextWriter.FalseBuffer;
+                        _expectedTokenBuffer = AbstractBlittableJsonTextWriter.FalseBuffer;
                         _expectedTokenBufferPosition = 1;
                         _expectedTokenString = "false";
                         if (EnsureRestOfToken(ref pos) == false)
