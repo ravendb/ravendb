@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 {
     private readonly IMultiPartUploader _multiPartUploader;
-    private readonly UploadToS3 _cloudUploadStatus;
+    private readonly CloudUploadStatus _cloudUploadStatus;
     private readonly Action<string> _onProgress;
     private readonly IDisposable _backupStatusIDisposable;
 
@@ -37,7 +37,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _onProgress = parameters.OnProgress;
 
         var progress = Progress.Get(_cloudUploadStatus.UploadProgress, parameters.OnProgress);
-        Client = parameters.Client.Invoke(progress);
+        Client = parameters.ClientFactory.Invoke(progress);
         _multiPartUploader = Client.GetUploader(parameters.Key, parameters.Metadata);
         _multiPartUploader.Initialize();
     }
@@ -156,7 +156,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
     public class Parameters
     {
-        public Func<Progress, T> Client { get; set; }
+        public Func<Progress, T> ClientFactory { get; set; }
 
         public string Key { get; set; }
 
@@ -166,7 +166,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
         public RetentionPolicyBaseParameters RetentionPolicyParameters { get; set; }
 
-        public UploadToS3 CloudUploadStatus { get; set; }
+        public CloudUploadStatus CloudUploadStatus { get; set; }
 
         public Action<string> OnProgress { get; set; }
     }

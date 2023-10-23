@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             AsyncHelpers.RunSync(() => PutObjectAsync(key, stream, metadata));
         }
 
-        public AwsS3MultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
+        public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
         {
             return new AwsS3MultiPartUploader(_client, _bucketName, _progress, key, metadata, _cancellationToken);
         }
