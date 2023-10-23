@@ -163,22 +163,20 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
 
 interface ShardInfoComponentProps {
     node: NodeInfo;
-    databaseName: string;
-    databaseLockMode: DatabaseLockMode;
     deleteFromGroup: (nodeTag: string, hardDelete: boolean) => void;
     db: DatabaseSharedInfo;
 }
 
 export function ShardInfoComponent(props: ShardInfoComponentProps) {
-    const { node, databaseLockMode, deleteFromGroup, databaseName, db } = props;
+    const { node, deleteFromGroup, db } = props;
 
     const deleteLockId = useId("delete-lock");
 
     const { isOperatorOrAbove } = useAccessManager();
 
-    const canDelete = databaseLockMode === "Unlock";
+    const canDelete = db.lockMode === "Unlock";
 
-    const documentsUrl = appUrl.forDocuments(null, databaseName);
+    const documentsUrl = appUrl.forDocuments(null, db.name);
     const debugUrl = appUrl.toExternalUrl(node.nodeUrl, documentsUrl);
 
     const canPromote = isOperatorOrAbove() && node.type === "Promotable";
@@ -224,10 +222,8 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                     <React.Fragment key="cannot-delete">
                         <UncontrolledDropdown id={deleteLockId}>
                             <DropdownToggle color="danger" caret disabled outline size="xs" className="rounded-pill">
-                                {databaseLockMode === "PreventDeletesError" && (
-                                    <Icon icon="trash" addon="exclamation" />
-                                )}
-                                {databaseLockMode === "PreventDeletesIgnore" && <Icon icon="trash" addon="cancel" />}
+                                {db.lockMode === "PreventDeletesError" && <Icon icon="trash" addon="exclamation" />}
+                                {db.lockMode === "PreventDeletesIgnore" && <Icon icon="trash" addon="cancel" />}
                                 Delete from group
                             </DropdownToggle>
                         </UncontrolledDropdown>
