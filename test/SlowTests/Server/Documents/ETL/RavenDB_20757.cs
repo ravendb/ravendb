@@ -12,6 +12,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ public class RavenDB_20757 : ReplicationTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Etl)]
     public async Task OnFailureToUpdateProcessStateEtlShouldEnterFallbackMode()
     {
         var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0,
