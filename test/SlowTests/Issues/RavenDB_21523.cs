@@ -289,14 +289,12 @@ public class RavenDB_21523 : RavenTestBase
 
             case BackupType.Snapshot:
                 // zip archive
-                var buffer = new byte[4];
 
                 using (var zip = ZipFile.Open(lastFile, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                 {
                     foreach (var entry in zip.Entries)
                     {
-                        if (entry.Name == RestoreSettings.SettingsFileName)
-                            continue;
+                        var buffer = new byte[4];
 
                         await using (var entryStream = entry.Open())
                         {
@@ -310,12 +308,12 @@ public class RavenDB_21523 : RavenTestBase
                                 var readMagicNumber = BitConverter.ToUInt32(buffer);
                                 if (readMagicNumber == zstdMagicNumber)
                                 {
-                                    Assert.Equal(BackupCompressionAlgorithm.Zstd, algorithm);
-                                    return;
+                                    Assert.True(BackupCompressionAlgorithm.Zstd == algorithm, $"Name: {entry.Name}");
+                                    continue;
                                 }
                             }
 
-                            Assert.Equal(BackupCompressionAlgorithm.Gzip, algorithm);
+                            Assert.True(BackupCompressionAlgorithm.Gzip == algorithm, $"Name: {entry.Name}");
                         }
                     }
                 }

@@ -1216,6 +1216,7 @@ namespace Raven.Server.Documents
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
+                    // the smuggler output is already compressed
                     var zipArchiveEntry = zipArchive.CreateEntry(RestoreSettings.SmugglerValuesFileName);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
@@ -1244,8 +1245,9 @@ namespace Raven.Server.Documents
 
                     infoNotify?.Invoke(("Backed up Database Record", 1));
 
-                    zipArchiveEntry = zipArchive.CreateEntry(RestoreSettings.SettingsFileName);
-                    using (var zipStream = zipArchiveEntry.Open())
+                    var package = new BackupZipArchive(zipArchive, compressionAlgorithm, compressionLevel);
+                    var settingsEntry = package.CreateEntry(RestoreSettings.SettingsFileName);
+                    using (var zipStream = settingsEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     using (var writer = new BlittableJsonTextWriter(serverContext, outputStream))
                     {

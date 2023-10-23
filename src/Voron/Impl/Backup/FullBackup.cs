@@ -314,10 +314,11 @@ namespace Voron.Impl.Backup
                 if (Directory.Exists(dst.FullPath) == false)
                     Directory.CreateDirectory(dst.FullPath);
 
-                using (var input = GetDecompressionStream(entry.Open()))
+                using (var zipEntry = entry.Open())
+                using (var decompressionStream = GetDecompressionStream(zipEntry))
                 using (var output = SafeFileStream.Create(dst.Combine(entry.Name).FullPath, FileMode.CreateNew))
                 {
-                    input.CopyTo(output, readCount =>
+                    decompressionStream.CopyTo(output, readCount =>
                     {
                         totalRead += readCount;
                         if (swForProgress.ElapsedMilliseconds > 5000)
