@@ -281,7 +281,7 @@ class editKafkaSinkTask extends viewModelBase {
         
         
         this.test = new kafkaTaskTestMode(this.activeDatabase, () => {
-            return this.isValid(this.editedKafkaSink().editedScriptSandbox().validationGroup);
+            return this.isValid(this.editedKafkaSink().editedScriptSandbox().testValidationGroup);
         }, dtoProvider);
 
         this.test.initObservables();

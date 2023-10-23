@@ -14,6 +14,7 @@ class ongoingTaskQueueSinkScriptModel {
     documentIdPostfix = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup;
+    testValidationGroup: KnockoutValidationGroup;
     
     dirtyFlag: () => DirtyFlag;
   
@@ -79,6 +80,11 @@ class ongoingTaskQueueSinkScriptModel {
         this.validationGroup = ko.validatedObservable({
             name: this.name,
             queues: this.queues,
+            script: this.script
+        });
+
+        this.testValidationGroup = ko.validatedObservable({
+            name: this.name,
             script: this.script
         });
     }
