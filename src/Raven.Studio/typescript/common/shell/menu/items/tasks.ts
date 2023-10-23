@@ -1,6 +1,7 @@
 ﻿import { bridgeToReact } from "common/reactUtils";
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import { BackupsPage } from "components/pages/database/tasks/backups/BackupsPage";
 import CreateSampleData from "components/pages/database/tasks/createSampleData/CreateSampleData";
 import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/OngoingTasksPage";
 
@@ -10,7 +11,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
     const tasksItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/tasks/backups',
-            moduleId: require('viewmodels/database/tasks/backups'),
+            moduleId: bridgeToReact(BackupsPage, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Backups',
             nav: true,
