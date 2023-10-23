@@ -119,7 +119,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
                 });
         };
 
-        return $.when<any>(this.loadServerSideConfiguration())
+        return $.when<any>(this.loadPossibleMentors(), this.loadServerSideConfiguration())
             .then(backupLoader);
     }
 
