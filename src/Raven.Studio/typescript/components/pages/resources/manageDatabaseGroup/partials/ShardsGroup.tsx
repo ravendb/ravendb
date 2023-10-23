@@ -160,9 +160,8 @@ export function ShardsGroup(props: ShardsGroupProps) {
                                 <ShardInfoComponent
                                     key={node.tag}
                                     node={node}
-                                    databaseName={db.name}
-                                    databaseLockMode={db.lockMode}
                                     deleteFromGroup={deleteNodeFromGroup}
+                                    db={db}
                                 />
                             ))}
 
