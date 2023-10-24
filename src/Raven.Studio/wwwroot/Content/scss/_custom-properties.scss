@@ -28,6 +28,10 @@ $prefix: "bs-";
     @each $key, $value in $theme-colors {
         --faded-#{$key}: #{mix($panel-bg-1, $value, 80%)};
     }
+
+    @each $key, $value in $zindexes {
+        --zindex-#{$key}: #{$value};
+    }
 }
 
 .modal-content,

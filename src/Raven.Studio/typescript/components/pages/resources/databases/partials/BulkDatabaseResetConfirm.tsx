@@ -30,7 +30,7 @@ export default function BulkDatabaseResetConfirm({
     };
 
     return (
-        <Modal isOpen centered wrapClassName="bs5">
+        <Modal isOpen wrapClassName="bs5" centered zIndex="var(--zindex-modal)">
             <ModalBody>
                 <div className="text-right">
                     <CloseButton onClick={toggle} />
