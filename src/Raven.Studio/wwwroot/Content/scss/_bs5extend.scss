@@ -384,3 +384,23 @@ select {
         }
     }
 }
+
+//Override bootstrap 5.3 CSS custom properties theming errors
+.accordion-button {
+    &::after {
+        content: "\f154" !important;
+        font-family: "icomoon" !important;
+        text-align: center;
+    }
+}
+.btn-close {
+    &::after {
+        content: "\f162" !important;
+        font-family: "icomoon" !important;
+        text-align: center;
+    }
+}
+
+.modal-content {
+    background-color: $panel-bg-1-var;
+}

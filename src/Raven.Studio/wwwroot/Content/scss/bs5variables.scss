@@ -1,4 +1,5 @@
 @use "sass:math";
+@use "sass:map";
 @import "../../../node_modules/boostrap5/scss/functions";
 @import "../scss/colors";
 @import "../scss/sizes";
@@ -118,10 +119,10 @@ $body-emphasis-color: $black !default;
 //
 // Style anchor elements.
 
-$link-color: $primary !default;
+$link-color: --bs-primary !default;
 $link-decoration: none !default;
 $link-shade-percentage: 20% !default;
-$link-hover-color: $text-emphasis-color !default;
+$link-hover-color: --text-emphasis !default;
 $link-hover-decoration: null !default;
 
 $stretched-link-pseudo-element: after !default;
@@ -791,17 +792,45 @@ $form-validation-states: (
 // of components dependent on the z-axis and are designed to all work together.
 
 // scss-docs-start zindex-stack
-$zindex-dropdown: 1000 !default;
-$zindex-sticky: 1020 !default;
-$zindex-fixed: 1030 !default;
-$zindex-selection-actions: 1035 !default;
-$zindex-offcanvas-backdrop: 1040 !default;
-$zindex-modal-backdrop: 1050 !default;
-$zindex-offcanvas: 1055 !default;
-$zindex-modal: 1060 !default;
-$zindex-popover: 1081 !default;
-$zindex-tooltip: 1082 !default;
-$zindex-toast: 1090 !default;
+
+$zindexes: (
+    "ace-fullScreenModeLabel": 950,
+    "text-index": 980,
+    "navbar": 1000,
+    "dropdown": 1000,
+    "sticky": 1020,
+    "scoped-modal": 1030,
+    "notification-center": 1035,
+    "selection-actions": 1035,
+    "menu-resize": 1035,
+    "fixed": 1037,
+    "offcanvas-backdrop": 1040,
+    "modal-backdrop": 1050,
+    "offcanvas": 1055,
+    "popover": 1081,
+    "tooltip": 1082,
+    "topalert": 1083,
+    "modal": 1085,
+    "toast": 1090,
+    "menu-xs": 1090,
+    "loading-overlay": 2490,
+    "processing-spinner": 2500,
+    "ace-fullScreen": 9999,
+    "disconnected": 99999,
+    "toastr": 999999,
+);
+
+$zindex-dropdown: map.get($zindexes, "dropdown") !default;
+$zindex-sticky: map.get($zindexes, "sticky") !default;
+$zindex-fixed: map.get($zindexes, "fixed") !default;
+$zindex-selection-actions: map.get($zindexes, "selection-actions") !default;
+$zindex-offcanvas-backdrop: map.get($zindexes, "backdrop") !default;
+$zindex-modal-backdrop: map.get($zindexes, "modal-dropdown") !default;
+$zindex-offcanvas: map.get($zindexes, "offcanvas") !default;
+$zindex-modal: map.get($zindexes, "modal") !default;
+$zindex-popover: map.get($zindexes, "popover") !default;
+$zindex-tooltip: map.get($zindexes, "tooltip") !default;
+$zindex-toast: map.get($zindexes, "toast") !default;
 // scss-docs-end zindex-stack
 
 // scss-docs-start zindex-levels-map
@@ -1039,23 +1068,23 @@ $accordion-body-padding-x: $accordion-padding-x !default;
 
 $accordion-button-padding-y: $accordion-padding-y !default;
 $accordion-button-padding-x: $accordion-padding-x !default;
-$accordion-button-color: var(--#{$prefix}body-color) !default;
+$accordion-button-color: $text-color-var !default;
 $accordion-button-bg: var(--#{$prefix}accordion-bg) !default;
 $accordion-transition: $btn-transition, border-radius 0.15s ease !default;
 $accordion-button-active-bg: var(--#{$prefix}primary-bg-subtle) !default;
-$accordion-button-active-color: var(--#{$prefix}primary-text-emphasis) !default;
+$accordion-button-active-color: $text-emphasis-var !default;
 
 $accordion-button-focus-border-color: $input-focus-border-color !default;
 $accordion-button-focus-box-shadow: $btn-focus-box-shadow !default;
 
 $accordion-icon-width: 1.25rem !default;
 $accordion-icon-color: $body-color !default;
-$accordion-icon-active-color: $primary-text-emphasis !default;
+$accordion-icon-active-color: $text-emphasis-color !default;
 $accordion-icon-transition: transform 0.2s ease-in-out !default;
 $accordion-icon-transform: rotate(-180deg) !default;
 
-$accordion-button-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='#{$accordion-icon-color}'><path fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/></svg>") !default;
-$accordion-button-active-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='#{$accordion-icon-active-color}'><path fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/></svg>") !default;
+$accordion-button-icon: none !default;
+$accordion-button-active-icon: none !default;
 // scss-docs-end accordion-variables
 
 // Tooltips
@@ -1174,7 +1203,7 @@ $modal-content-inner-border-radius: subtract($modal-content-border-radius, $moda
 $modal-content-box-shadow-xs: var(--#{$prefix}box-shadow-sm) !default;
 $modal-content-box-shadow-sm-up: var(--#{$prefix}box-shadow) !default;
 
-$modal-backdrop-bg: $body-bg !default;
+$modal-backdrop-bg: darken($body-bg, 10%) !default;
 $modal-backdrop-opacity: 0.5 !default;
 
 $modal-header-border-color: $border-color-light !default;
@@ -1361,7 +1390,7 @@ $btn-close-height: $btn-close-width !default;
 $btn-close-padding-x: 0.25em !default;
 $btn-close-padding-y: $btn-close-padding-x !default;
 $btn-close-color: $text-color-var !default;
-$btn-close-bg: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='#{$btn-close-color}'><path d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/></svg>") !default;
+$btn-close-bg: none !default;
 $btn-close-focus-shadow: $focus-ring-box-shadow !default;
 $btn-close-opacity: 0.5 !default;
 $btn-close-hover-opacity: 0.75 !default;
