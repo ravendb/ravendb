@@ -11,8 +11,6 @@ class ongoingTaskQueueSinkScriptModel {
     inputQueue = ko.observable<string>();
     canAddQueue: KnockoutComputed<boolean>;
 
-    documentIdPostfix = ko.observable<string>();
-
     validationGroup: KnockoutValidationGroup;
     testValidationGroup: KnockoutValidationGroup;
     
@@ -27,7 +25,6 @@ class ongoingTaskQueueSinkScriptModel {
                 this.name,
                 this.script,
                 this.queues,
-                this.documentIdPostfix
             ],
             false, jsonUtil.newLineNormalizingHashFunction);
     }
