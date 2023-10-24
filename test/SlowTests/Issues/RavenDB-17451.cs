@@ -3,19 +3,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Jint;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Core.AdminConsole;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static Tests.Infrastructure.TestMetrics.TcpStatisticsProvider;
 
 namespace SlowTests.Issues
 {
@@ -132,9 +129,16 @@ namespace SlowTests.Issues
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subsId)
                 {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
                 }))
                 {
+                     var mre = new AsyncManualResetEvent();
+
+                     subscription.OnEstablishedSubscriptionConnection += () =>
+                     {
+                         mre.Set();
+                     };
+
                     var list = new BlockingCollection<User>();
                     GC.KeepAlive(subscription.Run(u =>
                     {
@@ -143,13 +147,16 @@ namespace SlowTests.Issues
                             list.Add(item.Result);
                         }
                     }));
+
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "await mre.WaitAsync(TimeSpan.FromSeconds(15))");
+
                     User user;
                     for (var i = 0; i < 10; i++)
                     {
-                        Assert.True(list.TryTake(out user, 1000));
+                        Assert.True(list.TryTake(out user, 5000), "list.TryTake(out user, 5000)");
                     }
 
-                    Assert.False(list.TryTake(out user, 50));
+                    Assert.False(list.TryTake(out user, 50), "list.TryTake(out user, 50)");
 
                     List<TcpConnectionOptions> tcpConnections;
                     if (options.DatabaseMode == RavenDatabaseMode.Sharded)
@@ -161,7 +168,7 @@ namespace SlowTests.Issues
                             Assert.Equal(1, tcpConnections.Count);
 
                             // assert non-compressed tcp connection
-                            Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream);
+                            Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream, "tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream");
                         }
 
                         var orch = Sharding.GetOrchestrator(store.Database, server);
@@ -170,7 +177,7 @@ namespace SlowTests.Issues
                         Assert.Equal(1, tcpConnections.Count);
 
                         // assert non-compressed tcp connection
-                        Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream);
+                        Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream, "tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream");
                     }
                     else
                     {
@@ -182,7 +189,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, tcpConnections.Count);
 
                     // assert non-compressed tcp connection
-                    Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream);
+                    Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream, "tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream");
                 }
             }
         }
