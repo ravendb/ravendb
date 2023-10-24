@@ -203,12 +203,11 @@ export default class DatabasesService extends commandBase {
     }
 
     async promoteDatabaseNode(databaseName: string, nodeTag: string): Promise<PromoteImmediatelyResultDto> {
-        const args = appUrl.urlEncodeArgs({ name:databaseName, node: nodeTag });
+        const args = appUrl.urlEncodeArgs({ name: databaseName, node: nodeTag });
         const url = endpoints.global.adminDatabases.adminDatabasesPromote + args;
 
-        return this.post<PromoteImmediatelyResultDto>(url, null, null)
-            .fail((response: JQueryXHR) => {
-                this.reportError("Failed to promote node " + nodeTag, response.responseText, response.statusText);
-            });
+        return this.post<PromoteImmediatelyResultDto>(url, null, null).fail((response: JQueryXHR) => {
+            this.reportError("Failed to promote node " + nodeTag, response.responseText, response.statusText);
+        });
     }
 }
