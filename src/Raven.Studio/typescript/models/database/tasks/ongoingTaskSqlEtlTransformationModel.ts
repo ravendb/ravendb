@@ -17,8 +17,6 @@ class ongoingTaskSqlEtlTransformationModel {
     canAddCollection: KnockoutComputed<boolean>;
     applyScriptForAllCollections = ko.observable<boolean>(false);
 
-    documentIdPostfix = ko.observable<string>();
-    
     validationGroup: KnockoutValidationGroup; 
   
     dirtyFlag: () => DirtyFlag;
@@ -46,7 +44,6 @@ class ongoingTaskSqlEtlTransformationModel {
             this.resetScript,
             this.applyScriptForAllCollections,
             this.transformScriptCollections,
-            this.documentIdPostfix
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
    
@@ -58,7 +55,7 @@ class ongoingTaskSqlEtlTransformationModel {
                 Disabled: false,
                 Name: name || "",
                 Script: "",
-                DocumentIdPostfix: ""
+                DocumentIdPostfix: null
             }, true, false);
     }
 
@@ -69,7 +66,7 @@ class ongoingTaskSqlEtlTransformationModel {
             Disabled: false,
             Name: this.name(),
             Script: this.script(),
-            DocumentIdPostfix: this.documentIdPostfix()
+            DocumentIdPostfix: null
         }
     }
 
@@ -127,7 +124,6 @@ class ongoingTaskSqlEtlTransformationModel {
     update(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean): void {
         this.name(dto.Name);
         this.script(dto.Script);
-        this.documentIdPostfix(dto.DocumentIdPostfix);
         
         this.transformScriptCollections(dto.Collections || []);
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
