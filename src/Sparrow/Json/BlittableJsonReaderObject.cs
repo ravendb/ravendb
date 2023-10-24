@@ -1611,9 +1611,6 @@ namespace Sparrow.Json
 
         private int _hashCode;
 
-
-        
-
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
         {
