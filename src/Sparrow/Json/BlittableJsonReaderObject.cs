@@ -40,6 +40,7 @@ namespace Sparrow.Json
         private readonly delegate*<BlittableJsonReaderObject, int> GetHashCodeFunc;
         private readonly delegate*<BlittableJsonReaderObject, int, ref PropertyDetails, bool, void> GetPropertyByIndexFunc;
         private readonly delegate*<BlittableJsonReaderObject, string[]> GetPropertyNamesFunc;
+        private readonly delegate*<BlittableJsonReaderObject, StringSegment, out object, bool> TryGetMemberFunc;
 
         public override string ToString()
         {
@@ -129,6 +130,7 @@ namespace Sparrow.Json
             GetHashCodeFunc = AcquireGetHashCodeFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
             GetPropertyByIndexFunc = AcquireGetPropertyByIndexFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
             GetPropertyNamesFunc = AcquireGetPropertyNamesFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
+            TryGetMemberFunc = AcquireTryGetMemberFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
         }
 
         public BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
@@ -166,18 +168,28 @@ namespace Sparrow.Json
             GetHashCodeFunc = AcquireGetHashCodeFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
             GetPropertyByIndexFunc = AcquireGetPropertyByIndexFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
             GetPropertyNamesFunc = AcquireGetPropertyNamesFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
+            TryGetMemberFunc = AcquireTryGetMemberFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowOutOfRangeException(BlittableJsonToken token)
         {
             throw new ArgumentOutOfRangeException(nameof(token),$"Property names offset flag should be either byte, short of int, instead of {token}");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowObjectDisposed()
         {
             throw new ObjectDisposedException("blittable object has been disposed");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowOnZeroSize(int size)
         {
             //otherwise SetupPropertiesAccess will throw because of the memory garbage
@@ -342,11 +354,17 @@ namespace Sparrow.Json
             return true;
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowFormatException(object value, string fromType, string toType)
         {
             throw new FormatException($"Could not convert {fromType} ('{value}') to {toType}");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowFormatException(object value, string fromType, string toType, Exception e)
         {
             throw new FormatException($"Could not convert {fromType} ('{value}') to {toType}", e);
@@ -708,36 +726,39 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
 
             if (_mem == null)
-                goto ThrowDisposed;
+                ThrowObjectDisposed();
 
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
                 return true;
 
-            var comparer = _context.GetLazyStringForFieldWithCaching(name);
-            var index = GetPropertyIndex(comparer);
+            return TryGetMemberFunc(this, name, out result);
+        }
+
+        private static bool TryGetMember<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>(BlittableJsonReaderObject reader, StringSegment name, out object result)
+            where TOffsetSize : unmanaged
+            where TPropertyIdSize : unmanaged
+            where TNamesDataOffsetSize : unmanaged
+        {
+            var comparer = reader._context.GetLazyStringForFieldWithCaching(name);
+            var index = GetPropertyIndex<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>(reader, comparer);
             if (index == -1)
             {
                 Unsafe.SkipInit(out result);
                 return false;
             }
 
-            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            var metadataSize = sizeof(TOffsetSize) + sizeof(TPropertyIdSize) + sizeof(byte);
 
-            GetPropertyTypeAndPosition(index, metadataSize, out BlittableJsonToken token, out int position, out _);
-            result = GetObject(token, (int)(_objStart - _mem - position), out bool isBlittableJsonReader);
+            GetPropertyTypeAndPosition<TOffsetSize, TPropertyIdSize>(reader, index, metadataSize, out BlittableJsonToken token, out int position, out _);
+            result = reader.GetObject(token, (int)(reader._objStart - reader._mem - position), out bool isBlittableJsonReader);
 
-            if (NoCache == false && isBlittableJsonReader)
+            if (reader.NoCache == false && isBlittableJsonReader)
             {
-                AddToCache(name, result, index);
+                reader.AddToCache(name, result, index);
             }
 
             return true;
-
-            ThrowDisposed:
-            ThrowObjectDisposed();
-            result = null;
-            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1398,42 +1419,66 @@ namespace Sparrow.Json
                 }
             }
         }
-        
+
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowInvalidTokenType()
         {
             throw new InvalidDataException("Token type not valid");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowInvalidNull()
         {
             throw new InvalidDataException("Null not valid");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowInvalidBool()
         {
             throw new InvalidDataException("Bool not valid");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowInvalidCompressedString()
         {
             throw new InvalidDataException("Compressed string not valid");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private void ThrowInvalidNumber(int numberPosition)
         {
             throw new InvalidDataException("Number not valid (" + ReadStringLazily(numberPosition).ToString() + ")");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowInvalidPropertiesId()
         {
             throw new InvalidDataException("Properties id not valid");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowInvalidPropertiesOffest()
         {
             throw new InvalidDataException("Properties offset not valid");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowInvalidNumberOfProperties()
         {
             throw new InvalidDataException("Number of properties not valid");
@@ -1499,9 +1544,6 @@ namespace Sparrow.Json
         }
 
         private int _hashCode;
-
-
-        
 
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
@@ -1597,6 +1639,45 @@ namespace Sparrow.Json
         }
 
         public ReadOnlySpan<byte> AsSpan() => new ReadOnlySpan<byte>(BasePointer, Size);
+
+
+        private static delegate*<BlittableJsonReaderObject, StringSegment, out object, bool> AcquireTryGetMemberFunc(int currentOffsetSize, int currentPropertyIdSize, int propNamesDataOffsetSize)
+        {
+            return (currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize) switch
+            {
+                (sizeof(byte), sizeof(byte), sizeof(byte)) => &TryGetMember<byte, byte, byte>,
+                (sizeof(byte), sizeof(byte), sizeof(short)) => &TryGetMember<byte, byte, short>,
+                (sizeof(byte), sizeof(byte), sizeof(int)) => &TryGetMember<byte, byte, int>,
+                (sizeof(byte), sizeof(short), sizeof(byte)) => &TryGetMember<byte, short, byte>,
+                (sizeof(byte), sizeof(short), sizeof(short)) => &TryGetMember<byte, short, short>,
+                (sizeof(byte), sizeof(short), sizeof(int)) => &TryGetMember<byte, short, int>,
+                (sizeof(byte), sizeof(int), sizeof(byte)) => &TryGetMember<byte, int, byte>,
+                (sizeof(byte), sizeof(int), sizeof(short)) => &TryGetMember<byte, int, short>,
+                (sizeof(byte), sizeof(int), sizeof(int)) => &TryGetMember<byte, int, int>,
+
+                (sizeof(short), sizeof(byte), sizeof(byte)) => &TryGetMember<short, byte, byte>,
+                (sizeof(short), sizeof(byte), sizeof(short)) => &TryGetMember<short, byte, short>,
+                (sizeof(short), sizeof(byte), sizeof(int)) => &TryGetMember<short, byte, int>,
+                (sizeof(short), sizeof(short), sizeof(byte)) => &TryGetMember<short, short, byte>,
+                (sizeof(short), sizeof(short), sizeof(short)) => &TryGetMember<short, short, short>,
+                (sizeof(short), sizeof(short), sizeof(int)) => &TryGetMember<short, short, int>,
+                (sizeof(short), sizeof(int), sizeof(byte)) => &TryGetMember<short, int, byte>,
+                (sizeof(short), sizeof(int), sizeof(short)) => &TryGetMember<short, int, short>,
+                (sizeof(short), sizeof(int), sizeof(int)) => &TryGetMember<short, int, int>,
+
+                (sizeof(int), sizeof(byte), sizeof(byte)) => &TryGetMember<int, byte, byte>,
+                (sizeof(int), sizeof(byte), sizeof(short)) => &TryGetMember<int, byte, short>,
+                (sizeof(int), sizeof(byte), sizeof(int)) => &TryGetMember<int, byte, int>,
+                (sizeof(int), sizeof(short), sizeof(byte)) => &TryGetMember<int, short, byte>,
+                (sizeof(int), sizeof(short), sizeof(short)) => &TryGetMember<int, short, short>,
+                (sizeof(int), sizeof(short), sizeof(int)) => &TryGetMember<int, short, int>,
+                (sizeof(int), sizeof(int), sizeof(byte)) => &TryGetMember<int, int, byte>,
+                (sizeof(int), sizeof(int), sizeof(short)) => &TryGetMember<int, int, short>,
+                (sizeof(int), sizeof(int), sizeof(int)) => &TryGetMember<int, int, int>,
+
+                _ => throw new NotImplementedException(),
+            };
+        }
 
         private static delegate*<BlittableJsonReaderObject, string[]> AcquireGetPropertyNamesFunc(int currentOffsetSize, int currentPropertyIdSize, int propNamesDataOffsetSize)
         {
