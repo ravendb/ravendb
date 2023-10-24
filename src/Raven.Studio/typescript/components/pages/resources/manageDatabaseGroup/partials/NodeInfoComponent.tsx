@@ -8,7 +8,6 @@ import {
     UncontrolledTooltip,
 } from "reactstrap";
 import useId from "hooks/useId";
-import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useDraggableItem } from "hooks/useDraggableItem";
 import { DatabaseSharedInfo, NodeInfo } from "components/models/databases";
 import appUrl from "common/appUrl";
@@ -25,7 +24,6 @@ import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import useConfirm from "components/hooks/useConfirm";
 import { useAccessManager } from "components/hooks/useAccessManager";
-import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;

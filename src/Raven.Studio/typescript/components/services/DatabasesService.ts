@@ -47,10 +47,9 @@ import deleteCustomAnalyzerCommand = require("commands/database/settings/deleteC
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 import getDocumentsCompressionConfigurationCommand = require("commands/database/documents/getDocumentsCompressionConfigurationCommand");
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
-import commandBase = require("commands/commandBase");
 import promoteDatabaseNodeCommand = require("commands/database/debug/promoteDatabaseNodeCommand");
 
-export default class DatabasesService extends commandBase {
+export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
         return new saveDatabaseLockModeCommand(databases, newLockMode).execute();
     }
