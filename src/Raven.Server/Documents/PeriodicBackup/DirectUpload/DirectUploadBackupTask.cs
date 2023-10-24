@@ -6,15 +6,15 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Logging;
-using static Raven.Server.Documents.PeriodicBackup.DirectUpload.DirectUploadBackupTask.SupportedDirectUploadDestination;
+using static Raven.Server.Documents.PeriodicBackup.DirectUpload.DirectUploadBackupTask.DirectUploadDestination;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
 public class DirectUploadBackupTask : BackupTask
 {
-    private readonly SupportedDirectUploadDestination _destination;
+    private readonly DirectUploadDestination _destination;
 
-    public DirectUploadBackupTask(SupportedDirectUploadDestination destination, DocumentDatabase database, BackupParameters backupParameters,
+    public DirectUploadBackupTask(DirectUploadDestination destination, DocumentDatabase database, BackupParameters backupParameters,
         BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null) : base(database, backupParameters, configuration, logger, forTestingPurposes)
     {
         _destination = destination;
@@ -67,7 +67,7 @@ public class DirectUploadBackupTask : BackupTask
         // we're uploading directly without using a local file.
     }
 
-    public enum SupportedDirectUploadDestination
+    public enum DirectUploadDestination
     {
         S3
     }

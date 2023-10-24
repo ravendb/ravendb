@@ -26,7 +26,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
     protected T Client { get; }
 
-    protected abstract long MaxPartSizeInBytes { get; }
+    protected abstract long MinOncePartUploadSizeInBytes { get; }
 
     protected DirectUploadStream(Parameters parameters)
     {
@@ -44,6 +44,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
     public override void Flush()
     {
+        // nothing to do here
     }
 
     public override int Read(byte[] buffer, int offset, int count)
@@ -68,7 +69,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _cloudUploadStatus.UploadProgress.SetTotal(_position);
 
         var toUpload = _writeStream.Position;
-        if (toUpload <= MaxPartSizeInBytes)
+        if (toUpload <= MinOncePartUploadSizeInBytes)
             return;
 
         if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
@@ -90,7 +91,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _cloudUploadStatus.UploadProgress.SetTotal(_position);
 
         var toUpload = _writeStream.Position;
-        if (toUpload <= MaxPartSizeInBytes)
+        if (toUpload <= MinOncePartUploadSizeInBytes)
             return;
 
         if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))

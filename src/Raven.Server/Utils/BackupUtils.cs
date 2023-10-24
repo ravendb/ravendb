@@ -37,32 +37,24 @@ internal static class BackupUtils
 {
     internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
     {
-        var destination = GetDestination();
+        return IsDirectUploadSupported(out var directUploadDestination) 
+            ? new DirectUploadBackupTask(directUploadDestination, database, backupParameters, configuration, logger, forTestingPurposes) 
+            : new BackupTask(database, backupParameters, configuration, logger, forTestingPurposes);
 
-        switch (destination)
-        {
-            case DirectUploadBackupTask.SupportedDirectUploadDestination.S3:
-                return new DirectUploadBackupTask(destination.Value, database, backupParameters, configuration, logger, forTestingPurposes);
-
-            case null:
-                return new BackupTask(database, backupParameters, configuration, logger, forTestingPurposes);
-
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-
-        DirectUploadBackupTask.SupportedDirectUploadDestination? GetDestination()
+        bool IsDirectUploadSupported(out DirectUploadBackupTask.DirectUploadDestination destination)
         {
             if (backupParameters.BackupToLocalFolder)
             {
                 // we'll do the local backup and then upload it
-                return null;
+                destination = default;
+                return false;
             }
 
             if (configuration.DirectUpload == false)
             {
                 // disabled by configuration
-                return null;
+                destination = default;
+                return false;
             }
 
             var hasAws = BackupConfiguration.CanBackupUsing(configuration.S3Settings);
@@ -75,16 +67,19 @@ internal static class BackupUtils
             if (destinations.Count(x => x) != 1)
             {
                 // direct upload is supported only for 1 destination
-                return null;
+                destination = default;
+                return false;
             }
 
             if (hasAws)
             {
-                return DirectUploadBackupTask.SupportedDirectUploadDestination.S3;
+                destination = DirectUploadBackupTask.DirectUploadDestination.S3;
+                return true;
             }
 
             // all other destinations are currently not supported
-            return null;
+            destination = default;
+            return false;
         }
     }
     internal static async Task<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
