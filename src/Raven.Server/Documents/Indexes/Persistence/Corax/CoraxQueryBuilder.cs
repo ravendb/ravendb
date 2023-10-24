@@ -26,8 +26,6 @@ using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxConstants = Corax.Constants;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.Corax;
-using InParameter = (string Term, bool Exact);
-
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -613,7 +611,7 @@ public static class CoraxQueryBuilder
         
         if (ie.All)
         {
-            var uniqueMatches = new HashSet<InParameter>();
+            var uniqueMatches = new HashSet<(string Term, bool Exact)>();
             foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
             {
                 if (exact && builderParameters.Metadata.IsDynamic)
@@ -626,7 +624,7 @@ public static class CoraxQueryBuilder
             return builderParameters.IndexSearcher.AllInQuery(fieldMetadata, uniqueMatches);
         }
 
-        var matches = new List<InParameter>();
+        var matches = new List<(string Term, bool Exact)>();
         foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
         {
             bool isTime = hasTime && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);

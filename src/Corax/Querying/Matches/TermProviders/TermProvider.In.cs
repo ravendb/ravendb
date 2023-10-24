@@ -6,7 +6,6 @@ using System.IO;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Voron;
-using InParameter = (string Term, bool Exact);
 
 namespace Corax.Querying.Matches.TermProviders
 {
@@ -47,8 +46,8 @@ namespace Corax.Querying.Matches.TermProviders
             }
 
 
-            if (typeof(TTermsType) == typeof(InParameter) && (object)_terms[_termIndex] is InParameter inParam)
-                term = _searcher.TermQuery(inParam.Exact ? _exactField : _field, inParam.Term);
+            if (typeof(TTermsType) == typeof((string Term, bool Exact)) && (object)_terms[_termIndex] is (string stringTerm, bool isExact))
+                term = _searcher.TermQuery(isExact ? _exactField : _field, stringTerm);
             else if (typeof(TTermsType) == typeof(string))
                 term = _searcher.TermQuery(_field, (string)(object)_terms[_termIndex]);
             else if (typeof(TTermsType) == typeof(Slice))
