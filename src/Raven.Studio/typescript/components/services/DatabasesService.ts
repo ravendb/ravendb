@@ -47,14 +47,8 @@ import deleteCustomAnalyzerCommand = require("commands/database/settings/deleteC
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 import getDocumentsCompressionConfigurationCommand = require("commands/database/documents/getDocumentsCompressionConfigurationCommand");
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
-import endpoints = require("endpoints");
-import appUrl = require("common/appUrl");
 import commandBase = require("commands/commandBase");
-
-type PromoteImmediatelyResultDto = Pick<
-    Raven.Client.ServerWide.Operations.DatabasePutResult,
-    "Name" | "RaftCommandIndex"
->;
+import promoteDatabaseNodeCommand = require("commands/database/debug/promoteDatabaseNodeCommand");
 
 export default class DatabasesService extends commandBase {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -202,12 +196,7 @@ export default class DatabasesService extends commandBase {
         return new saveDocumentsCompressionCommand(db, dto).execute();
     }
 
-    async promoteDatabaseNode(databaseName: string, nodeTag: string): Promise<PromoteImmediatelyResultDto> {
-        const args = appUrl.urlEncodeArgs({ name: databaseName, node: nodeTag });
-        const url = endpoints.global.adminDatabases.adminDatabasesPromote + args;
-
-        return this.post<PromoteImmediatelyResultDto>(url, null, null).fail((response: JQueryXHR) => {
-            this.reportError("Failed to promote node " + nodeTag, response.responseText, response.statusText);
-        });
+    async promoteDatabaseNode(databaseName: string, nodeTag: string) {
+        return new promoteDatabaseNodeCommand(databaseName, nodeTag).execute();
     }
 }
