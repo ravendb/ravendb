@@ -992,7 +992,7 @@ namespace Sparrow.Json
             var propertyNameOffset = ReadNumber<T>(propertyNameOffsetPtr);
 
             // Get the relative "In Document" position of the property Name
-            var propertyNameRelativePosition = _propNames - propertyNameOffset;
+            var propertyNameRelativePosition = reader._propNames - propertyNameOffset;
 
             // Get the property name size
             var size = VariableSizeEncoding.Read<int>(propertyNameRelativePosition, out var propertyNameLengthDataLength);
@@ -1610,6 +1610,9 @@ namespace Sparrow.Json
         }
 
         private int _hashCode;
+
+
+        
 
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
