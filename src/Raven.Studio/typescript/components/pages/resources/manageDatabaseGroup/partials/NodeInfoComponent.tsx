@@ -42,11 +42,8 @@ function PromoteButton({ databaseName, nodeTag }: PromoteButtonProps) {
     const { databasesService } = useServices();
     const asyncPromoteImmediately = useAsyncCallback(() => databasesService.promoteDatabaseNode(databaseName, nodeTag));
 
-    const shardNumber = DatabaseUtils.shardNumber(databaseName);
-    const locationText = shardNumber != null ? `shard #${shardNumber} on node ${nodeTag}` : `node ${nodeTag}`;
-
     const [PromoteConfirm, confirmPromote] = useConfirm({
-        title: `Do you want to promote ${locationText} to become a member?`,
+        title: `Do you want to promote node ${nodeTag} to become a member?`,
         icon: "promote",
         actionColor: "primary",
         confirmText: "Promote",
