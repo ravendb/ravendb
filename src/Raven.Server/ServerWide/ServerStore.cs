@@ -3348,8 +3348,10 @@ namespace Raven.Server.ServerWide
             using (context.OpenReadTransaction())
                 clusterTopology = _engine.GetTopology(context);
 
-            if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
-                throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
+            var leaderUrl = PublishedServerUrls.SelectUrl(engineLeaderTag, clusterTopology);
+
+            if (string.IsNullOrEmpty(leaderUrl))
+                throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found.");
 
             cmdJson.TryGet("Type", out string commandType);
 
@@ -3378,9 +3380,25 @@ namespace Raven.Server.ServerWide
             return (command.Result.RaftCommandIndex, command.Result.Data);
         }
 
+        public DocumentConventions DocumentConventionsForRaft =>
+            new()
+            {
+                SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
+                MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
+                HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
+                HttpClientType = typeof(RachisConsensus),
+                DisableTopologyCache = DocumentConventions.DefaultForServer.DisableTopologyCache,
+                DisposeCertificate = DocumentConventions.DefaultForServer.DisposeCertificate,
+                CreateHttpClient = handler =>
+                {
+                    handler.ServerCertificateCustomValidationCallback = Sharding.ShardingCustomValidationCallback;
+                    return new HttpClient(handler);
+                }
+            };
+
         internal ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)
         {
-            var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+            var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, DocumentConventionsForRaft);
             requestExecutor.DefaultTimeout = Engine.OperationTimeout;
 
             return requestExecutor;
