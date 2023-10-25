@@ -45,7 +45,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                                 <NodeSetLabel color="shard" icon="shard">
                                     #{shardNumber}
                                 </NodeSetLabel>
-                                {db.nodes.map((node) => (
+                                {shard.nodes.map((node) => (
                                     <DatabaseTopologyNodeSetItem
                                         key={node.tag}
                                         node={node}
