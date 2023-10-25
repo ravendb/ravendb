@@ -57,7 +57,7 @@
 }
 
 @import "../scss/pages/cluster-dashboard.scss";
-
+@import "../../../typescript/components/common/LazyLoad";
 @import "../scss/custom-properties";
 @import "../scss/fonts";
 @import "../scss/main-menu";

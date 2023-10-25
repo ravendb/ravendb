@@ -16,17 +16,20 @@
                     <div class="flex-grow">
                         <div class="node-tag">
                             <i class="icon-node-leader text-node" 
-                               data-bind="attr: { class: 'text-node ' + (nodeState() === 'Leader' ? 'icon-node-leader' : 'icon-node') }"></i> 
+                               data-bind="attr: { class: (nodeState() ? 'text-node ' : 'text-muted ') + (nodeState() === 'Leader' ? 'icon-node-leader' : 'icon-node') }"></i> 
                             <span data-bind="text: nodeTag"></span>
+                            
                         </div>
-                        <div class="small-label" data-bind="text: nodeState() ?? '-', css: { 'text-warning' : nodeState() === 'Leader' }"></div>
+                        <div class="small-label d-flex align-items-center">
+                            <span class="global-spinner spinner-xs" data-bind="css:{'hidden': nodeState()}"></span> <span data-bind="text: nodeState() ?? 'Connecting...', css: { 'text-warning' : nodeState() === 'Leader' }"></span>
+                        </div>
                     </div>
-                    <div class="node-type">
+                    <div class="node-type" data-bind="css:{'lazy-load': !nodeType()}">
                         <i data-bind="attr: { class: 'icon-' + iconClass(nodeType()) }"></i>
                         <div class="small-label" data-bind="text: nodeType() ?? '-'"></div>
                     </div>
-                    <div class="node-os" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { title: osName() ?? '-', 'data-original-title': osName() ?? '-' }">
-                        <i data-bind="attr: { class: osIcon() }"></i>
+                    <div class="node-os" data-toggle="tooltip" data-placement="bottom" data-bind="css:{'lazy-load': !osName()},attr: { title: osName() ?? '-', 'data-original-title': osName() ?? '-' }">
+                        <i data-bind="attr: { class: osIcon() ? osIcon() : 'icon-circle' }"></i>
                         <div class="small-label" data-bind="text: osType() ?? '-'"></div>
                     </div>
                     <a class="node-url" target="_blank"
@@ -38,11 +41,15 @@
                 <div class="node-item-details p-3 pt-2">
                     <div class="detail-item" data-bind="attr: { title: 'Start time: ' + (formattedStartTime() ?? '-') }">
                         <div class="detail-label">Uptime:</div>
-                        <div class="detail-value" data-bind="text: formattedUpTime() ?? '-'"></div>
+                        <div class="detail-value" data-bind="css: {'lazy-load': !formattedUpTime() }">
+                            <div data-bind="text: formattedUpTime() ?? '-'"></div>
+                        </div>
                     </div>
                     <div class="detail-item" title="Server version">
                         <div class="detail-label">Version:</div>
-                        <div class="detail-value" data-bind="text: serverVersion() ?? '-'"></div>
+                        <div class="detail-value" data-bind="css: {'lazy-load': !serverVersion() }">
+                            <div data-bind="text: serverVersion() ?? '-'"></div>
+                        </div>
                     </div>
                 </div>
             </div>

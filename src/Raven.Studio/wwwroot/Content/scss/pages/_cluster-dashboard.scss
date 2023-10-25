@@ -11,6 +11,12 @@
                 display: flex;
                 align-items: flex-end;
 
+                .global-spinner {
+                    margin-top: -4px;
+                    margin-bottom: -3px;
+                    margin-right: $gutter-xxs;
+                }
+
                 .node-tag {
                     flex-grow: 1;
                     font-size: $font-size-lg;
@@ -42,9 +48,14 @@
             }
 
             .node-item-details {
+                display: flex;
+                flex-direction: column;
+                gap: $gutter-xxs;
                 .detail-item {
                     font-size: $font-size-xs;
+                    line-height: $font-size-xs;
                     display: flex;
+                    gap: $gutter-xs;
 
                     .detail-label {
                         font-weight: bold;
@@ -53,7 +64,7 @@
                     }
 
                     .detail-value {
-                        flex-grow: 1;
+                        flex-grow: 0.3;
                     }
                 }
             }
