@@ -1039,7 +1039,7 @@ $card-border-width: 0 !default;
 $card-border-color: var(--#{$prefix}border-color-translucent) !default;
 $card-border-radius: var(--#{$prefix}border-radius) !default;
 $card-box-shadow: null !default;
-$card-inner-border-radius: subtract($card-border-radius, $card-border-width) !default;
+$card-inner-border-radius: var(--#{$prefix}border-radius-sm) !default;
 $card-cap-padding-y: $card-spacer-y * 0.5 !default;
 $card-cap-padding-x: $card-spacer-x !default;
 $card-cap-bg: $panel-header-bg-var !default;

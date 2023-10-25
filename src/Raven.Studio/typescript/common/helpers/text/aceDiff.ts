@@ -362,11 +362,11 @@ class aceDiff {
     
     private initObservables() {
         this.leftGutterClass = ko.pureComputed(() => {
-            return this.leftRevisionIsNewer() ? "ace_added" : "ace_removed";
+            return this.leftRevisionIsNewer() ? "ace_added bg-success" : "ace_removed bg-danger";
         })
 
         this.rightGutterClass = ko.pureComputed(() => {
-            return this.leftRevisionIsNewer() ? "ace_removed" : "ace_added";
+            return this.leftRevisionIsNewer() ? "ace_removed bg-danger" : "ace_added bg-success";
         })
 
         this.leftMarkerClass = ko.pureComputed(() => {

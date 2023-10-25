@@ -37,7 +37,7 @@ $token-keyword: colors.$color-5;
 
     .ace_gutter {
         background: colors.$panel-bg-1-var;
-        color: colors.$text-muted-var;
+        color: colors.$base-text-muted-color;
     }
 
     .ace_print-margin {
@@ -73,12 +73,12 @@ $token-keyword: colors.$color-5;
     }
 
     .ace_marker-layer .ace_code-removed {
-        background: var(--bs-danger-rgb), 0.15;
+        background: rgba(var(--bs-danger-rgb), 0.15) !important;
         position: absolute;
     }
 
     .ace_marker-layer .ace_code-added {
-        background: var(--bs-success-rgb), 0.15;
+        background: rgba(var(--bs-success-rgb), 0.15) !important;
         position: absolute;
     }
 

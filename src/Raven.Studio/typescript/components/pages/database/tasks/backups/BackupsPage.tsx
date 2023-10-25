@@ -344,7 +344,6 @@ export function BackupsPage(props: NonShardedViewProps) {
                                     color="link"
                                     title="Navigate to the Server-Wide Tasks View"
                                     href={serverWideTasksUrl}
-                                    className="link-muted"
                                 >
                                     Go to Server-Wide Tasks View
                                 </Button>
