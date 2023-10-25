@@ -104,7 +104,7 @@ public class RavenDB_21566 : RavenTestBase
                 
                 Assert.IsType<InvalidOperationException>(innerException);
 
-                Assert.Contains("Type SlowTests.Issues.RavenDB_21566+DummyEnum does not exist on server, default value cannot be assigned", innerException.Message);
+                Assert.Contains($"Type SlowTests.Issues.RavenDB_21566+DummyEnum does not exist on server, default value cannot be assigned. Did you intend to register it via {nameof(DocumentConventions.TypeIsKnownServerSide)} convention?", innerException.Message);
             }
         }
     }
@@ -131,8 +131,6 @@ public class RavenDB_21566 : RavenTestBase
                 var res = session.Query<DummyIndexWithNullableDates.IndexResult>(index.IndexName).ProjectInto<DummyIndexWithNullableDates.IndexResult>().ToList();
                 
                 var firstResult = res.First();
-                
-                WaitForUserToContinueTheTest(store);
                 
                 Assert.Equal(default, firstResult.NonNullableDateOnly);
                 Assert.Equal(default, firstResult.NonNullableTimeSpan);

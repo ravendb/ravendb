@@ -1533,7 +1533,7 @@ namespace Raven.Client.Documents.Indexes
             if (node.Method.Name == "GetValueOrDefault" && Nullable.GetUnderlyingType(node.Method.DeclaringType) != null)
             {
                 if (TypeExistsOnServer(node.Type) == false)
-                    throw new InvalidOperationException($"Type {node.Type} does not exist on server, default value cannot be assigned");
+                    throw new InvalidOperationException($"Type {node.Type} does not exist on server, default value cannot be assigned. Did you intend to register it via {nameof(DocumentConventions.TypeIsKnownServerSide)} convention?");
                 
                 var underlyingType = Nullable.GetUnderlyingType(node.Method.DeclaringType);
                 
