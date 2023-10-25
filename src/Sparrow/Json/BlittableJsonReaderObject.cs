@@ -23,24 +23,76 @@ namespace Sparrow.Json
         private byte* _metadataPtr;
         private readonly int _size;
         private readonly int _propCount;
-        private readonly int _currentOffsetSize;
-        private readonly int _currentPropertyIdSize;
+
         private readonly bool _isRoot;
         private readonly byte* _objStart;
         private readonly byte* _propNames;
+
+        private readonly int _currentOffsetSize;
+        private readonly int _currentPropertyIdSize;
         private readonly int _propNamesDataOffsetSize;
+
+        private readonly int _functionTableIndex;
 
         public DynamicJsonValue Modifications;
 
         private Dictionary<StringSegment, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
-        private readonly delegate*<BlittableJsonReaderObject, LazyStringValue, int> GetPropertyIndexFunc;
-        private readonly delegate*<BlittableJsonReaderObject, ulong> GetHashOfPropertyNamesFunc;
-        private readonly delegate*<BlittableJsonReaderObject, int> GetHashCodeFunc;
-        private readonly delegate*<BlittableJsonReaderObject, int, ref PropertyDetails, bool, void> GetPropertyByIndexFunc;
-        private readonly delegate*<BlittableJsonReaderObject, string[]> GetPropertyNamesFunc;
-        private readonly delegate*<BlittableJsonReaderObject, StringSegment, out object, bool> TryGetMemberFunc;
+
+
+
+        static BlittableJsonReaderObject()
+        {
+            // PERF: We will create a function table that ensures that it has enough space to handle the mapping. 
+            FunctionTable = new FunctionTableItem[0b01_000000];
+
+            foreach (int currentOffsetSize in new byte[] { sizeof(byte), sizeof(short), sizeof(int) })
+            {
+                foreach (int currentPropertyIdSize in new byte[] { sizeof(byte), sizeof(short), sizeof(int) })
+                {
+                    foreach (int propNamesDataOffsetSize in new byte[] { sizeof(byte), sizeof(short), sizeof(int) })
+                    {
+                        ref var functionTableItem = ref GetFunctionTableItem(currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize);
+
+                        functionTableItem = (currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize) switch
+                        {
+                            (sizeof(byte), sizeof(byte), sizeof(byte)) => CreateFunctionTableItem<byte, byte, byte>(),
+                            (sizeof(byte), sizeof(byte), sizeof(short)) => CreateFunctionTableItem<byte, byte, short>(),
+                            (sizeof(byte), sizeof(byte), sizeof(int)) => CreateFunctionTableItem<byte, byte, int>(),
+                            (sizeof(byte), sizeof(short), sizeof(byte)) => CreateFunctionTableItem<byte, short, byte>(),
+                            (sizeof(byte), sizeof(short), sizeof(short)) => CreateFunctionTableItem<byte, short, short>(),
+                            (sizeof(byte), sizeof(short), sizeof(int)) => CreateFunctionTableItem<byte, short, int>(),
+                            (sizeof(byte), sizeof(int), sizeof(byte)) => CreateFunctionTableItem<byte, int, byte>(),
+                            (sizeof(byte), sizeof(int), sizeof(short)) => CreateFunctionTableItem<byte, int, short>(),
+                            (sizeof(byte), sizeof(int), sizeof(int)) => CreateFunctionTableItem<byte, int, int>(),
+
+                            (sizeof(short), sizeof(byte), sizeof(byte)) => CreateFunctionTableItem<short, byte, byte>(),
+                            (sizeof(short), sizeof(byte), sizeof(short)) => CreateFunctionTableItem<short, byte, short>(),
+                            (sizeof(short), sizeof(byte), sizeof(int)) => CreateFunctionTableItem<short, byte, int>(),
+                            (sizeof(short), sizeof(short), sizeof(byte)) => CreateFunctionTableItem<short, short, byte>(),
+                            (sizeof(short), sizeof(short), sizeof(short)) => CreateFunctionTableItem<short, short, short>(),
+                            (sizeof(short), sizeof(short), sizeof(int)) => CreateFunctionTableItem<short, short, int>(),
+                            (sizeof(short), sizeof(int), sizeof(byte)) => CreateFunctionTableItem<short, int, byte>(),
+                            (sizeof(short), sizeof(int), sizeof(short)) => CreateFunctionTableItem<short, int, short>(),
+                            (sizeof(short), sizeof(int), sizeof(int)) => CreateFunctionTableItem<short, int, int>(),
+
+                            (sizeof(int), sizeof(byte), sizeof(byte)) => CreateFunctionTableItem<int, byte, byte>(),
+                            (sizeof(int), sizeof(byte), sizeof(short)) => CreateFunctionTableItem<int, byte, short>(),
+                            (sizeof(int), sizeof(byte), sizeof(int)) => CreateFunctionTableItem<int, byte, int>(),
+                            (sizeof(int), sizeof(short), sizeof(byte)) => CreateFunctionTableItem<int, short, byte>(),
+                            (sizeof(int), sizeof(short), sizeof(short)) => CreateFunctionTableItem<int, short, short>(),
+                            (sizeof(int), sizeof(short), sizeof(int)) => CreateFunctionTableItem<int, short, int>(),
+                            (sizeof(int), sizeof(int), sizeof(byte)) => CreateFunctionTableItem<int, int, byte>(),
+                            (sizeof(int), sizeof(int), sizeof(short)) => CreateFunctionTableItem<int, int, short>(),
+                            (sizeof(int), sizeof(int), sizeof(int)) => CreateFunctionTableItem<int, int, int>(),
+
+                            _ => throw new NotImplementedException(),
+                        };
+                    }
+                }
+            }
+        }
 
         public override string ToString()
         {
@@ -125,12 +177,7 @@ namespace Sparrow.Json
             _currentOffsetSize = ProcessTokenOffsetFlags(currentType);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
 
-            GetPropertyIndexFunc = AcquireGetPropertyIndexFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            GetHashOfPropertyNamesFunc = AcquireGetHashOfPropertyNamesFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            GetHashCodeFunc = AcquireGetHashCodeFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            GetPropertyByIndexFunc = AcquireGetPropertyByIndexFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            GetPropertyNamesFunc = AcquireGetPropertyNamesFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            TryGetMemberFunc = AcquireTryGetMemberFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
+            _functionTableIndex = GetFunctionTableIndex(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
         }
 
         public BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
@@ -163,12 +210,7 @@ namespace Sparrow.Json
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
 
-            GetPropertyIndexFunc = AcquireGetPropertyIndexFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            GetHashOfPropertyNamesFunc = AcquireGetHashOfPropertyNamesFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            GetHashCodeFunc = AcquireGetHashCodeFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            GetPropertyByIndexFunc = AcquireGetPropertyByIndexFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            GetPropertyNamesFunc = AcquireGetPropertyNamesFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
-            TryGetMemberFunc = AcquireTryGetMemberFunc(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
+            _functionTableIndex = GetFunctionTableIndex(_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize);
         }
 
 #if NET6_0_OR_GREATER
@@ -253,7 +295,7 @@ namespace Sparrow.Json
         {
             AssertContextNotDisposed();
 
-            return GetPropertyNamesFunc(this);
+            return FunctionTable[_functionTableIndex].GetPropertyNamesFunc(this);
         }
 
         private static string[] GetPropertyNames<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>(BlittableJsonReaderObject reader)
@@ -732,7 +774,7 @@ namespace Sparrow.Json
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
                 return true;
 
-            return TryGetMemberFunc(this, name, out result);
+            return FunctionTable[_functionTableIndex].TryGetMemberFunc(this, name, out result);
         }
 
         private static bool TryGetMember<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>(BlittableJsonReaderObject reader, StringSegment name, out object result)
@@ -809,7 +851,7 @@ namespace Sparrow.Json
             if (index < 0 || index >= _propCount)
                 ThrowOutOfRangeException(index);
 
-            GetPropertyByIndexFunc(this, index, ref prop, addObjectToCache);
+            FunctionTable[_functionTableIndex].GetPropertyByIndexFunc(this, index, ref prop, addObjectToCache);
         }
 
         private static void GetPropertyByIndex<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>(BlittableJsonReaderObject reader, int index, ref PropertyDetails prop, bool addObjectToCache = false)
@@ -864,7 +906,7 @@ namespace Sparrow.Json
             if (_propCount == 0)
                 return -1;
 
-            return GetPropertyIndexFunc(this, comparer);
+            return FunctionTable[_functionTableIndex].GetPropertyIndexFunc(this, comparer);
         }
 
         private static int GetPropertyIndex<TOffsetSize, TPropertySize, TPropertyDataSize>(BlittableJsonReaderObject reader, LazyStringValue comparer)
@@ -998,7 +1040,7 @@ namespace Sparrow.Json
         {
             AssertContextNotDisposed();
 
-            return GetHashOfPropertyNamesFunc(this);
+            return FunctionTable[_functionTableIndex].GetHashOfPropertyNamesFunc(this);
         }
 
         private static ulong GetHashOfPropertyNames<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>(BlittableJsonReaderObject reader)
@@ -1548,10 +1590,10 @@ namespace Sparrow.Json
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
         {
-            AssertContextNotDisposed();
             if (_hashCode == 0)
             {
-                _hashCode = GetHashCodeFunc(this);
+                AssertContextNotDisposed();
+                _hashCode = FunctionTable[_functionTableIndex].GetHashCodeFunc(this);
             }
             return _hashCode;
         }
@@ -1638,235 +1680,61 @@ namespace Sparrow.Json
             return false;
         }
 
-        public ReadOnlySpan<byte> AsSpan() => new ReadOnlySpan<byte>(BasePointer, Size);
+        public ReadOnlySpan<byte> AsSpan() => new(BasePointer, Size);
 
 
-        private static delegate*<BlittableJsonReaderObject, StringSegment, out object, bool> AcquireTryGetMemberFunc(int currentOffsetSize, int currentPropertyIdSize, int propNamesDataOffsetSize)
+
+        private readonly struct FunctionTableItem
         {
-            return (currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize) switch
+            public readonly delegate*<BlittableJsonReaderObject, LazyStringValue, int> GetPropertyIndexFunc;
+            public readonly delegate*<BlittableJsonReaderObject, ulong> GetHashOfPropertyNamesFunc;
+            public readonly delegate*<BlittableJsonReaderObject, int> GetHashCodeFunc;
+            public readonly delegate*<BlittableJsonReaderObject, int, ref PropertyDetails, bool, void> GetPropertyByIndexFunc;
+            public readonly delegate*<BlittableJsonReaderObject, string[]> GetPropertyNamesFunc;
+            public readonly delegate*<BlittableJsonReaderObject, StringSegment, out object, bool> TryGetMemberFunc;
+
+            public FunctionTableItem(
+                delegate*<BlittableJsonReaderObject, LazyStringValue, int> getPropertyIndex,
+                delegate*<BlittableJsonReaderObject, ulong> getHashOfPropertyNames,
+                delegate*<BlittableJsonReaderObject, int> getHashCode,
+                delegate*<BlittableJsonReaderObject, int, ref PropertyDetails, bool, void> getPropertyByIndex,
+                delegate*<BlittableJsonReaderObject, string[]> getPropertyNames,
+                delegate*<BlittableJsonReaderObject, StringSegment, out object, bool> tryGetMember)
             {
-                (sizeof(byte), sizeof(byte), sizeof(byte)) => &TryGetMember<byte, byte, byte>,
-                (sizeof(byte), sizeof(byte), sizeof(short)) => &TryGetMember<byte, byte, short>,
-                (sizeof(byte), sizeof(byte), sizeof(int)) => &TryGetMember<byte, byte, int>,
-                (sizeof(byte), sizeof(short), sizeof(byte)) => &TryGetMember<byte, short, byte>,
-                (sizeof(byte), sizeof(short), sizeof(short)) => &TryGetMember<byte, short, short>,
-                (sizeof(byte), sizeof(short), sizeof(int)) => &TryGetMember<byte, short, int>,
-                (sizeof(byte), sizeof(int), sizeof(byte)) => &TryGetMember<byte, int, byte>,
-                (sizeof(byte), sizeof(int), sizeof(short)) => &TryGetMember<byte, int, short>,
-                (sizeof(byte), sizeof(int), sizeof(int)) => &TryGetMember<byte, int, int>,
-
-                (sizeof(short), sizeof(byte), sizeof(byte)) => &TryGetMember<short, byte, byte>,
-                (sizeof(short), sizeof(byte), sizeof(short)) => &TryGetMember<short, byte, short>,
-                (sizeof(short), sizeof(byte), sizeof(int)) => &TryGetMember<short, byte, int>,
-                (sizeof(short), sizeof(short), sizeof(byte)) => &TryGetMember<short, short, byte>,
-                (sizeof(short), sizeof(short), sizeof(short)) => &TryGetMember<short, short, short>,
-                (sizeof(short), sizeof(short), sizeof(int)) => &TryGetMember<short, short, int>,
-                (sizeof(short), sizeof(int), sizeof(byte)) => &TryGetMember<short, int, byte>,
-                (sizeof(short), sizeof(int), sizeof(short)) => &TryGetMember<short, int, short>,
-                (sizeof(short), sizeof(int), sizeof(int)) => &TryGetMember<short, int, int>,
-
-                (sizeof(int), sizeof(byte), sizeof(byte)) => &TryGetMember<int, byte, byte>,
-                (sizeof(int), sizeof(byte), sizeof(short)) => &TryGetMember<int, byte, short>,
-                (sizeof(int), sizeof(byte), sizeof(int)) => &TryGetMember<int, byte, int>,
-                (sizeof(int), sizeof(short), sizeof(byte)) => &TryGetMember<int, short, byte>,
-                (sizeof(int), sizeof(short), sizeof(short)) => &TryGetMember<int, short, short>,
-                (sizeof(int), sizeof(short), sizeof(int)) => &TryGetMember<int, short, int>,
-                (sizeof(int), sizeof(int), sizeof(byte)) => &TryGetMember<int, int, byte>,
-                (sizeof(int), sizeof(int), sizeof(short)) => &TryGetMember<int, int, short>,
-                (sizeof(int), sizeof(int), sizeof(int)) => &TryGetMember<int, int, int>,
-
-                _ => throw new NotImplementedException(),
-            };
+                GetPropertyIndexFunc = getPropertyIndex;
+                GetHashOfPropertyNamesFunc = getHashOfPropertyNames;
+                GetHashCodeFunc = getHashCode;
+                GetPropertyByIndexFunc = getPropertyByIndex;
+                GetPropertyNamesFunc = getPropertyNames;
+                TryGetMemberFunc = tryGetMember;
+            }
         }
 
-        private static delegate*<BlittableJsonReaderObject, string[]> AcquireGetPropertyNamesFunc(int currentOffsetSize, int currentPropertyIdSize, int propNamesDataOffsetSize)
+        private static readonly FunctionTableItem[] FunctionTable;
+
+        private static ReadOnlySpan<byte> FunctionTableTypeToIndex => new byte[] { 0b1111_1100, 0b00, 0b01, 0b1111_1100, 0b11 };
+
+        private static int GetFunctionTableIndex(int offsetSize, int propertyIdSize, int namesDataOffsetSize) =>
+            FunctionTableTypeToIndex[offsetSize] | 
+            FunctionTableTypeToIndex[propertyIdSize] << 2 | 
+            FunctionTableTypeToIndex[namesDataOffsetSize] << 4;
+
+        private static ref FunctionTableItem GetFunctionTableItem(int offsetSize, int propertyIdSize, int namesDataOffsetSize) =>
+            ref FunctionTable[GetFunctionTableIndex(offsetSize, propertyIdSize, namesDataOffsetSize)];
+
+        private static FunctionTableItem CreateFunctionTableItem<TOffsetSize, TPropertySize, TPropertyDataSize>()
+            where TOffsetSize : unmanaged
+            where TPropertySize : unmanaged
+            where TPropertyDataSize : unmanaged
         {
-            return (currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize) switch
-            {
-                (sizeof(byte), sizeof(byte), sizeof(byte)) => &GetPropertyNames<byte, byte, byte>,
-                (sizeof(byte), sizeof(byte), sizeof(short)) => &GetPropertyNames<byte, byte, short>,
-                (sizeof(byte), sizeof(byte), sizeof(int)) => &GetPropertyNames<byte, byte, int>,
-                (sizeof(byte), sizeof(short), sizeof(byte)) => &GetPropertyNames<byte, short, byte>,
-                (sizeof(byte), sizeof(short), sizeof(short)) => &GetPropertyNames<byte, short, short>,
-                (sizeof(byte), sizeof(short), sizeof(int)) => &GetPropertyNames<byte, short, int>,
-                (sizeof(byte), sizeof(int), sizeof(byte)) => &GetPropertyNames<byte, int, byte>,
-                (sizeof(byte), sizeof(int), sizeof(short)) => &GetPropertyNames<byte, int, short>,
-                (sizeof(byte), sizeof(int), sizeof(int)) => &GetPropertyNames<byte, int, int>,
-
-                (sizeof(short), sizeof(byte), sizeof(byte)) => &GetPropertyNames<short, byte, byte>,
-                (sizeof(short), sizeof(byte), sizeof(short)) => &GetPropertyNames<short, byte, short>,
-                (sizeof(short), sizeof(byte), sizeof(int)) => &GetPropertyNames<short, byte, int>,
-                (sizeof(short), sizeof(short), sizeof(byte)) => &GetPropertyNames<short, short, byte>,
-                (sizeof(short), sizeof(short), sizeof(short)) => &GetPropertyNames<short, short, short>,
-                (sizeof(short), sizeof(short), sizeof(int)) => &GetPropertyNames<short, short, int>,
-                (sizeof(short), sizeof(int), sizeof(byte)) => &GetPropertyNames<short, int, byte>,
-                (sizeof(short), sizeof(int), sizeof(short)) => &GetPropertyNames<short, int, short>,
-                (sizeof(short), sizeof(int), sizeof(int)) => &GetPropertyNames<short, int, int>,
-
-                (sizeof(int), sizeof(byte), sizeof(byte)) => &GetPropertyNames<int, byte, byte>,
-                (sizeof(int), sizeof(byte), sizeof(short)) => &GetPropertyNames<int, byte, short>,
-                (sizeof(int), sizeof(byte), sizeof(int)) => &GetPropertyNames<int, byte, int>,
-                (sizeof(int), sizeof(short), sizeof(byte)) => &GetPropertyNames<int, short, byte>,
-                (sizeof(int), sizeof(short), sizeof(short)) => &GetPropertyNames<int, short, short>,
-                (sizeof(int), sizeof(short), sizeof(int)) => &GetPropertyNames<int, short, int>,
-                (sizeof(int), sizeof(int), sizeof(byte)) => &GetPropertyNames<int, int, byte>,
-                (sizeof(int), sizeof(int), sizeof(short)) => &GetPropertyNames<int, int, short>,
-                (sizeof(int), sizeof(int), sizeof(int)) => &GetPropertyNames<int, int, int>,
-
-                _ => throw new NotImplementedException(),
-            };
-        }
-
-        private static delegate*<BlittableJsonReaderObject, int, ref PropertyDetails, bool, void> AcquireGetPropertyByIndexFunc(int currentOffsetSize, int currentPropertyIdSize, int propNamesDataOffsetSize)
-        {
-            return (currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize) switch
-            {
-                (sizeof(byte), sizeof(byte), sizeof(byte)) => &GetPropertyByIndex<byte, byte, byte>,
-                (sizeof(byte), sizeof(byte), sizeof(short)) => &GetPropertyByIndex<byte, byte, short>,
-                (sizeof(byte), sizeof(byte), sizeof(int)) => &GetPropertyByIndex<byte, byte, int>,
-                (sizeof(byte), sizeof(short), sizeof(byte)) => &GetPropertyByIndex<byte, short, byte>,
-                (sizeof(byte), sizeof(short), sizeof(short)) => &GetPropertyByIndex<byte, short, short>,
-                (sizeof(byte), sizeof(short), sizeof(int)) => &GetPropertyByIndex<byte, short, int>,
-                (sizeof(byte), sizeof(int), sizeof(byte)) => &GetPropertyByIndex<byte, int, byte>,
-                (sizeof(byte), sizeof(int), sizeof(short)) => &GetPropertyByIndex<byte, int, short>,
-                (sizeof(byte), sizeof(int), sizeof(int)) => &GetPropertyByIndex<byte, int, int>,
-
-                (sizeof(short), sizeof(byte), sizeof(byte)) => &GetPropertyByIndex<short, byte, byte>,
-                (sizeof(short), sizeof(byte), sizeof(short)) => &GetPropertyByIndex<short, byte, short>,
-                (sizeof(short), sizeof(byte), sizeof(int)) => &GetPropertyByIndex<short, byte, int>,
-                (sizeof(short), sizeof(short), sizeof(byte)) => &GetPropertyByIndex<short, short, byte>,
-                (sizeof(short), sizeof(short), sizeof(short)) => &GetPropertyByIndex<short, short, short>,
-                (sizeof(short), sizeof(short), sizeof(int)) => &GetPropertyByIndex<short, short, int>,
-                (sizeof(short), sizeof(int), sizeof(byte)) => &GetPropertyByIndex<short, int, byte>,
-                (sizeof(short), sizeof(int), sizeof(short)) => &GetPropertyByIndex<short, int, short>,
-                (sizeof(short), sizeof(int), sizeof(int)) => &GetPropertyByIndex<short, int, int>,
-
-                (sizeof(int), sizeof(byte), sizeof(byte)) => &GetPropertyByIndex<int, byte, byte>,
-                (sizeof(int), sizeof(byte), sizeof(short)) => &GetPropertyByIndex<int, byte, short>,
-                (sizeof(int), sizeof(byte), sizeof(int)) => &GetPropertyByIndex<int, byte, int>,
-                (sizeof(int), sizeof(short), sizeof(byte)) => &GetPropertyByIndex<int, short, byte>,
-                (sizeof(int), sizeof(short), sizeof(short)) => &GetPropertyByIndex<int, short, short>,
-                (sizeof(int), sizeof(short), sizeof(int)) => &GetPropertyByIndex<int, short, int>,
-                (sizeof(int), sizeof(int), sizeof(byte)) => &GetPropertyByIndex<int, int, byte>,
-                (sizeof(int), sizeof(int), sizeof(short)) => &GetPropertyByIndex<int, int, short>,
-                (sizeof(int), sizeof(int), sizeof(int)) => &GetPropertyByIndex<int, int, int>,
-
-                _ => throw new NotImplementedException(),
-            };
-        }
-
-        private static delegate*<BlittableJsonReaderObject, ulong> AcquireGetHashOfPropertyNamesFunc(int currentOffsetSize, int currentPropertyIdSize, int propNamesDataOffsetSize)
-        {
-            return (currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize) switch
-            {
-                (sizeof(byte), sizeof(byte), sizeof(byte)) => &GetHashOfPropertyNames<byte, byte, byte>,
-                (sizeof(byte), sizeof(byte), sizeof(short)) => &GetHashOfPropertyNames<byte, byte, short>,
-                (sizeof(byte), sizeof(byte), sizeof(int)) => &GetHashOfPropertyNames<byte, byte, int>,
-                (sizeof(byte), sizeof(short), sizeof(byte)) => &GetHashOfPropertyNames<byte, short, byte>,
-                (sizeof(byte), sizeof(short), sizeof(short)) => &GetHashOfPropertyNames<byte, short, short>,
-                (sizeof(byte), sizeof(short), sizeof(int)) => &GetHashOfPropertyNames<byte, short, int>,
-                (sizeof(byte), sizeof(int), sizeof(byte)) => &GetHashOfPropertyNames<byte, int, byte>,
-                (sizeof(byte), sizeof(int), sizeof(short)) => &GetHashOfPropertyNames<byte, int, short>,
-                (sizeof(byte), sizeof(int), sizeof(int)) => &GetHashOfPropertyNames<byte, int, int>,
-
-                (sizeof(short), sizeof(byte), sizeof(byte)) => &GetHashOfPropertyNames<short, byte, byte>,
-                (sizeof(short), sizeof(byte), sizeof(short)) => &GetHashOfPropertyNames<short, byte, short>,
-                (sizeof(short), sizeof(byte), sizeof(int)) => &GetHashOfPropertyNames<short, byte, int>,
-                (sizeof(short), sizeof(short), sizeof(byte)) => &GetHashOfPropertyNames<short, short, byte>,
-                (sizeof(short), sizeof(short), sizeof(short)) => &GetHashOfPropertyNames<short, short, short>,
-                (sizeof(short), sizeof(short), sizeof(int)) => &GetHashOfPropertyNames<short, short, int>,
-                (sizeof(short), sizeof(int), sizeof(byte)) => &GetHashOfPropertyNames<short, int, byte>,
-                (sizeof(short), sizeof(int), sizeof(short)) => &GetHashOfPropertyNames<short, int, short>,
-                (sizeof(short), sizeof(int), sizeof(int)) => &GetHashOfPropertyNames<short, int, int>,
-
-                (sizeof(int), sizeof(byte), sizeof(byte)) => &GetHashOfPropertyNames<int, byte, byte>,
-                (sizeof(int), sizeof(byte), sizeof(short)) => &GetHashOfPropertyNames<int, byte, short>,
-                (sizeof(int), sizeof(byte), sizeof(int)) => &GetHashOfPropertyNames<int, byte, int>,
-                (sizeof(int), sizeof(short), sizeof(byte)) => &GetHashOfPropertyNames<int, short, byte>,
-                (sizeof(int), sizeof(short), sizeof(short)) => &GetHashOfPropertyNames<int, short, short>,
-                (sizeof(int), sizeof(short), sizeof(int)) => &GetHashOfPropertyNames<int, short, int>,
-                (sizeof(int), sizeof(int), sizeof(byte)) => &GetHashOfPropertyNames<int, int, byte>,
-                (sizeof(int), sizeof(int), sizeof(short)) => &GetHashOfPropertyNames<int, int, short>,
-                (sizeof(int), sizeof(int), sizeof(int)) => &GetHashOfPropertyNames<int, int, int>,
-
-                _ => throw new NotImplementedException(),
-            };
-        }
-
-        private static delegate*<BlittableJsonReaderObject, int> AcquireGetHashCodeFunc(int currentOffsetSize, int currentPropertyIdSize, int propNamesDataOffsetSize)
-        {
-            return (currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize) switch
-            {
-                (sizeof(byte), sizeof(byte), sizeof(byte)) => &GetHashCode<byte, byte, byte>,
-                (sizeof(byte), sizeof(byte), sizeof(short)) => &GetHashCode<byte, byte, short>,
-                (sizeof(byte), sizeof(byte), sizeof(int)) => &GetHashCode<byte, byte, int>,
-                (sizeof(byte), sizeof(short), sizeof(byte)) => &GetHashCode<byte, short, byte>,
-                (sizeof(byte), sizeof(short), sizeof(short)) => &GetHashCode<byte, short, short>,
-                (sizeof(byte), sizeof(short), sizeof(int)) => &GetHashCode<byte, short, int>,
-                (sizeof(byte), sizeof(int), sizeof(byte)) => &GetHashCode<byte, int, byte>,
-                (sizeof(byte), sizeof(int), sizeof(short)) => &GetHashCode<byte, int, short>,
-                (sizeof(byte), sizeof(int), sizeof(int)) => &GetHashCode<byte, int, int>,
-
-                (sizeof(short), sizeof(byte), sizeof(byte)) => &GetHashCode<short, byte, byte>,
-                (sizeof(short), sizeof(byte), sizeof(short)) => &GetHashCode<short, byte, short>,
-                (sizeof(short), sizeof(byte), sizeof(int)) => &GetHashCode<short, byte, int>,
-                (sizeof(short), sizeof(short), sizeof(byte)) => &GetHashCode<short, short, byte>,
-                (sizeof(short), sizeof(short), sizeof(short)) => &GetHashCode<short, short, short>,
-                (sizeof(short), sizeof(short), sizeof(int)) => &GetHashCode<short, short, int>,
-                (sizeof(short), sizeof(int), sizeof(byte)) => &GetHashCode<short, int, byte>,
-                (sizeof(short), sizeof(int), sizeof(short)) => &GetHashCode<short, int, short>,
-                (sizeof(short), sizeof(int), sizeof(int)) => &GetHashCode<short, int, int>,
-
-                (sizeof(int), sizeof(byte), sizeof(byte)) => &GetHashCode<int, byte, byte>,
-                (sizeof(int), sizeof(byte), sizeof(short)) => &GetHashCode<int, byte, short>,
-                (sizeof(int), sizeof(byte), sizeof(int)) => &GetHashCode<int, byte, int>,
-                (sizeof(int), sizeof(short), sizeof(byte)) => &GetHashCode<int, short, byte>,
-                (sizeof(int), sizeof(short), sizeof(short)) => &GetHashCode<int, short, short>,
-                (sizeof(int), sizeof(short), sizeof(int)) => &GetHashCode<int, short, int>,
-                (sizeof(int), sizeof(int), sizeof(byte)) => &GetHashCode<int, int, byte>,
-                (sizeof(int), sizeof(int), sizeof(short)) => &GetHashCode<int, int, short>,
-                (sizeof(int), sizeof(int), sizeof(int)) => &GetHashCode<int, int, int>,
-
-                _ => throw new NotImplementedException(),
-            };
-        }
-
-        private static delegate*<BlittableJsonReaderObject, LazyStringValue, int> AcquireGetPropertyIndexFunc(int currentOffsetSize, int currentPropertyIdSize, int propNamesDataOffsetSize)
-        {
-            return (currentOffsetSize, currentPropertyIdSize, propNamesDataOffsetSize) switch
-            {
-                (sizeof(byte), sizeof(byte), sizeof(byte)) => &GetPropertyIndex<byte, byte, byte>,
-                (sizeof(byte), sizeof(byte), sizeof(short)) => &GetPropertyIndex<byte, byte, short>,
-                (sizeof(byte), sizeof(byte), sizeof(int)) => &GetPropertyIndex<byte, byte, int>,
-                (sizeof(byte), sizeof(short), sizeof(byte)) => &GetPropertyIndex<byte, short, byte>,
-                (sizeof(byte), sizeof(short), sizeof(short)) => &GetPropertyIndex<byte, short, short>,
-                (sizeof(byte), sizeof(short), sizeof(int)) => &GetPropertyIndex<byte, short, int>,
-                (sizeof(byte), sizeof(int), sizeof(byte)) => &GetPropertyIndex<byte, int, byte>,
-                (sizeof(byte), sizeof(int), sizeof(short)) => &GetPropertyIndex<byte, int, short>,
-                (sizeof(byte), sizeof(int), sizeof(int)) => &GetPropertyIndex<byte, int, int>,
-
-                (sizeof(short), sizeof(byte), sizeof(byte)) => &GetPropertyIndex<short, byte, byte>,
-                (sizeof(short), sizeof(byte), sizeof(short)) => &GetPropertyIndex<short, byte, short>,
-                (sizeof(short), sizeof(byte), sizeof(int)) => &GetPropertyIndex<short, byte, int>,
-                (sizeof(short), sizeof(short), sizeof(byte)) => &GetPropertyIndex<short, short, byte>,
-                (sizeof(short), sizeof(short), sizeof(short)) => &GetPropertyIndex<short, short, short>,
-                (sizeof(short), sizeof(short), sizeof(int)) => &GetPropertyIndex<short, short, int>,
-                (sizeof(short), sizeof(int), sizeof(byte)) => &GetPropertyIndex<short, int, byte>,
-                (sizeof(short), sizeof(int), sizeof(short)) => &GetPropertyIndex<short, int, short>,
-                (sizeof(short), sizeof(int), sizeof(int)) => &GetPropertyIndex<short, int, int>,
-
-                (sizeof(int), sizeof(byte), sizeof(byte)) => &GetPropertyIndex<int, byte, byte>,
-                (sizeof(int), sizeof(byte), sizeof(short)) => &GetPropertyIndex<int, byte, short>,
-                (sizeof(int), sizeof(byte), sizeof(int)) => &GetPropertyIndex<int, byte, int>,
-                (sizeof(int), sizeof(short), sizeof(byte)) => &GetPropertyIndex<int, short, byte>,
-                (sizeof(int), sizeof(short), sizeof(short)) => &GetPropertyIndex<int, short, short>,
-                (sizeof(int), sizeof(short), sizeof(int)) => &GetPropertyIndex<int, short, int>,
-                (sizeof(int), sizeof(int), sizeof(byte)) => &GetPropertyIndex<int, int, byte>,
-                (sizeof(int), sizeof(int), sizeof(short)) => &GetPropertyIndex<int, int, short>,
-                (sizeof(int), sizeof(int), sizeof(int)) => &GetPropertyIndex<int, int, int>,
-
-                _ => throw new NotImplementedException(),
-            };
+            return new FunctionTableItem(
+                getPropertyIndex: &GetPropertyIndex<TOffsetSize, TPropertySize, TPropertyDataSize>,
+                getHashOfPropertyNames: &GetHashOfPropertyNames<TOffsetSize, TPropertySize, TPropertyDataSize>,
+                getHashCode: &GetHashCode<TOffsetSize, TPropertySize, TPropertyDataSize>,
+                getPropertyByIndex: &GetPropertyByIndex<TOffsetSize, TPropertySize, TPropertyDataSize>,
+                getPropertyNames: &GetPropertyNames<TOffsetSize, TPropertySize, TPropertyDataSize>,
+                tryGetMember : &TryGetMember<TOffsetSize, TPropertySize, TPropertyDataSize>
+            );
         }
     }
 }
