@@ -363,6 +363,7 @@ namespace Raven.Server.Rachis
                         {
                             var cmd = new LowestIndexUpdateCommand(leader: this, engine: _engine, lowestIndexInEntireCluster: lowestIndexInEntireCluster);
                             _engine.TxMerger.EnqueueSync(cmd);
+                            LowestIndexInEntireCluster = _lowestIndexInEntireCluster;
                         }
                     }
                     catch (Exception ex)

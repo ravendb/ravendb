@@ -30,10 +30,6 @@ public sealed class LowestIndexUpdateCommand : MergedTransactionCommand<ClusterO
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
         _engine.TruncateLogBefore(context, _lowestIndexInEntireCluster);
-        context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
-        {
-            _leader.LowestIndexInEntireCluster = _lowestIndexInEntireCluster;
-        };
         return 1;
     }
 
