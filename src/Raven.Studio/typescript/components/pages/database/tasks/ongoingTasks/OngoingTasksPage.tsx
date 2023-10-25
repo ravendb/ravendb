@@ -356,7 +356,6 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
                             target="_blank"
                             href={serverWideTasksUrl}
                             title="Go to the Server-Wide Tasks view"
-                            className="link-muted"
                         >
                             <Icon icon="server-wide-tasks" />
                             Server-Wide Tasks
