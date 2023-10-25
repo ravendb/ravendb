@@ -1532,8 +1532,15 @@ namespace Raven.Client.Documents.Indexes
 
             if (node.Method.Name == "GetValueOrDefault" && Nullable.GetUnderlyingType(node.Method.DeclaringType) != null)
             {
+                if (TypeExistsOnServer(node.Type) == false)
+                    throw new InvalidOperationException($"Type {node.Type} does not exist on server, default value cannot be assigned");
+                
+                var underlyingType = Nullable.GetUnderlyingType(node.Method.DeclaringType);
+                
                 Visit(node.Object);
-                return node; // we don't do anything here on the server
+                Out($" ?? default({underlyingType.Name})");
+                
+                return node; // we don't have more to handle
             }
 
             var isExtension = false;
