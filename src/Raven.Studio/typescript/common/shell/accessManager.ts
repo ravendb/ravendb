@@ -169,6 +169,44 @@ class accessManager {
                 </div>`;
     }
 
+    dashboardView = {
+        showCertificatesLink: this.isOperatorOrAbove
+    };
+    
+    clusterView = {
+        canAddNode: this.isClusterAdminOrClusterNode,
+        canDeleteNode: this.isClusterAdminOrClusterNode,
+        showCoresInfo: this.isClusterAdminOrClusterNode,
+        canDemotePromoteNode: this.isClusterAdminOrClusterNode
+    };
+    
+    aboutView = {
+        canReplaceLicense: this.isClusterAdminOrClusterNode,
+        canForceUpdate: this.isClusterAdminOrClusterNode,
+        canRenewLicense: this.isClusterAdminOrClusterNode,
+        canRegisterLicense: this.isClusterAdminOrClusterNode
+    };
+    
+    databasesView = {
+        canCreateNewDatabase: this.isOperatorOrAbove,
+        canSetState: this.isOperatorOrAbove,
+        canDelete: this.isOperatorOrAbove,
+        canDisableEnableDatabase: this.isOperatorOrAbove,
+        canDisableIndexing: this.isOperatorOrAbove,
+        canCompactDatabase: this.isOperatorOrAbove
+    };
+
+    databaseGroupView = {
+        canPromoteNode: this.isOperatorOrAbove
+    };
+    
+    certificatesView = {
+        canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNode,
+        canDeleteClusterNodeCertificate: this.isClusterAdminOrClusterNode,
+        canDeleteClusterAdminCertificate: this.isClusterAdminOrClusterNode,
+        canGenerateClientCertificateForAdmin: this.isClusterAdminOrClusterNode
+    };
+    
     static getDatabasesAccess(name: string) {
         if (!name) {
             return null;

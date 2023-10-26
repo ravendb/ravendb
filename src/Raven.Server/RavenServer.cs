@@ -2598,7 +2598,7 @@ namespace Raven.Server
                                 msg = "Cannot allow access. Database name is empty.";
                                 return false;
                             }
-                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: false))
+                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication))
                                 return true;
                             msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;

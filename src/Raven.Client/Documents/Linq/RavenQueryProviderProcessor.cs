@@ -2067,12 +2067,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                 case "Any":
                     {
+                        if (expression.Arguments.Count == 2 && expression.Arguments[0] is not ConstantExpression)
+                            _subClauseDepth++;
+                        
                         VisitExpression(expression.Arguments[0]);
                         if (expression.Arguments.Count == 2)
                         {
                             if (_chainedWhere)
                                 DocumentQuery.AndAlso();
                             VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+                            
+                            if (_subClauseDepth > 0)
+                                _subClauseDepth--;
                         }
 
                         VisitAny();
