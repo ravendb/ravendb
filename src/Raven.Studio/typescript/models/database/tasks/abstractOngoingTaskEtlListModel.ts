@@ -5,6 +5,7 @@ import etlProgress = require("models/database/tasks/etlProgress");
 
 class progressItem {
     name = ko.observable<string>();
+    transactionalId = ko.observable<string>();
 
     globalProgress: etlProgress = new etlProgress(0, 0, x => x.toLocaleString());
 
@@ -29,6 +30,7 @@ class progressItem {
     
     update(dto: Raven.Server.Documents.ETL.Stats.EtlProcessProgress) {
         this.name(dto.TransformationName);
+        this.transactionalId(dto.TransactionalId);
         
         this.documents.total(dto.TotalNumberOfDocuments);
         this.documents.processed(dto.TotalNumberOfDocuments - dto.NumberOfDocumentsToProcess);
