@@ -47,9 +47,10 @@ namespace Raven.Client.Documents.Conventions
             SendApplicationIdentifier = false,
             MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes),
 #if NETCOREAPP3_1_OR_GREATER
-            HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19)
+            HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19),
+            HttpVersion = System.Net.HttpVersion.Version20
 #endif
-        };
+    };
 
         private static readonly bool DefaultDisableTcpCompression = false;
 
@@ -163,6 +164,22 @@ namespace Raven.Client.Documents.Conventions
                 DefaultForServer.HttpPooledConnectionLifetime = httpPooledConnectionLifetime < 0
                     ? null
                     : TimeSpan.FromSeconds(httpPooledConnectionLifetime);
+            }
+
+            var httpVersionAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_VERSION");
+            if (httpVersionAsString != null)
+            {
+                Version httpVersion;
+                try
+                {
+                    httpVersion = Version.Parse(httpVersionAsString);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_VERSION' env variable with value '{httpVersionAsString}'.", e);
+                }
+
+                DefaultForServer.HttpVersion = httpVersion;
             }
 #endif
 
