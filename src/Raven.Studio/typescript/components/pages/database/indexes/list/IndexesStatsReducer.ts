@@ -252,19 +252,26 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                 incomingStats.forEach((stat) => {
                     const existingShardedInfo = draft.indexes.find((x) => x.name === stat.Name);
                     if (existingShardedInfo) {
-                        // container already exists, just update node stats
+                        // container already exists, just update stats
+
+                        const sharedInfo: IndexSharedInfo = {
+                            ...mapToIndexSharedInfo(stat),
+                            nodesInfo: existingShardedInfo.nodesInfo,
+                        };
 
                         const nodeInfo = mapToIndexNodeInfo(stat, incomingLocation);
-                        const findIdx = existingShardedInfo.nodesInfo.findIndex((x) =>
+                        const findIdx = sharedInfo.nodesInfo.findIndex((x) =>
                             databaseLocationComparator(x.location, incomingLocation)
                         );
 
                         if (findIdx === -1) {
-                            existingShardedInfo.nodesInfo.push(nodeInfo);
+                            sharedInfo.nodesInfo.push(nodeInfo);
                         } else {
-                            nodeInfo.progress = existingShardedInfo.nodesInfo[findIdx].progress;
-                            existingShardedInfo.nodesInfo.splice(findIdx, 1, nodeInfo);
+                            nodeInfo.progress = sharedInfo.nodesInfo[findIdx].progress;
+                            sharedInfo.nodesInfo.splice(findIdx, 1, nodeInfo);
                         }
+
+                        draft.indexes.splice(draft.indexes.indexOf(existingShardedInfo), 1, sharedInfo);
                     } else {
                         // create new container with stats
                         const sharedInfo = mapToIndexSharedInfo(stat);
