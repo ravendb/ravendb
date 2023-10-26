@@ -1225,18 +1225,71 @@ namespace Raven.Server.Web.System
         public async Task SetUnusedDatabaseIds()
         {
             var database = GetStringQueryString("name");
+            var validate = GetBoolValueQueryString("validate", required: false);
+
             await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "unused-databases-ids"))
             {
                 var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
+                if (validate.HasValue && validate.Value)
+                {
+                    var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
+                    await ValidateUnusedIdsAsync(parameters.DatabaseIds, database, token.Token);
+                }
+
                 var command = new UpdateUnusedDatabaseIdsCommand(database, parameters.DatabaseIds, GetRaftRequestIdFromQuery());
                 await ServerStore.SendToLeaderAsync(command);
             }
 
             NoContentStatus();
         }
+
+        private async Task ValidateUnusedIdsAsync(HashSet<string> unusedIds, string databaseName, CancellationToken token)
+        {
+            DatabaseTopology topology;
+            ClusterTopology clusterTopology;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+            {
+                topology = rawRecord.Topology;
+                clusterTopology = ServerStore.GetClusterTopology(context);
+            }
+
+            if(unusedIds.Contains(topology.DatabaseTopologyIdBase64))
+                throw new InvalidOperationException($"'DatabaseTopologyIdBase64' ({topology.DatabaseTopologyIdBase64}) cannot be added to the 'unused ids' list (of '{databaseName}').");
+
+            if(unusedIds.Contains(topology.ClusterTransactionIdBase64))
+                throw new InvalidOperationException($"'ClusterTransactionIdBase64' ({topology.ClusterTransactionIdBase64}) cannot be added to the 'unused ids' list (of '{databaseName}').");
+
+            var nodesUrls = clusterTopology.AllNodes
+                .Where((kvp) => topology.AllNodes.Contains(kvp.Key))
+                .Select(kvp => kvp.Value)
+            .ToArray();
+
+            using var requestExecutor = RequestExecutor.Create(nodesUrls, databaseName, Server.Certificate.Certificate, DocumentConventions.Default);
+
+            foreach (var nodeTag in topology.AllNodes)
+            {
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var cmd = new GetStatisticsOperation.GetStatisticsCommand(null, nodeTag);
+                    await requestExecutor.ExecuteAsync(cmd, context); //, token: token);
+                    var stats = cmd.Result;
+
+                    if (unusedIds.Contains(stats.DatabaseId))
+                    {
+                        throw new InvalidOperationException(
+                            $"'{stats.DatabaseId}' cannot be added to the 'unused ids' list (of '{databaseName}'), because it's the database id of '{databaseName}' on node {nodeTag}.");
+                    }
+                }
+            }
+
+        }
+
+
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabases()
