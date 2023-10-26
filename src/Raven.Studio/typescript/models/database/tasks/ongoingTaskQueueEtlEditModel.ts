@@ -141,6 +141,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
         
         if (configuration) {
             this.connectionStringName(configuration.ConnectionStringName);
+            this.allowEtlOnNonEncryptedChannel(configuration.AllowEtlOnNonEncryptedChannel);
             this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskQueueEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!configuration.MentorNode);
             this.skipAutomaticQueueDeclaration(configuration.SkipAutomaticQueueDeclaration);
