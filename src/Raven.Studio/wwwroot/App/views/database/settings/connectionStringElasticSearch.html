@@ -77,6 +77,14 @@
             </div>
         </div>
     </div>
+    <div data-bind="collapse: authMethodUsed() === 'encodedApiKey'">
+        <div class="form-group" data-bind="validationElement: encodedApiKey">
+            <label class="control-label">Encoded API Key <i class="required"></i></label>
+            <div class="flex-grow">
+                <input class="form-control" data-bind="textInput: encodedApiKey" placeholder="Enter Encoded API Key" />
+            </div>
+        </div>
+    </div>
     <div data-bind="collapse: authMethodUsed() === 'certificate'">
         <div class="input-group file-input">
             <input type="file" id="elasticCertificateFilePicker" data-bind="event: { change: _.partial(uploadElasticCertificate, $element) }" />
@@ -123,25 +131,6 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
-<div class="form-group margin-bottom-sm">
-    <label class="control-label">&nbsp;</label>
-    <div class="text-warning bg-warning padding padding-sm margin-top flex-horizontal">
-        <div class="flex-start"><small><i class="icon-warning"></i></small></div>
-        <div>
-            <small>
-            In order to use the latest <strong>7.x</strong> Elasticsearch client with an <strong>8.x</strong> Elasticsearch server, you must enable the compatibility mode below.<br />
-            This will set <strong>EnableApiVersioningHeader</strong> on the Elasticsearch connection string.
-            </small>
-        </div>
-    </div>
-</div>
-<div class="form-group">
-    <label class="control-label">&nbsp;</label>
-    <div class="toggle">
-        <input id="toggle-elastic-compatibility-mode" type="checkbox" data-bind="checked: enableCompatibilityMode">
-        <label for="toggle-elastic-compatibility-mode">Enable compatibility mode</label>
     </div>
 </div>
 <div data-bind="if: !nodesUrls.isValid()">

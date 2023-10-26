@@ -11,7 +11,7 @@ import certificateUtils = require("common/certificateUtils");
 import messagePublisher = require("common/messagePublisher");
 import testElasticSearchNodeConnectionCommand = require("commands/database/cluster/testElasticSearchNodeConnectionCommand");
 
-type authenticationMethod = "none" | "basic" | "apiKey" | "certificate";
+type authenticationMethod = "none" | "basic" | "apiKey" | "encodedApiKey" | "certificate";
 
 class authenticationInfo {
 
@@ -19,6 +19,7 @@ class authenticationInfo {
         { value: "none", label: "No authentication" },
         { value: "basic", label: "Basic" },
         { value: "apiKey",label: "API Key" },
+        { value: "encodedApiKey",label: "Encoded API Key" },
         { value: "certificate", label: "Certificate" }
     ];
     
@@ -29,6 +30,8 @@ class authenticationInfo {
 
     apiKeyId = ko.observable<string>();
     apiKey = ko.observable<string>();
+    
+    encodedApiKey = ko.observable<string>();
 
     certificates = ko.observableArray<replicationCertificateModel>([]);
     
@@ -36,11 +39,14 @@ class authenticationInfo {
     validationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication) {
-        
         if (dto.Basic) {
             this.username(dto.Basic.Username);
             this.password(dto.Basic.Password);
         }
+
+        if (dto.ApiKey?.EncodedApiKey) {
+            this.encodedApiKey(dto.ApiKey.EncodedApiKey);
+        } 
         
         if (dto.ApiKey) {
             this.apiKeyId(dto.ApiKey.ApiKeyId);
@@ -59,7 +65,6 @@ class authenticationInfo {
     }
     
     private initObservables(): void {
-        
         this.authMethodUsed(this.findMethodUsed());
         
         this.dirtyFlag = new ko.DirtyFlag([
@@ -67,11 +72,17 @@ class authenticationInfo {
             this.password,
             this.apiKeyId,
             this.apiKey,
-            this.certificates
+            this.encodedApiKey,
+            this.certificates,
+            this.authMethodUsed
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
     private findMethodUsed(): authenticationMethod {
+        if (this.encodedApiKey()) {
+            return "encodedApiKey";
+        }
+        
         if (this.username() && this.password()) {
             return "basic";
         }
@@ -111,6 +122,12 @@ class authenticationInfo {
                 onlyIf: () => this.authMethodUsed() === "apiKey"
             }
         });
+        
+        this.encodedApiKey.extend({
+            required: {
+                onlyIf: () => this.authMethodUsed() === "encodedApiKey"
+            }
+        })
 
         this.certificates.extend({
             validation: [
@@ -126,6 +143,7 @@ class authenticationInfo {
             password: this.password,
             apiKeyId: this.apiKeyId,
             apiKey: this.apiKey,
+            encodedApiKey: this.encodedApiKey,
             certificates: this.certificates
         });
     }
@@ -135,7 +153,7 @@ class authenticationInfo {
 
         return {
             Basic: methodUsed === "basic" ? { Username: this.username(), Password: this.password() } : null,
-            ApiKey: methodUsed === "apiKey" ? { ApiKey: this.apiKey(), ApiKeyId: this.apiKeyId() } : null,
+            ApiKey: methodUsed === "apiKey" || methodUsed === "encodedApiKey" ? { ApiKey: this.apiKey(), ApiKeyId: this.apiKeyId(), EncodedApiKey: this.encodedApiKey() } : null,
             Certificate: methodUsed === "certificate" ? { CertificatesBase64: this.certificates().map(x => x.publicKey()) } : null
         }
     }
@@ -148,7 +166,8 @@ class authenticationInfo {
             },
             ApiKey: {
                 ApiKeyId: null,
-                ApiKey: null
+                ApiKey: null,
+                EncodedApiKey: null
             },
             Certificate: {
                 CertificatesBase64: []
@@ -210,7 +229,6 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
     selectedUrlToTest = ko.observable<string>();
     
     authentication = ko.observable<authenticationInfo>();
-    enableCompatibilityMode = ko.observable<boolean>();
 
     validationGroup: KnockoutValidationGroup;
 
@@ -231,9 +249,8 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
         this.nodesUrls(dto.Nodes.map((x) => new discoveryUrl(x)));
 
         this.authentication(new authenticationInfo(dto.Authentication));
-        this.enableCompatibilityMode(dto.EnableCompatibilityMode);
     }
-
+    
     initValidation(): void {
         super.initValidation();
 
@@ -271,7 +288,6 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             urlsCount,
             urlsAreDirty,
             this.authentication().dirtyFlag().isDirty,
-            this.enableCompatibilityMode
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -281,7 +297,6 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             Name: "",
             Nodes: [],
             Authentication: authenticationInfo.empty().toDto(),
-            EnableCompatibilityMode: false
         } as Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString, true, []);
     }
 
@@ -291,7 +306,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             Name: this.connectionStringName(),
             Nodes: this.nodesUrls().map((x) => x.discoveryUrlName()),
             Authentication: this.authentication().toDto(),
-            EnableCompatibilityMode: this.enableCompatibilityMode()
+            EnableCompatibilityMode: undefined // this field is no longer used
         };
     }
 
