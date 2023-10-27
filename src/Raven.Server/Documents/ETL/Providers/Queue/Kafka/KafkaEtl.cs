@@ -118,7 +118,7 @@ public class KafkaEtl : QueueEtl<KafkaItem>
             else
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to deliver message '{report.Key}': {report.Error.Reason}");
+                    Logger.Operations($"Failed to deliver message '{report.Key}', Kafka error code: '{report.Error.Code}', error reason: '{report.Error.Reason}'");
             }
         }
         if (itemsPerTopic.Count == 0)
@@ -194,7 +194,7 @@ public class KafkaEtl : QueueEtl<KafkaItem>
         catch (KafkaException ex)
         {
             var errorMessageBuilder = new StringBuilder($"ETL process: {Name}. Commit transaction failed. " +
-                                                        $"Error code: '{ex.Error.Code}'. Error reason: '{ex.Error.Reason}'{Environment.NewLine}");
+                                                        $"Kafka error code: '{ex.Error.Code}'. Error reason: '{ex.Error.Reason}'{Environment.NewLine}");
 
             if (ex is not KafkaTxnRequiresAbortException)
             {
