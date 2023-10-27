@@ -211,22 +211,26 @@ class registration extends dialogViewModelBase {
         app.showBootstrapDialog(vm);
     }
 
-    forceLicenseUpdate() {
-        this.spinners.forceLicenseUpdate(true);
+    async forceLicenseUpdate() {
+        try {
+            this.spinners.forceLicenseUpdate(true);
 
-        new forceLicenseUpdateCommand().execute()
-            .done(() => {
-                license.fetchLicenseStatus()
-                    .done(() => {
-                        const licenseStatus = license.licenseStatus();
-                        if (!licenseStatus.Expired &&
-                            !licenseStatus.ErrorMessage) {
-                            app.closeDialog(this);
-                        }
-                        license.fetchSupportCoverage();
-                    });
-            })
-            .always(() => this.spinners.forceLicenseUpdate(false));
+            const updateResult = await new forceLicenseUpdateCommand().execute();
+            const licenseStatus = await license.fetchLicenseStatus();
+
+            if (updateResult.Status === "NotModified") {
+                forceLicenseUpdateCommand.handleNotModifiedStatus(licenseStatus.Expired);
+            }
+
+            if (!licenseStatus.Expired && !licenseStatus.ErrorMessage) {
+                app.closeDialog(this);
+            }
+
+            await license.fetchSupportCoverage();
+
+        } finally {
+            this.spinners.forceLicenseUpdate(false)
+        }
     }
 
     renewLicense() {

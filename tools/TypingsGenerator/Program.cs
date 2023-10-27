@@ -419,6 +419,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseRenewalResult));
             scripter.AddType(typeof(LicenseConfiguration));
             scripter.AddType(typeof(LicenseHandler.ConnectivityToLicenseServer));
+            scripter.AddType(typeof(LicenseLeaseResult));
             scripter.AddType(typeof(LicenseLimitsUsage));
             scripter.AddType(typeof(DatabaseLicenseLimitsUsage));
 

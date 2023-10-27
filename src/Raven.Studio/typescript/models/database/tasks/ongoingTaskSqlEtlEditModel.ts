@@ -102,6 +102,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
 
         if (dto.Configuration) {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
+            this.allowEtlOnNonEncryptedChannel(dto.Configuration.AllowEtlOnNonEncryptedChannel);
             this.parameterizedDeletes(dto.Configuration.ParameterizeDeletes);
             this.forceRecompileQuery(dto.Configuration.ForceQueryRecompile);
             this.tableQuotation(dto.Configuration.QuoteTables);
