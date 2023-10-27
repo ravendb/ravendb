@@ -514,8 +514,8 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static readonly List<string> _timeSpanPropertiesNames = typeof(TimeSpan).GetProperties().Select(i => i.Name).ToList();
-        private static readonly List<string> _timeOnlyPropertiesNames = typeof(TimeOnly).GetProperties().Select(i => i.Name).ToList();
+        private static readonly string[] _timeSpanPropertiesNames = typeof(TimeSpan).GetProperties().Select(i => i.Name).ToArray();
+        private static readonly string[] _timeOnlyPropertiesNames = typeof(TimeOnly).GetProperties().Select(i => i.Name).ToArray();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe object ConvertLazyStringValue(LazyStringValue value, StringSegment member = default, bool supportTimeOnlyDateOnly = false)
@@ -567,7 +567,7 @@ namespace Raven.Server.Utils
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe bool TryConvertStringValue(string value, out object output) => TryConvertStringValue(value, supportDateOnlyTimeOnly: false, out output);
+        internal static bool TryConvertStringValue(string value, out object output) => TryConvertStringValue(value, supportDateOnlyTimeOnly: false, out output);
 
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
