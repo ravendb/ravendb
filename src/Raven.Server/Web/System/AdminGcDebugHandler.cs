@@ -116,9 +116,9 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private class GcAllocationsEventListener : Expensive_GcEventListener
+        internal class GcAllocationsEventListener : Expensive_GcEventListener
         {
-            private const string AllocationEventName = "GCAllocationTick_V4";
+            internal const string AllocationEventName = "GCAllocationTick_V4";
 
             private readonly Dictionary<string, AllocationInfo> _allocations = new();
 
@@ -408,7 +408,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private abstract class Expensive_GcEventListener : EventListener
+        internal abstract class Expensive_GcEventListener : EventListener
         {
             private const int GC_KEYWORD = 0x0000001;
 
