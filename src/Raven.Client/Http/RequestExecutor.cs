@@ -102,7 +102,7 @@ namespace Raven.Client.Http
 
         private Timer _updateTopologyTimer;
 
-        protected NodeSelector _nodeSelector;
+        protected internal NodeSelector _nodeSelector;
 
         private TimeSpan? _defaultTimeout;
 
@@ -540,7 +540,7 @@ namespace Raven.Client.Http
             else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate))
             {
                 DisposeAllFailedNodesTimers();
-                if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode && _nodeSelector.InSpeedTestPhase)
                 {
                     _nodeSelector.ScheduleSpeedTest();
                 }
