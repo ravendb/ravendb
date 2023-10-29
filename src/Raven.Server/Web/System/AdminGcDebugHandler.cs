@@ -7,6 +7,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -107,38 +108,7 @@ namespace Raven.Server.Web.System
 
                     first = false;
 
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(GcEventsEventListener.Event.Type));
-                    writer.WriteString(@event.Type.ToString());
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GcEventsEventListener.Event.DurationInMs));
-                    writer.WriteDouble(@event.DurationInMs);
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GcEventsEventListener.Event.Start));
-                    writer.WriteString(@event.Start.ToString("yyyy/MM/dd HH:mm:ss.fff"));
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GcEventsEventListener.Event.End));
-                    writer.WriteString(@event.End.ToString("yyyy/MM/dd HH:mm:ss.fff"));
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GcEventsEventListener.Event.OSThreadId));
-                    writer.WriteInteger(@event.OSThreadId);
-
-                    if (@event.Index != null)
-                    {
-                        writer.WriteComma();
-                        writer.WritePropertyName(nameof(GcEventsEventListener.Event.Index));
-                        writer.WriteInteger(@event.Index.Value);
-                    }
-
-                    if (@event.SuspendReason != null)
-                    {
-                        writer.WriteComma();
-                        writer.WritePropertyName(nameof(GcEventsEventListener.Event.SuspendReason));
-                        writer.WriteString(@event.SuspendReason);
-                    }
-
-                    writer.WriteEndObject();
+                    context.Write(writer, @event.ToJson());
                 }
 
                 writer.WriteEndArray();
@@ -211,9 +181,8 @@ namespace Raven.Server.Web.System
 
         private class GcEventsEventListener : Expensive_GcEventListener
         {
-            private Dictionary<long, DateTime> timeGCStartByIndex = new();
-            private DateTime? timeGCSuspendStart;
-            private uint? _gcSuspendReason;
+            private Dictionary<long, (DateTime DateTime, uint Generation, uint Reason)> timeGCStartByIndex = new();
+            private EventWrittenEventArgs _suspendData;
             private DateTime? timeGCRestartStart;
             private DateTime? timeGCFinalizersStart;
             private readonly List<Event> _events = new();
@@ -228,21 +197,146 @@ namespace Raven.Server.Web.System
                 GCFinalizers
             }
 
-            public class Event
+            public class Event : IDynamicJson
             {
-                public EventType Type { get; set; }
+                private EventType Type { get; }
 
-                public long OSThreadId { get; set; }
+                private long OSThreadId { get; }
 
-                public DateTime Start { get; set; }
+                private DateTime Start { get; }
 
-                public DateTime End { get; set; }
+                private DateTime End { get; }
 
-                public double DurationInMs { get; set; }
+                private double? _durationInMs;
 
-                public long? Index { get; set; }
+                public Event(EventType type, DateTime start, EventWrittenEventArgs eventData)
+                {
+                    Type = type;
+                    OSThreadId = eventData.OSThreadId;
+                    Start = start;
+                    End = eventData.TimeStamp;
+                }
 
-                public string SuspendReason { get; set; }
+                public double DurationInMs
+                {
+                    get
+                    {
+                        _durationInMs ??= (End.Ticks - Start.Ticks) / 10.0 / 1000.0;
+                        return _durationInMs.Value;
+                    }
+                }
+
+                public virtual DynamicJsonValue ToJson()
+                {
+                    return new DynamicJsonValue
+                    {
+                        [nameof(Type)] = Type,
+                        [nameof(OSThreadId)] = OSThreadId,
+                        [nameof(Start)] = Start,
+                        [nameof(End)] = End,
+                        [nameof(DurationInMs)] = DurationInMs,
+                    };
+                }
+            }
+
+            private class GCEvent : Event
+            {
+                private long Index { get; }
+
+                private uint Generation { get; }
+
+                private string Reason { get; }
+
+                public GCEvent(DateTime start, EventWrittenEventArgs eventData, long index, uint generation, uint reason)
+                    : base(EventType.GC, start, eventData)
+                {
+                    Index = index;
+                    Generation = generation;
+                    Reason = GetGcReason(reason);
+                }
+
+                public override DynamicJsonValue ToJson()
+                {
+                    var json = base.ToJson();
+                    json[nameof(Index)] = Index;
+                    json[nameof(Generation)] = Generation;
+                    json[nameof(Reason)] = Reason;
+                    return json;
+                }
+
+                private static string GetGcReason(uint valueReason)
+                {
+                    switch (valueReason)
+                    {
+                        case 0x0:
+                            return "Small object heap allocation";
+                        case 0x1:
+                            return "Induced";
+                        case 0x2:
+                            return "Low memory";
+                        case 0x3:
+                            return "Empty";
+                        case 0x4:
+                            return "Large object heap allocation";
+                        case 0x5:
+                            return "Out of space (for small object heap)";
+                        case 0x6:
+                            return "Out of space (for large object heap)";
+                        case 0x7:
+                            return "Induced but not forced as blocking";
+
+                        default:
+                            return null;
+                    }
+                }
+            }
+
+            private class GCSuspendEvent : Event
+            {
+                public uint Index { get; }
+
+                private string Reason { get; }
+
+                public GCSuspendEvent(DateTime start, EventWrittenEventArgs eventData, uint index, uint reason)
+                    : base(EventType.GCSuspend, start, eventData)
+                {
+                    Index = index;
+                    Reason = GetSuspendReason(reason);
+                }
+
+                public override DynamicJsonValue ToJson()
+                {
+                    var json = base.ToJson();
+                    json[nameof(Index)] = Index;
+                    json[nameof(Reason)] = Reason;
+                    return json;
+                }
+
+                private static string GetSuspendReason(uint? suspendReason)
+                {
+                    switch (suspendReason)
+                    {
+                        case 0x0:
+                            return "Suspend for Other";
+                        case 0x1:
+                            return "Suspend for GC";
+                        case 0x2:
+                            return "Suspend for AppDomain shutdown";
+                        case 0x3:
+                            return "Suspend for code pitching";
+                        case 0x4:
+                            return "Suspend for shutdown";
+                        case 0x5:
+                            return "Suspend for debugger";
+                        case 0x6:
+                            return "Suspend for GC Prep";
+                        case 0x7:
+                            return "Suspend for debugger sweep";
+
+                        default:
+                            return null;
+                    }
+                }
             }
 
             protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -254,30 +348,37 @@ namespace Raven.Server.Web.System
                 {
                     case "GCStart_V2":
                         var startIndex = long.Parse(eventData.Payload[0].ToString());
-                        timeGCStartByIndex[startIndex] = eventData.TimeStamp;
+                        var generation = (uint)eventData.Payload[1];
+                        var reason = (uint)eventData.Payload[2];
+                        timeGCStartByIndex[startIndex] = (eventData.TimeStamp, generation, reason);
                         break;
 
                     case "GCEnd_V1":
                         var endIndex = long.Parse(eventData.Payload[0].ToString());
 
-                        if (timeGCStartByIndex.TryGetValue(endIndex, out var start) == false)
+                        if (timeGCStartByIndex.TryGetValue(endIndex, out var tuple) == false)
                             return;
 
-                        RegisterEvent(EventType.GC, start, eventData, index: endIndex);
+                        _events.Add(new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason));
+                        timeGCStartByIndex.Remove(endIndex);
                         break;
 
                     case "GCSuspendEEBegin_V1":
-                        timeGCSuspendStart = eventData.TimeStamp;
-                        _gcSuspendReason = (uint)eventData.Payload[0];
+                        _suspendData = eventData;
                         break;
 
                     case "GCSuspendEEEnd_V1":
-                        if (timeGCSuspendStart == null)
+                        if (_suspendData == null)
+                        {
+                            Console.WriteLine($"WHAT???");
                             return;
+                        }
 
-                        RegisterEvent(EventType.GCSuspend, timeGCSuspendStart.Value, eventData, suspendReason: GetSuspendReason(_gcSuspendReason));
-                        timeGCSuspendStart = null;
-                        _gcSuspendReason = null;
+                        var index = (uint)_suspendData.Payload[1];
+                        var suspendReason = (uint)_suspendData.Payload[0];
+
+                        _events.Add(new GCSuspendEvent(_suspendData.TimeStamp, eventData, index, suspendReason));
+                        _suspendData = null;
                         break;
 
                     case "GCRestartEEBegin_V1":
@@ -288,7 +389,7 @@ namespace Raven.Server.Web.System
                         if (timeGCRestartStart == null)
                             return;
 
-                        RegisterEvent(EventType.GCRestart, timeGCRestartStart.Value, eventData);
+                        _events.Add(new Event(EventType.GCRestart, timeGCRestartStart.Value, eventData));
                         timeGCRestartStart = null;
                         break;
 
@@ -300,49 +401,9 @@ namespace Raven.Server.Web.System
                         if (timeGCFinalizersStart == null)
                             return;
 
-                        RegisterEvent(EventType.GCFinalizers, timeGCFinalizersStart.Value, eventData);
+                        _events.Add(new Event(EventType.GCFinalizers, timeGCFinalizersStart.Value, eventData));
                         timeGCFinalizersStart = null;
                         break;
-                }
-            }
-
-            private void RegisterEvent(EventType type, DateTime start, EventWrittenEventArgs eventData, long? index = null, string suspendReason = null)
-            {
-                _events.Add(new Event
-                {
-                    Type = type,
-                    Index = index,
-                    OSThreadId = eventData.OSThreadId,
-                    Start = start,
-                    End = eventData.TimeStamp,
-                    DurationInMs = (eventData.TimeStamp.Ticks - start.Ticks) / 10.0 / 1000.0,
-                    SuspendReason = suspendReason
-                });
-            }
-
-            private static string GetSuspendReason(uint? suspendReason)
-            {
-                switch (suspendReason)
-                {
-                    case 0x0:
-                        return "Suspend for Other";
-                    case 0x1:
-                        return "Suspend for GC";
-                    case 0x2:
-                        return "Suspend for AppDomain shutdown";
-                    case 0x3:
-                        return "Suspend for code pitching";
-                    case 0x4:
-                        return "Suspend for shutdown";
-                    case 0x5:
-                        return "Suspend for debugger";
-                    case 0x6:
-                        return "Suspend for GC Prep";
-                    case 0x7:
-                        return "Suspend for debugger sweep";
-
-                    default:
-                        return null;
                 }
             }
         }
