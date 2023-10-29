@@ -131,6 +131,13 @@ namespace Raven.Server.Web.System
                         writer.WriteInteger(@event.Index.Value);
                     }
 
+                    if (@event.SuspendReason != null)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(GcEventsEventListener.Event.SuspendReason));
+                        writer.WriteString(@event.SuspendReason);
+                    }
+
                     writer.WriteEndObject();
                 }
 
@@ -205,9 +212,10 @@ namespace Raven.Server.Web.System
         private class GcEventsEventListener : Expensive_GcEventListener
         {
             private Dictionary<long, DateTime> timeGCStartByIndex = new();
-            private DateTime? timeGCSuspendStart = null;
-            private DateTime? timeGCRestartStart = null;
-            private DateTime? timeGCFinalizersStart = null;
+            private DateTime? timeGCSuspendStart;
+            private uint? _gcSuspendReason;
+            private DateTime? timeGCRestartStart;
+            private DateTime? timeGCFinalizersStart;
             private readonly List<Event> _events = new();
 
             public IReadOnlyCollection<Event> Events => _events;
@@ -233,6 +241,8 @@ namespace Raven.Server.Web.System
                 public double DurationInMs { get; set; }
 
                 public long? Index { get; set; }
+
+                public string SuspendReason { get; set; }
             }
 
             protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -253,19 +263,21 @@ namespace Raven.Server.Web.System
                         if (timeGCStartByIndex.TryGetValue(endIndex, out var start) == false)
                             return;
 
-                        RegisterEvent(EventType.GC, start, eventData, endIndex);
+                        RegisterEvent(EventType.GC, start, eventData, index: endIndex);
                         break;
 
                     case "GCSuspendEEBegin_V1":
                         timeGCSuspendStart = eventData.TimeStamp;
+                        _gcSuspendReason = (uint)eventData.Payload[0];
                         break;
 
                     case "GCSuspendEEEnd_V1":
                         if (timeGCSuspendStart == null)
                             return;
 
-                        RegisterEvent(EventType.GCSuspend, timeGCSuspendStart.Value, eventData);
+                        RegisterEvent(EventType.GCSuspend, timeGCSuspendStart.Value, eventData, suspendReason: GetSuspendReason(_gcSuspendReason));
                         timeGCSuspendStart = null;
+                        _gcSuspendReason = null;
                         break;
 
                     case "GCRestartEEBegin_V1":
@@ -294,7 +306,7 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            private void RegisterEvent(EventType type, DateTime start, EventWrittenEventArgs eventData, long? index = null)
+            private void RegisterEvent(EventType type, DateTime start, EventWrittenEventArgs eventData, long? index = null, string suspendReason = null)
             {
                 _events.Add(new Event
                 {
@@ -303,8 +315,35 @@ namespace Raven.Server.Web.System
                     OSThreadId = eventData.OSThreadId,
                     Start = start,
                     End = eventData.TimeStamp,
-                    DurationInMs = (eventData.TimeStamp.Ticks - start.Ticks) / 10.0 / 1000.0
+                    DurationInMs = (eventData.TimeStamp.Ticks - start.Ticks) / 10.0 / 1000.0,
+                    SuspendReason = suspendReason
                 });
+            }
+
+            private static string GetSuspendReason(uint? suspendReason)
+            {
+                switch (suspendReason)
+                {
+                    case 0x0:
+                        return "Suspend for Other";
+                    case 0x1:
+                        return "Suspend for GC";
+                    case 0x2:
+                        return "Suspend for AppDomain shutdown";
+                    case 0x3:
+                        return "Suspend for code pitching";
+                    case 0x4:
+                        return "Suspend for shutdown";
+                    case 0x5:
+                        return "Suspend for debugger";
+                    case 0x6:
+                        return "Suspend for GC Prep";
+                    case 0x7:
+                        return "Suspend for debugger sweep";
+
+                    default:
+                        return null;
+                }
             }
         }
 
