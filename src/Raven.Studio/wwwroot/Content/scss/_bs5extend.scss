@@ -469,3 +469,17 @@ select {
         }
     }
 }
+
+//Better positioning for position absolute
+.top-gutter-xs {
+    top: $gutter-xs;
+}
+
+.end-gutter-xs {
+    right: $gutter-xs;
+}
+
+//Remove shadow from all btn-close on focus
+.btn-close:focus {
+    box-shadow: none;
+}
