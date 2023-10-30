@@ -26,13 +26,18 @@ public class KafkaEtl : QueueEtl<KafkaItem>
 
     public KafkaEtl(Transformation transformation, QueueEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore)
     {
-        TransactionalId = $"{Database.ServerStore.GetClusterTopology().TopologyId}-{Name}".Replace("/", "_"); // characters '/' don't pass the validation - we replace them
+        TransactionalId = EnsureValidTransactionalId($"{Database.DatabaseGroupId}-{Name}");
     }
 
 
     protected override EtlTransformer<QueueItem, QueueWithItems<KafkaItem>, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
         return new KafkaDocumentTransformer<KafkaItem>(Transformation, Database, context, Configuration);
+    }
+
+    private static string EnsureValidTransactionalId(string transactionalId)
+    {
+        return transactionalId.Replace("/", "_");
     }
 
     protected override int PublishMessages(List<QueueWithItems<KafkaItem>> itemsPerTopic, BlittableJsonEventBinaryFormatter formatter, out List<string> idsToDelete)
