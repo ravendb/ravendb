@@ -13,7 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.204" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.204.10" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.0" />
     <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.20.0" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
@@ -25,6 +25,6 @@
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="7.0.2" />
     <PackageReference Include="System.Reflection.Metadata" Version="7.0.2" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="7.0.0" />
-    <PackageReference Include="ZstdSharp.Port" Version="0.7.2" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.7.3" />
   </ItemGroup>
 </Project>
