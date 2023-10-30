@@ -977,6 +977,30 @@ namespace Sparrow.Json
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
         }
 
+        /// <summary>
+        /// Compares property names between received StringToByteComparer and the string stored in the document's property names storage
+        /// </summary>
+        /// <param name="propertyId">Position of the string in the property ids storage</param>
+        /// <param name="comparer">Comparer of a specific string value</param>
+        /// <param name="ignoreCase">Indicates if the comparison should be case insensitive</param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int ComparePropertyName<T>(int propertyId, LazyStringValue comparer) where T : unmanaged
+        {
+            // Get the offset of the property name from the _propNames position
+            var propertyNameOffsetPtr = _propNames + 1 + propertyId * sizeof(T);
+            var propertyNameOffset = ReadNumber<T>(propertyNameOffsetPtr);
+
+            // Get the relative "In Document" position of the property Name
+            var propertyNameRelativePosition = _propNames - propertyNameOffset;
+
+            // Get the property name size
+            var size = VariableSizeEncoding.Read<int>(propertyNameRelativePosition, out var propertyNameLengthDataLength);
+
+            // Return result of comparison between property name and received comparer
+            return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
+        }
+
         public struct InsertionOrderProperties : IDisposable
         {
             internal int* Properties;
