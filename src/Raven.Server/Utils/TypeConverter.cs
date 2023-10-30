@@ -490,16 +490,23 @@ namespace Raven.Server.Utils
             switch (value)
             {
                 case string valueAsString:
-                    return TryConvertStringValue(valueAsString, out object result) ? result : valueAsString;
+                {
+                    if (TryConvertStringValue(valueAsString, out object result))
+                        return result;
+
+                    return valueAsString;
+                }
                 case LazyCompressedStringValue compressedStringValue:
                     return ConvertLazyStringValue(compressedStringValue.ToLazyStringValue());
                 case LazyStringValue lazyStringValue:
                     return ConvertLazyStringValue(lazyStringValue);
-                case BlittableJsonReaderObject blittableJsonReaderObject 
-                    when blittableJsonReaderObject.TryGetWithoutThrowingOnError(ValuesPropertyName, out BlittableJsonReaderArray ja1):
-                    return new DynamicArray(ja1);
                 case BlittableJsonReaderObject blittableJsonReaderObject:
+                {
+                    if (blittableJsonReaderObject.TryGetWithoutThrowingOnError(ValuesPropertyName, out BlittableJsonReaderArray ja1))
+                        return new DynamicArray(ja1);
+
                     return new DynamicBlittableJson(blittableJsonReaderObject);
+                }
                 case BlittableJsonReaderArray blittableJsonReaderArray:
                     return new DynamicArray(blittableJsonReaderArray);
                 default:
@@ -600,7 +607,12 @@ namespace Raven.Server.Utils
             switch (value)
             {
                 case string valueAsString:
-                    return TryConvertStringValue(valueAsString, supportTimeOnlyDateOnly, out object result) ? result : valueAsString;
+                {
+                    if (TryConvertStringValue(valueAsString, supportTimeOnlyDateOnly, out object result))
+                        return result;
+
+                    return valueAsString;
+                }
                 case LazyCompressedStringValue compressedStringValue:
                     return ConvertLazyStringValue(compressedStringValue.ToLazyStringValue(), propertyName, supportTimeOnlyDateOnly);
                 case LazyStringValue lazyStringValue:
