@@ -76,7 +76,7 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
         // the CVs were validated in handler
     }
 
-    protected override DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId)
+    protected override DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId, long index)
     {
         return new SubscriptionState
         {
@@ -91,7 +91,8 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
             {
                 ChangeVectorForNextBatchStartingPointPerShard = InitialChangeVectorPerShard
             },
-            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
+            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior,
+            LastModifiedIndex = index
         }.ToJson();
     }
 

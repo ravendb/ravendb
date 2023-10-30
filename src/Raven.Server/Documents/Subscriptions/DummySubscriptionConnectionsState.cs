@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Subscriptions;
+﻿using System.Threading.Tasks;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 
 namespace Raven.Server.Documents.Subscriptions;
@@ -14,7 +15,8 @@ public sealed class DummySubscriptionConnectionsState : SubscriptionConnectionsS
         Query = state.Query;
     }
 
-    public override void Initialize(SubscriptionConnection connection, bool afterSubscribe = false)
+    public override Task InitializeAsync(SubscriptionConnection connection, bool afterSubscribe = false)
     {
+        return Task.CompletedTask;
     }
 }

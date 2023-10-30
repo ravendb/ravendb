@@ -66,7 +66,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.True(await signalWhenStartedProcessingDoc.WaitAsync(_reasonableWaitTime));
                 var database = await GetDatabase(store.Database);
 
-                SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
+                SubscriptionState subscriptionState;
                 using (database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {

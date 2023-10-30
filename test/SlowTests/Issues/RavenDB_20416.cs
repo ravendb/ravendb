@@ -175,7 +175,7 @@ namespace SlowTests.Issues
                 {
                     var connectionState = new SubscriptionConnectionsState(store2.Database, state.SubscriptionId, db2.SubscriptionStorage);
                     state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(db2.Name, out string cv);
-                    connectionState.InitializeLastChangeVectorSent(cv);
+                    connectionState.LastChangeVectorSent = cv;
                     CheckSubscriptionFetchAfterUpdateInternal(collection, db2, connectionState);
                 }
             }
@@ -183,7 +183,8 @@ namespace SlowTests.Issues
             {
                 var db2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
                 var connectionState = new SubscriptionConnectionsState(store2.Database, state.SubscriptionId, db2.SubscriptionStorage);
-                connectionState.InitializeLastChangeVectorSent(state.ChangeVectorForNextBatchStartingPoint);
+                connectionState.LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
+
                 CheckSubscriptionFetchAfterUpdateInternal(collection, db2, connectionState);
             }
         }
