@@ -958,7 +958,7 @@ namespace Sparrow.Json
                     return ReadCompressStringLazily(position);
 
                 case BlittableJsonToken.Boolean:
-                    return ReadNumber(_mem + position, 1) == 1 ? BoxedTrue : BoxedFalse;
+                    return ReadNumber(_mem + position, sizeof(byte)) == 1 ? BoxedTrue : BoxedFalse;
 
                 case BlittableJsonToken.Null:
                     return null;
