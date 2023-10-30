@@ -23,8 +23,12 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.ElasticSearch
 {
-    public class ElasticSearchEtlTests(ITestOutputHelper output) : ElasticSearchEtlTestBase(output)
+    public class ElasticSearchEtlTests : ElasticSearchEtlTestBase
     {
+        public ElasticSearchEtlTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected string UsersIndexName => $"Users{IndexSuffix}".ToLower();
 
         protected List<ElasticSearchIndex> UsersIndex => new()
