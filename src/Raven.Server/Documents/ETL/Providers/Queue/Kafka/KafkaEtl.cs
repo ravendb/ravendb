@@ -40,6 +40,13 @@ public class KafkaEtl : QueueEtl<KafkaItem>
         return transactionalId.Replace("/", "_");
     }
 
+    public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext)
+    {
+        var result = base.GetProgress(documentsContext);
+        result.TransactionalId = TransactionalId;
+        return result;
+    }
+
     protected override int PublishMessages(List<QueueWithItems<KafkaItem>> itemsPerTopic, BlittableJsonEventBinaryFormatter formatter, out List<string> idsToDelete)
     {
         if (itemsPerTopic.Count == 0)

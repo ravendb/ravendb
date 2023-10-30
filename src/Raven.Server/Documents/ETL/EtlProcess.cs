@@ -1367,9 +1367,6 @@ namespace Raven.Server.Documents.ETL
 
             var lastProcessedEtag = LastProcessState.GetLastProcessedEtag(Database.DbBase64Id, Database.ServerStore.NodeTag);
             
-            if (this is KafkaEtl kafkaEtl)
-                result.TransactionalId = kafkaEtl.TransactionalId;
-            
             var overallDuration = Stopwatch.StartNew();
             foreach (var collection in collections)
             {
