@@ -6,25 +6,24 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Logging;
-using static Raven.Server.Documents.PeriodicBackup.DirectUpload.DirectUploadBackupTask.DirectUploadDestination;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
 public class DirectUploadBackupTask : BackupTask
 {
-    private readonly DirectUploadDestination _destination;
+    private readonly BackupConfiguration.BackupDestination _destination;
 
-    public DirectUploadBackupTask(DirectUploadDestination destination, DocumentDatabase database, BackupParameters backupParameters,
+    internal DirectUploadBackupTask(DocumentDatabase database, BackupParameters backupParameters,
         BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null) : base(database, backupParameters, configuration, logger, forTestingPurposes)
     {
-        _destination = destination;
+        _destination = BackupConfigurationHelper.GetBackupDestinationForDirectUpload(backupParameters.BackupToLocalFolder, configuration);
     }
 
     protected override Stream GetStreamForBackupDestination(string filePath, string folderName, string fileName)
     {
         switch (_destination)
         {
-            case S3:
+            case BackupConfiguration.BackupDestination.AmazonS3:
                 var s3Settings = GetBackupConfigurationFromScript(Configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, Database.Name));
 
@@ -43,7 +42,7 @@ public class DirectUploadBackupTask : BackupTask
                 });
 
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException($"Missing implementation for direct upload destination '{_destination}'");
         }
     }
 
@@ -65,10 +64,5 @@ public class DirectUploadBackupTask : BackupTask
     protected override void DeleteFile(string path)
     {
         // we're uploading directly without using a local file.
-    }
-
-    public enum DirectUploadDestination
-    {
-        S3
     }
 }

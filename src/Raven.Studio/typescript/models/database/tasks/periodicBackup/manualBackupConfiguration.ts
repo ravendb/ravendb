@@ -25,7 +25,7 @@ class manualBackupConfiguration extends backupConfiguration {
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.backupType,
-            this.directUpload,
+            this.backupMode,
             this.encryptionSettings().dirtyFlag().isDirty,
             this.anyBackupTypeIsDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
@@ -49,9 +49,11 @@ class manualBackupConfiguration extends backupConfiguration {
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.BackupConfiguration {
+        const backupMode = backupConfiguration.backupModeDictionary.find(x => x.name === this.backupMode());
+
         return {
             BackupType: this.backupType(),
-            DirectUpload: this.directUpload(),
+            BackupMode: backupMode.fullName,
             SnapshotSettings: this.snapshot().toDto(),
             BackupEncryptionSettings: this.encryptionSettings().toDto(),
             LocalSettings: this.localSettings().toDto(),
