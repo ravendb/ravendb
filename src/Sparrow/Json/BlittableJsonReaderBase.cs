@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Compression;
@@ -227,33 +227,10 @@ namespace Sparrow.Json
             return -1;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected long ReadVariableSizeLong(int pos)
         {
-            // ReadAsync out an Int64 7 bits at a time.  The high bit 
-            // of the byte when on means to continue reading more bytes.
-
-            ulong count = 0;
-            byte shift = 0;
-            byte b;
-            do
-            {
-                if (shift == 70)
-                    goto Error; // PERF: Using goto to diminish the size of the loop.
-
-                b = _mem[pos++];
-                count |= (ulong)(b & 0x7F) << shift;
-                shift += 7;
-            }
-            while ((b & 0x80) != 0);
-
-            // good handling for negative values via:
-            // http://code.google.com/apis/protocolbuffers/docs/encoding.html#types
-
-            return (long)(count >> 1) ^ -(long)(count & 1);
-
-            Error:
-            ThrowInvalidShift();
-            return -1;
+            return ZigZagEncoding.Decode<long>(_mem, out _, pos: pos);
         }
 
         [Conditional("DEBUG")]
