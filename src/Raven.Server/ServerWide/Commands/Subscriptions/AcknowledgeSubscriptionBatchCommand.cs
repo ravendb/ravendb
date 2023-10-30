@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
@@ -55,7 +56,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+            var subscription = JsonDeserializationClient.SubscriptionState(existingValue);
             AssertSubscriptionState(record, subscription, subscriptionName);
 
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))

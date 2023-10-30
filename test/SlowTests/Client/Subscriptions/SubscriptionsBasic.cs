@@ -378,7 +378,7 @@ namespace SlowTests.Client.Subscriptions
 
                     Assert.True(await ackFirstCV.WaitAsync(_reasonableWaitTime));
 
-                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
+                    SubscriptionState subscriptionState;
                     using (database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {

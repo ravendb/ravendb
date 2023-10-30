@@ -91,7 +91,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         AssertValidChangeVector();
                     }
 
-                    using (var receivedSubscriptionState = context.ReadObject(CreateSubscriptionStateAsJson(subscriptionId), SubscriptionName))
+                    using (var receivedSubscriptionState = context.ReadObject(CreateSubscriptionStateAsJson(subscriptionId, index), SubscriptionName))
                     {
                         ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, receivedSubscriptionState);
                     }
@@ -101,7 +101,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
         }
 
-        protected virtual DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId)
+        protected virtual DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId, long index)
         {
             var json = new SubscriptionState
             {
@@ -114,7 +114,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 MentorNode = MentorNode,
                 PinToMentorNode = PinToMentorNode,
                 LastClientConnectionTime = null,
-                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior,
+                LastModifiedIndex = index
             }.ToJson();
             return json;
         }

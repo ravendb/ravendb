@@ -918,6 +918,15 @@ namespace Raven.Server.Documents.Subscriptions
             };
         }
 
+        internal async Task SendHeartBeatIfNeededAsync(Stopwatch sp, string reason)
+        {
+            if (sp.ElapsedMilliseconds >= ISubscriptionConnection.WaitForChangedDocumentsTimeoutInMs)
+            {
+                await SendHeartBeatAsync(reason);
+                sp.Restart();
+            }
+        }
+
         public async Task SendHeartBeatAsync(string reason)
         {
             try

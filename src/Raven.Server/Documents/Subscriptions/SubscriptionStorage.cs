@@ -196,8 +196,8 @@ namespace Raven.Server.Documents.Subscriptions
                 if (take-- <= 0)
                     yield break;
 
-                var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionConnectionsState.SubscriptionName);
-                GetRunningSubscriptionInternal(history, subscriptionData, subscriptionConnectionsState);
+                var state = GetSubscriptionFromServerStore(context, subscriptionConnectionsState.SubscriptionName);
+                var subscriptionData = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
                 yield return subscriptionData;
             }
         }
@@ -218,27 +218,27 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionGeneralDataAndStats GetSubscription(ClusterOperationContext context, long? id, string name, bool history)
         {
-            SubscriptionGeneralDataAndStats subscription;
+            SubscriptionState state;
 
             if (string.IsNullOrEmpty(name) == false)
             {
-                subscription = GetSubscriptionFromServerStore(context, name);
+                state = GetSubscriptionFromServerStore(context, name);
             }
             else if (id.HasValue)
             {
-                subscription = GetSubscriptionFromServerStore(context, id.ToString());
+                state = GetSubscriptionFromServerStore(context, id.ToString());
             }
             else
             {
                 throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
             }
 
-            GetSubscriptionInternal(subscription, history);
+            var subscription = GetSubscriptionInternal(state, history);
 
             return subscription;
         }
 
-        public SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(ClusterOperationContext context, string name)
+        public SubscriptionState GetSubscriptionFromServerStore(ClusterOperationContext context, string name)
         {
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_databaseName, name));
 
@@ -248,34 +248,33 @@ namespace Raven.Server.Documents.Subscriptions
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
             subscriptionState.ArchivedDataProcessingBehavior ??= _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior; // persisted state from v5.x  
             
-            var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState);
-            return subscriptionJsonValue;
+            return subscriptionState;
         }
 
         public SubscriptionGeneralDataAndStats GetRunningSubscription(ClusterOperationContext context, long? id, string name, bool history)
         {
-            SubscriptionGeneralDataAndStats subscription;
+            SubscriptionState state;
             if (string.IsNullOrEmpty(name) == false)
             {
-                subscription = GetSubscriptionFromServerStore(context, name);
+                state = GetSubscriptionFromServerStore(context, name);
             }
             else if (id.HasValue)
             {
                 name = GetSubscriptionNameById(context, id.Value);
-                subscription = GetSubscriptionFromServerStore(context, name);
+                state = GetSubscriptionFromServerStore(context, name);
             }
             else
             {
                 throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
             }
 
-            if (_subscriptions.TryGetValue(subscription.SubscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
+            if (_subscriptions.TryGetValue(state.SubscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
                 return null;
 
             if (subscriptionConnectionsState.IsSubscriptionActive() == false)
                 return null;
 
-            GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionsState);
+            var subscription = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
             return subscription;
         }
 
@@ -302,6 +301,7 @@ namespace Raven.Server.Documents.Subscriptions
                 LastClientConnectionTime = @base.LastClientConnectionTime;
                 Disabled = @base.Disabled;
                 ShardingState = @base.ShardingState;
+                LastModifiedIndex = @base.LastModifiedIndex;
             }
         }
 
@@ -317,15 +317,22 @@ namespace Raven.Server.Documents.Subscriptions
             subscriptionData.CurrentPendingConnections = subscriptionConnectionsState.PendingConnections;
         }
 
-        private static void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionsState subscriptionConnectionsState)
+        private static SubscriptionGeneralDataAndStats GetRunningSubscriptionInternal(bool history, SubscriptionState state, SubscriptionConnectionsState subscriptionConnectionsState)
         {
-            subscriptionData.Connections = subscriptionConnectionsState.GetConnections();
+            var subscriptionData = new SubscriptionGeneralDataAndStats(state)
+            {
+                Connections = subscriptionConnectionsState.GetConnections()
+            };
+
             if (history) // Only valid for this node
                 SetSubscriptionHistory(subscriptionConnectionsState, subscriptionData);
+
+            return subscriptionData;
         }
 
-        private void GetSubscriptionInternal(SubscriptionGeneralDataAndStats subscriptionData, bool history)
+        private SubscriptionGeneralDataAndStats GetSubscriptionInternal(SubscriptionState state, bool history)
         {
+            var subscriptionData = new SubscriptionGeneralDataAndStats(state);
             if (_subscriptions.TryGetValue(subscriptionData.SubscriptionId, out SubscriptionConnectionsState concurrentSubscription))
             {
                 subscriptionData.Connections = concurrentSubscription.GetConnections();
@@ -333,6 +340,8 @@ namespace Raven.Server.Documents.Subscriptions
                 if (history)//Only valid if this is my subscription
                     SetSubscriptionHistory(concurrentSubscription, subscriptionData);
             }
+
+            return subscriptionData;
         }
 
         internal virtual void CleanupSubscriptions()

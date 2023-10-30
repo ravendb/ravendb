@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -32,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new SubscriptionDoesNotExistException($"Subscription with id '{itemId}' does not exist");
 
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+            var subscription = JsonDeserializationClient.SubscriptionState(existingValue);
 
             var appropriateNode = AbstractSubscriptionStorage.GetSubscriptionResponsibleNodeForConnection(record, subscription, HasHighlyAvailableTasks);
 
