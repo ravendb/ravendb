@@ -21,6 +21,7 @@ import app from "durandal/app";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
+require("prismjs/components/prism-json");
 
 overrideSystem();
 overrideComposition();
