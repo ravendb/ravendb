@@ -74,7 +74,7 @@ class periodicBackupConfiguration extends backupConfiguration {
             this.name,
             this.disabled,
             this.backupType,
-            this.directUpload,
+            this.backupMode,
             this.fullBackupFrequency,
             this.fullBackupEnabled,
             this.incrementalBackupFrequency,
@@ -149,13 +149,15 @@ class periodicBackupConfiguration extends backupConfiguration {
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration {
+        const backupMode = backupConfiguration.backupModeDictionary.find(x => x.name === this.backupMode());
+
         return {
             TaskId: this.taskId(),
             Name: this.name(),
             Disabled: this.disabled(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),
-            DirectUpload: this.directUpload(),
+            BackupMode: backupMode.fullName,
             FullBackupFrequency: this.fullBackupEnabled() ? this.fullBackupFrequency() : null,
             IncrementalBackupFrequency: this.incrementalBackupEnabled() ? this.incrementalBackupFrequency() : null,
             RetentionPolicy: this.retentionPolicy().toDto(),

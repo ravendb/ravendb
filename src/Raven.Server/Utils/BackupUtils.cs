@@ -37,50 +37,9 @@ internal static class BackupUtils
 {
     internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
     {
-        return IsDirectUploadSupported(out var directUploadDestination) 
-            ? new DirectUploadBackupTask(directUploadDestination, database, backupParameters, configuration, logger, forTestingPurposes) 
+        return configuration.BackupMode == BackMode.DirectUpload
+            ? new DirectUploadBackupTask(database, backupParameters, configuration, logger, forTestingPurposes) 
             : new BackupTask(database, backupParameters, configuration, logger, forTestingPurposes);
-
-        bool IsDirectUploadSupported(out DirectUploadBackupTask.DirectUploadDestination destination)
-        {
-            if (backupParameters.BackupToLocalFolder)
-            {
-                // we'll do the local backup and then upload it
-                destination = default;
-                return false;
-            }
-
-            if (configuration.DirectUpload == false)
-            {
-                // disabled by configuration
-                destination = default;
-                return false;
-            }
-
-            var hasAws = BackupConfiguration.CanBackupUsing(configuration.S3Settings);
-            var hasGlacier = BackupConfiguration.CanBackupUsing(configuration.GlacierSettings);
-            var hasAzure = BackupConfiguration.CanBackupUsing(configuration.GlacierSettings);
-            var hasGoogleCloud = BackupConfiguration.CanBackupUsing(configuration.GoogleCloudSettings);
-            var hasFtp = BackupConfiguration.CanBackupUsing(configuration.GoogleCloudSettings);
-
-            var destinations = new List<bool> { hasAws, hasGlacier, hasAzure, hasGoogleCloud, hasFtp };
-            if (destinations.Count(x => x) != 1)
-            {
-                // direct upload is supported only for 1 destination
-                destination = default;
-                return false;
-            }
-
-            if (hasAws)
-            {
-                destination = DirectUploadBackupTask.DirectUploadDestination.S3;
-                return true;
-            }
-
-            // all other destinations are currently not supported
-            destination = default;
-            return false;
-        }
     }
     internal static async Task<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
     {
