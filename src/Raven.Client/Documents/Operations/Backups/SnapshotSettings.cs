@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Operations.Backups
 {
     public class SnapshotSettings : IDynamicJson
     {
-        public SnapshotBackupCompressionAlgorithm CompressionAlgorithm { get; set; }
+        public SnapshotBackupCompressionAlgorithm? CompressionAlgorithm { get; set; }
 
         public CompressionLevel CompressionLevel { get; set; }
 

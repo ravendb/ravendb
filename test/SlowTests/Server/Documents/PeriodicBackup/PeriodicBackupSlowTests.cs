@@ -458,12 +458,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [RavenTheory(RavenTestCategory.BackupExportImport), Trait("Category", "Smuggler")]
+        [InlineData(null, CompressionLevel.Optimal)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Optimal)]
+        [InlineData(null, CompressionLevel.Fastest)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Fastest)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Fastest)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.NoCompression)]
-        public async Task can_backup_and_restore_snapshot(SnapshotBackupCompressionAlgorithm algorithm, CompressionLevel compressionLevel)
+        public async Task can_backup_and_restore_snapshot(SnapshotBackupCompressionAlgorithm? algorithm, CompressionLevel compressionLevel)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
@@ -748,8 +750,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [RavenTheory(RavenTestCategory.BackupExportImport), Trait("Category", "Smuggler")]
+        [InlineData(null, CompressionLevel.Optimal)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Optimal)]
+        [InlineData(null, CompressionLevel.Fastest)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Fastest)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Fastest)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.NoCompression)]
