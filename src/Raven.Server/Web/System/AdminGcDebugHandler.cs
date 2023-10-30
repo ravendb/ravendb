@@ -181,10 +181,10 @@ namespace Raven.Server.Web.System
 
         private class GcEventsEventListener : Expensive_GcEventListener
         {
-            private Dictionary<long, (DateTime DateTime, uint Generation, uint Reason)> timeGCStartByIndex = new();
+            private Dictionary<long, (DateTime DateTime, uint Generation, uint Reason)> _timeGcStartByIndex = new();
             private EventWrittenEventArgs _suspendData;
-            private DateTime? timeGCRestartStart;
-            private DateTime? timeGCFinalizersStart;
+            private DateTime? _timeGcRestartStart;
+            private DateTime? _timeGcFinalizersStart;
             private readonly List<Event> _events = new();
 
             public IReadOnlyCollection<Event> Events => _events;
@@ -350,17 +350,17 @@ namespace Raven.Server.Web.System
                         var startIndex = long.Parse(eventData.Payload[0].ToString());
                         var generation = (uint)eventData.Payload[1];
                         var reason = (uint)eventData.Payload[2];
-                        timeGCStartByIndex[startIndex] = (eventData.TimeStamp, generation, reason);
+                        _timeGcStartByIndex[startIndex] = (eventData.TimeStamp, generation, reason);
                         break;
 
                     case "GCEnd_V1":
                         var endIndex = long.Parse(eventData.Payload[0].ToString());
 
-                        if (timeGCStartByIndex.TryGetValue(endIndex, out var tuple) == false)
+                        if (_timeGcStartByIndex.TryGetValue(endIndex, out var tuple) == false)
                             return;
 
                         _events.Add(new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason));
-                        timeGCStartByIndex.Remove(endIndex);
+                        _timeGcStartByIndex.Remove(endIndex);
                         break;
 
                     case "GCSuspendEEBegin_V1":
@@ -369,10 +369,7 @@ namespace Raven.Server.Web.System
 
                     case "GCSuspendEEEnd_V1":
                         if (_suspendData == null)
-                        {
-                            Console.WriteLine($"WHAT???");
                             return;
-                        }
 
                         var index = (uint)_suspendData.Payload[1];
                         var suspendReason = (uint)_suspendData.Payload[0];
@@ -382,42 +379,53 @@ namespace Raven.Server.Web.System
                         break;
 
                     case "GCRestartEEBegin_V1":
-                        timeGCRestartStart = eventData.TimeStamp;
+                        _timeGcRestartStart = eventData.TimeStamp;
                         break;
 
                     case "GCRestartEEEnd_V1":
-                        if (timeGCRestartStart == null)
+                        if (_timeGcRestartStart == null)
                             return;
 
-                        _events.Add(new Event(EventType.GCRestart, timeGCRestartStart.Value, eventData));
-                        timeGCRestartStart = null;
+                        _events.Add(new Event(EventType.GCRestart, _timeGcRestartStart.Value, eventData));
+                        _timeGcRestartStart = null;
                         break;
 
                     case "GCFinalizersBegin_V1":
-                        timeGCFinalizersStart = eventData.TimeStamp;
+                        _timeGcFinalizersStart = eventData.TimeStamp;
                         break;
 
                     case "GCFinalizersEnd_V1":
-                        if (timeGCFinalizersStart == null)
+                        if (_timeGcFinalizersStart == null)
                             return;
 
-                        _events.Add(new Event(EventType.GCFinalizers, timeGCFinalizersStart.Value, eventData));
-                        timeGCFinalizersStart = null;
+                        _events.Add(new Event(EventType.GCFinalizers, _timeGcFinalizersStart.Value, eventData));
+                        _timeGcFinalizersStart = null;
                         break;
                 }
             }
         }
 
+        //https://devblogs.microsoft.com/dotnet/a-portable-way-to-get-gc-events-in-process-and-no-admin-privilege-with-10-lines-of-code-and-ability-to-dynamically-enable-disable-events/
         internal abstract class Expensive_GcEventListener : EventListener
         {
             private const int GC_KEYWORD = 0x0000001;
+            private EventSource eventSourceDotNet;
 
             protected override void OnEventSourceCreated(EventSource eventSource)
             {
                 if (eventSource.Name.Equals("Microsoft-Windows-DotNETRuntime"))
                 {
                     EnableEvents(eventSource, EventLevel.Verbose, (EventKeywords)GC_KEYWORD);
+                    eventSourceDotNet = eventSource;
                 }
+            }
+
+            public override void Dispose()
+            {
+                if (eventSourceDotNet != null)
+                    DisableEvents(eventSourceDotNet);
+
+                base.Dispose();
             }
         }
     }
