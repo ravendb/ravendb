@@ -1212,8 +1212,8 @@ namespace Raven.Server.Web.System
                 var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
                 if (validate.HasValue && validate.Value)
                 {
-                    var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
-                    await ValidateUnusedIdsAsync(parameters.DatabaseIds, database, token.Token);
+                    using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
+                        await ValidateUnusedIdsAsync(parameters.DatabaseIds, database, token.Token);
                 }
 
                 var command = new UpdateUnusedDatabaseIdsCommand(database, parameters.DatabaseIds, GetRaftRequestIdFromQuery());
@@ -1235,16 +1235,13 @@ namespace Raven.Server.Web.System
                 clusterTopology = ServerStore.GetClusterTopology(context);
             }
 
-            if(unusedIds.Contains(topology.DatabaseTopologyIdBase64))
+            if (unusedIds.Contains(topology.DatabaseTopologyIdBase64))
                 throw new InvalidOperationException($"'DatabaseTopologyIdBase64' ({topology.DatabaseTopologyIdBase64}) cannot be added to the 'unused ids' list (of '{databaseName}').");
 
-            if(unusedIds.Contains(topology.ClusterTransactionIdBase64))
+            if (unusedIds.Contains(topology.ClusterTransactionIdBase64))
                 throw new InvalidOperationException($"'ClusterTransactionIdBase64' ({topology.ClusterTransactionIdBase64}) cannot be added to the 'unused ids' list (of '{databaseName}').");
 
-            var nodesUrls = clusterTopology.AllNodes
-                .Where((kvp) => topology.AllNodes.Contains(kvp.Key))
-                .Select(kvp => kvp.Value)
-            .ToArray();
+            var nodesUrls = topology.AllNodes.Select(clusterTopology.GetUrlFromTag).ToArray();
 
             using var requestExecutor = RequestExecutor.Create(nodesUrls, databaseName, Server.Certificate.Certificate, DocumentConventions.Default);
 
@@ -1252,8 +1249,8 @@ namespace Raven.Server.Web.System
             {
                 using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var cmd = new GetStatisticsOperation.GetStatisticsCommand(null, nodeTag);
-                    await requestExecutor.ExecuteAsync(cmd, context); //, token: token);
+                    var cmd = new GetStatisticsOperation.GetStatisticsCommand(debugTag: "unused-database-validation", nodeTag);
+                    await requestExecutor.ExecuteAsync(cmd, context, token: token);
                     var stats = cmd.Result;
 
                     if (unusedIds.Contains(stats.DatabaseId))
