@@ -223,16 +223,57 @@ namespace Sparrow.Json
         {
             AssertContextNotDisposed();
 
+            return (_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize) switch
+            {
+                (sizeof(byte), sizeof(byte), sizeof(byte)) => GetPropertyNames<byte, byte, byte>(),
+                (sizeof(byte), sizeof(byte), sizeof(short)) => GetPropertyNames<byte, byte, short>(),
+                (sizeof(byte), sizeof(byte), sizeof(int)) => GetPropertyNames<byte, byte, int>(),
+                (sizeof(byte), sizeof(short), sizeof(byte)) => GetPropertyNames<byte, short, byte>(),
+                (sizeof(byte), sizeof(short), sizeof(short)) => GetPropertyNames<byte, short, short>(),
+                (sizeof(byte), sizeof(short), sizeof(int)) => GetPropertyNames<byte, short, int>(),
+                (sizeof(byte), sizeof(int), sizeof(byte)) => GetPropertyNames<byte, int, byte>(),
+                (sizeof(byte), sizeof(int), sizeof(short)) => GetPropertyNames<byte, int, short>(),
+                (sizeof(byte), sizeof(int), sizeof(int)) => GetPropertyNames<byte, int, int>(),
+
+                (sizeof(short), sizeof(byte), sizeof(byte)) => GetPropertyNames<short, byte, byte>(),
+                (sizeof(short), sizeof(byte), sizeof(short)) => GetPropertyNames<short, byte, short>(),
+                (sizeof(short), sizeof(byte), sizeof(int)) => GetPropertyNames<short, byte, int>(),
+                (sizeof(short), sizeof(short), sizeof(byte)) => GetPropertyNames<short, short, byte>(),
+                (sizeof(short), sizeof(short), sizeof(short)) => GetPropertyNames<short, short, short>(),
+                (sizeof(short), sizeof(short), sizeof(int)) => GetPropertyNames<short, short, int>(),
+                (sizeof(short), sizeof(int), sizeof(byte)) => GetPropertyNames<short, int, byte>(),
+                (sizeof(short), sizeof(int), sizeof(short)) => GetPropertyNames<short, int, short>(),
+                (sizeof(short), sizeof(int), sizeof(int)) => GetPropertyNames<short, int, int>(),
+
+                (sizeof(int), sizeof(byte), sizeof(byte)) => GetPropertyNames<int, byte, byte>(),
+                (sizeof(int), sizeof(byte), sizeof(short)) => GetPropertyNames<int, byte, short>(),
+                (sizeof(int), sizeof(byte), sizeof(int)) => GetPropertyNames<int, byte, int>(),
+                (sizeof(int), sizeof(short), sizeof(byte)) => GetPropertyNames<int, short, byte>(),
+                (sizeof(int), sizeof(short), sizeof(short)) => GetPropertyNames<int, short, short>(),
+                (sizeof(int), sizeof(short), sizeof(int)) => GetPropertyNames<int, short, int>(),
+                (sizeof(int), sizeof(int), sizeof(byte)) => GetPropertyNames<int, int, byte>(),
+                (sizeof(int), sizeof(int), sizeof(short)) => GetPropertyNames<int, int, short>(),
+                (sizeof(int), sizeof(int), sizeof(int)) => GetPropertyNames<int, int, int>(),
+
+                _ => throw new NotImplementedException(),
+            };
+        }
+
+        private string[] GetPropertyNames<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>()
+            where TOffsetSize : unmanaged
+            where TPropertyIdSize : unmanaged
+            where TNamesDataOffsetSize : unmanaged
+        {
             var offsets = new int[_propCount];
             var propertyNames = new string[_propCount];
 
-            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+            var metadataSize = (sizeof(TOffsetSize) + sizeof(TPropertyIdSize) + sizeof(byte));
 
             for (int i = 0; i < _propCount; i++)
             {
-                GetPropertyTypeAndPosition(i, metadataSize, out _, out int position, out int id);
+                GetPropertyTypeAndPosition<TOffsetSize, TPropertyIdSize>(i, metadataSize, out _, out int position, out int id);
                 offsets[i] = position;
-                propertyNames[i] = GetPropertyName(id);
+                propertyNames[i] = GetPropertyName<TNamesDataOffsetSize>(id);
             }
 
             // sort according to offsets
@@ -244,10 +285,21 @@ namespace Sparrow.Json
 
         private LazyStringValue GetPropertyName(int propertyId)
         {
-            AssertContextNotDisposed();
-
             var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
+
+            // Get the relative "In Document" position of the property Name
+            var propRelativePos = _propNames - propertyNameOffset - _mem;
+
+            var propertyName = ReadStringLazily((int)propRelativePos);
+            return propertyName;
+        }
+
+        private LazyStringValue GetPropertyName<TNamesDataOffsetSize>(int propertyId)
+            where TNamesDataOffsetSize : unmanaged
+        {
+            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * sizeof(TNamesDataOffsetSize);
+            var propertyNameOffset = ReadNumber<TNamesDataOffsetSize>(propertyNameOffsetPtr);
 
             // Get the relative "In Document" position of the property Name
             var propRelativePos = _propNames - propertyNameOffset - _mem;
@@ -723,6 +775,17 @@ namespace Sparrow.Json
             token = (BlittableJsonToken)(*(propPos + _currentOffsetSize + _currentPropertyIdSize));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void GetPropertyTypeAndPosition<TOffsetSize, TPropertyIdSize>(int index, long metadataSize, out BlittableJsonToken token, out int position, out int propertyId)
+            where TOffsetSize : unmanaged
+            where TPropertyIdSize : unmanaged
+        {
+            var propPos = _metadataPtr + index * metadataSize;
+            position = ReadNumber<TOffsetSize>(propPos);
+            propertyId = ReadNumber<TPropertyIdSize>(propPos + sizeof(TOffsetSize));
+            token = (BlittableJsonToken)(*(propPos + sizeof(TOffsetSize) + sizeof(TPropertyIdSize)));
+        }
+
         public struct PropertyDetails
         {
             public LazyStringValue Name;
@@ -740,14 +803,79 @@ namespace Sparrow.Json
             if (index < 0 || index >= _propCount)
                 ThrowOutOfRangeException(index);
 
-            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            switch (_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize)
+            {
+                case (sizeof(byte), sizeof(byte), sizeof(byte)): GetPropertyByIndex<byte, byte, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(byte), sizeof(byte), sizeof(short)) : GetPropertyByIndex<byte, byte, short>(index, ref prop, addObjectToCache); 
+                    break;
+                case (sizeof(byte), sizeof(short), sizeof(byte)) : GetPropertyByIndex<byte, short, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(byte), sizeof(short), sizeof(short)) : GetPropertyByIndex<byte, short, short>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(byte), sizeof(short), sizeof(int)) : GetPropertyByIndex<byte, short, int>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(byte), sizeof(int), sizeof(byte)) : GetPropertyByIndex<byte, int, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(byte), sizeof(int), sizeof(short)) : GetPropertyByIndex<byte, int, short>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(byte), sizeof(int), sizeof(int)) : GetPropertyByIndex<byte, int, int>(index, ref prop, addObjectToCache);
+                    break;
 
-            GetPropertyTypeAndPosition(index, metadataSize,
+                case (sizeof(short), sizeof(byte), sizeof(byte)) : GetPropertyByIndex<short, byte, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(short), sizeof(byte), sizeof(short)) : GetPropertyByIndex<short, byte, short>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(short), sizeof(byte), sizeof(int)) : GetPropertyByIndex<short, byte, int>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(short), sizeof(short), sizeof(byte)) : GetPropertyByIndex<short, short, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(short), sizeof(short), sizeof(short)) : GetPropertyByIndex<short, short, short>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(short), sizeof(short), sizeof(int)) : GetPropertyByIndex<short, short, int>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(short), sizeof(int), sizeof(byte)) : GetPropertyByIndex<short, int, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(short), sizeof(int), sizeof(short)) : GetPropertyByIndex<short, int, short>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(short), sizeof(int), sizeof(int)) : GetPropertyByIndex<short, int, int>(index, ref prop, addObjectToCache);
+                    break;
+
+                case (sizeof(int), sizeof(byte), sizeof(byte)) : GetPropertyByIndex<int, byte, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(int), sizeof(byte), sizeof(short)) : GetPropertyByIndex<int, byte, short>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(int), sizeof(byte), sizeof(int)) : GetPropertyByIndex<int, byte, int>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(int), sizeof(short), sizeof(byte)) : GetPropertyByIndex<int, short, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(int), sizeof(short), sizeof(short)) : GetPropertyByIndex<int, short, short>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(int), sizeof(short), sizeof(int)) : GetPropertyByIndex<int, short, int>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(int), sizeof(int), sizeof(byte)) : GetPropertyByIndex<int, int, byte>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(int), sizeof(int), sizeof(short)) : GetPropertyByIndex<int, int, short>(index, ref prop, addObjectToCache);
+                    break;
+                case (sizeof(int), sizeof(int), sizeof(int)): GetPropertyByIndex<int, int, int>(index, ref prop, addObjectToCache);
+                    break;
+                default: throw new ArgumentException("Type not supported.");
+            };
+        }
+
+        private void GetPropertyByIndex<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>(int index, ref PropertyDetails prop, bool addObjectToCache = false)
+            where TOffsetSize : unmanaged
+            where TPropertyIdSize : unmanaged
+            where TNamesDataOffsetSize : unmanaged
+        {
+            var metadataSize = sizeof(TOffsetSize) + sizeof(TPropertyIdSize) + sizeof(byte);
+
+            GetPropertyTypeAndPosition<TOffsetSize, TPropertyIdSize>(index, metadataSize,
                 out var token,
                 out var position,
                 out var propertyId);
 
-            var stringValue = GetPropertyName(propertyId);
+            var stringValue = GetPropertyName<TNamesDataOffsetSize>(propertyId);
 
             prop.Token = token;
             prop.Name = stringValue;
@@ -787,24 +915,47 @@ namespace Sparrow.Json
             if (_propCount == 0)
                 return -1;
 
-            int min = 0, max = _propCount - 1;
+            return (_currentPropertyIdSize, _propNamesDataOffsetSize) switch
+            {
+                (sizeof(byte), sizeof(byte)) => GetPropertyIndex<byte, byte>(comparer),
+                (sizeof(byte), sizeof(short)) => GetPropertyIndex<byte, short>(comparer),
+                (sizeof(byte), sizeof(int)) => GetPropertyIndex<byte, int>(comparer),
+                (sizeof(short), sizeof(byte)) => GetPropertyIndex<short, byte>(comparer),
+                (sizeof(short), sizeof(short)) => GetPropertyIndex<short, short>(comparer),
+                (sizeof(short), sizeof(int)) => GetPropertyIndex<short, int>(comparer),
+                (sizeof(int), sizeof(byte)) => GetPropertyIndex<int, byte>(comparer),
+                (sizeof(int), sizeof(short)) => GetPropertyIndex<int, short>(comparer),
+                (sizeof(int), sizeof(int)) => GetPropertyIndex<int, int>(comparer),
+
+                _ => throw new ArgumentException($"Unsupported size {_currentPropertyIdSize}"),
+            };
+        }
+
+        private int GetPropertyIndex<TPropertySize, TPropertyDataSize>(LazyStringValue comparer) 
+            where TPropertySize : unmanaged
+            where TPropertyDataSize : unmanaged
+        {
+            if (_propCount == 0)
+                return -1;
 
             long currentOffsetSize = _currentOffsetSize;
-            long currentPropertyIdSize = _currentPropertyIdSize;
-            long metadataSize = currentOffsetSize + currentPropertyIdSize + sizeof(byte);
-            byte* metadataPtr = _metadataPtr;
+            long metadataSize = currentOffsetSize + sizeof(TPropertySize) + sizeof(byte);
 
-            int mid = (min + max) / 2;
+            int max = _propCount - 1;
+
+            int mid = max / 2;
             if (mid > max)
                 mid = max;
 
+            int min = 0;
+            byte* metadataPtr = _metadataPtr;
             do
             {
-                var propertyIntPtr = metadataPtr + (mid) * metadataSize;
+                var propertyIntPtr = metadataPtr + mid * metadataSize;
 
-                var propertyId = ReadNumber(propertyIntPtr + currentOffsetSize, currentPropertyIdSize);
+                var propertyId = ReadNumber<TPropertySize>(propertyIntPtr + currentOffsetSize);
 
-                var cmpResult = ComparePropertyName(propertyId, comparer);
+                var cmpResult = ComparePropertyName<TPropertyDataSize>(propertyId, comparer);
                 if (cmpResult == 0)
                 {
                     return mid;
@@ -837,6 +988,30 @@ namespace Sparrow.Json
             // Get the offset of the property name from the _propNames position
             var propertyNameOffsetPtr = _propNames + 1 + propertyId * _propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
+
+            // Get the relative "In Document" position of the property Name
+            var propertyNameRelativePosition = _propNames - propertyNameOffset;
+
+            // Get the property name size
+            var size = VariableSizeEncoding.Read<int>(propertyNameRelativePosition, out var propertyNameLengthDataLength);
+
+            // Return result of comparison between property name and received comparer
+            return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
+        }
+
+        /// <summary>
+        /// Compares property names between received StringToByteComparer and the string stored in the document's property names storage
+        /// </summary>
+        /// <param name="propertyId">Position of the string in the property ids storage</param>
+        /// <param name="comparer">Comparer of a specific string value</param>
+        /// <param name="ignoreCase">Indicates if the comparison should be case insensitive</param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int ComparePropertyName<T>(int propertyId, LazyStringValue comparer) where T : unmanaged
+        {
+            // Get the offset of the property name from the _propNames position
+            var propertyNameOffsetPtr = _propNames + 1 + propertyId * sizeof(T);
+            var propertyNameOffset = ReadNumber<T>(propertyNameOffsetPtr);
 
             // Get the relative "In Document" position of the property Name
             var propertyNameRelativePosition = _propNames - propertyNameOffset;
@@ -910,13 +1085,55 @@ namespace Sparrow.Json
         public ulong GetHashOfPropertyNames()
         {
             AssertContextNotDisposed();
-            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+
+            return (_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize) switch
+            {
+                (sizeof(byte), sizeof(byte), sizeof(byte)) => GetHashOfPropertyNames<byte, byte, byte>(),
+                (sizeof(byte), sizeof(byte), sizeof(short)) => GetHashOfPropertyNames<byte, byte, short>(),
+                (sizeof(byte), sizeof(byte), sizeof(int)) => GetHashOfPropertyNames<byte, byte, int>(),
+                (sizeof(byte), sizeof(short), sizeof(byte)) => GetHashOfPropertyNames<byte, short, byte>(),
+                (sizeof(byte), sizeof(short), sizeof(short)) => GetHashOfPropertyNames<byte, short, short>(),
+                (sizeof(byte), sizeof(short), sizeof(int)) => GetHashOfPropertyNames<byte, short, int>(),
+                (sizeof(byte), sizeof(int), sizeof(byte)) => GetHashOfPropertyNames<byte, int, byte>(),
+                (sizeof(byte), sizeof(int), sizeof(short)) => GetHashOfPropertyNames<byte, int, short>(),
+                (sizeof(byte), sizeof(int), sizeof(int)) => GetHashOfPropertyNames<byte, int, int>(),
+
+                (sizeof(short), sizeof(byte), sizeof(byte)) => GetHashOfPropertyNames<short, byte, byte>(),
+                (sizeof(short), sizeof(byte), sizeof(short)) => GetHashOfPropertyNames<short, byte, short>(),
+                (sizeof(short), sizeof(byte), sizeof(int)) => GetHashOfPropertyNames<short, byte, int>(),
+                (sizeof(short), sizeof(short), sizeof(byte)) => GetHashOfPropertyNames<short, short, byte>(),
+                (sizeof(short), sizeof(short), sizeof(short)) => GetHashOfPropertyNames<short, short, short>(),
+                (sizeof(short), sizeof(short), sizeof(int)) => GetHashOfPropertyNames<short, short, int>(),
+                (sizeof(short), sizeof(int), sizeof(byte)) => GetHashOfPropertyNames<short, int, byte>(),
+                (sizeof(short), sizeof(int), sizeof(short)) => GetHashOfPropertyNames<short, int, short>(),
+                (sizeof(short), sizeof(int), sizeof(int)) => GetHashOfPropertyNames<short, int, int>(),
+
+                (sizeof(int), sizeof(byte), sizeof(byte)) => GetHashOfPropertyNames<int, byte, byte>(),
+                (sizeof(int), sizeof(byte), sizeof(short)) => GetHashOfPropertyNames<int, byte, short>(),
+                (sizeof(int), sizeof(byte), sizeof(int)) => GetHashOfPropertyNames<int, byte, int>(),
+                (sizeof(int), sizeof(short), sizeof(byte)) => GetHashOfPropertyNames<int, short, byte>(),
+                (sizeof(int), sizeof(short), sizeof(short)) => GetHashOfPropertyNames<int, short, short>(),
+                (sizeof(int), sizeof(short), sizeof(int)) => GetHashOfPropertyNames<int, short, int>(),
+                (sizeof(int), sizeof(int), sizeof(byte)) => GetHashOfPropertyNames<int, int, byte>(),
+                (sizeof(int), sizeof(int), sizeof(short)) => GetHashOfPropertyNames<int, int, short>(),
+                (sizeof(int), sizeof(int), sizeof(int)) => GetHashOfPropertyNames<int, int, int>(),
+
+                _ => throw new NotImplementedException(),
+            };
+        }
+
+        private ulong GetHashOfPropertyNames<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>()
+            where TOffsetSize : unmanaged
+            where TPropertyIdSize : unmanaged
+            where TNamesDataOffsetSize : unmanaged
+        {
+            var metadataSize = (sizeof(TOffsetSize) + sizeof(TPropertyIdSize) + sizeof(byte));
 
             ulong hash = (ulong)_propCount;
             for (int i = 0; i < _propCount; i++)
             {
-                GetPropertyTypeAndPosition(i, metadataSize, out _, out int _, out int id);
-                var prop = GetPropertyName(id);
+                GetPropertyTypeAndPosition<TOffsetSize, TPropertyIdSize>(i, metadataSize, out _, out int _, out int id);
+                var prop = GetPropertyName<TNamesDataOffsetSize>(id);
                 hash = Hashing.XXHash64.Calculate(prop.Buffer, (ulong)prop.Size, hash);
             }
             return hash;
@@ -958,7 +1175,7 @@ namespace Sparrow.Json
                     return ReadCompressStringLazily(position);
 
                 case BlittableJsonToken.Boolean:
-                    return ReadNumber(_mem + position, sizeof(byte)) == 1 ? BoxedTrue : BoxedFalse;
+                    return ReadNumber<byte>(_mem + position) == 1 ? BoxedTrue : BoxedFalse;
 
                 case BlittableJsonToken.Null:
                     return null;
@@ -1431,18 +1648,61 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
             if (_hashCode == 0)
             {
-                ulong hash = GetHashOfPropertyNames();
-                PropertyDetails prop = default;
-                for (int i = 0; i < _propCount; i++)
+                _hashCode = (_currentOffsetSize, _currentPropertyIdSize, _propNamesDataOffsetSize) switch
                 {
-                    GetPropertyByIndex(i, ref prop, false);
-                    hash = Hashing.Combine(hash, (ulong)(prop.Value?.GetHashCode() ?? 0));
-                }
+                    (sizeof(byte), sizeof(byte), sizeof(byte)) => GetHashCode<byte, byte, byte>(),
+                    (sizeof(byte), sizeof(byte), sizeof(short)) => GetHashCode<byte, byte, short>(),
+                    (sizeof(byte), sizeof(byte), sizeof(int)) => GetHashCode<byte, byte, int>(),
+                    (sizeof(byte), sizeof(short), sizeof(byte)) => GetHashCode<byte, short, byte>(),
+                    (sizeof(byte), sizeof(short), sizeof(short)) => GetHashCode<byte, short, short>(),
+                    (sizeof(byte), sizeof(short), sizeof(int)) => GetHashCode<byte, short, int>(),
+                    (sizeof(byte), sizeof(int), sizeof(byte)) => GetHashCode<byte, int, byte>(),
+                    (sizeof(byte), sizeof(int), sizeof(short)) => GetHashCode<byte, int, short>(),
+                    (sizeof(byte), sizeof(int), sizeof(int)) => GetHashCode<byte, int, int>(),
 
-                _hashCode = (int)Hashing.Mix(hash);
-                if (_hashCode == 0)
-                    _hashCode++;
+                    (sizeof(short), sizeof(byte), sizeof(byte)) => GetHashCode<short, byte, byte>(),
+                    (sizeof(short), sizeof(byte), sizeof(short)) => GetHashCode<short, byte, short>(),
+                    (sizeof(short), sizeof(byte), sizeof(int)) => GetHashCode<short, byte, int>(),
+                    (sizeof(short), sizeof(short), sizeof(byte)) => GetHashCode<short, short, byte>(),
+                    (sizeof(short), sizeof(short), sizeof(short)) => GetHashCode<short, short, short>(),
+                    (sizeof(short), sizeof(short), sizeof(int)) => GetHashCode<short, short, int>(),
+                    (sizeof(short), sizeof(int), sizeof(byte)) => GetHashCode<short, int, byte>(),
+                    (sizeof(short), sizeof(int), sizeof(short)) => GetHashCode<short, int, short>(),
+                    (sizeof(short), sizeof(int), sizeof(int)) => GetHashCode<short, int, int>(),
+
+                    (sizeof(int), sizeof(byte), sizeof(byte)) => GetHashCode<int, byte, byte>(),
+                    (sizeof(int), sizeof(byte), sizeof(short)) => GetHashCode<int, byte, short>(),
+                    (sizeof(int), sizeof(byte), sizeof(int)) => GetHashCode<int, byte, int>(),
+                    (sizeof(int), sizeof(short), sizeof(byte)) => GetHashCode<int, short, byte>(),
+                    (sizeof(int), sizeof(short), sizeof(short)) => GetHashCode<int, short, short>(),
+                    (sizeof(int), sizeof(short), sizeof(int)) => GetHashCode<int, short, int>(),
+                    (sizeof(int), sizeof(int), sizeof(byte)) => GetHashCode<int, int, byte>(),
+                    (sizeof(int), sizeof(int), sizeof(short)) => GetHashCode<int, int, short>(),
+                    (sizeof(int), sizeof(int), sizeof(int)) => GetHashCode<int, int, int>(),
+
+                    _ => throw new NotImplementedException(),
+                };
             }
+            return _hashCode;
+        }
+
+        private int GetHashCode<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>()
+            where TOffsetSize : unmanaged
+            where TPropertyIdSize : unmanaged
+            where TNamesDataOffsetSize : unmanaged
+        {
+            ulong hash = GetHashOfPropertyNames();
+            PropertyDetails prop = default;
+            for (int i = 0; i < _propCount; i++)
+            {
+                GetPropertyByIndex<TOffsetSize, TPropertyIdSize, TNamesDataOffsetSize>(i, ref prop, false);
+                hash = Hashing.Combine(hash, (ulong)(prop.Value?.GetHashCode() ?? 0));
+            }
+
+            _hashCode = (int)Hashing.Mix(hash);
+            if (_hashCode == 0)
+                _hashCode++; 
+
             return _hashCode;
         }
 
