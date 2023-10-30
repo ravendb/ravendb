@@ -1484,9 +1484,11 @@ namespace Raven.Server
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
+            public readonly DateTime CreatedAt;
 
             public AuthenticateConnection()
             {
+                CreatedAt = SystemTime.UtcNow;
             }
 
             public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
