@@ -270,19 +270,19 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
 
         .kilo {
             &::before {
-                content: 'k';
+                content: "k";
             }
         }
 
         .mega {
             &::before {
-                content: 'm';
+                content: "m";
             }
         }
 
         .giga {
             &::before {
-                content: 'g';
+                content: "g";
             }
         }
     }
