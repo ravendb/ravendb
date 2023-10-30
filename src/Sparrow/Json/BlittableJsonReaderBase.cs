@@ -131,6 +131,25 @@ namespace Sparrow.Json
             return ThrowInvalidSizeForNumber(sizeOfValue);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static int ReadNumber<T>(byte* value) where T : unmanaged
+        {
+            if (typeof(T) == typeof(byte))
+            {
+                return *value;
+            }
+            if (typeof(T) == typeof(short))
+            {
+                return *value | *(value + 1) << 8;
+            }
+            if (typeof(T) == typeof(int))
+            {
+                return *value | *(value + 1) << 8 | *(short*)(value + 2) << 16;
+            }
+
+            throw new ArgumentException($"Unsupported type {typeof(T).Name}");
+        }
+
         private static int ThrowInvalidSizeForNumber(long sizeOfValue)
         {
             throw new ArgumentException($"Unsupported size {sizeOfValue}");
