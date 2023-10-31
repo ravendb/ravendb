@@ -73,7 +73,7 @@ internal static class BackupUtils
                 return new GZipStream(stream, compressionLevel, leaveOpen: true);
             case ExportCompressionAlgorithm.Zstd:
                 if (compressionLevel == CompressionLevel.NoCompression)
-                    return stream;
+                    return new LeaveOpenStream(stream);
 
                 return ZstdStream.Compress(stream, compressionLevel, leaveOpen: true);
             default:
