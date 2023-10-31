@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Operations.Backups;
 
-public enum BackMode
+public enum BackupUploadMode
 {
     Default,
     DirectUpload

@@ -37,7 +37,7 @@ internal static class BackupUtils
 {
     internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
     {
-        return configuration.BackupMode == BackMode.DirectUpload
+        return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
             ? new DirectUploadBackupTask(database, backupParameters, configuration, logger, forTestingPurposes) 
             : new BackupTask(database, backupParameters, configuration, logger, forTestingPurposes);
     }
