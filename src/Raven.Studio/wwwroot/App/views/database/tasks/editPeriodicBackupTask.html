@@ -30,15 +30,15 @@
                 </div>
             </div>
             <div class="row margin-bottom">
-                <label class="control-label col-sm-4 col-lg-2">Backup Mode</label>
+                <label class="control-label col-sm-4 col-lg-2">Backup Upload Mode</label>
                 <div class="col-sm-4">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                            <span data-bind="text: backupMode"></span>
+                            <span data-bind="text: backupUploadMode"></span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu" data-bind="foreach: backupModes">
-                            <li><a href="#" data-bind="text: $data, click: $parent.useBackupMode.bind($parent, $data)"></a></li>
+                        <ul class="dropdown-menu" data-bind="foreach: backupUploadModes">
+                            <li><a href="#" data-bind="text: $data, click: $parent.useBackupUploadMode.bind($parent, $data)"></a></li>
                         </ul>
                     </div>
                 </div>

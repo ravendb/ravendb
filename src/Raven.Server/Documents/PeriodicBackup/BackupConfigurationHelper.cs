@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private static void AssertDirectUpload(PeriodicBackupConfiguration configuration)
         {
-            if (configuration.BackupMode != BackMode.DirectUpload)
+            if (configuration.BackupUploadMode != BackupUploadMode.DirectUpload)
                 return;
 
             var backupToLocalFolder = BackupConfiguration.CanBackupUsing(configuration.LocalSettings);
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             if (backupToLocalFolder)
             {
-                throw new NotSupportedException("Trying to use direct upload when we have set a backup set to a local folder.");
+                throw new NotSupportedException("Trying to use direct upload when we configure a backup to a local folder.");
             }
 
             var hasAws = BackupConfiguration.CanBackupUsing(configuration.S3Settings);
@@ -154,13 +154,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             var destinations = new List<bool> { hasAws, hasGlacier, hasAzure, hasGoogleCloud, hasFtp };
             if (destinations.Count(x => x) != 1)
             {
-                throw new NotSupportedException("Cannot use direct upload when we set more than one destination.");
+                throw new NotSupportedException("Cannot use direct upload when we configure more than one destination.");
             }
 
             if (hasAws)
                 return BackupConfiguration.BackupDestination.AmazonS3;
 
-            throw new NotSupportedException("No supported backup destination for direct upload was set");
+            throw new NotSupportedException("No supported backup destination for direct upload was set.");
         }
 
         public static void AssertDestinationAndRegionAreAllowed(BackupConfiguration configuration, ServerStore serverStore)
