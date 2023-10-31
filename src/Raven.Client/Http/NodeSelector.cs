@@ -36,8 +36,8 @@ namespace Raven.Client.Http
                 Failures = new int[topology.Nodes.Count];
                 FastestRecords = new int[topology.Nodes.Count];
                 UnlikelyEveryoneFaultedChoiceIndex = 0;
-
-                var fastestNode = prevState.Nodes.ElementAt(Fastest);
+                
+                var fastestNode = prevState.Nodes.ElementAt(prevState.Fastest);
                 int index = 0;
                 foreach (var node in topology.Nodes)
                 {
