@@ -297,7 +297,8 @@ namespace InterversionTests
             using var store54 = await GetDocumentStoreAsync(Server54Version);
             using var storeCurrent = GetDocumentStore(options);
 
-            await InsertDataAndExecuteExportImportAsync(storeCurrent, store54);
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
+            await InsertDataAndExecuteExportImportAsync(storeCurrent, store54, exportOptions);
             await GetStatsAndAssertAsync(storeCurrent, store54);
         }
 
