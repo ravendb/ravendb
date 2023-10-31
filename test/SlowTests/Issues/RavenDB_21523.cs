@@ -12,6 +12,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Sparrow.Backups;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
@@ -38,6 +39,7 @@ public class RavenDB_21523 : RavenTestBase
     [InlineData(ExportCompressionAlgorithm.Gzip, CompressionLevel.SmallestSize)]
     [InlineData(ExportCompressionAlgorithm.Zstd, CompressionLevel.SmallestSize)]
     [InlineData(ExportCompressionAlgorithm.Gzip, CompressionLevel.NoCompression)]
+    [InlineData(ExportCompressionAlgorithm.Zstd, CompressionLevel.NoCompression)]
     public async Task CanExportImport(ExportCompressionAlgorithm? algorithm, CompressionLevel? compressionLevel)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -78,7 +80,10 @@ public class RavenDB_21523 : RavenTestBase
                         break;
                     case null:
                     case ExportCompressionAlgorithm.Zstd:
-                        Assert.IsType<ZstdStream>(backupStream);
+                        if (compressionLevel == CompressionLevel.NoCompression)
+                            Assert.IsType<BackupStream>(backupStream);
+                        else
+                            Assert.IsType<ZstdStream>(backupStream);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, null);
@@ -305,10 +310,10 @@ public class RavenDB_21523 : RavenTestBase
         await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
         using (var store2 = GetDocumentStore(new Options
-               {
-                   CreateDatabase = false,
-                   ModifyDatabaseName = s => databaseName
-               }))
+        {
+            CreateDatabase = false,
+            ModifyDatabaseName = s => databaseName
+        }))
         {
             using (var session = store2.OpenAsyncSession())
             {

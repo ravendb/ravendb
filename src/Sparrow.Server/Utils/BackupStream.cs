@@ -2,16 +2,17 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 
-namespace Voron.Impl.Backup;
+namespace Sparrow.Server.Utils;
 
-public sealed class ZipBackupStream : Stream
+internal sealed class BackupStream : Stream
 {
     private readonly Stream _inner;
     private readonly byte[] _b;
     private bool _hasRead;
 
-    public ZipBackupStream(Stream inner, byte[] b)
+    public BackupStream(Stream inner, byte[] b)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _b = b ?? throw new ArgumentNullException(nameof(b));
