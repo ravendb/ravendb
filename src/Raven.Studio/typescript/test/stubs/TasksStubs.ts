@@ -458,6 +458,7 @@ export class TasksStubs {
                     TotalNumberOfTimeSeriesSegments: 0,
                     NumberOfTimeSeriesSegmentsToProcess: 0,
                     TransformationName: "Script #1",
+                    TransactionalId: null,
                 },
             ],
             EtlType: etlType,
