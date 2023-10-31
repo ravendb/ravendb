@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using Sparrow;
 using Sparrow.Backups;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Data.Tables;
 using Voron.Global;
@@ -343,7 +344,7 @@ namespace Voron.Impl.Backup
             if (read == 0)
                 throw new InvalidOperationException("Empty stream");
 
-            var backupStream = new ZipBackupStream(stream, buffer);
+            var backupStream = new BackupStream(stream, buffer);
 
             if (read != buffer.Length)
                 return backupStream;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -18,7 +17,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
@@ -28,6 +26,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
@@ -35,29 +34,28 @@ namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
-    internal static async ValueTask<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
+    internal static async Task<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(1);
+        var buffer = new byte[4];
 
-        try
-        {
-            var read = await stream.ReadAsync(buffer, 0, 1, token);
-            if (read == 0)
-                throw new InvalidOperationException("Empty stream");
+        var read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+        if (read == 0)
+            throw new InvalidOperationException("Empty stream");
 
-            var backupStream = new BackupStream(stream, buffer[0]);
+        var backupStream = new BackupStream(stream, buffer);
 
-            return buffer[0] switch
-            {
-                31 => new GZipStream(backupStream, CompressionMode.Decompress),
-                40 => ZstdStream.Decompress(backupStream),
-                _ => throw new NotSupportedException($"Unknown stream format ({buffer[0]})")
-            };
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(buffer);
-        }
+        if (read != buffer.Length)
+            return backupStream;
+
+        const uint zstdMagicNumber = 0xFD2FB528;
+        var uintMagicNumber = BitConverter.ToUInt32(buffer);
+        if (uintMagicNumber == zstdMagicNumber)
+            return ZstdStream.Decompress(backupStream);
+
+        if (buffer[0] == 0x1F && buffer[1] == 0x8B)
+            return new GZipStream(backupStream, CompressionMode.Decompress);
+
+        return backupStream;
     }
 
     internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
@@ -67,6 +65,9 @@ internal static class BackupUtils
             case ExportCompressionAlgorithm.Gzip:
                 return new GZipStream(stream, compressionLevel, leaveOpen: true);
             case ExportCompressionAlgorithm.Zstd:
+                if (compressionLevel == CompressionLevel.NoCompression)
+                    return stream;
+
                 return ZstdStream.Compress(stream, compressionLevel, leaveOpen: true);
             default:
                 throw new ArgumentOutOfRangeException();
