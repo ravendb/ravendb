@@ -8,13 +8,13 @@ public class AwsS3DirectUploadStream : DirectUploadStream<RavenAwsS3Client>
 {
     private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
 
-    protected override long MinOncePartUploadSizeInBytes { get; }
+    protected override long MinOncPartUploadSizeInBytes { get; }
 
     public AwsS3DirectUploadStream(Parameters parameters) : base(parameters)
     {
         _retentionPolicyParameters = parameters.RetentionPolicyParameters;
 
-        MinOncePartUploadSizeInBytes = Client.MinOnePartUploadSizeLimit.GetValue(SizeUnit.Bytes);
+        MinOncPartUploadSizeInBytes = Client.MinOnePartUploadSizeLimit.GetValue(SizeUnit.Bytes);
     }
 
     protected override void Dispose(bool disposing)

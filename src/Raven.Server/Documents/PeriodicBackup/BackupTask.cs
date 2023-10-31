@@ -62,6 +62,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
 
+        protected Action OnBackupException;
+
         public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             Database = database;
@@ -616,29 +618,37 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         var totalSw = Stopwatch.StartNew();
                         var sw = Stopwatch.StartNew();
-                        var compressionAlgorithm = Configuration.SnapshotSettings?.CompressionAlgorithm ?? _database.Configuration.Backup.SnapshotCompressionAlgorithm;
-                        var compressionLevel = Configuration.SnapshotSettings?.CompressionLevel ?? _database.Configuration.Backup.SnapshotCompressionLevel;
+                        var compressionAlgorithm = Configuration.SnapshotSettings?.CompressionAlgorithm ?? Database.Configuration.Backup.SnapshotCompressionAlgorithm;
+                        var compressionLevel = Configuration.SnapshotSettings?.CompressionLevel ?? Database.Configuration.Backup.SnapshotCompressionLevel;
                         var excludeIndexes = Configuration.SnapshotSettings?.ExcludeIndexes ?? false;
 
                         using (var stream = GetStreamForBackupDestination(tempBackupFilePath, folderName, fileName))
                         {
-                            var smugglerResult = Database.FullBackupTo(stream, compressionAlgorithm, compressionLevel, excludeIndexes,
-                                info =>
-                                {
-                                    AddInfo(info.Message);
-
-                                    BackupResult.SnapshotBackup.ReadCount += info.FilesCount;
-                                    if (sw.ElapsedMilliseconds > 0 && info.FilesCount > 0)
+                            try
+                            {
+                                var smugglerResult = Database.FullBackupTo(stream, compressionAlgorithm, compressionLevel, excludeIndexes,
+                                    info =>
                                     {
-                                        AddInfo($"Backed up {BackupResult.SnapshotBackup.ReadCount} " +
-                                                $"file{(BackupResult.SnapshotBackup.ReadCount > 1 ? "s" : string.Empty)}");
-                                        sw.Restart();
-                                    }
-                                }, TaskCancelToken.Token);
+                                        AddInfo(info.Message);
 
-                            FlushToDiskIfNeeded(stream);
+                                        BackupResult.SnapshotBackup.ReadCount += info.FilesCount;
+                                        if (sw.ElapsedMilliseconds > 0 && info.FilesCount > 0)
+                                        {
+                                            AddInfo($"Backed up {BackupResult.SnapshotBackup.ReadCount} " +
+                                                    $"file{(BackupResult.SnapshotBackup.ReadCount > 1 ? "s" : string.Empty)}");
+                                            sw.Restart();
+                                        }
+                                    }, TaskCancelToken.Token);
 
-                            EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
+                                FlushToDiskIfNeeded(stream);
+
+                                EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
+                            }
+                            catch
+                            {
+                                OnBackupException?.Invoke();
+                                throw;
+                            }
                         }
 
                         AddInfo($"Backed up {BackupResult.SnapshotBackup.ReadCount} files, " +
@@ -780,26 +790,34 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (var outputStream = GetOutputStream(stream))
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value, startRaftIndex.Value, _logger);
-                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, Database.Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm(), Database.Configuration.Backup.CompressionLevel);
-                var smuggler = new DatabaseSmuggler(_database,
-                    smugglerSource,
-                    smugglerDestination,
-                    Database.Time,
-                    options: options,
-                    result: BackupResult,
-                    onProgress: _onProgress,
-                    token: TaskCancelToken.Token);
+                try
+                {
+                    var smugglerSource = new DatabaseSource(Database, startDocumentEtag.Value, startRaftIndex.Value, _logger);
+                    var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, Database.Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm(), Database.Configuration.Backup.CompressionLevel);
+                    var smuggler = new DatabaseSmuggler(Database,
+                        smugglerSource,
+                        smugglerDestination,
+                        Database.Time,
+                        options: options,
+                        result: BackupResult,
+                        onProgress: _onProgress,
+                        token: TaskCancelToken.Token);
 
-                smuggler.ExecuteAsync().Wait();
+                    smuggler.ExecuteAsync().Wait();
 
-                FlushToDiskIfNeeded(outputStream);
+                    FlushToDiskIfNeeded(outputStream);
 
-                currentBackupResults.LastEtag = smugglerSource.LastEtag;
-                currentBackupResults.LastDatabaseChangeVector = smugglerSource.LastDatabaseChangeVector;
-                currentBackupResults.LastRaftIndex = smugglerSource.LastRaftIndex;
+                    currentBackupResults.LastEtag = smugglerSource.LastEtag;
+                    currentBackupResults.LastDatabaseChangeVector = smugglerSource.LastDatabaseChangeVector;
+                    currentBackupResults.LastRaftIndex = smugglerSource.LastRaftIndex;
 
-                return currentBackupResults;
+                    return currentBackupResults;
+                }
+                catch
+                {
+                    OnBackupException?.Invoke();
+                    throw;
+                }
             }
         }
 
