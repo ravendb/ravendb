@@ -1196,6 +1196,37 @@ more responsive application.
             return changes;
         }
 
+        /// <summary>
+        /// Returns all changes for the specified entity. Including name of the field/property that changed, its old and new value and change type.
+        /// </summary>
+        public DocumentsChanges[] WhatChangedFor(object entity)
+        {
+            if (!DocumentsByEntity.TryGetValue(entity, out var documentInfo))
+                return Array.Empty<DocumentsChanges>();
+
+            if (DeletedEntities.Contains(entity))
+                return new[]
+                {
+                    new DocumentsChanges
+                    {
+                        FieldNewValue = string.Empty,
+                        FieldOldValue = string.Empty,
+                        Change = DocumentsChanges.ChangeType.DocumentDeleted
+                    }
+                };
+
+            UpdateMetadataModifications(documentInfo.MetadataInstance, documentInfo.Metadata);
+
+            using var document = JsonConverter.ToBlittable(entity, documentInfo);
+
+            var changes = new Dictionary<string, DocumentsChanges[]>();
+
+            if (!EntityChanged(document, documentInfo, changes))
+                return Array.Empty<DocumentsChanges>();
+
+            return changes[documentInfo.Id];
+        }
+
         public IDictionary<string, EntityInfo> GetTrackedEntities()
         {
             var tracked = DocumentsById.GetTrackedEntities(this);
