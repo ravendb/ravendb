@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Threading.Tasks;
+using Lextm.SharpSnmpLib.Pipeline;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -92,16 +93,39 @@ namespace Raven.Server.Web.System
                 events = listener.Events;
             }
 
+            var sortedEvents = new SortedSet<GcEventsEventListener.Event>(events, new EventComparerByDuration());
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("Events");
+                writer.WritePropertyName("TopFiveByDuration");
                 writer.WriteStartArray();
 
                 var first = true;
-                foreach (var @event in events.OrderByDescending(x => x.DurationInMs))
+                var count = 0;
+                foreach (var @event in sortedEvents)
+                {
+                    if (++count > 5)
+                        break;
+
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+
+                    context.Write(writer, @event.ToJson());
+                }
+
+                writer.WriteEndArray();
+
+                writer.WriteComma();
+                writer.WritePropertyName("Events");
+                writer.WriteStartArray();
+
+                first = true;
+                foreach (var @event in events.OrderBy(x => x.Start))
                 {
                     if (first == false)
                         writer.WriteComma();
@@ -112,7 +136,20 @@ namespace Raven.Server.Web.System
                 }
 
                 writer.WriteEndArray();
+
                 writer.WriteEndObject();
+            }
+        }
+
+        private class EventComparerByDuration : IComparer<GcEventsEventListener.Event>
+        {
+            public int Compare(GcEventsEventListener.Event x, GcEventsEventListener.Event y)
+            {
+                if (ReferenceEquals(x, y))return 0;
+                if (ReferenceEquals(null, y)) return 1;
+                if (ReferenceEquals(null, x)) return -1;
+
+                return y.DurationInMs.CompareTo(x.DurationInMs);
             }
         }
 
@@ -203,7 +240,7 @@ namespace Raven.Server.Web.System
 
                 private long OSThreadId { get; }
 
-                private DateTime Start { get; }
+                public DateTime Start { get; }
 
                 private DateTime End { get; }
 
@@ -234,7 +271,7 @@ namespace Raven.Server.Web.System
                         [nameof(OSThreadId)] = OSThreadId,
                         [nameof(Start)] = Start,
                         [nameof(End)] = End,
-                        [nameof(DurationInMs)] = DurationInMs,
+                        [nameof(DurationInMs)] = DurationInMs
                     };
                 }
             }
