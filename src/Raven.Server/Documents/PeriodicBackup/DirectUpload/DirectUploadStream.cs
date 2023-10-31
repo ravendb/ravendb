@@ -27,7 +27,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
     protected T Client { get; }
 
-    protected abstract long MinOncPartUploadSizeInBytes { get; }
+    protected abstract long MinOnePartUploadSizeInBytes { get; }
 
     protected DirectUploadStream(Parameters parameters)
     {
@@ -72,7 +72,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _cloudUploadStatus.UploadProgress.SetTotal(_position);
 
         var toUpload = _writeStream.Position;
-        if (toUpload <= MinOncPartUploadSizeInBytes)
+        if (toUpload <= MinOnePartUploadSizeInBytes)
             return;
 
         if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
@@ -94,7 +94,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _cloudUploadStatus.UploadProgress.SetTotal(_position);
 
         var toUpload = _writeStream.Position;
-        if (toUpload <= MinOncPartUploadSizeInBytes)
+        if (toUpload <= MinOnePartUploadSizeInBytes)
             return;
 
         if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
@@ -111,7 +111,10 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
     protected override void Dispose(bool disposing)
     {
         if (_abortUpload)
+        {
+            _backupStatusIDisposable?.Dispose();
             return;
+        }
 
         if (_disposed)
             return;
