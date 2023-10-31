@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Voron.Impl.Backup;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -230,8 +231,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     if (string.Equals(zipEntry.FullName, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
                     {
                         await using (var entryStream = zipEntry.Open())
+                        await using (var decompressionStream = FullBackup.GetDecompressionStream(entryStream))
                         {
-                            var json = await _context.ReadForMemoryAsync(entryStream, "read database settings");
+                            var json = await _context.ReadForMemoryAsync(decompressionStream, "read database settings");
                             json.BlittableValidation();
 
                             RestoreSettings restoreSettings = JsonDeserializationServer.RestoreSettings(json);
