@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
@@ -686,7 +685,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             long totalUsedSpace = 0;
             foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
             {
-                if(mountPointUsage.Type == nameof(StorageEnvironmentType.Index) &&
+                if (mountPointUsage.Type == nameof(StorageEnvironmentType.Index) &&
                    _configuration.SnapshotSettings is { ExcludeIndexes: true })
                     continue;
 

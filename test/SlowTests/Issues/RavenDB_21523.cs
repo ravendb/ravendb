@@ -2,7 +2,6 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -28,33 +27,33 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(null, null)]
-    [InlineData(null, null)]
-    [InlineData(ExportCompressionAlgorithm.Gzip, null)]
-    [InlineData(ExportCompressionAlgorithm.Zstd, null)]
-    [InlineData(ExportCompressionAlgorithm.Gzip, CompressionLevel.Optimal)]
-    [InlineData(ExportCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
-    [InlineData(ExportCompressionAlgorithm.Gzip, CompressionLevel.Fastest)]
-    [InlineData(ExportCompressionAlgorithm.Zstd, CompressionLevel.Fastest)]
-    [InlineData(ExportCompressionAlgorithm.Gzip, CompressionLevel.SmallestSize)]
-    [InlineData(ExportCompressionAlgorithm.Zstd, CompressionLevel.SmallestSize)]
-    [InlineData(ExportCompressionAlgorithm.Gzip, CompressionLevel.NoCompression)]
-    public async Task CanExportImport(ExportCompressionAlgorithm? algorithm, CompressionLevel? compressionLevel)
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { null, null })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { null, null })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, null })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Zstd, null })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, CompressionLevel.Optimal })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Zstd, CompressionLevel.Optimal })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, CompressionLevel.Fastest })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Zstd, CompressionLevel.Fastest })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, CompressionLevel.SmallestSize })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Zstd, CompressionLevel.SmallestSize })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, CompressionLevel.NoCompression })]
+    public async Task CanExportImport(Options options, object algorithmAsObject, object compressionLevelAsObject)
     {
+        ExportCompressionAlgorithm? algorithm = algorithmAsObject == null ? null : (ExportCompressionAlgorithm)algorithmAsObject;
+        CompressionLevel? compressionLevel = compressionLevelAsObject == null ? null : (CompressionLevel)compressionLevelAsObject;
+
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
         var exportFile = Path.Combine(backupPath, "export.ravendbdump");
 
-        options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = algorithm.ToString();
+        options.ModifyDatabaseRecord += record =>
+        {
+            record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = algorithm?.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionLevel)] = compressionLevel?.ToString();
+        };
 
         using (var store = GetDocumentStore(options))
-        {
-            ModifyDatabaseRecord = record =>
-            {
-                record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = algorithm?.ToString();
-                record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionLevel)] = compressionLevel?.ToString();
-            }
-        }))
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -274,54 +273,54 @@ public class RavenDB_21523 : RavenTestBase
 
     private async Task RunBackupRestore(DocumentStore store, string backupPath, BackupType backupType, Func<string, Task> assertBackupCompressionAlgorithm)
     {
-            using (var session = store.OpenAsyncSession())
-            {
-                await session.StoreAsync(new Company { Name = "HR" }, "companies/1");
-                await session.SaveChangesAsync();
-            }
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Company { Name = "HR" }, "companies/1");
+            await session.SaveChangesAsync();
+        }
 
-            var config = Backup.CreateBackupConfiguration(backupPath, backupType);
+        var config = Backup.CreateBackupConfiguration(backupPath, backupType);
 
-            await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+        await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
-            var databaseName = GetDatabaseName() + "restore";
+        var databaseName = GetDatabaseName() + "restore";
 
-            var backupDirectory = Directory.GetDirectories(backupPath).First();
-            var files = Directory.GetFiles(backupDirectory)
-                .Where(Raven.Client.Documents.Smuggler.BackupUtils.IsFullBackupOrSnapshot)
-                .OrderBackups()
-                .ToArray();
+        var backupDirectory = Directory.GetDirectories(backupPath).First();
+        var files = Directory.GetFiles(backupDirectory)
+            .Where(Raven.Client.Documents.Smuggler.BackupUtils.IsFullBackupOrSnapshot)
+            .OrderBackups()
+            .ToArray();
 
-            var lastFile = files.Last();
+        var lastFile = files.Last();
 
-            Assert.True(File.Exists(lastFile));
+        Assert.True(File.Exists(lastFile));
 
         await assertBackupCompressionAlgorithm(lastFile);
 
-            var restoreConfig = new RestoreBackupConfiguration()
-            {
-                BackupLocation = backupDirectory,
-                DatabaseName = databaseName,
-                LastFileNameToRestore = lastFile
-            };
+        var restoreConfig = new RestoreBackupConfiguration()
+        {
+            BackupLocation = backupDirectory,
+            DatabaseName = databaseName,
+            LastFileNameToRestore = lastFile
+        };
 
-            var restoreOperation = new RestoreBackupOperation(restoreConfig);
-            var operation = await store.Maintenance.Server.SendAsync(restoreOperation);
-            await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+        var restoreOperation = new RestoreBackupOperation(restoreConfig);
+        var operation = await store.Maintenance.Server.SendAsync(restoreOperation);
+        await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
-            using (var store2 = GetDocumentStore(new Options
+        using (var store2 = GetDocumentStore(new Options
+        {
+            CreateDatabase = false,
+            ModifyDatabaseName = s => databaseName
+        }))
+        {
+            using (var session = store2.OpenAsyncSession())
             {
-                CreateDatabase = false,
-                ModifyDatabaseName = s => databaseName
-            }))
-            {
-                using (var session = store2.OpenAsyncSession())
-                {
-                    var company = await session.LoadAsync<Company>("companies/1");
+                var company = await session.LoadAsync<Company>("companies/1");
 
-                    Assert.NotNull(company);
-                    Assert.Equal("HR", company.Name);
-                }
+                Assert.NotNull(company);
+                Assert.Equal("HR", company.Name);
             }
         }
     }
+}

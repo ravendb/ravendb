@@ -53,7 +53,6 @@ namespace Raven.Server.Smuggler.Documents
         private readonly ISmugglerSource _source;
         private readonly CompressionLevel _compressionLevel;
         private readonly ExportCompressionAlgorithm _compressionAlgorithm;
-        private readonly CompressionLevel _compressionLevel;
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;

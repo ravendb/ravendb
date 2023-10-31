@@ -141,22 +141,22 @@ namespace Raven.Server.Routing
                 }
             }
 
-            if (CanAccessRoute(route, context, database?.Name, feature, out var authenticationStatus)) 
-                return (true, authenticationStatus);
-            
+            if (CanAccessRoute(route, context, databaseName, feature, out var authenticationStatus))
+                return (true, authenticationStatus, feature.Certificate?.Thumbprint);
+
             if (ShouldRetryToAuthenticateConnection(feature))
             {
                 var httpConnectionFeature = context.Features.Get<IHttpConnectionFeature>();
                 feature = _ravenServer.AuthenticateConnectionCertificate(feature.Certificate, httpConnectionFeature);
                 context.Features.Set<IHttpAuthenticationFeature>(feature);
 
-                if (CanAccessRoute(route, context, database?.Name, feature, out authenticationStatus))
-                    return (true, authenticationStatus);
+                if (CanAccessRoute(route, context, databaseName, feature, out authenticationStatus))
+                    return (true, authenticationStatus, feature.Certificate?.Thumbprint);
             }
 
-            await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
-            return (false, authenticationStatus);
-            }
+            await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
+            return (false, authenticationStatus, feature.Certificate?.Thumbprint);
+        }
 
         internal bool CanAccessRoute(RouteInformation route, HttpContext context, string databaseName, RavenServer.AuthenticateConnection feature, out RavenServer.AuthenticationStatus authenticationStatus)
         {
@@ -199,7 +199,7 @@ namespace Raven.Server.Routing
                             // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
                             if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
                                 return true;
-                            
+
                             goto case RavenServer.AuthenticationStatus.None;
 
                         case RavenServer.AuthenticationStatus.Allowed:
