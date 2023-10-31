@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -345,7 +344,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
         return TryRemoveExistingValue(ref key, out value);
     }
-
+    
     public bool TryRemoveExistingValue(ref TLookupKey key, out long value)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
@@ -395,7 +394,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         VerifySizeOf(ref state, _internalCursor._pos == 0);
         return true;
     }
-
+    
     private void RemoveEntryFromPage(ref CursorState state, ref TLookupKey key, int pos, out long value)
     {
         var entriesOffsets = state.EntriesOffsets;
@@ -475,12 +474,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Memory.Copy(destinationState.Page.Pointer, temp.Ptr, Constants.Storage.PageSize);
         var keyData = GetKeyData(ref parent, parent.LastSearchPosition + 1);
         var siblingKey = TLookupKey.FromLong<TLookupKey>(keyData);
-        siblingKey.IncreaseReferenceCount(this);
+        siblingKey.PreventTermRemoval(this);
         // We update the entries offsets on the source page, now that we have moved the entries.
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);
-        return true;
 
+        return true;
     }
 
     [SkipLocalsInit]
@@ -496,13 +495,15 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         int combinedEntries = destination->NumberOfEntries + source->NumberOfEntries;
         var entries = new Span<ushort>((byte*)destination + PageHeader.SizeOf, combinedEntries)[destination->NumberOfEntries..];
         int idx = 0;
+        long firstItemKey = -1;        
         if (destination->IsBranch)
         {
             // special handling for the left most section
-            (long key, long childValue) = GetFirstActualKeyAndValue(source);
-            var len = EncodeEntry(destination, key, childValue, entryBuffer);
+            (firstItemKey, long childValue) = GetFirstActualKeyAndValue(source);
+            var len = EncodeEntry(destination, firstItemKey, childValue, entryBuffer);
             if (AddBufferToPage(entryBuffer, len, ref entries[idx]) == false)
                 return false;
+            
             idx++;
         }
         for (; idx < source->NumberOfEntries; idx++)
@@ -526,6 +527,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 return false;
         }
 
+        if (destination->IsBranch)
+        {
+            var firstItemLookupKey = TLookupKey.FromLong<TLookupKey>(firstItemKey);
+            firstItemLookupKey.OnNewKeyAddition(this);
+        }
+
         return true;
         
         bool AddBufferToPage(byte* buffer, int requiredSize, ref ushort entry)
@@ -545,7 +552,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Memory.Copy(entryPos, buffer, requiredSize);
 
             Debug.Assert(destination->Upper >= destination->Lower);
-
+            
             return true;
         }
     }
@@ -593,7 +600,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         // additionally we've to increase term references counter to avoid removal of term container
         var siblingKeyData = GetKeyData(ref parent, position);
         var siblingKey = TLookupKey.FromLong<TLookupKey>(siblingKeyData);
-        siblingKey.IncreaseReferenceCount(this);
+        siblingKey.PreventTermRemoval(this);
         
         long pageNum = destinationState.Page.PageNumber;
         Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
@@ -613,11 +620,15 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             // let's reduce the height of the tree entirely...
             DecrementPageNumbers(ref parent);
-
+            
+            var leafKey = GetKeyData(ref parent, parent.LastSearchPosition);
+            var lookupLeafKey = TLookupKey.FromLong<TLookupKey>(leafKey); 
+            lookupLeafKey.OnKeyRemoval(this);
+            
             var parentPageNumber = parent.Page.PageNumber;
             Debug.Assert(_llt.IsDirty(parent.Page.PageNumber));
             Memory.Copy(parent.Page.Pointer, stateToKeep.Page.Pointer, Constants.Storage.PageSize);
-            parent.Page.PageNumber = parentPageNumber; // we overwrote it...
+            parent.Page.PageNumber = parentPageNumber; //we overwrote it...
 
             _llt.FreePage(stateToDelete.Page.PageNumber);
             _llt.FreePage(stateToKeep.Page.PageNumber);
@@ -1705,4 +1716,31 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             }
         }
     }
+    
+#if DEBUG
+    public int GetReferenceCount(string key)
+    {
+        using var _ = Slice.From(_llt.Allocator, key, out var slice);
+        var compactKey = new CompactKey();
+        compactKey.Initialize(_llt);
+        compactKey.Set(slice);
+        compactKey.ChangeDictionary(State.DictionaryId);
+        TLookupKey lookupKey = (TLookupKey)(object)new CompactTree.CompactKeyLookup(compactKey);
+        
+        FindPageFor(ref lookupKey, ref _internalCursor);
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+
+        if (state.LastSearchPosition < 0)
+            return -1;
+        
+        var value = GetKeyData(ref state, state.LastSearchPosition);
+        var real = TLookupKey.FromLong<TLookupKey>(value);
+        if (real is CompactTree.CompactKeyLookup ckl)
+        {
+            ckl.GetTermReference(_llt, ckl.ContainerId, out var termRefCount);
+            return termRefCount;
+        }
+        return -1;
+    }
+#endif
 }

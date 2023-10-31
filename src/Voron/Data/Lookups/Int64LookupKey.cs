@@ -77,7 +77,7 @@ public struct Int64LookupKey : ILookupKey
     {
     }
 
-    public void IncreaseReferenceCount<T>(Lookup<T> parent) where T : struct, ILookupKey
+    public void PreventTermRemoval<T>(Lookup<T> parent) where T : struct, ILookupKey
     {
     }
 

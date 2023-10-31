@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Data.BTrees;
 using Voron.Data.Containers;
@@ -144,7 +145,6 @@ public sealed partial class CompactTree : IPrepareForCommit
         public void OnNewKeyAddition<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
             CreateTermInContainer(parent);
-
             IncrementTermReferenceCount(parent.Llt, ContainerId);
         }
 
@@ -161,12 +161,13 @@ public sealed partial class CompactTree : IPrepareForCommit
         {
             if (ContainerId == 0)
                 return; // the empty key is not stored and cannot be referenced
+            
             DecrementTermReferenceCount(parent.Llt, ContainerId, ref parent.State);
         }
 
-        public void IncreaseReferenceCount<T>(Lookup<T> parent) where T : struct, ILookupKey
+        public void PreventTermRemoval<T>(Lookup<T> parent) where T : struct, ILookupKey
         { 
-            IncrementTermReferenceCount(parent.Llt, ContainerId);
+            IncrementTermReferenceCount(parent.Llt, ContainerId, true);
         }
 
         public string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey
@@ -187,6 +188,7 @@ public sealed partial class CompactTree : IPrepareForCommit
                 throw new VoronErrorException("A term exists without any references? That should be impossible");
             if (termRefCount == 1) // no more references, can delete
             {
+                term[0] = 15 & 0xF;
                 Container.Delete(llt, state.TermsContainerId, keyContainerId);
                 return;
             }
@@ -194,11 +196,25 @@ public sealed partial class CompactTree : IPrepareForCommit
             term[0] = (byte)((term[0] & 0xF0) | (termRefCount - 1));
         }
 
-
-        private void IncrementTermReferenceCount(LowLevelTransaction llt, long keyContainerId)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<byte> GetTermReference(LowLevelTransaction llt, long keyContainerId, out int termRefCount)
         {
             var term = Container.GetMutable(llt, keyContainerId);
-            int termRefCount = term[0] & 0xF;
+            termRefCount = term[0] & 0xF;
+            return term;
+        }
+        
+        private int IncrementTermReferenceCount(LowLevelTransaction llt, long keyContainerId, bool conditionalIncrease = false)
+        {
+            var term = GetTermReference(llt, keyContainerId, out var termRefCount);
+            
+            
+            //In case of calling prevent deletion that means we're handling split/merges which copy the data.
+            //Let's increase it only when termRefCount is equal to 1 to avoid accidentally removal.
+            if (conditionalIncrease && termRefCount > 1)
+                return termRefCount;
+            
+            
             // A term usage count means that it is used by multiple pages at the same time. That can happen only if a leaf & branches are using
             // the same term as the separator. However, that has natural limits. As the term can only be in one path through the tree, the tree height
             // is a natural limit. Compact tree at maximum storage will take ~17 bytes, which means at *least* 425 items, which means that that the 
@@ -208,6 +224,7 @@ public sealed partial class CompactTree : IPrepareForCommit
                 throw new VoronErrorException($"A term is used at max(tree-height), but we have term: {keyContainerId} used: {termRefCount}. This is a bug");
 
             term[0] = (byte)((term[0] & 0xF0) | termRefCount + 1);
+            return term[0] & 0xF;
         }
 
 

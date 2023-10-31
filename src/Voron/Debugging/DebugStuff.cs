@@ -12,8 +12,8 @@ using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
-using Voron.Global;
 using Voron.Impl;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Debugging
 {
@@ -298,7 +298,7 @@ namespace Voron.Debugging
 
             RenderAndShowTCompactTree(tree, steps, tree.State.RootPage, $"<p>{headerData}</p>");
         }
-
+        
         [Conditional("DEBUG")]
         public static void RenderAndShow(CompactTree tree, string message = null)
         {
@@ -324,6 +324,7 @@ namespace Voron.Debugging
             where TKey : struct, ILookupKey
         {
             var header = (LookupPageHeader*)page.Pointer;
+            
             sw.WriteLine($"<ul><li><input type='checkbox' id='page-{page.PageNumber}' {(open ? "checked" : "")} /><label for='page-{page.PageNumber}'>{text}: Page {page.PageNumber:#,#;;0} - {header->PageFlags} - {header->NumberOfEntries:#,#;;0} entries - Usable space: {header->Upper - header->Lower} / Available {header->FreeSpace}</label><ul>");
 
             var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
@@ -332,12 +333,18 @@ namespace Voron.Debugging
                 var state = new Lookup<TKey>.CursorState { Page = page };
                 Lookup<TKey>.GetKeyAndValue(ref state, i, out var key, out var val);
                 TKey lookupKey = TKey.FromLong<TKey>(key);
-
                 if (header->PageFlags.HasFlag(LookupPageFlags.Leaf))
                 {
                     if (i % steps == 0)
                     {
-                        sw.Write($"<li>{lookupKey.ToString(tree)} --> {val}</li>");
+                        if (typeof(TKey) == typeof(CompactTree.CompactKeyLookup))
+                        {
+                            var compactKeyLookup = (CompactTree.CompactKeyLookup)(object)(lookupKey);
+                            compactKeyLookup.GetTermReference(tree.Llt, compactKeyLookup.ContainerId, out var refCount);
+                            sw.Write($"<li>{lookupKey.ToString(tree)} --> {val} ({refCount})</li>");
+                        }
+                        else
+                            sw.Write($"<li>{lookupKey.ToString(tree)} --> {val}</li>");
                     }
                 }
                 else
@@ -348,8 +355,7 @@ namespace Voron.Debugging
 
             sw.WriteLine("</ul></li></ul>");
         }
-
-
+        
         private static unsafe long GetFixedSizeTreeKey<TVal>(FixedSizeTreePage<TVal> page, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, int i)
             where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
         {
