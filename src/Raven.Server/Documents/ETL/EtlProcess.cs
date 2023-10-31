@@ -1375,7 +1375,7 @@ namespace Raven.Server.Documents.ETL
                 : Transformation.Collections;
 
             var lastProcessedEtag = LastProcessState.GetLastProcessedEtag(Database.DbBase64Id, Database.ServerStore.NodeTag);
-
+            
             var overallDuration = Stopwatch.StartNew();
             foreach (var collection in collections)
             {

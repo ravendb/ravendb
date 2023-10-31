@@ -193,6 +193,22 @@ namespace Raven.Client.Documents.Conventions
                     ? null
                     : TimeSpan.FromSeconds(httpPooledConnectionLifetime);
             }
+
+            var httpVersionAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_VERSION");
+            if (httpVersionAsString != null)
+            {
+                Version httpVersion;
+                try
+                {
+                    httpVersion = Version.Parse(httpVersionAsString);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_VERSION' env variable with value '{httpVersionAsString}'.", e);
+                }
+
+                DefaultForServer.HttpVersion = httpVersion;
+            }
 #endif
 
 #if NETCOREAPP3_1_OR_GREATER

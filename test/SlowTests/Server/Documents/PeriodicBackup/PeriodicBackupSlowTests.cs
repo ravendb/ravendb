@@ -43,6 +43,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Backups;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
@@ -457,11 +458,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory, Trait("Category", "Smuggler")]
-        [InlineData(CompressionLevel.Optimal)]
-        [InlineData(CompressionLevel.Fastest)]
-        [InlineData(CompressionLevel.NoCompression)]
-        public async Task can_backup_and_restore_snapshot(CompressionLevel compressionLevel)
+        [RavenTheory(RavenTestCategory.BackupExportImport), Trait("Category", "Smuggler")]
+        [InlineData(null, CompressionLevel.Optimal)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Optimal)]
+        [InlineData(null, CompressionLevel.Fastest)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Fastest)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Fastest)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.NoCompression)]
+        public async Task can_backup_and_restore_snapshot(SnapshotBackupCompressionAlgorithm? algorithm, CompressionLevel compressionLevel)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
@@ -489,7 +494,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                config.SnapshotSettings = new SnapshotSettings { CompressionLevel = compressionLevel };
+                config.SnapshotSettings = new SnapshotSettings
+                {
+                    CompressionAlgorithm = algorithm,
+                    CompressionLevel = compressionLevel
+                };
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
@@ -623,7 +632,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport), Trait("Category", "Smuggler")]
         [InlineData(BackupType.Snapshot)]
         [InlineData(BackupType.Backup)]
         public async Task can_backup_and_restore_snapshot_with_compare_exchange(BackupType backupType)
@@ -651,7 +660,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Equal(ids.Length, sourceStats.CountOfCompareExchange);
 
             var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType);
-            config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
             var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
             var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
@@ -742,8 +750,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task can_backup_and_restore_snapshot_with_compression()
+        [RavenTheory(RavenTestCategory.BackupExportImport), Trait("Category", "Smuggler")]
+        [InlineData(null, CompressionLevel.Optimal)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Optimal)]
+        [InlineData(null, CompressionLevel.Fastest)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Fastest)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Fastest)]
+        [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.NoCompression)]
+        public async Task can_backup_and_restore_snapshot_with_compression(SnapshotBackupCompressionAlgorithm algorithm, CompressionLevel compressionLevel)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options
@@ -769,7 +784,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(2, compressionRecovery.Length);
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
+                config.SnapshotSettings = new SnapshotSettings
+                {
+                    CompressionAlgorithm = algorithm,
+                    CompressionLevel = compressionLevel
+                };
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;

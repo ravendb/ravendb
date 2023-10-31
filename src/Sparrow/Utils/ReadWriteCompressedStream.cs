@@ -18,8 +18,8 @@ namespace Sparrow.Utils
         public ReadWriteCompressedStream(Stream inner)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            _input = ZstdStream.Decompress(inner);
-            _output = ZstdStream.Compress(inner);
+            _input = ZstdStream.Decompress(inner, leaveOpen: true);
+            _output = ZstdStream.Compress(inner, leaveOpen: true);
             _dispose = new DisposeOnce<SingleAttempt>(DisposeInternal);
         }
 

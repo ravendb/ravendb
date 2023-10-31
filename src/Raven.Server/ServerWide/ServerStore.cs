@@ -150,6 +150,8 @@ namespace Raven.Server.ServerWide
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
 
+        public DateTime? LastCertificateUpdateTime { get; private set; }
+
         internal ClusterRequestExecutor ClusterRequestExecutor => _clusterRequestExecutor.Value;
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
@@ -1295,6 +1297,9 @@ namespace Raven.Server.ServerWide
                     LicenseManager.ReloadLicenseLimits();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
+                    break;
+                case nameof(PutCertificateCommand):
+                    LastCertificateUpdateTime = SystemTime.UtcNow;
                     break;
 
                 case nameof(UpdateServerPublishedUrlsCommand):

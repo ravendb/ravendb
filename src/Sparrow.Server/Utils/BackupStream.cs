@@ -1,20 +1,21 @@
-﻿using System.IO;
-using System.Threading.Tasks;
+﻿using System;
+using System.IO;
 using System.Threading;
-using System;
+using System.Threading.Tasks;
+using Sparrow.Utils;
 
-namespace Raven.Server.Utils;
+namespace Sparrow.Server.Utils;
 
-public sealed class BackupStream : Stream
+internal sealed class BackupStream : Stream
 {
     private readonly Stream _inner;
-    private readonly byte _b;
+    private readonly byte[] _b;
     private bool _hasRead;
 
-    public BackupStream(Stream inner, byte b)
+    public BackupStream(Stream inner, byte[] b)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _b = b;
+        _b = b ?? throw new ArgumentNullException(nameof(b));
     }
 
     public override void Flush()
@@ -27,8 +28,8 @@ public sealed class BackupStream : Stream
         if (_hasRead == false)
         {
             _hasRead = true;
-            buffer[0] = _b;
-            return 1;
+            FillBuffer(buffer);
+            return _b.Length;
         }
 
         return _inner.Read(buffer);
@@ -39,8 +40,8 @@ public sealed class BackupStream : Stream
         if (_hasRead == false)
         {
             _hasRead = true;
-            buffer[offset] = _b;
-            return 1;
+            FillBuffer(buffer, offset);
+            return _b.Length;
         }
 
         return _inner.Read(buffer, offset, count);
@@ -51,8 +52,8 @@ public sealed class BackupStream : Stream
         if (_hasRead == false)
         {
             _hasRead = true;
-            buffer[offset] = _b;
-            return Task.FromResult(1);
+            FillBuffer(buffer, offset);
+            return Task.FromResult(_b.Length);
         }
 
         return _inner.ReadAsync(buffer, offset, count, cancellationToken);
@@ -63,8 +64,9 @@ public sealed class BackupStream : Stream
         if (_hasRead == false)
         {
             _hasRead = true;
-            buffer.Span[0] = _b;
-            return ValueTask.FromResult(1);
+
+            FillBuffer(buffer.Span);
+            return ValueTask.FromResult(_b.Length);
         }
 
         return _inner.ReadAsync(buffer, cancellationToken);
@@ -108,5 +110,19 @@ public sealed class BackupStream : Stream
     protected override void Dispose(bool disposing)
     {
         _inner.Dispose();
+    }
+
+    private void FillBuffer(Span<byte> buffer)
+    {
+        if (buffer.Length < _b.Length)
+            throw new ArgumentException();
+
+        for (var i = 0; i < _b.Length; i++)
+            buffer[i] = _b[i];
+    }
+
+    private void FillBuffer(byte[] buffer, int offset)
+    {
+        FillBuffer(new Span<byte>(buffer)[offset..]);
     }
 }

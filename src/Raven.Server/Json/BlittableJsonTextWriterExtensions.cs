@@ -189,6 +189,13 @@ namespace Raven.Server.Json
                 w.WriteString(taskStats.EtlType.ToString());
                 w.WriteComma();
 
+                if (taskStats.QueueBrokerType.HasValue)
+                {
+                    w.WritePropertyName(nameof(taskStats.QueueBrokerType));
+                    w.WriteString(taskStats.QueueBrokerType.ToString());
+                    w.WriteComma();
+                }
+
                 w.WriteArray(c, nameof(taskStats.ProcessesProgress), taskStats.ProcessesProgress, (wp, cp, processProgress) =>
                 {
                     wp.WriteStartObject();
@@ -196,6 +203,13 @@ namespace Raven.Server.Json
                     wp.WritePropertyName(nameof(processProgress.TransformationName));
                     wp.WriteString(processProgress.TransformationName);
                     wp.WriteComma();
+
+                    if (processProgress.TransactionalId is not null)
+                    {
+                        wp.WritePropertyName(nameof(processProgress.TransactionalId));
+                        wp.WriteString(processProgress.TransactionalId);
+                        wp.WriteComma();
+                    }
 
                     wp.WritePropertyName(nameof(processProgress.Completed));
                     wp.WriteBool(processProgress.Completed);

@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
             };
 
             await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
-            await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, BackupUtils.GetCompressionStream(outputStream, options.CompressionAlgorithm ?? RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionAlgorithm, RequestHandler.DatabaseContext.Configuration.Sharding.CompressionLevel)))
+            await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, BackupUtils.GetCompressionStream(outputStream, options.CompressionAlgorithm ?? RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionAlgorithm, RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionLevel)))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("BuildVersion");
