@@ -12,6 +12,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Sparrow.Backups;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
@@ -38,6 +39,7 @@ public class RavenDB_21523 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, CompressionLevel.SmallestSize })]
     [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Zstd, CompressionLevel.SmallestSize })]
     [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, CompressionLevel.NoCompression })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Zstd, CompressionLevel.NoCompression })]
     public async Task CanExportImport(Options options, object algorithmAsObject, object compressionLevelAsObject)
     {
         ExportCompressionAlgorithm? algorithm = algorithmAsObject == null ? null : (ExportCompressionAlgorithm)algorithmAsObject;
@@ -51,6 +53,7 @@ public class RavenDB_21523 : RavenTestBase
         {
             record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = algorithm?.ToString();
             record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionLevel)] = compressionLevel?.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.Sharding.CompressionLevel)] = compressionLevel?.ToString();
         };
 
         using (var store = GetDocumentStore(options))
@@ -80,7 +83,10 @@ public class RavenDB_21523 : RavenTestBase
                         break;
                     case null:
                     case ExportCompressionAlgorithm.Zstd:
-                        Assert.IsType<ZstdStream>(backupStream);
+                        if (compressionLevel == CompressionLevel.NoCompression)
+                            Assert.IsType<BackupStream>(backupStream);
+                        else
+                            Assert.IsType<ZstdStream>(backupStream);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, null);
