@@ -38,6 +38,7 @@ public class DirectUploadBackupTask : BackupTask
                     IsFullBackup = _isFullBackup,
                     RetentionPolicyParameters = RetentionPolicyParameters,
                     CloudUploadStatus = BackupResult.S3Backup,
+                    OnBackupException = OnBackupException,
                     OnProgress = AddInfo,
                 });
 
