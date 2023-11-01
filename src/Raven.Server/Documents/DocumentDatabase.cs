@@ -85,7 +85,7 @@ namespace Raven.Server.Documents
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         internal TestingStuff ForTestingPurposes;
 
-        private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
+        private readonly CancellationTokenSource _databaseShutdown;
 
         private readonly object _idleLocker = new object();
 
@@ -131,6 +131,7 @@ namespace Raven.Server.Documents
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
+            _databaseShutdown = CancellationTokenSource.CreateLinkedTokenSource(serverStore.ServerShutdown);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token);
@@ -1501,7 +1502,7 @@ namespace Raven.Server.Documents
             {
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
-                if (_serverStore.ServerShutdown.IsCancellationRequested || _databaseShutdown.IsCancellationRequested)
+                if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
                 throw;
@@ -1557,7 +1558,7 @@ namespace Raven.Server.Documents
             {
                 DatabaseDisabledException throwShutDown = null;
 
-                if ((_serverStore.ServerShutdown.IsCancellationRequested || _databaseShutdown.IsCancellationRequested) && e is DatabaseDisabledException == false) 
+                if (_databaseShutdown.IsCancellationRequested && e is DatabaseDisabledException == false)
                     e = throwShutDown = CreateDatabaseShutdownException(e);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);
