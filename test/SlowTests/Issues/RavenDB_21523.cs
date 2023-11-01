@@ -15,6 +15,7 @@ using Sparrow.Backups;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Tests.Infrastructure;
+using Voron.Impl.Backup;
 using Xunit;
 using Xunit.Abstractions;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
@@ -28,7 +29,6 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { null, null })]
     [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { null, null })]
     [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Gzip, null })]
     [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { ExportCompressionAlgorithm.Zstd, null })]
@@ -174,6 +174,7 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData(null, null)]
     [InlineData(BackupCompressionAlgorithm.Gzip, CompressionLevel.Optimal)]
     [InlineData(BackupCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
     [InlineData(BackupCompressionAlgorithm.Gzip, CompressionLevel.Fastest)]
@@ -181,6 +182,7 @@ public class RavenDB_21523 : RavenTestBase
     [InlineData(BackupCompressionAlgorithm.Gzip, CompressionLevel.SmallestSize)]
     [InlineData(BackupCompressionAlgorithm.Zstd, CompressionLevel.SmallestSize)]
     [InlineData(BackupCompressionAlgorithm.Gzip, CompressionLevel.NoCompression)]
+    [InlineData(BackupCompressionAlgorithm.Zstd, CompressionLevel.NoCompression)]
     public async Task CanBackupRestore(BackupCompressionAlgorithm algorithm, CompressionLevel compressionLevel)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -211,7 +213,10 @@ public class RavenDB_21523 : RavenTestBase
                                 Assert.IsType<GZipStream>(backupStream);
                                 break;
                             case BackupCompressionAlgorithm.Zstd:
-                                Assert.IsType<ZstdStream>(backupStream);
+                                if (compressionLevel == CompressionLevel.NoCompression)
+                                    Assert.IsType<BackupStream>(backupStream);
+                                else
+                                    Assert.IsType<ZstdStream>(backupStream);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, null);
@@ -223,14 +228,16 @@ public class RavenDB_21523 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
-    [InlineData(BackupCompressionAlgorithm.Gzip, CompressionLevel.Optimal)]
-    [InlineData(BackupCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
-    [InlineData(BackupCompressionAlgorithm.Gzip, CompressionLevel.Fastest)]
-    [InlineData(BackupCompressionAlgorithm.Zstd, CompressionLevel.Fastest)]
-    [InlineData(BackupCompressionAlgorithm.Gzip, CompressionLevel.SmallestSize)]
-    [InlineData(BackupCompressionAlgorithm.Zstd, CompressionLevel.SmallestSize)]
-    [InlineData(BackupCompressionAlgorithm.Gzip, CompressionLevel.NoCompression)]
-    public async Task CanSnapshotRestore(SnapshotBackupCompressionAlgorithm algorithm, CompressionLevel compressionLevel)
+    [InlineData(null, null)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Optimal)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Fastest)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Fastest)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.SmallestSize)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.SmallestSize)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.NoCompression)]
+    [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.NoCompression)]
+    public async Task CanSnapshotRestore(SnapshotBackupCompressionAlgorithm? algorithm, CompressionLevel? compressionLevel)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
@@ -239,8 +246,8 @@ public class RavenDB_21523 : RavenTestBase
         {
             ModifyDatabaseRecord = record =>
             {
-                record.Settings[RavenConfiguration.GetKey(x => x.Backup.SnapshotCompressionAlgorithm)] = algorithm.ToString();
-                record.Settings[RavenConfiguration.GetKey(x => x.Backup.SnapshotCompressionLevel)] = compressionLevel.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Backup.SnapshotCompressionAlgorithm)] = algorithm?.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Backup.SnapshotCompressionLevel)] = compressionLevel?.ToString();
             }
         }))
         {
@@ -250,26 +257,24 @@ public class RavenDB_21523 : RavenTestBase
                 {
                     foreach (var entry in zip.Entries)
                     {
-                        var buffer = new byte[4];
-
                         await using (var entryStream = entry.Open())
+                        await using (var backupStream = FullBackup.GetDecompressionStream(entryStream))
                         {
-                            var read = await entryStream.ReadAsync(buffer, 0, buffer.Length);
-                            if (read == 0)
-                                throw new InvalidOperationException("Empty stream");
-
-                            if (read == buffer.Length)
+                            switch (algorithm)
                             {
-                                const uint zstdMagicNumber = 0xFD2FB528;
-                                var readMagicNumber = BitConverter.ToUInt32(buffer);
-                                if (readMagicNumber == zstdMagicNumber)
-                                {
-                                    Assert.True(SnapshotBackupCompressionAlgorithm.Zstd == algorithm, $"Name: {entry.Name}");
-                                    continue;
-                                }
+                                case SnapshotBackupCompressionAlgorithm.Deflate:
+                                    Assert.IsType<BackupStream>(backupStream);
+                                    break;
+                                case null:
+                                case SnapshotBackupCompressionAlgorithm.Zstd:
+                                    if (compressionLevel == CompressionLevel.NoCompression)
+                                        Assert.IsType<BackupStream>(backupStream);
+                                    else
+                                        Assert.IsType<ZstdStream>(backupStream);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, null);
                             }
-
-                            Assert.True(SnapshotBackupCompressionAlgorithm.Deflate == algorithm, $"Name: {entry.Name}");
                         }
                     }
                 }
