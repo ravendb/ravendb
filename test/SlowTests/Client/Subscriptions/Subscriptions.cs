@@ -329,8 +329,7 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21544")]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanDisableSubscription(Options options)
         {
             using (var store = GetDocumentStore(options))
