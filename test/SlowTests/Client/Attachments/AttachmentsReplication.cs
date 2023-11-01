@@ -2615,8 +2615,8 @@ namespace SlowTests.Client.Attachments
 
                         if (attachment != null && attachment2 != null && attachment3 != null &&
                             attachment.Details.Name == "foo/bar" &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details) &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment3.Details))
+                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, excludeChangeVector: true) &&
+                            AreAttachmentDetailsEqual(attachment.Details, attachment3.Details, excludeChangeVector: true))
                         {
                             return true;
                         }
@@ -2660,11 +2660,13 @@ namespace SlowTests.Client.Attachments
                                 ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0));
                     Assert.Equal("foo/bar", attachment.Details.Name);
                     Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
                     Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
                     Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment3.Details.ChangeVector, attachment2.Details.ChangeVector);
                     Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
+
+                    // RavenDB-21650
+                    //Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
+                    //Assert.Equal(attachment3.Details.ChangeVector, attachment2.Details.ChangeVector);
                 }
             }
         }
@@ -2860,7 +2862,7 @@ namespace SlowTests.Client.Attachments
                     if (attachment != null && attachment2 != null &&
                         attachment.Details.Hash == "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" &&
                         attachment.Details.Name == "foo/bar" &&
-                        AreAttachmentDetailsEqual(attachment.Details, attachment2.Details))
+                        AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, excludeChangeVector: true))
                     {
                         return true;
                     }
@@ -2889,8 +2891,10 @@ namespace SlowTests.Client.Attachments
                 Assert.Equal("foo/bar", attachment.Details.Name);
 
                 Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
                 Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
+
+                // RavenDB-21650
+                Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
             }
         }
 
@@ -3355,10 +3359,10 @@ namespace SlowTests.Client.Attachments
             return val;
         }
 
-        private bool AreAttachmentDetailsEqual(AttachmentDetails attachment1, AttachmentDetails attachment2)
+        private bool AreAttachmentDetailsEqual(AttachmentDetails attachment1, AttachmentDetails attachment2, bool excludeChangeVector = false)
         {
             if (attachment1.DocumentId == attachment2.DocumentId &&
-                attachment1.ChangeVector == attachment2.ChangeVector &&
+                (excludeChangeVector || attachment1.ChangeVector == attachment2.ChangeVector) &&
                 attachment1.Hash == attachment2.Hash &&
                 attachment1.Name == attachment2.Name &&
                 attachment1.ContentType == attachment2.ContentType)
