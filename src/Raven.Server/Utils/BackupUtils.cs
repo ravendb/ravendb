@@ -20,7 +20,6 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -35,12 +34,6 @@ namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
-    internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
-    {
-        return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
-            ? new DirectUploadBackupTask(database, backupParameters, configuration, logger, forTestingPurposes) 
-            : new BackupTask(database, backupParameters, configuration, logger, forTestingPurposes);
-    }
     internal static async Task<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
     {
         var buffer = new byte[4];

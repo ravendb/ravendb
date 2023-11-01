@@ -477,7 +477,7 @@ namespace Raven.Server.Web.System
                         Name = backupName
                     };
 
-                    var backupTask = BackupUtils.GetBackupTask(Database, backupParameters, backupConfiguration, Logger, Database.PeriodicBackupRunner._forTestingPurposes);
+                    var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger, Database.PeriodicBackupRunner._forTestingPurposes);
                     var cancelToken = backupTask.TaskCancelToken;
 
                     var threadName = $"Backup thread {backupName} for database '{Database.Name}'";

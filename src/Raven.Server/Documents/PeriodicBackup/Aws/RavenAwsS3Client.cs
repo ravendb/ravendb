@@ -11,14 +11,13 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
-using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
-    public class RavenAwsS3Client : IDirectUploader, IDisposable
+    public class RavenAwsS3Client : IDisposable
     {
         private readonly Progress _progress;
         private readonly CancellationToken _cancellationToken;
@@ -104,11 +103,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             AsyncHelpers.RunSync(() => PutObjectAsync(key, stream, metadata));
         }
 
-        public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
-        {
-            return new AwsS3MultiPartUploader(_client, _bucketName, _progress, key, metadata, _cancellationToken);
-        }
-
         public async Task PutObjectAsync(string key, Stream stream, Dictionary<string, string> metadata)
         {
             //TestConnection();
@@ -126,19 +120,43 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 {
                     _progress?.UploadProgress.ChangeType(UploadType.Chunked);
 
-                    var multiPartUploader = new AwsS3MultiPartUploader(_client, _bucketName, _progress, key, metadata, _cancellationToken);
+                    var multipartRequest = new InitiateMultipartUploadRequest { Key = key, BucketName = _bucketName };
 
-                    await multiPartUploader.InitializeAsync();
+                    FillMetadata(multipartRequest.Metadata, metadata);
+
+                    var initiateResponse = await _client.InitiateMultipartUploadAsync(multipartRequest, _cancellationToken);
+                    var partNumber = 1;
+                    var partEtags = new List<PartETag>();
 
                     while (stream.Position < streamLength)
                     {
                         var leftToUpload = streamLength - stream.Position;
                         var toUpload = Math.Min(MinOnePartUploadSizeLimit.GetValue(SizeUnit.Bytes), leftToUpload);
 
-                        await multiPartUploader.UploadPartAsync(stream, toUpload);
+                        var uploadResponse = await _client
+                            .UploadPartAsync(new UploadPartRequest
+                            {
+                                Key = key,
+                                BucketName = _bucketName,
+                                InputStream = stream,
+                                PartNumber = partNumber++,
+                                PartSize = toUpload,
+                                UploadId = initiateResponse.UploadId,
+                                StreamTransferProgress = (_, args) =>
+                                {
+                                    _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                                    _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
+                                    _progress?.OnUploadProgress?.Invoke();
+                                }
+                            }, _cancellationToken);
+
+                        partEtags.Add(new PartETag(uploadResponse.PartNumber, uploadResponse.ETag));
                     }
 
-                    await multiPartUploader.CompleteUploadAsync();
+                    await _client.CompleteMultipartUploadAsync(
+                        new CompleteMultipartUploadRequest { UploadId = initiateResponse.UploadId, BucketName = _bucketName, Key = key, PartETags = partEtags },
+                        _cancellationToken);
+
                     return;
                 }
 
@@ -359,7 +377,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public static void FillMetadata(MetadataCollection collection, IDictionary<string, string> metadata)
+        private static void FillMetadata(MetadataCollection collection, IDictionary<string, string> metadata)
         {
             if (metadata == null)
                 return;

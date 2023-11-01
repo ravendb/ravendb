@@ -60,6 +60,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.CloudStorageOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting CloudStorageOperationTimeout { get; set; }
 
+
         [Description("EXPERT: Indicates which library to use when doing Azure backups.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Backup.Azure.Legacy", ConfigurationEntryScope.ServerWideOnly)]

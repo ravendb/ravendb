@@ -14,21 +14,11 @@ import encryptionSettings = require("models/database/tasks/periodicBackup/encryp
 import generalUtils = require("common/generalUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 
-interface backupUploadModeOption {
-    name: string;
-    fullName: Raven.Client.Documents.Operations.Backups.BackupUploadMode;
-}
-
 abstract class backupConfiguration {
 
     static readonly defaultFullBackupFrequency = "0 2 * * 0";
     static readonly defaultIncrementalBackupFrequency = "0 2 * * *";
-
-    static readonly backupUploadModeDictionary: backupUploadModeOption[] = [
-        { name: "Default", fullName: "Default" },
-        { name: "Direct Upload", fullName: "DirectUpload" }
-    ];
-
+    
     taskId = ko.observable<number>();
     isManualBackup = ko.observable<boolean>(false);
     isServerWide = ko.observable<boolean>();
@@ -36,15 +26,11 @@ abstract class backupConfiguration {
     backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
     isSnapshot = ko.pureComputed(() => this.backupType() === "Snapshot");
     backupOptions = ["Backup", "Snapshot"];
-    backupUploadModes = backupConfiguration.backupUploadModeDictionary.map(x => x.name);
-
     anyBackupTypeIsDirty: KnockoutComputed<boolean>;
     snapshot = ko.observable<snapshot>();
     
     mentorNode = ko.observable<string>();
-
-    backupUploadMode = ko.observable<string>();
-
+    
     encryptionSettings = ko.observable<encryptionSettings>();
     
     localSettings = ko.observable<localSettings>();
@@ -74,10 +60,6 @@ abstract class backupConfiguration {
                 isServerWide = false) {
         this.taskId(dto.TaskId);
         this.backupType(dto.BackupType);
-
-        const backupUploadMode = backupConfiguration.backupUploadModeDictionary.find(x => x.fullName === dto.BackupUploadMode);
-        this.backupUploadMode(backupUploadMode.name);
-
         this.localSettings(!dto.LocalSettings ? localSettings.empty("backup") : new localSettings(dto.LocalSettings, "backup"));
         this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions, "Backup") : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions, "Backup"));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty("Backup") : new azureSettings(dto.AzureSettings, "Backup"));
@@ -194,10 +176,6 @@ abstract class backupConfiguration {
         this.backupType(backupType);
     }
 
-    useBackupUploadMode(backupUploadMode: string) {
-        this.backupUploadMode(backupUploadMode);
-    }
-
     getPathForCreatedBackups(backupLocationInfo: Raven.Server.Web.Studio.SingleNodeDataDirectoryResult) {
         return ko.pureComputed(() => {
             const separator = backupLocationInfo.FullPath[0] === "/" ? "/" : "\\";
@@ -223,7 +201,6 @@ abstract class backupConfiguration {
             GoogleCloudSettings: null,
             FtpSettings: null,
             MentorNode: null,
-            BackupUploadMode: "Default",
             PinToMentorNode: false,
             BackupEncryptionSettings: null,
             SnapshotSettings: null,
