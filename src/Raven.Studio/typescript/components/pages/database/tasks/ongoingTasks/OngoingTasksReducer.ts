@@ -131,6 +131,7 @@ function mapProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeProgressD
         completed: taskProgress.Completed,
         disabled: taskProgress.Disabled,
         processedPerSecond: taskProgress.AverageProcessedPerSecond,
+        transactionalId: taskProgress.TransactionalId,
     };
 }
 function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
