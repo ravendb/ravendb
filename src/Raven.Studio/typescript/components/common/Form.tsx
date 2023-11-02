@@ -20,7 +20,7 @@ type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<
 };
 
 type FormInputProps = InputProps & {
-    type: Extract<InputType, "text" | "textarea" | "number" | "password" | "checkbox">;
+    type: InputType;
     addonText?: string;
 };
 

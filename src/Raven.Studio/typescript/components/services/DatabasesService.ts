@@ -48,6 +48,7 @@ import getCustomAnalyzersCommand = require("commands/database/settings/getCustom
 import getDocumentsCompressionConfigurationCommand = require("commands/database/documents/getDocumentsCompressionConfigurationCommand");
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
 import promoteDatabaseNodeCommand = require("commands/database/debug/promoteDatabaseNodeCommand");
+import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -169,6 +170,10 @@ export default class DatabasesService {
 
     async enforceRevisionsConfiguration(db: database) {
         return new enforceRevisionsConfigurationCommand(db).execute();
+    }
+
+    async revertRevisions(db: database, dto: Raven.Server.Documents.Revisions.RevertRevisionsRequest) {
+        return new revertRevisionsCommand(dto, db).execute();
     }
 
     async getCustomAnalyzers(db: database, getNamesOnly = false) {
