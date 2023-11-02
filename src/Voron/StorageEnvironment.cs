@@ -1540,15 +1540,15 @@ namespace Voron
             if (checksum != current->Checksum)
                 ThrowInvalidChecksum(pageNumber, current, checksum);
 
-            var spinner = new SpinWait();
             while (true)
             {
+                // PERF: This code used to have a spin-wait. While it makes sense where threads are competing on tight loops for
+                // for resources, the spin-wait here serves no purpose as the thread is going to bail out immediately after completion.
                 long modified = Interlocked.CompareExchange(ref _validPages[index], old | bitToSet, old);
                 if (modified == old || (modified & bitToSet) != 0)
                     break;
 
                 old = modified;
-                spinner.SpinOnce();
             }
         }
 
