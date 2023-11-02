@@ -2088,7 +2088,7 @@ namespace Raven.Client.Http
                     useHttpDecompression ?
                         DecompressionMethods.GZip
                         | DecompressionMethods.Deflate
-#if NET6_0_OR_GREATER
+#if FEATURE_BROTLI_SUPPORT
                         | DecompressionMethods.Brotli
 #endif
                         : DecompressionMethods.None;
