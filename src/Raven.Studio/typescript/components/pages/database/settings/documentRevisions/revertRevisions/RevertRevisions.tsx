@@ -12,7 +12,6 @@ import { Icon } from "components/common/Icon";
 import { FormInput, FormSelect } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import assertUnreachable from "components/utils/assertUnreachable";
-import { DevTool } from "@hookform/devtools";
 import moment from "moment";
 import useConfirm from "components/hooks/useConfirm";
 import { tryHandleSubmit } from "components/utils/common";
@@ -22,8 +21,8 @@ import genUtils from "common/generalUtils";
 import { todo } from "common/developmentHelper";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 
-todo("Styling", "Kwiato", "input type date styling");
-todo("Styling", "Kwiato", "input and validation errors position");
+todo("Styling", "Kwiato", "<FormInput type='date/datetime-local' /> styling");
+todo("Styling", "Kwiato", "inputs and validation error position");
 
 export default function RevertRevisions({ db }: NonShardedViewProps) {
     const { control, formState, handleSubmit, setValue } = useForm<RevertRevisionsFormData>({
@@ -37,7 +36,7 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
         },
     });
 
-    const { isRevertAllCollections, collections, timeMagnitude, pointInTime } = useWatch({ control });
+    const { isRevertAllCollections, collections, pointInTime } = useWatch({ control });
 
     const { forCurrentDatabase } = useAppUrls();
 
@@ -66,7 +65,6 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
 
     return (
         <Row className="content-margin gy-sm">
-            <DevTool control={control} />
             <Col>
                 <AboutViewHeading title="Revert Revisions" icon="revert-revisions" />
                 <Form onSubmit={handleSubmit(onRevert)}>
@@ -109,7 +107,7 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                                         control={control}
                                         id="timeWindow"
                                         name="timeWindow"
-                                        placeholder={`default (${getTimeWindowPlaceholder(timeMagnitude)})`}
+                                        placeholder={`default (${defaultWindowValue})`}
                                     />
                                     <FormSelect
                                         control={control}
@@ -207,19 +205,6 @@ const timeWindowOptions: SelectOption<timeMagnitude>[] = ["minutes", "hours", "d
     value: x,
     label: x,
 }));
-
-const getTimeWindowPlaceholder = (magnitude: timeMagnitude) => {
-    switch (magnitude) {
-        case "minutes":
-            return "5760";
-        case "hours":
-            return "96";
-        case "days":
-            return "4";
-        default:
-            assertUnreachable(magnitude);
-    }
-};
 
 function toDto(formData: RevertRevisionsFormData): Raven.Server.Documents.Revisions.RevertRevisionsRequest {
     let WindowInSec = formData.timeWindow ?? defaultWindowValue;
