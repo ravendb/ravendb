@@ -22,6 +22,7 @@ export interface OngoingTaskNodeProgressDetails {
     disabled: boolean;
     completed: boolean;
     processedPerSecond: number;
+    transactionalId?: string;
 }
 
 export interface OngoingTaskNodeInfoDetails {

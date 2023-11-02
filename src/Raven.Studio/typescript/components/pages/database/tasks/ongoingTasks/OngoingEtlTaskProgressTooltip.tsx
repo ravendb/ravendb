@@ -7,6 +7,7 @@ import { Button, Modal, ModalBody } from "reactstrap";
 import useBoolean from "components/hooks/useBoolean";
 import Code from "components/common/Code";
 import copyToClipboard from "common/copyToClipboard";
+import { todo } from "common/developmentHelper";
 
 interface OngoingTaskEtlProgressTooltipProps {
     target: HTMLElement;
@@ -84,6 +85,8 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
         return null;
     }
 
+    todo("Styling", "Kwiato", "Transactional Id position");
+
     return (
         <PopoverWithHover rounded="true" target={target} placement="top">
             <div className="ongoing-tasks-details-tooltip">
@@ -104,19 +107,42 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                         );
 
                         return (
-                            <NamedProgress name={nameNode} key={transformationScriptProgress.transformationName}>
-                                <NamedProgressItem progress={transformationScriptProgress.documents}>
-                                    documents
-                                </NamedProgressItem>
-                                <NamedProgressItem progress={transformationScriptProgress.documentTombstones}>
-                                    tombstones
-                                </NamedProgressItem>
-                                {transformationScriptProgress.counterGroups.total > 0 && (
-                                    <NamedProgressItem progress={transformationScriptProgress.counterGroups}>
-                                        counters
-                                    </NamedProgressItem>
+                            <div>
+                                {transformationScriptProgress.transactionalId && (
+                                    <div className="d-flex justify-content-between p-3">
+                                        <div className="small-label">Transactional Id:</div>
+                                        <div>
+                                            <div>{transformationScriptProgress.transactionalId}</div>
+                                            <Button
+                                                color="primary"
+                                                className="btn-link"
+                                                size="xs"
+                                                onClick={() =>
+                                                    copyToClipboard.copy(
+                                                        transformationScriptProgress.transactionalId,
+                                                        "Transactional Id was copied to clipboard."
+                                                    )
+                                                }
+                                            >
+                                                <Icon icon="copy" margin="0" />
+                                            </Button>
+                                        </div>
+                                    </div>
                                 )}
-                            </NamedProgress>
+                                <NamedProgress name={nameNode} key={transformationScriptProgress.transformationName}>
+                                    <NamedProgressItem progress={transformationScriptProgress.documents}>
+                                        documents
+                                    </NamedProgressItem>
+                                    <NamedProgressItem progress={transformationScriptProgress.documentTombstones}>
+                                        tombstones
+                                    </NamedProgressItem>
+                                    {transformationScriptProgress.counterGroups.total > 0 && (
+                                        <NamedProgressItem progress={transformationScriptProgress.counterGroups}>
+                                            counters
+                                        </NamedProgressItem>
+                                    )}
+                                </NamedProgress>
+                            </div>
                         );
                     })}
             </div>
