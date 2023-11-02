@@ -681,7 +681,7 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.EnsureNotPassiveAsync();
 
-            var waitOnRecordDeletion = new List<string>();
+            var waitOnDeletion = new List<string>();
             var pendingDeletes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var databasesToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -752,14 +752,9 @@ namespace Raven.Server.Web.System
                                 pendingDeletes.Add(node);
                                 topology.RemoveFromTopology(node);
                             }
-
-                            if (topology.Count == 0)
-                                waitOnRecordDeletion.Add(databaseName);
-
-                            continue;
                         }
 
-                        waitOnRecordDeletion.Add(databaseName);
+                        waitOnDeletion.Add(databaseName);
                     }
                 }
 
@@ -779,22 +774,45 @@ namespace Raven.Server.Web.System
                 }
 
                 await ServerStore.Cluster.WaitForIndexNotification(index);
-
                 long actualDeletionIndex = index;
 
                 var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
 
                 var sp = Stopwatch.StartNew();
                 int databaseIndex = 0;
-                while (waitOnRecordDeletion.Count > databaseIndex)
+                
+               
+                while (waitOnDeletion.Count > databaseIndex)
                 {
-                    var databaseName = waitOnRecordDeletion[databaseIndex];
+                    var databaseName = waitOnDeletion[databaseIndex];
                     using (context.OpenReadTransaction())
+                    using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                     {
-                        if (ServerStore.Cluster.DatabaseExists(context, databaseName) == false)
+                        if (raw == null)
                         {
-                            waitOnRecordDeletion.RemoveAt(databaseIndex);
+                            waitOnDeletion.RemoveAt(databaseIndex);
                             continue;
+                        }
+
+                        if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
+                        {
+                            {
+                                var allNodesDeleted = true;
+                                foreach (var node in parameters.FromNodes)
+                                {
+                                    if (raw.DeletionInProgress.ContainsKey(node) == false)
+                                        continue;
+
+                                    allNodesDeleted = false;
+                                    break;
+                                }
+
+                                if (allNodesDeleted)
+                                {
+                                    waitOnDeletion.RemoveAt(databaseIndex);
+                                    continue;
+                                }
+                            }
                         }
                     }
                     // we'll now wait for the _next_ operation in the cluster
@@ -818,6 +836,11 @@ namespace Raven.Server.Web.System
                     {
                         databaseIndex++;
                     }
+                }
+
+                if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
+                {
+                    await WaitForExecutionOnRelevantNodes(context, "server", ServerStore.GetClusterTopology(), parameters.FromNodes.ToList(), actualDeletionIndex);
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
