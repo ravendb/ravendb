@@ -194,18 +194,19 @@ namespace Raven.Server.Web
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var encoding in acceptedContentEncodings)
             {
+                switch (encoding)
+                {
 #if FEATURE_ZSTD_SUPPORT
-                if (encoding.Contains(Constants.Headers.Encodings.Zstd))
-                    return HttpCompressionAlgorithm.Zstd;
+                    case Constants.Headers.Encodings.Zstd:
+                        return HttpCompressionAlgorithm.Zstd;
 #endif
-
 #if FEATURE_BROTLI_SUPPORT
-                if (encoding.Contains(Constants.Headers.Encodings.Brotli))
-                    return HttpCompressionAlgorithm.Brotli;
+                    case Constants.Headers.Encodings.Brotli:
+                        return HttpCompressionAlgorithm.Brotli;
 #endif
-
-                if (encoding.Contains(Constants.Headers.Encodings.Gzip))
-                    return HttpCompressionAlgorithm.Gzip;
+                    case Constants.Headers.Encodings.Gzip:
+                        return HttpCompressionAlgorithm.Gzip;
+                }
             }
 
             return null;
