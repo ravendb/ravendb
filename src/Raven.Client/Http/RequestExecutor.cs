@@ -1672,18 +1672,24 @@ namespace Raven.Client.Http
             var serverStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var stream = serverStream;
             var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
-            if (encoding != null && encoding.Contains(Constants.Headers.Encodings.Gzip))
-                return new GZipStream(stream, CompressionMode.Decompress);
+            if (encoding != null)
+            {
+                switch (encoding)
+                {
+                    case Constants.Headers.Encodings.Gzip:
+                        return new GZipStream(stream, CompressionMode.Decompress);
 #if FEATURE_BROTLI_SUPPORT
-            if (encoding != null && encoding.Contains(Constants.Headers.Encodings.Brotli))
-                return new BrotliStream(stream, CompressionMode.Decompress);
+                    case Constants.Headers.Encodings.Brotli:
+                        return new BrotliStream(stream, CompressionMode.Decompress);
 #endif
 #if FEATURE_ZSTD_SUPPORT
-            if (encoding != null && encoding.Contains(Constants.Headers.Encodings.Zstd))
-                return ZstdStream.Decompress(stream);
+                    case Constants.Headers.Encodings.Zstd:
+                        return ZstdStream.Decompress(stream);
 #endif
-            if (encoding != null && encoding.Contains(Constants.Headers.Encodings.Deflate))
-                return new DeflateStream(stream, CompressionMode.Decompress);
+                    case Constants.Headers.Encodings.Deflate:
+                        return new DeflateStream(stream, CompressionMode.Decompress);
+                }
+            }
 
             return serverStream;
         }

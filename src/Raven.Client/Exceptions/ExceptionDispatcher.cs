@@ -79,7 +79,11 @@ namespace Raven.Client.Exceptions
             if (response == null)
                 throw new ArgumentNullException(nameof(response));
 
+#if NETSTANDARD2_0
             using (var stream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
+#else
+            await using (var stream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
+#endif
             using (var json = await GetJson(context, response, stream).ConfigureAwait(false))
             {
                 var schema = GetExceptionSchema(response.StatusCode, json);
