@@ -63,8 +63,6 @@ namespace Raven.Client.Json
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-
         }
 
         protected override bool TryComputeLength(out long length)
