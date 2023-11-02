@@ -17,6 +17,7 @@ class snapshot {
     ];
 
     static readonly compressionAlgorithmDictionary: compressionAlgorithmLevelOption[] = [
+        { name: "Default", fullName: null },
         { name: "Zstd", fullName: "Zstd" },
         { name: "Deflate", fullName: "Deflate" }
     ];
