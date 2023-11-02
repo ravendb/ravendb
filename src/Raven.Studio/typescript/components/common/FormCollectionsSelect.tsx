@@ -8,18 +8,22 @@ import { FormRadioToggleWithIcon, FormSelectCreatable } from "./Form";
 import { RadioToggleWithIconInputItem } from "./RadioToggle";
 import { Icon } from "./Icon";
 import { SelectOption } from "./select/Select";
+import { FieldPath, FieldValues, Control } from "react-hook-form";
 
-interface FormCollectionsSelectProps {
-    control: any;
-    isAllCollectionsFormName: string;
+interface FormCollectionsSelectProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
+    control: Control<TFieldValues>;
+    isAllCollectionsFormName: TName;
     isAllCollections: boolean;
-    collectionsFormName: string;
+    collectionsFormName: TName;
     collections: string[];
-    setValue: (name: string, collections: string[], options: { shouldDirty: boolean }) => void;
+    setValue: (name: TName, collections: string[], options: { shouldDirty: boolean }) => void;
     customOptions?: SelectOption<string>[];
+    isReadOnly?: boolean;
 }
 
-export default function FormCollectionsSelect(props: FormCollectionsSelectProps) {
+export default function FormCollectionsSelect<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+    props: FormCollectionsSelectProps<TFieldValues, TName>
+) {
     const {
         control,
         isAllCollectionsFormName,
@@ -28,6 +32,7 @@ export default function FormCollectionsSelect(props: FormCollectionsSelectProps)
         collections,
         setValue,
         customOptions,
+        isReadOnly,
     } = props;
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
@@ -36,57 +41,61 @@ export default function FormCollectionsSelect(props: FormCollectionsSelectProps)
 
     const removeCollection = (name: string) => {
         setValue(
-            "collections",
+            collectionsFormName,
             collections.filter((x) => x !== name),
             { shouldDirty: true }
         );
     };
 
     const removeAllCollections = () => {
-        setValue("collections", [], { shouldDirty: true });
+        setValue(collectionsFormName, [], { shouldDirty: true });
     };
 
     const addAllCollections = () => {
         const remainingCollectionNames = allCollectionNames.filter((name) => !collections.includes(name));
-        setValue("collections", [...collections, ...remainingCollectionNames], { shouldDirty: true });
+        setValue(collectionsFormName, [...collections, ...remainingCollectionNames], { shouldDirty: true });
     };
 
     const isAddAllCollectionsDisabled = allCollectionNames.filter((name) => !collections.includes(name)).length === 0;
 
     return (
         <div className="vstack gap-2">
-            <FormRadioToggleWithIcon
-                control={control}
-                name={isAllCollectionsFormName}
-                leftItem={leftRadioToggleItem}
-                rightItem={rightRadioToggleItem}
-                className="d-flex justify-content-center"
-            />
+            {!isReadOnly && (
+                <FormRadioToggleWithIcon
+                    control={control}
+                    name={isAllCollectionsFormName}
+                    leftItem={leftRadioToggleItem}
+                    rightItem={rightRadioToggleItem}
+                    className="d-flex justify-content-center"
+                />
+            )}
             <Collapse isOpen={!isAllCollections}>
-                <Row className="mb-4">
-                    <Col>
-                        <FormSelectCreatable
-                            control={control}
-                            name={collectionsFormName}
-                            options={allCollectionNames.map((x) => ({ label: x, value: x }))}
-                            customOptions={customOptions}
-                            isMulti
-                            controlShouldRenderValue={false}
-                            isClearable={false}
-                            placeholder="Select collection (or enter new collection)"
-                            maxMenuHeight={300}
-                        />
-                    </Col>
-                    <Col sm="auto" className="d-flex">
-                        <Button color="info" onClick={addAllCollections} disabled={isAddAllCollectionsDisabled}>
-                            <Icon icon="documents" addon="plus" /> Add all
-                        </Button>
-                    </Col>
-                </Row>
+                {!isReadOnly && (
+                    <Row className="mb-4">
+                        <Col>
+                            <FormSelectCreatable
+                                control={control}
+                                name={collectionsFormName}
+                                options={allCollectionNames.map((x) => ({ label: x, value: x }))}
+                                customOptions={customOptions}
+                                isMulti
+                                controlShouldRenderValue={false}
+                                isClearable={false}
+                                placeholder="Select collection (or enter new collection)"
+                                maxMenuHeight={300}
+                            />
+                        </Col>
+                        <Col sm="auto" className="d-flex">
+                            <Button color="info" onClick={addAllCollections} disabled={isAddAllCollectionsDisabled}>
+                                <Icon icon="documents" addon="plus" /> Add all
+                            </Button>
+                        </Col>
+                    </Row>
+                )}
                 <div className="d-flex flex-wrap mb-1 align-items-center">
                     <h4 className="m-0">Selected collections</h4>
                     <FlexGrow />
-                    {collections.length > 0 && (
+                    {collections.length > 0 && !isReadOnly && (
                         <Button color="link" size="xs" onClick={removeAllCollections} className="p-0">
                             Remove all
                         </Button>
@@ -97,9 +106,16 @@ export default function FormCollectionsSelect(props: FormCollectionsSelectProps)
                         {collections.map((name) => (
                             <div key={name} className="p-1 hstack slidein-style">
                                 <div className="flex-grow-1">{name}</div>
-                                <Button color="link" size="xs" onClick={() => removeCollection(name)} className="p-0">
-                                    <Icon icon="trash" margin="m-0" />
-                                </Button>
+                                {!isReadOnly && (
+                                    <Button
+                                        color="link"
+                                        size="xs"
+                                        onClick={() => removeCollection(name)}
+                                        className="p-0"
+                                    >
+                                        <Icon icon="trash" margin="m-0" />
+                                    </Button>
+                                )}
                             </div>
                         ))}
                     </div>
