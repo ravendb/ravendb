@@ -719,7 +719,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         public override void Flush()
         {
-            throw new NotSupportedException();
+            // nothing to do
         }
 
         public override void Close()
