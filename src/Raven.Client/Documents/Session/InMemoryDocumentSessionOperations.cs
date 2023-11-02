@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -16,7 +15,6 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -37,7 +35,6 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -117,17 +114,17 @@ namespace Raven.Client.Documents.Session
         /// Translate between an ID and its associated entity
         /// </summary>
         internal readonly Dictionary<string, DocumentInfo> IncludedDocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
-        
+
         /// <summary>
         /// Translate between an CV and its associated entity
         /// </summary>
         internal Dictionary<string, DocumentInfo> IncludeRevisionsByChangeVector;
-        
+
         /// <summary>
         /// Translate between an ID and its associated entity
         /// </summary>
         internal Dictionary<string, Dictionary<DateTime, DocumentInfo>> IncludeRevisionsIdByDateTimeBefore;
-        
+
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
@@ -150,9 +147,9 @@ namespace Raven.Client.Documents.Session
             _timeSeriesByDocId ?? (_timeSeriesByDocId = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase));
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesByDocId;
-        
+
         protected readonly DocumentStoreBase _documentStore;
-        
+
         public string DatabaseName { get; }
 
         ///<summary>
@@ -692,7 +689,7 @@ more responsive application.
             if (DocumentsByEntity.TryGetValue(entity, out var value))
             {
                 if (id != null && value.Id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException($"Cannot store the same entity (id: {value.Id}) with a different id ({id})"); 
+                    throw new InvalidOperationException($"Cannot store the same entity (id: {value.Id}) with a different id ({id})");
 
                 value.ChangeVector = changeVector ?? value.ChangeVector;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
@@ -976,7 +973,7 @@ more responsive application.
             foreach (var item in md)
             {
                 var v = item.Value;
-                if(v is IMetadataDictionary nested)
+                if (v is IMetadataDictionary nested)
                 {
                     RuntimeHelpers.EnsureSufficientExecutionStack();
                     v = HandleDictionaryObject(nested);
@@ -1044,7 +1041,7 @@ more responsive application.
 
                         if (UseOptimisticConcurrency == false)
                             changeVector = null;
-                       
+
                         if (deletedEntity.ExecuteOnBeforeDelete)
                         {
                             OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity));
@@ -1201,7 +1198,7 @@ more responsive application.
         /// </summary>
         public DocumentsChanges[] WhatChangedFor(object entity)
         {
-            if (!DocumentsByEntity.TryGetValue(entity, out var documentInfo))
+            if (DocumentsByEntity.TryGetValue(entity, out var documentInfo) == false)
                 return Array.Empty<DocumentsChanges>();
 
             if (DeletedEntities.Contains(entity))
@@ -1221,7 +1218,7 @@ more responsive application.
 
             var changes = new Dictionary<string, DocumentsChanges[]>();
 
-            if (!EntityChanged(document, documentInfo, changes))
+            if (EntityChanged(document, documentInfo, changes) == false)
                 return Array.Empty<DocumentsChanges>();
 
             return changes[documentInfo.Id];
@@ -1526,9 +1523,9 @@ more responsive application.
             {
                 includes.GetPropertyByIndex(i, ref propertyDetails);
 
-                if (propertyDetails.Value is not BlittableJsonReaderObject json) 
+                if (propertyDetails.Value is not BlittableJsonReaderObject json)
                     continue;
-                
+
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
                     continue;
@@ -1536,7 +1533,7 @@ more responsive application.
                 IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
         }
-        
+
         internal void RegisterRevisionIncludes(BlittableJsonReaderArray revisionIncludes)
         {
             if (NoTracking)
@@ -1544,12 +1541,12 @@ more responsive application.
 
             if (revisionIncludes == null)
                 return;
-            
+
             IncludeRevisionsByChangeVector ??= new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
             IncludeRevisionsIdByDateTimeBefore ??= new Dictionary<string, Dictionary<DateTime, DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
             foreach (var obj in revisionIncludes)
             {
-                if (obj is not BlittableJsonReaderObject json) 
+                if (obj is not BlittableJsonReaderObject json)
                     continue;
                 json = ((BlittableJsonReaderObject)obj);
                 json.TryGet(nameof(RevisionIncludeResult.Id), out string id);
@@ -1563,7 +1560,7 @@ more responsive application.
                 {
                     IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo>
                     {
-                        [dateTime] = new() {Document = revision}
+                        [dateTime] = new() { Document = revision }
                     };
                 }
             }
@@ -2222,21 +2219,21 @@ more responsive application.
             OnAfterConversionToEntityInvoke(id, document, entity);
             return entity;
         }
-        
+
         internal bool CheckIfAllChangeVectorsAreAlreadyIncluded(IEnumerable<string> changeVectors)
         {
-            if (IncludeRevisionsByChangeVector is null) 
-                 return false;
-            
+            if (IncludeRevisionsByChangeVector is null)
+                return false;
+
             foreach (var cv in changeVectors)
             {
-                if (IncludeRevisionsByChangeVector.ContainsKey(cv)  == false )
+                if (IncludeRevisionsByChangeVector.ContainsKey(cv) == false)
                     return false;
             }
 
             return true;
         }
-        
+
         internal bool CheckIfRevisionByDateTimeBeforeAlreadyIncluded(string id, DateTime dateTime)
         {
             if (IncludeRevisionsIdByDateTimeBefore is null)
@@ -2250,7 +2247,7 @@ more responsive application.
 
             return false;
         }
-        
+
         public bool CheckIfIdAlreadyIncluded(string[] ids, IEnumerable<string> includes)
         {
             foreach (var id in ids)

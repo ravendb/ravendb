@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -9,9 +10,10 @@ namespace FastTests.Client;
 public class WhatChangedFor : RavenTestBase
 {
     public WhatChangedFor(ITestOutputHelper output) : base(output)
-    { }
+    {
+    }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_New_Field()
     {
         using (var store = GetDocumentStore())
@@ -40,7 +42,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_Removed_Field()
     {
         using (var store = GetDocumentStore(new Options
@@ -77,7 +79,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_Change_Field()
     {
         using (var store = GetDocumentStore(new Options
@@ -113,7 +115,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_Array_Value_Changed()
     {
         using (var store = GetDocumentStore())
@@ -152,7 +154,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_Array_Value_Added()
     {
         using (var store = GetDocumentStore())
@@ -185,7 +187,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_Array_Value_Removed()
     {
         using (var store = GetDocumentStore())
@@ -218,7 +220,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_RavenDB_8169()
     {
         //Test that when old and new values are of different type
@@ -259,8 +261,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_Delete_After_Change_Value()
     {
         //RavenDB-13501
@@ -294,7 +295,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_RemovingAndAddingSameAmountOfFieldsToObjectShouldWork()
     {
         using (var store = GetDocumentStore())
@@ -373,7 +374,7 @@ public class WhatChangedFor : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void What_Changed_For_CanSeeChangesWhenAddingGuidsToArray()
     {
         using (var store = GetDocumentStore())
