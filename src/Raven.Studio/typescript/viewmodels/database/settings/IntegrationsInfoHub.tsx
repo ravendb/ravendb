@@ -1,4 +1,4 @@
-import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
+import {AboutViewAnchored, AccordionItemWrapper} from "components/common/AboutView";
 import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
@@ -30,7 +30,7 @@ export function IntegrationsInfoHub() {
     const hasAllFeaturesInLicense = hasPostgreSql && hasPowerBi;
 
     return (
-        <AboutViewFloating defaultOpen={hasAllFeaturesInLicense ? null : "licensing"}>
+        <AboutViewAnchored defaultOpen={hasAllFeaturesInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -70,7 +70,7 @@ export function IntegrationsInfoHub() {
                 isUnlimited={hasAllFeaturesInLicense}
                 data={featureAvailability}
             />
-        </AboutViewFloating>
+        </AboutViewAnchored>
     );
 }
 
