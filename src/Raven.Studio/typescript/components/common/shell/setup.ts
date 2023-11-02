@@ -120,6 +120,10 @@ function initYup() {
             min: ({ min }) => `Value must be greater than or equal ${min}`,
             max: ({ max }) => `Value must be less than or equal ${max}`,
         },
+        date: {
+            min: ({ min }) => `Value must be ${min} or later`,
+            max: ({ max }) => `Value must be ${max} or earlier`,
+        },
     });
 }
 
