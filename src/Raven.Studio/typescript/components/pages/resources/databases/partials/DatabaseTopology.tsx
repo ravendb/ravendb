@@ -28,7 +28,12 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                         Orchestrators
                     </NodeSetLabel>
                     {db.nodes.map((node) => (
-                        <DatabaseTopologyNodeSetItem key={node.tag} node={node} localInfos={localInfos} />
+                        <DatabaseTopologyNodeSetItem
+                            key={node.tag}
+                            node={node}
+                            localInfos={localInfos}
+                            isDisabled={db.disabled}
+                        />
                     ))}
                 </NodeSet>
 
@@ -51,6 +56,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                                         node={node}
                                         localInfos={localInfos}
                                         shardNumber={shardNumber}
+                                        isDisabled={db.disabled}
                                     />
                                 ))}
                                 {shard.deletionInProgress.map((node) => {
@@ -82,7 +88,12 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                 >
                     <NodeSetLabel icon="database">Nodes</NodeSetLabel>
                     {db.nodes.map((node) => (
-                        <DatabaseTopologyNodeSetItem key={node.tag} node={node} localInfos={localInfos} />
+                        <DatabaseTopologyNodeSetItem
+                            key={node.tag}
+                            node={node}
+                            localInfos={localInfos}
+                            isDisabled={db.disabled}
+                        />
                     ))}
                     {db.deletionInProgress.map((node) => {
                         return (
