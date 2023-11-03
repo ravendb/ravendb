@@ -40,6 +40,13 @@ namespace Raven.Server.Web
 
         public const string PageSizeParameter = "pageSize";
 
+        internal static readonly HashSet<string> SafeCsrfMethods = new()
+        {
+            HttpMethod.Head.Method,
+            HttpMethod.Options.Method,
+            HttpMethod.Trace.Method
+        };
+
         private RequestHandlerContext _context;
 
         protected HttpContext HttpContext
@@ -687,6 +694,70 @@ namespace Raven.Server.Web
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
 
+        public static bool CheckCSRF(HttpContext httpContext, ServerStore serverStore)
+        {
+            if (serverStore.Configuration.Security.EnableCsrfFilter == false)
+                return true;
+            
+            var requestedOrigin = httpContext.Request.Headers[Constants.Headers.Origin];
+            
+            if (requestedOrigin.Count == 0 || requestedOrigin[0] == null)
+                return true;
+            
+            // no origin at this point - it means it is safe request or non-browser
+
+            var host = httpContext.Request.Host;
+            if (string.IsNullOrEmpty(host.Host))
+                return false;
+            
+            if (SafeCsrfMethods.Contains(httpContext.Request.Method))
+                return true;
+            
+            var origin = requestedOrigin[0];
+            var uriOrigin = new Uri(origin);
+            var originHost = uriOrigin.Host;
+            var originAuthority = uriOrigin.Authority;
+            
+            // for hostname matching we validate both hostname and port
+            var hostMatches = host.ToString() == originAuthority;
+            if (hostMatches)
+                return true;
+            
+            // for requests with-in cluster we value both hostname and port
+            var requestWithinCluster = IsOriginAllowed(origin, serverStore);
+            if (requestWithinCluster)
+                return true;
+            
+            // for trusted origins we match hostname only, port is ignored
+            var trustedOrigins = serverStore.Configuration.Security.CsrfTrustedOrigins ?? Array.Empty<string>();
+            if (trustedOrigins.Length > 0)
+            {
+                foreach (var o in trustedOrigins)
+                {
+                    if (originHost == o)
+                        return true;
+                }
+            }
+
+            // for additional origin headers we match hostname only, port is ignored
+            var additionalHeaders = serverStore.Configuration.Security.CsrfAdditionalOriginHeaders ?? Array.Empty<string>();
+            if (additionalHeaders.Length > 0)
+            {
+                foreach (string additionalHeader in additionalHeaders)
+                {
+                    if (httpContext.Request.Headers.TryGetValue(additionalHeader, out var headerValue) == false)
+                        continue;
+
+                    var stringHeader = headerValue.ToString();
+
+                    if (stringHeader == originAuthority)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+        
         public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore, CorsMode corsMode)
         {
             httpContext.Response.Headers.Add("Vary", "Origin");
@@ -707,7 +778,7 @@ namespace Raven.Server.Web
                     allowedOrigin = requestedOrigin;
                     break;
                 case CorsMode.Cluster:
-                    if (IsOriginAllowed(requestedOrigin, serverStore))
+                    if (serverStore.Server.Certificate.Certificate == null || IsOriginAllowed(requestedOrigin, serverStore))
                         allowedOrigin = requestedOrigin;
                     break;
             }
@@ -720,12 +791,6 @@ namespace Raven.Server.Web
 
         private static bool IsOriginAllowed(string origin, ServerStore serverStore)
         {
-            if (serverStore.Server.Certificate.Certificate == null)
-            {
-                // running in unsafe mode - since server can be access via multiple urls/aliases accept them 
-                return true;
-            }
-
             var topology = serverStore.GetClusterTopology();
 
             // check explicitly each topology type to avoid allocations in topology.AllNodes
