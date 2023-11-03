@@ -215,6 +215,22 @@ namespace Raven.Client.Documents.Conventions
 
                 DefaultForServer.HttpVersion = httpVersion;
             }
+
+            var httpCompressionAlgorithmAsString = Environment.GetEnvironmentVariable("RAVEN_COMPRESSION_ALGORITHM");
+            if (httpCompressionAlgorithmAsString != null)
+            {
+                HttpCompressionAlgorithm httpCompressionAlgorithm;
+                try
+                {
+                    httpCompressionAlgorithm = Enum.Parse<HttpCompressionAlgorithm>(httpCompressionAlgorithmAsString, ignoreCase: true);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Could not parse 'RAVEN_COMPRESSION_ALGORITHM' env variable with value '{httpCompressionAlgorithmAsString}'.", e);
+                }
+
+                DefaultForServer.HttpCompressionAlgorithm = httpCompressionAlgorithm;
+            }
 #endif
 
 #if NETCOREAPP3_1_OR_GREATER
