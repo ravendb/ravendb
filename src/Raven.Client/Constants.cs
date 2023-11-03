@@ -60,6 +60,8 @@ namespace Raven.Client
 
             public const string ContentLength = "Content-Length";
 
+            public const string Origin = "Origin";
+
             public const string IncrementalTimeSeriesPrefix = "INC:";
         }
 
