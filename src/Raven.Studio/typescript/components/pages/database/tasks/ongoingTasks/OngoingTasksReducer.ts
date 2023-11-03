@@ -478,13 +478,15 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                 draft.tasks.forEach((task) => {
                     const nodeInfo = task.nodesInfo.find((x) =>
                         databaseLocationComparator(x.location, incomingLocation)
-                    );
+                    ) as WritableDraft<OngoingEtlTaskNodeInfo>;
+
                     nodeInfo.status = "failure";
                     nodeInfo.details = {
                         error: error.responseJSON.Message,
                         responsibleNode: null,
                         taskConnectionStatus: null,
                     };
+                    nodeInfo.etlProgress = null;
                 });
             });
         }
