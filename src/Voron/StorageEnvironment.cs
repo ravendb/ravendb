@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -1511,24 +1511,24 @@ namespace Voron
 
         public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
         {
-            long old;
             var index = pageNumber / (8 * sizeof(long));
-            var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
-            var bitToSet = 1L << bitIndex;
 
             // If the page is beyond the initial size of the file we don't validate it. 
             // We assume that it is valid since we wrote it in this run.
             if (index >= _validPages.Length)
                 return;
 
-            old = _validPages[index];
-            if ((old & bitToSet) != 0)
+            var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
+            var bitToSet = 1L << bitIndex;
+
+            ref long pageBucket = ref _validPages[index];
+            if ((pageBucket & bitToSet) != 0)
                 return;
 
-            UnlikelyValidatePage(pageNumber, current, index, old, bitToSet);
+            UnlikelyValidatePage(pageNumber, current, ref pageBucket, bitToSet);
         }
 
-        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet)
+        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, ref long bucket, long bitToSet)
         {
             // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
             // which we already got using AcquirePagePointerWithOverflowHandling()
@@ -1544,11 +1544,10 @@ namespace Voron
             {
                 // PERF: This code used to have a spin-wait. While it makes sense where threads are competing on tight loops for
                 // for resources, the spin-wait here serves no purpose as the thread is going to bail out immediately after completion.
-                long modified = Interlocked.CompareExchange(ref _validPages[index], old | bitToSet, old);
-                if (modified == old || (modified & bitToSet) != 0)
+                long old = bucket;
+                long modified = Interlocked.CompareExchange(ref bucket, old | bitToSet, old);
+                if (modified == old || (bucket & bitToSet) != 0)
                     break;
-
-                old = modified;
             }
         }
 
