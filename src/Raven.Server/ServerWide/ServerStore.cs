@@ -1968,38 +1968,6 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteTaskCommand);
         }
 
-        public async Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName, string raftRequestId)
-        {
-            CommandBase disableEnableCommand;
-            switch (type)
-            {
-                case OngoingTaskType.Subscription:
-                    if (taskName == null)
-                    {
-                        AbstractSubscriptionStorage subscriptionStorage;
-                        if(_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database))
-                            subscriptionStorage = (await database).SubscriptionStorage;
-                        else if(_server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(dbName, out var shardedDatabase))
-                            subscriptionStorage = (await shardedDatabase).SubscriptionsStorage;
-                        else
-                            throw new DatabaseDoesNotExistException($"Can't get subscription name because The database {dbName} does not exists");
-
-                        using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            taskName = subscriptionStorage.GetSubscriptionNameById(ctx, taskId);
-                        }
-                    }
-                    disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName, raftRequestId);
-                    break;
-
-                default:
-                    disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName, raftRequestId);
-                    break;
-            }
-            return await SendToLeaderAsync(disableEnableCommand);
-        }
-
         public Task<(long Index, object Result)> PromoteDatabaseNode(string dbName, string nodeTag, string raftRequestId)
         {
             var promoteDatabaseNodeCommand = new PromoteDatabaseNodeCommand(dbName, raftRequestId)
