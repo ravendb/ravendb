@@ -47,6 +47,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
@@ -1967,7 +1968,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteTaskCommand);
         }
 
-        public Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName, string raftRequestId)
+        public async Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName, string raftRequestId)
         {
             CommandBase disableEnableCommand;
             switch (type)
@@ -1975,16 +1976,18 @@ namespace Raven.Server.ServerWide
                 case OngoingTaskType.Subscription:
                     if (taskName == null)
                     {
-                        if (_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out _) == false)
-                            if(_server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(dbName, out _) == false)
-                                throw new DatabaseDoesNotExistException($"Can't get subscription name because The database {dbName} does not exists");
+                        AbstractSubscriptionStorage subscriptionStorage;
+                        if(_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database))
+                            subscriptionStorage = (await database).SubscriptionStorage;
+                        else if(_server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(dbName, out var shardedDatabase))
+                            subscriptionStorage = (await shardedDatabase).SubscriptionsStorage;
+                        else
+                            throw new DatabaseDoesNotExistException($"Can't get subscription name because The database {dbName} does not exists");
 
                         using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-#pragma warning disable CS0618
-                            taskName = Cluster.Subscriptions.GetSubscriptionNameById(ctx, dbName, taskId);
-#pragma warning restore CS0618
+                            taskName = subscriptionStorage.GetSubscriptionNameById(ctx, taskId);
                         }
                     }
                     disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName, raftRequestId);
@@ -1994,7 +1997,7 @@ namespace Raven.Server.ServerWide
                     disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName, raftRequestId);
                     break;
             }
-            return SendToLeaderAsync(disableEnableCommand);
+            return await SendToLeaderAsync(disableEnableCommand);
         }
 
         public Task<(long Index, object Result)> PromoteDatabaseNode(string dbName, string nodeTag, string raftRequestId)
