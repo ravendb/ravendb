@@ -29,14 +29,14 @@ namespace Raven.Client.Http
                 UnlikelyEveryoneFaultedChoiceIndex = 0;
             }
 
-            public NodeSelectorState(Topology topology, NodeSelectorState prevState)
+            public NodeSelectorState(Topology topology, NodeSelectorState prevState) : this(topology)
             {
-                Topology = topology;
-                Nodes = topology.Nodes;
-                Failures = new int[topology.Nodes.Count];
-                FastestRecords = new int[topology.Nodes.Count];
-                UnlikelyEveryoneFaultedChoiceIndex = 0;
-                
+                if (prevState.Fastest < 0 || prevState.Fastest >= prevState.Nodes.Count)
+                {
+                    Debug.Assert(false, "Fastest is out of range of Nodes in NodeSelectorState");
+                    return;
+                }
+
                 var fastestNode = prevState.Nodes.ElementAt(prevState.Fastest);
                 int index = 0;
                 foreach (var node in topology.Nodes)
