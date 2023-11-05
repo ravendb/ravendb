@@ -1251,7 +1251,7 @@ namespace Voron.Data.Tables
             return null;
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last, long skip)
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice? prefix, Slice last, long skip)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1262,11 +1262,14 @@ namespace Voron.Data.Tables
                 if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
                     yield break;
 
-                it.SetRequiredPrefix(prefix);
-                if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
+                if (prefix != null)
                 {
-                    if (it.MovePrev() == false)
-                        yield break;
+                    it.SetRequiredPrefix(prefix.Value);
+                    if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
+                    {
+                        if (it.MovePrev() == false)
+                            yield break;
+                    }
                 }
 
                 do
