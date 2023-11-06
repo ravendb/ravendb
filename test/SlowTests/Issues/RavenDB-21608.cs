@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
@@ -66,6 +67,43 @@ public class RavenDB_21608 : RavenTestBase
             Assert.NotEqual(h1, h2);
             Assert.NotEqual(h1, h3);
             Assert.NotEqual(h1, h4);
+            
+            Assert.NotEqual(h2, h3);
+            Assert.NotEqual(h2, h4);
+            
+            Assert.NotEqual(h3, h4);
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public void HashIsDifferentForDifferentContainsDict()
+    {
+        var q1 = new IndexQuery
+        {
+            Query = "from index 'Grade/ByAllIds' where PayriteCode in ($p0)",
+            QueryParameters = new Parameters()
+            {
+                {"p0", new Dictionary<string, string>() { {"A", "BC"} } }
+            }
+        };
+            
+        var q2 = new IndexQuery
+        {
+            Query = "from index 'Grade/ByAllIds' where PayriteCode in ($p0)",
+            QueryParameters = new Parameters()
+            {
+                {"p0", new Dictionary<string, string>() { {"AB", "C"} } }
+            }
+        };
+        
+        var conventions = new DocumentConventions();
+        var jsonSerializer = conventions.Serialization.CreateSerializer();
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            var h1 = q1.GetQueryHash(context, conventions, jsonSerializer);
+            var h2 = q2.GetQueryHash(context, conventions, jsonSerializer);
+            
+            Assert.NotEqual(h1, h2);
         }
     }
 }

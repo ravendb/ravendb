@@ -115,7 +115,7 @@ namespace Raven.Client.Documents.Queries
 
         public void Write(string s)
         {
-            if (string.IsNullOrEmpty(s))
+            if (s == null)
             {
                 Write("null-string");
                 return;
@@ -267,30 +267,35 @@ namespace Raven.Client.Documents.Queries
                     var dictionaryEnumerator = dict.GetEnumerator();
                     while (dictionaryEnumerator.MoveNext())
                     {
+                        Write("key");
                         WriteParameterValue(dictionaryEnumerator.Key, conventions, serializer);
+                        Write("value");
                         WriteParameterValue(dictionaryEnumerator.Value, conventions, serializer);
                         hadDictionaryValues = true;
                     }
+                    
                     if (hadDictionaryValues == false)
-                    {
                         Write("empty-dictionary");
-                    }
                     break;
 
                 case IEnumerable e:
                     bool hadEnumerableValues = false;
-                    var processedItems = 0;
+                    var processedEnumerableItemsCount = 0;
                     
                     var enumerator = e.GetEnumerator();
                     while (enumerator.MoveNext())
                     {
                         WriteParameterValue(enumerator.Current, conventions, serializer);
-                        processedItems++;
+                        
+                        if (enumerator.Current is string s)
+                            Write(s.Length);
+                        
+                        processedEnumerableItemsCount++;
                         hadEnumerableValues = true;
                     }
 
                     if (hadEnumerableValues)
-                        Write(processedItems);
+                        Write(processedEnumerableItemsCount);
                     else
                         Write("empty-enumerator");
 
