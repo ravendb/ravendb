@@ -5,14 +5,8 @@
     display: contents;
 }
 
-.progress-name,
 .named-progress {
     padding: sizes.$gutter-xs sizes.$gutter-sm;
-}
-
-.progress-name {
-    font-size: 12px;
-    text-align: center;
 }
 
 .named-progress {

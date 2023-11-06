@@ -8,7 +8,7 @@ export function NamedProgress(props: { name: string | ReactNode; children: React
     const { name, children } = props;
     return (
         <div className="named-progress-container">
-            <div className="progress-name">{name}</div>
+            <small className="m-auto w-100 text-center">{name}</small>
             <div className="named-progress">{children}</div>
         </div>
     );
