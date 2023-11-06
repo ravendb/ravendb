@@ -588,6 +588,11 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             return new DynamicDictionary(_dictionary.SelectMany(collectionSelector, resultSelector));
         }
+        
+        public IEnumerable<object> SelectMany(Func<KeyValuePair<object, object>, IEnumerable<object>> selector)
+        {
+            return _dictionary.SelectMany(selector);
+        }
 
         public IEnumerable<KeyValuePair<object, object>> Select()
         {

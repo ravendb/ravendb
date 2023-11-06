@@ -178,7 +178,20 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     switch (parentInvocation)
                     {
                         case "ToDictionary":
-                            return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+                            if (IsSelectManyCalledOnValueCollection(currentInvocation))
+                            {
+                                if (DoesLambdaReturnDictionary(node))
+                                    return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+
+                                return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})"));
+                            }
+                            else
+                            {
+                                if (DoesLambdaReturnDictionary(node))
+                                    return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+                        
+                                return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, IEnumerable<dynamic>>)({node})"));
+                            }
                         default:
                             return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({ModifyLambdaForDynamicEnumerable(node)})"));
                     }
@@ -209,6 +222,39 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return node;
         }
 
+        private static bool IsSelectManyCalledOnValueCollection(InvocationExpressionSyntax invocation)
+        {
+            if (invocation.Expression is MemberAccessExpressionSyntax e1)
+            {
+                if (e1.Expression is ObjectCreationExpressionSyntax e2)
+                {
+                    if (e2.ArgumentList?.Arguments[0].Expression is MemberAccessExpressionSyntax m1)
+                    {
+                        if (m1.Name.Identifier.Text == "Values" || m1.Name.Identifier.Text == "Keys")
+                            return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool DoesLambdaReturnDictionary(LambdaExpressionSyntax node)
+        {
+            if (node is SimpleLambdaExpressionSyntax lambda)
+            {
+                if (lambda.Body is InvocationExpressionSyntax lambdaBody)
+                {
+                    if (lambdaBody.Expression is MemberAccessExpressionSyntax expression)
+                    {
+                        if (expression.Name.Identifier.Text == "ToDictionary")
+                            return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
         private static SyntaxNode ModifyLambdaForDynamicEnumerable(LambdaExpressionSyntax node)
         {
             var lambda = node as SimpleLambdaExpressionSyntax;
