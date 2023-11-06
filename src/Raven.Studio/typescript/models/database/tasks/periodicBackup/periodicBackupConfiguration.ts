@@ -83,6 +83,7 @@ class periodicBackupConfiguration extends backupConfiguration {
             this.mentorNode,
             this.pinMentorNode,
             this.snapshot().compressionLevel,
+            this.snapshot().compressionAlgorithm,
             this.snapshot().excludeIndexes,
             this.retentionPolicy().dirtyFlag().isDirty,
             this.encryptionSettings().dirtyFlag().isDirty,
