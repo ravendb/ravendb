@@ -27,7 +27,9 @@
         <div data-bind="foreach: connectionOptions">
             <div class="flex-horizontal margin-bottom-xs">
                 <input class="form-control margin-right-sm" placeholder="Option key" data-bind="textInput: key" />
-                <input class="form-control margin-right-sm" placeholder="Option value" data-bind="textInput: value" />
+                <input class="form-control margin-right-sm" placeholder="Option value" data-bind="textInput: value, visible: !multiLine()" />
+                <textarea class="form-control margin-right-sm" placeholder="Option value" data-bind="textInput: value, visible: multiLine">
+                </textarea>
                 <a title="Remove this connection option" href="#" class="btn" data-bind="click: $parent.removeConnectionOption.bind($parent, $data)">
                     <i class="icon-trash"></i>
                 </a>
