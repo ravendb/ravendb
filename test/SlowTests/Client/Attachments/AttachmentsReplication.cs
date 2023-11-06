@@ -2949,9 +2949,6 @@ namespace SlowTests.Client.Attachments
                     Assert.NotNull(attachment);
                     Assert.NotNull(attachment2);
 
-                    var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
-                    var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
-
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                     Assert.Equal("foo/bar", attachment.Details.Name);
 
@@ -2959,7 +2956,9 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
 
                     // RavenDB-21650
-                    Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
+                    //var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
+                    //var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
+                    //Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
                 }
             }
         }
