@@ -330,7 +330,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     public bool TryRemove(ref TLookupKey key)
     {
         FindPageFor(ref key, ref _internalCursor);
-        return RemoveFromPage(ref key, allowRecurse: true);
+        return RemoveFromPage(ref key, allowRecurse: true, isExplicitRemove: true);
     }
 
     public bool TryRemove(TLookupKey key, out long value) => TryRemove(ref key, out value);
@@ -350,20 +350,20 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         value = GetValue(ref state, state.LastSearchPosition);
-        return RemoveFromPage(ref key, allowRecurse: true);
+        return RemoveFromPage(ref key, allowRecurse: true, isExplicitRemove: true);
     }
 
-    private void RemoveFromPage(bool allowRecurse, int pos)
+    private void RemoveFromPage(bool allowRecurse, int pos, bool isExplicitRemove)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         state.LastSearchPosition = pos;
         state.LastMatch = 0;
         long keyData = GetKeyData(ref state, pos);
         var key = TLookupKey.FromLong<TLookupKey>(keyData);
-        RemoveFromPage(ref key, allowRecurse);
+        RemoveFromPage(ref key, allowRecurse, isExplicitRemove);
     }
 
-    private bool RemoveFromPage(ref TLookupKey key, bool allowRecurse)
+    private bool RemoveFromPage(ref TLookupKey key, bool allowRecurse, bool isExplicitRemove)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
         if (state.LastMatch != 0)
@@ -373,7 +373,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
-        RemoveEntryFromPage(ref state, ref key, state.LastSearchPosition, out _);
+        RemoveEntryFromPage(ref state, ref key, state.LastSearchPosition, isExplicitRemove, out _);
 
         if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
         {
@@ -395,8 +395,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         VerifySizeOf(ref state, _internalCursor._pos == 0);
         return true;
     }
-
-    private void RemoveEntryFromPage(ref CursorState state, ref TLookupKey key, int pos, out long value)
+    
+    private void RemoveEntryFromPage(ref CursorState state, ref TLookupKey key, int pos, bool isExplicitRemove, out long value)
     {
         var entriesOffsets = state.EntriesOffsets;
         var len = GetKeyAndValue(ref state, pos, out var k, out value);
@@ -407,7 +407,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
         Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
         Debug.Assert(k == key.ToLong(), "k == key.ToLong()");
-        key.OnKeyRemoval(this);
+        
+        if (state.Header->IsBranch || isExplicitRemove)
+            key.OnKeyRemoval(this);
+        
         entriesOffsets[(pos + 1)..].CopyTo(entriesOffsets[pos..]);
     }
 
@@ -470,14 +473,13 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         // now copy from the temp buffer to the actual page
         Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, temp.Ptr, Constants.Storage.PageSize);
-
         // We update the entries offsets on the source page, now that we have moved the entries.
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);
         return true;
 
     }
-
+    
     [SkipLocalsInit]
     private bool TryMoveAllEntries(LookupPageHeader* destination, LookupPageHeader* source)
     {
@@ -491,13 +493,15 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         int combinedEntries = destination->NumberOfEntries + source->NumberOfEntries;
         var entries = new Span<ushort>((byte*)destination + PageHeader.SizeOf, combinedEntries)[destination->NumberOfEntries..];
         int idx = 0;
+        long firstItemKey = -1;        
         if (destination->IsBranch)
         {
             // special handling for the left most section
-            (long key, long childValue) = GetFirstActualKeyAndValue(source);
-            var len = EncodeEntry(destination, key, childValue, entryBuffer);
+            (firstItemKey, long childValue) = GetFirstActualKeyAndValue(source);
+            var len = EncodeEntry(destination, firstItemKey, childValue, entryBuffer);
             if (AddBufferToPage(entryBuffer, len, ref entries[idx]) == false)
                 return false;
+            
             idx++;
         }
         for (; idx < source->NumberOfEntries; idx++)
@@ -521,6 +525,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 return false;
         }
 
+        if (destination->IsBranch)
+        {
+            var firstItemLookupKey = TLookupKey.FromLong<TLookupKey>(firstItemKey);
+            firstItemLookupKey.OnNewKeyAddition(this);
+        }
+
         return true;
         
         bool AddBufferToPage(byte* buffer, int requiredSize, ref ushort entry)
@@ -540,11 +550,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Memory.Copy(entryPos, buffer, requiredSize);
 
             Debug.Assert(destination->Upper >= destination->Lower);
-
+            
             return true;
         }
     }
-
+    
     private (long key, long childValue) GetFirstActualKeyAndValue(LookupPageHeader* src)
     {
         Debug.Assert(src->IsBranch,"destination->IsBranch");
@@ -620,7 +630,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         {
             _llt.FreePage(stateToDelete.Page.PageNumber);
             PopPage(ref _internalCursor);
-            RemoveFromPage(allowRecurse: true, parent.LastSearchPosition);
+            RemoveFromPage(allowRecurse: true, parent.LastSearchPosition, isExplicitRemove: false);
         }
     }
 
@@ -883,7 +893,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             if (state.Header->IsBranch) // we cannot allow a branch with a single element, steal another one
             {
                 DecodeEntry(ref state, state.Header->NumberOfEntries - 1, out var k, out var v);
-                RemoveFromPage(allowRecurse: false, state.Header->NumberOfEntries - 1);
+                RemoveFromPage(allowRecurse: false, state.Header->NumberOfEntries - 1, isExplicitRemove: false);
                 // the first item in a branch is always the smallest
                 var prevEntryLen = EncodeEntry(newPageState.Header, TLookupKey.MinValue, v, entryBufferPtr);
                 AddEntryToPage(ref newPageState, prevEntryLen, entryBufferPtr, isUpdate: false);
@@ -950,7 +960,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             var k = TLookupKey.FromLong<TLookupKey>(separatorKey);
             // we need to update the separator key here...
             (separatorKey,_) = GetFirstActualKeyAndValue(newPageState.Header);
-            RemoveEntryFromPage(ref newPageState, ref k, 0, out var pageNum);
+            RemoveEntryFromPage(ref newPageState, ref k, 0, isExplicitRemove: false, out var pageNum);
             var requiredSize = EncodeEntry(newPageState.Header, TLookupKey.MinValue, pageNum, entryBufferPtr);
             newPageState.LastSearchPosition = 0;
             AddEntryToPage(ref newPageState, requiredSize, entryBufferPtr, false);
@@ -1531,7 +1541,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         // need to go negative because the value is negative and then flipped
         state.LastMatch = 0; // ensure that we mark it properly
         oldValue = GetValue(ref state, state.LastSearchPosition);
-        RemoveFromPage(ref key, allowRecurse: true);
+        RemoveFromPage(ref key, allowRecurse: true, isExplicitRemove: true);
         return true;
     }
     
