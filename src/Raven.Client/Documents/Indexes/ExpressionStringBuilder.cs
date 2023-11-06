@@ -144,7 +144,10 @@ namespace Raven.Client.Documents.Indexes
                 Visit(instance);
                 if (ShouldParenthesisMemberExpression(instance))
                     Out(")");
-
+                
+                if (instance.Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)) && name == "Values")
+                    Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
+                
                 if (isId == false)
                     OutMemberCall(name);
             }
@@ -1270,6 +1273,10 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
             Visit(body);
+            
+            if (body.NodeType == ExpressionType.MemberAccess && body.Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
+                Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
+            
             return node;
         }
 
@@ -1668,7 +1675,14 @@ namespace Raven.Client.Documents.Indexes
                     }
                     else
                     {
-                        Visit(expression);
+                        if (expression is MemberExpression memberExpression && memberExpression.Member.Name == "Values")
+                        {
+                            Out("new DynamicArray(");
+                            Visit(expression);
+                            Out(")");
+                        }
+                        else
+                            Visit(expression);
                     }
                     if (IsIndexerCall(node) == false)
                     {
