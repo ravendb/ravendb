@@ -7,7 +7,6 @@ import { Button, Modal, ModalBody } from "reactstrap";
 import useBoolean from "components/hooks/useBoolean";
 import Code from "components/common/Code";
 import copyToClipboard from "common/copyToClipboard";
-import { todo } from "common/developmentHelper";
 
 interface OngoingTaskEtlProgressTooltipProps {
     target: HTMLElement;
@@ -84,8 +83,6 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
     if (nodeInfo.status !== "success") {
         return null;
     }
-
-    todo("Styling", "Kwiato", "Transactional Id position");
 
     return (
         <PopoverWithHover rounded="true" target={target} placement="top">
