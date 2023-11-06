@@ -89,33 +89,33 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
 
     return (
         <PopoverWithHover rounded="true" target={target} placement="top">
-            <div className="ongoing-tasks-details-tooltip">
+            <div className="vstack gap-3 py-2">
                 {nodeInfo.etlProgress &&
-                    nodeInfo.etlProgress.map((transformationScriptProgress) => {
+                    nodeInfo.etlProgress.map((transformationScriptProgress, index) => {
                         const nameNode = (
-                            <div>
+                            <div className="d-flex align-items-center justify-content-center gap-1">
                                 {transformationScriptProgress.transformationName}
-                                <button
-                                    type="button"
-                                    className="btn btn-link btn-sm margin-left-xs"
+                                <Button
+                                    color="link"
+                                    className="p-0"
+                                    size="xs"
                                     title="Show script preview"
                                     onClick={() => showPreview(transformationScriptProgress.transformationName)}
                                 >
                                     <Icon icon="preview" margin="m-0" />
-                                </button>
+                                </Button>
                             </div>
                         );
 
                         return (
-                            <div>
+                            <div className="vstack">
                                 {transformationScriptProgress.transactionalId && (
-                                    <div className="d-flex justify-content-between p-3">
-                                        <div className="small-label">Transactional Id:</div>
-                                        <div>
-                                            <div>{transformationScriptProgress.transactionalId}</div>
+                                    <div className="vstack">
+                                        <div className="small-label d-flex align-items-center justify-content-center gap-1">
+                                            Transactional Id
                                             <Button
-                                                color="primary"
-                                                className="btn-link"
+                                                color="link"
+                                                className="p-0"
                                                 size="xs"
                                                 onClick={() =>
                                                     copyToClipboard.copy(
@@ -123,10 +123,14 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                                                         "Transactional Id was copied to clipboard."
                                                     )
                                                 }
+                                                title="Copy to clipboard"
                                             >
                                                 <Icon icon="copy" margin="0" />
                                             </Button>
                                         </div>
+                                        <small className="text-center mb-1">
+                                            {transformationScriptProgress.transactionalId}
+                                        </small>
                                     </div>
                                 )}
                                 <NamedProgress name={nameNode} key={transformationScriptProgress.transformationName}>
@@ -142,6 +146,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                                         </NamedProgressItem>
                                     )}
                                 </NamedProgress>
+                                {index !== nodeInfo.etlProgress.length - 1 && <hr className="mt-2 mb-0" />}
                             </div>
                         );
                     })}
