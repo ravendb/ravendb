@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
@@ -7,6 +8,11 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
     {
         public OngoingTasksHandlerProcessorForPostSubscriptionTasksState([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
+        }
+
+        protected override AbstractSubscriptionStorage GetSubscriptionStorage()
+        {
+            return RequestHandler.Database.SubscriptionStorage;
         }
     }
 }
