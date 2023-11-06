@@ -132,7 +132,7 @@ namespace Raven.Server.Commercial
 
         public int MaxCores => GetValue<int?>(LicenseAttribute.Cores) ?? 3;
 
-        public int? MaxCoresPerNode => GetValue<int?>(LicenseAttribute.MaxCoresPerNode);
+        public int? MaxCoresPerNode => GetValue<int?>(LicenseAttribute.MaxCoresPerNode, agplValue: 2);
 
         public int MaxClusterSize
         {
