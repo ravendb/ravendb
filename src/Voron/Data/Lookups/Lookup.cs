@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Platform;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Debugging;
@@ -788,7 +789,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 }
             }
 
-            if (Vector128.IsHardwareAccelerated)
+            if (PlatformSpecific.IsArm == false && Vector128.IsHardwareAccelerated)
             {
                 int N128 = (Vector128<ushort>.Count - 1);
                 while (newEntriesStartPtr - Vector128<ushort>.Count >= newEntriesEndPtr)
