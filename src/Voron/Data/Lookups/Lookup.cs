@@ -407,7 +407,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
         Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
         Debug.Assert(k == key.ToLong(), "k == key.ToLong()");
-        
         key.OnKeyRemoval(this);
         entriesOffsets[(pos + 1)..].CopyTo(entriesOffsets[pos..]);
     }
@@ -469,13 +468,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             return false; // nothing to be done here, we cannot fully merge, so abort
         
         // now copy from the temp buffer to the actual page
-        // additionally we've to increase term references counter to avoid removal of term container
-        
         Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, temp.Ptr, Constants.Storage.PageSize);
-        var keyData = GetKeyData(ref parent, parent.LastSearchPosition + 1);
-        var siblingKey = TLookupKey.FromLong<TLookupKey>(keyData);
-        siblingKey.IncreaseReferenceCount(this);
+
         // We update the entries offsets on the source page, now that we have moved the entries.
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);
@@ -588,18 +583,13 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             FreePageFor(ref sourceState, ref destinationState, ref parent);
             return;
         }
-        
+
         // if we are removing the leftmost item, we need to maintain the smallest entry, just copy the sibling's contents
-        // additionally we've to increase term references counter to avoid removal of term container
-        var siblingKeyData = GetKeyData(ref parent, position);
-        var siblingKey = TLookupKey.FromLong<TLookupKey>(siblingKeyData);
-        siblingKey.IncreaseReferenceCount(this);
-        
         long pageNum = destinationState.Page.PageNumber;
         Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, sourceState.Page.Pointer, Constants.Storage.PageSize);
         destinationState.Page.PageNumber = pageNum;
-        
+
         // now ask that we'll remove the _sibling_ page, not us, since we copied it
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);

@@ -1,6 +1,4 @@
 ﻿using FastTests.Voron;
-using Tests.Infrastructure;
-using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,14 +11,14 @@ public class RavenDB_21399_2 : StorageTest
     {
     }
 
-    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
+    [Fact]
     public unsafe void CanHandleDeletesAndUpdatesToLeftmostLeafPage()
     {
         using var wtx = Env.WriteTransaction();
 
         var lookup = wtx.LookupFor<Int64LookupKey>("test");
         long k = 1;
-
+        
         // we are waiting until the tree structure looks like
         // * Root
         // * * Branch - min value
@@ -43,12 +41,15 @@ public class RavenDB_21399_2 : StorageTest
         {
             lookup.Add(k++, 0);
         }
-
-        var rootState = new Lookup<Int64LookupKey>.CursorState {Page = wtx.LowLevelTransaction.GetPage(lookup.State.RootPage)};
+        
+        var rootState = new Lookup<Int64LookupKey>.CursorState
+        {
+            Page = wtx.LowLevelTransaction.GetPage(lookup.State.RootPage)
+        };
 
         long keyData = Lookup<Int64LookupKey>.GetKeyData(ref rootState, rootState.Header->NumberOfEntries - 1);
         changed = lookup.CheckTreeStructureChanges();
-
+        
         // Now we remove until we have this situation:
         // * Root
         // * * Branch - min value
@@ -60,22 +61,22 @@ public class RavenDB_21399_2 : StorageTest
         {
             lookup.TryRemove(keyData++, out _);
         }
-
+        
         // Now we insert $SomeVal+8, which will go to the $SomeVal + 10 key 
-        lookup.Add(keyData - 2, 0);
-
+        lookup.Add(keyData-2, 0);
+        
         // Problem
         lookup.VerifyStructure();
     }
-
-    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
+    
+    [Fact]
     public unsafe void CanHandleDeletesAndUpdatesToMiddleLeafPage()
     {
         using var wtx = Env.WriteTransaction();
 
         var lookup = wtx.LookupFor<Int64LookupKey>("test");
         long k = 1;
-
+        
         // we are waiting until the tree structure looks like
         // * Root
         // * * Branch - min value
@@ -93,10 +94,13 @@ public class RavenDB_21399_2 : StorageTest
         // * * Branch - $SomeVal
         // * * Branch - $SomeVal + 100
 
-        var rootState = new Lookup<Int64LookupKey>.CursorState {Page = wtx.LowLevelTransaction.GetPage(lookup.State.RootPage)};
+        var rootState = new Lookup<Int64LookupKey>.CursorState
+        {
+            Page = wtx.LowLevelTransaction.GetPage(lookup.State.RootPage)
+        };
 
-        long keyData = Lookup<Int64LookupKey>.GetKeyData(ref rootState, rootState.Header->NumberOfEntries / 2);
-
+        long keyData = Lookup<Int64LookupKey>.GetKeyData(ref rootState, rootState.Header->NumberOfEntries /2);
+        
         // Now we remove until we have this situation:
         // * Root
         // * * Branch - min value
@@ -109,28 +113,9 @@ public class RavenDB_21399_2 : StorageTest
             lookup.TryRemove(keyData++, out _);
         }
 
-        lookup.Add(keyData - 2, 0);
-
+        lookup.Add(keyData-2, 0);
+        
         // Problem
         lookup.VerifyStructure();
-    }
-
-    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
-    public void CanSafelySwapLeavesWithoutRemovingTermFromDisk()
-    {
-        using var wtx = Env.WriteTransaction();
-        CompactTree tree = wtx.CompactTreeFor($"test");
-        var lookup = tree._inner;
-        long k = 1;
-        
-        while (lookup.State.BranchPages < 4)
-        {
-            tree.Add($"{k}", k++);
-        }
-
-        while (k > 0)
-        {
-            tree.TryRemove($"{--k}", out _);
-        }
     }
 }
