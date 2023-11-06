@@ -115,7 +115,7 @@ namespace Raven.Client.Documents.Queries
 
         public void Write(string s)
         {
-            if (s == null)
+            if (string.IsNullOrEmpty(s))
             {
                 Write("null-string");
                 return;
@@ -279,21 +279,24 @@ namespace Raven.Client.Documents.Queries
 
                 case IEnumerable e:
                     bool hadEnumerableValues = false;
+                    var processedItems = 0;
+                    
                     var enumerator = e.GetEnumerator();
                     while (enumerator.MoveNext())
                     {
                         WriteParameterValue(enumerator.Current, conventions, serializer);
+                        processedItems++;
                         hadEnumerableValues = true;
                     }
-                    if (hadEnumerableValues == false)
-                    {
+
+                    if (hadEnumerableValues)
+                        Write(processedItems);
+                    else
                         Write("empty-enumerator");
-                    }
 
                     break;
 
                 default:
-
                     var valueType = value.GetType();
                     if (valueType.IsPrimitive == false)
                     {
