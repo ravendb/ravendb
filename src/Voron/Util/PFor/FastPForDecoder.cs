@@ -5,6 +5,7 @@ using System.Runtime.Intrinsics;
 using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Sparrow.Server.Platform;
 using Voron.Data.PostingLists;
 
 namespace Voron.Util.PFor;
@@ -193,8 +194,12 @@ public unsafe struct FastPForDecoder : IDisposable
             Vector256<ulong> GetDeltaHighBits()
             {
                 var ptr = (byte*)bigDeltaOffsets.Pop() + 1;
-                var highBitsDelta = Vector128.Load(ptr)
-                    .AsInt32().ToVector256();
+
+                Vector256<int> highBitsDelta = PlatformSpecific.IsArm == false 
+                    ? Vector128.Load(ptr).AsInt32().ToVector256() 
+                    : Vector256.Create(*(int*)ptr, *(int*)(ptr + sizeof(int)), *(int*)(ptr + 2 * sizeof(int)), *(int*)(ptr + 3 * sizeof(int)), 0, 0, 0, 0);
+                    
+                
                 if (bigDeltaOffsets.Count > 0)
                 {
                     expectedBufferIndex = *(byte*)bigDeltaOffsets.First;
