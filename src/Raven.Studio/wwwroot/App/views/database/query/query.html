@@ -327,11 +327,11 @@
             <label for="disableAutoIndex">Don't create a new Auto-Index</label>
         </div>
         <div class="toggle margin-left">
-            <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isCollectionQuery()">
+            <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isDynamicQuery()">
             <label for="storedFields">Show stored index fields only</label>
         </div>
         <div class="toggle margin-left">
-            <input id="rawEntries" type="checkbox" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery()">
+            <input id="rawEntries" type="checkbox" data-bind="checked: criteria().indexEntries, disable: isDynamicQuery()">
             <label for="rawEntries" data-bind="text: 'Show raw index entries instead of ' + (queryResultsContainMatchingDocuments() ? 'matching documents' : 'index results')"></label>
         </div>
         <div class="margin-left" data-bind="collapse: criteria().indexEntries">
