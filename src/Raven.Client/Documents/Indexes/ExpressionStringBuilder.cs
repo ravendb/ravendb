@@ -146,7 +146,7 @@ namespace Raven.Client.Documents.Indexes
                     Out(")");
                 
                 if (instance.Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)) && name == "Values")
-                    Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
+                    Out(".ToDictionary(x => x.Key, x => x.Value)");
                 
                 if (isId == false)
                     OutMemberCall(name);
@@ -1275,7 +1275,7 @@ namespace Raven.Client.Documents.Indexes
             Visit(body);
             
             if (body.NodeType == ExpressionType.MemberAccess && body.Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
-                Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
+                Out(".ToDictionary(x => x.Key, x => x.Value)");
             
             return node;
         }
