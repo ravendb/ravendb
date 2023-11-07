@@ -24,7 +24,7 @@ using Voron.Util;
 using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
+using System.Text; // Do not remove, used in debug only
 
 namespace Voron.Impl
 {
@@ -628,7 +628,7 @@ namespace Voron.Impl
                 }
 
                 p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
-                Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from scratch", pageNumber, p.PageNumber));
+                Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from scratch");
             }
             else
             {
@@ -636,17 +636,20 @@ namespace Voron.Impl
                 if (pageFromJournal != null)
                 {
                     p = pageFromJournal.Value;
-                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
+                    Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from journal");
                 }
                 else
                 {
                     p = new Page(DataPager.AcquirePagePointerWithOverflowHandling(this, pageNumber));
 
-                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
+                    Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
 
                     // When encryption is off, we do validation by checksum
-                    if (_env.Options.Encryption.IsEnabled == false)
-                        _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
+                    if (_env.Options.Encryption.IsEnabled == false && _env.IsPageValidationRequired(pageNumber))
+                    {
+                        GlobalValidationBehavior.GlobalValidator.Value.Validate(_env, this, pageNumber, (PageHeader*)p.Pointer);
+                    }
+                     
                 }
             }
 

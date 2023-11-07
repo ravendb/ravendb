@@ -1509,6 +1509,25 @@ namespace Voron
             _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DirectoryPath, exception.CurrentFreeSpace, ExceptionDispatchInfo.Capture(exception));
         }
 
+        public bool IsPageValidationRequired(long pageNumber)
+        {
+            var index = pageNumber / (8 * sizeof(long));
+
+            // If the page is beyond the initial size of the file we don't validate it. 
+            // We assume that it is valid since we wrote it in this run.
+            if (index >= _validPages.Length)
+                return false;
+
+            var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
+            var bitToSet = 1L << bitIndex;
+
+            ref long pageBucket = ref _validPages[index];
+            if ((pageBucket & bitToSet) != 0)
+                return false;
+
+            return true;
+        }
+
         public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
         {
             var index = pageNumber / (8 * sizeof(long));
@@ -1528,7 +1547,7 @@ namespace Voron
             UnlikelyValidatePage(pageNumber, current, ref pageBucket, bitToSet);
         }
 
-        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, ref long bucket, long bitToSet)
+        internal unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, ref long bucket, long bitToSet)
         {
             // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
             // which we already got using AcquirePagePointerWithOverflowHandling()
