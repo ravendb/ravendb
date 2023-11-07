@@ -1,4 +1,4 @@
-import React, { ComponentProps, useState } from "react";
+import React, { ComponentProps, ReactNode, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
@@ -21,7 +21,7 @@ type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<
 
 type FormInputProps = InputProps & {
     type: InputType;
-    addonText?: string;
+    addonText?: ReactNode;
 };
 
 export interface FormCheckboxesOption<T extends string | number = string> {
