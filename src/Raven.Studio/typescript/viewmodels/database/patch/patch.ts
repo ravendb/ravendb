@@ -400,10 +400,15 @@ class patch extends shardViewModelBase {
         const matchingDocs = $.Deferred<number>();
         
         if (patchScriptParts.length === 2) {
-            const query = queryCriteria.empty();
-            query.queryText(patchScriptParts[0]);
+            const criteria = queryCriteria.empty();
+            criteria.queryText(patchScriptParts[0]);
 
-            new queryCommand(this.db, 0, 0, query)
+            new queryCommand({
+                    db: this.db,
+                    skip: 0,
+                    take: 0,
+                    criteria
+                })
                 .execute()
                 .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
                 .fail(() => matchingDocs.resolve(-1))

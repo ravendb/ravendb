@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             _remoteFolderName = GetRemoteFolder(GetType().Name);
         }
 
-        protected async Task can_backup_and_restore_internal(string dbName = null)
+        protected async Task can_backup_and_restore_internal(string dbName = null, BackupUploadMode backupUploadMode = BackupUploadMode.Default)
         {
             var s3Settings = GetS3Settings();
             Options options = null;
@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings);
+                var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings, backupUploadMode: backupUploadMode);
                 var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
                 Assert.NotNull(backupResult);
@@ -101,7 +101,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        protected async Task can_backup_and_restore_snapshot_internal()
+        protected async Task can_backup_and_restore_snapshot_internal(BackupUploadMode backupUploadMode)
         {
             var s3Settings = GetS3Settings();
 
@@ -129,7 +129,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, s3Settings: s3Settings);
+                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, s3Settings: s3Settings, backupUploadMode: backupUploadMode);
                 var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 using (var session = store.OpenAsyncSession())
                 {
@@ -186,7 +186,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key_internal()
+        protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key_internal(BackupUploadMode backupUploadMode)
         {
             var s3Settings = GetS3Settings();
 
@@ -213,7 +213,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings, fullBackupFrequency: null, incrementalBackupFrequency: "0 */6 * * *", backupEncryptionSettings: new BackupEncryptionSettings
                 {
                     EncryptionMode = EncryptionMode.UseDatabaseKey
-                });
+                }, backupUploadMode: backupUploadMode);
                 var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
@@ -390,7 +390,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        protected async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_internal()
+        protected async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_internal(BackupUploadMode backupUploadMode)
         {
             var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
@@ -412,7 +412,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, s3Settings: s3Settings);
+                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, s3Settings: s3Settings, backupUploadMode: backupUploadMode);
                 var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 var backupStatus = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
                 var databaseName = GetDatabaseName();
