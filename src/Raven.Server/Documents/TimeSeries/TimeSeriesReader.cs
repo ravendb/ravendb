@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.TimeSeries
         private TimestampState[] _states = Array.Empty<TimestampState>();
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
-        private TimeSpan? _offset;
+        private readonly TimeSpan? _offset;
         private DetailedSingleResult _details;
         private readonly CancellationToken _token;
 
@@ -304,6 +304,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
+                if (_offset.HasValue)
+                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
+                
                 if (baseline > _to)
                     yield break;
 
@@ -311,11 +314,6 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     _values = new double[_currentSegment.NumberOfValues];
                     _states = new TimestampState[_currentSegment.NumberOfValues];
-                }
-
-                if (_offset.HasValue)
-                {
-                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
                 }
 
                 segmentResult.End = _currentSegment.GetLastTimestamp(baseline);
@@ -356,6 +354,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
+                if (_offset.HasValue)
+                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
+                
                 if (baseline > _to)
                     yield break;
 
@@ -367,11 +368,6 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         _values = new double[_currentSegment.NumberOfValues];
                         _states = new TimestampState[_currentSegment.NumberOfValues];
-                    }
-
-                    if (_offset.HasValue)
-                    {
-                        baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
                     }
 
                     foreach (var val in YieldSegment(baseline, includeDead))
