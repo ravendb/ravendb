@@ -45,9 +45,8 @@ export interface TopLevelDatabaseInfo {
 
 export type MergedDatabaseState = "Loading" | "Error" | "Offline" | "Disabled" | "Online" | "Partially Online";
 
-export interface DatabaseSharedInfo {
+export interface NonShardedDatabaseInfo {
     name: string;
-    sharded: this is ShardedDatabaseSharedInfo;
     lockMode: DatabaseLockMode;
     deletionInProgress: string[];
     encrypted: boolean;
@@ -60,11 +59,15 @@ export interface DatabaseSharedInfo {
         relevant: boolean;
         isBeingDeleted: boolean;
     };
+    sharded: false;
 }
 
-export interface ShardedDatabaseSharedInfo extends DatabaseSharedInfo {
-    shards: DatabaseSharedInfo[];
+export interface ShardedDatabaseInfo extends Omit<NonShardedDatabaseInfo, "sharded"> {
+    sharded: true;
+    shards: NonShardedDatabaseInfo[];
 }
+
+export type DatabaseSharedInfo = NonShardedDatabaseInfo | ShardedDatabaseInfo;
 
 export type DatabaseFilterByStateOption = Exclude<MergedDatabaseState, "Partially Online"> | "Local" | "Remote";
 

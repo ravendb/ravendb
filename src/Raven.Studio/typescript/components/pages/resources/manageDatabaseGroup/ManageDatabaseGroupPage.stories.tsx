@@ -7,7 +7,6 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
-import { ShardedDatabaseSharedInfo } from "components/models/databases";
 
 export default {
     title: "Pages/Manage Database Group",
@@ -33,7 +32,7 @@ export const SingleNode: ComponentStory<typeof ManageDatabaseGroupPage> = () => 
 
     mockStore.databases.withDatabases([db.toDto()]);
 
-    return <ManageDatabaseGroupPage db={db} />;
+    return <ManageDatabaseGroupPage databaseName={db.name} />;
 };
 
 export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -49,7 +48,7 @@ export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = (
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    return <ManageDatabaseGroupPage db={db} />;
+    return <ManageDatabaseGroupPage databaseName={db.name} />;
 };
 
 export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -59,7 +58,7 @@ export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
-    return <ManageDatabaseGroupPage db={db} />;
+    return <ManageDatabaseGroupPage databaseName={db.name} />;
 };
 
 export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -68,11 +67,11 @@ export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     const { cluster } = mockStore;
     cluster.with_Cluster();
 
-    mockStore.databases.with_Sharded((x: ShardedDatabaseSharedInfo) => (x.shards[0].nodes[0].type = "Promotable"));
+    mockStore.databases.with_Sharded((x) => (x.shards[0].nodes[0].type = "Promotable"));
 
     const db = DatabasesStubs.shardedDatabase();
 
-    return <ManageDatabaseGroupPage db={db} />;
+    return <ManageDatabaseGroupPage databaseName={db.name} />;
 };
 
 export const ClusterWithDeletion: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -84,7 +83,7 @@ export const ClusterWithDeletion: ComponentStory<typeof ManageDatabaseGroupPage>
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
-    return <ManageDatabaseGroupPage db={db} />;
+    return <ManageDatabaseGroupPage databaseName={db.name} />;
 };
 
 export const ClusterWithFailure: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -99,7 +98,7 @@ export const ClusterWithFailure: ComponentStory<typeof ManageDatabaseGroupPage> 
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
-    return <ManageDatabaseGroupPage db={db} />;
+    return <ManageDatabaseGroupPage databaseName={db.name} />;
 };
 
 export const PreventDeleteIgnore: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -111,7 +110,7 @@ export const PreventDeleteIgnore: ComponentStory<typeof ManageDatabaseGroupPage>
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    return <ManageDatabaseGroupPage db={db} />;
+    return <ManageDatabaseGroupPage databaseName={db.name} />;
 };
 
 export const PreventDeleteError: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -123,5 +122,5 @@ export const PreventDeleteError: ComponentStory<typeof ManageDatabaseGroupPage> 
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    return <ManageDatabaseGroupPage db={db} />;
+    return <ManageDatabaseGroupPage databaseName={db.name} />;
 };

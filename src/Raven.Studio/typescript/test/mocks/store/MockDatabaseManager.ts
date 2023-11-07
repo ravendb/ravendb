@@ -1,4 +1,4 @@
-﻿import { DatabaseSharedInfo } from "components/models/databases";
+﻿import { DatabaseSharedInfo, NonShardedDatabaseInfo, ShardedDatabaseInfo } from "components/models/databases";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import { createValue } from "../utils";
@@ -6,14 +6,14 @@ import { globalDispatch } from "components/storeCompat";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
 
 export class MockDatabaseManager {
-    with_Cluster(dto?: MockedValue<DatabaseSharedInfo>) {
+    with_Cluster(dto?: MockedValue<NonShardedDatabaseInfo>) {
         const value = this.createValue(dto, DatabasesStubs.nonShardedClusterDatabase().toDto());
 
         globalDispatch(databaseActions.databasesLoaded([value]));
         return value;
     }
 
-    with_Sharded(dto?: MockedValue<DatabaseSharedInfo>) {
+    with_Sharded(dto?: MockedValue<ShardedDatabaseInfo>) {
         const value = this.createValue(dto, DatabasesStubs.shardedDatabase().toDto());
         globalDispatch(databaseActions.databasesLoaded([value]));
         return value;

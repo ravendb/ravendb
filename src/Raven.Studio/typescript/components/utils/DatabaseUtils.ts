@@ -1,9 +1,4 @@
-﻿import {
-    DatabaseLocalInfo,
-    DatabaseSharedInfo,
-    MergedDatabaseState,
-    ShardedDatabaseSharedInfo,
-} from "components/models/databases";
+﻿import { DatabaseLocalInfo, DatabaseSharedInfo, MergedDatabaseState } from "components/models/databases";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import moment from "moment";
 import { locationAwareLoadableData } from "components/models/common";
@@ -79,9 +74,7 @@ export default class DatabaseUtils {
 
     static getLocations(db: DatabaseSharedInfo): databaseLocationSpecifier[] {
         if (db.sharded) {
-            const shardedDb = db as ShardedDatabaseSharedInfo;
-
-            const locations: databaseLocationSpecifier[] = shardedDb.shards.flatMap((shard) => {
+            const locations: databaseLocationSpecifier[] = db.shards.flatMap((shard) => {
                 const shardNumber = DatabaseUtils.shardNumber(shard.name);
 
                 return shard.nodes.map((node) => {

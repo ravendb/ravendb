@@ -13,11 +13,15 @@ import changesContext from "common/changesContext";
 import { services } from "hooks/useServices";
 import viewModelBase from "viewmodels/viewModelBase";
 import buildInfo = require("models/resources/buildInfo");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 let initialized = false;
 
 function updateDatabases() {
-    const dtos = databasesManager.default.databases().map((x) => x.toDto());
+    const dtos: DatabaseSharedInfo[] = databasesManager.default.databases().map((x) => {
+        return x.toDto();
+    });
+
     globalDispatch(databaseActions.databasesLoaded(dtos));
 }
 

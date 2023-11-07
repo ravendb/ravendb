@@ -1,4 +1,4 @@
-﻿import { DatabaseLocalInfo, DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+﻿import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
 import React from "react";
 import DatabaseUtils from "components/utils/DatabaseUtils";
@@ -15,7 +15,6 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
     const { db, localInfos, togglePanelCollapsed } = props;
 
     if (db.sharded) {
-        const shardedDb = db as ShardedDatabaseSharedInfo;
         return (
             <div>
                 <NodeSet
@@ -37,7 +36,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                     ))}
                 </NodeSet>
 
-                {shardedDb.shards.map((shard) => {
+                {db.shards.map((shard) => {
                     const shardNumber = DatabaseUtils.shardNumber(shard.name);
                     return (
                         <React.Fragment key={shard.name}>

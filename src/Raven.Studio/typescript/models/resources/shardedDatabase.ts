@@ -1,7 +1,7 @@
 import database from "models/resources/database";
 import shard from "models/resources/shard";
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
-import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+import { NonShardedDatabaseInfo, ShardedDatabaseInfo } from "components/models/databases";
 import DeletionInProgressStatus = Raven.Client.ServerWide.DeletionInProgressStatus;
 
 class shardedDatabase extends database {
@@ -37,10 +37,12 @@ class shardedDatabase extends database {
         return locationSpecifiers;
     }
     
-    toDto(): DatabaseSharedInfo {
-        const dto = super.toDto() as ShardedDatabaseSharedInfo;
-        dto.shards = this.shards().map(x => x.toDto());
-        return dto;
+    toDto(): ShardedDatabaseInfo {
+        return {
+            ...super.toDto(),
+            sharded: true,
+            shards: this.shards().map(x => x.toDto() as NonShardedDatabaseInfo)
+        }
     }
 
     updateUsing(incomingCopy: StudioDatabaseInfo) {
