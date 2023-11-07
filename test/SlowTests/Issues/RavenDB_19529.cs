@@ -141,7 +141,7 @@ public class RavenDB_19529 : ReplicationTestBase
     }
 
     [Fact]
-    public async Task MergedTransaction_Conflict_Then_PutAnotherToLargeSection_CompressionSetInTheMiddle()
+    public async Task MergedTransaction_AddConflict_Then_PutUpdateDocumentOnLargeSection_CompressionSetInTheMiddle()
     {
         const string specificSizeAndContentDocumentId = "users/1-A";
         const string documentToConflictId = "users/2-A";
@@ -196,7 +196,7 @@ public class RavenDB_19529 : ReplicationTestBase
 
 
      [Fact(Skip= "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
-     public async Task MergedTransaction_ConflictForDocumentInDifferentCollection()
+     public async Task MergedTransaction_ConflictForDocumentInDifferentCollection_Then_PutUpdateDocumentOnLargeSection_CompressionSetInTheMiddle()
      {
          const string specificSizeAndContentDocumentId = "users/1-A";
          const string documentToConflictId = "users/2-A";
