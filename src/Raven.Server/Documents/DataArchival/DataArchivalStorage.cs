@@ -27,9 +27,7 @@ public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
         using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data, throwOnConflict: true))
         {
             if (doc == null || doc.TryGetMetadata(out var metadata) == false)
-            {
-                throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
-            }
+                return;
 
             if (HasPassed(metadata, currentTime, MetadataPropertyName) == false)
                 return;

@@ -27,9 +27,7 @@ namespace Raven.Server.Documents.Refresh
             using (var doc = Database.DocumentsStorage.Get(context, lowerId, throwOnConflict: false))
             {
                 if (doc == null || doc.TryGetMetadata(out var metadata) == false)
-                {
-                    throw new InvalidOperationException($"Failed to fetch the metadata of document '{id}'");
-                }
+                    return;
 
                 if (HasPassed(metadata, currentTime, MetadataPropertyName) == false)
                     return;
