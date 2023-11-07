@@ -89,8 +89,8 @@ export default class DatabasesService {
         return new deleteOrchestratorFromNodeCommand(db, node).execute();
     }
 
-    async toggleDynamicNodeAssignment(db: database, enabled: boolean) {
-        return new toggleDynamicNodeAssignmentCommand(db.name, enabled).execute();
+    async toggleDynamicNodeAssignment(databaseName: string, enabled: boolean) {
+        return new toggleDynamicNodeAssignmentCommand(databaseName, enabled).execute();
     }
 
     async reorderNodesInGroup(db: DatabaseSharedInfo, tagsOrder: string[], fixOrder: boolean) {

@@ -5,7 +5,7 @@ import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
-import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+import { DatabaseSharedInfo } from "components/models/databases";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
@@ -26,8 +26,7 @@ function commonInit() {
 
 function getDatabaseNamesForNode(nodeTag: string, dto: DatabaseSharedInfo): string[] {
     if (dto.sharded) {
-        const shardedDto = dto as ShardedDatabaseSharedInfo;
-        return shardedDto.shards.map((x) => (x.nodes.some((n) => n.tag === nodeTag) ? x.name : null)).filter((x) => x);
+        return dto.shards.map((x) => (x.nodes.some((n) => n.tag === nodeTag) ? x.name : null)).filter((x) => x);
     }
 
     return dto.nodes.some((x) => x.tag === nodeTag) ? [dto.name] : [];
@@ -144,7 +143,7 @@ export const DifferentNodeStates: ComponentStory<typeof DatabasesPage> = () => {
     const clusterDb = DatabasesStubs.nonShardedClusterDatabase().toDto();
     clusterDb.nodes.forEach((n) => (n.type = assignNodeType(n.tag)));
 
-    const shardedDb = DatabasesStubs.shardedDatabase().toDto() as ShardedDatabaseSharedInfo;
+    const shardedDb = DatabasesStubs.shardedDatabase().toDto();
     shardedDb.nodes.forEach((n) => (n.type = assignNodeType(n.tag)));
     shardedDb.shards.forEach((s) => {
         s.nodes.forEach((n) => {

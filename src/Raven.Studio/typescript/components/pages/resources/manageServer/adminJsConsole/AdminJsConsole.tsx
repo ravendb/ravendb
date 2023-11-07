@@ -20,7 +20,6 @@ import {
 } from "components/common/select/Select";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import "./AdminJsConsole.scss";
-import { ShardedDatabaseSharedInfo } from "components/models/databases";
 import RunScriptButton from "components/common/RunScriptButton";
 import useBoolean from "components/hooks/useBoolean";
 import { useRavenLink } from "components/hooks/useRavenLink";
@@ -36,9 +35,7 @@ export default function AdminJSConsole() {
     const asyncRunAdminJsScript = useAsyncCallback(manageServerService.runAdminJsScript);
     const allDatabases = useAppSelector(databaseSelectors.allDatabases);
 
-    const allDatabaseNames = allDatabases.flatMap((db) =>
-        db.sharded ? (db as ShardedDatabaseSharedInfo).shards.map((x) => x.name) : [db.name]
-    );
+    const allDatabaseNames = allDatabases.flatMap((db) => (db.sharded ? db.shards.map((x) => x.name) : [db.name]));
 
     const adminJsConsoleDocsLink = useRavenLink({ hash: "IBUJ7M" });
 

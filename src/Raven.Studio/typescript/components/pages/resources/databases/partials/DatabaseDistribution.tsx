@@ -1,6 +1,6 @@
 ﻿import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import React, { useState } from "react";
-import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+import { DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
 import genUtils from "common/generalUtils";
@@ -67,14 +67,10 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
 
                 const shardNumber = localState.location.shardNumber;
 
-                const nodesToUse = db.sharded
-                    ? (db as ShardedDatabaseSharedInfo).shards[localState.location.shardNumber].nodes
-                    : db.nodes;
-
+                const nodesToUse = db.sharded ? db.shards[localState.location.shardNumber].nodes : db.nodes;
                 const node = nodesToUse.find((x) => x.tag === localState.location.nodeTag);
 
                 const uptime = localState.data ? DatabaseUtils.formatUptime(localState.data.upTime) : "";
-
                 const isOfflineOrDisabled = uptime === "Offline" || db.disabled;
 
                 return (

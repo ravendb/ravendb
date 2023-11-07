@@ -3,7 +3,6 @@ import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import AdminJsConsole from "./AdminJsConsole";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import { ShardedDatabaseSharedInfo } from "components/models/databases";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
@@ -16,7 +15,7 @@ export const DefaultAdminJSConsole: StoryObj<typeof AdminJsConsole> = {
     name: "Admin Js Console",
     render: () => {
         const clusterDb = DatabasesStubs.nonShardedClusterDatabase().toDto();
-        const shardedDb = DatabasesStubs.shardedDatabase().toDto() as ShardedDatabaseSharedInfo;
+        const shardedDb = DatabasesStubs.shardedDatabase().toDto();
 
         mockStore.databases.withDatabases([clusterDb, shardedDb]);
 
