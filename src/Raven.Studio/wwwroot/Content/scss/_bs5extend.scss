@@ -405,3 +405,36 @@ select {
     background-color: $panel-bg-1-var;
     color: $text-color-var;
 }
+
+// react-select placed inside input group text (see: Revert Revisions > Time Window)
+.input-group-text {
+    .react-select-container {
+        border: none;
+
+        .react-select__control {
+            background: transparent;
+            min-height: unset;
+        }
+        .react-select__indicators {
+            .react-select__indicator {
+                padding: 0;
+            }
+            [class$="-indicatorContainer"] {
+                color: var(--border-color-light);
+                &:hover {
+                    color: var(--border-color);
+                }
+            }
+        }
+        .react-select__menu {
+            text-align: left;
+            min-width: 120px;
+            width: auto;
+        }
+    }
+}
+
+// datetime-local input scheme based on theme colors
+input[type="datetime-local"] {
+    color-scheme: $datepicker-color-mode;
+}

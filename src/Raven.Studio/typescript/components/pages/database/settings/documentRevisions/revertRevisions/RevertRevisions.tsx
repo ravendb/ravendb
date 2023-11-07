@@ -88,7 +88,7 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                     </div>
                     <Card className="mt-3">
                         <CardBody className="gap-4">
-                            <FormGroup className="w-50">
+                            <FormGroup>
                                 <Label for="pointInTime">Point in Time</Label>
                                 <FormInput
                                     type="datetime-local"
@@ -97,9 +97,10 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                                     name="pointInTime"
                                     max={moment().endOf("day").format(genUtils.inputDateTimeFormat)}
                                     addonText="local"
+                                    placeholder="Select the point in time"
                                 />
                             </FormGroup>
-                            <FormGroup className="w-50">
+                            <FormGroup>
                                 <Label for="timeWindow">Time Window</Label>
                                 <InputGroup>
                                     <FormInput
@@ -108,12 +109,15 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                                         id="timeWindow"
                                         name="timeWindow"
                                         placeholder={`default (${defaultWindowValue})`}
-                                    />
-                                    <FormSelect
-                                        control={control}
-                                        name="timeMagnitude"
-                                        options={timeWindowOptions}
-                                        isSearchable={false}
+                                        addonText={
+                                            <FormSelect
+                                                control={control}
+                                                name="timeMagnitude"
+                                                options={timeWindowOptions}
+                                                isSearchable={false}
+                                                className="w-25"
+                                            />
+                                        }
                                     />
                                 </InputGroup>
                             </FormGroup>

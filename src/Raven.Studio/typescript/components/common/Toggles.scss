@@ -11,10 +11,11 @@ $toggle-baseheight: 37px !default;
 $toggle-bg: colors.$well-bg-var !default;
 $toggle-color: colors.$text-color-var !default;
 $toggle-hover-color: colors.$text-emphasis-var !default;
-$toggle-icon-size: 21px !default;
+$toggle-icon-size: 18px !default;
 $toggle-width-scale: 2.1 !default;
 
-$toggle-knob-highlight-color: colors.$text-emphasis-var !default;
+$toggle-label-highlight-color: colors.$primary-var !default;
+$toggle-knob-highlight-color: colors.$base-text-emphasis-color !default;
 $toggle-knob-muted-color: colors.$text-muted-var !default;
 
 $toggle-knob-bg: colors.$primary-var !default;
@@ -124,7 +125,7 @@ $toggle-knob-hover-scale: 0.9 !default;
             pointer-events: none;
 
             & + label {
-                color: $toggle-knob-highlight-color;
+                color: $toggle-label-highlight-color;
             }
         }
 

@@ -90,6 +90,8 @@ $shadow-color: $black;
 
 $hover-filter: brightness(1.2) saturate(1.1);
 
+$datepicker-color-mode: dark;
+
 // Blue Theme
 @if $theme == "blue" {
     $black: #172138;
@@ -137,6 +139,8 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $shadow-color: $gray-500;
 
     $hover-filter: brightness(1.03) saturate(1.3);
+
+    $datepicker-color-mode: light;
 }
 // Light Theme
 @if $theme == "light" {
@@ -212,6 +216,8 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $shadow-color: $gray-600;
 
     $hover-filter: brightness(1.03) saturate(1.4);
+
+    $datepicker-color-mode: light;
 }
 
 // Classic Theme
@@ -296,6 +302,8 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $link-color: $primary;
 
     $hover-filter: brightness(1.2) saturate(1.1);
+
+    $datepicker-color-mode: dark;
 }
 
 $table-bg-scale: 30% !default;
