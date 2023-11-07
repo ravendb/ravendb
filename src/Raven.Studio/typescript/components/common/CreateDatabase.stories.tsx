@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 
 import React, { useState } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
@@ -21,7 +21,7 @@ export default {
             control: "none",
         },
     },
-} as ComponentMeta<typeof CreateDatabase>;
+} satisfies Meta<typeof CreateDatabase>;
 
 const TemplatePanel = (args: {
     serverAuthentication: boolean;

@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import React from "react";
 import { StatePill } from "./StatePill";
 import { boundCopy } from "../utils/common";
@@ -10,7 +10,7 @@ export default {
     title: "Bits/State Pills",
     decorators: [withStorybookContexts, withBootstrap5],
     component: StatePill,
-} as ComponentMeta<typeof StatePill>;
+} satisfies Meta<typeof StatePill>;
 
 const Template = () => {
     return (

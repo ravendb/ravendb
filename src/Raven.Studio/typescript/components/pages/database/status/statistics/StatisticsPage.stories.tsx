@@ -1,5 +1,5 @@
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { ComponentMeta } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import { StatisticsPage } from "./StatisticsPage";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -14,7 +14,7 @@ export default {
     component: StatisticsPage,
     decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
-} as ComponentMeta<typeof StatisticsPage>;
+} satisfies Meta<typeof StatisticsPage>;
 
 export const StatisticsTemplate = (args: { db: database; stats?: IndexStats[] }) => {
     const { databasesService, indexesService } = mockServices;

@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, ComponentStory } from "@storybook/react";
 import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "test/storybookTestUtils";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -15,7 +15,7 @@ export default {
     component: BackupsPage,
     decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
-} as ComponentMeta<typeof BackupsPage>;
+} satisfies Meta<typeof BackupsPage>;
 
 function commonInit() {
     const { accessManager } = mockStore;

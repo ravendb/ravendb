@@ -1,5 +1,5 @@
 ﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { ComponentMeta } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import { DropdownPanel, UncontrolledButtonWithDropdownPanel } from "./DropdownPanel";
 import React, { useCallback, useState } from "react";
 import { Button } from "reactstrap";
@@ -8,7 +8,7 @@ export default {
     title: "Bits/Dropdown Panel",
     decorators: [withStorybookContexts, withBootstrap5],
     component: UncontrolledDropdown,
-} as ComponentMeta<typeof UncontrolledDropdown>;
+} satisfies Meta<typeof UncontrolledDropdown>;
 
 export function UncontrolledDropdown() {
     const [log, setLog] = useState<string[]>([]);

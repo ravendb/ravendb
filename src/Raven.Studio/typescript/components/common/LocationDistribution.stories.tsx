@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import React from "react";
 import {
     DistributionItem,
@@ -13,7 +13,7 @@ import { Icon } from "./Icon";
 export default {
     title: "Bits/Location Distribution",
     component: LocationDistribution,
-} as ComponentMeta<typeof LocationDistribution>;
+} satisfies Meta<typeof LocationDistribution>;
 
 const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
     return (

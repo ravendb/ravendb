@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import { Steps } from "./Steps";
 import React, { useState } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
@@ -10,7 +10,7 @@ export default {
     title: "Bits/Steps",
     component: Steps,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof Steps>;
+} satisfies Meta<typeof Steps>;
 
 export function StepsExample() {
     const [currentStep, setCurrentStep] = useState(0);

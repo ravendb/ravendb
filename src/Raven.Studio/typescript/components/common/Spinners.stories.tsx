@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import React from "react";
 import { Spinner } from "reactstrap";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
@@ -7,7 +7,7 @@ export default {
     title: "Bits/Spinners",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Spinner,
-} as ComponentMeta<typeof Spinner>;
+} satisfies Meta<typeof Spinner>;
 
 export function allSpinners() {
     return (

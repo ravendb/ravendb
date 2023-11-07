@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import { Checkbox, Radio, Switch } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 import React from "react";
@@ -10,7 +10,7 @@ export default {
     title: "Bits/Checkbox",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Checkbox,
-} as ComponentMeta<typeof Checkbox>;
+} satisfies Meta<typeof Checkbox>;
 
 const Template = () => {
     const { value: selected, toggle } = useBoolean(false);

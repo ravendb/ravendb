@@ -1,5 +1,5 @@
 import { IndexesPage } from "./IndexesPage";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, ComponentStory } from "@storybook/react";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -12,7 +12,7 @@ export default {
     title: "Pages/Indexes/List of indexes",
     component: IndexesPage,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof IndexesPage>;
+} satisfies Meta<typeof IndexesPage>;
 
 function commonInit() {
     const { accessManager, license } = mockStore;

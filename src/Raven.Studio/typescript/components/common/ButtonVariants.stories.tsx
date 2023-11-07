@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Button } from "reactstrap";
@@ -8,7 +8,7 @@ export default {
     title: "Bits/Buttons",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Button,
-} as ComponentMeta<typeof Button>;
+} satisfies Meta<typeof Button>;
 
 const colors = [
     "primary",

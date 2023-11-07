@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetList } from "./NodeSet";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
@@ -8,7 +8,7 @@ export default {
     title: "Bits/NodeSet",
     component: NodeSet,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof NodeSet>;
+} satisfies Meta<typeof NodeSet>;
 
 export function NodeSets() {
     return (
