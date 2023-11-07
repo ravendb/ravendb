@@ -2069,6 +2069,7 @@ namespace Raven.Server.Documents
             internal Action Subscription_ActionToCallDuringWaitForChangedDocuments;
             internal Action<long> Subscription_ActionToCallAfterRegisterSubscriptionConnection;
             internal Action<ConcurrentSet<SubscriptionConnection>> ConcurrentSubscription_ActionToCallDuringWaitForSubscribe;
+            internal Action Subscription_ActionToCallDuringWaitForAck;
 
             internal IDisposable CallDuringWaitForChangedDocuments(Action action)
             {
@@ -2087,6 +2088,12 @@ namespace Raven.Server.Documents
                 ConcurrentSubscription_ActionToCallDuringWaitForSubscribe = action;
 
                 return new DisposableAction(() => ConcurrentSubscription_ActionToCallDuringWaitForSubscribe = null);
+            }
+            internal IDisposable CallDuringWaitForAck(Action action)
+            {
+                Subscription_ActionToCallDuringWaitForAck = action;
+
+                return new DisposableAction(() => Subscription_ActionToCallDuringWaitForAck = null);
             }
 
             internal ManualResetEvent DatabaseRecordLoadHold;

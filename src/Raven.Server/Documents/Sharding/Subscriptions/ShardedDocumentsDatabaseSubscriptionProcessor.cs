@@ -196,7 +196,11 @@ public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDat
         ItemsToRemoveFromResend.Clear();
         BatchItems.Clear();
 
-        return SubscriptionConnectionsState.AcknowledgeBatchAsync(Connection.LastSentChangeVectorInThisConnection, batchId, BatchItems, command => command.LastKnownSubscriptionChangeVector = changeVector);
+        return SubscriptionConnectionsState.AcknowledgeBatchAsync(Connection.LastSentChangeVectorInThisConnection, batchId, BatchItems, command =>
+        {
+            command.LastKnownSubscriptionChangeVector = changeVector;
+            command.LastModifiedIndex = Connection.LastModifiedIndex;
+        });
     }
 
     protected override ShardIncludesCommandImpl CreateIncludeCommands()

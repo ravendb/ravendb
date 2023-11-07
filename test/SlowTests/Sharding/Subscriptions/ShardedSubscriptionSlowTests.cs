@@ -26,10 +26,12 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Sharding.Cluster;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -156,7 +158,157 @@ namespace SlowTests.Sharding.Subscriptions
                     Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
                     Assert.Equal(newQuery, newState.Query);
                     Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+                    await CheckSubscriptionNewQuery(store, state, newQuery);
+                    Assert.True(second.Wait(_reasonableWaitTime));
 
+                    AssertOnSubscriptionConnectionRetryEventException(onSubscriptionConnectionRetryException, state);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
+        public async Task CanUpdateSubscriptionToStartFromBeginningOfTimeWhenThereIsActiveBatch()
+        {
+            /* if there is active batch and we update teh subscription meanwhile 
+             * I will fail the ack (since we cannot increase the orchestrator CV)
+             */
+
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var conf = await Sharding.GetShardingConfigurationAsync(store);
+                int n;
+                using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+                {
+                    n = ShardHelper.GetShardNumberFor(conf, allocator, "users/9");
+                }
+
+                var count = 10;
+                var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                Assert.Equal(1, subscriptions.Count);
+                var db1 = await Sharding.GetShardsDocumentDatabaseInstancesFor(store).FirstOrDefaultAsync(x => x.ShardNumber == n);
+                Assert.NotNull(db1);
+                var testingStuff = db1.ForTestingPurposesOnly();
+                using var disposable = testingStuff.CallAfterRegisterSubscriptionConnection(_ =>
+                {
+                    // make sure shard n doesn't process anything
+                    Thread.Sleep(1000);
+                    throw new SubscriptionDoesNotBelongToNodeException("DROPPED BY TEST");
+                });
+                var state = subscriptions.First();
+                Assert.Equal("from 'Users' as doc", state.Query);
+
+                const string newQuery = "from Users where Age > 18";
+
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(1000)
+                }))
+                {
+                    Exception onSubscriptionConnectionRetryException = null;
+                    subscription.OnSubscriptionConnectionRetry += x =>
+                    {
+                        onSubscriptionConnectionRetryException = x;
+                    };
+
+                    using var first = new CountdownEvent(count);
+                    using var second = new CountdownEvent(count / 2);
+                    var mre = new AsyncManualResetEvent();
+                    var mre2 = new ManualResetEventSlim();
+                    var t = subscription.Run(async x =>
+                    {
+                        if (first.IsSet)
+                        {
+                            second.Signal(x.NumberOfItemsInBatch);
+                        }
+                        else
+                        {
+                            first.Signal(x.NumberOfItemsInBatch);
+                            if (first.IsSet)
+                            {
+                                await mre.WaitAsync();
+                            }
+                        }
+                    });
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        var age = i < (count / 2) ? 18 : 19;
+                        using (var session = store.OpenSession())
+                        {
+                            session.Store(new User
+                            {
+                                Name = $"EGR_{i}",
+                                Age = age
+                            }, $"users/{i}");
+                            session.SaveChanges();
+                        }
+                    }
+                    var statistics0 = await store.Maintenance.ForNode("A").ForShardWithProxy(n).SendAsync(new GetStatisticsOperation());
+                    Assert.NotNull(statistics0);
+                    Assert.NotEqual(0, statistics0.CountOfDocuments);
+
+                    Assert.Equal(await WaitForValueAsync(() => first.CurrentCount, statistics0.CountOfDocuments), statistics0.CountOfDocuments);
+                    // shard n will start process
+                    disposable.Dispose();
+
+
+                    Assert.True(first.Wait(_reasonableWaitTime));
+
+
+                    var disposables = new List<IDisposable>();
+                    // set up action to halt the ack
+                    var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
+                    await foreach (var db in shards)
+                    {
+
+                        disposables.Add(db.ForTestingPurposesOnly().CallDuringWaitForAck(() =>
+                        {
+
+                            mre2.Wait(_reasonableWaitTime);
+
+
+                        }));
+
+                    }
+
+                    try
+                    {
+                        // advance subscription worker
+                        mre.Set();
+
+                        await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
+                        {
+                            Name = state.SubscriptionName,
+                            Query = newQuery,
+                            ChangeVector = $"{Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime}"
+                        });
+
+                        // now we should send the ack command & fail since the subscription changed
+                        mre2.Set();
+                    }
+                    finally
+                    {
+                        foreach (var d in disposables)
+                        {
+                            try
+                            {
+                                d.Dispose();
+                            }
+                            catch
+                            {
+                                // no one cares
+                            }
+                        }
+                    }
+                    await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);
+
+                    var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                    var newState = newSubscriptions.First();
+                    Assert.Equal(1, newSubscriptions.Count);
+                    Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                    Assert.Equal(newQuery, newState.Query);
+                    Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
                     await CheckSubscriptionNewQuery(store, state, newQuery);
                     Assert.True(second.Wait(_reasonableWaitTime));
 
