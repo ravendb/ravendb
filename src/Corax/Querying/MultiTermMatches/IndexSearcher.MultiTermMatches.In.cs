@@ -60,13 +60,22 @@ public partial class IndexSearcher
 
             if (inTerms.Count % 2 == 1)
             {
+                TermMatch termMatch; 
+                
+                
                 // We need even values to make the last work. 
-                if (typeof(TTermType) == typeof((string Term, bool Exact)) && (object)inTerms[^1] is (string stringTerm, bool isExact) )
-                    stack[^1] = Or(stack[^1], TermQuery(isExact ? exactField : field, stringTerm, terms), token);
+                if (typeof(TTermType) == typeof((string Term, bool Exact)) && (object)inTerms[^1] is (string stringTerm, bool isExact))
+                    termMatch = TermQuery(isExact ? exactField : field, stringTerm, terms);
                 else if (typeof(TTermType) == typeof(string))
-                    stack[^1] = Or(stack[^1], TermQuery(field, (string)(object)inTerms[^1], terms), token);
+                    termMatch = TermQuery(field, (string)(object)inTerms[^1], terms);
                 else
-                    stack[^1] = Or(stack[^1], TermQuery(field, (Slice)(object)inTerms[^1], terms), token);
+                    termMatch = TermQuery(field, (Slice)(object)inTerms[^1], terms);
+
+                if (inTerms.Count == 1)
+                    return MultiTermMatch.Create(termMatch);
+                
+
+                stack[^1] = Or(stack[^1], termMatch, token);
             }
 
             int currentTerms = stack.Length;
@@ -176,6 +185,10 @@ public partial class IndexSearcher
         {
             // We need even values to make the last work. 
             var term = TermQuery(field, queryTerms[^1].Item, terms);
+
+            if (allInTerms.Count == 1)
+                return term;
+            
             binaryMatchOfTermMatches[^1] = And(binaryMatchOfTermMatches[^1], term, cancellationToken);
         }
         

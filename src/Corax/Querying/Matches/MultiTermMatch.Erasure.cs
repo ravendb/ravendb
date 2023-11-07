@@ -134,6 +134,13 @@ namespace Corax.Querying.Matches
             return new MultiTermMatch(query, StaticFunctionCache<BinaryMatch>.FunctionTable);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static MultiTermMatch Create(in TermMatch query)
+        { 
+            return new MultiTermMatch(query, StaticFunctionCache<BinaryMatch>.FunctionTable);
+        }
+
+        
         private struct EmptyTermProvider : ITermProvider
         {
             public int TermsCount => 0;
