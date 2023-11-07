@@ -1,4 +1,4 @@
-import { ComponentMeta } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import React, { useState } from "react";
 import { DatabaseActionContexts, MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
 import { boundCopy } from "../utils/common";
@@ -8,7 +8,7 @@ export default {
     title: "Bits/Database location selector - multiple",
     component: MultipleDatabaseLocationSelector,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof MultipleDatabaseLocationSelector>;
+} satisfies Meta<typeof MultipleDatabaseLocationSelector>;
 
 const Template = (args: { allContexts: DatabaseActionContexts[] }) => {
     const [selectedContexts, setSelectedContexts] = useState<DatabaseActionContexts[]>(args.allContexts);

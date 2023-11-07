@@ -1,5 +1,5 @@
 ﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { ComponentMeta, ComponentStory, StoryObj } from "@storybook/react";
+import { Meta, ComponentStory, StoryObj } from "@storybook/react";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
@@ -12,7 +12,7 @@ export default {
     title: "Pages/Databases",
     component: DatabasesPage,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof DatabasesPage>;
+} satisfies Meta<typeof DatabasesPage>;
 
 function commonInit() {
     const { cluster } = mockStore;

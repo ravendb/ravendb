@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import { EmptySet } from "./EmptySet";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
@@ -7,7 +7,7 @@ export default {
     title: "Bits/EmptySet",
     component: EmptySet,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof EmptySet>;
+} satisfies Meta<typeof EmptySet>;
 
 export function EmptySets() {
     return (

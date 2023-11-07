@@ -1,5 +1,5 @@
 import React from "react";
-import { ComponentMeta } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5, licenseArgType } from "test/storybookTestUtils";
 import { AboutViewFloating, AboutViewAnchored, AccordionItemWrapper, AboutViewHeading } from "./AboutView";
 import { Col, Row } from "reactstrap";
@@ -17,7 +17,7 @@ export default {
     argTypes: {
         licenseType: licenseArgType,
     },
-} as ComponentMeta<typeof AboutViewFloating>;
+} satisfies Meta<typeof AboutViewFloating>;
 
 interface FloatingButtonProps {
     licenseType: Raven.Server.Commercial.LicenseType;

@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "./PropSummary";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
@@ -9,7 +9,7 @@ export default {
     title: "Bits/PropSummary",
     component: PropSummary,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof PropSummary>;
+} satisfies Meta<typeof PropSummary>;
 
 export function PropertySummary() {
     return (

@@ -1,5 +1,5 @@
 import React from "react";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, ComponentStory } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientGlobalConfiguration from "./ClientGlobalConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -9,7 +9,7 @@ export default {
     title: "Pages/ManageServer/Client Configuration",
     component: ClientGlobalConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof ClientGlobalConfiguration>;
+} satisfies Meta<typeof ClientGlobalConfiguration>;
 
 function commonInit() {
     const { manageServerService } = mockServices;

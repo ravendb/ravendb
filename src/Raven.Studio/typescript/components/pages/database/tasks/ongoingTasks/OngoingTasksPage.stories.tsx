@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { OngoingTasksPage } from "./OngoingTasksPage";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, ComponentStory } from "@storybook/react";
 import { forceStoryRerender, withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -26,7 +26,7 @@ export default {
     component: OngoingTasksPage,
     decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
-} as ComponentMeta<typeof OngoingTasksPage>;
+} satisfies Meta<typeof OngoingTasksPage>;
 
 function commonInit() {
     const { accessManager, license } = mockStore;
