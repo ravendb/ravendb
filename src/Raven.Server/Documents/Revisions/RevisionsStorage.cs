@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -136,7 +135,7 @@ namespace Raven.Server.Documents.Revisions
                  };
             }
 
-            var revisionsSchema = _documentsStorage.DocumentPut.DocumentsCompression.CompressRevisions ?
+            var revisionsSchema = _database.DocumentsCompression.CompressRevisions ?
                 CompressedRevisionsSchema :
                 RevisionsSchema;
 
