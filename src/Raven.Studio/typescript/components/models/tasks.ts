@@ -1,10 +1,11 @@
 ﻿import { loadStatus } from "./common";
 import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 import BackupType = Raven.Client.Documents.Operations.Backups.BackupType;
+import PullReplicationMode = Raven.Client.Documents.Operations.Replication.PullReplicationMode;
 
 export interface OngoingTaskHubDefinitionSharedInfo extends OngoingTaskSharedInfo {
     delayReplicationTime: number;
-    taskMode: Raven.Client.Documents.Operations.Replication.PullReplicationMode;
+    taskMode: PullReplicationMode;
     hasFiltering: boolean;
 }
 
@@ -26,7 +27,7 @@ export interface OngoingTaskNodeProgressDetails {
 }
 
 export interface OngoingTaskNodeInfoDetails {
-    taskConnectionStatus: OngoingTaskConnectionStatus;
+    taskConnectionStatus: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus;
     responsibleNode: string;
     error: string;
 }
@@ -181,69 +182,69 @@ export interface OngoingTaskInfo<
     nodesInfo: TNodesInfo[];
 }
 
-type OngoingTaskElasticSearchEtlInfo = OngoingTaskInfo<
+export type OngoingTaskElasticSearchEtlInfo = OngoingTaskInfo<
     OngoingTaskElasticSearchEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskElasticSearchEtlNodeInfoDetails>
 >;
 
-type OngoingTaskExternalReplicationInfo = OngoingTaskInfo<
+export type OngoingTaskExternalReplicationInfo = OngoingTaskInfo<
     OngoingTaskExternalReplicationSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskExternalReplicationNodeInfoDetails>
 >;
 
-type OngoingTaskOlapEtlInfo = OngoingTaskInfo<
+export type OngoingTaskOlapEtlInfo = OngoingTaskInfo<
     OngoingTaskOlapEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskOlapEtlNodeInfoDetails>
 >;
 
-type OngoingTaskPeriodicBackupInfo = OngoingTaskInfo<
+export type OngoingTaskPeriodicBackupInfo = OngoingTaskInfo<
     OngoingTaskPeriodicBackupSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskPeriodicBackupNodeInfoDetails>
 >;
 
-type OngoingTaskRavenEtlInfo = OngoingTaskInfo<
+export type OngoingTaskRavenEtlInfo = OngoingTaskInfo<
     OngoingTaskRavenEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskRavenEtlNodeInfoDetails>
 >;
 
-type OngoingTaskReplicationHubInfo = OngoingTaskInfo<
+export type OngoingTaskReplicationHubInfo = OngoingTaskInfo<
     OngoingTaskReplicationHubSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskReplicationHubNodeInfoDetails>
 >;
 
-type OngoingTaskHubDefinitionInfo = OngoingTaskInfo<OngoingTaskHubDefinitionSharedInfo, never>;
+export type OngoingTaskHubDefinitionInfo = OngoingTaskInfo<OngoingTaskHubDefinitionSharedInfo, never>;
 
-type OngoingTaskReplicationSinkInfo = OngoingTaskInfo<
+export type OngoingTaskReplicationSinkInfo = OngoingTaskInfo<
     OngoingTaskReplicationSinkSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskReplicationSinkNodeInfoDetails>
 >;
 
-type OngoingTaskSqlEtlInfo = OngoingTaskInfo<
+export type OngoingTaskSqlEtlInfo = OngoingTaskInfo<
     OngoingTaskSqlEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskSqlEtlNodeInfoDetails>
 >;
 
-type OngoingTaskKafkaEtlInfo = OngoingTaskInfo<
+export type OngoingTaskKafkaEtlInfo = OngoingTaskInfo<
     OngoingTaskKafkaEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskKafkaEtlNodeInfoDetails>
 >;
 
-type OngoingTaskRabbitMqEtlInfo = OngoingTaskInfo<
+export type OngoingTaskRabbitMqEtlInfo = OngoingTaskInfo<
     OngoingTaskRabbitMqEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskRabbitMqEtlNodeInfoDetails>
 >;
 
-type OngoingTaskKafkaSinkInfo = OngoingTaskInfo<
+export type OngoingTaskKafkaSinkInfo = OngoingTaskInfo<
     OngoingTaskKafkaSinkSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskKafkaSinkNodeInfoDetails>
 >;
 
-type OngoingTaskRabbitMqSinkInfo = OngoingTaskInfo<
+export type OngoingTaskRabbitMqSinkInfo = OngoingTaskInfo<
     OngoingTaskRabbitMqSinkSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskRabbitMqSinkNodeInfoDetails>
 >;
 
-type OngoingTaskSubscriptionInfo = OngoingTaskInfo<
+export type OngoingTaskSubscriptionInfo = OngoingTaskInfo<
     OngoingTaskSubscriptionSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskSubscriptionNodeInfoDetails>
 >;
