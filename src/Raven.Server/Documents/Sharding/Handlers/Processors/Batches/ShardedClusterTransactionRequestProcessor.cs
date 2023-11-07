@@ -9,8 +9,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;
 
 public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterTransactionRequestProcessor<ShardedDatabaseRequestHandler, ShardedBatchCommand>
 {
-    public ShardedClusterTransactionRequestProcessor(ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler)
+    public ShardedClusterTransactionRequestProcessor(ShardedDatabaseRequestHandler requestHandler, DocumentDatabase database)
+        : base(requestHandler, database)
     {
     }
 

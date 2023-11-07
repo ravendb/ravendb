@@ -2,26 +2,38 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Documents;
+using Raven.Server.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Rachis
 {
-    public sealed class ClusterTransactionWaiter : AsyncWaiter<ClusterTransactionCompletionResult>
+    public sealed class ClusterTransactionWaiter : AsyncWaiter<long?>
     {
-
-    }
-
-    public sealed class ClusterTransactionCompletionResult
-    {
-        public Task IndexTask;
-        public DynamicJsonArray Array;
+        public RemoveTask CreateTask(string id, long index, DocumentDatabase database, out Task<long?> task)
+        {
+            var t = new TaskCompletionSource<long?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var current = _results.GetOrAdd(id, t);
+        
+            if (current == t)
+            {
+                var lastCompleted = Interlocked.Read(ref database.LastCompletedClusterTransactionIndex);
+                if (lastCompleted >= index)
+                {
+                    current.TrySetResult(null);
+                }
+            }
+        
+            task = current.Task;
+            return new RemoveTask(this, id);
+        }
     }
 
     public class AsyncWaiter<T>
     {
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
+        protected readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
 
-        public RemoveTask CreateTask(out string id)
+        protected virtual RemoveTask CreateTask(out string id)
         {
             id = Guid.NewGuid().ToString();
             _results.TryAdd(id, new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously));
@@ -34,19 +46,19 @@ namespace Raven.Server.Rachis
             return val;
         }
 
-        public void TrySetResult(string id, T result)
+        public void SetResult(string id, T result)
         {
             if (_results.TryGetValue(id, out var task))
             {
-                task.TrySetResult(result);
+                task.SetResult(result);
             }
         }
 
-        public void TrySetException(string id, Exception e)
+        public void SetException(string id, Exception e)
         {
             if (_results.TryGetValue(id, out var task))
             {
-                task.TrySetException(e);
+                task.SetException(e);
             }
         }
 

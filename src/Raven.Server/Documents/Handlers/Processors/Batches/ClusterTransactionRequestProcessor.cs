@@ -12,8 +12,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
     {
         private readonly DatabaseTopology _topology;
 
-        public ClusterTransactionRequestProcessor(DatabaseRequestHandler requestHandler, [NotNull] DatabaseTopology topology)
-            : base(requestHandler)
+        public ClusterTransactionRequestProcessor(DatabaseRequestHandler requestHandler, [NotNull] DocumentDatabase database, [NotNull] DatabaseTopology topology)
+            : base(requestHandler, database)
         {
             _topology = topology ?? throw new ArgumentNullException(nameof(topology));
         }

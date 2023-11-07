@@ -95,7 +95,6 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                     (long index, DynamicJsonArray clusterResults) = await processor.ProcessAsync(context, command);
 
                     RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue

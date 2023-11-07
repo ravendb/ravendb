@@ -338,12 +338,8 @@ namespace Raven.Server.ServerWide
                 switch (type)
                 {
                     case nameof(ClusterTransactionCommand):
-                        var errors = ExecuteClusterTransaction(context, cmd, index);
-                        if (errors != null)
-                        {
-                            result = errors;
-                            leader?.SetStateOf(index, errors);
-                        }
+                        result = ExecuteClusterTransaction(context, cmd, index);
+                        leader?.SetStateOf(index, result);
                         break;
 
                     case nameof(CleanUpClusterStateCommand):
@@ -991,7 +987,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<ClusterTransactionCommand.ClusterTransactionErrorInfo> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private object ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
@@ -1017,9 +1013,10 @@ namespace Raven.Server.ServerWide
                 if (error == null)
                 {
                     DatabasesLandlord.ClusterDatabaseChangeType notify;
+                    var clusterTransactionResult = new ClusterTransactionResult();
                     if (clusterTransaction.HasDocumentsInTransaction)
                     {
-                        clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
+                        clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter, clusterTransactionResult);
                         notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
                     }
                     else
@@ -1029,7 +1026,7 @@ namespace Raven.Server.ServerWide
 
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
-                    return null;
+                    return clusterTransactionResult;
                 }
 
                 OnTransactionDispose(context, index);

@@ -620,7 +620,7 @@ namespace Raven.Server.ServerWide.Commands
         }
 
         public void SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index,
-            ClusterTransactionWaiter clusterTransactionWaiter)
+            ClusterTransactionWaiter clusterTransactionWaiter, ClusterTransactionResult clusterTransactionResult)
         {
             if (HasDocumentsInTransaction == false)
                 return;
@@ -653,21 +653,13 @@ namespace Raven.Server.ServerWide.Commands
                 foreach (var command in perShard.BuildCommandsPerShard(context, result))
                 {
                     size = result.Count - size;
-                    SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, command, size);
+                    clusterTransactionResult.Count = SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, command, size);
                 }
-
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-                {
-                    if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
-                        return;
-
-                    clusterTransactionWaiter.TrySetResult(Options.TaskId, new ClusterTransactionCompletionResult { Array = result });
-                };
             }
             else
             {
                 var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
-                SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, commands, DatabaseCommandsCount);
+                clusterTransactionResult.Count = SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, commands, DatabaseCommandsCount);
             }
         }
 
@@ -679,7 +671,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        private unsafe void SaveCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
+        private unsafe long SaveCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
             BlittableJsonReaderObject commands, long commandsCount)
         {
             using (GetPrefix(context, databaseName, out var databaseSlice))
@@ -695,6 +687,8 @@ namespace Raven.Server.ServerWide.Commands
                 }
                 using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
                     *(long*)ptr = prevCount + commandsCount;
+
+                return prevCount;
             }
         }
 
@@ -891,20 +885,30 @@ namespace Raven.Server.ServerWide.Commands
 
         public override object FromRemote(object remoteResult)
         {
-            var errors = new List<ClusterTransactionErrorInfo>();
-            if (remoteResult is BlittableJsonReaderArray array)
+            if (remoteResult is BlittableJsonReaderObject bjro)
             {
-                foreach (var o in array)
-                {
-                    if (o is not BlittableJsonReaderObject blittable)
-                        continue;
-
-                    errors.Add(ToClusterTransactionErrorInfo(blittable));
-                }
-
-                return errors;
+                return JsonDeserializationCluster.ClusterTransactionResult(bjro);
             }
+
+            if (remoteResult is BlittableJsonReaderArray bjra)
+            {
+                return GetErrors(bjra);
+            }
+
             return base.FromRemote(remoteResult);
+        }
+
+        private static List<ClusterTransactionErrorInfo> GetErrors(BlittableJsonReaderArray array)
+        {
+            var errors = new List<ClusterTransactionErrorInfo>();
+            foreach (var o in array)
+            {
+                if (o is not BlittableJsonReaderObject blittable)
+                    continue;
+
+                errors.Add(ToClusterTransactionErrorInfo(blittable));
+            }
+            return errors;
         }
 
         private static ClusterTransactionErrorInfo ToClusterTransactionErrorInfo(BlittableJsonReaderObject bjro)

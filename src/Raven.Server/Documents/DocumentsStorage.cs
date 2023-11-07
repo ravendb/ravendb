@@ -79,6 +79,7 @@ namespace Raven.Server.Documents
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
+        private static readonly Slice LastCompletedClusterTransactionIndexSlice;
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
@@ -103,6 +104,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "Etags", ByteStringType.Immutable, out EtagsSlice);
                 Slice.From(ctx, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
                 Slice.From(ctx, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
+                Slice.From(ctx, "LastCompletedClusterTransactionIndex", ByteStringType.Immutable, out LastCompletedClusterTransactionIndexSlice);
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
@@ -629,6 +631,32 @@ namespace Raven.Server.Documents
 
             return lastEtag;
         }
+
+        public static long ReadLastCompletedClusterTransactionIndex(Transaction tx)
+        {
+            if (tx == null)
+                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
+            var tree = tx.ReadTree(GlobalTreeSlice);
+            if (tree == null)
+            {
+                return 0;
+            }
+            var readResult = tree.Read(LastCompletedClusterTransactionIndexSlice);
+            if (readResult == null)
+            {
+                return 0;
+            }
+
+            return readResult.Reader.ReadLittleEndianInt64();
+        }
+
+        public void SetLastCompletedClusterTransactionIndex(DocumentsOperationContext context, long index)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
+            using (Slice.External(context.Allocator, (byte*)&index, sizeof(long), out Slice indexSlice))
+                tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
+        }
+
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,
             long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All, CancellationToken token = default)
