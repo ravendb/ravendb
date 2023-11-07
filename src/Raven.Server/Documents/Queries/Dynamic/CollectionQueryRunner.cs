@@ -136,6 +136,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var fieldsToFetch = new FieldsToFetch(query, null, IndexType.None);
                 var includeDocumentsCommand  = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
+                
+                if (resultToFill is StreamQueryResult<Document> && resultToFill.IncludedPaths != null && resultToFill.IncludedPaths.Length > 0)
+                    throw new NotSupportedException("Includes are not supported by this type of query");
+                
                 var includeRevisionsCommand  = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes);
                 
                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);

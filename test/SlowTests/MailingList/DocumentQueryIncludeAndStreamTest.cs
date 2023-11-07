@@ -92,6 +92,29 @@ namespace SlowTests.MailingList
                 Assert.Contains("Includes are not supported by this type of query", notSupportedException.Message);
             }
         }
+        
+        [Fact]
+        public void StreamDocumentCollectionQueryWithInclude()
+        {
+            var store = GetDocumentStore();
+            Setup(store);
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include StepExecutionsId");
+                var notSupportedException = Assert.Throws<RavenException>(() =>
+                {
+                    using (var stream = session.Advanced.Stream(query))
+                    {
+                        while (stream.MoveNext())
+                        {
+
+                        }
+                    }
+                });
+                Assert.Contains("Includes are not supported by this type of query", notSupportedException.Message);
+            }
+        }
 
         void Setup(IDocumentStore store)
         {
