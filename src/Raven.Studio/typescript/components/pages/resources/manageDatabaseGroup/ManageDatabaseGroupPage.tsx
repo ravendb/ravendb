@@ -17,10 +17,7 @@ import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-
-interface ManageDatabaseGroupPageProps {
-    databaseName: string;
-}
+import { NonShardedViewProps } from "components/models/common";
 
 function getDynamicDatabaseDistributionWarning(
     hasDynamicNodesDistribution: boolean,
@@ -42,13 +39,13 @@ function getDynamicDatabaseDistributionWarning(
     return null;
 }
 
-export function ManageDatabaseGroupPage({ databaseName }: ManageDatabaseGroupPageProps) {
+export function ManageDatabaseGroupPage({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
     const hasDynamicNodesDistribution = useAppSelector(licenseSelectors.statusValue("HasDynamicNodesDistribution"));
 
     const { isOperatorOrAbove } = useAccessManager();
 
-    const dbSharedInfo = useAppSelector(databaseSelectors.databaseByName(databaseName));
+    const dbSharedInfo = useAppSelector(databaseSelectors.databaseByName(db.name));
 
     const { value: dynamicDatabaseDistribution, toggle: toggleDynamicDatabaseDistribution } = useBoolean(
         dbSharedInfo.dynamicNodesDistribution
@@ -57,15 +54,15 @@ export function ManageDatabaseGroupPage({ databaseName }: ManageDatabaseGroupPag
     const settingsUniqueId = useId("settings");
 
     const addNewShard = useCallback(() => {
-        const addShardView = new addNewShardToDatabaseGroup(databaseName);
+        const addShardView = new addNewShardToDatabaseGroup(dbSharedInfo.name);
         app.showBootstrapDialog(addShardView);
-    }, [databaseName]);
+    }, [dbSharedInfo.name]);
 
     const changeDynamicDatabaseDistribution = useCallback(async () => {
         toggleDynamicDatabaseDistribution();
 
-        await databasesService.toggleDynamicNodeAssignment(databaseName, !dynamicDatabaseDistribution);
-    }, [dynamicDatabaseDistribution, toggleDynamicDatabaseDistribution, databasesService, databaseName]);
+        await databasesService.toggleDynamicNodeAssignment(dbSharedInfo.name, !dynamicDatabaseDistribution);
+    }, [dynamicDatabaseDistribution, toggleDynamicDatabaseDistribution, databasesService, dbSharedInfo.name]);
 
     const dynamicDatabaseDistributionWarning = getDynamicDatabaseDistributionWarning(
         hasDynamicNodesDistribution,
