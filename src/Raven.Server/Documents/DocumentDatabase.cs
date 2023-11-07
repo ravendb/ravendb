@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Commercial;
@@ -52,11 +51,10 @@ using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron;
+using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -96,6 +94,11 @@ namespace Raven.Server.Documents
         public string ClusterTransactionId;
 
         public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
+
+        public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
+
+        private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
+        private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
 
         public void ResetIdleTime()
         {
@@ -1587,10 +1590,10 @@ namespace Raven.Server.Documents
             ClientConfiguration = record.Client;
             StudioConfiguration = record.Studio;
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
-            DocumentsStorage.DocumentPut.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             PeriodicBackupRunner.UpdateConfigurations(record);
+            UpdateCompressionConfigurationFromDatabaseRecord(record);
         }
 
         private void LoadTimeSeriesPolicyRunnerConfigurations()
@@ -1678,6 +1681,27 @@ namespace Raven.Server.Documents
             {
                 return ServerStore.Cluster.ReadDatabase(context, Name);
             }
+        }
+
+        public TableSchema GetDocsSchemaForCollection(CollectionName collection) =>
+            _documentsCompression.CompressAllCollections || _compressedCollections.Contains(collection.Name)
+                ? DocumentsStorage.CompressedDocsSchema
+                : DocumentsStorage.DocsSchema;
+
+        private void UpdateCompressionConfigurationFromDatabaseRecord(DatabaseRecord record)
+        {
+            if (_documentsCompression.Equals(record.DocumentsCompression))
+                return;
+
+            if (record.DocumentsCompression == null) // legacy configurations
+            {
+                _compressedCollections.Clear();
+                _documentsCompression = new DocumentsCompressionConfiguration(false);
+                return;
+            }
+
+            _documentsCompression = record.DocumentsCompression;
+            _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
