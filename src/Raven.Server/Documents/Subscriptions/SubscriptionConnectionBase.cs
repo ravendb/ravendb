@@ -62,6 +62,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
         public readonly string ClientUri;
+        public long LastModifiedIndex => SubscriptionState.LastModifiedIndex;
 
         public string WorkerId => _options.WorkerId ??= Guid.NewGuid().ToString();
         public SubscriptionState SubscriptionState { get; set; }

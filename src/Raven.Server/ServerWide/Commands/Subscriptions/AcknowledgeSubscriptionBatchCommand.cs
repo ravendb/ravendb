@@ -35,6 +35,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public List<DocumentRecord> DocumentsToResend; // documents that were updated while this batch was processing 
 
         public string ShardName;
+        public long LastModifiedIndex;
 
         // for serialization
         private AcknowledgeSubscriptionBatchCommand() { }
@@ -78,6 +79,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
             else
             {
+                // we need to check if subscription was changed since we increment the orchestrator change vector
+                if (LastModifiedIndex != subscription.LastModifiedIndex)
+                {
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to changes in subscription task, current {nameof(LastModifiedIndex)} value is '{LastModifiedIndex}' but persisted value is '{subscription.LastModifiedIndex}'.{Environment.NewLine}Probably there was an admin intervention that changed the subscription change vector or query value.");
+                }
+
                 var changeVector = context.GetChangeVector(ChangeVector);
                 subscription.ShardingState.NodeTagPerShard[ShardName] = NodeTag;
                 subscription.ChangeVectorForNextBatchStartingPoint =
@@ -192,6 +199,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
             json[nameof(BatchId)] = BatchId;
             json[nameof(ShardName)] = ShardName;
+            json[nameof(LastModifiedIndex)] = LastModifiedIndex;
             if (DocumentsToResend != null)
                 json[nameof(DocumentsToResend)] = new DynamicJsonArray(DocumentsToResend);
         }

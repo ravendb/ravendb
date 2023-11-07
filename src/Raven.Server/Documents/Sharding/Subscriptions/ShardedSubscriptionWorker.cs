@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                     return (ShouldTryToReconnect: false, NodeRedirectTo: null);
                 }
 
-                return (ShouldTryToReconnect: true, r.NodeRedirectTo);
+                return (r.ShouldTryToReconnect, r.NodeRedirectTo);
             }
             // here we need to cancel all other sharded works as well
             catch (SubscriptionException se)
@@ -144,8 +144,24 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
 
             if (sce.CanReconnect)
-                return (true, null);
+                return (true, _redirectNode);
 
+            return (false, null);
+        }
+
+        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleShouldNotTryToReconnect()
+        {
+            return (true, _redirectNode);
+        }
+
+        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleAggregateException()
+        {
+            return (true, _redirectNode);
+        }
+
+        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionChangeVectorUpdateConcurrencyException()
+        {
+            // the orchestrator will reconnect (and restart the sharded workers) since the subscription was changed
             return (false, null);
         }
 
@@ -153,6 +169,18 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             // for sharded worker we throw the real exception
             throw ex;
+        }
+
+        protected override TimeSpan GetTimeToWaitBeforeConnectionRetry()
+        {
+            if (_redirectNode == null)
+            {
+                // don't spam the subscription connection if there is real error or unstable cluster
+                return TimeSpan.FromSeconds(3);
+            }
+
+            // we got SubscriptionDoesNotBelongToNodeException with an AppropriateNode set
+            return _options.TimeToWaitBeforeConnectionRetry;
         }
 
         protected override async Task TrySetRedirectNodeOnConnectToServerAsync()

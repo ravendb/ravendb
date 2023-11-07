@@ -367,6 +367,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override async Task OnClientAckAsync(string clientReplyChangeVector)
         {
+            _database.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForAck?.Invoke();
+
             await Processor.AcknowledgeBatchAsync(CurrentBatchId, clientReplyChangeVector);
             await SendConfirmAsync(TcpConnection.DocumentDatabase.Time.GetUtcNow());
         }
