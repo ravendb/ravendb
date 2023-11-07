@@ -180,14 +180,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         case "ToDictionary":
                             if (IsSelectManyCalledOnValueCollection(currentInvocation))
                             {
-                                if (DoesLambdaReturnDictionary(node))
+                                if (IsDictionaryReturned(node))
                                     return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
 
                                 return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})"));
                             }
                             else
                             {
-                                if (DoesLambdaReturnDictionary(node))
+                                if (IsDictionaryReturned(node))
                                     return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
                         
                                 return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, IEnumerable<dynamic>>)({node})"));
@@ -224,14 +224,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private static bool IsSelectManyCalledOnValueCollection(InvocationExpressionSyntax invocation)
         {
-            if (invocation.Expression is MemberAccessExpressionSyntax e1)
+            if (invocation.Expression is MemberAccessExpressionSyntax selectManyMemberAccess)
             {
-                if (e1.Expression is ObjectCreationExpressionSyntax e2)
+                if (selectManyMemberAccess.Expression is ObjectCreationExpressionSyntax objectCreation)
                 {
-                    if (e2.ArgumentList?.Arguments[0].Expression is MemberAccessExpressionSyntax m1)
+                    if (objectCreation.Type is IdentifierNameSyntax type && type.Identifier.Text == "DynamicArray")
                     {
-                        if (m1.Name.Identifier.Text == "Values" || m1.Name.Identifier.Text == "Keys")
-                            return true;
+                        if (objectCreation.ArgumentList?.Arguments[0].Expression is MemberAccessExpressionSyntax memberAccess)
+                        {
+                            if (memberAccess.Name.Identifier.Text == "Values")
+                                return true;
+                        }
                     }
                 }
             }
@@ -239,7 +242,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return false;
         }
 
-        private static bool DoesLambdaReturnDictionary(LambdaExpressionSyntax node)
+        private static bool IsDictionaryReturned(LambdaExpressionSyntax node)
         {
             if (node is SimpleLambdaExpressionSyntax lambda)
             {
