@@ -68,7 +68,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (IsLegacyCommand())
             {
                 if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
-                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
 
                 subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
             }
@@ -80,9 +80,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             else
             {
                 // we need to check if subscription was changed since we increment the orchestrator change vector
-                if (LastModifiedIndex != subscription.LastModifiedIndex)
+                if (LastModifiedIndex != subscription.RaftCommandIndex)
                 {
-                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to changes in subscription task, current {nameof(LastModifiedIndex)} value is '{LastModifiedIndex}' but persisted value is '{subscription.LastModifiedIndex}'.{Environment.NewLine}Probably there was an admin intervention that changed the subscription change vector or query value.");
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to changes in subscription task, current {nameof(LastModifiedIndex)} value is '{LastModifiedIndex}' but persisted value is '{subscription.RaftCommandIndex}'.{Environment.NewLine}Probably there was an admin intervention that changed the subscription change vector or query value.");
                 }
 
                 var changeVector = context.GetChangeVector(ChangeVector);

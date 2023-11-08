@@ -79,9 +79,9 @@ public sealed class ShardSubscriptionStorage : SubscriptionStorage
         if (taskStatus.LastClientConnectionTime != null)
             return false;
 
-        // persisted subscription state has different LastModifiedIndex than state of current connection
+        // persisted subscription state has different RaftCommandIndex than state of current connection
         // the subscription was modified and needs to reconnect
-        return taskStatus.LastModifiedIndex != state.SubscriptionState.LastModifiedIndex;
+        return taskStatus.RaftCommandIndex != state.SubscriptionState.RaftCommandIndex;
     }
 
     internal override void CleanupSubscriptions()

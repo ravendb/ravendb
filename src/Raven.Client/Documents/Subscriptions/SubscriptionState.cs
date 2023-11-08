@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Subscriptions
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
         public bool Disabled { get; set; }
         // raft index used to create or update subscription task
-        public long LastModifiedIndex { get; set; }
+        public long RaftCommandIndex { get; set; }
 
         // the responsible node of the subscription,
         // in sharding context - orchestrator node tag
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled,
                 [nameof(ArchivedDataProcessingBehavior)] = ArchivedDataProcessingBehavior,
-                [nameof(LastModifiedIndex)] = LastModifiedIndex
+                [nameof(RaftCommandIndex)] = RaftCommandIndex
             };
 
             if (ShardingState != null)

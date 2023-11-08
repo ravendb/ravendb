@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Subscriptions
                 LastClientConnectionTime = @base.LastClientConnectionTime;
                 Disabled = @base.Disabled;
                 ShardingState = @base.ShardingState;
-                LastModifiedIndex = @base.LastModifiedIndex;
+                RaftCommandIndex = @base.RaftCommandIndex;
             }
         }
 
