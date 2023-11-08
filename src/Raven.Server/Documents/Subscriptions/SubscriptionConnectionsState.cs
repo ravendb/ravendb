@@ -107,25 +107,25 @@ namespace Raven.Server.Documents.Subscriptions
                     return;
                 }
 
-                if (connection.SubscriptionState.LastModifiedIndex < _subscriptionState.LastModifiedIndex)
+                if (connection.SubscriptionState.RaftCommandIndex < _subscriptionState.RaftCommandIndex)
                 {
                     // this connection was modified while waiting to subscribe, lets try to drop it
                     DropSingleConnection(connection, new SubscriptionClosedException($"The subscription '{_subscriptionName}' was modified, connection have to be restarted.", canReconnect: true));
                     return;
                 }
 
-                if (connection.SubscriptionState.LastModifiedIndex == _subscriptionState.LastModifiedIndex)
+                if (connection.SubscriptionState.RaftCommandIndex == _subscriptionState.RaftCommandIndex)
                 {
                     // no changes in the subscription
                     return;
                 }
 
-                if (connection.SubscriptionState.LastModifiedIndex > _subscriptionState.LastModifiedIndex)
+                if (connection.SubscriptionState.RaftCommandIndex > _subscriptionState.RaftCommandIndex)
                 {
                     // we have new connection after subscription have changed
                     // we have to wait until old connections (with smaller raft index) will get disconnected
                     // then we continue and will re-initialize 
-                    while (_connections.Any(c => c.SubscriptionState.LastModifiedIndex == _subscriptionState.LastModifiedIndex))
+                    while (_connections.Any(c => c.SubscriptionState.RaftCommandIndex == _subscriptionState.RaftCommandIndex))
                     {
                         connection.CancellationTokenSource.Token.ThrowIfCancellationRequested();
                         await Task.Delay(300);

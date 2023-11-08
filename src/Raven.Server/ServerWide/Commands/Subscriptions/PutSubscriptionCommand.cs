@@ -115,7 +115,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 PinToMentorNode = PinToMentorNode,
                 LastClientConnectionTime = null,
                 ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior,
-                LastModifiedIndex = index
+                RaftCommandIndex = index
             }.ToJson();
             return json;
         }
