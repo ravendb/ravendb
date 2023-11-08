@@ -158,6 +158,9 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 var query = await IndexQueryServerSide.CreateAsync(HttpContext, GetStart(), GetPageSize(), queryContext.Documents, tracker, overrideQuery: overrideQuery);
                 query.IsStream = true;
+                
+                if (query.Metadata.Includes != null)
+                    throw new NotSupportedException("Includes are not supported by streaming query.");
 
                 var format = GetStringQueryString("format", false);
                 var debug = GetStringQueryString("debug", false);
@@ -235,6 +238,9 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 var queryJson = await queryContext.Documents.ReadForMemoryAsync(stream, "index/query");
                 var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, tracker);
                 query.IsStream = true;
+
+                if (query.Metadata.Includes != null)
+                    throw new NotSupportedException("Includes are not supported by streaming query.");
 
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
