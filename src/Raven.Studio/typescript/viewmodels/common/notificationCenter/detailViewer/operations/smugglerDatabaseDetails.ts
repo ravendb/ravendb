@@ -611,7 +611,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     }
 
     copyLogs() {
-        copyToClipboard.copy(this.messagesJoined(), "Copied details to clipboard.");
+        const dialogContainer = document.getElementById("exportModal");
+        copyToClipboard.copy(this.messagesJoined(), "Copied details to clipboard.", dialogContainer);
     }
 }
 
