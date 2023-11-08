@@ -35,6 +35,8 @@ namespace Raven.Server.Documents.Expiration
         private readonly TimeSpan _refreshPeriod;
         private readonly TimeSpan _expirationPeriod;
 
+        internal bool _throwOnError = false;
+
         public ExpirationConfiguration ExpirationConfiguration { get; }
         public RefreshConfiguration RefreshConfiguration { get; }
 
@@ -181,6 +183,9 @@ namespace Raven.Server.Documents.Expiration
             }
             catch (Exception e)
             {
+                if (_throwOnError)
+                    throw;
+
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Failed to {(forExpiration ? "delete" : "refresh")} documents on {_database.Name} which are older than {currentTime}", e);
             }

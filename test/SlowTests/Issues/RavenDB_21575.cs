@@ -64,6 +64,7 @@ public class RavenDB_21575 : RavenTestBase
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
             var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
+            expiredDocumentsCleaner._throwOnError = true;
             await expiredDocumentsCleaner.CleanupExpiredDocs();
 
             using (var session = store.OpenAsyncSession())
