@@ -150,7 +150,12 @@ class customSorters extends shardViewModelBase {
         
         const queryTask = $.Deferred<pagedResult<documentObject>>();
         
-        new queryCommand(this.db, 0, 128, criteria)
+        new queryCommand({
+                db: this.db,
+                skip: 0,
+                take: 128,
+                criteria
+            })
             .execute()
             .done(results => {
                 this.resultsCount(results.items.length);

@@ -45,17 +45,17 @@ class snapshot {
         this.compressionLevel(option);
     }
 
-    useAlgorightm(option: string) {
+    useAlgorithm(option: string) {
         this.compressionAlgorithm(option);
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.SnapshotSettings {
         const compressionLevel = snapshot.compressionLevelDictionary.find(x => x.name === this.compressionLevel());
-        const compressionAlgorighm = snapshot.compressionAlgorithmDictionary.find(x => x.name === this.compressionAlgorithm());
+        const compressionAlgorithm = snapshot.compressionAlgorithmDictionary.find(x => x.name === this.compressionAlgorithm());
 
         return {
             CompressionLevel: compressionLevel.fullName,
-            CompressionAlgorithm: compressionAlgorighm.fullName,
+            CompressionAlgorithm: compressionAlgorithm.fullName,
             ExcludeIndexes: this.excludeIndexes()
         }
     }

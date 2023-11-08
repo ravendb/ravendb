@@ -267,33 +267,41 @@ namespace Raven.Client.Documents.Queries
                     var dictionaryEnumerator = dict.GetEnumerator();
                     while (dictionaryEnumerator.MoveNext())
                     {
+                        Write("key");
                         WriteParameterValue(dictionaryEnumerator.Key, conventions, serializer);
+                        Write("value");
                         WriteParameterValue(dictionaryEnumerator.Value, conventions, serializer);
                         hadDictionaryValues = true;
                     }
+                    
                     if (hadDictionaryValues == false)
-                    {
                         Write("empty-dictionary");
-                    }
                     break;
 
                 case IEnumerable e:
                     bool hadEnumerableValues = false;
+                    var processedEnumerableItemsCount = 0;
+                    
                     var enumerator = e.GetEnumerator();
                     while (enumerator.MoveNext())
                     {
                         WriteParameterValue(enumerator.Current, conventions, serializer);
+                        
+                        if (enumerator.Current is string s)
+                            Write(s.Length);
+                        
+                        processedEnumerableItemsCount++;
                         hadEnumerableValues = true;
                     }
-                    if (hadEnumerableValues == false)
-                    {
+
+                    if (hadEnumerableValues)
+                        Write(processedEnumerableItemsCount);
+                    else
                         Write("empty-enumerator");
-                    }
 
                     break;
 
                 default:
-
                     var valueType = value.GetType();
                     if (valueType.IsPrimitive == false)
                     {

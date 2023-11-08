@@ -340,6 +340,18 @@
                 <label for="ignoreLimit">Ignore the index query size limit</label>
             </div>
         </div>
+        <div class="margin-left">
+            <div class="control-label">Projection Behavior</div>
+            <div class="btn-group projection-behavior-dropdown">
+                <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-toggle="dropdown">
+                    <span data-bind="text: projectionBehavior()"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" data-bind="foreach: ['Default', 'FromDocument', 'FromDocumentOrThrow', 'FromIndex', 'FromIndexOrThrow']" style="position: initial;">
+                    <li><a href="#" data-bind="text: $data, click: $parent.setProjectionBehavior.bind($parent, $data)"></a></li>
+                </ul>
+            </div>
+        </div>
     </div>
 </script>
 
