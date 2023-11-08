@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -848,11 +849,11 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(1, stats.CountOfDocuments); // the marker
                     Assert.Equal(2, stats.CountOfTombstones);
 
-                    var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, id);
-                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    var storage = await GetDocumentStorageFor(store, options.DatabaseMode, configuration.DatabaseName, id);
+                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        foreach (var tombstone in storage.DocumentsStorage.GetTombstonesFrom(ctx, 0))
+                        foreach (var tombstone in storage.GetTombstonesFrom(ctx, 0))
                         {
                             var documentTombstone = (DocumentReplicationItem)tombstone;
                             Assert.Equal("oren\r\neini", documentTombstone.Id);
@@ -899,6 +900,15 @@ namespace SlowTests.Server.Replication
             }
 
             return configuration;
+        }
+
+        private async Task<DocumentsStorage> GetDocumentStorageFor(IDocumentStore store, RavenDatabaseMode mode, string databaseName, string id)
+        {
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(
+                mode == RavenDatabaseMode.Single
+                    ? databaseName
+                    : await Sharding.GetShardDatabaseNameForDocAsync(store, id, databaseName));
+            return db.DocumentsStorage;
         }
     }
 }
