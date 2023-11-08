@@ -147,8 +147,10 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                         continue;
 
                     collectionOfFacetValues = new FacetValues(facetQuery.Legacy);
-                    if ((result.Value.Aggregations.Count > 0) == false)
+                    if (result.Value.Aggregations.Count <= 0)
+                    {
                         collectionOfFacetValues.AddDefault(key);
+                    }
                     else
                     {
                         foreach (var aggregation in result.Value.Aggregations)
@@ -182,6 +184,9 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             reader.Reset();
             while (reader.FindNext(fieldRootPage))
             {
+                if (reader.IsNull)
+                    continue;
+                
                 isMatching = result.RangeType switch
                 {
                     RangeType.Double => range.IsMatch(reader.CurrentDouble),
