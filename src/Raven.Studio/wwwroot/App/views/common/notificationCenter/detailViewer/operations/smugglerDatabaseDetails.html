@@ -111,8 +111,7 @@
             
             <div class="clearfix" data-bind="visible: !operationFailed()">
                 <div class="pull-right margin-top">
-                    <button class="btn btn-default btn-sm" data-bind="click: toggleDetails">
-                        <i class="icon-logs"></i><span data-bind="text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false"></span>
+                    <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">
                     </button>
                 </div>
             </div>

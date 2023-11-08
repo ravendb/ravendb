@@ -66,7 +66,7 @@ class threadStackTrace extends dialogViewModelBase {
     }
     
     copyStackTrace(): void {
-        copyToClipboard.copy(this.stackTrace().toString(), "Stack trace has been copied to clipboard");
+        copyToClipboard.copy(this.stackTrace().toString(), "Stack trace has been copied to clipboard", this.dialogContainer);
     }
 
     isUserCode(line: string): boolean {

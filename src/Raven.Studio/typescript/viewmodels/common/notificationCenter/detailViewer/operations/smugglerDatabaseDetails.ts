@@ -8,7 +8,6 @@ import genericProgress = require("common/helpers/database/genericProgress");
 import delayBackupCommand = require("commands/database/tasks/delayBackupCommand");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import copyToClipboard = require("common/copyToClipboard");
-
 import ShardedSmugglerResult = Raven.Client.Documents.Smuggler.ShardedSmugglerResult;
 import CountsWithSkippedCountAndLastEtag = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag;
 import CountsWithSkippedCountAndLastEtagAndAttachments = Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtagAndAttachments;
@@ -613,7 +612,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     copyLogs() {
         copyToClipboard.copy(this.messagesJoined(), "Copied details to clipboard.");
-}
+    }
 }
 
 export = smugglerDatabaseDetails;
