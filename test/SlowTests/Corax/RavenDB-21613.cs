@@ -45,7 +45,7 @@ public class RavenDB_21613 : RavenTestBase
     }
     
     [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Facets)]
-    public void Test()
+    public void CanDoAggregationOnFullYearPerDay()
     {
         using IDocumentStore store = GetDocumentStore();
         store.ExecuteIndex(new TimeRangeTestIndex("indexes/test_document-lucene", SearchEngineType.Lucene));
@@ -79,7 +79,14 @@ public class RavenDB_21613 : RavenTestBase
                 .AggregateBy(secondFacet)
                 .Execute();
 
-
+            var coraxTimestampResults = resultsCorax["Timestamp"].Values;
+            var coraxRanges = coraxTimestampResults.Select(x => x.Range).ToArray();
+            foreach (var result in results["Timestamp"].Values)
+            {
+                Assert.Contains(result.Range, coraxRanges);
+                var coraxResult = coraxTimestampResults.Single(x => x.Range == result.Range);
+                Assert.Equal(result.Count, coraxResult.Count);
+            }
         }
     }
 	
