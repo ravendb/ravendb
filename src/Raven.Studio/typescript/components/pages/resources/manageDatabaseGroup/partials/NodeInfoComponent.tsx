@@ -22,8 +22,8 @@ import { Icon } from "components/common/Icon";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
-import useConfirm from "components/hooks/useConfirm";
 import { useAccessManager } from "components/hooks/useAccessManager";
+import useConfirm from "components/common/ConfirmDialog";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
@@ -40,33 +40,32 @@ function PromoteButton({ databaseName, nodeTag }: PromoteButtonProps) {
     const { databasesService } = useServices();
     const asyncPromoteImmediately = useAsyncCallback(() => databasesService.promoteDatabaseNode(databaseName, nodeTag));
 
-    const [PromoteConfirm, confirmPromote] = useConfirm({
-        title: `Do you want to promote node ${nodeTag} to become a member?`,
-        icon: "promote",
-        actionColor: "primary",
-        confirmText: "Promote",
-    });
+    const confirm = useConfirm();
 
     const promote = async () => {
-        if (await confirmPromote()) {
+        const isConfirmed = await confirm({
+            title: `Do you want to promote node ${nodeTag} to become a member?`,
+            icon: "promote",
+            actionColor: "primary",
+            confirmText: "Promote",
+        });
+
+        if (isConfirmed) {
             await asyncPromoteImmediately.execute();
         }
     };
 
     return (
-        <>
-            <ButtonWithSpinner
-                className="rounded-pill justify-content-center"
-                title="Promote to become a member"
-                icon="promote"
-                size="sm"
-                onClick={promote}
-                isSpinning={asyncPromoteImmediately.status === "loading"}
-            >
-                Promote
-            </ButtonWithSpinner>
-            <PromoteConfirm />
-        </>
+        <ButtonWithSpinner
+            className="rounded-pill justify-content-center"
+            title="Promote to become a member"
+            icon="promote"
+            size="sm"
+            onClick={promote}
+            isSpinning={asyncPromoteImmediately.status === "loading"}
+        >
+            Promote
+        </ButtonWithSpinner>
     );
 }
 
