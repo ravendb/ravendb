@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -17,6 +18,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests
@@ -268,6 +270,45 @@ namespace FastTests
                 Assert.NotNull(result.Status);
                 Assert.NotNull(result.Status.LastOperationId);
                 return result.Status.LastOperationId.Value;
+            }
+
+            public async Task<long> CreateAndRunBackupAsync(IDocumentStore store, RavenDatabaseMode mode, string backupPath)
+            {
+                var config = CreateBackupConfiguration(backupPath);
+
+                if (mode == RavenDatabaseMode.Single)
+                    return await UpdateConfigAndRunBackupAsync(_parent.Server, config, store);
+
+                var backupCompleted = await _parent.Sharding.Backup.WaitForBackupToComplete(store);
+                var backupTaskId = await _parent.Sharding.Backup.UpdateConfigurationAndRunBackupAsync(_parent.Server, store, config);
+                Assert.True(WaitHandle.WaitAll(backupCompleted, TimeSpan.FromSeconds(10)));
+
+                return backupTaskId;
+            }
+
+            public async Task<RestoreBackupConfiguration> RunBackupAndCreateRestoreConfigurationAsync(DocumentStore store, RavenDatabaseMode mode, long backupTaskId, string backupPath)
+            {
+                var databaseName = _parent.GetDatabaseName();
+                var configuration = new RestoreBackupConfiguration { DatabaseName = databaseName };
+
+                if (mode == RavenDatabaseMode.Single)
+                {
+                    await RunBackupAndReturnStatusAsync(_parent.Server, backupTaskId, store, isFullBackup: false);
+                    configuration.BackupLocation = Directory.GetDirectories(backupPath).First();
+                }
+                else
+                {
+                    var backupCompleted = await _parent.Sharding.Backup.WaitForBackupToComplete(store);
+                    await _parent.Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, servers: new List<RavenServer> { _parent.Server });
+                    Assert.True(WaitHandle.WaitAll(backupCompleted, TimeSpan.FromSeconds(10)));
+
+                    var dirs = Directory.GetDirectories(backupPath);
+                    var sharding = await _parent.Sharding.GetShardingConfigurationAsync(store);
+                    var settings = _parent.Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+                    configuration.ShardRestoreSettings = settings;
+                }
+
+                return configuration;
             }
 
             internal static string PrintBackupStatus(PeriodicBackupStatus status)
