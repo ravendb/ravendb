@@ -147,7 +147,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                                         formState.isSubmitting || !formValues.isArchiveFrequencyEnabled
                                                     }
                                                     placeholder="Default (60)"
-                                                    addonText="seconds"
+                                                    addon="seconds"
                                                 />
                                             </div>
                                         </div>

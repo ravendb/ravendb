@@ -11,6 +11,7 @@ import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
 import { GetOptionValue, GroupBase, OnChangeValue, OptionsOrGroups } from "react-select";
 import Select, { SelectValue } from "./select/Select";
+import DatePicker from "./DatePicker";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -19,10 +20,14 @@ type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<
     control: Control<TFieldValues>;
 };
 
-type FormInputProps = InputProps & {
-    type: InputType;
-    addonText?: ReactNode;
-};
+interface AddonProps {
+    addon?: ReactNode;
+}
+
+type FormInputProps = Omit<InputProps, "addon"> &
+    AddonProps & {
+        type: InputType;
+    };
 
 export interface FormCheckboxesOption<T extends string | number = string> {
     value: T;
@@ -297,11 +302,41 @@ export function FormDurationPicker<
     );
 }
 
+export function FormDatePicker<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>(props: FormElementProps<TFieldValues, TName> & Omit<ComponentProps<typeof DatePicker>, "onChange"> & AddonProps) {
+    const { name, control, defaultValue, rules, shouldUnregister, addon, ...rest } = props;
+
+    const {
+        field: { onChange, value },
+        fieldState: { error, invalid },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return (
+        <>
+            <div className="d-flex flex-grow">
+                <InputGroup>
+                    <DatePicker {...rest} selected={value} onChange={onChange} invalid={invalid} />
+                    {addon && <InputGroupText>{addon}</InputGroupText>}
+                </InputGroup>
+            </div>
+            {error && <div className="d-flex text-danger small w-100">{error.message}</div>}
+        </>
+    );
+}
+
 function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(props: FormElementProps<TFieldValues, TName> & InputProps) {
-    const { name, control, defaultValue, rules, shouldUnregister, children, type, addonText, ...rest } = props;
+>(props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "addon"> & AddonProps) {
+    const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, ...rest } = props;
 
     const {
         field: { onChange, onBlur, value },
@@ -337,7 +372,7 @@ function FormInputGeneral<
                     >
                         {children}
                     </Input>
-                    {addonText && <InputGroupText>{addonText}</InputGroupText>}
+                    {addon && <InputGroupText>{addon}</InputGroupText>}
                 </InputGroup>
             </div>
 

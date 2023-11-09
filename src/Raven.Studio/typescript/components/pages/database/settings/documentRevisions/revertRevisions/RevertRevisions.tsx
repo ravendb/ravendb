@@ -9,7 +9,7 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { Icon } from "components/common/Icon";
-import { FormInput, FormSelect } from "components/common/Form";
+import { FormDatePicker, FormInput, FormSelect } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import assertUnreachable from "components/utils/assertUnreachable";
 import moment from "moment";
@@ -17,12 +17,9 @@ import useConfirm from "components/hooks/useConfirm";
 import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import notificationCenter from "common/notifications/notificationCenter";
-import genUtils from "common/generalUtils";
-import { todo } from "common/developmentHelper";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
-
-todo("Styling", "Kwiato", "<FormInput type='date/datetime-local' /> styling");
-todo("Styling", "Kwiato", "inputs and validation error position");
+import { useAsyncCallback } from "react-async-hook";
+import RevertRevisionsRequest = Raven.Server.Documents.Revisions.RevertRevisionsRequest;
 
 export default function RevertRevisions({ db }: NonShardedViewProps) {
     const { control, formState, handleSubmit, setValue } = useForm<RevertRevisionsFormData>({
@@ -54,10 +51,14 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
 
     const { databasesService } = useServices();
 
+    const asyncRevertRevisions = useAsyncCallback((dto: RevertRevisionsRequest) =>
+        databasesService.revertRevisions(db, dto)
+    );
+
     const onRevert = async (formData: RevertRevisionsFormData) => {
         if (await confirmRevert()) {
             return tryHandleSubmit(async () => {
-                const result = await databasesService.revertRevisions(db, toDto(formData));
+                const result = await asyncRevertRevisions.execute(toDto(formData));
                 notificationCenter.instance.openDetailsForOperationById(db, result.OperationId);
             });
         }
@@ -67,7 +68,7 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
         <Row className="content-margin gy-sm">
             <Col>
                 <AboutViewHeading title="Revert Revisions" icon="revert-revisions" />
-                <Form onSubmit={handleSubmit(onRevert)}>
+                <Form onSubmit={handleSubmit(onRevert)} autoComplete="off">
                     <div className="d-flex justify-content-between align-items-end">
                         <RevertConfirm />
                         <ButtonWithSpinner
@@ -75,7 +76,7 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                             color="primary"
                             icon="revert-revisions"
                             disabled={!formState.isDirty}
-                            isSpinning={formState.isSubmitting}
+                            isSpinning={asyncRevertRevisions.status === "loading"}
                         >
                             Revert
                         </ButtonWithSpinner>
@@ -90,14 +91,18 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                         <CardBody className="gap-4">
                             <FormGroup>
                                 <Label for="pointInTime">Point in Time</Label>
-                                <FormInput
-                                    type="datetime-local"
-                                    control={control}
+                                <FormDatePicker
                                     id="pointInTime"
                                     name="pointInTime"
-                                    max={moment().endOf("day").format(genUtils.inputDateTimeFormat)}
-                                    addonText="local"
-                                    placeholder="Select the point in time"
+                                    control={control}
+                                    showTimeSelect
+                                    timeIntervals={15}
+                                    filterDate={filterPointInTime}
+                                    filterTime={filterPointInTime}
+                                    showYearDropdown
+                                    showMonthDropdown
+                                    placeholderText="Select the point in time"
+                                    addon="local"
                                 />
                             </FormGroup>
                             <FormGroup>
@@ -109,7 +114,7 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                                         id="timeWindow"
                                         name="timeWindow"
                                         placeholder={`default (${defaultWindowValue})`}
-                                        addonText={
+                                        addon={
                                             <FormSelect
                                                 control={control}
                                                 name="timeMagnitude"
@@ -205,12 +210,19 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
 const defaultDateFormat = "DD/MM/YYYY HH:mm";
 const defaultWindowValue = 96;
 
+const filterPointInTime = (date: Date) => {
+    const currentDate = moment().add(10, "minutes");
+    const selectedDate = moment(date);
+
+    return currentDate > selectedDate;
+};
+
 const timeWindowOptions: SelectOption<timeMagnitude>[] = ["minutes", "hours", "days"].map((x: timeMagnitude) => ({
     value: x,
     label: x,
 }));
 
-function toDto(formData: RevertRevisionsFormData): Raven.Server.Documents.Revisions.RevertRevisionsRequest {
+function toDto(formData: RevertRevisionsFormData): RevertRevisionsRequest {
     let WindowInSec = formData.timeWindow ?? defaultWindowValue;
 
     switch (formData.timeMagnitude) {

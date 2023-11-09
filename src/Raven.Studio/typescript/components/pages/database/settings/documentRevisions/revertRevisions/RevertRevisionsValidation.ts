@@ -1,10 +1,8 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import genUtils from "common/generalUtils";
-import moment from "moment";
 import * as yup from "yup";
 
 const schema = yup.object({
-    pointInTime: yup.date().nullable().required().max(moment().add(10, "minutes").format(genUtils.inputDateTimeFormat)),
+    pointInTime: yup.date().nullable().required(),
     timeWindow: yup.number().nullable().positive().integer(),
     timeMagnitude: yup.mixed<timeMagnitude>().oneOf(["minutes", "hours", "days"]),
     isRevertAllCollections: yup.boolean(),
