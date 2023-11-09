@@ -3144,10 +3144,6 @@ namespace Raven.Server.Documents.Indexes
         {
             QueryInternalPreparation(query);
 
-            if (resultToFill.SupportsInclude == false
-                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
-                throw new NotSupportedException("Includes are not supported by this type of query.");
-
             if (resultToFill.SupportsHighlighting == false && query.Metadata.HasHighlightings)
                 throw new NotSupportedException("Highlighting is not supported by this type of query.");
 
@@ -3420,10 +3416,6 @@ namespace Raven.Server.Documents.Indexes
           where TQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
         {
             QueryInternalPreparation(query);
-
-            if (resultToFill.SupportsInclude == false
-                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
-                throw new NotSupportedException("Includes are not supported by this type of query.");
 
             if (resultToFill.SupportsHighlighting == false && query.Metadata.HasHighlightings)
                 throw new NotSupportedException("Highlighting is not supported by this type of query.");

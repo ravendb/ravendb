@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,7 +68,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void StreamDocumentQueryWithInclude()
         {
             var store = GetDocumentStore();
@@ -93,7 +94,7 @@ namespace SlowTests.MailingList
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void StreamDocumentCollectionQueryWithInclude()
         {
             var store = GetDocumentStore();
