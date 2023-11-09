@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -33,12 +34,10 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
     where TBatchCommand : IBatchCommand
 {
     protected readonly TRequestHandler RequestHandler;
-    public readonly DocumentDatabase Database;
 
-    protected AbstractClusterTransactionRequestProcessor([NotNull] TRequestHandler requestHandler, [NotNull] DocumentDatabase database)
+    protected AbstractClusterTransactionRequestProcessor([NotNull] TRequestHandler requestHandler)
     {
         RequestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
-        Database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
     protected abstract ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(TBatchCommand command);
@@ -74,7 +73,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         var clusterTransactionCommandResult = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
         var index = clusterTransactionCommandResult.Index;
-        using var _ = RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, index, Database, out var onDatabaseCompletionTask);
+        using var _ = CreateClusterTransactionTask(id: options.TaskId, index, out var onDatabaseCompletionTask);
         var result = clusterTransactionCommandResult.Result;
         var array = new DynamicJsonArray();
 
@@ -83,7 +82,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         var count = await GetClusterTransactionCount(result, raftRequestId, clusterTransactionCommand.DatabaseCommandsCount, onDatabaseCompletionTask);
         if (count.HasValue)
-            GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count.Value, lastModified: Database.Time.GetUtcNow(),
+            GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count.Value, lastModified: GetUtcNow(),
                 options.DisableAtomicDocumentWrites, array);
 
         foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
@@ -93,6 +92,11 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         return (clusterTransactionCommandResult.Index, array);
     }
+
+    public abstract AsyncWaiter<long?>.RemoveTask CreateClusterTransactionTask(string id, long index, out Task<long?> task);
+
+    public abstract Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask);
+    protected abstract DateTime GetUtcNow();
 
     private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
     {
@@ -108,8 +112,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         if (databaseCommandsCount == 0)
             return null;
 
-        Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
-        var count = await onDatabaseCompletionTask.WithCancellation(RequestHandler.HttpContext.RequestAborted);
+        RequestHandler.ServerStore.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
+        var count = await WaitForDatabaseCompletion(onDatabaseCompletionTask);
 
         if (count.HasValue)
             return count;
@@ -158,10 +162,13 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         if (count < 0)
             throw new InvalidOperationException($"ClusterTransactionCommand result is invalid - count lower then 0 ({count}).");
 
+        using var _ = RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
+
         foreach (var dataCmd in databaseCommands)
         {
             count++;
-            var cv = GenerateChangeVector(index, count, disableAtomicDocumentWrites, Database.DatabaseGroupId, Database.ClusterTransactionId);
+            var info = GetDatabaseGroupIdAndClusterTransactionId(ctx, dataCmd.Id);
+            var cv = GenerateChangeVector(index, count, disableAtomicDocumentWrites, info.DatabaseGroupId, info.ClusterTransactionId);
 
             switch (dataCmd.Type)
             {
@@ -190,6 +197,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             }
         }
     }
+
+    protected abstract (string DatabaseGroupId, string ClusterTransactionId) GetDatabaseGroupIdAndClusterTransactionId(TransactionOperationContext ctx, string id);
 
     private static string GenerateChangeVector(long index, long count, bool? disableAtomicDocumentWrites, string databaseGroupId, string clusterTransactionId)
     {

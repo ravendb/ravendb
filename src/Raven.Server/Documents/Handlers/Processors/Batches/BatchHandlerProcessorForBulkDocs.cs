@@ -158,7 +158,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         if (topology.Promotables.Contains(RequestHandler.ServerStore.NodeTag))
             throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
-        return new ClusterTransactionRequestProcessor(RequestHandler, RequestHandler.Database, topology);
+        return new ClusterTransactionRequestProcessor(RequestHandler, topology);
     }
 
     [DoesNotReturn]

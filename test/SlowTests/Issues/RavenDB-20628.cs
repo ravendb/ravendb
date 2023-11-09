@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Esprima.Ast;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Server;
+using Raven.Server.Rachis;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -17,17 +20,17 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Cluster)]
-        public async Task ClusterTransaction_Should_Work_After_Commit_And_Failover()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ClusterTransaction_Should_Work_After_Commit_And_Failover(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
-            using var store = GetDocumentStore(new Options
-            {
-                Server = leader,
-                ReplicationFactor = nodes.Count
-            });
 
-            await ApplyFailoverAfterCommitAsync(nodes, store.Database);
+            options.Server = leader;
+            options.ReplicationFactor = nodes.Count;
+            using var store = GetDocumentStore(options);
+
+            await ApplyFailoverAfterCommitAsync(nodes);
 
             var user1 = new User() { Id = "Users/1-A", Name = "Alice" };
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -41,19 +44,17 @@ namespace SlowTests.Issues
                 var users1onSession = await session.LoadAsync<User>(user1.Id);
                 Assert.Equal(users1onSession.Name, "Alice");
             }
+
         }
 
-        [RavenFact(RavenTestCategory.Cluster)]
-        public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
-            using var store = GetDocumentStore(new Options
-            {
-                Server = leader,
-                ReplicationFactor = nodes.Count
-            });
+            using var store = GetDocumentStore(options);
 
-            await ApplyFailoverAfterCommitAsync(nodes, store.Database);
+            await ApplyFailoverAfterCommitAsync(nodes);
 
             var user1 = new User() { Id = "Users/1-A", Name = "Alice" };
             var user2 = new User() { Id = "Users/2-A", Name = "Bob" };
@@ -87,17 +88,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Cluster)]
-        public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover_UseResults()
+        [RavenTheory(RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover_UseResults(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
-            using var store = GetDocumentStore(new Options
-            {
-                Server = leader,
-                ReplicationFactor = nodes.Count
-            });
+            using var store = GetDocumentStore(options);
 
-            await ApplyFailoverAfterCommitAsync(nodes, store.Database);
+            await ApplyFailoverAfterCommitAsync(nodes);
 
             var user1 = new User() { Id = "Users/1-A", Name = "Alice" };
             var user2 = new User() { Id = "Users/2-A", Name = "Bob" };
@@ -135,14 +133,12 @@ namespace SlowTests.Issues
             }
         }
 
-        private async Task ApplyFailoverAfterCommitAsync(List<RavenServer> nodes, string database)
+        private async Task ApplyFailoverAfterCommitAsync(List<RavenServer> nodes)
         {
             int failover = 0;
-            foreach (var n in nodes)
+            foreach (var server in nodes)
             {
-                var server = n;
-                var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                db.ForTestingPurposesOnly().AfterCommitInClusterTransaction = () =>
+                server.ServerStore.ForTestingPurposesOnly().AfterCommitInClusterTransaction = () =>
                 {
                     if (Interlocked.CompareExchange(ref failover, 1, 0) == 0)
                         throw new TimeoutException("Fake server fail that cause failover"); // for failover in node A

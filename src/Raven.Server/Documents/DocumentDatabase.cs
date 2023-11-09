@@ -769,7 +769,9 @@ namespace Raven.Server.Documents
                         options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                         mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
 
-                    var removeTask = ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(command.Options.TaskId, command.Index, database: this, out _);
+                    var removeTask = ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(command.Options.TaskId);
+                    // TODO: FOR DATABASE AND SHARDING CREATE TASK IS DIFFERENT
+
                     /*
                         the remove task that we are creating here is relevant only for a failover with wait for index:
                         We need the task only when we do a failover during cluster transaction (batch handler) with 'wait for index'.
@@ -2091,8 +2093,6 @@ namespace Raven.Server.Documents
             internal bool ForceSendTombstones = false;
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
-
-            internal Action AfterCommitInClusterTransaction;
 
             internal bool EnableWritesToTheWrongShard = false;
 

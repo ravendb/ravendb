@@ -650,11 +650,22 @@ namespace Raven.Server.ServerWide.Commands
                 }
 
                 var size = 0;
+                long? count = null;
                 foreach (var command in perShard.BuildCommandsPerShard(context, result))
                 {
                     size = result.Count - size;
-                    clusterTransactionResult.Count = SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, command, size);
+                    count = SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, command, size);
                 }
+
+                clusterTransactionResult.Count = count;
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                {
+                    if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
+                        return;
+
+                    clusterTransactionWaiter.SetResult(Options.TaskId, count);
+                };
             }
             else
             {
