@@ -15,7 +15,6 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -815,7 +814,7 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var backupTaskId = await CreateAndRunBackup(store, options.DatabaseMode, backupPath);
+                var backupTaskId = await Backup.CreateAndRunBackupAsync(store, options.DatabaseMode, backupPath);
 
                 using (var session = store.OpenSession())
                 {
@@ -841,7 +840,7 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var configuration = await RunBackupAndCreateRestoreConfiguration(store, options.DatabaseMode, backupTaskId, backupPath);
+                var configuration = await Backup.RunBackupAndCreateRestoreConfigurationAsync(store, options.DatabaseMode, backupTaskId, backupPath);
 
                 using (Backup.RestoreDatabase(store, configuration))
                 {
@@ -849,7 +848,11 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(1, stats.CountOfDocuments); // the marker
                     Assert.Equal(2, stats.CountOfTombstones);
 
-                    var storage = await GetDocumentStorageFor(store, options.DatabaseMode, configuration.DatabaseName, id);
+                    var dbName = options.DatabaseMode == RavenDatabaseMode.Single
+                        ? configuration.DatabaseName
+                        : await Sharding.GetShardDatabaseNameForDocAsync(store, id, configuration.DatabaseName);
+                    var storage = (await GetDocumentDatabaseInstanceForAsync(dbName)).DocumentsStorage;
+
                     using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -861,54 +864,6 @@ namespace SlowTests.Server.Replication
                     }
                 }
             }
-        }
-
-        private async Task<long> CreateAndRunBackup(IDocumentStore store, RavenDatabaseMode mode, string backupPath)
-        {
-            var config = Backup.CreateBackupConfiguration(backupPath);
-
-            if (mode == RavenDatabaseMode.Single)
-                return await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-            
-            var backupCompleted = await Sharding.Backup.WaitForBackupToComplete(store);
-            var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
-            Assert.True(WaitHandle.WaitAll(backupCompleted, TimeSpan.FromSeconds(10)));
-
-            return backupTaskId;
-        }
-
-        private async Task<RestoreBackupConfiguration> RunBackupAndCreateRestoreConfiguration(DocumentStore store, RavenDatabaseMode mode, long backupTaskId, string backupPath)
-        {
-            var databaseName = GetDatabaseName();
-            var configuration = new RestoreBackupConfiguration { DatabaseName = databaseName };
-
-            if (mode == RavenDatabaseMode.Single)
-            {
-                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
-                configuration.BackupLocation = Directory.GetDirectories(backupPath).First();
-            }
-            else
-            {
-                var backupCompleted = await Sharding.Backup.WaitForBackupToComplete(store);
-                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, servers: new List<RavenServer> { Server });
-                Assert.True(WaitHandle.WaitAll(backupCompleted, TimeSpan.FromSeconds(10)));
-
-                var dirs = Directory.GetDirectories(backupPath);
-                var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
-                configuration.ShardRestoreSettings = settings;
-            }
-
-            return configuration;
-        }
-
-        private async Task<DocumentsStorage> GetDocumentStorageFor(IDocumentStore store, RavenDatabaseMode mode, string databaseName, string id)
-        {
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(
-                mode == RavenDatabaseMode.Single
-                    ? databaseName
-                    : await Sharding.GetShardDatabaseNameForDocAsync(store, id, databaseName));
-            return db.DocumentsStorage;
         }
     }
 }
