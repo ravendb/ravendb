@@ -9,6 +9,7 @@ import { createRoot, Root } from "react-dom/client";
 import store from "components/store";
 import { Provider as ReduxProvider, ProviderProps as ReduxProviderProps } from "react-redux";
 import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
+import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
 
 class extensions {
     static install() {
@@ -234,8 +235,9 @@ class extensions {
                     const component = createElement(options.component, options.props);
                     const dirtyFlagWrapper = createElement(DirtyFlagProvider, options.dirtyFlag, component);
                     const reduxWrapper = createElement(ReduxProvider, { store: store } as ReduxProviderProps, dirtyFlagWrapper);
+                    const confirmDialogProvider = createElement(ConfirmDialogProvider, null, reduxWrapper);
 
-                    root.render(reduxWrapper);
+                    root.render(confirmDialogProvider);
                     $(element).data("root", root);
                 }
             }
