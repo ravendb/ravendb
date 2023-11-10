@@ -151,7 +151,7 @@ export function FormSelect<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & ComponentProps<typeof Select<Option, IsMulti, Group>>) {
-    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+    const { name, control, defaultValue, rules, shouldUnregister, className, ...rest } = props;
 
     const {
         field: { onChange, value: formValues },
@@ -169,7 +169,7 @@ export function FormSelect<
     const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
 
     return (
-        <div className="position-relative flex-grow-1">
+        <div className={classNames("position-relative flex-grow-1", className)}>
             <div className="d-flex flex-grow-1">
                 <Select
                     value={selectedOptions}
