@@ -245,26 +245,29 @@ namespace Corax.Indexing
         private IndexedField GetDynamicIndexedField(ByteStringContext context, string currentFieldName)
         {
             using var _ = Slice.From(context, currentFieldName, out var slice);
-            return GetDynamicIndexedField(context, slice);
+            return GetDynamicIndexedField(slice);
         }
         
         private IndexedField GetDynamicIndexedField(ByteStringContext context, Span<byte> currentFieldName)
         {
             using var _ = Slice.From(context, currentFieldName, out var slice);
-            return GetDynamicIndexedField(context, slice);
+            return GetDynamicIndexedField(slice);
         }
 
-        private IndexedField GetDynamicIndexedField(ByteStringContext context, Slice slice)
+
+        private IndexedField GetDynamicIndexedField(Slice fieldName)
         {
-            if (_fieldsMapping.TryGetByFieldName(slice, out var indexFieldBinding))
+            //We have to use transaction context here for storing slices in _dynamicFieldsTerms since we may reset other
+            //allocators during the document insertion.
+            var context = _transaction.LowLevelTransaction.Allocator;
+            if (_fieldsMapping.TryGetByFieldName(fieldName, out var indexFieldBinding))
                 return _knownFieldsTerms[indexFieldBinding.FieldId];
 
             _dynamicFieldsTerms ??= new(SliceComparer.Instance);
-            if (_dynamicFieldsTerms.TryGetValue(slice, out var indexedField))
+            if (_dynamicFieldsTerms.TryGetValue(fieldName, out var indexedField))
                 return indexedField;
 
-            var clonedFieldName = slice.Clone(context);
-
+            var clonedFieldName = fieldName.Clone(context);
             if (_dynamicFieldsMapping is null || _persistedDynamicFieldsAnalyzers is null)
             {
                 indexedField = CreateDynamicField(null, FieldIndexingMode.Normal);
@@ -272,8 +275,8 @@ namespace Corax.Indexing
                 return indexedField;
             }
 
-            var persistedAnalyzer = _persistedDynamicFieldsAnalyzers.Read(slice);
-            if (_dynamicFieldsMapping?.TryGetByFieldName(slice, out var binding) is true)
+            var persistedAnalyzer = _persistedDynamicFieldsAnalyzers.Read(clonedFieldName);
+            if (_dynamicFieldsMapping?.TryGetByFieldName(clonedFieldName, out var binding) is true)
             {
                 indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong,
                     binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer,
@@ -288,7 +291,7 @@ namespace Corax.Indexing
 
                 if (binding.FieldIndexingMode != FieldIndexingMode.Normal && persistedAnalyzer == null)
                 {
-                    _persistedDynamicFieldsAnalyzers.Add(slice, (byte)binding.FieldIndexingMode);
+                    _persistedDynamicFieldsAnalyzers.Add(clonedFieldName, (byte)binding.FieldIndexingMode);
                 }
 
                 _dynamicFieldsTerms[clonedFieldName] = indexedField;
@@ -308,8 +311,8 @@ namespace Corax.Indexing
                 Analyzer analyzer = mode switch
                 {
                     FieldIndexingMode.No => null,
-                    FieldIndexingMode.Exact => _dynamicFieldsMapping!.ExactAnalyzer(slice.ToString()),
-                    FieldIndexingMode.Search => _dynamicFieldsMapping!.SearchAnalyzer(slice.ToString()),
+                    FieldIndexingMode.Exact => _dynamicFieldsMapping!.ExactAnalyzer(clonedFieldName.ToString()),
+                    FieldIndexingMode.Search => _dynamicFieldsMapping!.SearchAnalyzer(clonedFieldName.ToString()),
                     _ => _dynamicFieldsMapping!.DefaultAnalyzer
                 };
 
@@ -664,11 +667,12 @@ namespace Corax.Indexing
             _additionsForTerm.Clear();
             _removalsForTerm.Clear();
             _tempListBuffer.Dispose();
-
+            
             for (int i = 0; i < _knownFieldsTerms.Length; i++)
             {
                 _knownFieldsTerms[i].Clear();
             }
+            
             if (_dynamicFieldsTerms != null)
             {
                 foreach (var (_, field)  in _dynamicFieldsTerms)
