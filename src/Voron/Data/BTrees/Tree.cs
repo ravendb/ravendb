@@ -1384,9 +1384,13 @@ namespace Voron.Data.BTrees
             return CompactTreeFor(keySlice);
         }
         
+        // RavenDB-21678: If you're keeping a reference to CompactTree, it may happen that you can actually override the prepareLocator and 
+        // have more than one object of the same tree in memory but with different states. It's dangerous to mix usage since the object retains states.
         public CompactTree CompactTreeFor(Slice key)
         {
-            _prepareLocator ??= new SliceSmallSet<IPrepareForCommit>(128);
+            // RavenDB-21678: Indexes with dynamic fields can generate a lot of fields, which can lead to overflow in the locator.
+            // We've observed indexes with more than ~150 fields, and since performance is crucial, we increased it by one order of magnitude.
+            _prepareLocator ??= new SliceSmallSet<IPrepareForCommit>(4096);
 
             if (_prepareLocator.TryGetValue(key, out var prep) == false)
             {

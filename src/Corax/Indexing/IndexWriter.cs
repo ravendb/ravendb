@@ -120,7 +120,6 @@ namespace Corax.Indexing
             _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-            _primaryKeyTree = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(0).FieldName);
             _persistedDynamicFieldsAnalyzers = _transaction.CreateTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
 
             _indexMetadata = _transaction.CreateTree(Constants.IndexMetadataSlice);
@@ -345,7 +344,6 @@ namespace Corax.Indexing
         private NativeList<NativeList<RecordedTerm>> _termsPerEntryId;
         private ByteStringContext _entriesAllocator;
         private Tree _fieldsTree;
-        private CompactTree _primaryKeyTree;
         private Tree _nullEntriesPostingLists;
         
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
@@ -614,7 +612,8 @@ namespace Corax.Indexing
             if (_indexedEntries.Contains(termSlice) == false)
             {
                 _compactKeyScope.Key.Set(termSlice);
-                var exists = _primaryKeyTree.TryGetValue(_compactKeyScope.Key, out var containerId);
+                //
+                var exists = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(0).FieldName).TryGetValue(_compactKeyScope.Key, out var containerId);
                 if (exists)
                 {
                     // note that the containerId may be a single value or many(!), if it is many items
@@ -900,6 +899,7 @@ namespace Corax.Indexing
                     }
                 }
             }
+            
 
             if (_ownsTransaction)
             {
