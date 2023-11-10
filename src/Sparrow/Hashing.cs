@@ -11,14 +11,6 @@ namespace Sparrow
     {
         #region XXHash32 & XXHash64
 
-        internal struct XXHash32Values
-        {
-            public uint V1;
-            public uint V2;
-            public uint V3;
-            public uint V4;
-        }
-
         internal static class XXHash32Constants
         {
             internal const uint PRIME32_1 = 2654435761U;
