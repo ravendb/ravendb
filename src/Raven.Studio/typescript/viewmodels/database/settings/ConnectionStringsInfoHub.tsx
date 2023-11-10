@@ -1,4 +1,4 @@
-﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
+﻿import {AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
 import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
@@ -45,7 +45,7 @@ export function ConnectionStringsInfoHub() {
     const hasAllFeaturesInLicense = hasRavenEtl && hasSqlEtl && hasOlapEtl && hasElasticSearchEtl && hasQueueEtl;
 
     return (
-        <AboutViewFloating defaultOpen={hasAllFeaturesInLicense ? null : "licensing"}>
+        <AboutViewAnchored defaultOpen={hasAllFeaturesInLicense ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -78,7 +78,7 @@ export function ConnectionStringsInfoHub() {
                 isUnlimited={hasAllFeaturesInLicense}
                 data={featureAvailability}
             />
-        </AboutViewFloating>
+        </AboutViewAnchored>
     );
 }
 
