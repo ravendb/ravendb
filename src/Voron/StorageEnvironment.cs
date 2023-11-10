@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -1285,19 +1285,31 @@ namespace Voron
             _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DirectoryPath, exception.CurrentFreeSpace, ExceptionDispatchInfo.Capture(exception));
         }
 
+        public unsafe void ValidateInMemoryPageChecksum(long pageNumber, PageHeader* current)
+        {
+            // Since we are forcing the validation there is no need to update the _validPages 
+            if (pageNumber != current->PageNumber)
+                ThrowInvalidPageNumber(pageNumber, current);
+
+            ulong checksum = CalculatePageChecksum((byte*)current, current->PageNumber, current->Flags, current->OverflowSize);
+
+            if (checksum != current->Checksum)
+                ThrowInvalidChecksum(pageNumber, current, checksum);
+        }
+
         public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
         {
-            long old;
             var index = pageNumber / (8 * sizeof(long));
             var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
             var bitToSet = 1L << bitIndex;
 
             // If the page is beyond the initial size of the file we don't validate it. 
             // We assume that it is valid since we wrote it in this run.
+
             if (index >= _validPages.Length)
                 return;
 
-            old = _validPages[index];
+            long old = _validPages[index];
             if ((old & bitToSet) != 0)
                 return;
 
@@ -1316,15 +1328,15 @@ namespace Voron
             if (checksum != current->Checksum)
                 ThrowInvalidChecksum(pageNumber, current, checksum);
 
-            var spinner = new SpinWait();
             while (true)
             {
+                // PERF: This code used to have a spin-wait. While it makes sense where threads are competing on tight loops for
+                // for resources, the spin-wait here serves no purpose as the thread is going to bail out immediately after completion.
                 long modified = Interlocked.CompareExchange(ref _validPages[index], old | bitToSet, old);
                 if (modified == old || (modified & bitToSet) != 0)
                     break;
 
                 old = modified;
-                spinner.SpinOnce();
             }
         }
 
