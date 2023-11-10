@@ -76,7 +76,7 @@ function GatherDebugInfo() {
                                 <div className="position-sticky package-download-section d-flex flex-column align-items-center well border-radius-xs p-4 gap-4">
                                     <img src={createPackageImg} alt="Info Package" width="90" />
                                     <h4 className="m-0">Create package for</h4>
-                                    <InputGroup className="d-flex flex-column align-items-center gap-4">
+                                    <div className="d-flex flex-column w-100 gap-3">
                                         <FormSelect
                                             control={control}
                                             name="packageScope"
@@ -93,6 +93,7 @@ function GatherDebugInfo() {
                                             className="rounded-pill"
                                             icon="default"
                                             isSpinning={isDownloading}
+                                            className="align-self-center"
                                         >
                                             Download
                                         </ButtonWithSpinner>
@@ -103,11 +104,12 @@ function GatherDebugInfo() {
                                                 color="warning"
                                                 isSpinning={abortData.isAborting}
                                                 onClick={abortData.toggleIsConfirmVisible}
+                                                className="align-self-center"
                                             >
                                                 Abort
                                             </ButtonWithSpinner>
                                         )}
-                                    </InputGroup>
+                                    </div>
                                 </div>
                             </div>
                         </div>

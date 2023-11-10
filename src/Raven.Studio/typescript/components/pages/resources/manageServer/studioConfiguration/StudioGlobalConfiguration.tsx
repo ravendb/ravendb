@@ -114,8 +114,8 @@ export default function StudioGlobalConfiguration() {
                         )}
                         <div className={hasStudioConfiguration ? null : "item-disabled pe-none"}>
                             <Card id="popoverContainer">
-                                <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
-                                    <InputGroup className="gap-1 flex-wrap flex-column">
+                                <CardBody className="vstack gap-3">
+                                    <div className="gap-1">
                                         <Label className="mb-0 md-label">
                                             Server Environment <Icon icon="info" color="info" id="EnvironmentInfo" />
                                             <UncontrolledPopover
@@ -141,8 +141,8 @@ export default function StudioGlobalConfiguration() {
                                             options={studioEnvironmentOptions}
                                             isSearchable={false}
                                         ></FormSelect>
-                                    </InputGroup>
-                                    <InputGroup className="gap-1 flex-wrap flex-column">
+                                    </div>
+                                    <div className="gap-1">
                                         <Label className="mb-0 md-label">
                                             Default Replication Factor{" "}
                                             <Icon icon="info" color="info" id="ReplicationFactorInfo" />
@@ -177,7 +177,7 @@ export default function StudioGlobalConfiguration() {
                                             type="number"
                                             placeholder="Cluster size (default)"
                                         ></FormInput>
-                                    </InputGroup>
+                                    </div>
                                 </CardBody>
                             </Card>
                             <Card className="mt-3">
