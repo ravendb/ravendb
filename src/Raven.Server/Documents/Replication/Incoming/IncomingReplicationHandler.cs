@@ -667,7 +667,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 foreach (var documentConflict in conflicts)
                                 {
                                     if (documentConflict.Flags.Contain(DocumentFlags.HasAttachments) == false ||
-                                        ChangeVectorUtils.GetConflictStatus(cv, documentConflict.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                        ChangeVector.GetConflictStatus(context, cv, documentConflict.ChangeVector) == ConflictStatus.AlreadyMerged)
                                         continue;
 
                                     // recreate attachments reference
@@ -677,7 +677,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 continue;
                             }
 
-                            if (ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged || 
+                            if (ChangeVector.GetConflictStatus(context, cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged || 
                                 doc.Flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved))
                             {
                                 // have to load the full document
