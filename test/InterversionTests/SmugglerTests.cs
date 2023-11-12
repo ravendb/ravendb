@@ -163,7 +163,7 @@ namespace InterversionTests
             using var store42 = await GetDocumentStoreAsync(Server42Version);
             using var storeCurrent = GetDocumentStore();
             //Export
-            storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
+            await storeCurrent.Maintenance.SendAsync(new CreateSampleDataOperation());
             using (var session = storeCurrent.OpenAsyncSession())
             {
                 var dateTime = new DateTime(2020, 3, 29);
@@ -177,7 +177,7 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
