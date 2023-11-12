@@ -1225,7 +1225,7 @@ namespace Raven.Server.Web.System
         public async Task SetUnusedDatabaseIds()
         {
             var database = GetStringQueryString("name");
-            var validate = GetBoolValueQueryString("validate", required: false);
+            var validate = GetBoolValueQueryString("validate", required: false) ?? false;
 
             await ServerStore.EnsureNotPassiveAsync();
 
@@ -1233,7 +1233,7 @@ namespace Raven.Server.Web.System
             using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "unused-databases-ids"))
             {
                 var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
-                if (validate.HasValue && validate.Value)
+                if (validate)
                 {
                     using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                         await ValidateUnusedIdsAsync(parameters.DatabaseIds, database, token.Token);
