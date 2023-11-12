@@ -50,8 +50,8 @@ namespace Raven.Client.ServerWide.Operations
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases/unused-ids?name={_database}";
-                if (_parameters.Validate.HasValue)
-                    url += $"&validate={_parameters.Validate}";
+                if (_parameters.Validate)
+                    url += $"&validate=true";
 
                 return new HttpRequestMessage
                 {
@@ -66,7 +66,7 @@ namespace Raven.Client.ServerWide.Operations
         internal class Parameters
         {
             public HashSet<string> DatabaseIds { get; set; }
-            public bool? Validate { get; set; } = null;
+            public bool Validate { get; set; }
         }
     }
 }
