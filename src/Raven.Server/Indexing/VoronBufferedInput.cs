@@ -235,7 +235,7 @@ public class VoronBufferedInput : BufferedIndexInput
             return; // never hit
         }
 
-        if (state.Transaction.LowLevelTransaction.IsDisposed)
+        if (state.Transaction.LowLevelTransaction.IsValid == false)
             ThrowTransactionDisposed();
         if (_cts.IsCancellationRequested)
             ThrowCancelled();
