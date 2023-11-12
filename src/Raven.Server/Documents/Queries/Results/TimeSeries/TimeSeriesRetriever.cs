@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
-using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -94,24 +93,15 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             if (_stats.Count == 0)
                 return Enumerable.Empty<DynamicJsonValue>();
             
+            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction);
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
-            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, offset);
 
             var groupByTimePeriod = timeSeriesFunction.GroupBy.TimePeriod?.GetValue(_queryParameters)?.ToString();
             var groupByTag = timeSeriesFunction.GroupBy.HasGroupByTag;
             var filterByTag = timeSeriesFunction.Where != null;
             _individualValuesOnly = groupByTag || filterByTag;
 
-            RangeGroup rangeSpec;
-            if (groupByTimePeriod != null)
-            {
-                rangeSpec = RangeGroup.ParseRangeFromString(groupByTimePeriod, from);
-            }
-            else
-            {
-                rangeSpec = new RangeGroup();
-                rangeSpec.InitializeFullRange(from, to);
-            }
+            RangeGroup rangeSpec = InitializeRangeSpecs(groupByTimePeriod, from, to, offset);
 
             ITimeSeriesReader reader = groupByTimePeriod == null
                 ? new TimeSeriesReader(_context, documentId, _source, from, to, offset, _token)
@@ -779,6 +769,27 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
+        private static RangeGroup InitializeRangeSpecs(string groupByTimePeriod, DateTime from, DateTime to, TimeSpan? offset)
+        {
+            if (offset.HasValue)
+            {
+                var minWithOffset = from.Ticks + offset.Value.Ticks;
+                var maxWithOffset = to.Ticks + offset.Value.Ticks;
+
+                if (minWithOffset >= 0 && minWithOffset <= DateTime.MaxValue.Ticks)
+                    from = from.Add(offset.Value);
+                if (maxWithOffset >= 0 && maxWithOffset <= DateTime.MaxValue.Ticks)
+                    to = to.Add(offset.Value);
+            }
+
+            if (groupByTimePeriod != null)
+                return RangeGroup.ParseRangeFromString(groupByTimePeriod, from);
+            
+            var rangeSpec = new RangeGroup();
+            rangeSpec.InitializeFullRange(from, to);
+            return rangeSpec;
+        }
+
         private static bool IsLastDuplicate(TimeSeriesValuesSegment segment, AggregationHolder aggregationHolder)
         {
             return segment.Version.ContainsLastValueDuplicate && aggregationHolder.Contains(AggregationType.Last);
@@ -982,7 +993,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
-        private (DateTime From, DateTime To) GetFromAndTo(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, TimeSpan? offset)
+        private (DateTime From, DateTime To) GetFromAndTo(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction)
         {
             DateTime from, to;
             if (timeSeriesFunction.Last != null)
@@ -1003,18 +1014,6 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             {
                 from = GetDateValue(timeSeriesFunction.Between?.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
                 to = GetDateValue(timeSeriesFunction.Between?.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
-            }
-
-            if (offset.HasValue)
-            {
-                var minWithOffset = from.Ticks + offset.Value.Ticks;
-                var maxWithOffset = to.Ticks + offset.Value.Ticks;
-
-                if (minWithOffset >= 0 && minWithOffset <= DateTime.MaxValue.Ticks)
-                    from = from.Add(offset.Value);
-                if (maxWithOffset >= 0 && maxWithOffset <= DateTime.MaxValue.Ticks)
-                    to = to.Add(offset.Value);
-
             }
 
             return (from, to);
