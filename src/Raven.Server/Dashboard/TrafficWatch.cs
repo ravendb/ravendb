@@ -13,6 +13,8 @@ namespace Raven.Server.Dashboard
 
         public double AverageRequestDuration { get; set; }
 
+        public int RequestsPerSecond { get; set; }
+
         public TrafficWatch()
         {
             Items = new List<TrafficWatchItem>();
@@ -23,6 +25,7 @@ namespace Raven.Server.Dashboard
             var json = base.ToJson();
             json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
             json[nameof(AverageRequestDuration)] = AverageRequestDuration;
+            json[nameof(RequestsPerSecond)] = RequestsPerSecond;
             return json;
         }
 
@@ -44,6 +47,7 @@ namespace Raven.Server.Dashboard
             var json = base.ToJson();
             json[nameof(Items)] = items;
             json[nameof(AverageRequestDuration)] = AverageRequestDuration;
+            json[nameof(RequestsPerSecond)] = RequestsPerSecond;
             return json;
         }
     }
