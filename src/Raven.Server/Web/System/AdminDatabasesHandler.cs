@@ -12,6 +12,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -1225,6 +1226,12 @@ namespace Raven.Server.Web.System
 
         private async Task ValidateUnusedIdsAsync(HashSet<string> unusedIds, string databaseName, CancellationToken token)
         {
+            foreach (var id in unusedIds)
+            {
+                if(IsBase64String(id)==false)
+                    throw new InvalidOperationException($"Database id '{id}' isn't valid because it isn't Base64String (it contains chars which cannot be in Base64String).");
+            }
+
             DatabaseTopology topology;
             ClusterTopology clusterTopology;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1263,6 +1270,12 @@ namespace Raven.Server.Web.System
 
         }
 
+        public static unsafe bool IsBase64String(string base64)
+        {
+            int base64Size = (int)Math.Ceiling((double)base64.Length / 3) * 4;
+            Span<byte> bytes = stackalloc byte[base64Size];
+            return Convert.TryFromBase64String(base64, bytes, out int bytesParsed);
+        }
 
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
