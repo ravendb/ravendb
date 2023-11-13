@@ -100,7 +100,7 @@ namespace Corax.Querying.Matches
             };
         }
         
-        public static TermMatch YieldOnce(Querying.IndexSearcher indexSearcher, ByteStringContext ctx, long value, double termRatioToWholeCollection, bool isBoosting)
+        public static TermMatch YieldOnce(IndexSearcher indexSearcher, ByteStringContext ctx, long value, double termRatioToWholeCollection, bool isBoosting)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -172,7 +172,7 @@ namespace Corax.Querying.Matches
             };
         }
 
-        public static TermMatch YieldSmall(Querying.IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem, double termRatioToWholeCollection, bool isBoosting)
+        public static TermMatch YieldSmall(IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem, double termRatioToWholeCollection, bool isBoosting)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc<TBoostingMode>(ref TermMatch term, Span<long> matches) where TBoostingMode : IBoostingMarker
@@ -289,70 +289,84 @@ namespace Corax.Querying.Matches
             };
         }
         
-        public static TermMatch YieldSet(Querying.IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, double termRatioToWholeCollection, bool isBoosting, bool useAccelerated = true)
+        public static TermMatch YieldSet(IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, double termRatioToWholeCollection, bool isBoosting, bool useAccelerated = true)
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker
+            static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matchesCount) where TBoostingMode : IBoostingMarker
             {
-                int matchedIdx = 0;
-
+                if (matchesCount == 0)
+                    return 0;
+                
+                int resultCursor = 0;
+                int bufferCursor = 0;
+                
                 var it = term._set;
+                ref long matchesBuffer = ref MemoryMarshal.GetReference(buffer);
 
-                ref long start = ref MemoryMarshal.GetReference(buffer);
-                if (it.Seek(start - 1) == false)
+                var matchesLowest = Unsafe.Add(ref matchesBuffer, 0);
+                var matchesHighest = Unsafe.Add(ref matchesBuffer, matchesCount - 1);
+                
+                if (it.Seek(matchesBuffer - 1) == false)
                     return 0;
 
-                Span<long> decodedMatches = stackalloc long[1024];
+                Span<long> postingListItems = stackalloc long[1024];
+                
+                //Maximum value we can match.
+                var maxValidValue = Unsafe.Add(ref matchesBuffer, matchesCount - 1) + 1;
+                var currentMatchesDocument = Unsafe.Add(ref matchesBuffer, bufferCursor);
 
-                long maxValidValue = buffer[matches - 1] + 1;
-                while (true)
+                while (resultCursor < matchesCount && it.Fill(postingListItems, out var read, maxValidValue) && read > 0)
                 {
-                    if (it.Fill(decodedMatches, out var read, maxValidValue) == false)
-                        return matchedIdx;
-
-                    for (int j = 0; j < read; j++)
+                    var isFirstItemInsideRange = EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[0]) >= matchesLowest
+                                                && EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[0]) <= matchesHighest;
+                    
+                    // Match is impossible, proceed.
+                    if (read == 1 && isFirstItemInsideRange == false)
+                        continue;
+                    
+                    var isLastItemInsideRange = EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[read - 1]) >= matchesLowest
+                                               && EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[read - 1]) <= matchesHighest;
+                    
+                    // Since the posting list and buffer matches are sorted, it implies that no additional matches can occur in this batch.
+                    if (isLastItemInsideRange == false && isFirstItemInsideRange == false)
+                        continue; 
+                    
+                    // for each document read from posting list
+                    for (int readCursor = 0; readCursor < read; ++readCursor)
                     {
-                        long current = decodedMatches[j];
-                        if (typeof(TBoostingMode) == typeof(HasBoosting))
+                        long currentPostingListDocument = typeof(HasBoosting) == typeof(TBoostingMode) && term._bm25Relevance.IsStored 
+                            ? term._bm25Relevance.Add(postingListItems[readCursor]) 
+                            : EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[readCursor]);
+                        
+                        // When current document from posting list is bigger or equal than our current document from buffer.
+                        while (currentPostingListDocument >= currentMatchesDocument)
                         {
-                            if (term._bm25Relevance.IsStored)
-                                current = term._bm25Relevance.Add(current);
-                            else
-                                current = EntryIdEncodings.DecodeAndDiscardFrequency(current);
-                        }
-                
-                        else
-                            current = EntryIdEncodings.DecodeAndDiscardFrequency(current);
-                
-                        // Check if there are matches left to process or is any possibility of a match to be available in this block.
-                        int i = 0;
-                        long end = Unsafe.Add(ref start, matches - 1);
-                        while (i < matches && current <= end)
-                        {
-                            // While the current match is smaller we advance.
-                            while (Unsafe.Add(ref start, i) < current)
+                            //If it's bigger we've to move our bufferCursor (matches passed as parameter) to find at least equal or bigger
+                            //in comparison to our document from posting list since we know there will be no lower id from posting list.
+                            if (currentPostingListDocument > currentMatchesDocument)
                             {
-                                i++;
-                                if (i >= matches)
-                                    return matchedIdx;
+                                if (bufferCursor + 1 >= matchesCount)
+                                    return resultCursor;
+                                
+                                currentMatchesDocument = Unsafe.Add(ref matchesBuffer, ++bufferCursor);
+                                matchesLowest = currentMatchesDocument;
+                                
+                                continue;
                             }
-
-                            // We are guaranteed that matches[i] is at least equal if not higher than current.
-                            Debug.Assert(buffer[i] >= current);
-
-                            // We have a match, we include it into the matches and go on. 
-                            if (current == Unsafe.Add(ref start, i))
-                            {
-                                ref long location = ref Unsafe.Add(ref start, matchedIdx++);
-                                location = current;
-                                i++;
-                            }
+                            
+                            buffer[resultCursor++] = currentPostingListDocument;
+                            
+                            if (bufferCursor + 1 >= matchesCount)
+                                return resultCursor;
+                            
+                            currentMatchesDocument = Unsafe.Add(ref matchesBuffer, ++bufferCursor);
+                            matchesLowest = currentMatchesDocument;
                         }
                     }
-
-                    return matchedIdx;
                 }
+                
+                return resultCursor;
             }
 
             [SkipLocalsInit]
