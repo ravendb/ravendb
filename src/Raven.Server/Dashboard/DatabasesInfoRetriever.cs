@@ -9,10 +9,10 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -97,6 +97,8 @@ namespace Raven.Server.Dashboard
             var trafficWatch = new TrafficWatch();
             var drivesUsage = new DrivesUsage();
 
+            var rate = (int)RefreshRate.TotalSeconds;
+            trafficWatch.RequestsPerSecond = (int)Math.Ceiling(serverStore.Server.Metrics.Requests.RequestsPerSec.GetRate(rate));
             trafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
 
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -128,8 +130,6 @@ namespace Raven.Server.Dashboard
                             continue;
                         }
 
-                        var rate = (int)RefreshRate.TotalSeconds;
-                        
                         var indexingSpeedItem = new IndexingSpeedItem
                         {
                             Database = database.Name,

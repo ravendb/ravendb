@@ -30,7 +30,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
         public override DynamicJsonValue ToJson()
         {
             var result = new TrafficWatchPayload();
-
+            
+            result.RequestsPerSecond = RequestsPerSecond;
             foreach (TrafficWatchItem item in TrafficPerDatabase)
             {
                 result.Add(item);
@@ -73,7 +74,6 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
 
         private void Add(TrafficWatchItem item)
         {
-            RequestsPerSecond += item.RequestsPerSecond;
             AttachmentWritesPerSecond += item.AttachmentWritesPerSecond;
             AttachmentsWriteBytesPerSecond += item.AttachmentsWriteBytesPerSecond;
             CounterWritesPerSecond += item.CounterWritesPerSecond;
