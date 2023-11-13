@@ -1,10 +1,8 @@
 import React, { ComponentProps, forwardRef } from "react";
 import ReactDatePicker from "react-datepicker";
 import { Input } from "reactstrap";
-import { todo } from "common/developmentHelper";
-
-todo("Styling", "Matteo", "define styles, and remove this import?");
-import "react-datepicker/dist/react-datepicker.css";
+import "./ReactDatepicker.scss";
+import { Icon } from "components/common/Icon";
 
 const DatePickerInput = forwardRef<HTMLInputElement, ComponentProps<typeof Input>>(function DatePickerInput(
     props,
@@ -23,6 +21,7 @@ export default function DatePicker(props: ComponentProps<typeof ReactDatePicker>
             customInput={<DatePickerInput invalid={props.invalid} />}
             dateFormat={dateFormat}
             timeFormat={timeFormat}
+            disabledKeyboardNavigation
         />
     );
 }

@@ -434,7 +434,13 @@ select {
     }
 }
 
-// datetime-local input scheme based on theme colors
-input[type="datetime-local"] {
-    color-scheme: $datepicker-color-mode;
+.input-group {
+    .react-datepicker-wrapper {
+        display: flex;
+        flex-grow: 1;
+        input {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+    }
 }
