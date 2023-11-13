@@ -5,13 +5,13 @@ import document = require("models/database/documents/document");
 
 class getRevisionsBinEntryCommand extends commandBase {
 
-    constructor(private database: database, private changeVector: string, private take: number) {
+    constructor(private database: database, private skip: number, private take: number) {
         super();
     }
 
     execute(): JQueryPromise<pagedResult<document>> {
         const args = {
-            changeVector: this.changeVector,
+            skip: this.skip,
             pageSize: this.take
         };
 

@@ -30,8 +30,6 @@ class revisionsBin extends viewModelBase {
         delete: ko.observable<boolean>(false)
     };
 
-    private revisionsBinEntryNextChangeVector = undefined as string;
-
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
 
@@ -63,23 +61,16 @@ class revisionsBin extends viewModelBase {
 
     refresh() {
         eventsCollector.default.reportEvent("revisions-bin", "refresh");
-        this.revisionsBinEntryNextChangeVector = undefined;
         this.gridController().reset(true);
     }
 
     fetchRevisionsBinEntries(skip: number): JQueryPromise<pagedResult<document>> {
         const task = $.Deferred<pagedResult<document>>();
 
-        new getRevisionsBinEntryCommand(this.activeDatabase(), this.revisionsBinEntryNextChangeVector, 101)
+        new getRevisionsBinEntryCommand(this.activeDatabase(), skip, 100)
             .execute()
             .done(result => {
-                const hasMore = result.items.length === 101;
                 const totalCount = skip + result.items.length;
-                if (hasMore) {
-                    const nextItem = result.items.pop();
-                    this.revisionsBinEntryNextChangeVector = nextItem.__metadata.changeVector();
-                }
-
                 task.resolve({
                     totalResultCount: totalCount,
                     items: result.items
