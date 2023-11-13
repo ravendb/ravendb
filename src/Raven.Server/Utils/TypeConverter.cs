@@ -285,7 +285,15 @@ namespace Raven.Server.Utils
                     if (js.IsUndefined())
                         return DynamicNullObject.Null;
                     if (js.IsString())
-                        return js.AsString();
+                    {
+                        var jsString = js.AsString();
+
+                        if (TryConvertStringValue(jsString, out var jsDate))
+                            return jsDate;
+                        
+                        return jsString;
+                    }
+
                     if (js.IsBoolean())
                         return js.AsBoolean();
                     if (js.IsNumber())
