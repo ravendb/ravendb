@@ -8,11 +8,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 
@@ -35,6 +33,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             _isFanout = definition.GroupByFields.Any(x => x.Value.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues);
             _output = new MapOutput(_isFanout);
+
+            UpdateMapFields();
         }
 
         public static AutoMapReduceIndex CreateNew(AutoMapReduceIndexDefinition definition, DocumentDatabase documentDatabase)
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     {
                         var fanoutIndex = 0;
 
-                        if (!(value is IEnumerable array))
+                        if (value is IEnumerable array == false || autoIndexField.SamePathAsGroupByField == false)
                         {
                             for (; fanoutIndex < _output.Results.Count; fanoutIndex++)
                             {
@@ -242,6 +242,61 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
         }
 
+        private void UpdateMapFields()
+        {
+            if (_isFanout == false)
+                return;
+
+            // we have a fanout in the map reduce index, there are 2 options:
+            // the reduce result has the same OR a different path as one of the reduce keys.
+            // if it's the same path, we need to insert each value separately in the mapped results.
+            // if it isn't, we need to calculate the result for each entry in the fanout (will have the same result).
+            //
+            // Examples:
+            //
+            // The SUM has the same path as one of the reduce keys
+            // from 'Messages'
+            // group by Name, Data[].Items[].ProductName
+            // select Name, sum(Data[].Items[].TotalPrice) as Total
+            // 
+            // The SUM has a different path than any of the reduce keys
+            // from 'Messages'
+            // group by Name, Tries[].ResultMessage
+            // select Name, sum(Data[].Items[].TotalPrice) as Total
+
+            var groupByFieldsPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach ((_, AutoIndexField value) in Definition.GroupByFields)
+            {
+                if (value.GroupByArrayBehavior != GroupByArrayBehavior.ByIndividualValues)
+                    continue;
+
+                var lastIndexOfGroupByField = value.Name.LastIndexOf(".", StringComparison.OrdinalIgnoreCase);
+                if (lastIndexOfGroupByField == -1)
+                    continue;
+
+                var groupByFieldPath = value.Name.Substring(0, lastIndexOfGroupByField);
+                groupByFieldsPaths.Add(groupByFieldPath);
+            }
+
+            Debug.Assert(groupByFieldsPaths.Count > 0);
+
+            foreach ((_, IndexFieldBase field) in Definition.MapFields)
+            {
+                var autoIndexField = field.As<AutoIndexField>();
+
+                var lastIndexOfAutoIndexField = autoIndexField.Name.LastIndexOf(".", StringComparison.OrdinalIgnoreCase);
+                if (lastIndexOfAutoIndexField == -1)
+                    continue;
+
+                var autoIndexFieldPath = autoIndexField.Name.Substring(0, lastIndexOfAutoIndexField);
+
+                if (groupByFieldsPaths.Contains(autoIndexFieldPath))
+                {
+                    autoIndexField.SamePathAsGroupByField = true;
+                }
+            }
+        }
+
         private object GetFieldValue(AutoIndexField autoIndexField, Document document)
         {
             switch (autoIndexField.Aggregation)
@@ -259,8 +314,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         return fieldValue;
                     }
 
-
-                    if (_isFanout == false)
+                    if (_isFanout == false || autoIndexField.SamePathAsGroupByField == false)
                     {
                         decimal total = 0;
 
