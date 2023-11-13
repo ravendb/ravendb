@@ -14,6 +14,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -456,7 +457,7 @@ namespace SlowTests.Client
                 }))
                 {
                     var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
-                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                     result.Metadata["TestString"] = str;
                     result.Metadata["TestNumber"] = num;
                     await session.SaveChangesAsync();
@@ -465,7 +466,7 @@ namespace SlowTests.Client
                 var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>(key));
                 Assert.Equal(user.Name, res.Value.Name);
                 Assert.NotNull(res.Metadata);
-                Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
+                Assert.Equal(dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), res.Metadata[Constants.Documents.Metadata.Expires]);
                 Assert.Equal(str, res.Metadata["TestString"]);
                 Assert.Equal(num, res.Metadata["TestNumber"]);
 
@@ -504,7 +505,7 @@ namespace SlowTests.Client
                 }))
                 {
                     var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue<string>(key, "EGR");
-                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                     result.Metadata["TestString"] = str;
                     result.Metadata["TestNumber"] = num;
                     await session.SaveChangesAsync();
@@ -513,7 +514,7 @@ namespace SlowTests.Client
                 var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(key));
                 Assert.Equal("EGR", res.Value);
                 Assert.NotNull(res.Metadata);
-                Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
+                Assert.Equal(dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), res.Metadata[Constants.Documents.Metadata.Expires]);
                 Assert.Equal(str, res.Metadata["TestString"]);
                 Assert.Equal(num, res.Metadata["TestNumber"]);
 
@@ -552,7 +553,7 @@ namespace SlowTests.Client
                 }))
                 {
                     var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, 322);
-                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                     result.Metadata["TestString"] = str;
                     result.Metadata["TestNumber"] = num;
                     await session.SaveChangesAsync();
@@ -561,7 +562,7 @@ namespace SlowTests.Client
                 var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<int>(key));
                 Assert.Equal(322, res.Value);
                 Assert.NotNull(res.Metadata);
-                Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
+                Assert.Equal(dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), res.Metadata[Constants.Documents.Metadata.Expires]);
                 Assert.Equal(str, res.Metadata["TestString"]);
                 Assert.Equal(num, res.Metadata["TestNumber"]);
 
