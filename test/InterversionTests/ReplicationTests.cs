@@ -69,10 +69,17 @@ namespace InterversionTests
         public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersionV52()
         {
             // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
-            string version = "5.2.3";
+            string version = Server52Version;
             await CanReplicateToOldServerWithLowerReplicationProtocolVersion(version);
         }
 
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux)]
+        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersionV53()
+        {
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
+            string version = Server53Version;
+            await CanReplicateToOldServerWithLowerReplicationProtocolVersion(version);
+        }
 
         private async Task CanReplicateToOldServerWithLowerReplicationProtocolVersion(string version)
         {
@@ -95,7 +102,7 @@ namespace InterversionTests
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.TimeSeries, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer()
         {
-            const string version = "5.2.3";
+            const string version = Server52Version;
             const string incrementalTsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
             const string docId = "users/1";
             var baseline = DateTime.UtcNow;

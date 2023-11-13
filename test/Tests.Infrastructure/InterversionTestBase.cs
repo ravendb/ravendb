@@ -43,6 +43,8 @@ namespace Tests.Infrastructure
         private static readonly ServerBuildRetriever _serverBuildRetriever = new ServerBuildRetriever();
 
         protected const string Server42Version = "4.2.124";
+        protected const string Server52Version = "5.2.100";
+        protected const string Server53Version = "5.3.100";
         protected const string Server54Version = "5.4.109";
 
         protected DocumentStore GetDocumentStore(
