@@ -13,9 +13,9 @@ namespace Raven.Client.ServerWide.Commands
             _index = index;
         }
 
-        public WaitForRaftIndexCommand(long index, string node) : this(index)
+        public WaitForRaftIndexCommand(long index, string nodeTag) : this(index)
         {
-            SelectedNodeTag = node;
+            SelectedNodeTag = nodeTag;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
