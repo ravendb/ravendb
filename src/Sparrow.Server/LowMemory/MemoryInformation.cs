@@ -21,10 +21,6 @@ namespace Sparrow.LowMemory
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Server");
 
-        private static readonly ConcurrentQueue<Tuple<long, DateTime>> MemByTime = new ConcurrentQueue<Tuple<long, DateTime>>();
-        private static DateTime _memoryRecordsSet;
-        private static readonly TimeSpan MemByTimeThrottleTime = TimeSpan.FromMilliseconds(100);
-
         private static readonly byte[] VmRss = Encoding.UTF8.GetBytes("VmRSS:");
         private static readonly byte[] VmSwap = Encoding.UTF8.GetBytes("VmSwap:");
         private static readonly byte[] MemAvailable = Encoding.UTF8.GetBytes("MemAvailable:");
@@ -32,13 +28,6 @@ namespace Sparrow.LowMemory
         private static readonly byte[] MemTotal = Encoding.UTF8.GetBytes("MemTotal:");
         private static readonly byte[] SwapTotal = Encoding.UTF8.GetBytes("SwapTotal:");
         private static readonly byte[] Committed_AS = Encoding.UTF8.GetBytes("Committed_AS:");
-
-        public static long HighLastOneMinute;
-        public static long LowLastOneMinute = long.MaxValue;
-        public static long HighLastFiveMinutes;
-        public static long LowLastFiveMinutes = long.MaxValue;
-        public static long HighSinceStartup;
-        public static long LowSinceStartup = long.MaxValue;
 
         private static readonly int ProcessId;
 
@@ -493,8 +482,6 @@ namespace Sparrow.LowMemory
                 swapUsage.Set(procStatus.Swap, SizeUnit.Bytes);
             }
 
-            SetMemoryRecords(fromProcMemInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes));
-
             return new MemoryInfoResult
             {
                 TotalCommittableMemory = fromProcMemInfo.CommitLimit,
@@ -572,8 +559,6 @@ namespace Sparrow.LowMemory
 
             var availableMemoryForProcessing = availableMemory; // mac (unlike other linux distros) does calculate accurate available memory
             var workingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes);
-
-            SetMemoryRecords(availableMemoryForProcessing.GetValue(SizeUnit.Bytes));
 
             return new MemoryInfoResult
             {
@@ -674,8 +659,6 @@ namespace Sparrow.LowMemory
                     remarks = "Memory limited by Job Object limits";
                 }
             }
-            
-            SetMemoryRecords(availableMemoryForProcessingInBytes);
 
             return new MemoryInfoResult
             {
@@ -744,25 +727,6 @@ namespace Sparrow.LowMemory
             return totalMapped;
         }
 
-        public static MemoryInfoResult.MemoryUsageLowHigh GetMemoryUsageRecords()
-        {
-            return new MemoryInfoResult.MemoryUsageLowHigh
-            {
-                High = new MemoryInfoResult.MemoryUsageIntervals
-                {
-                    LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
-                    LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
-                    SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
-                },
-                Low = new MemoryInfoResult.MemoryUsageIntervals
-                {
-                    LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
-                    LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
-                    SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
-                }
-            };
-        }
-
         public static long GetWorkingSetInBytes()
         {
             if (PlatformDetails.RunningOnLinux)
@@ -772,55 +736,6 @@ namespace Sparrow.LowMemory
             {
                 return currentProcess.WorkingSet64;
             }
-        }
-
-        private static void SetMemoryRecords(long availableMemoryForProcessingInBytes)
-        {
-            var now = DateTime.UtcNow;
-
-            if (HighSinceStartup < availableMemoryForProcessingInBytes)
-                HighSinceStartup = availableMemoryForProcessingInBytes;
-            if (LowSinceStartup > availableMemoryForProcessingInBytes)
-                LowSinceStartup = availableMemoryForProcessingInBytes;
-
-            while (MemByTime.TryPeek(out var existing) &&
-                   (now - existing.Item2) > TimeSpan.FromMinutes(5))
-            {
-                if (MemByTime.TryDequeue(out _) == false)
-                    break;
-            }
-
-            if (now - _memoryRecordsSet < MemByTimeThrottleTime)
-                return;
-
-            _memoryRecordsSet = now;
-
-            MemByTime.Enqueue(new Tuple<long, DateTime>(availableMemoryForProcessingInBytes, now));
-
-            long highLastOneMinute = 0;
-            long lowLastOneMinute = long.MaxValue;
-            long highLastFiveMinutes = 0;
-            long lowLastFiveMinutes = long.MaxValue;
-
-            foreach (var item in MemByTime)
-            {
-                if (now - item.Item2 < TimeSpan.FromMinutes(1))
-                {
-                    if (highLastOneMinute < item.Item1)
-                        highLastOneMinute = item.Item1;
-                    if (lowLastOneMinute > item.Item1)
-                        lowLastOneMinute = item.Item1;
-                }
-                if (highLastFiveMinutes < item.Item1)
-                    highLastFiveMinutes = item.Item1;
-                if (lowLastFiveMinutes > item.Item1)
-                    lowLastFiveMinutes = item.Item1;
-            }
-
-            HighLastOneMinute = highLastOneMinute;
-            LowLastOneMinute = lowLastOneMinute;
-            HighLastFiveMinutes = highLastFiveMinutes;
-            LowLastFiveMinutes = lowLastFiveMinutes;
         }
 
         public static DirtyMemoryState GetDirtyMemoryState()

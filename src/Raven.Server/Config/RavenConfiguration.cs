@@ -103,6 +103,8 @@ namespace Raven.Server.Config
 
         public TrafficWatchConfiguration TrafficWatch { get; }
 
+        public ExportImportConfiguration ExportImport { get; }
+
         internal string ConfigPath => _customConfigPath
                        ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
 
@@ -153,6 +155,7 @@ namespace Raven.Server.Config
             Migration = new MigrationConfiguration();
             TrafficWatch = new TrafficWatchConfiguration();
             Integrations = new IntegrationsConfiguration();
+            ExportImport = new ExportImportConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -214,6 +217,7 @@ namespace Raven.Server.Config
             Migration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             TrafficWatch.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Integrations.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            ExportImport.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 
             PostInit();
 

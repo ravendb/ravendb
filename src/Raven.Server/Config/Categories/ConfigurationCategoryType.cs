@@ -36,6 +36,8 @@ namespace Raven.Server.Config.Categories
         TransactionMerger,
         Updates,
         [Description("Traffic Watch")]
-        TrafficWatch
+        TrafficWatch,
+        [Description("Export & Import")]
+        ExportImport
     }
 }

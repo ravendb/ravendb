@@ -1,34 +1,36 @@
 ﻿using System;
 using System.Buffers;
 using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
 #if NETCOREAPP3_1_OR_GREATER
-    internal class ZstdStream : Stream
+    internal sealed class ZstdStream : Stream
     {
         private readonly Stream _inner;
         private readonly bool _compression;
-        private ZstdLib.CompressContext _compressContext = new ZstdLib.CompressContext();
+        private readonly bool _leaveOpen;
+        private ZstdLib.CompressContext _compressContext;
         private byte[] _tempBuffer = ArrayPool<byte>.Shared.Rent(1024);
         private Memory<byte> _decompressionInput = Memory<byte>.Empty;
-        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         private long _compressedBytesCount;
         private long _uncompressedBytesCount;
-        private readonly DisposeLock _disposerLock = new DisposeLock(nameof(ZstdStream));
+        private readonly DisposeLock _disposerLock = new(nameof(ZstdStream));
+        private bool _disposed;
 
-        private ZstdStream(Stream inner, bool compression)
+        private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+            _compressContext = new ZstdLib.CompressContext(level);
             _compression = compression;
-            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
+            _leaveOpen = leaveOpen;
         }
 
-        public static ZstdStream Compress(Stream stream) => new ZstdStream(stream, compression: true);
-        public static ZstdStream Decompress(Stream stream) => new ZstdStream(stream, compression: false);
+        public static ZstdStream Compress(Stream stream, CompressionLevel compressionLevel = CompressionLevel.Optimal, bool leaveOpen = false) => new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen);
+        public static ZstdStream Decompress(Stream stream, bool leaveOpen = false) => new(stream, compression: false, 0, leaveOpen);
 
         public override bool CanRead => _compression == false;
         public override bool CanSeek => false;
@@ -196,39 +198,97 @@ namespace Sparrow.Utils
         {
             using (_disposerLock.EnsureNotDisposed())
             {
-                while (true)
-                {
-                    var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
-                    if (outputBytes == 0)
-                        break;
-                    _inner.Write(_tempBuffer, 0, outputBytes);
-                }
-                _inner?.Flush();
+                FlushInternal();
             }
+        }
+
+        private void FlushInternal()
+        {
+            while (true)
+            {
+                var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
+                if (outputBytes == 0)
+                    break;
+                _inner.Write(_tempBuffer, 0, outputBytes);
+            }
+
+            _inner.Flush();
         }
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
             using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
             {
-                while (true)
-                {
-                    var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
-                    if (outputBytes == 0)
-                        break;
-
-                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
-                }
-                await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
+                await FlushInternalAsync(cancellationToken).ConfigureAwait(false);
             }
         }
 
-        private void DisposeInternal()
+        private async Task FlushInternalAsync(CancellationToken cancellationToken = default)
         {
+            while (true)
+            {
+                var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
+                if (outputBytes == 0)
+                    break;
+
+                await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
+            }
+
+            await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            if (_disposed)
+                return;
+
             using (_disposerLock.StartDisposing())
             {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
+
                 if (_compressContext != null)
                 {
+                    if (_compression)
+                        await FlushInternalAsync().ConfigureAwait(false);
+
+                    while (_compression)
+                    {
+                        var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
+
+                        if (done)
+                            break;
+
+                        await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(false);
+                    }
+                }
+
+                if (_leaveOpen == false)
+                    await _inner.DisposeAsync().ConfigureAwait(false);
+
+                ReleaseResources();
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            using (_disposerLock.StartDisposing())
+            {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
+
+                if (_compressContext != null)
+                {
+                    if (_compression)
+                        FlushInternal();
+
                     while (_compression)
                     {
                         var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
@@ -239,13 +299,12 @@ namespace Sparrow.Utils
                         _inner.Write(_tempBuffer, 0, outputBytes);
                     }
                 }
+
+                if (_leaveOpen == false)
+                    _inner.Dispose();
+
                 ReleaseResources();
             }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            _disposeOnce.Dispose();
         }
 
         private void ReleaseResources()
@@ -259,6 +318,24 @@ namespace Sparrow.Utils
                 }
                 _compressContext?.Dispose();
                 _compressContext = null;
+            }
+        }
+
+        private static int ToZstdLevel(CompressionLevel compressionLevel)
+        {
+            switch (compressionLevel)
+            {
+                case CompressionLevel.Optimal:
+                    return 0;
+                case CompressionLevel.Fastest:
+                    return 1;
+#if NET6_0_OR_GREATER
+                case CompressionLevel.SmallestSize:
+                    return 22;
+#endif
+                case CompressionLevel.NoCompression:
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(compressionLevel), compressionLevel, null);
             }
         }
     }

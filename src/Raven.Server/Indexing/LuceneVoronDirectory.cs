@@ -230,9 +230,5 @@ namespace Raven.Server.Indexing
         {
             _indexOutputFilesSummary.Reset();
         }
-
-        protected override void Dispose(bool disposing)
-        {
-        }
     }
 }

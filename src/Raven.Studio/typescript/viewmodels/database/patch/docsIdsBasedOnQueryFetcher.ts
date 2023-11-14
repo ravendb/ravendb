@@ -24,7 +24,12 @@ class docsIdsBasedOnQueryFetcher {
         criteria.queryText(`${wherelessQueryText} where startsWith(id(), '${this.escape(documentIdPrefix)}')`);
         criteria.metadataOnly(true);
         
-        return new queryCommand(this.database(), 0, 10, criteria)
+        return new queryCommand({
+                db: this.database(),
+                skip: 0,
+                take: 10,
+                criteria
+            })
             .execute()
             .then(result => result.items.map(x => x.getId()));
     }

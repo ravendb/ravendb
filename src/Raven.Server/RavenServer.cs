@@ -1484,9 +1484,11 @@ namespace Raven.Server
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
+            public readonly DateTime CreatedAt;
 
             public AuthenticateConnection()
             {
+                CreatedAt = SystemTime.UtcNow;
             }
 
             public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
@@ -2549,7 +2551,7 @@ namespace Raven.Server
                                 msg = "Cannot allow access. Database name is empty.";
                                 return false;
                             }
-                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: false))
+                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication))
                                 return true;
                             msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;

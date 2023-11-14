@@ -102,6 +102,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
         if (dto.Configuration) {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
+            this.allowEtlOnNonEncryptedChannel(dto.Configuration.AllowEtlOnNonEncryptedChannel);
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskRavenEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
             this.pinMentorNode(dto.Configuration.PinToMentorNode);

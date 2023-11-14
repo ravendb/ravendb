@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     if (field.Value.AggregationOperation == AggregationOperation.None)
                     {
-                        throw new InvalidQueryException($"Field '{field.Key}' isn't neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
+                        throw new InvalidQueryException($"Field '{field.Key}' is neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
                             query.QueryParameters);
                     }
                 }

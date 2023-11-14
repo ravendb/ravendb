@@ -134,13 +134,14 @@ namespace FastTests
 
             public PeriodicBackupConfiguration CreateBackupConfiguration(string backupPath = null, BackupType backupType = BackupType.Backup, bool disabled = false, string fullBackupFrequency = "0 0 1 1 *",
                 string incrementalBackupFrequency = null, long? taskId = null, string mentorNode = null, BackupEncryptionSettings backupEncryptionSettings = null, AzureSettings azureSettings = null,
-                GoogleCloudSettings googleCloudSettings = null, S3Settings s3Settings = null, RetentionPolicy retentionPolicy = null, string name = null)
+                GoogleCloudSettings googleCloudSettings = null, S3Settings s3Settings = null, RetentionPolicy retentionPolicy = null, string name = null, BackupUploadMode backupUploadMode = BackupUploadMode.Default)
             {
                 var config = new PeriodicBackupConfiguration()
                 {
                     BackupType = backupType,
                     FullBackupFrequency = fullBackupFrequency,
-                    Disabled = disabled
+                    Disabled = disabled,
+                    BackupUploadMode = backupUploadMode
                 };
 
                 if (taskId.HasValue)

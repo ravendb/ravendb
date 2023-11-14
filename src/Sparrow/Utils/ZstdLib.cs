@@ -191,10 +191,16 @@ namespace Sparrow.Utils
 
         public class CompressContext : IDisposable
         {
+            private readonly int _level;
             private void* _cctx;
             public void* Compression => _cctx != null ? _cctx : (_cctx = CreateCompression());
             private void* _dctx;
             public void* Decompression => _dctx != null ? _dctx : (_dctx = CreateDecompression());
+
+            public CompressContext(int level)
+            {
+                _level = level;
+            }
 
             private void* CreateCompression()
             {
@@ -202,6 +208,12 @@ namespace Sparrow.Utils
                 if (cctx == null)
                 {
                     throw new OutOfMemoryException("Unable to create compression context");
+                }
+
+                if (_level > 0)
+                {
+                    var rc = ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_compressionLevel, _level);
+                    AssertZstdSuccess(rc);
                 }
 
                 if (PlatformDetails.Is32Bits)
@@ -252,7 +264,7 @@ namespace Sparrow.Utils
 
         public static int Compress(byte* src, int srcLen, byte* dst, int dstLen, CompressionDictionary dictionary)
         {
-            _threadCompressContext ??= new CompressContext();
+            _threadCompressContext ??= new CompressContext(level: 0);
 
             {
                 UIntPtr result;
@@ -284,7 +296,7 @@ namespace Sparrow.Utils
 
         public static int Decompress( byte* srcPtr, int srcSize, byte* dstPtr, int dstSize, CompressionDictionary dictionary)
         {
-            _threadCompressContext ??= new CompressContext();
+            _threadCompressContext ??= new CompressContext(level: 0);
 
             UIntPtr result;
             if (dictionary == null || dictionary.Compression == null)

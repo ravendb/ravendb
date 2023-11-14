@@ -101,6 +101,11 @@
                                             <li><a href="#">Promote node immediately</a></li>
                                         </ul>
                                     </div>-->
+                                    <button class="btn btn-default" title="Promote to become member" 
+                                        data-bind="click: $parent.promote.bind($root, tag()), css: { 'btn-spinner': _.includes($root.spinners.promote(), tag()) }, 
+                                                   disable: _.includes($root.spinners.promote(), tag()), visible: canBePromoted()" >
+                                        <i class="icon-promote"></i> <span>Promote</span>
+                                    </button>
                                     <div class="dropdown dropdown-right" data-bind="visible: $root.lockMode() === 'Unlock', requiredAccess: 'Operator'">
                                         <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                             <i class="icon-disconnected"></i> <span>Delete from group</span>

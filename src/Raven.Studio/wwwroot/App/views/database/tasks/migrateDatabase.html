@@ -15,13 +15,16 @@
                         <div class="form-group" data-bind="validationElement: migratorFullPath">
                             <label class="control-label migrator-path">
                                 Migrator Path
-                                <small data-bind="visible: !migratorPathInConfiguration()"><i class="icon-info text-info"></i></small>
+                                <small data-bind="visible: !migratorPathInConfiguration() && !$root.suggestDeployingToolsForCloudProduct()"><i class="icon-info text-info"></i></small>
                             </label>
                             <div class="flex-grow has-feedback">
                                 <div data-bind="visible: migratorPathInConfiguration" class="form-control-static">
-                                    <small><i class="icon-info margin-right margin-right-sm"></i>Path for Raven.Migrator executable was defined by administrator</small>
+                                    <small><i class="icon-info margin-right-xs"></i>Path for Raven.Migrator executable was defined by administrator</small>
                                 </div>
-                                <input data-bind="textInput: migratorFullPath, visible: !migratorPathInConfiguration()" 
+                                <div data-bind="visible: $root.suggestDeployingToolsForCloudProduct">
+                                    <small><i class="icon-info margin-right-xs"></i>Please deploy RavenDB Tools via <a href="https://cloud.ravendb.net/portal/" title="RavenDB Cloud">RavenDB Cloud Portal</a></small>
+                                </div>
+                                <input data-bind="textInput: migratorFullPath, visible: !migratorPathInConfiguration() && !$root.suggestDeployingToolsForCloudProduct()" 
                                        id="migratorFullPath" type="text" class="form-control" placeholder="Enter the full path of the directory containing the Raven.Migrator executable" />
                                 <span class="glyphicon glyphicon-ok text-success form-control-feedback" title="Raven.Migrator was found under specified path" data-bind="visible: migratorFullPath() && migratorFullPath.isValid() && !migratorFullPath.isValidating()"></span>
                                 <ul class="dropdown-menu" role="menu"

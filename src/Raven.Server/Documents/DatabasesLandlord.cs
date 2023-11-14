@@ -92,6 +92,8 @@ namespace Raven.Server.Documents
             internal bool ShouldFetchIdleStateImmediately = false;
             internal Action<Exception, string> OnFailedRescheduleNextScheduledActivity;
             internal bool PreventNodePromotion = false;
+            internal Func<ServerStore, Task> BeforeHandleClusterTransactionOnDatabaseChanged;
+            internal Action DelayNotifyFeaturesAboutStateChange;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
@@ -174,6 +176,9 @@ namespace Raven.Server.Documents
 
                         case ClusterDatabaseChangeType.PendingClusterTransactions:
                         case ClusterDatabaseChangeType.ClusterTransactionCompleted:
+                            if (ForTestingPurposes?.BeforeHandleClusterTransactionOnDatabaseChanged != null)
+                                await ForTestingPurposes.BeforeHandleClusterTransactionOnDatabaseChanged.Invoke(_serverStore);
+
                             database.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
                             database.ClusterTransactionId = topology.ClusterTransactionIdBase64;
                             database.NotifyOnPendingClusterTransaction(index, changeType);
