@@ -22,6 +22,7 @@ namespace SlowTests.Issues
                     new()
                     {
                         Name = "Initial",
+                        Numbers = new List<int> { 1, 2, 3 },
                         Tries = new List<Message.Try> { new() { ResultMessage = "Received" } },
                         Data = new List<Message.Info>
                         {
@@ -48,6 +49,7 @@ namespace SlowTests.Issues
                     new()
                     {
                         Name = "Initial",
+                        Numbers = new List<int> { 1, 2, 3 },
                         Tries = new List<Message.Try> { new() { ResultMessage = "Received" } },
                         Data = new List<Message.Info>
                         {
@@ -124,6 +126,21 @@ namespace SlowTests.Issues
                     Assert.Equal(31, dictionary["TV"]);
                     Assert.Equal(32, dictionary["Table"]);
                     Assert.Equal(3, dictionary["Laptop"]);
+
+                    rql = "from 'Messages' " +
+                          "group by Name, Numbers[] " +
+                          "select Name, Numbers[] as OriginalNumber, sum(Numbers) as Total";
+
+                    var numbersResult = session.Advanced.RawQuery<ResultSamePathNumbers>(rql).ToList();
+                    Assert.Equal(3, numbersResult.Count);
+                    Assert.True(numbersResult.Select(x => x.Name).All(x => x == "Initial"));
+
+                    Assert.Equal(1, numbersResult[0].OriginalNumber);
+                    Assert.Equal(2, numbersResult[0].Total);
+                    Assert.Equal(2, numbersResult[1].OriginalNumber);
+                    Assert.Equal(4, numbersResult[1].Total);
+                    Assert.Equal(3, numbersResult[2].OriginalNumber);
+                    Assert.Equal(6, numbersResult[2].Total);
                 }
             }
         }
@@ -132,6 +149,8 @@ namespace SlowTests.Issues
         private class Message
         {
             public string Name { get; set; }
+
+            public List<int> Numbers { get; set; }
 
             public List<Info> Data { get; set; }
 
@@ -175,5 +194,13 @@ namespace SlowTests.Issues
             public string ProductName { get; set; }
         }
 
+        private class ResultSamePathNumbers
+        {
+            public string Name { get; set; }
+
+            public double Total { get; set; }
+
+            public int OriginalNumber { get; set; }
+        }
     }
 }

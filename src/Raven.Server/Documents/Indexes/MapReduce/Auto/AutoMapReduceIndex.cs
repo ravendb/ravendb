@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         {
                             var fanoutIndex = 0;
 
-                            if (value is IEnumerable array == false || autoIndexField.SamePathAsGroupByField == false)
+                            if (value is IEnumerable array == false || autoIndexField.SamePathToArrayAsGroupByField == false)
                             {
                                 for (; fanoutIndex < _output.Results.Count; fanoutIndex++)
                                 {
@@ -265,12 +265,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             // select Name, Tries[].ResultMessage as ResultMessage, sum(Data[].Items[].TotalPrice) as Total
 
             var groupByFieldsPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            
             foreach ((_, AutoIndexField value) in Definition.GroupByFields)
             {
                 if (value.GroupByArrayBehavior != GroupByArrayBehavior.ByIndividualValues)
                     continue;
 
-                var lastIndexOfGroupByField = value.Name.LastIndexOf(".", StringComparison.OrdinalIgnoreCase);
+                var lastIndexOfGroupByField = value.Name.LastIndexOf("[]", StringComparison.OrdinalIgnoreCase);
                 if (lastIndexOfGroupByField == -1)
                     continue;
 
@@ -284,15 +285,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 var autoIndexField = field.As<AutoIndexField>();
 
-                var lastIndexOfAutoIndexField = autoIndexField.Name.LastIndexOf(".", StringComparison.OrdinalIgnoreCase);
-                if (lastIndexOfAutoIndexField == -1)
+                if (autoIndexField.Aggregation != AggregationOperation.Sum)
                     continue;
 
-                var autoIndexFieldPath = autoIndexField.Name.Substring(0, lastIndexOfAutoIndexField);
+                var lastIndexOfAutoIndexField = autoIndexField.Name.LastIndexOf("[]", StringComparison.OrdinalIgnoreCase);
+
+                var autoIndexFieldPath = lastIndexOfAutoIndexField == -1 
+                    ? autoIndexField.Name 
+                    : autoIndexField.Name.Substring(0, lastIndexOfAutoIndexField);
 
                 if (groupByFieldsPaths.Any(x => autoIndexFieldPath.StartsWith(x)))
                 {
-                    autoIndexField.SamePathAsGroupByField = true;
+                    autoIndexField.SamePathToArrayAsGroupByField = true;
                 }
             }
         }
@@ -314,7 +318,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         return fieldValue;
                     }
 
-                    if (_isFanout == false || autoIndexField.SamePathAsGroupByField == false)
+                    if (_isFanout == false || autoIndexField.SamePathToArrayAsGroupByField == false)
                     {
                         decimal total = 0;
 
