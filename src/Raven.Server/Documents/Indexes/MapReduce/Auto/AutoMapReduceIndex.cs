@@ -117,105 +117,105 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             var document = ((Document[])mapResults)[0];
             Debug.Assert(indexItem.LowerId == document.LowerId);
 
-            using (_stats.BlittableJsonAggregation.Start())
-            {
-                DynamicJsonValue singleResult = null;
-
-                var groupByFieldsCount = Definition.OrderedGroupByFields.Length;
-
-                for (var i = 0; i < groupByFieldsCount; i++)
-                {
-                    var groupByField = Definition.OrderedGroupByFields[i];
-
-                    BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, groupByField.Name, out object result);
-
-                    if (_isFanout == false)
-                    {
-                        if (singleResult == null)
-                            singleResult = new DynamicJsonValue();
-
-                        singleResult[groupByField.Name] = result;
-                        _reduceKeyProcessor.Process(indexContext.Allocator, result);
-                    }
-                    else
-                    {
-                        if (result is IEnumerable array && groupByField.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues)
-                        {
-                            // fanout
-                            foreach (var item in array)
-                            {
-                                _output.AddGroupByValue(groupByField.Name, item);
-                            }
-                        }
-                        else
-                        {
-                            _output.AddGroupByValue(groupByField.Name, result);
-                        }
-                    }
-                }
-
-                if (_isFanout == false)
-                {
-                    _output.Results.Add((singleResult, _reduceKeyProcessor.Hash));
-                }
-                else if (_output.GroupByFields.Count >= Definition.GroupByFields.Count)
-                {
-                    for (var i = 0; i < _output.MaxGroupByFieldsCount; i++)
-                    {
-                        var json = new DynamicJsonValue();
-
-                        foreach (var groupBy in _output.GroupByFields)
-                        {
-                            var index = Math.Min(i, groupBy.Value.Count - 1);
-                            var value = _output.GroupByFields[groupBy.Key][index];
-
-                            json[groupBy.Key] = value;
-
-                            _reduceKeyProcessor.Process(indexContext.Allocator, value);
-                        }
-
-                        _output.Results.Add((json, _reduceKeyProcessor.Hash));
-
-                        _reduceKeyProcessor.Reset();
-                    }
-                }
-                // else { } - we have fanout index with multiple group by fields and one is collection
-                // if we have empty collection we cannot create composite key then
-                // let's skip putting such map results
-
-                foreach (var field in Definition.MapFields)
-                {
-                    var autoIndexField = field.Value.As<AutoIndexField>();
-
-                    var value = GetFieldValue(autoIndexField, document);
-
-                    if (_isFanout == false)
-                        _output.Results[0].Json[autoIndexField.Name] = value;
-                    else
-                    {
-                        var fanoutIndex = 0;
-
-                        if (value is IEnumerable array == false || autoIndexField.SamePathAsGroupByField == false)
-                        {
-                            for (; fanoutIndex < _output.Results.Count; fanoutIndex++)
-                            {
-                                _output.Results[fanoutIndex].Json[autoIndexField.Name] = value;
-                            }
-                        }
-                        else
-                        {
-                            foreach (var arrayValue in array)
-                            {
-                                Debug.Assert(fanoutIndex < _output.Results.Count);
-                                _output.Results[fanoutIndex++].Json[autoIndexField.Name] = arrayValue;
-                            }
-                        }
-                    }
-                }
-            }
-
             try
             {
+                using (_stats.BlittableJsonAggregation.Start())
+                {
+                    DynamicJsonValue singleResult = null;
+
+                    var groupByFieldsCount = Definition.OrderedGroupByFields.Length;
+
+                    for (var i = 0; i < groupByFieldsCount; i++)
+                    {
+                        var groupByField = Definition.OrderedGroupByFields[i];
+
+                        BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, groupByField.Name, out object result);
+
+                        if (_isFanout == false)
+                        {
+                            if (singleResult == null)
+                                singleResult = new DynamicJsonValue();
+
+                            singleResult[groupByField.Name] = result;
+                            _reduceKeyProcessor.Process(indexContext.Allocator, result);
+                        }
+                        else
+                        {
+                            if (result is IEnumerable array && groupByField.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues)
+                            {
+                                // fanout
+                                foreach (var item in array)
+                                {
+                                    _output.AddGroupByValue(groupByField.Name, item);
+                                }
+                            }
+                            else
+                            {
+                                _output.AddGroupByValue(groupByField.Name, result);
+                            }
+                        }
+                    }
+
+                    if (_isFanout == false)
+                    {
+                        _output.Results.Add((singleResult, _reduceKeyProcessor.Hash));
+                    }
+                    else if (_output.GroupByFields.Count >= Definition.GroupByFields.Count)
+                    {
+                        for (var i = 0; i < _output.MaxGroupByFieldsCount; i++)
+                        {
+                            var json = new DynamicJsonValue();
+
+                            foreach (var groupBy in _output.GroupByFields)
+                            {
+                                var index = Math.Min(i, groupBy.Value.Count - 1);
+                                var value = _output.GroupByFields[groupBy.Key][index];
+
+                                json[groupBy.Key] = value;
+
+                                _reduceKeyProcessor.Process(indexContext.Allocator, value);
+                            }
+
+                            _output.Results.Add((json, _reduceKeyProcessor.Hash));
+
+                            _reduceKeyProcessor.Reset();
+                        }
+                    }
+                    // else { } - we have fanout index with multiple group by fields and one is collection
+                    // if we have empty collection we cannot create composite key then
+                    // let's skip putting such map results
+
+                    foreach (var field in Definition.MapFields)
+                    {
+                        var autoIndexField = field.Value.As<AutoIndexField>();
+
+                        var value = GetFieldValue(autoIndexField, document);
+
+                        if (_isFanout == false)
+                            _output.Results[0].Json[autoIndexField.Name] = value;
+                        else
+                        {
+                            var fanoutIndex = 0;
+
+                            if (value is IEnumerable array == false || autoIndexField.SamePathAsGroupByField == false)
+                            {
+                                for (; fanoutIndex < _output.Results.Count; fanoutIndex++)
+                                {
+                                    _output.Results[fanoutIndex].Json[autoIndexField.Name] = value;
+                                }
+                            }
+                            else
+                            {
+                                foreach (var arrayValue in array)
+                                {
+                                    Debug.Assert(fanoutIndex < _output.Results.Count);
+                                    _output.Results[fanoutIndex++].Json[autoIndexField.Name] = arrayValue;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 using (_stats.CreateBlittableJson.Start())
                 {
                     for (var i = 0; i < _output.Results.Count; i++)
