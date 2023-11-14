@@ -3,9 +3,15 @@ using Sparrow.Threading;
 
 namespace Raven.Server.Rachis;
 
-public class BlittableResultWriter(Func<object, object> writeResultFunc) : IDisposable
+public class BlittableResultWriter : IDisposable
 {
     private readonly SingleUseFlag _invalid = new SingleUseFlag();
+    private readonly Func<object, object> _writeResultFunc;
+
+    public BlittableResultWriter(Func<object, object> writeResultFunc)
+    {
+        _writeResultFunc = writeResultFunc;
+    }
 
     public object Result { private set; get; }
 
@@ -15,7 +21,7 @@ public class BlittableResultWriter(Func<object, object> writeResultFunc) : IDisp
         {
             Result =  _invalid.IsRaised() 
                 ? null : 
-                writeResultFunc.Invoke(result);
+                _writeResultFunc.Invoke(result);
         }
     }
 
