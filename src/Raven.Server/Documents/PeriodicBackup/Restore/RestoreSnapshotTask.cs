@@ -22,7 +22,6 @@ using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using Index = Raven.Server.Documents.Indexes.Index;
-using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -31,6 +30,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         private Stopwatch _sw;
         private readonly string _firstFile, _extension;
+        private ZipArchive _zipArchive;
 
         public RestoreSnapshotTask(ServerStore serverStore, RestoreBackupConfigurationBase restoreConfiguration, IRestoreSource restoreSource,
             string firstFile, string extension, List<string> filesToRestore, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, restoreSource, filesToRestore, operationCancelToken)
@@ -135,91 +135,92 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             RestoreSettings restoreSettings = null;
 
             var fullBackupPath = RestoreSource.GetBackupPath(backupPath);
-            using (var zip = await RestoreSource.GetZipArchiveForSnapshot(fullBackupPath))
+            _zipArchive = await RestoreSource.GetZipArchiveForSnapshot(fullBackupPath);
+
+            var restorePath = new VoronPathSetting(RestoreConfiguration.DataDirectory);
+            if (Directory.Exists(restorePath.FullPath) == false)
+                Directory.CreateDirectory(restorePath.FullPath);
+
+            // validate free space
+            var snapshotSize = _zipArchive.Entries.Sum(entry => entry.Length);
+            BackupHelper.AssertFreeSpaceForSnapshot(restorePath.FullPath, snapshotSize, "restore a backup", Logger);
+
+            foreach (var zipEntries in _zipArchive.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
             {
-                var restorePath = new VoronPathSetting(RestoreConfiguration.DataDirectory);
-                if (Directory.Exists(restorePath.FullPath) == false)
-                    Directory.CreateDirectory(restorePath.FullPath);
+                var directory = zipEntries.Key;
 
-                // validate free space
-                var snapshotSize = zip.Entries.Sum(entry => entry.Length);
-                BackupHelper.AssertFreeSpaceForSnapshot(restorePath.FullPath, snapshotSize, "restore a backup", Logger);
-
-                foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
+                if (string.IsNullOrWhiteSpace(directory))
                 {
-                    var directory = zipEntries.Key;
-
-                    if (string.IsNullOrWhiteSpace(directory))
+                    foreach (var zipEntry in zipEntries)
                     {
-                        foreach (var zipEntry in zipEntries)
+                        if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
+                            await using (var entryStream = zipEntry.Open())
                             {
-                                await using (var entryStream = zipEntry.Open())
+                                var snapshotEncryptionKey = RestoreConfiguration.EncryptionKey != null
+                                    ? Convert.FromBase64String(RestoreConfiguration.EncryptionKey)
+                                    : null;
+
+                                await using (var decompressionStream = FullBackup.GetDecompressionStream(entryStream))
+                                await using (var stream = GetInputStream(decompressionStream, snapshotEncryptionKey))
                                 {
-                                    var snapshotEncryptionKey = RestoreConfiguration.EncryptionKey != null
-                                        ? Convert.FromBase64String(RestoreConfiguration.EncryptionKey)
-                                        : null;
+                                    var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
+                                    json.BlittableValidation();
 
-                                    await using (var decompressionStream = FullBackup.GetDecompressionStream(entryStream))
-                                    await using (var stream = GetInputStream(decompressionStream, snapshotEncryptionKey))
-                                    {
-                                        var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
-                                        json.BlittableValidation();
+                                    restoreSettings = JsonDeserializationServer.RestoreSettings(json);
 
-                                        restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                                    restoreSettings.DatabaseRecord.DatabaseName = RestoreConfiguration.DatabaseName;
+                                    DatabaseHelper.Validate(RestoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord, ServerStore.Configuration);
 
-                                        restoreSettings.DatabaseRecord.DatabaseName = RestoreConfiguration.DatabaseName;
-                                        DatabaseHelper.Validate(RestoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord, ServerStore.Configuration);
+                                    if (restoreSettings.DatabaseRecord.Encrypted && HasEncryptionKey == false)
+                                        throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
 
-                                        if (restoreSettings.DatabaseRecord.Encrypted && HasEncryptionKey == false)
-                                            throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
-
-                                        if (restoreSettings.DatabaseRecord.Encrypted == false && HasEncryptionKey)
-                                            throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
-                                    }
+                                    if (restoreSettings.DatabaseRecord.Encrypted == false && HasEncryptionKey)
+                                        throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
                                 }
                             }
                         }
-
-                        continue;
                     }
 
-                    var restoreDirectory = directory.StartsWith(Constants.Documents.PeriodicBackup.Folders.Documents, StringComparison.OrdinalIgnoreCase)
-                        ? restorePath
-                        : restorePath.Combine(directory);
-
-                    var isSubDirectory = PathUtil.IsSubDirectory(restoreDirectory.FullPath, restorePath.FullPath);
-                    if (isSubDirectory == false)
-                    {
-                        var extensions = zipEntries
-                            .Select(x => Path.GetExtension(x.Name))
-                            .Distinct()
-                            .ToArray();
-
-                        if (extensions.Length != 1 || string.Equals(extensions[0], TableValueCompressor.CompressionRecoveryExtension, StringComparison.OrdinalIgnoreCase) == false)
-                            throw new InvalidOperationException($"Encountered invalid directory '{directory}' in snapshot file with following file extensions: {string.Join(", ", extensions)}");
-
-                        // this enables backward compatibility of snapshot backups with compression recovery files before fix was made in RavenDB-17173
-                        // the underlying issue was that we were putting full path when compression recovery files were backed up using snapshot
-                        // because of that the end restore directory was not a sub-directory of a restore path
-                        // which could result in a file already exists exception
-                        // since restoring of compression recovery files is not mandatory then it is safe to skip them
-                        continue;
-                    }
-
-                    BackupMethods.Full.Restore(
-                        zipEntries,
-                        restoreDirectory,
-                        journalDir: null,
-                        onProgress: message =>
-                        {
-                            restoreResult.AddInfo(message);
-                            restoreResult.SnapshotRestore.ReadCount++;
-                            onProgress.Invoke(restoreResult.Progress);
-                        },
-                        cancellationToken: OperationCancelToken.Token);
+                    continue;
                 }
+
+                var restoreDirectory = directory.StartsWith(Constants.Documents.PeriodicBackup.Folders.Documents, StringComparison.OrdinalIgnoreCase)
+                    ? restorePath
+                    : restorePath.Combine(directory);
+
+                var isSubDirectory = PathUtil.IsSubDirectory(restoreDirectory.FullPath, restorePath.FullPath);
+                if (isSubDirectory == false)
+                {
+                    var extensions = zipEntries
+                        .Select(x => Path.GetExtension(x.Name))
+                        .Distinct()
+                        .ToArray();
+
+                    if (extensions.Length != 1 || string.Equals(extensions[0], TableValueCompressor.CompressionRecoveryExtension, StringComparison.OrdinalIgnoreCase) ==
+                        false)
+                        throw new InvalidOperationException(
+                            $"Encountered invalid directory '{directory}' in snapshot file with following file extensions: {string.Join(", ", extensions)}");
+
+                    // this enables backward compatibility of snapshot backups with compression recovery files before fix was made in RavenDB-17173
+                    // the underlying issue was that we were putting full path when compression recovery files were backed up using snapshot
+                    // because of that the end restore directory was not a sub-directory of a restore path
+                    // which could result in a file already exists exception
+                    // since restoring of compression recovery files is not mandatory then it is safe to skip them
+                    continue;
+                }
+
+                BackupMethods.Full.Restore(
+                    zipEntries,
+                    restoreDirectory,
+                    journalDir: null,
+                    onProgress: message =>
+                    {
+                        restoreResult.AddInfo(message);
+                        restoreResult.SnapshotRestore.ReadCount++;
+                        onProgress.Invoke(restoreResult.Progress);
+                    },
+                    cancellationToken: OperationCancelToken.Token);
             }
 
             if (restoreSettings == null)
@@ -239,33 +240,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 SkipRevisionCreation = true
             };
 
-            var lastPath = RestoreSource.GetSmugglerBackupPath(smugglerFile);
-
             Result.Files.CurrentFileName = smugglerFile; 
             Result.Files.CurrentFile++;
 
             onProgress.Invoke(Result.Progress);
 
-            using (var zip = await RestoreSource.GetZipArchiveForSnapshot(lastPath))
+            var entry = _zipArchive.GetEntry(RestoreSettings.SmugglerValuesFileName);
+            if (entry != null)
             {
-                foreach (var entry in zip.Entries)
+                using (_zipArchive)
+                await using (var input = entry.Open())
+                await using (var inputStream = GetSnapshotInputStream(input, database.Name))
+                await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                 {
-                    if (entry.Name == RestoreSettings.SmugglerValuesFileName)
-                    {
-                        await using (var input = entry.Open())
-                        await using (var inputStream = GetSnapshotInputStream(input, database.Name))
-                        await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
-                        {
-                            var source = new StreamSource(uncompressed, context, database.Name);
+                    var source = new StreamSource(uncompressed, context, database.Name);
 
-                            var smuggler = database.Smuggler.CreateForRestore(databaseRecord: null, source, destination, context, smugglerOptions, result: null, onProgress, OperationCancelToken.Token);
-                            smuggler.BackupKind = BackupKind.Incremental;
+                    var smuggler = database.Smuggler.CreateForRestore(databaseRecord: null, source, destination, context, smugglerOptions, result: null, onProgress,
+                        OperationCancelToken.Token);
+                    smuggler.BackupKind = BackupKind.Incremental;
 
-                            await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
-                        }
-                        break;
-                    }
+                    await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                 }
+
+                _zipArchive = null; // the zip archive is not needed anymore
             }
         }
 
@@ -312,5 +309,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
+        public override void Dispose()
+        {
+            _zipArchive?.Dispose();
+            base.Dispose();
+        }
     }
 }
