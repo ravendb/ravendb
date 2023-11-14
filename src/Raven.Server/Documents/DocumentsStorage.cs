@@ -1003,22 +1003,27 @@ namespace Raven.Server.Documents
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
-            // return tombstone in any collection with the requested id
+            Tombstone mostRecent = null;
             foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0))
             {
                 if (IsTombstoneOfId(tombstoneKey, lowerId))
                 {
-                    return new DocumentOrTombstone
+                    var current = TableValueToTombstone(context, ref tvh.Reader);
+                    mostRecent = current;
+                    if (mostRecent == null || 
+                        GetConflictStatus(context, current.ChangeVector, mostRecent.ChangeVector, ChangeVectorMode.Version) == ConflictStatus.Update)
                     {
-                        Tombstone = TableValueToTombstone(context, ref tvh.Reader)
-                    };
+                        using (var old = mostRecent)
+                        {
+                            mostRecent = current;
+                        }
+                    }
                 }
-                break;
             }
 
             return new DocumentOrTombstone
             {
-                Tombstone = null
+                Tombstone = mostRecent
             };
         }
 
