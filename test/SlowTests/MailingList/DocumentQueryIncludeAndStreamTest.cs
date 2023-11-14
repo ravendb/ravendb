@@ -90,7 +90,7 @@ namespace SlowTests.MailingList
                         }
                     }
                 }).InnerException;
-                Assert.Contains("Includes are not supported by streaming query.", notSupportedException.Message);
+                Assert.Contains("Includes are not supported by this type of query.", notSupportedException.Message);
             }
         }
         
@@ -113,7 +113,7 @@ namespace SlowTests.MailingList
                         }
                     }
                 });
-                Assert.Contains("Includes are not supported by streaming query.", notSupportedException.Message);
+                Assert.Contains("Includes are not supported by this type of query.", notSupportedException.Message);
             }
         }
 
