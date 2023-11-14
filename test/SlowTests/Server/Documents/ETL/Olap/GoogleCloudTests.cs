@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Client;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -30,7 +29,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         private readonly string _googleCloudTestsPrefix = $"olap-tests/{nameof(GoogleCloudTests)}-{Guid.NewGuid()}";
         private const string CollectionName = "Orders";
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanUploadToGoogleCloud()
         {
             var settings = GetGoogleCloudSettings();
@@ -105,7 +104,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task SimpleTransformation()
         {
             var settings = GetGoogleCloudSettings();
@@ -211,7 +210,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanLoadToMultipleTables()
         {
             const string salesTableName = "Sales";
@@ -393,7 +392,7 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanModifyPartitionColumnName()
         {
             var settings = GetGoogleCloudSettings();
@@ -489,7 +488,7 @@ loadToOrders(partitionBy(['order_date', key]),
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task SimpleTransformation_NoPartition()
         {
             var settings = GetGoogleCloudSettings();
@@ -598,7 +597,7 @@ loadToOrders(noPartition(),
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task SimpleTransformation_MultiplePartitions()
         {
             var settings = GetGoogleCloudSettings();
@@ -683,7 +682,7 @@ loadToOrders(partitionBy(
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanPartitionByCustomDataFieldViaScript()
         {
             var settings = GetGoogleCloudSettings();
@@ -757,7 +756,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanHandleSpecialCharsInFolderPath()
         {
             var settings = GetGoogleCloudSettings();
@@ -907,7 +906,7 @@ for (var i = 0; i < this.Lines.length; i++){
 
         private GoogleCloudSettings GetGoogleCloudSettings([CallerMemberName] string caller = null)
         {
-            var googleCloudSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
+            var googleCloudSettings = GoogleCloudRetryFactAttribute.GoogleCloudSettings;
             if (googleCloudSettings == null)
                 return null;
 
