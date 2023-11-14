@@ -41,6 +41,19 @@ export default class IndexUtils {
         }
     }
 
+    static getLockIcon(lockMode: IndexLockMode): IconName {
+        switch (lockMode) {
+            case "Unlock":
+                return "unlock";
+            case "LockedError":
+                return "lock-error";
+            case "LockedIgnore":
+                return "lock";
+            default:
+                assertUnreachable(lockMode);
+        }
+    }
+
     static formatStatus(status: IndexStatus) {
         switch (status) {
             case "RollingDeployment":

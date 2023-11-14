@@ -17,7 +17,6 @@ import collectionsTracker from "common/helpers/database/collectionsTracker";
 import useInterval from "hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 import IndexUtils from "components/utils/IndexUtils";
-import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
 import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";
 import app from "durandal/app";
@@ -38,6 +37,9 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
+import useConfirm from "components/common/ConfirmDialog";
+import React from "react";
+import { Alert } from "reactstrap";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -63,6 +65,8 @@ export function useIndexesPage(database: database, stale: boolean) {
     const { databaseChangesApi, serverNotifications } = useChanges();
 
     const [resetIndexName, setResetIndexName] = useState<string>(null);
+
+    const confirm = useConfirm();
 
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
 
@@ -421,29 +425,37 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const confirmSetLockModeSelectedIndexes = useCallback(
         async (lockMode: IndexLockMode) => {
-            const lockModeFormatted = IndexUtils.formatLockMode(lockMode);
-
             const indexes = getSelectedIndexes().filter(
                 (index) => index.type !== "AutoMap" && index.type !== "AutoMapReduce"
             );
 
-            viewHelpers
-                .confirmationMessage(
-                    "Are you sure?",
-                    `Do you want to <strong>${genUtils.escapeHtml(
-                        lockModeFormatted
-                    )}</strong> selected indexes?</br>Note: Static-indexes only will be set, 'Lock Mode' is not relevant for auto-indexes.`,
-                    {
-                        html: true,
-                    }
-                )
-                .done((can) => {
-                    if (can) {
-                        setLockModeSelectedIndexes(lockMode, indexes);
-                    }
-                });
+            const isConfirmed = await confirm({
+                icon: IndexUtils.getLockIcon(lockMode),
+                title: (
+                    <span>
+                        Do you want to <strong>{IndexUtils.formatLockMode(lockMode)}</strong> selected indexes?
+                    </span>
+                ),
+                actionColor: "primary",
+                message: (
+                    <div>
+                        <ul className="overflow-auto" style={{ maxHeight: "200px" }}>
+                            {indexes.map((x) => (
+                                <li key={x.name}>{x.name}</li>
+                            ))}
+                        </ul>
+                        <Alert color="info">
+                            Static-indexes only will be set, &apos;Lock Mode&apos; is not relevant for auto-indexes.
+                        </Alert>
+                    </div>
+                ),
+            });
+
+            if (isConfirmed) {
+                await setLockModeSelectedIndexes(lockMode, indexes);
+            }
         },
-        [setLockModeSelectedIndexes, getSelectedIndexes]
+        [getSelectedIndexes, confirm, setLockModeSelectedIndexes]
     );
 
     const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
@@ -493,21 +505,20 @@ export function useIndexesPage(database: database, stale: boolean) {
     };
 
     const openFaulty = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
-        viewHelpers
-            .confirmationMessage(
-                "Open index?",
-                `You're opening a faulty index <strong>'${genUtils.escapeHtml(index.name)}'</strong>`,
-                {
-                    html: true,
-                }
-            )
-            .done((result) => {
-                if (result.can) {
-                    eventsCollector.reportEvent("indexes", "open");
+        const isConfirmed = await confirm({
+            title: (
+                <span>
+                    Do you want to open faulty index <strong>{index.name}</strong>?
+                </span>
+            ),
+            confirmText: "Open",
+            actionColor: "primary",
+        });
 
-                    indexesService.openFaulty(index, database, location);
-                }
-            });
+        if (isConfirmed) {
+            eventsCollector.reportEvent("indexes", "open");
+            await indexesService.openFaulty(index, database, location);
+        }
     };
 
     const onResetIndexConfirm = async (contexts: DatabaseActionContexts[]) => {

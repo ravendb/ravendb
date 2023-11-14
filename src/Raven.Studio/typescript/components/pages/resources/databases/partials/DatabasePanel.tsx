@@ -41,10 +41,8 @@ import { selectDatabaseState } from "components/pages/resources/databases/store/
 import {
     changeDatabasesLockMode,
     compactDatabase,
-    confirmSetLockMode,
     confirmToggleDatabases,
     confirmToggleIndexing,
-    confirmTogglePauseIndexing,
     reloadDatabaseDetails,
     toggleDatabases,
     toggleIndexing,
@@ -58,6 +56,7 @@ import changesContext = require("common/changesContext");
 import { useServices } from "components/hooks/useServices";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
+import useConfirm from "components/common/ConfirmDialog";
 
 interface DatabasePanelProps {
     databaseName: string;
@@ -103,6 +102,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
     const { databasesService } = useServices();
+    const confirm = useConfirm();
 
     //TODO: show commands errors!
 
@@ -157,9 +157,11 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
         reportEvent("databases", "set-lock-mode", lockMode);
 
-        const can = await dispatch(confirmSetLockMode());
+        const isConfirmed = await confirm({
+            title: "Do you want to change lock mode?`",
+        });
 
-        if (can) {
+        if (isConfirmed) {
             setLockChanges(true);
             try {
                 await dispatch(changeDatabasesLockMode(dbs, lockMode));
@@ -172,12 +174,16 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const onTogglePauseIndexing = async (pause: boolean) => {
         reportEvent("databases", "pause-indexing");
 
-        const confirmation = await dispatch(confirmTogglePauseIndexing(db, pause));
+        const isConfirmed = await confirm({
+            icon: pause ? "pause" : "play",
+            title: `Do you want to ${pause ? "pause" : "resume"} indexing?`,
+            actionColor: pause ? "warning" : "success",
+        });
 
-        if (confirmation.can) {
+        if (isConfirmed) {
             try {
                 setInProgressAction(pause ? "Pausing indexing" : "Resume indexing");
-                await dispatch(togglePauseIndexing(db, pause, confirmation.locations));
+                await dispatch(togglePauseIndexing(db, pause));
             } finally {
                 setInProgressAction(null);
             }

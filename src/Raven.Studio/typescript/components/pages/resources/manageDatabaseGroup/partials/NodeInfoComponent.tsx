@@ -95,7 +95,7 @@ export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps)
 
 interface NodeInfoComponentProps {
     node: NodeInfo;
-    deleteFromGroup: (nodeTag: string, hardDelete: boolean) => void;
+    deleteFromGroup: (nodeTag: string, hardDelete: boolean) => Promise<void>;
     db: DatabaseSharedInfo;
 }
 
