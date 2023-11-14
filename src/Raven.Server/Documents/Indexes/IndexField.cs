@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Indexes
 
         public AutoSpatialOptions Spatial { get; set; }
 
-        public bool SamePathAsGroupByField { get; set; }
+        public bool SamePathToArrayAsGroupByField { get; set; }
 
         public static AutoIndexField Create(string name, AutoIndexDefinition.AutoIndexFieldOptions options)
         {
