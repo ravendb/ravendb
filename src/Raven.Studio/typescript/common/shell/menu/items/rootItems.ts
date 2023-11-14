@@ -29,9 +29,13 @@ function bs5Item() {
 
 
 function clusterDashboard() {
+    const clusterDashboardView = require('viewmodels/resources/clusterDashboard');
+    
+    appUrl.clusterDashboardModule = clusterDashboardView;
+    
     return new leafMenuItem({
         route: ["", "clusterDashboard"],
-        moduleId: require('viewmodels/resources/clusterDashboard'),
+        moduleId: clusterDashboardView,
         title: 'Cluster Dashboard',
         tooltip: "Cluster Dashboard",
         nav: true, // todo - this needs issue RavenDB-16618 to work...
