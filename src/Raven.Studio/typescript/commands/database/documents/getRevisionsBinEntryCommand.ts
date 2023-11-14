@@ -11,7 +11,7 @@ class getRevisionsBinEntryCommand extends commandBase {
 
     execute(): JQueryPromise<pagedResult<document>> {
         const args = {
-            skip: this.skip,
+            etag: this.skip,
             pageSize: this.take
         };
 
