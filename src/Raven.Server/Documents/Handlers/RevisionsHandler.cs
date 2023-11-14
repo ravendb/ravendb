@@ -401,7 +401,7 @@ namespace Raven.Server.Documents.Handlers
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
 
             var sw = Stopwatch.StartNew();
-            var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
+            var etag = GetLongQueryString("etag", false) ?? 0;
             var pageSize = GetPageSize();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
