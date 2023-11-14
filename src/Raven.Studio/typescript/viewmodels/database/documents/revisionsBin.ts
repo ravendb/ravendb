@@ -67,10 +67,14 @@ class revisionsBin extends viewModelBase {
     fetchRevisionsBinEntries(skip: number): JQueryPromise<pagedResult<document>> {
         const task = $.Deferred<pagedResult<document>>();
 
-        new getRevisionsBinEntryCommand(this.activeDatabase(), skip, 100)
+        new getRevisionsBinEntryCommand(this.activeDatabase(), skip, 101)
             .execute()
             .done(result => {
+                const hasMore = result.items.length === 101;
                 const totalCount = skip + result.items.length;
+                if (hasMore) {
+                    result.items.pop();
+                }
                 task.resolve({
                     totalResultCount: totalCount,
                     items: result.items
