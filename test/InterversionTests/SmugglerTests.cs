@@ -160,7 +160,7 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
@@ -225,7 +225,7 @@ namespace InterversionTests
             }
             
             //Export
-            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
             exportOptions.OperateOnTypes = _operateOnTypes42;
             exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)
