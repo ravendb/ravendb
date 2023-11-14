@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace Raven.Server.Exceptions
 {
@@ -15,10 +14,6 @@ namespace Raven.Server.Exceptions
         }
 
         public MissingAttachmentException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        private MissingAttachmentException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }
