@@ -6,6 +6,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using Corax.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +33,7 @@ public class QuantizationTest : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Intrinsics, RavenIntrinsics.Avx2)]
     [InlineData(7)]
     [InlineData(8)]
     [InlineData(16)]
@@ -42,9 +43,6 @@ public class QuantizationTest : RavenTestBase
     [InlineData(1)]
     public void Avx2InstructionCorrectlyIgnoresFrequency(int size)
     {
-        if (Avx2.IsSupported == false && AdvSimd.IsSupported == false)
-            return;
-
         var random = new Random(2337);
         var ids = Enumerable.Range(0, size).Select(i => (long)random.Next(31_111, 59_999)).ToArray();
 
@@ -52,16 +50,34 @@ public class QuantizationTest : RavenTestBase
         var idsWithShiftedCopy = idsWithShifted.ToArray();
 
         EntryIdEncodings.DecodeAndDiscardFrequencyClassic(idsWithShiftedCopy.AsSpan(), size);
-
-        if (Avx2.IsSupported)
-            EntryIdEncodings.DecodeAndDiscardFrequencyAvx2(idsWithShifted.AsSpan(), size);
-        else if (AdvSimd.IsSupported)
-            EntryIdEncodings.DecodeAndDiscardFrequencyNeon(idsWithShifted.AsSpan(), size);
+        EntryIdEncodings.DecodeAndDiscardFrequencyAvx2(idsWithShifted.AsSpan(), size);
 
         Assert.Equal(ids, idsWithShifted);
         Assert.Equal(idsWithShifted, idsWithShiftedCopy);
     }
 
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Intrinsics, RavenIntrinsics.AdvSimd)]
+    [InlineData(7)]
+    [InlineData(8)]
+    [InlineData(16)]
+    [InlineData(24)]
+    [InlineData(32)]
+    [InlineData(33)]
+    [InlineData(1)]
+    public void AdvSimdInstructionCorrectlyIgnoresFrequency(int size)
+    {
+        var random = new Random(2337);
+        var ids = Enumerable.Range(0, size).Select(i => (long)random.Next(31_111, 59_999)).ToArray();
+
+        var idsWithShifted = ids.Select(i => i << 10).ToArray();
+        var idsWithShiftedCopy = idsWithShifted.ToArray();
+
+        EntryIdEncodings.DecodeAndDiscardFrequencyClassic(idsWithShiftedCopy.AsSpan(), size);
+        EntryIdEncodings.DecodeAndDiscardFrequencyNeon(idsWithShifted.AsSpan(), size);
+
+        Assert.Equal(ids, idsWithShifted);
+        Assert.Equal(idsWithShifted, idsWithShiftedCopy);
+    }
     
     // We were trying to improve the performance of the EntryIdEncodings's functions by using SIMD, but we found that the fixed keyword used to obtain a pointer from a Span was causing a significant
     // performance overhead that nullified any gains from using SIMD. We attempted to load a vector using Unsafe.AsPointer, but this approach was not safe because we're sometimes using
@@ -91,12 +107,9 @@ public class QuantizationTest : RavenTestBase
         }
     }
     
-    [Fact]
+    [RavenMultiplatformFact(RavenTestCategory.Corax | RavenTestCategory.Intrinsics, RavenIntrinsics.Avx2)]
     public unsafe void CanSafelyReadVectorFromManagedMemory()
     {
-        if (Avx2.IsSupported == false)
-            return;
-
         var toDelete = new List<int[]>();
         for (int i = 0; i < 1000; i++)
         {

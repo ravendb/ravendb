@@ -59,5 +59,6 @@ public enum RavenTestCategory : long
     ChangesApi = 1L << 43,
     Interversion = 1L << 44,
     Security = 1L << 45,
-    Core = 1L << 46
+    Core = 1L << 46,
+    Intrinsics = 1L << 47
 }

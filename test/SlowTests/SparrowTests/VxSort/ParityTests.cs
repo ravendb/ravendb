@@ -114,7 +114,7 @@ namespace SlowTests.SparrowTests.VxSort
 
 
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Sse42)]
         [MemberData(nameof(PreSorted))]
         [MemberData(nameof(ReverseSorted))]
         [MemberData(nameof(HalfMinValue))]
