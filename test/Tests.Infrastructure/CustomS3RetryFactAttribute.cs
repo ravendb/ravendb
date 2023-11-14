@@ -2,11 +2,11 @@ using System;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
-using Xunit;
+using xRetry;
 
 namespace Tests.Infrastructure
 {
-    public class CustomS3FactAttribute : FactAttribute
+    public class CustomS3RetryFactAttribute : RetryFactAttribute
     {
         private const string S3CredentialEnvironmentVariable = "CUSTOM_S3_SETTINGS";
 
@@ -18,7 +18,7 @@ namespace Tests.Infrastructure
 
         private static readonly bool EnvVariableMissing;
 
-        static CustomS3FactAttribute()
+        static CustomS3RetryFactAttribute()
         {
             var strSettings = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
             if (strSettings == null)
@@ -40,7 +40,8 @@ namespace Tests.Infrastructure
             }
         }
 
-        public CustomS3FactAttribute([CallerMemberName] string memberName = "")
+        public CustomS3RetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
+            : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
             //if (RavenTestHelper.IsRunningOnCI)
             //    return;

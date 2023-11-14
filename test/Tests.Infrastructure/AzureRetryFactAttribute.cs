@@ -3,11 +3,11 @@ using System.Runtime.CompilerServices;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
-using Xunit;
+using xRetry;
 
 namespace Tests.Infrastructure
 {
-    public class AzureFactAttribute : FactAttribute
+    public class AzureRetryFactAttribute : RetryFactAttribute
     {
         private const string AzureCredentialEnvironmentVariable = "AZURE_CREDENTIAL";
 
@@ -19,7 +19,7 @@ namespace Tests.Infrastructure
 
         private static readonly bool EnvVariableMissing;
 
-        static AzureFactAttribute()
+        static AzureRetryFactAttribute()
         {
             var azureSettingsString = Environment.GetEnvironmentVariable(AzureCredentialEnvironmentVariable);
             if (azureSettingsString == null)
@@ -38,7 +38,8 @@ namespace Tests.Infrastructure
             }
         }
 
-        public AzureFactAttribute([CallerMemberName] string memberName = "")
+        public AzureRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
+            : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
             if (RavenTestHelper.IsRunningOnCI)
                 return;

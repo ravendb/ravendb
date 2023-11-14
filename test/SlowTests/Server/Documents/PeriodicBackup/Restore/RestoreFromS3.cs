@@ -441,7 +441,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         public S3Settings GetS3Settings(string subPath = null, [CallerMemberName] string caller = null)
         {
-            var s3Settings = _isCustom ? CustomS3FactAttribute.S3Settings : AmazonS3FactAttribute.S3Settings;
+            var s3Settings = _isCustom ? CustomS3RetryFactAttribute.S3Settings : AmazonS3RetryFactAttribute.S3Settings;
             if (s3Settings == null)
                 return null;
 
@@ -471,7 +471,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
             base.Dispose();
 
-            var s3Settings = _isCustom ? CustomS3FactAttribute.S3Settings : AmazonS3FactAttribute.S3Settings;
+            var s3Settings = _isCustom ? CustomS3RetryFactAttribute.S3Settings : AmazonS3RetryFactAttribute.S3Settings;
             if (s3Settings == null)
                 return;
 
