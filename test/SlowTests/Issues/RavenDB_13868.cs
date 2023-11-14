@@ -17,11 +17,12 @@ namespace SlowTests.Issues
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(30);
-        
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CollectionInSubscriptionsShouldbeCaseInsensitive()
+
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CollectionInSubscriptionsShouldbeCaseInsensitive(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

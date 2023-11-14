@@ -2,7 +2,11 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents.Handlers.Processors.Databases;
+using Raven.Server.Documents.Subscriptions;
+using Raven.Server.ServerWide.Commands.Subscriptions;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -46,7 +50,33 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             _desc = (disable) ? "disable" : "enable";
             _desc += $"-{typeStr}-Task {(string.IsNullOrEmpty(taskName) ? string.Empty : $" with task name: '{taskName}'")}";
 
-            return RequestHandler.ServerStore.ToggleTaskState(_key, taskName, type, disable, RequestHandler.DatabaseName, raftRequestId);
+            return ToggleTaskState(_key, taskName, type, disable, RequestHandler.DatabaseName, raftRequestId);
         }
+
+        private async Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName, string raftRequestId)
+        {
+            CommandBase disableEnableCommand;
+            switch (type)
+            {
+                case OngoingTaskType.Subscription:
+                    if (taskName == null)
+                    {
+                        using (RequestHandler.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            taskName = GetSubscriptionStorage().GetSubscriptionNameById(ctx, taskId);
+                        }
+                    }
+                    disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName, raftRequestId);
+                    break;
+
+                default:
+                    disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName, raftRequestId);
+                    break;
+            }
+            return await RequestHandler.ServerStore.SendToLeaderAsync(disableEnableCommand);
+        }
+
+        protected abstract AbstractSubscriptionStorage GetSubscriptionStorage();
     }
 }

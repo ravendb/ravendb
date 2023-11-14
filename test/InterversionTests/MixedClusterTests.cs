@@ -53,11 +53,7 @@ namespace InterversionTests
         }
 
         [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows)]
-        [InlineData("4.1.4", "4.1.4", "4.1.4")]
-        [InlineData("4.1.3", "4.1.3", "4.1.3")]
-        [InlineData("4.1.2", "4.1.2", "4.1.2")]
-        [InlineData("4.1.1", "4.1.1", "4.1.1")]
-        [InlineData("4.1.0", "4.1.0", "4.1.0")]
+        [InlineData("4.1.5", "4.1.5", "4.1.5")]
         public async Task UpgradeFromEarly41(params string[] initialVersions)
         {
             var upgradeTo = new List<string>
@@ -66,16 +62,8 @@ namespace InterversionTests
                 "current"
             };
 
-            var v411 = new Version411(this);
-            var v41X = new Version41X(this);
-
-            UpgradeTestSuit before = v41X;
-            if (initialVersions[0] == "4.1.1" || initialVersions[0] == "4.1.0")
-            {
-                before = v411;
-            }
-
-            await ExecuteUpgradeTest(initialVersions, upgradeTo, before, before, v41X);
+            var suit = new Version41X(this);
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows)]

@@ -6,9 +6,9 @@ using System.Text;
 using System.Threading;
 using Corax;
 using Corax.Mappings;
-using Corax.Queries;
-using Corax.Queries.Meta;
-using Corax.Queries.SortingMatches.Meta;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
@@ -22,11 +22,10 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Spatial4n.Shapes;
 using RavenConstants = Raven.Client.Constants;
-using IndexSearcher = Corax.IndexSearcher.IndexSearcher;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxConstants = Corax.Constants;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.Corax;
-
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -244,9 +243,12 @@ public static class CoraxQueryBuilder
                 var maxTermToScan = builderParameters.Take switch
                 {
                     < 0 => int.MaxValue, // meaning, take all
-                    int.MaxValue => int.MaxValue, // avoid overflow
-                    var take => take + 1
+                    // We cannot apply this optimization when we are returning statistics (RavenDB-21525).
+                    var take when builderParameters.Query.SkipStatistics => (long)take + 1, 
+                    int.MaxValue => (long)int.MaxValue + 1, // avoid overflow
+                    _ => int.MaxValue
                 };
+
                 // We have no where clause and a sort by index, can just scan over the relevant index if there is a single order by clause
                 // if we have multiple clauses, we'll get the first $TAKE+1 terms from the index, then sort just those, leading to the same
                 // behavior, but far faster
@@ -604,25 +606,29 @@ public static class CoraxQueryBuilder
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping, builderParameters.FieldsToFetch, builderParameters.HasDynamics,
             builderParameters.DynamicFields, exact: exact);
-
+        
+        var hasTime = builderParameters.Index.IndexFieldsPersistence.HasTimeValues(fieldName);
+        
         if (ie.All)
         {
-            var uniqueMatches = new HashSet<string>();
+            var uniqueMatches = new HashSet<(string Term, bool Exact)>();
             foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
             {
                 if (exact && builderParameters.Metadata.IsDynamic)
                     fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
-
-                uniqueMatches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
+                
+                bool isTime = hasTime && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);
+                uniqueMatches.Add((QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
             }
 
             return builderParameters.IndexSearcher.AllInQuery(fieldMetadata, uniqueMatches);
         }
 
-        var matches = new List<string>();
+        var matches = new List<(string Term, bool Exact)>();
         foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
         {
-            matches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
+            bool isTime = hasTime && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);
+            matches.Add((QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
         }
 
         if (highlightingTerm != null)

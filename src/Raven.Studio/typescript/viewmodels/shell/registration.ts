@@ -73,7 +73,7 @@ class registration extends dialogViewModelBase {
     error = ko.observable<string>();
 
     private licenseKeyModel = ko.validatedObservable(new licenseKeyModel());
-    private licenseStatus: Raven.Server.Commercial.LicenseStatus;
+    private licenseStatus: LicenseStatus;
 
     private hasInvalidLicense = ko.observable<boolean>(false);
     private letsEncryptMode = ko.observable<boolean>(false); 
@@ -84,7 +84,7 @@ class registration extends dialogViewModelBase {
         renewLicense: ko.observable<boolean>(false)      
     };
 
-    constructor(licenseStatus: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
+    constructor(licenseStatus: LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
         super();
         
         this.licenseStatus = licenseStatus;
@@ -156,7 +156,7 @@ class registration extends dialogViewModelBase {
              });
     }
     
-    static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus, skipIfNoLicense = false) {
+    static showRegistrationDialogIfNeeded(license: LicenseStatus, skipIfNoLicense = false) {
         switch (license.Type) {
             case "Invalid":
                 registration.showRegistrationDialog(license, false, false);
@@ -202,7 +202,7 @@ class registration extends dialogViewModelBase {
         }
     }
 
-    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
+    static showRegistrationDialog(license: LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
         if ($("#licenseModal").is(":visible") && $("#enterLicenseKey").is(":visible")) {
             return;
         }
@@ -211,22 +211,26 @@ class registration extends dialogViewModelBase {
         app.showBootstrapDialog(vm);
     }
 
-    forceLicenseUpdate() {
-        this.spinners.forceLicenseUpdate(true);
+    async forceLicenseUpdate() {
+        try {
+            this.spinners.forceLicenseUpdate(true);
 
-        new forceLicenseUpdateCommand().execute()
-            .done(() => {
-                license.fetchLicenseStatus()
-                    .done(() => {
-                        const licenseStatus = license.licenseStatus();
-                        if (!licenseStatus.Expired &&
-                            !licenseStatus.ErrorMessage) {
-                            app.closeDialog(this);
-                        }
-                        license.fetchSupportCoverage();
-                    });
-            })
-            .always(() => this.spinners.forceLicenseUpdate(false));
+            const updateResult = await new forceLicenseUpdateCommand().execute();
+            const licenseStatus = await license.fetchLicenseStatus();
+
+            if (updateResult.Status === "NotModified") {
+                forceLicenseUpdateCommand.handleNotModifiedStatus(licenseStatus.Expired);
+            }
+
+            if (!licenseStatus.Expired && !licenseStatus.ErrorMessage) {
+                app.closeDialog(this);
+            }
+
+            await license.fetchSupportCoverage();
+
+        } finally {
+            this.spinners.forceLicenseUpdate(false)
+        }
     }
 
     renewLicense() {

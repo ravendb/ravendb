@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Corax.IndexSearcher;
-using Corax.Queries;
-using Corax.Queries.Meta;
+using Corax.Querying;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 

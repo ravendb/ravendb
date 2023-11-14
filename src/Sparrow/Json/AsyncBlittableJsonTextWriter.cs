@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Json
 {
-    public class AsyncBlittableJsonTextWriter : AbstractBlittableJsonTextWriter, IAsyncDisposable
+    public sealed class AsyncBlittableJsonTextWriter : AbstractBlittableJsonTextWriter, IAsyncDisposable
     {
         private readonly Stream _outputStream;
         private readonly CancellationToken _cancellationToken;

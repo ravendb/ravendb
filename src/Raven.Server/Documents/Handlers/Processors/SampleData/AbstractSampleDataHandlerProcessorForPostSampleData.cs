@@ -11,6 +11,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Web.Studio;
 using Sparrow.Json;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Documents.Handlers.Processors.SampleData
 {
@@ -78,7 +79,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
             {
                 await using (var sampleData = typeof(SampleDataHandler).Assembly
                                  .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
-                await using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
+                await using (var stream = await BackupUtils.GetDecompressionStreamAsync(sampleData))
                 {
                     await ExecuteSmugglerAsync(context, stream, operateOnTypes);
                 }

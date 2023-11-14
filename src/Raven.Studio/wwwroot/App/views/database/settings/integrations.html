@@ -28,13 +28,13 @@
             </div>
         </div>
     </div>
-    <div class="row flex-row flex-grow flex-stretch-items">
+    <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: canUseIntegrations">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="scroll flex-grow">
                 <div class="hr-title on-base-background margin-top">
                     <h5><strong>PostgreSQL</strong> protocol credentials</h5><hr>
                     <button class="btn btn-sm btn-primary" title="Add new credentials"
-                            data-bind="click: onAddPostgreSqlCredentials, requiredAccess: 'DatabaseAdmin'">
+                            data-bind="click: onAddPostgreSqlCredentials, disable: !isDataFetched(), requiredAccess: 'DatabaseAdmin'">
                         <i class="icon-plus"></i><span>Add</span>
                     </button> 
                 </div>

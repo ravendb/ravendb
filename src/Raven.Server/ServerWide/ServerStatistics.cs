@@ -70,7 +70,8 @@ namespace Raven.Server.ServerWide
             LastRequestTimePerCertificate = newLastRequestTimePerCertificate;
         }
 
-        public void WriteTo(AbstractBlittableJsonTextWriter writer)
+        public void WriteTo<TWriter>(TWriter writer)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
 

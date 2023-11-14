@@ -4,7 +4,6 @@ import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownP
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { useServices } from "hooks/useServices";
-import database from "models/resources/database";
 import { useAccessManager } from "hooks/useAccessManager";
 import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/partials/NodeGroup";
 import { OrchestratorsGroup } from "components/pages/resources/manageDatabaseGroup/partials/OrchestratorsGroup";
@@ -14,15 +13,11 @@ import app from "durandal/app";
 import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDatabaseGroup";
 import { StickyHeader } from "components/common/StickyHeader";
 import { useAppSelector } from "components/store";
-import { ShardedDatabaseSharedInfo } from "components/models/databases";
 import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-
-interface ManageDatabaseGroupPageProps {
-    db: database;
-}
+import { NonShardedViewProps } from "components/models/common";
 
 function getDynamicDatabaseDistributionWarning(
     hasDynamicNodesDistribution: boolean,
@@ -44,9 +39,7 @@ function getDynamicDatabaseDistributionWarning(
     return null;
 }
 
-export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
-    const { db } = props;
-
+export function ManageDatabaseGroupPage({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
     const hasDynamicNodesDistribution = useAppSelector(licenseSelectors.statusValue("HasDynamicNodesDistribution"));
 
@@ -61,15 +54,15 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     const settingsUniqueId = useId("settings");
 
     const addNewShard = useCallback(() => {
-        const addShardView = new addNewShardToDatabaseGroup(db.name);
+        const addShardView = new addNewShardToDatabaseGroup(dbSharedInfo.name);
         app.showBootstrapDialog(addShardView);
-    }, [db]);
+    }, [dbSharedInfo.name]);
 
     const changeDynamicDatabaseDistribution = useCallback(async () => {
         toggleDynamicDatabaseDistribution();
 
-        await databasesService.toggleDynamicNodeAssignment(db, !dynamicDatabaseDistribution);
-    }, [dynamicDatabaseDistribution, toggleDynamicDatabaseDistribution, databasesService, db]);
+        await databasesService.toggleDynamicNodeAssignment(dbSharedInfo.name, !dynamicDatabaseDistribution);
+    }, [dynamicDatabaseDistribution, toggleDynamicDatabaseDistribution, databasesService, dbSharedInfo.name]);
 
     const dynamicDatabaseDistributionWarning = getDynamicDatabaseDistributionWarning(
         hasDynamicNodesDistribution,
@@ -82,7 +75,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
         <>
             <StickyHeader>
                 <div className="flex-horizontal">
-                    {!db.isSharded() && (
+                    {!dbSharedInfo.sharded && (
                         <UncontrolledButtonWithDropdownPanel buttonText="Settings">
                             <>
                                 <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
@@ -108,7 +101,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                     )}
 
                     <FlexGrow />
-                    {db.isSharded() && (
+                    {dbSharedInfo.sharded && (
                         <Button color="shard" onClick={addNewShard}>
                             <Icon icon="shard" addon="plus" />
                             Add Shard
@@ -118,10 +111,10 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
             </StickyHeader>
             <div className="content-margin">
                 <SortableModeCounterProvider>
-                    {db.isSharded() ? (
+                    {dbSharedInfo.sharded ? (
                         <React.Fragment key="sharded-db">
                             <OrchestratorsGroup db={dbSharedInfo} />
-                            {(dbSharedInfo as ShardedDatabaseSharedInfo).shards.map((shard) => {
+                            {dbSharedInfo.shards.map((shard) => {
                                 return <ShardsGroup key={shard.name} db={shard} />;
                             })}
                         </React.Fragment>

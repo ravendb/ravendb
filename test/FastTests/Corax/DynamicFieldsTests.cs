@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Utils;
 using FastTests.Voron;
@@ -15,6 +15,8 @@ using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 using Version = Lucene.Net.Util.Version;
 
 namespace FastTests.Corax;

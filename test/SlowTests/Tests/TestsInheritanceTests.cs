@@ -16,6 +16,7 @@ using Raven.TestDriver;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.Issues.RavenDB_13335;
 
 namespace SlowTests.Tests
 {
@@ -78,6 +79,57 @@ namespace SlowTests.Tests
 
             var userMessage = string.Join(Environment.NewLine, array.Select(x => x.FullName));
             throw new Exception(userMessage);
+        }
+
+        [Fact]
+        public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
+        {
+            var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
+                        from test in GetAssemblyTypes(assembly)
+                        from method in test.GetMethods()
+                        where Filter(method)
+                        select method;
+
+            var array = types.ToArray();
+            const int numberToTolerate = 4682;
+            if (array.Length == numberToTolerate)
+                return;
+
+            var userMessage = $"We have detected '{array.Length}' test(s) that do not have {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attribute. Please check if tests that you have added have those attributes. List of test files:{Environment.NewLine}{string.Join(Environment.NewLine, array.Select(x => GetTestName(x)))}";
+            throw new Exception(userMessage);
+
+            static string GetTestName(MethodInfo method)
+            {
+                return $"{method.DeclaringType?.FullName}.{method.Name}";
+            }
+
+            static bool Filter(MethodInfo method)
+            {
+                var factAttribute = method.GetCustomAttribute(typeof(FactAttribute), false);
+                if (factAttribute != null)
+                {
+                    if (ValidNamespace(factAttribute.GetType().Namespace))
+                        return false;
+
+                    return true;
+                }
+
+                var theoryAttribute = method.GetCustomAttribute(typeof(TheoryAttribute), false);
+                if (theoryAttribute != null)
+                {
+                    if (ValidNamespace(theoryAttribute.GetType().Namespace))
+                        return false;
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            static bool ValidNamespace(string @namespace)
+            {
+                return @namespace == null || @namespace.StartsWith("FastTests") || @namespace.StartsWith("SlowTests") || @namespace.StartsWith("Tests.Infrastructure");
+        }
         }
 
         private IEnumerable<Assembly> GetAssemblies(Assembly assemblyToScan)

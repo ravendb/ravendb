@@ -61,11 +61,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
 
         [ThreadStatic]
-        public static bool IsIncomingReplication;
+        public static bool IsIncomingInternalReplication;
 
         static IncomingReplicationHandler()
         {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingReplication = false;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingInternalReplication = false;
         }
 
         protected override ByteStringContext GetContextAllocator(DocumentsOperationContext context) => context.Allocator;
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return new MergedDocumentReplicationCommand(data, lastDocumentEtag);
+            return new MergedDocumentReplicationCommand(data, lastDocumentEtag, isInternal: ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal);
         }
 
         internal class MergedUpdateDatabaseChangeVectorCommand : DocumentMergedTransactionCommand
@@ -292,18 +292,22 @@ namespace Raven.Server.Documents.Replication.Incoming
         internal class MergedDocumentReplicationCommand : DocumentMergedTransactionCommand
         {
             private readonly long _lastEtag;
+            private readonly bool _isInternal;
             private readonly DataForReplicationCommand _replicationInfo;
 
-            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag)
+            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool isInternal = false)
             {
                 _replicationInfo = replicationInfo;
                 _lastEtag = lastEtag;
+                _isInternal = isInternal;
             }
 
             protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
+
+            protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => NonPersistentDocumentFlags.FromReplication;
 
             protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
             {
@@ -320,7 +324,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected virtual void SetIsIncomingReplication()
             {
-                IsIncomingReplication = true;
+                IsIncomingInternalReplication = _isInternal;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -366,12 +370,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                         {
                             case AttachmentReplicationItem attachment:
 
-                                var localAttachment = database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, attachment.Key);
+                                var result = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachment.Key);
                                 if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) == true)
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                        Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                        Debug.Assert(result.Attachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
                                             "the stream should have been written when the revision was added by the document");
                                         database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
@@ -382,11 +386,11 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                                var localAttachmentChangeVector = context.GetChangeVector(localAttachment?.ChangeVector);
-                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, localAttachmentChangeVector) switch
+                                var local = context.GetChangeVector(result.ChangeVector);
+                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local) switch
                                 {
                                     // we don't need to worry about the *contents* of the attachments, that is handled by the conflict detection during document replication
-                                    ConflictStatus.Conflict => ChangeVector.Merge(incomingChangeVector, localAttachmentChangeVector, context),
+                                    ConflictStatus.Conflict => ChangeVector.Merge(incomingChangeVector, local, context),
                                     ConflictStatus.Update => attachment.ChangeVector,
                                     ConflictStatus.AlreadyMerged => null, // nothing to do
                                     _ => throw new ArgumentOutOfRangeException()
@@ -402,8 +406,10 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
 
-                                var tombstone = database.DocumentsStorage.AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
-                                if (tombstone != null && ChangeVectorUtils.GetConflictStatus(incomingChangeVector, context.GetChangeVector(tombstone.ChangeVector)) == ConflictStatus.AlreadyMerged)
+                                var attachmentOrTombstone = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachmentTombstone.Key);
+                                var local2 = context.GetChangeVector(attachmentOrTombstone.ChangeVector);
+
+                                if (ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local2) == ConflictStatus.AlreadyMerged)
                                     continue;
 
                                 string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key); 
@@ -522,7 +528,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     }
                                 }
 
-                                var nonPersistentFlags = NonPersistentDocumentFlags.FromReplication;
+                                var nonPersistentFlags = GetNonPersistentDocumentFlags();
                                 if (doc.Flags.Contain(DocumentFlags.Revision))
                                 {
                                     database.DocumentsStorage.RevisionsStorage.Put(
@@ -610,7 +616,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             // it is a case of a conflict between documents which were modified in a cluster transaction
                                             // in two _different clusters_, so we will treat it as a "normal" conflict
 
-                                            IsIncomingReplication = false;
+                                            IsIncomingInternalReplication = false;
 
                                             conflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
                                                 document, incomingChangeVector, doc.Flags);
@@ -649,14 +655,30 @@ namespace Raven.Server.Documents.Replication.Incoming
                         {
                             var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector, throwOnConflict: false);
 
-                            // RavenDB-19421: if the document doesn't exist, the tombstone doesn't matter
+                            // RavenDB-19421: if the document doesn't exist and a conflict for the document doesn't exist, the tombstone doesn't matter
                             // and if the change vector is already merged, we should also check if we had a previous conflict on the existing document
                             // if not, then it is already taken into consideration
                             // we need to force an update when this is _not_ the case, because this replication batch gave us the tombstone only, without
                             // the related document update, so we need to simulate that locally
-                            if (doc != null &&
-                                (ChangeVector.GetConflictStatusForDocument(context, cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged 
-                                 || doc.Flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved))) 
+
+                            if (doc == null)
+                            {
+                                var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
+                                foreach (var documentConflict in conflicts)
+                                {
+                                    if (documentConflict.Flags.Contain(DocumentFlags.HasAttachments) == false ||
+                                        ChangeVectorUtils.GetConflictStatus(cv, documentConflict.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                        continue;
+
+                                    // recreate attachments reference
+                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentRevert(context, documentConflict.Id, documentConflict.Doc, out _);
+                                }
+
+                                continue;
+                            }
+
+                            if (ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged || 
+                                doc.Flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved))
                             {
                                 // have to load the full document
                                 doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, fields: DocumentFields.All, throwOnConflict: false);
@@ -700,7 +722,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                         item.Dispose();
                     }
 
-                    IsIncomingReplication = false;
+                    IsIncomingInternalReplication = false;
                 }
             }
 

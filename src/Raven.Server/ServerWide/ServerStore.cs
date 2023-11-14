@@ -47,6 +47,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
@@ -149,6 +150,8 @@ namespace Raven.Server.ServerWide
         public ServerOperations Operations { get; }
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
+
+        public DateTime? LastCertificateUpdateTime { get; private set; }
 
         internal ClusterRequestExecutor ClusterRequestExecutor => _clusterRequestExecutor.Value;
 
@@ -1296,6 +1299,9 @@ namespace Raven.Server.ServerWide
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
+                case nameof(PutCertificateCommand):
+                    LastCertificateUpdateTime = SystemTime.UtcNow;
+                    break;
 
                 case nameof(UpdateServerPublishedUrlsCommand):
                     using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -1965,34 +1971,6 @@ namespace Raven.Server.ServerWide
                     new DeleteOngoingTaskCommand(taskId, taskType, dbName, raftRequestId);
 
             return SendToLeaderAsync(deleteTaskCommand);
-        }
-
-        public Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName, string raftRequestId)
-        {
-            CommandBase disableEnableCommand;
-            switch (type)
-            {
-                case OngoingTaskType.Subscription:
-                    if (taskName == null)
-                    {
-                        if (_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out _) == false)
-                            throw new DatabaseDoesNotExistException($"Can't get subscription name because The database {dbName} does not exists");
-                        using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-#pragma warning disable CS0618
-                            taskName = Cluster.Subscriptions.GetSubscriptionNameById(ctx, dbName, taskId);
-#pragma warning restore CS0618
-                        }
-                    }
-                    disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName, raftRequestId);
-                    break;
-
-                default:
-                    disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName, raftRequestId);
-                    break;
-            }
-            return SendToLeaderAsync(disableEnableCommand);
         }
 
         public Task<(long Index, object Result)> PromoteDatabaseNode(string dbName, string nodeTag, string raftRequestId)

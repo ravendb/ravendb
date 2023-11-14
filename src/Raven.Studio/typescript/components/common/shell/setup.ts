@@ -12,6 +12,7 @@ import { collectionsTrackerActions } from "./collectionsTrackerSlice";
 import changesContext from "common/changesContext";
 import { services } from "hooks/useServices";
 import viewModelBase from "viewmodels/viewModelBase";
+import buildInfo = require("models/resources/buildInfo");
 
 let initialized = false;
 
@@ -79,6 +80,7 @@ function initRedux() {
     });
 
     viewModelBase.clientVersion.subscribe((version) => globalDispatch(clusterActions.clientVersionLoaded(version)));
+    buildInfo.serverBuildVersion.subscribe((version) => globalDispatch(clusterActions.serverVersionLoaded(version)));
 
     licenseModel.licenseStatus.subscribe((licenseStatus) => {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));

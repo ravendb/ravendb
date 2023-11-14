@@ -24,8 +24,10 @@ import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function DataArchival({ db }: NonShardedViewProps) {
@@ -44,7 +46,15 @@ export default function DataArchival({ db }: NonShardedViewProps) {
     const { isAdminAccessOrAbove } = useAccessManager();
 
     const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
-    const featureAvailability = useEnterpriseLicenseAvailability(hasDataArchival);
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasDataArchival,
+            },
+        ],
+    });
 
     useEffect(() => {
         if (!formValues.isArchiveFrequencyEnabled && formValues.archiveFrequency !== null) {
@@ -224,3 +234,13 @@ function mapToFormData(dto: DataArchivalConfiguration): DataArchivalFormData {
         archiveFrequency: dto.ArchiveFrequencyInSec,
     };
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Data Archival",
+        featureIcon: "data-archival",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

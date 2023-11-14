@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Unicode;
 using System.Threading;
 using Corax;
 using Corax.Analyzers;
+using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 {
-    private sealed class Builder : IndexWriter.IIndexEntryBuilder
+    private sealed class Builder : IIndexEntryBuilder
     {
         private int _storageIdx;
 
@@ -257,16 +257,37 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
                 
                 var doc = (Document)itemEnumerator.Current.Item;
 
-                foreach (var result in mapResults)
+                var enumerator = mapResults.GetEnumerator();
+                do
                 {
+                    try
+                    {
+                        // When the index throws an exception as in the case of RavenDB-21480 that we try to
+                        // divide by zero, we have to disregard the document only. However, since an exception
+                        // in an enumerator will stop the enumeration, we need to guard against that case. In 
+                        // this case what we do is ignore the document that will be in error and let the document
+                        // to fail during the indexing instead. 
+                        // https://issues.hibernatingrhinos.com/issue/RavenDB-21480
+
+                        if (enumerator.MoveNext() == false)
+                            break;
+                    }
+                    catch
+                    {
+                        _indexingStatsScope.RecordMapError();
+                        continue;
+                    }
+
                     builder.Reset();
-                    _converter.SetDocument(doc.LowerId, null, result, _indexContext, builder);
+                    _converter.SetDocument(doc.LowerId, null, enumerator.Current, _indexContext, builder);
+                    
+                    _indexingStatsScope.RecordMapSuccess();
 
                     foreach (var item in builder.Buffer)
                         yield return item;
-                }
-                
-                _indexingStatsScope.RecordMapSuccess();
+                } 
+                while (true);
+
                 _indexingStatsScope.RecordDocumentSize(doc.Data.Size);
                 
                 // Check if we have already hit the threshold allocations.

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Raven.Client.Documents.Queries.Suggestions;
@@ -15,6 +15,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
 using Encoding = System.Text.Encoding;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 

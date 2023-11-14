@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
@@ -163,7 +164,7 @@ namespace InterversionTests
             using var store42 = await GetDocumentStoreAsync(Server42Version);
             using var storeCurrent = GetDocumentStore();
             //Export
-            storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
+            await storeCurrent.Maintenance.SendAsync(new CreateSampleDataOperation());
             using (var session = storeCurrent.OpenAsyncSession())
             {
                 var dateTime = new DateTime(2020, 3, 29);
@@ -177,7 +178,7 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
@@ -297,7 +298,8 @@ namespace InterversionTests
             using var store54 = await GetDocumentStoreAsync(Server54Version);
             using var storeCurrent = GetDocumentStore(options);
 
-            await InsertDataAndExecuteExportImportAsync(storeCurrent, store54);
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
+            await InsertDataAndExecuteExportImportAsync(storeCurrent, store54, exportOptions);
             await GetStatsAndAssertAsync(storeCurrent, store54);
         }
 
@@ -396,8 +398,12 @@ namespace InterversionTests
         public async Task CanMigrateFromCurrentTo42()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
-            using var storeCurrent = GetDocumentStore();
-
+            using var storeCurrent = GetDocumentStore(new Options
+            {
+                // workaround for RavenDB-21687
+                ModifyDatabaseRecord = record =>
+                    record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = "Gzip"
+            });
             storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
             using (var session = storeCurrent.OpenAsyncSession())
             {
@@ -440,7 +446,12 @@ namespace InterversionTests
         public async Task CanMigrateFromCurrentTo54()
         {
             using var store54 = await GetDocumentStoreAsync(Server54Version);
-            using var storeCurrent = GetDocumentStore();
+            using var storeCurrent = GetDocumentStore(new Options
+            {
+                // workaround for RavenDB-21687
+                ModifyDatabaseRecord = record => 
+                    record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = "Gzip"
+            });
 
             storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
             using (var session = storeCurrent.OpenAsyncSession())

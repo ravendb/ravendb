@@ -8,12 +8,14 @@ import { DatabaseNodeSetItem } from "./DatabaseNodeSetItem";
 interface DatabaseTopologyNodeSetItemProps {
     node: NodeInfo;
     localInfos: locationAwareLoadableData<DatabaseLocalInfo>[];
+    isDisabled: boolean;
     shardNumber?: number;
 }
 
 export default function DatabaseTopologyNodeSetItem({
     node,
     localInfos,
+    isDisabled,
     shardNumber,
 }: DatabaseTopologyNodeSetItemProps) {
     const localInfo = localInfos.find((x) =>
@@ -31,5 +33,7 @@ export default function DatabaseTopologyNodeSetItem({
 
     const isOffline = localInfo.data ? DatabaseUtils.formatUptime(localInfo.data.upTime) === "Offline" : false;
 
-    return <DatabaseNodeSetItem node={node} isOffline={isOffline} />;
+    const isOfflineOrDisabled = isOffline || isDisabled;
+
+    return <DatabaseNodeSetItem node={node} isOfflineOrDisabled={isOfflineOrDisabled} />;
 }

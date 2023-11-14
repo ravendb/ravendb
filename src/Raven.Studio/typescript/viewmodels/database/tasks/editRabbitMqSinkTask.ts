@@ -273,7 +273,7 @@ class editRabbitMqSinkTask extends viewModelBase {
         
         
         this.test = new rabbitMqTaskTestMode(this.activeDatabase, () => {
-            return this.isValid(this.editedRabbitMqSink().editedScriptSandbox().validationGroup);
+            return this.isValid(this.editedRabbitMqSink().editedScriptSandbox().testValidationGroup);
         }, dtoProvider);
 
         this.test.initObservables();

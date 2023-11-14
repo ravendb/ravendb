@@ -83,7 +83,7 @@ namespace Raven.Server.Smuggler.Documents
             var stream = ShardedSmugglerHandlerProcessorForImport.GetOutputStream(holders[shardNumber].OutStream.OutputStream.Result, _options);
             holders[shardNumber].InputStream = stream;
             holders[shardNumber].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
-            var destination = new StreamDestination(stream, context, _source, compressionLevel: _databaseContext.Configuration.Sharding.CompressionLevel);
+            var destination = new StreamDestination(stream, context, _source, _options.CompressionAlgorithm ?? _databaseContext.Configuration.ExportImport.CompressionAlgorithm, compressionLevel: _databaseContext.Configuration.Sharding.CompressionLevel);
             holders[shardNumber].DestinationAsyncDisposable = await destination.InitializeAsync(_options, result, buildVersion);
             _destinations[shardNumber] = destination;
         }

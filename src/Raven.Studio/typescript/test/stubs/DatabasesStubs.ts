@@ -388,4 +388,12 @@ export class DatabasesStubs {
             ArchiveFrequencyInSec: 65,
         };
     }
+
+    static documentsCompressionConfiguration(): Raven.Client.ServerWide.DocumentsCompressionConfiguration {
+        return {
+            Collections: ["Shippers"],
+            CompressAllCollections: false,
+            CompressRevisions: true,
+        };
+    }
 }

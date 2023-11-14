@@ -2,15 +2,17 @@
 import { NodeSetItem } from "components/common/NodeSet";
 import React from "react";
 import assertUnreachable from "components/utils/assertUnreachable";
+import IconName from "typings/server/icons";
+import { TextColor } from "components/models/common";
 
-export function DatabaseNodeSetItem(props: { node: NodeInfo; isOffline?: boolean }) {
-    const { node, isOffline } = props;
+export function DatabaseNodeSetItem(props: { node: NodeInfo; isOfflineOrDisabled?: boolean }) {
+    const { node, isOfflineOrDisabled } = props;
 
     return (
         <NodeSetItem
             key={node.tag}
             icon={iconForNodeType(node.type)}
-            color={colorForNodeType(node.type, isOffline)}
+            color={colorForNodeType(node.type, isOfflineOrDisabled)}
             title={node.type}
         >
             {node.tag}
@@ -18,10 +20,14 @@ export function DatabaseNodeSetItem(props: { node: NodeInfo; isOffline?: boolean
     );
 }
 
-function colorForNodeType(type: databaseGroupNodeType, isOffline?: boolean) {
+function colorForNodeType(type: databaseGroupNodeType, isOfflineOrDisabled?: boolean): TextColor {
+    if (isOfflineOrDisabled) {
+        return "muted";
+    }
+
     switch (type) {
         case "Member":
-            return isOffline ? "muted" : "node";
+            return "node";
         case "Rehab":
             return "danger";
         case "Promotable":
@@ -31,7 +37,7 @@ function colorForNodeType(type: databaseGroupNodeType, isOffline?: boolean) {
     }
 }
 
-function iconForNodeType(type: databaseGroupNodeType) {
+function iconForNodeType(type: databaseGroupNodeType): IconName {
     switch (type) {
         case "Member":
             return "dbgroup-member";

@@ -5,7 +5,9 @@ import ongoingTaskElasticSearchEtlIndexModel = require("models/database/tasks/on
 
 class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
     connectionStringName = ko.observable<string>();
-        
+
+    allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
+    
     transformationScripts = ko.observableArray<ongoingTaskElasticSearchEtlTransformationModel>([]);
     elasticIndexes = ko.observableArray<ongoingTaskElasticSearchEtlIndexModel>([]);
     
@@ -38,7 +40,8 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName,
             this.mentorNode,
             this.pinMentorNode,
-            this.manualChooseMentor
+            this.manualChooseMentor,
+            this.allowEtlOnNonEncryptedChannel
         ])
     }
     
@@ -85,6 +88,7 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
         const configuration = dto.Configuration;
         if (configuration) {
             this.connectionStringName(configuration.ConnectionStringName);
+            this.allowEtlOnNonEncryptedChannel(configuration.AllowEtlOnNonEncryptedChannel);
             this.manualChooseMentor(!!configuration.MentorNode);
             this.pinMentorNode(configuration.PinToMentorNode);
             this.mentorNode(configuration.MentorNode);
@@ -105,7 +109,7 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
             Name: this.taskName(),
             EtlType: "ElasticSearch",
             ConnectionStringName: this.connectionStringName(),
-            AllowEtlOnNonEncryptedChannel: true,
+            AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
             Disabled: this.taskState() === "Disabled",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),

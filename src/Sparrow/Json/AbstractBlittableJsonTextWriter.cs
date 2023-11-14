@@ -3,11 +3,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow.Extensions;
 
 namespace Sparrow.Json
 {
-    public abstract unsafe class AbstractBlittableJsonTextWriter
+    public abstract unsafe class AbstractBlittableJsonTextWriter : IBlittableJsonTextWriter
     {
         protected readonly JsonOperationContext _context;
         protected readonly Stream _stream;
@@ -114,7 +115,7 @@ namespace Sparrow.Json
                     }
 
                     obj.GetPropertyByIndex(buffer.Properties[i], ref prop);
-                    WritePropertyName((string)prop.Name);
+                    WritePropertyName(prop.Name);
 
                     WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
@@ -446,6 +447,20 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteRawString(ReadOnlySpan<byte> buffer)
+        {
+            if (buffer.Length < JsonOperationContext.MemoryBuffer.DefaultSize)
+            {
+                EnsureBuffer(buffer.Length);
+                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(_buffer + _pos), ref MemoryMarshal.GetReference(buffer), (uint)buffer.Length);
+                _pos += buffer.Length;
+                return;
+            }
+
+            UnlikelyWriteLargeRawString(buffer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void WriteRawString(byte* buffer, int size)
         {
             if (size < JsonOperationContext.MemoryBuffer.DefaultSize)
@@ -457,6 +472,25 @@ namespace Sparrow.Json
             }
 
             UnlikelyWriteLargeRawString(buffer, size);
+        }
+
+        private void UnlikelyWriteLargeRawString(ReadOnlySpan<byte> buffer)
+        {
+            // need to do this in pieces
+            var posInStr = 0;
+            while (posInStr < buffer.Length)
+            {
+                var amountToCopy = Math.Min(buffer.Length - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize);
+                FlushInternal();
+
+                Unsafe.CopyBlockUnaligned(
+                    ref Unsafe.AsRef<byte>(_buffer), 
+                    ref Unsafe.AddByteOffset( ref MemoryMarshal.GetReference(buffer), (uint)posInStr ),
+                    (uint)buffer.Length);
+
+                posInStr += amountToCopy;
+                _pos = amountToCopy;
+            }
         }
 
         private void UnlikelyWriteLargeRawString(byte* buffer, int size)
@@ -474,7 +508,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual void WriteStartObject()
+        public void WriteStartObject()
         {
             EnsureBuffer(1);
             _buffer[_pos++] = StartObject;
@@ -495,15 +529,15 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual void WriteEndObject()
+        public void WriteEndObject()
         {
             EnsureBuffer(1);
             _buffer[_pos++] = EndObject;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected virtual void EnsureBuffer(int len)
-        {
+        protected void EnsureBuffer(int len)
+        { 
             if (len >= JsonOperationContext.MemoryBuffer.DefaultSize)
                 ThrowValueTooBigForBuffer(len);
             if (_pos + len < JsonOperationContext.MemoryBuffer.DefaultSize)
@@ -564,6 +598,14 @@ namespace Sparrow.Json
             EnsureBuffer(1);
             _buffer[_pos++] = Comma;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WritePropertyName(ReadOnlySpan<byte> prop)
+        {
+            EnsureBuffer(prop.Length);
+            WriteRawString(prop);
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WritePropertyName(LazyStringValue prop)
@@ -671,6 +713,11 @@ namespace Sparrow.Json
         }
 
         public void WriteBufferFor(byte[] buffer)
+        {
+            WriteBufferFor(buffer.AsSpan());
+        }
+
+        public void WriteBufferFor(ReadOnlySpan<byte> buffer)
         {
             EnsureBuffer(buffer.Length);
             for (int i = 0; i < buffer.Length; i++)

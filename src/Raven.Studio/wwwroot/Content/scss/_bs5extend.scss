@@ -121,6 +121,12 @@
     border-width: $spinner-border-width-xs;
 }
 
+.input-group {
+    .input-group-text ~ div > .input-group > input {
+        border-radius: 0 $input-border-radius $input-border-radius 0;
+    }
+}
+
 .form-control,
 .form-select {
     min-height: 37px;
@@ -367,4 +373,35 @@ select {
     max-height: 180px;
     overflow-y: scroll;
     position: relative;
+}
+
+.simple-item-list {
+    .hstack {
+        transition: background-color 0.1s ease;
+        border-radius: $border-radius;
+        &:hover {
+            background-color: lighten($well-bg, 5%);
+        }
+    }
+}
+
+//Override bootstrap 5.3 CSS custom properties theming errors
+.accordion-button {
+    &::after {
+        content: "\f154" !important;
+        font-family: "icomoon" !important;
+        text-align: center;
+    }
+}
+.btn-close {
+    &::after {
+        content: "\f162" !important;
+        font-family: "icomoon" !important;
+        text-align: center;
+    }
+}
+
+.modal-content {
+    background-color: $panel-bg-1-var;
+    color: $text-color-var;
 }

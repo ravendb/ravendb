@@ -50,29 +50,46 @@
     font-weight: 600 !important;
 }
 
-.about-view-dropdown .popover {
-    width: 540px;
-    max-width: 90vw;
-    font-size: bs5variables.$font-size-sm;
-    border: none;
-    color: bs5variables.$text-color-var;
-    border-radius: bs5variables.$border-radius-lg;
+.about-view-dropdown {
+    .popover {
+        padding: sizes.$gutter-xxs;
+        width: 540px;
+        max-width: 90vw;
+        font-size: bs5variables.$font-size-sm;
+        border: none;
+        color: bs5variables.$text-color-var;
+        border-radius: bs5variables.$border-radius-lg;
+    }
+    .popover-inner {
+        max-height: calc(100vh - 240px);
+        overflow: auto;
+    }
+    .popover-arrow {
+        &:before {
+            border: transparent;
+        }
+    }
 }
 
 .about-view-accordion {
     .description {
         font-size: 0.75rem;
-        color: var(--text-muted);
+        color: colors.$text-muted-var;
     }
     .tab-icon {
         top: 3px;
         font-size: 1.5rem;
     }
+
+    .license-accordion {
+        border-radius: sizes.$gutter-xs !important;
+    }
     .accordion-button {
         border-radius: sizes.$gutter-xs !important;
-        background: var(--panel-bg-1);
+        background-color: colors.$panel-bg-1-var;
         display: flex;
         align-items: baseline;
+        transition: background-color 0.4s ease;
         &:focus {
             outline: none;
             box-shadow: none;
@@ -81,12 +98,15 @@
             background: transparent;
             box-shadow: none;
         }
+        h4 {
+            color: colors.$text-emphasis-var;
+        }
     }
     .accordion-item {
-        background: var(--panel-bg-1);
+        background-color: colors.$panel-bg-1-var;
         border: none;
         &:not(:first-of-type) {
-            margin-top: sizes.$gutter-xs;
+            margin-top: sizes.$gutter-xxs;
         }
         $shadow-classes: (
             info: 0 0 100px 0 inset rgba(var(--bs-info-rgb), 0.2),
@@ -103,7 +123,7 @@
             font-weight: 700;
         }
         .accordion-body {
-            padding: sizes.$gutter-xs sizes.$gutter sizes.$gutter sizes.$gutter;
+            padding: sizes.$gutter-xs sizes.$gutter-sm sizes.$gutter sizes.$gutter-sm;
         }
     }
     .license-name {
@@ -136,15 +156,15 @@
         }
     }
     .licensing-cols {
-        background: var(--panel-bg-2);
+        background-color: colors.$panel-bg-2-var;
         padding: sizes.$gutter-sm sizes.$gutter;
         margin: sizes.$gutter;
         border-radius: sizes.$gutter-sm;
         .icon-cancel {
-            color: var(--bs-danger);
+            color: colors.$danger-var;
         }
         .icon-tick {
-            color: var(--bs-success);
+            color: colors.$success-var;
         }
     }
 }

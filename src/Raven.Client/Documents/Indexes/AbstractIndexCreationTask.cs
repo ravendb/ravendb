@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -247,12 +246,6 @@ namespace Raven.Client.Documents.Indexes
                 if (DeploymentMode.HasValue)
                     indexDefinition.DeploymentMode = DeploymentMode.Value;
 
-                if (SearchEngineType.HasValue)
-                {
-                    indexDefinition.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
-                }
-
-                
                 return store.Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexDefinition), token);
             }
             finally
@@ -302,7 +295,7 @@ namespace Raven.Client.Documents.Indexes
             if (Conventions == null)
                 Conventions = new DocumentConventions();
 
-            var indexDefinition = new IndexDefinitionBuilder<TDocument, TReduceResult>(IndexName)
+            IndexDefinitionBuilder<TDocument, TReduceResult> builder = new(IndexName)
             {
                 Indexes = Indexes,
                 IndexesStrings = IndexesStrings,
@@ -330,7 +323,14 @@ namespace Raven.Client.Documents.Indexes
                 CompoundFieldsStrings = CompoundFieldsStrings,
                 CompoundFields = CompoundFields,
                 ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
-            }.ToIndexDefinition(Conventions);
+            };
+
+            if (SearchEngineType.HasValue)
+            {
+                builder.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
+            }
+
+            var indexDefinition = builder.ToIndexDefinition(Conventions);
 
             return indexDefinition;
         }

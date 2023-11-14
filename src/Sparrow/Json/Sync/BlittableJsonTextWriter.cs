@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow.Json.Sync
 {
-    internal class BlittableJsonTextWriter : AbstractBlittableJsonTextWriter, IDisposable
+    internal sealed class BlittableJsonTextWriter : AbstractBlittableJsonTextWriter, IDisposable
     {
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream) : base(context, stream)
         {
@@ -15,7 +15,6 @@ namespace Sparrow.Json.Sync
             DisposeInternal();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Flush()
         {
             FlushInternal();

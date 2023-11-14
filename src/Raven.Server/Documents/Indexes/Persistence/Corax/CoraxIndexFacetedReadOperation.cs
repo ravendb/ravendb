@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
@@ -19,6 +19,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
 using Voron.Impl;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 using RangeType = Raven.Client.Documents.Indexes.RangeType;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -60,6 +61,8 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
         Page page = default;
         int read = 0;
+        CreateMappingForRanges();
+        
         while ((read = baseQuery.Fill(ids)) != 0)
         {
             for (int docId = 0; docId < read; docId++)
@@ -122,6 +125,42 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 }
             }
         }
+        
+        void CreateMappingForRanges()
+        {
+            foreach (var result in results)
+            {
+                if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
+                    continue;
+
+                // Cache facetByRange because we will fulfill data in batches instead of whole collection
+                if (facetsByRange.TryGetValue(result.Key, out var facetValues) == false)
+                {
+                    facetValues = new();
+                    facetsByRange.Add(result.Key, facetValues);
+                }
+
+                foreach (var range in result.Value.Ranges)
+                {
+                    var key = range.RangeText;
+                    if (facetValues.TryGetValue(key, out var collectionOfFacetValues))
+                        continue;
+
+                    collectionOfFacetValues = new FacetValues(facetQuery.Legacy);
+                    if (result.Value.Aggregations.Count <= 0)
+                    {
+                        collectionOfFacetValues.AddDefault(key);
+                    }
+                    else
+                    {
+                        foreach (var aggregation in result.Value.Aggregations)
+                            collectionOfFacetValues.Add(aggregation.Key, key);
+                    }
+
+                    facetValues.Add(key, collectionOfFacetValues);
+                }
+            }
+        }
     }
 
     private void HandleRangeFacetsPerDocument(ref EntryTermsReader reader,
@@ -134,12 +173,6 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         var needToApplyAggregation = result.Aggregations.Count > 0;
         var ranges = result.Ranges;
 
-        // Create map in first batch
-        if (facetValues.Count == 0)
-        {
-            CreateFacetMapping();
-        }
-
         foreach (var parsedRange in ranges)
         {
             if (parsedRange is not FacetedQueryParser.CoraxParsedRange range)
@@ -151,6 +184,9 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             reader.Reset();
             while (reader.FindNext(fieldRootPage))
             {
+                if (reader.IsNull)
+                    continue;
+                
                 isMatching = result.RangeType switch
                 {
                     RangeType.Double => range.IsMatch(reader.CurrentDouble),
@@ -169,28 +205,6 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             }
 
             token.ThrowIfCancellationRequested();
-        }
-
-
-        void CreateFacetMapping()
-        {
-            foreach (var range in ranges)
-            {
-                var key = range.RangeText;
-                if (facetValues.TryGetValue(key, out var collectionOfFacetValues))
-                    continue;
-
-                collectionOfFacetValues = new FacetValues(legacy);
-                if (needToApplyAggregation == false)
-                    collectionOfFacetValues.AddDefault(key);
-                else
-                {
-                    foreach (var aggregation in result.Aggregations)
-                        collectionOfFacetValues.Add(aggregation.Key, key);
-                }
-
-                facetValues.Add(key, collectionOfFacetValues);
-            }
         }
     }
 

@@ -4,7 +4,7 @@
     <Description>Corax - Low level indexing engine</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.11</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.13</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Corax</AssemblyName>
     <PackageId>Corax</PackageId>
@@ -35,10 +35,6 @@
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Exceptions\" />
   </ItemGroup>
 
 

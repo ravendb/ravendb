@@ -25,6 +25,7 @@ using Raven.Client.Exceptions.Corax;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Corax.Indexing;
 using Sparrow.Binary;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -58,14 +59,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         object doc, JsonOperationContext indexContext,
         TBuilder builder,
         object sourceDocument)
-        where TBuilder : IndexWriter.IIndexEntryBuilder;
+        where TBuilder : IIndexEntryBuilder;
 
     [SkipLocalsInit]
     public bool SetDocument<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext,
         TBuilder builder)
-        where TBuilder : IndexWriter.IIndexEntryBuilder
+        where TBuilder : IIndexEntryBuilder
     {
         using var _ = Scope; // ensure that we release all the resources generated in SetDocumentFields
         var currentIndexingScope = CurrentIndexingScope.Current;
@@ -134,7 +135,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     [SkipLocalsInit]
     protected void InsertRegularField<TBuilder>(IndexField field, object value, JsonOperationContext indexContext, TBuilder builder, object sourceDocument,
         out bool shouldSkip)
-        where TBuilder : IndexWriter.IIndexEntryBuilder
+        where TBuilder : IIndexEntryBuilder
     {
         if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_complexFields is null || _complexFields.Contains(field) == false))
             ThrowFieldIsNoIndexedAndStored(field);
@@ -430,7 +431,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void HandleObject<TBuilder>(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, TBuilder builder, object sourceDocument, out bool shouldSkip)
-        where TBuilder : IndexWriter.IIndexEntryBuilder
+        where TBuilder : IIndexEntryBuilder
     {
         if (val.TryGetMember(RavenConstants.Json.Fields.Values, out var values) &&
             IsArrayOfTypeValueObject(val))
@@ -499,7 +500,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     }
     
     protected int AppendFieldValue<TBuilder>(string field, object v, int index, TBuilder builder)         
-    where TBuilder : IndexWriter.IIndexEntryBuilder
+    where TBuilder : IIndexEntryBuilder
     {        
 
         var indexFieldId = _index.Definition.IndexFields[field].Id;

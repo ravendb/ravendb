@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { CounterBadge } from "./CounterBadge";
@@ -7,7 +7,7 @@ export default {
     title: "Bits/CounterBadge",
     component: CounterBadge,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof CounterBadge>;
+} satisfies Meta<typeof CounterBadge>;
 
 export function CounterBadges() {
     return (

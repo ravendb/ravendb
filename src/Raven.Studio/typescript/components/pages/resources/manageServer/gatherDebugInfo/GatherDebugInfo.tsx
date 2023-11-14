@@ -2,18 +2,23 @@ import React from "react";
 import { Card, CardBody, Col, Form, InputGroup } from "reactstrap";
 import "./GatherDebugInfo.scss";
 import { useForm, useWatch } from "react-hook-form";
-import { GatherDebugInfoFormData, gatherDebugInfoYupResolver } from "./GatherDebugInfoValidation";
+import {
+    GatherDebugInfoFormData,
+    GatherDebugInfoPackageScope,
+    gatherDebugInfoYupResolver,
+} from "./GatherDebugInfoValidation";
 import { FormCheckboxes, FormSelect, FormSwitch } from "components/common/Form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import GatherDebugInfoIcons from "./GatherDebugInfoIcons";
 import { useGatherDebugInfoHelpers } from "./useGatherDebugInfoHelpers";
 import GatherDebugInfoAbortConfirm from "./GatherDebugInfoAbortConfirm";
+import { OptionWithIconAndSeparator, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 
 const infoPackageImg = require("Content/img/info_package.svg");
 const createPackageImg = require("Content/img/create_package.svg");
 
 function GatherDebugInfo() {
-    const { dataTypesOptions, defaultValues, packageScopeOptions, isDownloading, databaseOptions, onSave, abortData } =
+    const { dataTypesOptions, defaultValues, isDownloading, databaseOptions, onSave, abortData } =
         useGatherDebugInfoHelpers();
 
     const { handleSubmit, control } = useForm<GatherDebugInfoFormData>({
@@ -77,6 +82,10 @@ function GatherDebugInfo() {
                                             name="packageScope"
                                             options={packageScopeOptions}
                                             isSearchable={false}
+                                            components={{
+                                                Option: OptionWithIconAndSeparator,
+                                                SingleValue: SingleValueWithIcon,
+                                            }}
                                         />
                                         <ButtonWithSpinner
                                             type="submit"
@@ -114,5 +123,10 @@ function GatherDebugInfo() {
         </Col>
     );
 }
+
+const packageScopeOptions: SelectOptionWithIcon<GatherDebugInfoPackageScope>[] = [
+    { label: "Entire cluster", value: "cluster", icon: "cluster" },
+    { label: "Current server only", value: "server", icon: "server" },
+];
 
 export default GatherDebugInfo;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -457,13 +457,13 @@ namespace Sparrow.Json
             using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
             {
 #endif
-                EnsureNotDisposed();
-                LazyStringValue value = GetLazyString(key, longLived: true);
-                _fieldNames[key.Value] = value;
+            EnsureNotDisposed();
+            LazyStringValue value = GetLazyString(key, longLived: true);
+            _fieldNames[key.Value] = value;
 
-                //sanity check, in case the 'value' is manually disposed outside of this function
-                Debug.Assert(value.IsDisposed == false);
-                return value;
+            //sanity check, in case the 'value' is manually disposed outside of this function
+            Debug.Assert(value.IsDisposed == false);
+            return value;
 #if DEBUG || VALIDATE
             }
 #endif
@@ -978,13 +978,15 @@ namespace Sparrow.Json
             }
         }
 
-        public void Write(AbstractBlittableJsonTextWriter writer, BlittableJsonReaderObject json)
+        public void Write<TWriter>(TWriter writer, BlittableJsonReaderObject json)
+            where TWriter : IBlittableJsonTextWriter
         {
             EnsureNotDisposed();
             WriteInternal(writer, json);
         }
 
-        private void WriteInternal(AbstractBlittableJsonTextWriter writer, object json)
+        private void WriteInternal<TWriter>(TWriter writer, object json)
+            where TWriter : IBlittableJsonTextWriter
         {
             _jsonParserState.Reset();
             _objectJsonParser.Reset(json);
@@ -996,13 +998,15 @@ namespace Sparrow.Json
             _objectJsonParser.Reset(null);
         }
 
-        public void Write(AbstractBlittableJsonTextWriter writer, DynamicJsonValue json)
+        public void Write<TWriter>(TWriter writer, DynamicJsonValue json)
+            where TWriter : IBlittableJsonTextWriter
         {
             EnsureNotDisposed();
             WriteInternal(writer, json);
         }
 
-        public void Write(AbstractBlittableJsonTextWriter writer, DynamicJsonArray json)
+        public void Write<TWriter>(TWriter writer, DynamicJsonArray json)
+            where TWriter : IBlittableJsonTextWriter
         {
             EnsureNotDisposed();
             _jsonParserState.Reset();
@@ -1015,7 +1019,8 @@ namespace Sparrow.Json
             _objectJsonParser.Reset(null);
         }
 
-        public void WriteObject(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+        public void WriteObject<TWriter>(TWriter writer, JsonParserState state, ObjectJsonParser parser)
+            where TWriter : IBlittableJsonTextWriter
         {
             EnsureNotDisposed();
             if (state.CurrentTokenType != JsonParserToken.StartObject)
@@ -1053,7 +1058,9 @@ namespace Sparrow.Json
             writer.WriteEndObject();
         }
 
-        private void WriteValue(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+
+        private void WriteValue<TWriter>(TWriter writer, JsonParserState state, ObjectJsonParser parser)
+            where TWriter: IBlittableJsonTextWriter
         {
             switch (state.CurrentTokenType)
             {
@@ -1119,7 +1126,8 @@ namespace Sparrow.Json
             }
         }
 
-        public void WriteArray(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+        public void WriteArray<TWriter>( TWriter writer, JsonParserState state, ObjectJsonParser parser)
+            where TWriter : IBlittableJsonTextWriter
         {
             EnsureNotDisposed();
             if (state.CurrentTokenType != JsonParserToken.StartArray)

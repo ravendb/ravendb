@@ -52,6 +52,7 @@ namespace Raven.Client.Documents.Linq
         internal readonly LinqPathProvider LinqPathProvider;
         private readonly Action<QueryResult> _afterQueryExecuted;
         private readonly LinqQueryHighlightings _highlightings;
+        private readonly QueryStatistics _queryStatistics;
         private bool _chainedWhere;
         private int _insideWhere;
         private int _insideFilter;
@@ -132,7 +133,8 @@ namespace Raven.Client.Documents.Linq
             bool isMapReduce,
             Type originalType,
             DocumentConventions conventions,
-            bool isProjectInto)
+            bool isProjectInto,
+            QueryStatistics queryStatistics)
         {
             FieldsToFetch = fieldsToFetch;
             _newExpressionType = typeof(T);
@@ -146,6 +148,7 @@ namespace Raven.Client.Documents.Linq
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _conventions = conventions;
             _isProjectInto = isProjectInto;
+            _queryStatistics = queryStatistics;
             LinqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
             _loadAliasesMovedToOutputFunction = new HashSet<string>();
@@ -2064,12 +2067,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                 case "Any":
                     {
+                        if (expression.Arguments.Count == 2 && expression.Arguments[0] is not ConstantExpression)
+                            _subClauseDepth++;
+                        
                         VisitExpression(expression.Arguments[0]);
                         if (expression.Arguments.Count == 2)
                         {
                             if (_chainedWhere)
                                 DocumentQuery.AndAlso();
                             VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+                            
+                            if (_subClauseDepth > 0)
+                                _subClauseDepth--;
                         }
 
                         VisitAny();
@@ -3917,14 +3926,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareTokens, _loadTokens, true));
+                return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareTokens, _loadTokens, true)
+                {
+                    QueryStatistics = _queryStatistics
+                });
             }
 
             var (fields, projections) = GetProjections();
 
             return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(fields, projections, FromAlias, null, _loadTokens)
             {
-                IsProjectInto = _isProjectInto
+                IsProjectInto = _isProjectInto,
+                QueryStatistics = _queryStatistics
             });
         }
 
@@ -3966,14 +3979,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return asyncDocumentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareTokens, _loadTokens, true));
+                return asyncDocumentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareTokens, _loadTokens, true)
+                {
+                    QueryStatistics = _queryStatistics
+                });
             }
 
             var (fields, projections) = GetProjections();
 
             return asyncDocumentQuery.CreateDocumentQueryInternal<T>(new QueryData(fields, projections, FromAlias, null, _loadTokens)
             {
-                IsProjectInto = _isProjectInto
+                IsProjectInto = _isProjectInto,
+                QueryStatistics = _queryStatistics
             });
         }
 

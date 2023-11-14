@@ -4,17 +4,25 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditRabbitMqEtlInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
-    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+    const hasQueueEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasQueueEtl,
+            },
+        ],
+    });
 
     const rabbitMqEtlDocsLink = useRavenLink({ hash: "KFKQM7" });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasQueueEtl ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -68,9 +76,19 @@ export function EditRabbitMqEtlInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasQueueEtl}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "RabbitMQ ETL",
+        featureIcon: "rabbitmq-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

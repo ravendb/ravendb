@@ -286,12 +286,14 @@ namespace SlowTests.Client.Subscriptions
         }
 
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ResendAfterConnectionClosed()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task ResendAfterConnectionClosed(bool filter)
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await (filter ? store.Subscriptions.CreateAsync<User>(user => user.Name != "John") : store.Subscriptions.CreateAsync<User>());
                 await using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -335,10 +337,16 @@ namespace SlowTests.Client.Subscriptions
 
                     mre.WaitOne();
 
+                    var exception = string.Empty;
                     var t = subscription.Run(x =>
                     {
                         foreach (var item in x.Items)
                         {
+                            if (string.IsNullOrEmpty(exception) && string.IsNullOrEmpty(item.ExceptionMessage) == false)
+                            {
+                                exception = item.ExceptionMessage;
+                            }
+
                             con1Docs.Add(item.Id);
                         }
                     });
@@ -346,12 +354,12 @@ namespace SlowTests.Client.Subscriptions
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 4), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
 
-                    WaitForUserToContinueTheTest(store);
-
                     tcs.SetException(new InvalidOperationException());
                     await Subscription2.DisposeAsync(waitForSubscriptionTask: true);
 
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 6), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
+                    Assert.True(string.IsNullOrEmpty(exception), $"string.IsNullOrEmpty(exception): " + exception);
+
                     await AssertNoLeftovers(store, id);
                 }
             }

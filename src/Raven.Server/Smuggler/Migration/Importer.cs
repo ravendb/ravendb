@@ -20,6 +20,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Smuggler.Migration
 {
@@ -171,7 +172,7 @@ namespace Raven.Server.Smuggler.Migration
             }
 
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
-            await using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
+            await using (var stream = await BackupUtils.GetDecompressionStreamAsync(responseStream))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(stream, context, Parameters.Database.Name))
             {

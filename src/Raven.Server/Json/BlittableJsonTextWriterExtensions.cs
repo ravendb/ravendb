@@ -173,7 +173,8 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteEtlTaskProgress(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<EtlTaskProgress> progress)
+        public static void WriteEtlTaskProgress<TWriter>(this TWriter writer, JsonOperationContext context, IEnumerable<EtlTaskProgress> progress)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
             writer.WriteArray(context, "Results", progress, (w, c, taskStats) =>
@@ -188,6 +189,13 @@ namespace Raven.Server.Json
                 w.WriteString(taskStats.EtlType.ToString());
                 w.WriteComma();
 
+                if (taskStats.QueueBrokerType.HasValue)
+                {
+                    w.WritePropertyName(nameof(taskStats.QueueBrokerType));
+                    w.WriteString(taskStats.QueueBrokerType.ToString());
+                    w.WriteComma();
+                }
+
                 w.WriteArray(c, nameof(taskStats.ProcessesProgress), taskStats.ProcessesProgress, (wp, cp, processProgress) =>
                 {
                     wp.WriteStartObject();
@@ -195,6 +203,13 @@ namespace Raven.Server.Json
                     wp.WritePropertyName(nameof(processProgress.TransformationName));
                     wp.WriteString(processProgress.TransformationName);
                     wp.WriteComma();
+
+                    if (processProgress.TransactionalId is not null)
+                    {
+                        wp.WritePropertyName(nameof(processProgress.TransactionalId));
+                        wp.WriteString(processProgress.TransactionalId);
+                        wp.WriteComma();
+                    }
 
                     wp.WritePropertyName(nameof(processProgress.Completed));
                     wp.WriteBool(processProgress.Completed);
@@ -967,7 +982,8 @@ namespace Raven.Server.Json
             writer.WriteObject(context.ReadObject(djv, "subscriptionConnection/performance"));
         }
 
-        public static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IIndexQuery query)
+        public static void WriteIndexQuery<TWriter>(this TWriter writer, JsonOperationContext context, IIndexQuery query)
+            where TWriter : IBlittableJsonTextWriter
         {
             var indexQuery = query as IndexQueryServerSide;
             if (indexQuery != null)
@@ -979,7 +995,8 @@ namespace Raven.Server.Json
             throw new NotSupportedException($"Not supported query type: {query.GetType()}");
         }
 
-        private static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
+        private static void WriteIndexQuery<TWriter>(this TWriter writer, JsonOperationContext context, IndexQueryServerSide query)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
 
@@ -1044,7 +1061,8 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteEssentialDatabaseStatistics(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, EssentialDatabaseStatistics statistics)
+        public static void WriteEssentialDatabaseStatistics<TWriter>(this TWriter writer, JsonOperationContext context, EssentialDatabaseStatistics statistics)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
 
@@ -1053,7 +1071,8 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteDatabaseStatistics(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, DatabaseStatistics statistics)
+        public static void WriteDatabaseStatistics<TWriter>(this TWriter writer, JsonOperationContext context, DatabaseStatistics statistics)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
 
@@ -1062,7 +1081,8 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static void WriteDatabaseStatisticsInternal(AbstractBlittableJsonTextWriter writer, DatabaseStatistics statistics)
+        private static void WriteDatabaseStatisticsInternal<TWriter>(this TWriter writer, DatabaseStatistics statistics)
+            where TWriter : IBlittableJsonTextWriter
         {
             WriteEssentialDatabaseStatisticsInternal(writer, statistics);
             writer.WriteComma();
@@ -1142,8 +1162,9 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static void WriteEssentialDatabaseStatisticsInternal<TIndexInformation>(AbstractBlittableJsonTextWriter writer, AbstractDatabaseStatistics<TIndexInformation> statistics)
+        private static void WriteEssentialDatabaseStatisticsInternal<TIndexInformation, TWriter>(this TWriter writer, AbstractDatabaseStatistics<TIndexInformation> statistics)
             where TIndexInformation : EssentialIndexInformation
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WritePropertyName(nameof(statistics.CountOfIndexes));
             writer.WriteInteger(statistics.CountOfIndexes);
@@ -1206,7 +1227,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndArray();
 
-            void WriteIndexInformation(AbstractBlittableJsonTextWriter w, IndexInformation index)
+            void WriteIndexInformation(TWriter w, IndexInformation index)
             {
                 w.WriteStartObject();
 
@@ -1231,7 +1252,7 @@ namespace Raven.Server.Json
                 w.WriteEndObject();
             }
 
-            void WriteBasicIndexInformation(AbstractBlittableJsonTextWriter w, EssentialIndexInformation index)
+            void WriteBasicIndexInformation(TWriter w, EssentialIndexInformation index)
             {
                 w.WriteStartObject();
 
@@ -1260,7 +1281,7 @@ namespace Raven.Server.Json
                 w.WriteEndObject();
             }
 
-            static void WriteBasicIndexInformationInternal(AbstractBlittableJsonTextWriter w, TIndexInformation index)
+            static void WriteBasicIndexInformationInternal(TWriter w, TIndexInformation index)
             {
                 w.WritePropertyName(nameof(index.Name));
                 w.WriteString(index.Name);
@@ -1548,7 +1569,8 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexesStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexStats[] indexesStats)
+        public static void WriteIndexesStats<TWriter>(this TWriter writer, JsonOperationContext context, IndexStats[] indexesStats)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
 
@@ -1590,7 +1612,8 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexErrors(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexErrors> indexErrors)
+        public static void WriteIndexErrors<TWriter>(this TWriter writer, JsonOperationContext context, IEnumerable<IndexErrors> indexErrors)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
             writer.WriteArray(context, "Results", indexErrors, (w, c, index) =>

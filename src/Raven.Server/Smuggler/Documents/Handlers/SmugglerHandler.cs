@@ -35,6 +35,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
 {
@@ -122,7 +123,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         await using (var file = await getFile())
-                        await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
+                        await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
                         using (var source = new StreamSource(stream, context, Database.Name))
                         {
                             var destination = Database.Smuggler.CreateDestination();

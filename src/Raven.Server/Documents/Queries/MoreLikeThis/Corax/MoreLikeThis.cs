@@ -6,7 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Analyzers;
-using Corax.Queries.Meta;
+using Corax.Querying.Matches.Meta;
 using Lucene.Net.Util;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax;

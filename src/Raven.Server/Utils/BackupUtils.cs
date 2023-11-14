@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -15,6 +20,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -22,11 +28,61 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Utils;
+using Sparrow.Utils;
+using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
+    internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+    {
+        return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
+            ? new DirectUploadBackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes) 
+            : new BackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes);
+    }
+
+    internal static async Task<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
+    {
+        var buffer = new byte[4];
+
+        var read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+        if (read == 0)
+            throw new InvalidOperationException("Empty stream");
+
+        var backupStream = new BackupStream(stream, buffer);
+
+        if (read != buffer.Length)
+            return backupStream;
+
+        const uint zstdMagicNumber = 0xFD2FB528;
+        var uintMagicNumber = BitConverter.ToUInt32(buffer);
+        if (uintMagicNumber == zstdMagicNumber)
+            return ZstdStream.Decompress(backupStream);
+
+        if (buffer[0] == 0x1F && buffer[1] == 0x8B)
+            return new GZipStream(backupStream, CompressionMode.Decompress);
+
+        return backupStream;
+    }
+
+    internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
+    {
+        switch (compressionAlgorithm)
+        {
+            case ExportCompressionAlgorithm.Gzip:
+                return new GZipStream(stream, compressionLevel, leaveOpen: true);
+            case ExportCompressionAlgorithm.Zstd:
+                if (compressionLevel == CompressionLevel.NoCompression)
+                    return new LeaveOpenStream(stream);
+
+                return ZstdStream.Compress(stream, compressionLevel, leaveOpen: true);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
     internal static BackupInfo GetBackupInfo(BackupInfoParameters parameters)
     {
         var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, taskId: 0L);
@@ -238,8 +294,8 @@ internal static class BackupUtils
             nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
 
         return delayUntil.HasValue && delayUntil.Value.ToLocalTime() > nextBackup.Value
-            ? delayUntil.Value.ToLocalTime() 
-            : nextBackup.Value;              
+            ? delayUntil.Value.ToLocalTime()
+            : nextBackup.Value;
     }
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,

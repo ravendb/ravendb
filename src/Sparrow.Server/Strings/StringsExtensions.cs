@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using Sparrow.Server.Platform;
 
 namespace Sparrow.Server.Strings
 {
@@ -188,6 +189,18 @@ namespace Sparrow.Server.Strings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe bool CompareConstantVector128(ref byte constantRef, byte* ptr, int size)
         {
+            if (PlatformSpecific.IsArm) // bug workaround. Should be removed after dotnet 7.0.15 release. https://github.com/ravendb/ravendb/pull/17651
+            {
+                for (int i = 0; i < size; ++i)
+                {
+                    ref var currentByte = ref Unsafe.Add(ref constantRef, i);
+                    if (*(ptr + i) != currentByte)
+                        return false;
+                }
+
+                return true;
+            }
+            
             if (size >= Vector128<byte>.Count)
             {
                 Vector128<byte> result = Vector128.Equals(

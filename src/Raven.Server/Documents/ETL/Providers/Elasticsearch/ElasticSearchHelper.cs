@@ -1,23 +1,25 @@
 ﻿using System;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using Elasticsearch.Net;
-using Nest;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
+using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Sparrow;
+using BasicAuthentication = Elastic.Transport.BasicAuthentication;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
     public static class ElasticSearchHelper
     {
-        public static ElasticClient CreateClient(ElasticSearchConnectionString connectionString, TimeSpan? requestTimeout = null, TimeSpan? pingTimeout = null)
+        public static ElasticsearchClient CreateClient(ElasticSearchConnectionString connectionString, TimeSpan? requestTimeout = null, TimeSpan? pingTimeout = null, bool useCustomBlittableSerializer = true)
         {
             Uri[] nodesUrls = connectionString.Nodes.Select(x => new Uri(x)).ToArray();
 
-            StaticConnectionPool pool = new StaticConnectionPool(nodesUrls);
-            ConnectionSettings settings = new ConnectionSettings(pool);
-
-            if (connectionString.EnableCompatibilityMode)
-                settings.EnableApiVersioningHeader();
+            var pool = new StaticNodePool(nodesUrls);
+            var settings = useCustomBlittableSerializer
+                ? new ElasticsearchClientSettings(pool, sourceSerializer: (@in, values) => new BlittableJsonElasticSerializer())
+                : new ElasticsearchClientSettings(pool);
 
             if (requestTimeout != null)
                 settings.RequestTimeout(requestTimeout.Value);
@@ -29,11 +31,21 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             {
                 if (connectionString.Authentication.Basic != null)
                 {
-                    settings.BasicAuthentication(connectionString.Authentication.Basic.Username, connectionString.Authentication.Basic.Password);
+                    settings.Authentication(new BasicAuthentication(connectionString.Authentication.Basic.Username, connectionString.Authentication.Basic.Password));
                 }
                 else if (connectionString.Authentication.ApiKey != null)
                 {
-                    settings.ApiKeyAuthentication(connectionString.Authentication.ApiKey.ApiKeyId, connectionString.Authentication.ApiKey.ApiKey);
+                    if (connectionString.Authentication.ApiKey.EncodedApiKey != null)
+                    {
+                        settings.Authentication(new ApiKey(connectionString.Authentication.ApiKey.EncodedApiKey));
+                    }
+                    else
+                    { 
+                        var apiKeyMergedBytes = Encodings.Utf8.GetBytes($"{connectionString.Authentication.ApiKey.ApiKeyId}:{connectionString.Authentication.ApiKey.ApiKey}");
+                        var encodedApiKey = Convert.ToBase64String(apiKeyMergedBytes);
+                        settings.Authentication(new ApiKey(encodedApiKey));    
+                    }
+                    
                 }
                 else if (connectionString.Authentication.Certificate != null)
                 {
@@ -56,7 +68,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 }
             }
 
-            ElasticClient client = new(settings);
+            ElasticsearchClient client = new(settings);
 
             return client;
         }

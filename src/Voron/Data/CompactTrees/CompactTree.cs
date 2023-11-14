@@ -266,6 +266,8 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public long AddAfterTryGetNext(ref CompactKeyLookup lookup, long value)
     {
+        CompactTreeDumper.WriteAddition(this, ref lookup, value);
+
         _inner.AddAfterTryGetNext(ref lookup, value);
         return lookup.ContainerId;
     }
@@ -279,11 +281,10 @@ public sealed partial class CompactTree : IPrepareForCommit
     public long Add(CompactKey key, long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
-
-        CompactTreeDumper.WriteAddition(this, key.Decoded(), value);
-
         AssertValueAndKeySize(key, value);
+
         var lookup = new CompactKeyLookup(key);
+        CompactTreeDumper.WriteAddition(this, ref lookup, value);
         _inner.Add(ref lookup, value);
 
         return lookup.ContainerId;
@@ -418,12 +419,16 @@ public sealed partial class CompactTree : IPrepareForCommit
     
     public bool TryRemove(CompactKeyLookup key, out long oldValue)
     {
-        return _inner.TryRemove(key, out oldValue);
+        var result = _inner.TryRemove(key, out oldValue);
+        CompactTreeDumper.WriteRemoval(this, ref key, oldValue);
+        return result;
     }
 
     public bool TryRemoveExistingValue(ref CompactKeyLookup key, out long oldValue)
     {
-        return _inner.TryRemoveExistingValue(ref key, out oldValue);
+        var result = _inner.TryRemoveExistingValue(ref key, out oldValue);
+        CompactTreeDumper.WriteRemoval(this, ref key, oldValue);
+        return result;
     }
 
     public void InitializeStateForTryGetNextValue()
@@ -444,7 +449,8 @@ public sealed partial class CompactTree : IPrepareForCommit
     
     public void BulkUpdateSet(ref CompactKeyLookup key, long value, long pageNum, int offset, ref int adjustment)
     {
-        _inner.BulkUpdateSet(ref key, value, pageNum, offset, ref adjustment);   
+        _inner.BulkUpdateSet(ref key, value, pageNum, offset, ref adjustment);
+        CompactTreeDumper.WriteBulkSet(this, ref key, value);
     }
 
     public Lookup<CompactKeyLookup>.TreeStructureChanged CheckTreeStructureChanges()
@@ -454,7 +460,9 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public bool BulkUpdateRemove(ref CompactKeyLookup key, long pageNum, int offset, ref int adjustment, out long oldValue)
     {
-        return _inner.BulkUpdateRemove(ref key, pageNum, offset, ref adjustment, out oldValue);
+        var result = _inner.BulkUpdateRemove(ref key, pageNum, offset, ref adjustment, out oldValue);
+        CompactTreeDumper.WriteBulkRemoval(this, ref key, oldValue);
+        return result;
     }
     
     public int BulkUpdateStart(Span<CompactKeyLookup> keys, Span<long> values, Span<int> offsets, out long pageNum)

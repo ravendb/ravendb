@@ -170,7 +170,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                         {isDatabaseAdmin && (
                             <StickyHeader>
                                 <Row>
-                                    <div className="d-flex gap-2">
+                                    <div className="d-flex flex-wrap gap-2">
                                         <ButtonWithSpinner
                                             color="primary"
                                             icon="save"
@@ -437,7 +437,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         enterprise: { value: Infinity },
     },
     {
-        featureName: "Max retention time",
+        featureName: "Max retention time (days)",
         featureIcon: "clock",
         community: { value: 45 },
         professional: { value: Infinity },

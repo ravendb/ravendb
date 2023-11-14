@@ -1,5 +1,4 @@
 @import "./bootstrap/bootstrap.less";
-@import "fonts.less";
 @import "checkbox-toggle.less";
 
 @import "modals.less";
@@ -1160,8 +1159,7 @@ input[type="file"] + .form-control {
     }
 
     .flex-window-scroll {
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow: auto;
         position: relative;
         flex-grow: 1;
     }
@@ -2290,6 +2288,10 @@ ul.properties {
 
 .align-self-center {
     align-self: center;
+}
+
+.pb-3 {
+    padding-bottom: 1rem;
 }
 
 @import "prism.less";

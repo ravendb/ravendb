@@ -1,16 +1,24 @@
 ﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function EditKafkaSinkTaskInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
-    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+    const hasQueueSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasQueueSink,
+            },
+        ],
+    });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasQueueSink ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -40,9 +48,19 @@ export function EditKafkaSinkTaskInfoHub() {
                 </ul>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasQueueSink}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Kafka Sink",
+        featureIcon: "kafka-sink",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

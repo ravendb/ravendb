@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
@@ -33,7 +35,7 @@ namespace SlowTests.Issues
             public Dictionary<string, BlittableJsonReaderObject> D { get; set; }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
+        [RavenFact(RavenTestCategory.None)]
         public void CanDeserializeToBlittableDictionary()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -49,22 +51,31 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport)]
-        public void CanRestoreSubscriptions()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRestoreSubscriptions(Options options)
         {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var backupPath = NewDataPath(suffix: $"{options.DatabaseMode}_BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Subscriptions.Create<User>(x => x.Name == "Marcin");
                 store.Subscriptions.Create<User>();
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                    Backup.UpdateConfigAndRunBackup(Server, config, store);
+                else
+                {
+                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                }
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
-
+                
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),

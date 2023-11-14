@@ -34,6 +34,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
 
     const currentLicense = useAppSelector(licenseSelectors.licenseType);
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+    const isIsv = useAppSelector(licenseSelectors.statusValue("IsIsv"));
 
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
@@ -62,9 +63,14 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                         <tr>
                             <th className="p-0"></th>
                             {licenseTypes.map((licenseType) => {
-                                if (currentLicense === "Essential" && licenseType === "Community") {
+                                if (isIsv && licenseType === "Community") {
                                     return (
-                                        <th key="Essential" className="community current">
+                                        <th
+                                            key="Essential"
+                                            className={classNames("community", {
+                                                "current bg-faded-primary": currentLicense === "Essential",
+                                            })}
+                                        >
                                             <Icon icon="circle-filled" className="license-dot" /> Essential
                                         </th>
                                     );
@@ -73,7 +79,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                     <th
                                         key={licenseType}
                                         className={classNames("position-relative", licenseType.toLowerCase(), {
-                                            current:
+                                            "current bg-faded-primary":
                                                 currentLicense === licenseType ||
                                                 (currentLicense === "None" && licenseType === "Community") ||
                                                 (currentLicense === "Community" && licenseType === "Free") ||
@@ -81,7 +87,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                         })}
                                     >
                                         <Icon icon="circle-filled" className="license-dot" />
-                                        {licenseType}
+                                        {licenseType === "Developer" ? <span>Dev</span> : licenseType}
                                         {licenseType === "Developer" && (
                                             <>
                                                 <div className="corner-info" id="DevTooltip">
@@ -96,8 +102,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                                     <div className="p-2 text-center">
                                                         <div>
                                                             Developer license enables{" "}
-                                                            <strong>Enterprise License features</strong>
-                                                            <br /> but is{" "}
+                                                            <strong>Enterprise License features</strong> but is{" "}
                                                             <strong>not applicable for commercial use</strong>.
                                                         </div>
 
@@ -120,7 +125,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                     </thead>
                     <tbody>
                         {data.map((data, idx) => (
-                            <tr key={idx}>
+                            <tr key={idx} className="feature-row">
                                 <th className="p-0">
                                     {data.featureName && (
                                         <div className="p-2">
@@ -131,7 +136,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                 </th>
                                 <td
                                     className={classNames("community", {
-                                        current:
+                                        "current bg-faded-primary":
                                             currentLicense === "Community" ||
                                             currentLicense === "Essential" ||
                                             currentLicense === "None",
@@ -142,18 +147,24 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                 {!isCloud && (
                                     <td
                                         className={classNames("professional", {
-                                            current: currentLicense === "Professional",
+                                            "current bg-faded-primary": currentLicense === "Professional",
                                         })}
                                     >
                                         {formatAvailabilityValue(data.professional)}
                                     </td>
                                 )}
-                                <td className={classNames("enterprise", { current: currentLicense === "Enterprise" })}>
+                                <td
+                                    className={classNames("enterprise", {
+                                        "current bg-faded-primary": currentLicense === "Enterprise",
+                                    })}
+                                >
                                     {formatAvailabilityValue(data.enterprise, isCloud)}
                                 </td>
                                 {currentLicense === "Developer" && (
                                     <td
-                                        className={classNames("developer", { current: currentLicense === "Developer" })}
+                                        className={classNames("developer", {
+                                            "current bg-faded-primary": currentLicense === "Developer",
+                                        })}
                                     >
                                         {formatAvailabilityValue(data.enterprise, isCloud)}
                                     </td>
@@ -177,7 +188,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                     <td
                                         key={licenseType}
                                         className={classNames(licenseType.toLowerCase(), {
-                                            current:
+                                            "current bg-faded-primary":
                                                 currentLicense === licenseType ||
                                                 (currentLicense === "Community" && licenseType === "Free") ||
                                                 (currentLicense === "Enterprise" && licenseType === "Production"),
@@ -195,7 +206,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                 </Table>
             </div>
             {currentLicense === "None" && (
-                <div className="hstack gap-4 justify-content-center mt-4">
+                <div className="hstack gap-4 justify-content-center mt-4 flex-wrap">
                     <a
                         href={buyLink}
                         target="_blank"
@@ -208,7 +219,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                 </div>
             )}
             {currentLicense !== "Enterprise" && currentLicense !== "None" && (
-                <div className="hstack gap-4 justify-content-center mt-4">
+                <div className="hstack gap-4 justify-content-center mt-4 flex-wrap">
                     Upgrade License
                     <a
                         href={buyLink}
@@ -260,11 +271,13 @@ function formatAvailabilityValue(data: ValueData, canBeEnabledInCloud?: boolean)
 
     return (
         <>
-            {formattedValue}
-            <Icon id={id} icon="info" color="info" />
-            <UncontrolledTooltip target={id}>
-                Default value for your license is {data.value.toString()}.
-            </UncontrolledTooltip>
+            <div className="overwritten-value">
+                {formattedValue}
+                <Icon id={id} icon="info" color="info" margin="m-0" />
+                <UncontrolledTooltip target={id}>
+                    Default value for your license is {data.value.toString()}.
+                </UncontrolledTooltip>
+            </div>
         </>
     );
 }

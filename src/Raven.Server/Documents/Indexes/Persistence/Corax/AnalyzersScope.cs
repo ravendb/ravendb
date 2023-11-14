@@ -5,11 +5,11 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Analyzers;
-using Corax.IndexSearcher;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Sparrow.Server;
 using Voron;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -114,8 +114,8 @@ internal sealed unsafe class AnalyzersScope : IDisposable
     private Analyzer GetAnalyzer(Slice fieldName, FieldMetadata field = default)
     {
         Analyzer analyzer;
-        if (_analyzersCache.ContainsKey(fieldName))
-            return _analyzersCache[fieldName];
+        if (_analyzersCache.TryGetValue(fieldName, out Analyzer analyzer1))
+            return analyzer1;
 
         if (_knownFields.TryGetByFieldName(fieldName, out var binding))
         {

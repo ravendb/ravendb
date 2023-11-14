@@ -4,7 +4,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Indexing;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Utils;
 using FastTests.Voron;
@@ -17,6 +18,8 @@ using Voron.Data.Containers;
 using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace SlowTests.Corax;
 

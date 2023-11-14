@@ -3,7 +3,7 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Jint;
 using Jint.Native;
@@ -18,6 +18,7 @@ using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -169,11 +170,12 @@ namespace Raven.Server.Documents.Patch
              
                 while (reader.FindNextStored(fieldRootPage))
                 {
-                    if (reader.IsList && // stored value is an array 
-                        value is null)   // and we haven't initialized it yet 
+                    // check if stored value is an array and we haven't initialized it yet
+                    if (reader.IsList)
                     {
-                        value = new JsArray(_parent.Engine);
+                        value ??= new JsArray(_parent.Engine);
                     }
+
                     if (reader.StoredField == null)
                     {
                         SetValue(ref value, Null);
@@ -183,7 +185,10 @@ namespace Raven.Server.Documents.Patch
                     var span = reader.StoredField.Value;
                     if (span.Length == 0)
                     {
-                        SetValue(ref value, string.Empty);
+                        if (reader.IsList == false)
+                        {
+                            SetValue(ref value, string.Empty);
+                        }
                         continue;
                     }
 

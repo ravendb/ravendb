@@ -38,6 +38,7 @@ class documentMetadata {
     
     archiveAtDateInterval: KnockoutComputed<string>;
     archiveAtDateFullDate: KnockoutComputed<string>;
+    archiveAtInPast: KnockoutComputed<boolean>;
     
     attachments = ko.observableArray<documentAttachmentDto>();
     counters = ko.observableArray<string>();
@@ -128,6 +129,15 @@ class documentMetadata {
                 }
                 
                 return "";
+            });
+
+            this.archiveAtInPast = ko.pureComputed(() => {
+                const archiveAt = dto["@archive-at"];
+                if (archiveAt) {
+                    return moment.utc(archiveAt).isBefore(moment.utc());
+                }
+
+                return false;
             });
 
             this.lastModified(dto['@last-modified']);

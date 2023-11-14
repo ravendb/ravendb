@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Raven.Server.Utils;
+using SlowTests.Corax;
 using SlowTests.Sharding.Cluster;
 using Xunit;
 

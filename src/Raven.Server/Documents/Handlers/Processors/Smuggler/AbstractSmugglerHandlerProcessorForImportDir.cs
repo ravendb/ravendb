@@ -67,7 +67,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
                     using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
                         await using (var file = await getFile())
-                        await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
+                        await using (var stream = await Utils.BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
                         {
                             var result = await DoImport(context, stream, options: null, result: null, onProgress: null, operationId, token);
                             results.Enqueue(result);

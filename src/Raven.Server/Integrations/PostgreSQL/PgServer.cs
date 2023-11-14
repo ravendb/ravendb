@@ -130,7 +130,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 var session = new PgSession(
                     client,
-                    _server.Certificate.Certificate,
+                    _server.Certificate,
                     identifier,
                     _processId,
                     _server.ServerStore.DatabasesLandlord,
@@ -171,6 +171,8 @@ namespace Raven.Server.Integrations.PostgreSQL
                         {
                             if (_logger.IsOperationsEnabled)
                                 _logger.Operations($"Failed to accept TCP client (port: {((IPEndPoint)tcpListener.LocalEndpoint).Port})", e);
+
+                            continue;
                         }
 
                         if (client == null)

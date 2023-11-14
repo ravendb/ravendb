@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Queries
@@ -27,6 +28,8 @@ namespace Raven.Client.Documents.Queries
         public bool IsMapReduce { get; set; }
 
         internal bool IsProjectInto { get; set; }
+
+        internal QueryStatistics QueryStatistics { get; set; }
 
         public ProjectionBehavior? ProjectionBehavior { get; set; }
 

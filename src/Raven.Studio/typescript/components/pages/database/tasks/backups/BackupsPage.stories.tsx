@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, ComponentStory } from "@storybook/react";
 import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "test/storybookTestUtils";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -15,7 +15,7 @@ export default {
     component: BackupsPage,
     decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
-} as ComponentMeta<typeof BackupsPage>;
+} satisfies Meta<typeof BackupsPage>;
 
 function commonInit() {
     const { accessManager } = mockStore;
@@ -42,7 +42,7 @@ export const EmptyView: ComponentStory<typeof BackupsPage> = () => {
 
     tasksService.withGetManualBackup((x) => (x.Status = null));
 
-    return <BackupsPage database={db} />;
+    return <BackupsPage db={db} />;
 };
 
 export const FullView: ComponentStory<typeof BackupsPage> = () => {
@@ -56,7 +56,7 @@ export const FullView: ComponentStory<typeof BackupsPage> = () => {
     tasksService.withGetProgress();
     tasksService.withGetManualBackup();
 
-    return <BackupsPage database={db} />;
+    return <BackupsPage db={db} />;
 };
 
 export const PeriodicBackupTemplate = (args: {
@@ -82,7 +82,7 @@ export const PeriodicBackupTemplate = (args: {
 
     tasksService.withGetManualBackup();
 
-    return <BackupsPage {...forceStoryRerender()} database={db} />;
+    return <BackupsPage {...forceStoryRerender()} db={db} />;
 };
 
 export const PeriodicBackupDisabled = boundCopy(PeriodicBackupTemplate, {

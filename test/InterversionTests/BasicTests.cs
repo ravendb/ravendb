@@ -29,10 +29,19 @@ namespace InterversionTests
             AssertStore(GetDocumentStore());
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
-        [InlineData("5.2.3")]
-        [InlineData("5.3.0-nightly-20211107-0402")]
-        public async Task SubscriptionTest(string version)
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
+        public async Task SubscriptionTestV52()
+        {
+            await SubscriptionTestInternal(Server52Version);
+        }
+
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
+        public async Task SubscriptionTestV53()
+        {
+            await SubscriptionTestInternal(Server53Version);
+        }
+
+        private async Task SubscriptionTestInternal(string version)
         {
             using (var store = await GetDocumentStoreAsync(version))
             {

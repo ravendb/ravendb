@@ -115,7 +115,8 @@ class virtualGrid<T extends object> {
             markColumnsDirty: () => this.markColumnsDirty(),
             resultEtag: () => this.previousResultsEtag(),
             scrollDown: () => this.scrollDown(),
-            setDefaultSortBy: (columnIndex, mode) => this.setDefaultSortBy(columnIndex, mode)
+            setDefaultSortBy: (columnIndex, mode) => this.setDefaultSortBy(columnIndex, mode),
+            sortEnabled: () => !!this.sortByColumn()
         }
     }
 

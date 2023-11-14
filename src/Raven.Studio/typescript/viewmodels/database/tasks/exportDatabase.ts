@@ -39,6 +39,7 @@ class exportDatabase extends shardViewModelBase {
     filteredCollections: KnockoutComputed<Array<string>>;
 
     commandTypes: Array<commandLineType> = ["PowerShell", "Cmd", "Bash"];
+    compressionAlgorithms: Array<Raven.Client.Documents.Smuggler.ExportCompressionAlgorithm> = ["Gzip", "Zstd"];
     effectiveCommandType = ko.observable<commandLineType>("PowerShell");
     effectiveCommand: KnockoutComputed<string>;
 
@@ -232,6 +233,14 @@ class exportDatabase extends shardViewModelBase {
 
     getCommandTypeLabel(cmdType: commandLineType) {
         return `Export Command - ${cmdType}`;
+    }
+
+    getCompressionAlgorithmLabel(algorithm: Raven.Client.Documents.Smuggler.ExportCompressionAlgorithm | null) {
+        if (!algorithm) {
+            return "Default";
+        }
+        
+        return algorithm;
     }
 
     copyCommandToClipboard() {

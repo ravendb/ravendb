@@ -129,7 +129,7 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                 )}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="text-muted">
+                <Button color="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
                 <Button color={getColorForType(type)} onClick={onSubmit} className="rounded-pill">

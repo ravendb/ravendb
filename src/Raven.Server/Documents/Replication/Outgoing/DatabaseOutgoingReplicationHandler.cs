@@ -398,8 +398,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnChangeInternal(bool triggeredByReplicationThread)
         {
-            if (triggeredByReplicationThread)
+            if (triggeredByReplicationThread || ForTestingPurposes?.DisableWaitForChangesForExternalReplication == true)
                 return;
+
             _waitForChanges.Set();
         }
 
@@ -449,6 +450,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             public Action OnDocumentSenderFetchNewItem;
 
             public Action<Dictionary<Slice, AttachmentReplicationItem>, SortedList<long, ReplicationBatchItem>> OnMissingAttachmentStream;
+
+            public bool DisableWaitForChangesForExternalReplication;
         }
     }
 

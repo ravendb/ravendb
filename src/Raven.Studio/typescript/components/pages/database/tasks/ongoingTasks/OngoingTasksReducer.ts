@@ -131,6 +131,7 @@ function mapProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeProgressD
         completed: taskProgress.Completed,
         disabled: taskProgress.Disabled,
         processedPerSecond: taskProgress.AverageProcessedPerSecond,
+        transactionalId: taskProgress.TransactionalId,
     };
 }
 function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
@@ -478,13 +479,15 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                 draft.tasks.forEach((task) => {
                     const nodeInfo = task.nodesInfo.find((x) =>
                         databaseLocationComparator(x.location, incomingLocation)
-                    );
+                    ) as WritableDraft<OngoingEtlTaskNodeInfo>;
+
                     nodeInfo.status = "failure";
                     nodeInfo.details = {
                         error: error.responseJSON.Message,
                         responsibleNode: null,
                         taskConnectionStatus: null,
                     };
+                    nodeInfo.etlProgress = null;
                 });
             });
         }

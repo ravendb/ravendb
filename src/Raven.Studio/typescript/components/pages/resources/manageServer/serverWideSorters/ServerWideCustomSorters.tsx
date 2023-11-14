@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Col, Row, UncontrolledPopover } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -11,8 +11,10 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import classNames from "classnames";
 import SortersList from "./ServerWideCustomSortersList";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function ServerWideCustomSorters() {
@@ -23,7 +25,15 @@ export default function ServerWideCustomSorters() {
     const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
 
     const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasServerWideCustomSorters);
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasServerWideCustomSorters,
+            },
+        ],
+    });
 
     const resultsCount = asyncGetSorters.result?.length ?? null;
 
@@ -118,3 +128,13 @@ export default function ServerWideCustomSorters() {
         </div>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Server-Wide Custom Sorters",
+        featureIcon: "server-wide-custom-sorters",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

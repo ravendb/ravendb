@@ -2,7 +2,7 @@
 @use "Content/scss/colors";
 $pre-color: colors.$text-color-var;
 $pre-bg: colors.$well-bg-var;
-$token-number: colors.$color-2-1;
+$token-number: colors.$color-1-3;
 $token-string: colors.$color-3-1;
 $token-keyword: colors.$color-5;
 
@@ -37,7 +37,7 @@ $token-keyword: colors.$color-5;
 
     .ace_gutter {
         background: colors.$panel-bg-1-var;
-        color: colors.$text-muted-var;
+        color: colors.$base-text-muted-color;
     }
 
     .ace_print-margin {
@@ -51,11 +51,11 @@ $token-keyword: colors.$color-5;
     }
 
     .ace_cursor {
-        color: colors.$text-color-var;
+        color: colors.$base-text-color;
     }
 
     .ace_marker-layer .ace_selection {
-        background: rgba(var(--bs-primary-rgb), 0.4);
+        background: rgba(var(--bs-primary-rgb), 0.3);
     }
 
     &.ace_multiselect .ace_selection.ace_start {
@@ -73,12 +73,12 @@ $token-keyword: colors.$color-5;
     }
 
     .ace_marker-layer .ace_code-removed {
-        background: var(--bs-danger-rgb), 0.15;
+        background: rgba(var(--bs-danger-rgb), 0.15) !important;
         position: absolute;
     }
 
     .ace_marker-layer .ace_code-added {
-        background: var(--bs-success-rgb), 0.15;
+        background: rgba(var(--bs-success-rgb), 0.15) !important;
         position: absolute;
     }
 
@@ -87,8 +87,7 @@ $token-keyword: colors.$color-5;
     }
 
     .ace_marker-layer .ace_active-line {
-        background: colors.$panel-header-bg-var;
-        opacity: 0.5;
+        background: rgba(var(--bs-primary-rgb), 0.1);
     }
 
     .ace_gutter-active-line {

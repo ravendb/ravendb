@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 import database = require("models/resources/database");
 import { DatabaseSharedInfo } from "components/models/databases";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class accessManager {
 
@@ -34,7 +35,7 @@ class accessManager {
             return "DatabaseAdmin";
         }
         
-        return accessManager.databasesAccess[dbName];
+        return accessManager.getDatabasesAccess(dbName);
     }
 
     getDatabaseAccessLevelTextByDbName(dbName: string): string {
@@ -125,7 +126,7 @@ class accessManager {
     static canHandleOperation(requiredAccess: accessLevel, dbName: string = null): boolean {
         const actualAccessLevel = accessManager.default.isOperatorOrAbove()
             ? accessManager.default.securityClearance()
-            : accessManager.databasesAccess[dbName];
+            : accessManager.getDatabasesAccess(dbName);
         
         if (!actualAccessLevel) {
             return false;
@@ -166,6 +167,52 @@ class accessManager {
                         <li>Required: <strong>${requiredText}</strong></li>
                     </ul>
                 </div>`;
+    }
+
+    dashboardView = {
+        showCertificatesLink: this.isOperatorOrAbove
+    };
+    
+    clusterView = {
+        canAddNode: this.isClusterAdminOrClusterNode,
+        canDeleteNode: this.isClusterAdminOrClusterNode,
+        showCoresInfo: this.isClusterAdminOrClusterNode,
+        canDemotePromoteNode: this.isClusterAdminOrClusterNode
+    };
+    
+    aboutView = {
+        canReplaceLicense: this.isClusterAdminOrClusterNode,
+        canForceUpdate: this.isClusterAdminOrClusterNode,
+        canRenewLicense: this.isClusterAdminOrClusterNode,
+        canRegisterLicense: this.isClusterAdminOrClusterNode
+    };
+    
+    databasesView = {
+        canCreateNewDatabase: this.isOperatorOrAbove,
+        canSetState: this.isOperatorOrAbove,
+        canDelete: this.isOperatorOrAbove,
+        canDisableEnableDatabase: this.isOperatorOrAbove,
+        canDisableIndexing: this.isOperatorOrAbove,
+        canCompactDatabase: this.isOperatorOrAbove
+    };
+
+    databaseGroupView = {
+        canPromoteNode: this.isOperatorOrAbove
+    };
+    
+    certificatesView = {
+        canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNode,
+        canDeleteClusterNodeCertificate: this.isClusterAdminOrClusterNode,
+        canDeleteClusterAdminCertificate: this.isClusterAdminOrClusterNode,
+        canGenerateClientCertificateForAdmin: this.isClusterAdminOrClusterNode
+    };
+    
+    static getDatabasesAccess(name: string) {
+        if (!name) {
+            return null;
+        }
+
+        return accessManager.databasesAccess[DatabaseUtils.shardGroupKey(name)];
     }
 
 }

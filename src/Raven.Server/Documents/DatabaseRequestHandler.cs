@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -77,6 +79,11 @@ namespace Raven.Server.Documents
                 await ServerStore.Cluster.WaitForIndexNotification(index);
             }
         }
+
+        public override bool IsShutdownRequested() => base.IsShutdownRequested() || Database.DatabaseShutdown.IsCancellationRequested;
+
+        [DoesNotReturn]
+        public override void ThrowShutdownException(Exception inner = null) => throw new DatabaseDisabledException("The database " + DatabaseName + " is shutting down", inner);
 
         public override OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken()
         {

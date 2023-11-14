@@ -147,7 +147,7 @@ export class TasksStubs {
 
     static getKafkaProgress(): EtlTaskProgress {
         const taskName = TasksStubs.getKafkaEtl().TaskName;
-        return TasksStubs.getEtlProgress(taskName, "Queue");
+        return TasksStubs.getEtlProgress(taskName, "Queue", "bVhBBojWnEOKrsszfuQ+Yg-tst-kafka_Script #1");
     }
 
     static getRabbitProgress(): EtlTaskProgress {
@@ -439,7 +439,7 @@ export class TasksStubs {
         };
     }
 
-    private static getEtlProgress(taskName: string, etlType: EtlType): EtlTaskProgress {
+    private static getEtlProgress(taskName: string, etlType: EtlType, transactionalId?: string): EtlTaskProgress {
         return {
             TaskName: taskName,
             ProcessesProgress: [
@@ -458,6 +458,7 @@ export class TasksStubs {
                     TotalNumberOfTimeSeriesSegments: 0,
                     NumberOfTimeSeriesSegmentsToProcess: 0,
                     TransformationName: "Script #1",
+                    TransactionalId: transactionalId,
                 },
             ],
             EtlType: etlType,

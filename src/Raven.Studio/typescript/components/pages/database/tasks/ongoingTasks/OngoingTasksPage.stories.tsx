@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { OngoingTasksPage } from "./OngoingTasksPage";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, ComponentStory } from "@storybook/react";
 import { forceStoryRerender, withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -26,7 +26,7 @@ export default {
     component: OngoingTasksPage,
     decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
-} as ComponentMeta<typeof OngoingTasksPage>;
+} satisfies Meta<typeof OngoingTasksPage>;
 
 function commonInit() {
     const { accessManager, license } = mockStore;
@@ -59,7 +59,7 @@ export const EmptyView: ComponentStory<typeof OngoingTasksPage> = () => {
         dto.Results = [];
     });
 
-    return <OngoingTasksPage database={db} />;
+    return <OngoingTasksPage db={db} />;
 };
 
 export const FullView: ComponentStory<typeof OngoingTasksPage> = () => {
@@ -72,7 +72,7 @@ export const FullView: ComponentStory<typeof OngoingTasksPage> = () => {
     tasksService.withGetTasks();
     tasksService.withGetProgress();
 
-    return <OngoingTasksPage database={db} />;
+    return <OngoingTasksPage db={db} />;
 };
 
 export const ExternalReplicationTemplate = (args: {
@@ -100,7 +100,7 @@ export const ExternalReplicationTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const ExternalReplicationDisabled = boundCopy(ExternalReplicationTemplate, {
@@ -139,7 +139,7 @@ export const SubscriptionTemplate = (args: {
         x.SubscriptionsCount = 1;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const SubscriptionsWithLicenseLimits = () => {
@@ -164,7 +164,7 @@ export const SubscriptionsWithLicenseLimits = () => {
         x.SubscriptionsCount = 2;
     });
 
-    return <OngoingTasksPage database={db} />;
+    return <OngoingTasksPage db={db} />;
 };
 
 export const SubscriptionDisabled = boundCopy(SubscriptionTemplate, {
@@ -211,7 +211,7 @@ export const RavenEtlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const RavenEtlDisabled = boundCopy(RavenEtlTemplate, {
@@ -252,7 +252,7 @@ export const SqlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const SqlDisabled = boundCopy(SqlTemplate, {
@@ -293,7 +293,7 @@ export const OlapTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const OlapDisabled = boundCopy(OlapTemplate, {
@@ -334,7 +334,7 @@ export const ElasticSearchTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const ElasticSearchDisabled = boundCopy(ElasticSearchTemplate, {
@@ -375,7 +375,7 @@ export const KafkaEtlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const KafkaEtlDisabled = boundCopy(KafkaEtlTemplate, {
@@ -416,7 +416,7 @@ export const RabbitEtlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const RabbitEtlDisabled = boundCopy(RabbitEtlTemplate, {
@@ -452,7 +452,7 @@ export const KafkaSinkTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const KafkaSinkDisabled = boundCopy(KafkaSinkTemplate, {
@@ -481,7 +481,7 @@ export const RabbitSinkTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const RabbitSinkDisabled = boundCopy(RabbitSinkTemplate, {
@@ -511,7 +511,7 @@ export const ReplicationSinkTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const ReplicationSinkDisabled = boundCopy(ReplicationSinkTemplate, {
@@ -551,7 +551,7 @@ export const ReplicationHubTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const ReplicationHubDisabled = boundCopy(ReplicationHubTemplate, {
@@ -588,7 +588,7 @@ export const PeriodicBackupTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
 };
 
 export const PeriodicBackupDisabled = boundCopy(PeriodicBackupTemplate, {

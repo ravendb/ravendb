@@ -59,6 +59,7 @@ import moment from "moment";
 import databasesManager from "common/shell/databasesManager";
 import { globalDispatch } from "components/storeCompat";
 import { accessManagerActions } from "components/common/shell/accessManagerSlice";
+import UpgradeModal from "./shell/UpgradeModal";
 
 class shell extends viewModelBase {
 
@@ -68,7 +69,7 @@ class shell extends viewModelBase {
     
     notificationCenterView = require("views/notifications/notificationCenter.html");
     graphHelperView = require("views/common/graphHelper.html");
-    
+
     static studioConfigDocumentId = "Raven/StudioConfig";
     
     static showConnectionLost = connectionStatus.showConnectionLost;
@@ -105,8 +106,6 @@ class shell extends viewModelBase {
     allShardsUrl: KnockoutObservable<string>;
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
-    
-    
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
@@ -126,6 +125,9 @@ class shell extends viewModelBase {
     serverEnvironmentClass = database.createEnvironmentColorComputed("text", this.serverEnvironment);
     
     private onBootstrapFinishedTask = $.Deferred<void>();
+
+    upgradeModalView: ReactInKnockout<typeof UpgradeModal>;
+    isUpgradeModalVisible = ko.observable<boolean>(false);
     
     constructor() {
         super();
@@ -208,6 +210,8 @@ class shell extends viewModelBase {
         });
 
         this.bindToCurrentInstance("toggleMenu");
+
+        this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -238,7 +242,7 @@ class shell extends viewModelBase {
         
         $.when<any>(licenseTask, topologyTask, clientCertificateTask)
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            .done(([license]: [Raven.Server.Commercial.LicenseStatus], 
+            .done(([license]: [LicenseStatus], 
                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                    [topology]: [Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged],
                    [certificate]: [Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition]) => {
@@ -439,6 +443,11 @@ class shell extends viewModelBase {
 
         this.onBootstrapFinishedTask
             .done(() => {
+                if (license.getStatusValue("UpgradeRequired")) {
+                    this.isUpgradeModalVisible(true);
+                    return;
+                }
+
                 registration.showRegistrationDialogIfNeeded(license.licenseStatus());
                 this.tryReopenRegistrationDialog();
             });

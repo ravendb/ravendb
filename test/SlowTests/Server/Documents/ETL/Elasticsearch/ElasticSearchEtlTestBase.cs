@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using FastTests;
-using Nest;
+using Elastic.Clients.Elasticsearch;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -61,7 +61,7 @@ loadToOrders" + IndexSuffix + @"(orderData);";
         };
 
         protected ElasticSearchEtlConfiguration SetupElasticEtl(DocumentStore store, string script, IEnumerable<ElasticSearchIndex> indexes, IEnumerable<string> collections, bool applyToAllDocuments = false,
-            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, string configurationName = null, string transformationName = null, string[] nodes = null, bool enableCompatibilityMode = false)
+            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, string configurationName = null, string transformationName = null, string[] nodes = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
 
@@ -93,16 +93,17 @@ loadToOrders" + IndexSuffix + @"(orderData);";
                     Name = connectionStringName,
                     Nodes = nodes ?? ElasticSearchTestNodes.Instance.VerifiedNodes.Value,
                     Authentication = authentication,
-                    EnableCompatibilityMode = enableCompatibilityMode
                 });
 
             return config;
         }
 
-        protected IDisposable GetElasticClient(out ElasticClient client)
+        protected IDisposable GetElasticClient(out ElasticsearchClient client)
         {
-            ElasticClient localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
-
+            ElasticsearchClient localClient = client =
+                ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString {Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value},
+                    useCustomBlittableSerializer: false);
+            
             CleanupIndexes(localClient);
 
             return new DisposableAction(() =>
@@ -111,26 +112,30 @@ loadToOrders" + IndexSuffix + @"(orderData);";
             });
         }
 
-        protected void CleanupIndexes(ElasticClient client)
+        private void CleanupIndexes(ElasticsearchClient client)
         {
-            if (_definedIndexes.Count > 0)
+            if (_definedIndexes.Count <= 0)
+                return;
+
+            foreach (var indexName in _definedIndexes)
             {
-                var response = client.Indices.Delete(Indices.Index(_definedIndexes.Select(x => x.ToLower())));
+                var response = client.Indices.Delete(Indices.Index(indexName.ToLower()));
 
-                if (response.IsValid == false)
-                {
-                    if (response.ServerError?.Status == 404)
-                        return;
+                if (response.IsValidResponse)
+                    continue;
 
-                    Exception inner;
+                if (response.ElasticsearchServerError?.Status == 404)
+                    return;
 
-                    if (Context.TestException != null)
-                        inner = new AggregateException(response.OriginalException, Context.TestException);
-                    else
-                        inner = response.OriginalException;
+                Exception inner;
 
-                    throw new InvalidOperationException($"Failed to cleanup indexes: {response.ServerError}. Check inner exceptions for details", inner);
-                }
+                response.TryGetOriginalException(out var exception);
+                if (Context.TestException != null)
+                    inner = new AggregateException(exception, Context.TestException);
+                else
+                    inner = exception;
+
+                throw new InvalidOperationException($"Failed to cleanup indexes: {response.ElasticsearchServerError}. Check inner exceptions for details", inner);
             }
         }
 

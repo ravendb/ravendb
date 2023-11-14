@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
 {
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
             };
 
             await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
-            await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
+            await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, BackupUtils.GetCompressionStream(outputStream, options.CompressionAlgorithm ?? RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionAlgorithm, RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionLevel)))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("BuildVersion");
@@ -72,7 +73,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
 
                     var smugglerOperation = await smuggler.ExportToStreamAsync(options.ToExportOptions(), async stream =>
                     {
-                        await using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
+                        await using (var gzipStream = await BackupUtils.GetDecompressionStreamAsync(GetInputStream(stream, options)))
                         {
                             await writer.WriteStreamAsync(gzipStream);
                         }

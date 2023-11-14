@@ -28,15 +28,16 @@ import classNames from "classnames";
 import notificationCenter from "common/notifications/notificationCenter";
 import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 import { Badge, Collapse, Input } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import useBoolean from "components/hooks/useBoolean";
+import { useAppSelector } from "components/store";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
 
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
     allowSelect: boolean;
+    sourceView: EditPeriodicBackupTaskSourceView;
 }
 
 const neverBackedUpText = "Never backed up";
@@ -67,10 +68,8 @@ function findBackupNowBlockReason(data: OngoingTaskPeriodicBackupInfo, runningOn
     return null;
 }
 
-function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
-    const { data, canEdit, db, forceReload } = props;
-
-    const { value: isCurrentNodeResponsible, setValue: setIsCurrentNodeResponsible } = useBoolean(false);
+function Details(props: PeriodicBackupPanelProps) {
+    const { data, db, forceReload } = props;
 
     const backupDestinationsHumanized = data.shared.backupDestinations.length
         ? data.shared.backupDestinations.join(", ")
@@ -102,9 +101,10 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
         return `in ${formatDuration} (${backupTypeText}) ${originalDateText}`;
     }, [data.shared]);
 
+    const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
+
     const onGoingBackup = data.nodesInfo.map((x) => x.details?.onGoingBackup).find((x) => x);
-    const runningOnAnotherNode =
-        onGoingBackup && data.shared.responsibleNodeTag !== clusterTopologyManager.default.localNodeTag();
+    const runningOnAnotherNode = onGoingBackup && data.shared.responsibleNodeTag !== localNodeTag;
 
     const onGoingBackupHumanized = useMemo(() => {
         if (!onGoingBackup) {
@@ -132,8 +132,10 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
 
     const backupNowInProgress = !!onGoingBackup;
     const neverBackedUp = !data.shared.lastFullBackup;
-    const backupNowVisible =
-        (!data.shared.serverWide || canEdit) && !(backupNowInProgress && !isCurrentNodeResponsible);
+
+    const { isAdminAccessOrAbove } = useAccessManager();
+
+    const backupNowVisible = data.shared.serverWide || isAdminAccessOrAbove(db);
 
     const onBackupNow = () => {
         if (onGoingBackup && onGoingBackup.RunningBackupTaskId) {
@@ -155,10 +157,7 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
                     (backupNowResult: Raven.Client.Documents.Operations.Backups.StartBackupOperationResult) => {
                         forceReload();
 
-                        const isCurrentNodeResponsibleResult =
-                            clusterTopologyManager.default.localNodeTag() === backupNowResult.ResponsibleNode;
-
-                        setIsCurrentNodeResponsible(isCurrentNodeResponsibleResult);
+                        const isCurrentNodeResponsibleResult = localNodeTag === backupNowResult.ResponsibleNode;
 
                         if (backupNowResult && isCurrentNodeResponsibleResult) {
                             // running on this node
@@ -228,13 +227,23 @@ function BackupEncryption(props: { encrypted: boolean }) {
 }
 
 export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
-    const { db, data, allowSelect, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
+    const {
+        db,
+        data,
+        allowSelect,
+        toggleSelection,
+        isSelected,
+        onTaskOperation,
+        isDeleting,
+        isTogglingState,
+        sourceView,
+    } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editPeriodicBackupTask(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editPeriodicBackupTask(sourceView, data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 
@@ -274,7 +283,7 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                 </RichPanelActions>
             </RichPanelHeader>
             <Collapse isOpen={detailsVisible}>
-                <Details canEdit={canEdit} {...props} />
+                <Details {...props} />
             </Collapse>
         </RichPanel>
     );

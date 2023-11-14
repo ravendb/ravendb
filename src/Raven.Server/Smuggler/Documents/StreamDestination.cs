@@ -27,7 +27,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -41,32 +40,36 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
+using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
 
 namespace Raven.Server.Smuggler.Documents
 {
     public sealed class StreamDestination : ISmugglerDestination
     {
         private readonly Stream _stream;
-        private GZipStream _gzipStream;
+        private Stream _outputStream;
         private readonly JsonOperationContext _context;
         private readonly ISmugglerSource _source;
         private readonly CompressionLevel _compressionLevel;
+        private readonly ExportCompressionAlgorithm _compressionAlgorithm;
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
 
-        public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source, CompressionLevel compressionLevel = CompressionLevel.Optimal)
+        public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
         {
             _stream = stream;
             _context = context;
             _source = source;
+            _compressionAlgorithm = compressionAlgorithm;
             _compressionLevel = compressionLevel;
         }
 
         public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
-            _gzipStream = new GZipStream(_stream, _compressionLevel, leaveOpen: true);
-            _writer = new AsyncBlittableJsonTextWriter(_context, _gzipStream);
+            _outputStream = BackupUtils.GetCompressionStream(_stream, _compressionAlgorithm, _compressionLevel);
+            _writer = new AsyncBlittableJsonTextWriter(_context, _outputStream);
             _options = options;
 
             SetupMetadataFilterMethod(_context);
@@ -90,7 +93,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 await _writer.DisposeAsync();
-                await _gzipStream.DisposeAsync();
+                await _outputStream.DisposeAsync();
             });
         }
 
@@ -300,7 +303,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WritePropertyName(nameof(databaseRecord.Expiration));
                     WriteExpiration(databaseRecord.Expiration);
                 }
-                
+
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.DataArchival))
                 {
                     _writer.WriteComma();
@@ -839,7 +842,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _context.Write(_writer, expiration.ToJson());
             }
-            
+
             private void WriteDataArchival(DataArchivalConfiguration dataArchival)
             {
                 if (dataArchival == null)

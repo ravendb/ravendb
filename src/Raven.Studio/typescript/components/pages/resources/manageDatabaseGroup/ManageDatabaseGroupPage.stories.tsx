@@ -1,5 +1,5 @@
 ﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, ComponentStory } from "@storybook/react";
 import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
 import React from "react";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
@@ -12,7 +12,7 @@ export default {
     title: "Pages/Manage Database Group",
     component: ManageDatabaseGroupPage,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof ManageDatabaseGroupPage>;
+} satisfies Meta<typeof ManageDatabaseGroupPage>;
 
 function commonInit() {
     const { licenseService } = mockServices;
@@ -54,7 +54,7 @@ export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = (
 export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    mockStore.databases.with_Cluster();
+    mockStore.databases.with_Cluster((x) => (x.nodes[0].type = "Promotable"));
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
@@ -67,7 +67,7 @@ export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     const { cluster } = mockStore;
     cluster.with_Cluster();
 
-    mockStore.databases.with_Sharded();
+    mockStore.databases.with_Sharded((x) => (x.shards[0].nodes[0].type = "Promotable"));
 
     const db = DatabasesStubs.shardedDatabase();
 

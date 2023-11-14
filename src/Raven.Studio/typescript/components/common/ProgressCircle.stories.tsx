@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import React from "react";
 import { ProgressCircle } from "./ProgressCircle";
 import { boundCopy } from "../utils/common";
@@ -6,7 +6,7 @@ import { boundCopy } from "../utils/common";
 export default {
     title: "Bits/Progress circle",
     component: ProgressCircle,
-} as ComponentMeta<typeof ProgressCircle>;
+} satisfies Meta<typeof ProgressCircle>;
 
 const Template = () => {
     return (

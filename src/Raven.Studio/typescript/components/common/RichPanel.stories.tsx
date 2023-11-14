@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import { boundCopy } from "../utils/common";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import {
@@ -28,7 +28,7 @@ export default {
     title: "Bits/Rich Panel",
     decorators: [withStorybookContexts, withBootstrap5],
     component: RichPanel,
-} as ComponentMeta<typeof RichPanel>;
+} satisfies Meta<typeof RichPanel>;
 
 const Template = (args: { withCheckbox: boolean }) => {
     const { value: checked, toggle: toggleCheckbox } = useBoolean(false);

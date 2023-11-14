@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
@@ -12,5 +13,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         }
 
         protected override bool RequireAdmin { get; }
+        protected override AbstractSubscriptionStorage GetSubscriptionStorage()
+        {
+            return RequestHandler.DatabaseContext.SubscriptionsStorage;
+        }
     }
 }

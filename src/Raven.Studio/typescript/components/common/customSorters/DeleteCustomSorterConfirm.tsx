@@ -39,7 +39,7 @@ export default function DeleteCustomSorterConfirm(props: DeleteCustomSorterConfi
                 </span>
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="text-muted">
+                <Button color="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
                 <Button color="danger" onClick={onSubmit} className="rounded-pill">

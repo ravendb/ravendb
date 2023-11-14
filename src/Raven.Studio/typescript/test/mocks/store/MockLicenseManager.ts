@@ -3,11 +3,11 @@ import { licenseActions } from "components/common/shell/licenseSlice";
 import { LicenseStubs } from "test/stubs/LicenseStubs";
 
 export class MockLicenseManager {
-    with_License(override?: Partial<Raven.Server.Commercial.LicenseStatus>) {
+    with_License(override?: Partial<LicenseStatus>) {
         globalDispatch(licenseActions.statusLoaded({ ...LicenseStubs.getStatus(), ...override }));
     }
 
-    with_LicenseLimited(override?: Partial<Raven.Server.Commercial.LicenseStatus>) {
+    with_LicenseLimited(override?: Partial<LicenseStatus>) {
         globalDispatch(licenseActions.statusLoaded({ ...LicenseStubs.getStatusLimited(), ...override }));
     }
 

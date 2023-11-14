@@ -205,7 +205,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private void WriteAllEnvs(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context)
+        private void WriteAllEnvs<TWriter>(TWriter writer, DocumentsOperationContext context)
+            where TWriter : IBlittableJsonTextWriter
         {
             var envs = Database.GetAllStoragesEnvironment();
 

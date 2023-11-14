@@ -112,6 +112,7 @@ namespace Raven.Client.Documents.Linq
         public IRavenQueryable<T> Statistics(out QueryStatistics stats)
         {
             stats = _queryStats;
+            stats.RequestedByUser = true;
             return this;
         }
 
@@ -210,7 +211,8 @@ namespace Raven.Client.Documents.Linq
                 _isMapReduce,
                 _provider.OriginalQueryType,
                 _conventions,
-                _provider.IsProjectInto);
+                _provider.IsProjectInto,
+                _queryStats);
         }
 
         public string IndexName => _indexName;

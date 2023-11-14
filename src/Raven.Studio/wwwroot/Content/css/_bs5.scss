@@ -1,54 +1,54 @@
 ﻿// Required
-@import "../../../node_modules/boostrap5/scss/functions";
+@import "~boostrap5/scss/functions";
 
 // Default variable overrides
 @import "../scss/bs5variables";
 
 // Required
-@import "../../../node_modules/boostrap5/scss/variables";
-@import "../../../node_modules/boostrap5/scss/maps";
-@import "../../../node_modules/boostrap5/scss/mixins";
-@import "../../../node_modules/boostrap5/scss/utilities";
-@import "../../../node_modules/boostrap5/scss/root";
+@import "~boostrap5/scss/variables";
+@import "~boostrap5/scss/maps";
+@import "~boostrap5/scss/mixins";
+@import "~boostrap5/scss/utilities";
+@import "../scss/root";
 
 .bs5 {
     // Optional Bootstrap components
-    @import "../../../node_modules/boostrap5/scss/reboot";
-    @import "../../../node_modules/boostrap5/scss/type";
-    @import "../../../node_modules/boostrap5/scss/images";
-    @import "../../../node_modules/boostrap5/scss/containers";
-    @import "../../../node_modules/boostrap5/scss/grid";
-    @import "../../../node_modules/boostrap5/scss/tables";
-    @import "../../../node_modules/boostrap5/scss/forms";
-    @import "../../../node_modules/boostrap5/scss/buttons";
-    @import "../../../node_modules/boostrap5/scss/transitions";
-    @import "../../../node_modules/boostrap5/scss/dropdown";
-    @import "../../../node_modules/boostrap5/scss/button-group";
-    @import "../../../node_modules/boostrap5/scss/nav";
-    @import "../../../node_modules/boostrap5/scss/navbar";
-    @import "../../../node_modules/boostrap5/scss/card";
-    @import "../../../node_modules/boostrap5/scss/accordion";
-    @import "../../../node_modules/boostrap5/scss/breadcrumb";
-    @import "../../../node_modules/boostrap5/scss/pagination";
-    @import "../../../node_modules/boostrap5/scss/badge";
-    @import "../../../node_modules/boostrap5/scss/alert";
-    @import "../../../node_modules/boostrap5/scss/progress";
-    @import "../../../node_modules/boostrap5/scss/list-group";
-    @import "../../../node_modules/boostrap5/scss/close";
-    @import "../../../node_modules/boostrap5/scss/toasts";
-    @import "../../../node_modules/boostrap5/scss/modal";
-    @import "../../../node_modules/boostrap5/scss/carousel";
-    @import "../../../node_modules/boostrap5/scss/spinners";
-    @import "../../../node_modules/boostrap5/scss/offcanvas";
+    @import "../scss/reboot";
+    @import "~boostrap5/scss/type";
+    @import "~boostrap5/scss/images";
+    @import "~boostrap5/scss/containers";
+    @import "~boostrap5/scss/grid";
+    @import "~boostrap5/scss/tables";
+    @import "~boostrap5/scss/forms";
+    @import "~boostrap5/scss/buttons";
+    @import "~boostrap5/scss/transitions";
+    @import "~boostrap5/scss/dropdown";
+    @import "~boostrap5/scss/button-group";
+    @import "~boostrap5/scss/nav";
+    @import "~boostrap5/scss/navbar";
+    @import "~boostrap5/scss/card";
+    @import "~boostrap5/scss/accordion";
+    @import "~boostrap5/scss/breadcrumb";
+    @import "~boostrap5/scss/pagination";
+    @import "~boostrap5/scss/badge";
+    @import "~boostrap5/scss/alert";
+    @import "~boostrap5/scss/progress";
+    @import "~boostrap5/scss/list-group";
+    @import "~boostrap5/scss/close";
+    @import "~boostrap5/scss/toasts";
+    @import "~boostrap5/scss/modal";
+    @import "~boostrap5/scss/carousel";
+    @import "~boostrap5/scss/spinners";
+    @import "~boostrap5/scss/offcanvas";
     //Custom components and mods
     @import "../../../typescript/components/common/Background.scss";
     @import "../../../typescript/components/common/Buttons.scss";
     @import "../../../typescript/components/common/Icon.scss";
     @import "../../../typescript/components/common/Type.scss";
     // Helpers
-    @import "../../../node_modules/boostrap5/scss/helpers";
+    @import "~boostrap5/scss/helpers";
     // Utilities
-    @import "../../../node_modules/boostrap5/scss/utilities/api";
+    @import "~boostrap5/scss/utilities/api";
 
     // Pages
     @import "../scss/pages/stats.scss";
@@ -57,11 +57,12 @@
 }
 
 @import "../scss/pages/cluster-dashboard.scss";
-
+@import "../../../typescript/components/common/LazyLoad";
 @import "../scss/custom-properties";
+@import "../scss/fonts";
 @import "../scss/main-menu";
-@import "../../../node_modules/boostrap5/scss/popover";
-@import "../../../node_modules/boostrap5/scss/tooltip";
+@import "~boostrap5/scss/popover";
+@import "~boostrap5/scss/tooltip";
 
 // Storybook theme testing
 .sb-show-main {

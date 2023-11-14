@@ -337,12 +337,12 @@ namespace Raven.Server.Documents.Revisions
                     _documentsStorage.AttachmentsStorage.RevisionAttachments(context, document, lowerId, changeVectorSlice);
                 }
 
-                document = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document);
-
-                document = PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
+                PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
 
                 if (table.VerifyKeyExists(changeVectorSlice)) // we might create
                     return true;
+
+                using var revision = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document.CloneOnTheSameContext());
 
                 flags |= DocumentFlags.Revision;
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation))
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Revisions
                     tvb.Add(SpecialChars.RecordSeparator);
                     tvb.Add(newEtagSwapBytes);
                     tvb.Add(idSlice);
-                    tvb.Add(document.BasePointer, document.Size);
+                    tvb.Add(revision.BasePointer, revision.Size);
                     tvb.Add((int)flags);
                     tvb.Add(NotDeletedRevisionMarker);
                     tvb.Add(lastModifiedTicks);
@@ -392,19 +392,19 @@ namespace Raven.Server.Documents.Revisions
 
             if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counterNames))
             {
-                var dvj = new DynamicJsonValue();
+                var djv = new DynamicJsonValue();
                 for (var i = 0; i < counterNames.Length; i++)
                 {
                     var counter = counterNames[i].ToString();
                     var val = _documentsStorage.CountersStorage.GetCounterValue(context, id, counter, capOnOverflow: true)?.Value;
                     if (val == null)
                         continue;
-                    dvj[counter] = val.Value;
+                    djv[counter] = val.Value;
                 }
 
                 metadata.Modifications = new DynamicJsonValue(metadata)
                 {
-                    [Constants.Documents.Metadata.RevisionCounters] = dvj
+                    [Constants.Documents.Metadata.RevisionCounters] = djv
                 };
 
                 metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
@@ -412,14 +412,14 @@ namespace Raven.Server.Documents.Revisions
 
             if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames))
             {
-                var dvj = new DynamicJsonValue();
+                var djv = new DynamicJsonValue();
                 for (var i = 0; i < timeSeriesNames.Length; i++)
                 {
                     var name = timeSeriesNames[i].ToString();
                     var (count, start, end) = _documentsStorage.TimeSeriesStorage.Stats.GetStats(context, id, name);
                     Debug.Assert(start == default || start.Kind == DateTimeKind.Utc);
 
-                    dvj[name] = new DynamicJsonValue
+                    djv[name] = new DynamicJsonValue
                     {
                         ["Count"] = count,
                         ["Start"] = start,
@@ -429,9 +429,10 @@ namespace Raven.Server.Documents.Revisions
 
                 metadata.Modifications ??= new DynamicJsonValue(metadata);
 
-                metadata.Modifications[Constants.Documents.Metadata.RevisionTimeSeries] = dvj;
+                metadata.Modifications[Constants.Documents.Metadata.RevisionTimeSeries] = djv;
 
                 metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
+
             }
 
             if (metadata.Modifications != null)
@@ -441,13 +442,16 @@ namespace Raven.Server.Documents.Revisions
                     [Constants.Documents.Metadata.Key] = metadata
                 };
 
-                document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                using (var old = document)
+                {
+                    return context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
             }
 
             return document;
         }
 
-        private BlittableJsonReaderObject PutFromRevisionIfChangeVectorIsGreater(
+        private void PutFromRevisionIfChangeVectorIsGreater(
             DocumentsOperationContext context,
             BlittableJsonReaderObject document,
             string id,
@@ -458,19 +462,19 @@ namespace Raven.Server.Documents.Revisions
             CollectionName collectionName = null)
         {
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                return document;
+                return;
 
             if ((flags.Contain(DocumentFlags.Revision) || flags.Contain(DocumentFlags.DeleteRevision)) == false)
-                return document; // only revision can overwrite the document
+                return; // only revision can overwrite the document
 
             if (flags.Contain(DocumentFlags.Conflicted))
-                return document; // but, conflicted revision can't
+                return; // but, conflicted revision can't
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out var lowerId, out _))
             {
                 var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, out _);
                 if (conflictStatus != ConflictStatus.Update)
-                    return document; // Do not modify the document.
+                    return; // Do not modify the document.
 
                 if (flags.Contain(DocumentFlags.Resolved))
                 {
@@ -484,16 +488,13 @@ namespace Raven.Server.Documents.Revisions
                 {
                     _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
                         nonPersistentFlags, flags);
-                    return null;
+                    return;
                 }
 
-                document = RevertSnapshotFlags(context, document, id);
-
-                _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
+                using var reverted = RevertSnapshotFlags(context, document.CloneOnTheSameContext(), id);
+                _documentsStorage.Put(context, id, null, reverted, lastModifiedTicks, changeVector,
                     null, flags, nonPersistentFlags);
             }
-
-            return document;
         }
 
         private static bool RevertSnapshotFlag(BlittableJsonReaderObject metadata, string snapshotFlag, string flag)
@@ -526,7 +527,10 @@ namespace Raven.Server.Documents.Revisions
 
             if (metadataModified)
             {
-                document.Modifications = new DynamicJsonValue(document) { [Constants.Documents.Metadata.Key] = metadata };
+                document.Modifications = new DynamicJsonValue(document)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
 
                 using (var old = document)
                     document = context.ReadObject(document, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -545,7 +549,7 @@ namespace Raven.Server.Documents.Revisions
 
         private DeleteOldRevisionsResult DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, CollectionName collectionName,
             RevisionsCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags, ChangeVector changeVector, long lastModifiedTicks,
-            bool documentDeleted, bool skipForceCreated)
+            bool documentDeleted, bool skipForceCreated, DocumentFlags flags = DocumentFlags.None)
         {
             var result = new DeleteOldRevisionsResult();
             result.PreviousCount = GetRevisionsCount(context, lowerIdPrefix);
@@ -576,7 +580,7 @@ namespace Raven.Server.Documents.Revisions
                     configuration, result.PreviousCount, result);
             }
 
-            var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result, tombstoneFlags: DocumentFlags.None);
+            var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result, tombstoneFlags: flags);
 
             IncrementCountOfRevisions(context, lowerIdPrefix, -deleted);
             result.Remaining = result.PreviousCount - deleted;
@@ -1308,6 +1312,7 @@ namespace Raven.Server.Documents.Revisions
             flags |= DocumentFlags.HasRevisions;
 
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
+            var fromResharding = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding);
 
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
             if (configuration.Disabled && hadRevisions == false && fromReplication == false)
@@ -1324,14 +1329,13 @@ namespace Raven.Server.Documents.Revisions
                     return;
                 }
 
-
                 using var _ = GetKeyPrefix(context, lowerId, out Slice lowerIdPrefix);
 
-                if (configuration.PurgeOnDelete)
+                if (configuration.PurgeOnDelete && (fromResharding || fromReplication == false))
                 {
                     DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration,
                         NonPersistentDocumentFlags.None,
-                        changeVector, lastModifiedTicks, documentDeleted: true, skipForceCreated: false);
+                        changeVector, lastModifiedTicks, documentDeleted: true, skipForceCreated: false, flags);
                     return;
                 }
 

@@ -20,8 +20,10 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 export default function StudioGlobalConfiguration() {
@@ -48,7 +50,15 @@ export default function StudioGlobalConfiguration() {
     const { reportEvent } = useEventsCollector();
 
     const hasStudioConfiguration = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasStudioConfiguration);
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasStudioConfiguration,
+            },
+        ],
+    });
 
     const onSave: SubmitHandler<StudioGlobalConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -221,3 +231,13 @@ export default function StudioGlobalConfiguration() {
         </div>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Studio Configuration",
+        featureIcon: "studio-configuration",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

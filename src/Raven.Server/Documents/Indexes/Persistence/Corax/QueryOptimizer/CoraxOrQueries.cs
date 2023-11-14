@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
-using Corax.Queries;
-using Corax.Queries.Meta;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using Sparrow.Extensions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
@@ -133,6 +134,7 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
                 }
                 else
                 {
+                    
                     AddToQueryTree(IndexSearcher.InQuery(field, terms));
                 }
             }

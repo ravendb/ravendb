@@ -306,13 +306,18 @@ class genUtils {
     }
 
     static getSizeClass(input: number): string {
-        if (input < 100000) {
+        if (input < 100_000) {
             return "";
         }
-        if (input < 1000 * 1000) {
+        if (input < 1_000_000) {
             return "kilo";
         }
-        return "mega";
+        
+        if (input < 1_000_000_000) {
+            return "mega";
+        }
+        
+        return "giga";
     }
     
     static siFormat(value: number) {
@@ -329,13 +334,16 @@ class genUtils {
     }
 
     static getCountPrefix(count: number): string {
-        if (count < 100000) {
+        if (count < 100_000) {
             return count.toLocaleString();
         }
-        if (count < 1000 * 1000) {
+        if (count < 1_000_000) {
             return _.floor(count / 1000, 2).toLocaleString();
         }
-        return _.floor(count / 1000000, 2).toLocaleString();
+        if (count < 1_000_000_000) {
+            return _.floor(count / 1_000_000, 2).toLocaleString();
+        }
+        return _.floor(count / 1_000_000_000, 2).toLocaleString();
     }
     
     static getSelectedText() {

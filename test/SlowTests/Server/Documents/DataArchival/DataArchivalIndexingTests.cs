@@ -1017,9 +1017,210 @@ public class DataArchivalIndexingTests : RavenTestBase
         }
     }
 
+    private class CompaniesByNameJSMapReduce : AbstractJavaScriptIndexCreationTask
+    {
+        public CompaniesByNameJSMapReduce()
+        {
+            Maps = new HashSet<string> {@"map('Companies', function (u){ return { Name: u.Name, Count: 1, Id: u.Id};})",};
+
+            Reduce = @"groupBy(x => ({ Name: x.Name }))
+.aggregate(g => { 
+    return {
+        Name: g.key.Name
+        Count: g.values.reduce((count, val) => val.Count + count, 0),
+    };
+})";
+        }
+    }
+
+    private class ArchivedCompaniesByNameJSMapReduce : AbstractJavaScriptIndexCreationTask
+    {
+        public ArchivedCompaniesByNameJSMapReduce()
+        {
+            Maps = new HashSet<string>
+            {
+                @"map('Companies', function (u){ return { Name: u.Name, Count: 1, Id: u.Id};})",
+            };
+            
+            Reduce = @"groupBy(x => ({ Name: x.Name }))
+.aggregate(g => { 
+    return {
+        Name: g.key.Name
+        Count: g.values.reduce((count, val) => val.Count + count, 0),
+    };
+})";
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior.ArchivedOnly;
+        }
+    }
+
+    private class AllCompaniesByNameJSMapReduce : AbstractJavaScriptIndexCreationTask
+    {
+        public AllCompaniesByNameJSMapReduce()
+        {
+            Maps = new HashSet<string>
+            {
+                @"map('Companies', function (u){ return { Name: u.Name, Count: 1, Id: u.Id};})",
+            };
+
+            Reduce = @"groupBy(x => ({ Name: x.Name }))
+.aggregate(g => { 
+    return {
+        Name: g.key.Name
+        Count: g.values.reduce((count, val) => val.Count + count, 0),
+    };
+})";
+            ArchivedDataProcessingBehavior = Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior.IncludeArchived;
+        }
+    }
+
 
     [Fact]
     public async void CanIndexOnlyUnarchivedDocuments_JavaScriptMapReduceIndex()
+    {
+        using (var store = GetDocumentStore())
+        {
+            await new CompaniesByNameJSMapReduce().ExecuteAsync(store);
+            var company = new Company { Name = "Company Name", Address1 = "Dabrowskiego 6" };
+            var company2 = new Company { Name = "OG IT", Address1 = "Julianowo 6" };
+            var retires = SystemTime.UtcNow.AddMinutes(5);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                var metadata = session.Advanced.GetMetadataFor(company);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await session.StoreAsync(company2);
+                await session.SaveChangesAsync();
+            }
+
+            await Indexes.WaitForIndexingAsync(store);
+            RavenTestHelper.AssertNoIndexErrors(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var results = await session
+                    .Query<Company>("CompaniesByNameJSMapReduce")
+                    .ToListAsync();
+                Assert.Equal(2, results.Count);
+            }
+
+            // Activate the archival
+            await SetupDataArchival(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            await Indexes.WaitForIndexingAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var results = await session
+                    .Query<Company>("CompaniesByNameJSMapReduce")
+                    .ToListAsync();
+                Assert.Equal(1, results.Count);
+            }
+        }
+    }
+
+
+    [Fact]
+    public async void CanIndexOnlyArchivedDocuments_JavaScriptMapReduceIndex()
+    {
+        using (var store = GetDocumentStore())
+        {
+            await new ArchivedCompaniesByNameJSMapReduce().ExecuteAsync(store);
+            var company = new Company { Name = "Company Name", Address1 = "Dabrowskiego 6" };
+            var company2 = new Company { Name = "OG IT", Address1 = "Julianowo 6" };
+            var retires = SystemTime.UtcNow.AddMinutes(5);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                var metadata = session.Advanced.GetMetadataFor(company);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await session.StoreAsync(company2);
+                await session.SaveChangesAsync();
+            }
+
+            await Indexes.WaitForIndexingAsync(store);
+            RavenTestHelper.AssertNoIndexErrors(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var results = await session
+                    .Query<Company>("ArchivedCompaniesByNameJSMapReduce")
+                    .ToListAsync();
+                Assert.Equal(0, results.Count);
+            }
+
+            // Activate the archival
+            await SetupDataArchival(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            await Indexes.WaitForIndexingAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var results = await session
+                    .Query<Company>("ArchivedCompaniesByNameJSMapReduce")
+                    .ToListAsync();
+                Assert.Equal(1, results.Count);
+            }
+        }
+    }
+
+    [Fact]
+    public async void CanIndexAllDocuments_JavaScriptMapReduceIndex()
+    {
+        using (var store = GetDocumentStore())
+        {
+            await new AllCompaniesByNameJSMapReduce().ExecuteAsync(store);
+            var company = new Company { Name = "Company Name", Address1 = "Dabrowskiego 6" };
+            var company2 = new Company { Name = "OG IT", Address1 = "Julianowo 6" };
+            var retires = SystemTime.UtcNow.AddMinutes(5);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                var metadata = session.Advanced.GetMetadataFor(company);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await session.StoreAsync(company2);
+                await session.SaveChangesAsync();
+            }
+
+            await Indexes.WaitForIndexingAsync(store);
+            RavenTestHelper.AssertNoIndexErrors(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var results = await session
+                    .Query<Company>("AllCompaniesByNameJSMapReduce")
+                    .ToListAsync();
+                Assert.Equal(2, results.Count);
+            }
+
+            // Activate the archival
+            await SetupDataArchival(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            await Indexes.WaitForIndexingAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var results = await session
+                    .Query<Company>("AllCompaniesByNameJSMapReduce")
+                    .ToListAsync();
+                Assert.Equal(2, results.Count);
+            }
+        }
+    }
+    
+    [Fact]
+    public async void CanIndexOnlyUnarchivedDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
         {
@@ -1068,7 +1269,7 @@ public class DataArchivalIndexingTests : RavenTestBase
 
 
     [Fact]
-    public async void CanIndexOnlyArchivedDocuments_JavaScriptMapReduceIndex()
+    public async void CanIndexOnlyArchivedDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
         {
@@ -1116,7 +1317,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
 
     [Fact]
-    public async void CanIndexAllDocuments_JavaScriptMapReduceIndex()
+    public async void CanIndexAllDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
         {

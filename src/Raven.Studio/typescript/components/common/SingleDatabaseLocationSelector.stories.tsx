@@ -1,4 +1,4 @@
-import { ComponentMeta } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import React, { useState } from "react";
 import { SingleDatabaseLocationSelector } from "./SingleDatabaseLocationSelector";
 import { boundCopy } from "../utils/common";
@@ -8,7 +8,7 @@ export default {
     title: "Bits/Database location selector - single",
     component: SingleDatabaseLocationSelector,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof SingleDatabaseLocationSelector>;
+} satisfies Meta<typeof SingleDatabaseLocationSelector>;
 
 const Template = (args: { locations: databaseLocationSpecifier[] }) => {
     const [location, setLocation] = useState<databaseLocationSpecifier>();

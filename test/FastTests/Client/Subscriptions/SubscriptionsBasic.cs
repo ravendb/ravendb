@@ -376,10 +376,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions, Skip = "RavenDB-8404, RavenDB-8682")]
-        public void ShouldRespectStartsWithCriteria()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, Skip = "RavenDB-8404, RavenDB-8682")]
+        public void ShouldRespectStartsWithCriteria(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -664,11 +665,12 @@ namespace FastTests.Client.Subscriptions
                 }
             }
         }
-
-        [RavenFact(RavenTestCategory.Subscriptions, Skip = "RavenDB-15919, need to change the test, since we update the ChangeVectorForNextBatchStartingPoint upon fetching and not acking")]
-        public async Task ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault()
+        
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, Skip = "RavenDB-15919, need to change the test, since we update the ChangeVectorForNextBatchStartingPoint upon fetching and not acking")]
+        public async Task ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
@@ -720,11 +722,12 @@ namespace FastTests.Client.Subscriptions
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21581")]
         public async Task RavenDB_3452_ShouldStopPullingDocsIfReleased(Options options)
         {
             DoNotReuseServer();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Cluster.SuspendObserver(Server);
 

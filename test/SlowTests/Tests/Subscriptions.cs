@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.ServerWide.Commands.Sharding;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,10 +19,11 @@ namespace SlowTests.Tests
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task BasicSusbscriptionTest()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task BasicSusbscriptionTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await CreateDocuments(store, 1);
 

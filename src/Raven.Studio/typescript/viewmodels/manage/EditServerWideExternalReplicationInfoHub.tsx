@@ -1,16 +1,26 @@
 ﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
 export function EditServerWideExternalReplicationInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasServerWideExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasServerWideExternalReplication,
+            },
+        ],
+    });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasServerWideExternalReplication ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -38,9 +48,19 @@ export function EditServerWideExternalReplicationInfoHub() {
                 </div>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasServerWideExternalReplication}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Server-Wide External Replication",
+        featureIcon: "server-wide-replication",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

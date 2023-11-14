@@ -327,17 +327,29 @@
             <label for="disableAutoIndex">Don't create a new Auto-Index</label>
         </div>
         <div class="toggle margin-left">
-            <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isCollectionQuery()">
+            <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isDynamicQuery()">
             <label for="storedFields">Show stored index fields only</label>
         </div>
         <div class="toggle margin-left">
-            <input id="rawEntries" type="checkbox" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery()">
+            <input id="rawEntries" type="checkbox" data-bind="checked: criteria().indexEntries, disable: isDynamicQuery()">
             <label for="rawEntries" data-bind="text: 'Show raw index entries instead of ' + (queryResultsContainMatchingDocuments() ? 'matching documents' : 'index results')"></label>
         </div>
         <div class="margin-left" data-bind="collapse: criteria().indexEntries">
             <div class="toggle margin-left">
                 <input id="ignoreLimit" type="checkbox" data-bind="checked: criteria().ignoreIndexQueryLimit">
                 <label for="ignoreLimit">Ignore the index query size limit</label>
+            </div>
+        </div>
+        <div class="margin-left">
+            <div class="control-label">Projection Behavior</div>
+            <div class="btn-group projection-behavior-dropdown">
+                <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-toggle="dropdown">
+                    <span data-bind="text: projectionBehavior()"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" data-bind="foreach: ['Default', 'FromDocument', 'FromDocumentOrThrow', 'FromIndex', 'FromIndexOrThrow']" style="position: initial;">
+                    <li><a href="#" data-bind="text: $data, click: $parent.setProjectionBehavior.bind($parent, $data)"></a></li>
+                </ul>
             </div>
         </div>
     </div>

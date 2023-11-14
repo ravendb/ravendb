@@ -1,4 +1,3 @@
-import database from "models/resources/database";
 import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { PeriodicBackupPanel } from "../ongoingTasks/panels/PeriodicBackupPanel";
 import { useAccessManager } from "hooks/useAccessManager";
@@ -12,7 +11,7 @@ import { OngoingTaskInfo, OngoingTaskPeriodicBackupInfo } from "components/model
 import { BaseOngoingTaskPanelProps, taskKey, useOngoingTasksOperations } from "../shared/shared";
 import router from "plugins/router";
 import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.PeriodicBackupStatus;
-import { loadableData } from "components/models/common";
+import { NonShardedViewProps, loadableData } from "components/models/common";
 import genUtils from "common/generalUtils";
 import moment from "moment";
 import { Button, Spinner } from "reactstrap";
@@ -138,12 +137,8 @@ function ManualBackup(props: ManualBackupProps) {
     );
 }
 
-interface BackupsPageProps {
-    database: database;
-}
-
-export function BackupsPage(props: BackupsPageProps) {
-    const { database } = props;
+export function BackupsPage(props: NonShardedViewProps) {
+    const { db } = props;
     const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
 
     const { tasksService } = useServices();
@@ -154,12 +149,12 @@ export function BackupsPage(props: BackupsPageProps) {
 
     const backupDocsLink = useRavenLink({ hash: "GMBYOH" });
 
-    const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
+    const [tasks, dispatch] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
             try {
-                const tasks = await tasksService.getOngoingTasks(database, location);
+                const tasks = await tasksService.getOngoingTasks(db, location);
                 dispatch({
                     type: "TasksLoaded",
                     location,
@@ -173,7 +168,7 @@ export function BackupsPage(props: BackupsPageProps) {
                 });
             }
         },
-        [database, tasksService, dispatch]
+        [db, tasksService, dispatch]
     );
 
     const fetchManualBackup = useCallback(
@@ -186,7 +181,7 @@ export function BackupsPage(props: BackupsPageProps) {
             }
 
             try {
-                const manualBackup = await tasksService.getManualBackup(database);
+                const manualBackup = await tasksService.getManualBackup(db);
 
                 setManualBackup({
                     data: manualBackup.Status ? mapManualBackup(manualBackup.Status) : null,
@@ -200,7 +195,7 @@ export function BackupsPage(props: BackupsPageProps) {
                 });
             }
         },
-        [database, tasksService]
+        [db, tasksService]
     );
 
     const reload = useCallback(async () => {
@@ -227,14 +222,14 @@ export function BackupsPage(props: BackupsPageProps) {
 
     useEffect(() => {
         const nodeTag = clusterTopologyManager.default.localNodeTag();
-        const initialLocation = database.getFirstLocation(nodeTag);
+        const initialLocation = db.getFirstLocation(nodeTag);
 
         // noinspection JSIgnoredPromiseFromCall
         fetchTasks(initialLocation);
 
         // noinspection JSIgnoredPromiseFromCall
         fetchManualBackup();
-    }, [fetchManualBackup, fetchTasks, database]);
+    }, [fetchManualBackup, fetchTasks, db]);
 
     const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
     const serverWideTasksUrl = appUrl.forServerWideTasks();
@@ -245,10 +240,10 @@ export function BackupsPage(props: BackupsPageProps) {
     };
 
     const { onTaskOperation, operationConfirm, cancelOperationConfirm, isDeleting, isTogglingState } =
-        useOngoingTasksOperations(database, reload);
+        useOngoingTasksOperations(db, reload);
 
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
-        db: database,
+        db: db,
         onTaskOperation: onTaskOperation,
         isDeleting,
         isTogglingState,
@@ -257,12 +252,12 @@ export function BackupsPage(props: BackupsPageProps) {
     };
 
     const createNewPeriodicBackupTask = () => {
-        const url = appUrl.forEditPeriodicBackupTask(database);
+        const url = appUrl.forEditPeriodicBackupTask(db, "Backups");
         router.navigate(url);
     };
 
     const createManualBackup = () => {
-        const url = appUrl.forEditManualBackup(database);
+        const url = appUrl.forEditManualBackup(db);
         router.navigate(url);
     };
 
@@ -271,11 +266,11 @@ export function BackupsPage(props: BackupsPageProps) {
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
 
     return (
-        <div className="flex-grow-1 flex-stretch-items">
+        <div className="content-margin flex-grow-1 flex-stretch-items">
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
 
             <div className="flex-vertical">
-                {isAdminAccessOrAbove(database) && (
+                {isAdminAccessOrAbove(db) && (
                     <div className="flex-shrink-0 hstack gap-2 mb-4">
                         <Button
                             onClick={navigateToRestoreDatabase}
@@ -328,7 +323,7 @@ export function BackupsPage(props: BackupsPageProps) {
                         <span>Manual Backup</span>
                     </HrHeader>
 
-                    {isAdminAccessOrAbove(database) && (
+                    {isAdminAccessOrAbove(db) && (
                         <div className="mb-1 flex-shrink-0">
                             <Button color="primary" title="Backup the database now" onClick={createManualBackup}>
                                 <Icon icon="backup" /> Create a Backup
@@ -346,7 +341,6 @@ export function BackupsPage(props: BackupsPageProps) {
                                 <Button
                                     size="xs"
                                     target="_blank"
-                                    outline
                                     color="link"
                                     title="Navigate to the Server-Wide Tasks View"
                                     href={serverWideTasksUrl}
@@ -362,7 +356,7 @@ export function BackupsPage(props: BackupsPageProps) {
                             {!hasPeriodicBackups && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                         </span>
                     </HrHeader>
-                    {canReadWriteDatabase(database) && (
+                    {canReadWriteDatabase(db) && (
                         <div className="mb-1">
                             <Button
                                 color="primary"
@@ -382,6 +376,7 @@ export function BackupsPage(props: BackupsPageProps) {
                                 <>
                                     {backups.map((x) => (
                                         <PeriodicBackupPanel
+                                            sourceView="Backups"
                                             forceReload={reload}
                                             allowSelect={false}
                                             {...sharedPanelProps}

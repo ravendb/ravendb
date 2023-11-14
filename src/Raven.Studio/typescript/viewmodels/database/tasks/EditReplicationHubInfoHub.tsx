@@ -3,18 +3,26 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { useRavenLink } from "hooks/useRavenLink";
-import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditReplicationHubInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
-    const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
+    const hasPullReplicationAsHub = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasPullReplicationAsHub,
+            },
+        ],
+    });
 
     const replicationHubDocsLink = useRavenLink({ hash: "NIH5LN" });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasPullReplicationAsHub ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -71,9 +79,19 @@ export function EditReplicationHubInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasPullReplicationAsHub}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Replication Hub",
+        featureIcon: "pull-replication-hub",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

@@ -61,8 +61,12 @@ pre[class*="language-"] {
         opacity: .7;
     }
 
-    &.property, &.tag, &.boolean, &.number, &.constant, &.symbol {
+    &.property, &.tag, &.boolean, &.constant, &.symbol {
         color: @token-boolean;
+    }
+    
+    &.number {
+        color: @token-number;
     }
 
     &.selector, &.attr-name, &.string, &.char, &.builtin, &.inserted {

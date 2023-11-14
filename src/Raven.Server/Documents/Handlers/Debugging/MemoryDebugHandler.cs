@@ -287,7 +287,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static void WriteMemoryStats(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, bool includeThreads, bool includeMappings)
+        private static void WriteMemoryStats<TWriter>(TWriter writer, JsonOperationContext context, bool includeThreads, bool includeMappings)
+            where TWriter : IBlittableJsonTextWriter
         {
             writer.WriteStartObject();
 
@@ -296,7 +297,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             long totalUnmanagedAllocations = NativeMemory.TotalAllocatedMemory;
             var encryptionBuffers = EncryptionBuffersPool.Instance.GetStats();
             var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
-            var memoryUsageRecords = MemoryInformation.GetMemoryUsageRecords();
 
             long totalMapping = 0;
             var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
@@ -337,12 +337,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.DirtyMemory)] = Size.Humane(dirtyMemoryState.TotalDirtyInBytes),
                 [nameof(MemoryInfo.AvailableMemory)] = Size.Humane(memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)),
                 [nameof(MemoryInfo.AvailableMemoryForProcessing)] = memInfo.AvailableMemoryForProcessing.ToString(),
-                [nameof(MemoryInfo.HighMemLastOneMinute)] = memoryUsageRecords.High.LastOneMinute.ToString(),
-                [nameof(MemoryInfo.LowMemLastOneMinute)] = memoryUsageRecords.Low.LastOneMinute.ToString(),
-                [nameof(MemoryInfo.HighMemLastFiveMinute)] = memoryUsageRecords.High.LastFiveMinutes.ToString(),
-                [nameof(MemoryInfo.LowMemLastFiveMinute)] = memoryUsageRecords.Low.LastFiveMinutes.ToString(),
-                [nameof(MemoryInfo.HighMemSinceStartup)] = memoryUsageRecords.High.SinceStartup.ToString(),
-                [nameof(MemoryInfo.LowMemSinceStartup)] = memoryUsageRecords.Low.SinceStartup.ToString(),
             };
             if (memInfo.Remarks != null)
             {
@@ -367,7 +361,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             writer.WriteEndObject();
         }
 
-        private static void WriteThreads(bool includeThreads, AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
+        private static void WriteThreads<TWriter>(bool includeThreads, TWriter writer, JsonOperationContext context)
+            where TWriter : IBlittableJsonTextWriter
         {
             if (includeThreads == false)
                 return;
@@ -412,8 +407,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static void WriteMappings(bool includeMappings, AsyncBlittableJsonTextWriter writer, JsonOperationContext context,
+        private static void WriteMappings<TWriter>(bool includeMappings, TWriter writer, JsonOperationContext context,
             Dictionary<string, long> fileMappingSizesByDir, Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>> fileMappingByDir)
+            where TWriter : IBlittableJsonTextWriter
         {
             if (includeMappings == false)
                 return;
@@ -549,12 +545,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string DirtyMemory { get; set; }
             public string AvailableMemory { get; set; }
             public string AvailableMemoryForProcessing { get; set; }
-            public string HighMemLastOneMinute { get; set; }
-            public string LowMemLastOneMinute { get; set; }
-            public string HighMemLastFiveMinute { get; set; }
-            public string LowMemLastFiveMinute { get; set; }
-            public string HighMemSinceStartup { get; set; }
-            public string LowMemSinceStartup { get; set; }
             public MemoryInfoMappingItem[] Mappings { get; set; }
         }
 

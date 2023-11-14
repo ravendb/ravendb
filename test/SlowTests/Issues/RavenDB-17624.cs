@@ -17,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ForbidOpeningMoreThenOneSessionPerSubscriptionBatch()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ForbidOpeningMoreThenOneSessionPerSubscriptionBatch(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new Command { Value = 1 });
@@ -72,10 +73,11 @@ namespace SlowTests.Issues
             Assert.Equal("Session can only be opened once per each Subscription batch", exception.Message);
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ClearSessionOpenedWhenBatchIsReused()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ClearSessionOpenedWhenBatchIsReused(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new Command { Value = 1 });

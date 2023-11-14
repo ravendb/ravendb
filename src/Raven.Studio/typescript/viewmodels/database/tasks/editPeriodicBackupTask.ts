@@ -19,6 +19,13 @@ import { EditManualBackupTaskInfoHub } from "./EditManualBackupTaskInfoHub";
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 
+interface ActivateProps {
+    database: string;
+    sourceView: EditPeriodicBackupTaskSourceView;
+    taskId?: number;
+    manual?: boolean;
+}
+
 class editPeriodicBackupTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editPeriodicBackupTask.html");
@@ -41,6 +48,8 @@ class editPeriodicBackupTask extends shardViewModelBase {
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();
+
+    sourceView = ko.observable<EditPeriodicBackupTaskSourceView>();
     
     isAddingNewBackupTask = ko.observable<boolean>(true);
     possibleMentors = ko.observableArray<string>([]);
@@ -62,11 +71,13 @@ class editPeriodicBackupTask extends shardViewModelBase {
         }));
     }
 
-    activate(args: any) { 
+    activate(args: ActivateProps) { 
         super.activate(args);
 
         const database = activeDatabaseTracker.default.database();
         const dbName = ko.observable<string>(database ? database.name : null);
+
+        this.sourceView(args.sourceView);
         
         const backupLoader = () => {
             const deferred = $.Deferred<void>();
@@ -108,7 +119,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
                 });
         };
 
-        return $.when<any>(this.loadServerSideConfiguration())
+        return $.when<any>(this.loadPossibleMentors(), this.loadServerSideConfiguration())
             .then(backupLoader);
     }
 
@@ -189,7 +200,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
 
         this.configuration().submit(this.db, dto).done(() => {
             this.dirtyFlag().reset();
-            this.goToBackupsView();
+            this.goBack();
         });
     }
 
@@ -210,11 +221,20 @@ class editPeriodicBackupTask extends shardViewModelBase {
     }
 
     cancelOperation() {
-        this.goToBackupsView();
+        this.goBack();
     }
 
-    private goToBackupsView() {
-        router.navigate(appUrl.forBackups(this.db));
+    private goBack() {
+        switch (this.sourceView()) {
+            case "Backups":
+                router.navigate(appUrl.forBackups(this.db));
+                break;
+            case "OngoingTasks":
+                router.navigate(appUrl.forOngoingTasks(this.db));
+                break;
+            default:
+                router.navigate(appUrl.forBackups(this.db));
+        }
     }
 
     private validate(): boolean {

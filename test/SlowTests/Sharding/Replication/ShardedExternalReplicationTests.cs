@@ -638,20 +638,28 @@ namespace SlowTests.Sharding.Replication
                 Assert.True(WaitForDocument(src, "users/2$users/1", 30_000));
 
                 var oldLocation = await Sharding.GetShardNumberForAsync(dst, "users/2$users/1");
+                var name1 = ShardHelper.ToShardName(dst.Database, oldLocation);
+
                 await Sharding.Resharding.MoveShardForId(dst, "users/2$users/1", servers: dstNodes);
 
-                var db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dst.Database, oldLocation));
-                var storage = db.DocumentsStorage;
-                using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                var newLocation = await Sharding.GetShardNumberForAsync(dst, "users/2$users/1");
+                var name2 = ShardHelper.ToShardName(dst.Database, newLocation);
+                foreach (var server in dstNodes)
                 {
-                    //tombstones
-                    var tombstonesCount = storage.GetNumberOfTombstones(context);
-                    Assert.Equal(2, tombstonesCount);
-                }
+                    var db1 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name1);
+                    Assert.Equal(0, WaitForValue(() => db1.DocumentsStorage.GetNumberOfDocuments(), 2, 15_000, 333));
 
-                var docsCount = storage.GetNumberOfDocuments();
-                Assert.Equal(0, docsCount);
+                    using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        //tombstones
+                        var tombstonesCount = db1.DocumentsStorage.GetNumberOfTombstones(context);
+                        Assert.Equal(2, tombstonesCount);
+                    }
+
+                    var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name2);
+                    Assert.Equal(2, WaitForValue(() => db2.DocumentsStorage.GetNumberOfDocuments(), 2, 15_000, 333));
+                }
 
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
                     srcNodes,

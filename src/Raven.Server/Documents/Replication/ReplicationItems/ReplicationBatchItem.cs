@@ -33,6 +33,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
         }
 
+        public override string ToString()
+        {
+            return $"{Type} {ChangeVector}";
+        }
+
         public abstract long AssertChangeVectorSize();
 
         public abstract long Size { get; }

@@ -67,7 +67,7 @@ const AboutViewFloating = (props: AboutViewProps) => {
                     offset={[-215, 10]}
                     defaultOpen={!!defaultOpen}
                 >
-                    <PopoverBody className="p-1">
+                    <PopoverBody className="p-0">
                         <AboutViewAnchored defaultOpen={defaultOpen ? "licensing" : null}>{children}</AboutViewAnchored>
                     </PopoverBody>
                 </UncontrolledPopover>
@@ -93,7 +93,7 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
     const { icon, color, heading, description, children, pill, pillText, pillIcon, className } = props;
     const targetId = props.targetId ?? uniqueId();
     return (
-        <AccordionItem className={classNames("rounded-3", `box-shadow-${color}`, "panel-bg-1", className)}>
+        <AccordionItem className={classNames("license-accordion", `box-shadow-${color}`, "panel-bg-1", className)}>
             <AccordionHeader targetId={targetId}>
                 <Icon icon={icon} color={color} className="tab-icon me-3" />
                 <div className="vstack gap-1">

@@ -57,8 +57,10 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     
     protected abstract prepareColumns(containerWidth:number, results: pagedResult<TTableItem>): virtualColumn[];
 
-    protected afterSyncUpdate() {
-        this.gridController().reset(false);
+    protected afterSyncUpdate(updatesCount: number) {
+        if (updatesCount) {
+            this.gridController().reset(false);
+        }
     }
 
     afterComponentResized() {
@@ -102,8 +104,6 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     }
 
     protected applyPerDatabaseStripes(items: databaseAndNodeAwareStats[]) {
-        // TODO: RavenDB-17013 - stripes not working correctly after scroll
-        
         // leave only first database name in group - we don't want to repeat db name
         let currentDbName = "";
         let even = true;

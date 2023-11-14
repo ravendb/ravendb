@@ -2,11 +2,12 @@
 import React from "react";
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
-import { Card, PopoverBody, Table, UncontrolledPopover } from "reactstrap";
+import { Button, Card, PopoverBody, Table, UncontrolledPopover } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { statisticsViewSelectors } from "components/pages/database/status/statistics/store/statisticsViewSlice";
+import copyToClipboard = require("common/copyToClipboard");
 
 interface DetailsBlockProps {
     children: (data: DetailedDatabaseStatistics, location: databaseLocationSpecifier) => JSX.Element;
@@ -14,6 +15,12 @@ interface DetailsBlockProps {
 
 export function DetailedDatabaseStats() {
     const perNodeStats = useAppSelector(statisticsViewSelectors.allDatabaseDetails);
+    const copyChangeVector = (formattedChangeVector: changeVectorItem[]) => {
+        copyToClipboard.copy(
+            formattedChangeVector.map((cv) => cv.fullFormat).join("\r\n"),
+            "Copied error message to clipboard"
+        );
+    };
 
     function DetailsBlock(props: DetailsBlockProps): JSX.Element {
         const { children } = props;
@@ -89,6 +96,14 @@ export function DetailedDatabaseStats() {
                                     return (
                                         <>
                                             <div id={id} className="d-inline-flex flex-wrap gap-1">
+                                                <Button
+                                                    color="primary"
+                                                    size="xs"
+                                                    title="Copy to clipboard"
+                                                    onClick={() => copyChangeVector(formattedChangeVector)}
+                                                >
+                                                    <Icon icon="copy-to-clipboard" margin="m-0" />
+                                                </Button>
                                                 {formattedChangeVector.map((cv) => (
                                                     <div
                                                         key={cv.fullFormat}

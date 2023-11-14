@@ -151,7 +151,7 @@
 
         .modal-settings-panel-slideout {
             display: block;
-            background-color: @panel-bg-2;
+            border: 1px solid @panel-bg-2;
 
             .panel-body {
                 box-shadow: inset 0 0 0 1px @gray-dark;
@@ -161,7 +161,9 @@
             .fadeindelay-style;
 
             @media (min-width: @screen-sm) {
-                width: (@modal-lg / 3 * 2);
+                width: 500px;
+                flex-grow: 1;
+                flex-shrink: 0;
             }
         }
     }
@@ -334,10 +336,10 @@
     }
 }
 
-.scoped-modal {    
-    position: absolute;    
+.scoped-modal {
+    position: absolute;
     width: 100%;
-    z-index: @zindex-modal;    
+    z-index: @zindex-scoped-modal;
 }
 
 .neo-modal {

@@ -247,30 +247,42 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
         justify-content: center;
         border-radius: 2px;
         overflow: hidden;
+
         .label {
             padding: 0 $gutter-xxs;
             line-height: $gutter-sm;
             font-size: 11px;
         }
+
         .value {
             flex-grow: 1;
         }
+
         .kilo,
-        .mega {
+        .mega,
+        .giga {
             padding: 0 4px;
             font-weight: 800;
             line-height: $gutter-sm;
             font-size: 10px;
             background-color: $secondary;
         }
+
         .kilo {
             &::before {
-                content: "K";
+                content: "k";
             }
         }
+
         .mega {
             &::before {
-                content: "M";
+                content: "m";
+            }
+        }
+
+        .giga {
+            &::before {
+                content: "g";
             }
         }
     }

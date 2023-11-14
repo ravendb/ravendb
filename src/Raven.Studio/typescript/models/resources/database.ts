@@ -125,7 +125,7 @@ abstract class database {
         return {
             name: this.name,
             encrypted: this.isEncrypted(),
-            sharded: this.isSharded(),
+            sharded: false,
             nodes: this.nodes(),
             disabled: this.disabled(),
             currentNode: { 

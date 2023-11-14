@@ -12,6 +12,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,12 +24,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [InlineData("hello\nthere", "\n")]
-        [InlineData("hello\r\nthere", "\r\n")]
-        public void CanGetSubscriptionsResultsWithEscapeHandling(string input, string shouldNotContain)
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData("hello\nthere", "\n", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("hello\r\nthere", "\r\n", DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetSubscriptionsResultsWithEscapeHandling(Options options, string input, string shouldNotContain)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -51,10 +52,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void SubscriptionWithNoResultsShouldNotLoopWhenTesting()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SubscriptionWithNoResultsShouldNotLoopWhenTesting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var sw = Stopwatch.StartNew();
                 store.Operations.Send(new SubscriptionTryoutOperation(new SubscriptionTryout

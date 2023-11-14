@@ -1,8 +1,8 @@
 using System.IO;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
-using Corax.Queries.SortingMatches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -14,6 +14,8 @@ using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace FastTests.Corax.Bugs;
 

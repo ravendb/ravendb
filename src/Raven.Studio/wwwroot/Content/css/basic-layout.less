@@ -449,9 +449,15 @@
     grid-area: navbar;
     height: @navbar-height-xs;
     border-bottom: 1px solid @layout-border;
+    background-color: @body-bg;
     display: flex;
     align-items: center;
     z-index: @zindex-navbar-fixed;
+
+    @supports (backdrop-filter: blur(24px)) {
+        background-color: transparent;
+        backdrop-filter: blur(24px);
+    }
 
     @media (min-width:@screen-md) {
         height: @navbar-height;

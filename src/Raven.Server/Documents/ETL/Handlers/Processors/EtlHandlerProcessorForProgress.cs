@@ -1,6 +1,9 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
+using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -29,7 +32,13 @@ internal sealed class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcess
             {
                 TaskName = x.Key,
                 EtlType = x.Value.First().EtlType,
-                ProcessesProgress = x.Value.Select(y => y.GetProgress(context)).ToArray()
+                ProcessesProgress = x.Value.Select(y => y.GetProgress(context)).ToArray(),
+                QueueBrokerType = x.Value.First() switch
+                {
+                    RabbitMqEtl => QueueBrokerType.RabbitMq,
+                    KafkaEtl => QueueBrokerType.Kafka,
+                    _ => null
+                }
             }).ToArray();
 
             writer.WriteEtlTaskProgress(context, performance);

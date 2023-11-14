@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Corax;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
-using Corax.Queries;
-using Corax.Queries.SortingMatches.Meta;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -14,6 +14,8 @@ using Sparrow.Threading;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace StressTests.Corax
 {
@@ -212,7 +214,6 @@ namespace StressTests.Corax
             builder.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             builder.Write(Content1, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
             builder.Write(Content2, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
-
         }
 
 

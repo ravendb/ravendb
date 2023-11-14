@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Utils;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Sparrow;
+using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Queries.Results
         
         public Corax.Utils.Spatial.SpatialResult? CoraxDistance;
 
-        public Corax.IndexSearcher.IndexSearcher CoraxIndexSearcher;
+        public IndexSearcher CoraxIndexSearcher;
 
         public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, ScoreDoc score, IState state)
         {
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.Queries.Results
             CoraxIndexSearcher = null;
         }
 
-        public RetrieverInput(Corax.IndexSearcher.IndexSearcher searcher, IndexFieldsMapping knownFields, EntryTermsReader reader, string id, float? score = null, Corax.Utils.Spatial.SpatialResult? distance = null)
+        public RetrieverInput(IndexSearcher searcher, IndexFieldsMapping knownFields, in EntryTermsReader reader, string id, float? score = null, Corax.Utils.Spatial.SpatialResult? distance = null)
         {
             CoraxTermsReader = reader;
             KnownFields = knownFields;

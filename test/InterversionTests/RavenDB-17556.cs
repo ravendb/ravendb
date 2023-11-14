@@ -18,7 +18,7 @@ namespace InterversionTests
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Replication | RavenTestCategory.TimeSeries, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task IncomingReplicationShouldRejectIncrementalTimeSeriesFromOldServer()
         {
-            const string version = "5.2.3";
+            const string version = Server52Version;
             const string incrementalTsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
             const string docId = "users/1";
 

@@ -39,19 +39,23 @@ class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
     protected prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
-            new textColumn<trafficWatchItem>(grid, x => x.hideDatabaseName ? "" : DatabaseUtils.formatName(x.database), "Database", "30%"),
+            new textColumn<trafficWatchItem>(grid, x => x.hideDatabaseName && !grid.sortEnabled() ? "" : DatabaseUtils.formatName(x.database), "Database", "30%"),
             new nodeTagColumn<trafficWatchItem>(grid, item => this.prepareUrl(item, "Traffic Watch View")),
             new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.requestsPerSecond), "Requests/s", "12%", {
-                headerTitle: "Requests made to node per second"
+                headerTitle: "Requests made to node per second",
+                sortable: "number",
             }),
             new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.writesPerSecond), "Writes/s", "12%", {
-                headerTitle: "Items written by node per second"
+                headerTitle: "Items written by node per second",
+                sortable: "number",
             }),
             new textColumn<trafficWatchItem>(grid, x => x.noData ? "-" : generalUtils.formatBytesToSize(x.dataWritesPerSecond), "Data written/s", "12%", {
-                headerTitle: "Bytes written by node per second"
+                headerTitle: "Bytes written by node per second",
+                sortable: "number",
             }),
             new textColumn<trafficWatchItem>(grid, x => x.noData ? "-" : Math.round(x.averageDuration).toLocaleString() + " ms", "Avg Req Time", "12%", {
-                headerTitle: "Average request time"
+                headerTitle: "Average request time",
+                sortable: "number",
             }),
         ];
     }

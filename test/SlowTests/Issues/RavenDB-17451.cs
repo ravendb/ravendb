@@ -4,9 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Core.AdminConsole;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -89,8 +92,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanDisableTcpCompressionViaConfiguration_SubscriptionsTest()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDisableTcpCompressionViaConfiguration_SubscriptionsTest(Options options)
         {
             var server = GetNewServer(new ServerCreationOptions
             {
@@ -103,7 +107,7 @@ namespace SlowTests.Issues
 
             Assert.True(server.Configuration.Server.DisableTcpCompression);
 
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options(options)
             {
                 Server = server
             }))
@@ -125,9 +129,16 @@ namespace SlowTests.Issues
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subsId)
                 {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
                 }))
                 {
+                     var mre = new AsyncManualResetEvent();
+
+                     subscription.OnEstablishedSubscriptionConnection += () =>
+                     {
+                         mre.Set();
+                     };
+
                     var list = new BlockingCollection<User>();
                     GC.KeepAlive(subscription.Run(u =>
                     {
@@ -136,43 +147,76 @@ namespace SlowTests.Issues
                             list.Add(item.Result);
                         }
                     }));
+
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "await mre.WaitAsync(TimeSpan.FromSeconds(15))");
+
                     User user;
                     for (var i = 0; i < 10; i++)
                     {
-                        Assert.True(list.TryTake(out user, 1000));
+                        Assert.True(list.TryTake(out user, 5000), "list.TryTake(out user, 5000)");
                     }
 
-                    Assert.False(list.TryTake(out user, 50));
+                    Assert.False(list.TryTake(out user, 50), "list.TryTake(out user, 50)");
 
-                    var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    List<TcpConnectionOptions> tcpConnections;
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                    {
+                        await foreach (var shardDb in Sharding.GetShardsDocumentDatabaseInstancesFor(store.Database, new List<RavenServer>() {server}))
+                        {
+                            Assert.Equal(1, shardDb.RunningTcpConnections.Count);
+                            tcpConnections = shardDb.RunningTcpConnections.ToList();
+                            Assert.Equal(1, tcpConnections.Count);
 
-                    var tcpConnections = db.RunningTcpConnections.ToList();
+                            // assert non-compressed tcp connection
+                            Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream, "tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream");
+                        }
+
+                        var orch = Sharding.GetOrchestrator(store.Database, server);
+
+                        tcpConnections = orch.RunningTcpConnections.ToList();
+                        Assert.Equal(1, tcpConnections.Count);
+
+                        // assert non-compressed tcp connection
+                        Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream, "tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream");
+                    }
+                    else
+                    {
+                        var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                        tcpConnections = db.RunningTcpConnections.ToList();
+                    }
 
                     Assert.Equal(1, tcpConnections.Count);
 
                     // assert non-compressed tcp connection
-                    Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream);
+                    Assert.False(tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream, "tcpConnections[0].Stream is Sparrow.Utils.ReadWriteCompressedStream");
                 }
             }
         }
 
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanDisableTcpCompressionOnTheClientViaStoreConventions()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDisableTcpCompressionOnTheClientViaStoreConventions(Options options)
         {
             var server = GetNewServer(new ServerCreationOptions
             {
                 RunInMemory = false
             });
 
-            using (var store1 = GetDocumentStore(new Options
+            var modifyDocStore = options.ModifyDocumentStore;
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 Server = server
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 Server = server,
-                ModifyDocumentStore = s => s.Conventions.DisableTcpCompression = true
+                ModifyDocumentStore = s =>
+                {
+                    modifyDocStore?.Invoke(s);
+                    s.Conventions.DisableTcpCompression = true;
+                }
             }))
             {
                 Assert.False(server.Configuration.Server.DisableTcpCompression);
@@ -215,9 +259,18 @@ namespace SlowTests.Issues
                             Assert.True(list.TryTake(out user, 1000));
                         }
                         Assert.False(list.TryTake(out user, 50));
+                        List<TcpConnectionOptions> tcpConnections;
+                        if (options.DatabaseMode == RavenDatabaseMode.Single)
+                        {
+                            var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                            tcpConnections = db.RunningTcpConnections.ToList();
+                        }
+                        else
+                        {
+                            var orch = Sharding.GetOrchestrator(store.Database, server);
+                            tcpConnections = orch.RunningTcpConnections.ToList();
+                        }
 
-                        var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                        var tcpConnections = db.RunningTcpConnections.ToList();
                         Assert.Equal(1, tcpConnections.Count);
 
                         if (compressionDisabled)

@@ -22,7 +22,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
     };
 
     return (
-        <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-warning">
+        <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-warning" centered>
             <ModalBody className="vstack gap-2">
                 {collectionConfigsNames.length > 0 && (
                     <>
@@ -59,7 +59,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                 </Alert>
             </ModalBody>
             <ModalFooter>
-                <Button color="secondary" onClick={toggle}>
+                <Button color="link" className="link-muted" onClick={toggle}>
                     Cancel
                 </Button>
                 <Button color="warning" onClick={onSubmit}>

@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import { boundCopy } from "../utils/common";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import {
@@ -28,7 +28,7 @@ export default {
     title: "Bits/LazyLoad",
     decorators: [withStorybookContexts, withBootstrap5],
     component: LazyLoad,
-} as ComponentMeta<typeof LazyLoad>;
+} satisfies Meta<typeof LazyLoad>;
 
 const TemplatePanel = (args: { loadingActive: boolean }) => {
     const { value: open, toggle: toggleOpen } = useBoolean(false);

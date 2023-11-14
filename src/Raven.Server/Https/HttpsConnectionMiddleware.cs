@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Features;
@@ -21,15 +20,16 @@ namespace Raven.Server.Https
         // See http://oid-info.com/get/1.3.6.1.5.5.7.3.1
         // Indicates that a certificate can be used as a SSL server certificate
         private const string ServerAuthenticationOid = "1.3.6.1.5.5.7.3.1";
-
-        private X509Certificate2 _serverCertificate;
-
-        public HttpsConnectionMiddleware(RavenServer server, KestrelServerOptions options)
+        private readonly X509Certificate2 _originalServerCertificate;
+        public HttpsConnectionMiddleware(RavenServer server, KestrelServerOptions options, X509Certificate2 originalServerCertificate)
         {
             _server = server;
             CipherSuitesPolicy = server.Configuration.Security.TlsCipherSuites != null && server.Configuration.Security.TlsCipherSuites.Length > 0
                 ? new CipherSuitesPolicy(server.Configuration.Security.TlsCipherSuites)
                 : null;
+
+            _originalServerCertificate = originalServerCertificate;
+            EnsureCertificateIsAllowedForServerAuth(_originalServerCertificate);
 
             options.ConfigureHttpsDefaults(o =>
             {
@@ -55,18 +55,23 @@ namespace Raven.Server.Https
                     return sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors ||
                            sslPolicyErrors == SslPolicyErrors.None;
                 };
-                o.ServerCertificateSelector = (_, __) => _serverCertificate;
 
-                if (CipherSuitesPolicy != null)
-                    o.OnAuthenticate = (_, sslServerAuthenticationOptions) => sslServerAuthenticationOptions.CipherSuitesPolicy = CipherSuitesPolicy;
+                o.ServerCertificate = _originalServerCertificate;
+
+                o.OnAuthenticate = (_, sslServerAuthenticationOptions) =>
+                {
+                    if (CipherSuitesPolicy != null)
+                        sslServerAuthenticationOptions.CipherSuitesPolicy = CipherSuitesPolicy;
+
+                    if (server.Certificate?.Certificate != null && _originalServerCertificate.Thumbprint != server.Certificate.Certificate.Thumbprint)
+                    {
+                        // the certificate got changed (refresh) we need to update ssl auth options
+
+                        sslServerAuthenticationOptions.ServerCertificateContext = server.Certificate.CertificateContext;
+                        sslServerAuthenticationOptions.ServerCertificate = server.Certificate.Certificate;
+                    }
+                };
             });
-        }
-
-        public void SetCertificate(X509Certificate2 serverCertificate)
-        {
-            EnsureCertificateIsAllowedForServerAuth(serverCertificate);
-
-            Interlocked.Exchange(ref _serverCertificate, serverCertificate);
         }
 
         public async Task OnConnectionAsync(ConnectionContext context, Func<Task> next)
@@ -103,7 +108,7 @@ namespace Raven.Server.Https
             return new X509Certificate2(certificate);
         }
 
-        private static void EnsureCertificateIsAllowedForServerAuth(X509Certificate2 certificate)
+        public static void EnsureCertificateIsAllowedForServerAuth(X509Certificate2 certificate)
         {
             /* If the Extended Key Usage extension is included, then we check that the serverAuth usage is included. (http://oid-info.com/get/1.3.6.1.5.5.7.3.1)
              * If the Extended Key Usage extension is not included, then we assume the certificate is allowed for all usages.

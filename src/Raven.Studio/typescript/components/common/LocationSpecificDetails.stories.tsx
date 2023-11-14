@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import React from "react";
 import { boundCopy } from "../utils/common";
 import {
@@ -15,7 +15,7 @@ export default {
     title: "Bits/Location Specific Details",
     decorators: [withStorybookContexts, withBootstrap5],
     component: LocationSpecificDetails,
-} as ComponentMeta<typeof LocationSpecificDetails>;
+} satisfies Meta<typeof LocationSpecificDetails>;
 
 const Template = (args: { withProgress: boolean; shardedLocation: boolean }) => {
     const location: databaseLocationSpecifier = {

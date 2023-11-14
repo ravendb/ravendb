@@ -6,12 +6,12 @@ using System.Linq;
 using System.Text;
 using Corax;
 using Corax.Analyzers;
-using Corax.IndexSearcher;
+using Corax.Querying;
 using Corax.Mappings;
 using Corax.Pipeline;
-using Corax.Queries;
-using Corax.Queries.Meta;
-using Corax.Queries.SortingMatches.Meta;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
 using Sparrow;
@@ -22,6 +22,8 @@ using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using IndexSearcher = Corax.Querying.IndexSearcher;
+using IndexWriter = Corax.Indexing.IndexWriter;
 using VoronConstants = Voron.Global.Constants;
 
 namespace FastTests.Corax

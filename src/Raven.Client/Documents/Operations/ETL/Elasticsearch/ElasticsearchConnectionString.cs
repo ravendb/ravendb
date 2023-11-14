@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
@@ -12,7 +13,8 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         public Authentication Authentication;
 
         public override ConnectionStringType Type => ConnectionStringType.ElasticSearch;
-
+        
+        [Obsolete("Elasticsearch compatibility isn't required anymore to connect with Elasticsearch server v8.x.")]
         public bool EnableCompatibilityMode { get; set; }
 
         protected override void ValidateImpl(ref List<string> errors)
@@ -59,7 +61,9 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             DynamicJsonValue json = base.ToJson();
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
+#pragma warning disable CS0618 // Type or member is obsolete
             json[nameof(EnableCompatibilityMode)] = EnableCompatibilityMode;
+#pragma warning restore CS0618 // Type or member is obsolete
             json[nameof(Authentication)] = Authentication == null ? null : new DynamicJsonValue()
             {
                 [nameof(Authentication.Basic)] = Authentication.Basic == null ? null : new DynamicJsonValue()
@@ -70,7 +74,8 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
                 [nameof(Authentication.ApiKey)] = Authentication.ApiKey == null ? null : new DynamicJsonValue()
                 {
                     [nameof(Authentication.ApiKey.ApiKeyId)] = Authentication?.ApiKey?.ApiKeyId,
-                    [nameof(Authentication.ApiKey.ApiKey)] = Authentication?.ApiKey?.ApiKey
+                    [nameof(Authentication.ApiKey.ApiKey)] = Authentication?.ApiKey?.ApiKey,
+                    [nameof(Authentication.ApiKey.EncodedApiKey)] = Authentication?.ApiKey?.EncodedApiKey
                 },
                 [nameof(Authentication.Certificate)] = Authentication.Certificate == null ? null : new DynamicJsonValue()
                 {
@@ -85,7 +90,9 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             DynamicJsonValue json = base.ToAuditJson();
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
+#pragma warning disable CS0618 // Type or member is obsolete
             json[nameof(EnableCompatibilityMode)] = EnableCompatibilityMode;
+#pragma warning restore CS0618 // Type or member is obsolete
 
             return json;
         }
@@ -103,6 +110,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         public string ApiKeyId { get; set; }
         
         public string ApiKey { get; set; }
+        public string EncodedApiKey { get; set; }
     }
     
     public sealed class BasicAuthentication

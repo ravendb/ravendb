@@ -4,7 +4,7 @@
 .location-specific-details-tooltip {
     color: colors.$text-color-var;
     background-color: colors.$panel-bg-1-var;
-    border-radius: sizes.$gutter-xs;
+    border-radius: sizes.$border-radius-md;
     display: grid;
     grid-template-columns: auto 1fr;
     z-index: 1000;

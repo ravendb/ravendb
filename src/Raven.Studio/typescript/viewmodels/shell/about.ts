@@ -12,7 +12,6 @@ import appUrl = require("common/appUrl");
 import popoverUtils = require("common/popoverUtils");
 import app = require("durandal/app");
 import feedback from "viewmodels/shell/feedback";
-import licenseModel from "models/auth/licenseModel";
 
 class about extends viewModelBase {
 
@@ -174,7 +173,7 @@ class about extends viewModelBase {
     });
 
     formatLicenseStatusValue(
-        name: Exclude<keyof Raven.Server.Commercial.LicenseStatus, "Attributes" | "Version">
+        name: Exclude<keyof LicenseStatus, "Attributes">
     ): string | number {
         const value = license.getStatusValue(name);
 
@@ -285,23 +284,27 @@ class about extends viewModelBase {
         window.open("https://ravendb.net/downloads", "_blank");
     }
 
-    forceLicenseUpdate() {
-        this.confirmationMessage(
-                "Force License Update",
-                "Are you sure that you want to force license update?")
-            .done(can => {
-                if (!can) {
-                    return;
-                }
+    async forceLicenseUpdate() {
+        const isConfirmed = await this.confirmationMessage("Force License Update", "Are you sure that you want to force license update?");
+        if (!isConfirmed) {
+            return;
+        }
 
-                this.spinners.forceLicenseUpdate(true);
-                new forceLicenseUpdateCommand().execute()
-                    .done(() => {
-                        license.fetchLicenseStatus()
-                            .done(() => license.fetchSupportCoverage());
-                    })
-                    .always(() => this.spinners.forceLicenseUpdate(false));
-            });
+        try {
+            this.spinners.forceLicenseUpdate(true);
+
+            const updateResult = await new forceLicenseUpdateCommand().execute();
+            const licenseStatus = await license.fetchLicenseStatus();
+
+            if (updateResult.Status === "NotModified") {
+                forceLicenseUpdateCommand.handleNotModifiedStatus(licenseStatus.Expired);
+            }
+
+            await license.fetchSupportCoverage();
+            
+        } finally {
+            this.spinners.forceLicenseUpdate(false);
+        }
     }
 
     renewLicense() {

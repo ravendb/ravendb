@@ -1,4 +1,5 @@
 @use "Content/scss/bs5variables";
+@use "Content/scss/sizes";
 
 .license-limited {
     .current {
@@ -8,10 +9,14 @@
 
 .feature-availability-table {
     $table-border-radius: bs5variables.$border-radius-md;
-    border: bs5variables.$border-width solid bs5variables.$border-color-light;
-    border-radius: $table-border-radius;
+    $table-border-style: bs5variables.$border-width solid bs5variables.$border-color-light-var;
+    padding: 1px;
     text-align: center;
-    margin-bottom: bs5variables.$gutter-md;
+    overflow-x: auto;
+
+    table {
+        margin-bottom: 0 !important;
+    }
 
     --license-color: var(--bs-secondary);
 
@@ -33,62 +38,132 @@
         --license-color: var(--license-enterprise);
         --decoration-color: var(--license-color);
     }
-
+    .current {
+        color: var(--license-color) !important;
+    }
     .corner-info {
         position: absolute;
         right: 0;
         top: 0;
-        background-color: bs5variables.$panel-bg-1-var;
+        font-size: 0.75rem;
+        background-color: bs5variables.$well-bg-var;
         padding: 3px 3px bs5variables.$gutter-sm bs5variables.$gutter-sm;
         color: var(--decoration-color);
-        clip-path: polygon(0% 0%, 100% 0%, 100% 100%);
+        clip-path: polygon(15% 0%, 100% 0%, 100% 85%);
+        border-radius: 0 $table-border-radius 0 0;
+
+        i {
+            top: -0.1rem;
+            right: -0.01rem;
+        }
     }
 
     table {
         border-collapse: unset;
-        margin-bottom: bs5variables.$gutter * -1 !important;
+        border-spacing: 0;
+
         th,
         td {
             border: 0;
+            vertical-align: middle;
+            background-color: inherit;
         }
         th {
             color: bs5variables.$text-muted-var;
         }
-
-        .current {
-            background-color: var(--faded-primary);
+        .overwritten-value {
+            position: relative;
+            [id^="overwritten-availability-value-"] {
+                position: absolute;
+                font-size: 0.75rem;
+                width: 16px;
+                height: 16px;
+                top: -4px;
+                &:before {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    width: 100%;
+                    height: 100%;
+                    padding-top: 4px;
+                }
+            }
         }
 
         thead {
             th {
-                padding-top: bs5variables.$gutter-sm !important;
+                padding-top: bs5variables.$gutter-xs !important;
+                border-top: $table-border-style;
                 font-weight: normal;
+                font-size: bs5variables.$font-size-xs;
+                white-space: nowrap;
                 .license-dot {
                     color: var(--license-color);
                 }
+
+                &:first-of-type {
+                    border-radius: $table-border-radius 0 0 0;
+                    border-left: $table-border-style;
+                }
+
+                &:last-of-type {
+                    border-radius: 0 $table-border-radius 0 0;
+                    border-right: $table-border-style;
+                }
+
                 &.current {
                     border: bs5variables.$border-width solid var(--decoration-color);
+                    font-size: bs5variables.$font-size-sm;
+                    font-weight: 600;
                     border-bottom: none;
-                    font-weight: bold;
                     color: bs5variables.$text-emphasis-var;
                 }
             }
         }
-        tbody {
-            .current {
-                border: bs5variables.$border-width solid var(--decoration-color);
-                border-top: 0;
-                border-bottom: 0;
-            }
 
+        tbody {
             th {
                 font-size: bs5variables.$font-size-xs;
                 font-weight: normal;
                 border-bottom: 0;
                 text-align: left;
+                line-height: 1em;
+                border-left: $table-border-style;
+            }
+            tr:not(:last-of-type) {
+                td:last-of-type {
+                    border-right: $table-border-style;
+                }
+            }
+
+            tr:nth-last-of-type(2) {
+                th,
+                td {
+                    border-bottom: $table-border-style;
+                }
+                th {
+                    border-radius: 0 0 0 $table-border-radius;
+                }
+            }
+
+            td.current {
+                border: bs5variables.$border-width solid;
+                border-color: var(--decoration-color) !important;
+                border-top: 0;
+                border-bottom: 0;
+            }
+
+            tr:nth-last-child(2) {
+                td:last-of-type:not(.current) {
+                    border-radius: 0 0 $table-border-radius 0;
+                }
             }
 
             tr.current-indicator-row {
+                th {
+                    border: none;
+                }
+
                 td,
                 th {
                     &.current {

@@ -1,16 +1,16 @@
-import React, { ComponentProps } from "react";
+import React, { ComponentProps, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
 import { Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
-import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle";
+import { RadioToggleWithIcon } from "./RadioToggle";
 import AceEditor, { AceEditorProps } from "./AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { GroupBase, OptionsOrGroups } from "react-select";
-import Select, { SelectOption } from "./select/Select";
+import { GetOptionValue, GroupBase, OnChangeValue, OptionsOrGroups } from "react-select";
+import Select, { SelectValue } from "./select/Select";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -23,10 +23,6 @@ type FormInputProps = InputProps & {
     type: Extract<InputType, "text" | "textarea" | "number" | "password" | "checkbox">;
     addonText?: string;
 };
-
-interface SelectGeneralProps<T extends string | number> {
-    options: OptionsOrGroups<SelectOption<T>, GroupBase<SelectOption<T>>>;
-}
 
 export interface FormCheckboxesOption<T extends string | number = string> {
     value: T;
@@ -49,11 +45,8 @@ type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<T
 type FormRadioToggleWithIconProps<
     TFieldValues extends FieldValues,
     TName extends FieldPath<TFieldValues>
-> = FormElementProps<TFieldValues, TName> & {
-    leftItem: RadioToggleWithIconInputItem<TFieldValues[TName]>;
-    rightItem: RadioToggleWithIconInputItem<TFieldValues[TName]>;
-    className?: string;
-};
+> = FormElementProps<TFieldValues, TName> &
+    Omit<ComponentProps<typeof RadioToggleWithIcon>, "name" | "selectedValue" | "setSelectedValue">;
 
 export function FormInput<
     TFieldValues extends FieldValues = FieldValues,
@@ -121,32 +114,124 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
     return <FormCheckbox type="radio" {...props} />;
 }
 
+export function getFormSelectedOptions<Option>(
+    formValues: SelectValue | SelectValue[],
+    optionsOrGroups: OptionsOrGroups<Option, GroupBase<Option>>,
+    valueAccessor: GetOptionValue<Option>
+): Option | GroupBase<Option> | (Option | GroupBase<Option>)[] {
+    const optionsFromGroups: Option[] = optionsOrGroups
+        .filter((x: GroupBase<Option>) => x.options != null)
+        .map((x: GroupBase<Option>) => x.options)
+        .flat();
+
+    const basicOptions = optionsOrGroups.filter((x: GroupBase<Option>) => x.options == null) as Option[];
+
+    const allOptions: Option[] = [...optionsFromGroups, ...basicOptions];
+
+    return Array.isArray(formValues)
+        ? formValues.map((value) => allOptions.find((option) => valueAccessor(option) === value))
+        : allOptions.find((option) => valueAccessor(option) === formValues);
+}
+
 export function FormSelect<
+    Option,
+    IsMulti extends boolean = false,
+    Group extends GroupBase<Option> = GroupBase<Option>,
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(
-    props: FormElementProps<TFieldValues, TName> &
-        SelectGeneralProps<TFieldValues[TName]> &
-        ComponentProps<typeof Select>
-) {
-    return <FormSelectGeneral {...props} isCreatable={false} />;
+>(props: FormElementProps<TFieldValues, TName> & ComponentProps<typeof Select<Option, IsMulti, Group>>) {
+    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value: formValues },
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
+
+    const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
+
+    return (
+        <div className="d-flex flex-grow">
+            <Select
+                value={selectedOptions}
+                onChange={(options: OnChangeValue<Option, IsMulti>) => {
+                    onChange(Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options));
+                }}
+                {...rest}
+            />
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
+    );
 }
 
 export function FormSelectCreatable<
+    Option,
+    IsMulti extends boolean = false,
+    Group extends GroupBase<Option> = GroupBase<Option>,
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(
     props: FormElementProps<TFieldValues, TName> &
-        SelectGeneralProps<TFieldValues[TName]> &
-        ComponentProps<typeof SelectCreatable>
+        ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
+            customOptions?: OptionsOrGroups<Option, Group>;
+            optionCreator?: (value: string) => any;
+        }
 ) {
-    return <FormSelectGeneral {...props} isCreatable />;
+    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value: formValues },
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    const [customOptions, setCustomOptions] = useState<OptionsOrGroups<Option, Group>>(rest.customOptions ?? []);
+
+    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
+    const optionCreator = rest.optionCreator ?? ((value: string) => ({ value, label: value }));
+
+    const selectedOptions = getFormSelectedOptions<Option>(
+        formValues,
+        [...rest.options, ...customOptions],
+        valueAccessor
+    );
+
+    const onCreateOption = (value: string) => {
+        setCustomOptions((options) => [...options, optionCreator(value)]);
+        onChange(rest.isMulti ? [...formValues, value] : value);
+    };
+
+    return (
+        <div>
+            <SelectCreatable
+                value={selectedOptions}
+                onChange={(options: OnChangeValue<Option, IsMulti>) => {
+                    onChange(Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options));
+                }}
+                onCreateOption={onCreateOption}
+                {...rest}
+            />
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
+    );
 }
 
 export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
     props: FormRadioToggleWithIconProps<TFieldValues, TName>
 ) {
-    const { name, control, rules, defaultValue, shouldUnregister, leftItem, rightItem, className } = props;
+    const { name, control, rules, defaultValue, shouldUnregister, ...rest } = props;
 
     const {
         field: { onChange, value },
@@ -161,14 +246,7 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
 
     return (
         <div>
-            <RadioToggleWithIcon
-                name={name}
-                leftItem={leftItem}
-                rightItem={rightItem}
-                selectedValue={value}
-                setSelectedValue={onChange}
-                className={className}
-            />
+            <RadioToggleWithIcon name={name} selectedValue={value} setSelectedValue={onChange} {...rest} />
             {invalid && <div className="text-danger small">{error.message}</div>}
         </div>
     );
@@ -311,52 +389,5 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
             />
             {invalid && <div className="text-danger small">{error.message}</div>}
         </>
-    );
-}
-
-function FormSelectGeneral<
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(
-    props: FormElementProps<TFieldValues, TName> &
-        SelectGeneralProps<TFieldValues[TName]> &
-        ComponentProps<typeof Select | typeof SelectCreatable> & {
-            isCreatable: boolean;
-        }
-) {
-    type Option = SelectOption<TFieldValues[TName]>;
-
-    const { name, control, defaultValue, rules, shouldUnregister, isCreatable, ...rest } = props;
-
-    const SelectComponent = isCreatable ? SelectCreatable : Select;
-
-    const {
-        field: { onChange, value: formValue },
-        fieldState: { invalid, error },
-    } = useController({
-        name,
-        control,
-        rules,
-        defaultValue,
-        shouldUnregister,
-    });
-
-    const selectedOptions = Array.isArray(formValue)
-        ? formValue.map((formValue: TFieldValues[TName]) =>
-              rest.options.find((option: Option) => option.value === formValue)
-          )
-        : rest.options.find((option: Option) => option.value === formValue);
-
-    return (
-        <div>
-            <SelectComponent
-                {...rest}
-                defaultValue={selectedOptions}
-                onChange={(option: Option | Option[]) => {
-                    onChange(Array.isArray(option) ? option.map((x) => x.value) : option.value);
-                }}
-            />
-            {invalid && <div className="text-danger small">{error.message}</div>}
-        </div>
     );
 }

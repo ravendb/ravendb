@@ -46,6 +46,20 @@
                         </ul>
                     </div>
                 </div>
+            <div class="row margin-bottom">
+                <label class="control-label col-sm-4 col-lg-2">Backup Upload Mode</label>
+                <div class="col-sm-4">
+                    <div class="dropdown btn-block">
+                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                            <span data-bind="text: backupUploadMode"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: backupUploadModes">
+                            <li><a href="#" data-bind="text: $data, click: $parent.useBackupUploadMode.bind($parent, $data)"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
                 <div class="row margin-bottom" data-bind="validationElement: backupType">
                     <label class="control-label col-sm-4 col-lg-2">Backup Type <i class="required"></i> <small><i class="backup-info icon-info text-info"></i></small></label>
                     <div class="col-sm-4" data-bind="validationOptions: { insertMessages: false }">
@@ -73,10 +87,24 @@
                 </div>
                 <div data-bind="collapse: isSnapshot, with: snapshot">
                     <div class="row margin-bottom">
-                        <label class="control-label col-sm-4 col-lg-2">Compression</label>
+                    <label class="control-label col-sm-4 col-lg-2">Compression Algorithm</label>
                         <div class="col-sm-4">
                             <div class="dropdown btn-block">
                                 <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                <span data-bind="text: compressionAlgorithm"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: compressionAlgorithmOptions">
+                                <li><a href="#" data-bind="text: $data, click: $parent.useAlgorithm.bind($parent, $data)"></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="row margin-bottom">
+                    <label class="control-label col-sm-4 col-lg-2">Compression Level</label>
+                    <div class="col-sm-4">
+                        <div class="dropdown btn-block">
+                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
                                     <span data-bind="text: compressionLevel"></span>
                                     <span class="caret"></span>
                                 </button>
@@ -139,6 +167,18 @@
                                     <label for="excludeIndexes">Exclude indexes data</label>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row margin-bottom">
+                <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
+                    <div class="toggle">
+                        <div class="toggle" data-placement="right" data-toggle="tooltip"
+                             title="Support direct upload to a single cloud destination without using a temp file."
+                             data-animation="true">
+                            <input id="directUpload" type="checkbox" data-bind="checked: directUpload">
+                            <label for="directUpload">Direct Upload</label>
                         </div>
                     </div>
                 </div>

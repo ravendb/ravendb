@@ -412,8 +412,9 @@ public sealed partial class ClusterStateMachine
         AssertNumberOfSubscriptionsPerClusterLimits(serverStore, items, context, subscriptionsNamesPerDatabase);
     }
 
-    private List<T> AssertSubscriptionsBatchLicenseLimits<T>(ServerStore serverStore, Table items, BlittableJsonReaderArray subscriptionCommands, string type, ClusterOperationContext context)
-        where T: PutSubscriptionCommand
+    private List<T> AssertSubscriptionsBatchLicenseLimits<T>(ServerStore serverStore, Table items, BlittableJsonReaderArray subscriptionCommands, string type,
+        ClusterOperationContext context)
+        where T : PutSubscriptionCommand
     {
         var includesRevisions = false;
         var putSubscriptionCommandsList = new List<T>();
@@ -421,7 +422,7 @@ public sealed partial class ClusterStateMachine
 
         foreach (BlittableJsonReaderObject command in subscriptionCommands)
         {
-            if (command.TryGet("Type", out string putSubscriptionType) == false && putSubscriptionType != nameof(T))
+            if (command.TryGet("Type", out string putSubscriptionType) == false || putSubscriptionType != typeof(T).Name)
                 throw new RachisApplyException($"Cannot execute {type} command, wrong format");
 
             var putSubscriptionCommand = (T)JsonDeserializationCluster.Commands[typeof(T).Name](command);

@@ -1,11 +1,5 @@
 import { FormCheckboxesOption } from "components/common/Form";
-import { SelectOption } from "components/common/select/Select";
-import {
-    GatherDebugInfoFormData,
-    allGatherDebugInfoPackageDataTypes,
-    GatherDebugInfoPackageScope,
-    allGatherDebugInfoPackageScopes,
-} from "./GatherDebugInfoValidation";
+import { GatherDebugInfoFormData, allGatherDebugInfoPackageDataTypes } from "./GatherDebugInfoValidation";
 import assertUnreachable from "components/utils/assertUnreachable";
 import DebugInfoPackageContentType = Raven.Server.Documents.Handlers.Debugging.ServerWideDebugInfoPackageHandler.DebugInfoPackageContentType;
 import messagePublisher = require("common/messagePublisher");
@@ -98,7 +92,6 @@ export function useGatherDebugInfoHelpers() {
         isDownloading,
         defaultValues,
         databaseOptions,
-        packageScopeOptions,
         dataTypesOptions,
         onSave,
         abortData: {
@@ -109,27 +102,6 @@ export function useGatherDebugInfoHelpers() {
         },
     };
 }
-
-const packageScopeOptions: SelectOption<GatherDebugInfoPackageScope>[] = allGatherDebugInfoPackageScopes.map(
-    (scope) => {
-        switch (scope) {
-            case "cluster":
-                return {
-                    label: "Entire cluster",
-                    value: scope,
-                    icon: "cluster",
-                } satisfies SelectOption<GatherDebugInfoPackageScope>;
-            case "server":
-                return {
-                    label: "Current server only",
-                    value: scope,
-                    icon: "server",
-                } satisfies SelectOption<GatherDebugInfoPackageScope>;
-            default:
-                assertUnreachable(scope);
-        }
-    }
-);
 
 const dataTypesOptions: FormCheckboxesOption<DebugInfoPackageContentType>[] = allGatherDebugInfoPackageDataTypes.map(
     (dataType) => {

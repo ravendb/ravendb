@@ -3,18 +3,26 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import { useRavenLink } from "hooks/useRavenLink";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditReplicationSinkInfoHub() {
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsSink"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasPullReplicationAsSink = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsSink"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasPullReplicationAsSink,
+            },
+        ],
+    });
 
     const replicationSinkDocsLink = useRavenLink({ hash: "MMUKGD" });
 
     return (
-        <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasPullReplicationAsSink ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -70,9 +78,19 @@ export function EditReplicationSinkInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
+                isUnlimited={hasPullReplicationAsSink}
                 data={featureAvailability}
             />
         </AboutViewFloating>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Replication Sink",
+        featureIcon: "pull-replication-agent",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

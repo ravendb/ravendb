@@ -16,8 +16,10 @@ import AboutViewFloating, { AboutViewHeading, AccordionItemWrapper } from "compo
 import { FlexGrow } from "components/common/FlexGrow";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
@@ -34,14 +36,23 @@ export function IndexCleanup(props: IndexCleanupProps) {
     const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
     const { appUrl } = useAppUrls();
 
-    const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(isFeatureInLicense);
+    const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasIndexCleanup,
+            },
+        ],
+    });
 
     if (asyncFetchStats.status === "not-requested" || asyncFetchStats.status === "loading") {
         return <LoadingView />;
     }
 
-    if (isFeatureInLicense && asyncFetchStats.status === "error") {
+    if (hasIndexCleanup && asyncFetchStats.status === "error") {
         return <LoadError error="Unable to load index cleanup data" refresh={asyncFetchStats.execute} />;
     }
 
@@ -54,11 +65,11 @@ export function IndexCleanup(props: IndexCleanupProps) {
                             <AboutViewHeading
                                 icon="index-cleanup"
                                 title="Index Cleanup"
-                                licenseBadgeText={isFeatureInLicense ? null : "Professional +"}
+                                licenseBadgeText={hasIndexCleanup ? null : "Professional +"}
                             />
 
                             <FlexGrow />
-                            <AboutViewFloating defaultOpen={isFeatureInLicense ? null : "licensing"}>
+                            <AboutViewFloating defaultOpen={hasIndexCleanup ? null : "licensing"}>
                                 <AccordionItemWrapper
                                     targetId="about"
                                     icon="about"
@@ -78,12 +89,12 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                     </p>
                                 </AccordionItemWrapper>
                                 <FeatureAvailabilitySummaryWrapper
-                                    isUnlimited={isFeatureInLicense}
+                                    isUnlimited={hasIndexCleanup}
                                     data={featureAvailability}
                                 />
                             </AboutViewFloating>
                         </div>
-                        <div className={isFeatureInLicense ? "" : "item-disabled pe-none"}>
+                        <div className={hasIndexCleanup ? "" : "item-disabled pe-none"}>
                             <Nav className="card-tabs gap-3 card-tabs">
                                 <NavItem>
                                     <Card
@@ -95,7 +106,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             className="rounded-pill fs-5"
                                             color={mergable.data.length !== 0 ? "primary" : "secondary"}
                                         >
-                                            {isFeatureInLicense ? mergable.data.length : "?"}
+                                            {hasIndexCleanup ? mergable.data.length : "?"}
                                         </Badge>
                                         <h4 className="text-center">
                                             Merge
@@ -114,7 +125,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             className="rounded-pill fs-5"
                                             color={surpassing.data.length !== 0 ? "primary" : "secondary"}
                                         >
-                                            {isFeatureInLicense ? surpassing.data.length : "?"}
+                                            {hasIndexCleanup ? surpassing.data.length : "?"}
                                         </Badge>
                                         <h4 className="text-center">
                                             Remove
@@ -133,7 +144,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             className="rounded-pill fs-5"
                                             color={unused.data.length !== 0 ? "primary" : "secondary"}
                                         >
-                                            {isFeatureInLicense ? unused.data.length : "?"}
+                                            {hasIndexCleanup ? unused.data.length : "?"}
                                         </Badge>
                                         <h4 className="text-center">
                                             Remove <br />
@@ -151,7 +162,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                             className="rounded-pill fs-5"
                                             color={unmergable.data.length !== 0 ? "primary" : "secondary"}
                                         >
-                                            {isFeatureInLicense ? unmergable.data.length : "?"}
+                                            {hasIndexCleanup ? unmergable.data.length : "?"}
                                         </Badge>
                                         <h4 className="text-center">
                                             Unmergable
@@ -172,7 +183,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <CarouselItem key="carousel-0" onEntering={() => carousel.setHeight(0)}>
                                     <div ref={(el) => (carousel.carouselRefs.current[0] = el)}>
                                         <Card>
-                                            <Card className="bg-faded-primary p-4 d-block">
+                                            <Card className="bg-faded-primary p-4 m-1 d-block">
                                                 <div className="text-limit-width">
                                                     <h2>Merge indexes</h2>
                                                     Combining several indexes with similar purposes into a single index
@@ -182,7 +193,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                     original indexes can be removed.
                                                 </div>
                                             </Card>
-                                            {isFeatureInLicense && (
+                                            {hasIndexCleanup && (
                                                 <div className="p-2">
                                                     {mergable.data.length === 0 ? (
                                                         <EmptySet>No indexes to merge</EmptySet>
@@ -295,7 +306,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <CarouselItem key="carousel-1" onEntering={() => carousel.setHeight(1)}>
                                     <div ref={(el) => (carousel.carouselRefs.current[1] = el)}>
                                         <Card>
-                                            <Card className="bg-faded-primary p-4">
+                                            <Card className="bg-faded-primary m-1 p-4">
                                                 <div className="text-limit-width">
                                                     <h2>Remove sub-indexes</h2>
                                                     If an index is completely covered by another index (i.e., all its
@@ -439,7 +450,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <CarouselItem key="carousel-2" onEntering={() => carousel.setHeight(2)}>
                                     <div ref={(el) => (carousel.carouselRefs.current[2] = el)}>
                                         <Card>
-                                            <Card className="bg-faded-primary p-4">
+                                            <Card className="bg-faded-primary m-1 p-4">
                                                 <div className="text-limit-width">
                                                     <h2>Remove unused indexes</h2>
                                                     Unused indexes still consume resources. Indexes that have not been
@@ -559,7 +570,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                 <CarouselItem key="carousel-3" onEntering={() => carousel.setHeight(3)}>
                                     <div ref={(el) => (carousel.carouselRefs.current[3] = el)}>
                                         <Card>
-                                            <Card className="bg-faded-primary p-4">
+                                            <Card className="bg-faded-primary m-1 p-4">
                                                 <div className="text-limit-width">
                                                     <h2>Unmergable indexes</h2>
                                                     The following indexes cannot be merged. See the specific reason
@@ -639,3 +650,13 @@ const formatDate = (date: Date) => {
         </>
     );
 };
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Index Cleanup",
+        featureIcon: "index-cleanup",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

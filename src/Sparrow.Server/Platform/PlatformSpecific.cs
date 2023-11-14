@@ -14,6 +14,10 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class PlatformSpecific
     {
+        public static readonly bool IsArm = RuntimeInformation.ProcessArchitecture.HasFlag(Architecture.Arm) 
+                                             ||   RuntimeInformation.ProcessArchitecture.HasFlag(Architecture.Arm64);
+
+        
         public static class MemoryInformation
         {
             public static string IsSwappingOnHddInsteadOfSsd()

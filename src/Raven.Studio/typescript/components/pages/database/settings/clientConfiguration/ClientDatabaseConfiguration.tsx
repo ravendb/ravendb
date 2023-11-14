@@ -25,8 +25,10 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import { useProfessionalOrAboveLicenseAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 
 interface ClientDatabaseConfigurationProps {
@@ -53,7 +55,15 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     const clientConfigurationLink = useRavenLink({ hash: "TS7SGF" });
 
     const hasClientConfiguration = useAppSelector(licenseSelectors.statusValue("HasClientConfiguration"));
-    const featureAvailability = useProfessionalOrAboveLicenseAvailability(hasClientConfiguration);
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasClientConfiguration,
+            },
+        ],
+    });
 
     const globalConfig = useMemo(() => {
         const globalConfigResult = asyncGetClientGlobalConfiguration.result;
@@ -386,7 +396,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                             target="SetLoadBalanceSeedBehavior"
                                                             trigger="hover"
                                                             container="PopoverContainer"
-                                                            placement="top"
+                                                            placement="right"
                                                         >
                                                             <div className="p-3">
                                                                 An optional seed number.
@@ -498,7 +508,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                         target="SetLoadBalanceSeedBehavior"
                                                         trigger="hover"
                                                         container="PopoverContainer"
-                                                        placement="top"
+                                                        placement="right"
                                                     >
                                                         <div className="p-3">
                                                             An optional seed number.
@@ -651,3 +661,13 @@ const rightRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
     value: true,
     iconName: "database",
 };
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Client Configuration",
+        featureIcon: "client-configuration",
+        community: { value: false },
+        professional: { value: true },
+        enterprise: { value: true },
+    },
+];

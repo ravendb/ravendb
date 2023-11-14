@@ -1,15 +1,16 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react";
 import { Checkbox, Radio, Switch } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { boundCopy } from "../utils/common";
+import { Input, InputGroup, InputGroupText } from "reactstrap";
 
 export default {
     title: "Bits/Checkbox",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Checkbox,
-} as ComponentMeta<typeof Checkbox>;
+} satisfies Meta<typeof Checkbox>;
 
 const Template = () => {
     const { value: selected, toggle } = useBoolean(false);
@@ -75,6 +76,33 @@ const Template = () => {
             <Radio selected={selected} toggleSelection={toggle} color="danger" disabled>
                 Radio disabled
             </Radio>
+            <hr />
+            <div>
+                <InputGroup>
+                    <InputGroupText>@</InputGroupText>
+                    <Input placeholder="username" />
+                </InputGroup>
+                <br />
+                <InputGroup>
+                    <InputGroupText>
+                        <Checkbox selected={selected} toggleSelection={toggle} color="primary" />
+                    </InputGroupText>
+                    <Input placeholder="Check it out" />
+                </InputGroup>
+                <br />
+                <InputGroup>
+                    <Input placeholder="username" />
+                    <InputGroupText>@example.com</InputGroupText>
+                </InputGroup>
+                <br />
+                <InputGroup>
+                    <InputGroupText>$</InputGroupText>
+                    <InputGroupText>$</InputGroupText>
+                    <Input placeholder="Dolla dolla billz yo!" />
+                    <InputGroupText>$</InputGroupText>
+                    <InputGroupText>$</InputGroupText>
+                </InputGroup>
+            </div>
         </div>
     );
 };

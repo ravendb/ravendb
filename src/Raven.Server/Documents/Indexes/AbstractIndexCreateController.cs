@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -68,6 +70,8 @@ public abstract class AbstractIndexCreateController
 
         definition.RemoveDefaultValues();
         ValidateAnalyzers(definition);
+        
+        ValidateConfiguration(definition);
 
         var databaseConfiguration = GetDatabaseConfiguration();
         var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion); // pre-compile it and validate
@@ -220,6 +224,20 @@ public abstract class AbstractIndexCreateController
             catch (Exception e)
             {
                 throw new IndexCompilationException(e.Message, e);
+            }
+        }
+    }
+    
+    private static void ValidateConfiguration(IndexDefinition definition)
+    {
+        if (definition.Configuration == null)
+            return;
+        
+        foreach (var kvp in definition.Configuration)
+        {
+            if (IndexingConfiguration.ValidIndexingConfigurationKeys.Value.Contains(kvp.Key) == false)
+            {
+                throw new IndexCreationException($"Could not create index '{definition.Name}' because the configuration option key '{kvp.Key}' is not recognized");
             }
         }
     }

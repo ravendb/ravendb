@@ -1,5 +1,5 @@
 import React from "react";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, ComponentStory } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientDatabaseConfiguration from "./ClientDatabaseConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -10,7 +10,7 @@ export default {
     title: "Pages/Database/Settings/ClientConfiguration",
     component: ClientDatabaseConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof ClientDatabaseConfiguration>;
+} satisfies Meta<typeof ClientDatabaseConfiguration>;
 
 function commonInit() {
     const { accessManager, license } = mockStore;

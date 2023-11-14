@@ -28,10 +28,11 @@ namespace SlowTests.Issues
 
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanUseInOnMetadataInSubscription()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseInOnMetadataInSubscription(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using (var s = store.OpenAsyncSession())
             {
                 await s.StoreAsync(new Item());
@@ -65,10 +66,11 @@ where doc.'@metadata'.'@collection' in ('Items','Users')"
             Assert.Equal(2, items);
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanUseMetadataUsingOr()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseMetadataUsingOr(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using (var s = store.OpenAsyncSession())
             {
                 await s.StoreAsync(new Item());

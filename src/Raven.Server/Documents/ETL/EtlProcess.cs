@@ -491,7 +491,7 @@ namespace Raven.Server.Documents.ETL
                         stats.RecordLoadFailure();
                         stats.RecordBatchStopReason($"{msg} : {e}");
 
-                        EnterFallbackMode();
+                        EnterFallbackMode(Statistics.LastLoadErrorTime);
 
                         Statistics.ThrowLoadError(e.ToString(), count: stats.NumberOfExtractedItems.Sum(x => x.Value));
                     }
@@ -501,14 +501,14 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        private void EnterFallbackMode()
+        private void EnterFallbackMode(DateTime? lastErrorTime)
         {
-            if (Statistics.LastLoadErrorTime == null)
+            if (lastErrorTime == null)
                 FallbackTime = TimeSpan.FromSeconds(5);
             else
             {
                 // double the fallback time (but don't cross Etl.MaxFallbackTime)
-                var secondsSinceLastError = (Database.Time.GetUtcNow() - Statistics.LastLoadErrorTime.Value).TotalSeconds;
+                var secondsSinceLastError = (Database.Time.GetUtcNow() - lastErrorTime.Value).TotalSeconds;
 
                 FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
             }
@@ -840,20 +840,33 @@ namespace Raven.Server.Documents.ETL
 
                     if (didWork)
                     {
-                        try
+                        DateTime? lastUpdateStateErrorTime = null;
+                        while (true)
                         {
-                            UpdateEtlProcessState(state);
-                            Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
-                        }
-                        catch (Exception e)
-                        {
-                            if (CancellationToken.IsCancellationRequested == false)
+                            try
                             {
-                                if (Logger.IsOperationsEnabled) 
+                                UpdateEtlProcessState(state);
+                                break;
+                            }
+                            catch (Exception e)
+                            {
+                                if (CancellationToken.IsCancellationRequested) 
+                                    return;
+
+                                if (Logger.IsOperationsEnabled)
                                     Logger.Operations($"{Tag} Failed to update state of ETL process '{Name}'", e);
+
+                                EnterFallbackMode(lastUpdateStateErrorTime);
+                                lastUpdateStateErrorTime = Database.Time.GetUtcNow();
+
+                                if (CancellationToken.WaitHandle.WaitOne(FallbackTime.Value))
+                                    return;
+
+                                FallbackTime = null;
                             }
                         }
 
+                        Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
                         continue;
                     }
                     try
@@ -1362,7 +1375,7 @@ namespace Raven.Server.Documents.ETL
                 : Transformation.Collections;
 
             var lastProcessedEtag = LastProcessState.GetLastProcessedEtag(Database.DbBase64Id, Database.ServerStore.NodeTag);
-
+            
             var overallDuration = Stopwatch.StartNew();
             foreach (var collection in collections)
             {

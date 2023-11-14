@@ -107,4 +107,10 @@ namespace Raven.Client.Documents.Smuggler
         int MaxStepsForTransformScript { get; set; }
         List<string> Collections { get; set; }
     }
+
+    public enum ExportCompressionAlgorithm
+    {
+        Zstd,
+        Gzip
+    }
 }

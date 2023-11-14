@@ -1,5 +1,4 @@
 ﻿import moment from "moment";
-import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
 
 export class LicenseStubs {
@@ -55,14 +54,7 @@ export class LicenseStubs {
             },
             FormattedExpiration: null,
             ErrorMessage: null,
-            Version: {
-                Build: 1,
-                Major: 1,
-                MajorRevision: 0,
-                Minor: 2,
-                MinorRevision: 0,
-                Revision: 0,
-            },
+            Version: "6.0",
             Expiration: moment()
                 .add(2 as const, "months")
                 .format(),
