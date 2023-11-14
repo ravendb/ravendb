@@ -771,16 +771,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private static RangeGroup InitializeRangeSpecs(string groupByTimePeriod, DateTime from, DateTime to, TimeSpan? offset)
         {
-            if (offset.HasValue)
-            {
-                var minWithOffset = from.Ticks + offset.Value.Ticks;
-                var maxWithOffset = to.Ticks + offset.Value.Ticks;
-
-                if (minWithOffset >= 0 && minWithOffset <= DateTime.MaxValue.Ticks)
-                    from = from.Add(offset.Value);
-                if (maxWithOffset >= 0 && maxWithOffset <= DateTime.MaxValue.Ticks)
-                    to = to.Add(offset.Value);
-            }
+            TimeSeriesReader.AddOffsetIfNeeded(offset, ref from, ref to);
 
             if (groupByTimePeriod != null)
                 return RangeGroup.ParseRangeFromString(groupByTimePeriod, from);

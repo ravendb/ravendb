@@ -152,18 +152,16 @@ namespace Raven.Server.Documents.TimeSeries
             if (_from > _to)
                 return false;
 
-            var baseline = _from;
-            AddOffsetIfNeeded();
-
-            using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(baseline))
+            using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(_from))
             {
-                if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
-                {
-                    return _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr);
-                }
-
-                return true;
+                if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false &&
+                    _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false) 
+                    return false;
             }
+
+            AddOffsetIfNeeded(_offset, ref _from, ref _to);
+
+            return true;
         }
 
         public SingleResult First()
@@ -621,18 +619,31 @@ namespace Raven.Server.Documents.TimeSeries
             return (etag, changeVector, baseline);
         }
 
-        private void AddOffsetIfNeeded()
+        internal static void AddOffsetIfNeeded(TimeSpan? offset, ref DateTime from, ref DateTime to)
         {
-            if (_offset.HasValue == false)
+            if (offset.HasValue == false)
                 return;
 
-            var minWithOffset = _from.Ticks + _offset.Value.Ticks;
-            var maxWithOffset = _to.Ticks + _offset.Value.Ticks;
+            AddOffset(offset.Value, ref from);
+            AddOffset(offset.Value, ref to);
+        }
 
-            if (minWithOffset >= 0 && minWithOffset <= DateTime.MaxValue.Ticks)
-                _from = _from.Add(_offset.Value);
-            if (maxWithOffset >= 0 && maxWithOffset <= DateTime.MaxValue.Ticks)
-                _to = _to.Add(_offset.Value);
+        private static void AddOffset(TimeSpan offset, ref DateTime date)
+        {
+            var withOffset = date.Ticks + offset.Ticks;
+            if (withOffset < 0)
+            {
+                date = DateTime.MinValue;
+                return;
+            }
+
+            if (withOffset > DateTime.MaxValue.Ticks)
+            {
+                date = DateTime.MaxValue;
+                return;
+            }
+
+            date = date.Add(offset);
         }
     }
 
