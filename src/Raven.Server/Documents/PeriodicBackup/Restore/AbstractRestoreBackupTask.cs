@@ -668,7 +668,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                    Directory.GetDirectories(location).Length > 0;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             RestoreSource?.Dispose();
             OperationCancelToken?.Dispose();
