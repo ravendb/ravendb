@@ -13,7 +13,6 @@ import { useServices } from "hooks/useServices";
 import app from "durandal/app";
 import { DatabaseSharedInfo } from "components/models/databases";
 import addNewOrchestratorToDatabase from "viewmodels/resources/addNewOrchestatorToDatabaseGroup";
-import viewHelpers from "common/helpers/view/viewHelpers";
 import classNames from "classnames";
 import {
     RichPanel,
@@ -31,6 +30,7 @@ import {
 } from "components/common/DatabaseGroup";
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 import { Icon } from "components/common/Icon";
+import useConfirm from "components/common/ConfirmDialog";
 
 export interface OrchestratorsGroupProps {
     db: DatabaseSharedInfo;
@@ -53,6 +53,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
+    const confirm = useConfirm();
 
     const addNode = useCallback(() => {
         const addKeyView = new addNewOrchestratorToDatabase(db.name, db.nodes);
@@ -69,20 +70,23 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
     );
 
     const deleteOrchestratorFromGroup = useCallback(
-        (nodeTag: string) => {
-            viewHelpers
-                .confirmationMessage("Are you sure", "Do you want to delete orchestrator from node: " + nodeTag + "?", {
-                    buttons: ["Cancel", "Yes, delete"],
-                    html: true,
-                })
-                .done((result) => {
-                    if (result.can) {
-                        // noinspection JSIgnoredPromiseFromCall
-                        databasesService.deleteOrchestratorFromNode(db, nodeTag);
-                    }
-                });
+        async (nodeTag: string) => {
+            const isConfirmed = await confirm({
+                icon: "trash",
+                title: (
+                    <span>
+                        Do you want to delete orchestrator from node <strong>{nodeTag}</strong>?
+                    </span>
+                ),
+                confirmText: "Delete",
+                actionColor: "danger",
+            });
+
+            if (isConfirmed) {
+                await databasesService.deleteOrchestratorFromNode(db, nodeTag);
+            }
         },
-        [db, databasesService]
+        [confirm, databasesService, db]
     );
 
     const onSave = async () => {

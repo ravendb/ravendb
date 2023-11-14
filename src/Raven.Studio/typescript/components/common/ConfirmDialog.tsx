@@ -5,8 +5,8 @@ import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
 
 interface ConfirmOptions {
-    title: string;
-    icon: IconName;
+    title: ReactNode;
+    icon?: IconName;
     actionColor?: TextColor;
     message?: ReactNode;
     confirmText?: string;
@@ -43,33 +43,37 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
     return (
         <ConfirmDialog.Provider value={exposedConfirm}>
             {children}
-            <Modal
-                isOpen={isOpen}
-                toggle={onCancel}
-                wrapClassName="bs5"
-                centered
-                contentClassName={`modal-border bulge-${actionColor}`}
-            >
-                <ModalBody className="vstack gap-4 position-relative">
-                    <div className="text-center">
-                        <Icon icon={icon} color={actionColor} className="fs-1" margin="m-0" />
-                    </div>
-                    <div className="position-absolute m-2 end-0 top-0">
-                        <Button close onClick={onCancel} />
-                    </div>
-                    <div className="text-center lead">{title}</div>
-                    {message}
-                </ModalBody>
-                <ModalFooter>
-                    <Button color="link" onClick={onCancel} className="link-muted">
-                        Cancel
-                    </Button>
-                    <Button color={actionColor} onClick={onConfirm} className="rounded-pill">
-                        {confirmIcon && <Icon icon={confirmIcon} />}
-                        {confirmText}
-                    </Button>
-                </ModalFooter>
-            </Modal>
+            {isOpen && (
+                <Modal
+                    isOpen
+                    toggle={onCancel}
+                    wrapClassName="bs5"
+                    centered
+                    contentClassName={`modal-border bulge-${actionColor}`}
+                >
+                    <ModalBody className="vstack gap-4 position-relative">
+                        {icon && (
+                            <div className="text-center">
+                                <Icon icon={icon} color={actionColor} className="fs-1" margin="m-0" />
+                            </div>
+                        )}
+                        <div className="position-absolute m-2 end-0 top-0">
+                            <Button close onClick={onCancel} />
+                        </div>
+                        <div className="text-center lead">{title}</div>
+                        {message}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button color="link" onClick={onCancel} className="link-muted">
+                            Cancel
+                        </Button>
+                        <Button color={actionColor} onClick={onConfirm} className="rounded-pill">
+                            {confirmIcon && <Icon icon={confirmIcon} />}
+                            {confirmText}
+                        </Button>
+                    </ModalFooter>
+                </Modal>
+            )}
         </ConfirmDialog.Provider>
     );
 }

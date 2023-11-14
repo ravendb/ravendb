@@ -18,12 +18,12 @@ import { SelectionActions } from "components/common/SelectionActions";
 import { Icon } from "components/common/Icon";
 import {
     changeDatabasesLockMode,
-    confirmSetLockMode,
     confirmToggleDatabases,
     toggleDatabases,
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
 import genUtils = require("common/generalUtils");
+import useConfirm from "components/common/ConfirmDialog";
 
 interface DatabasesSelectActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -44,6 +44,7 @@ export function DatabasesSelectActions({
     const [deleteChanges, setDeleteChanges] = useState(false);
 
     const dispatch = useAppDispatch();
+    const confirm = useConfirm();
 
     const canDeleteSelection = selectedDatabases.some((x) => x.lockMode === "Unlock");
     const anythingSelected = selectedDatabases.length > 0;
@@ -72,9 +73,11 @@ export function DatabasesSelectActions({
 
         reportEvent("databases", "set-lock-mode", lockMode);
 
-        const can = await dispatch(confirmSetLockMode());
+        const isConfirmed = await confirm({
+            title: "Do you want to change lock mode?`",
+        });
 
-        if (can) {
+        if (isConfirmed) {
             setLockChanges(true);
             try {
                 await dispatch(changeDatabasesLockMode(dbs, lockMode));

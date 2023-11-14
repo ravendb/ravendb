@@ -32,6 +32,7 @@ import {
 } from "components/common/DatabaseGroup";
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 import { Icon } from "components/common/Icon";
+import useConfirm from "components/common/ConfirmDialog";
 
 export interface NodeGroupProps {
     db: DatabaseSharedInfo;
@@ -54,6 +55,7 @@ export function NodeGroup(props: NodeGroupProps) {
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
+    const confirm = useConfirm();
 
     const addNode = useCallback(() => {
         const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.encrypted);
@@ -70,24 +72,23 @@ export function NodeGroup(props: NodeGroupProps) {
     );
 
     const deleteNodeFromGroup = useCallback(
-        (nodeTag: string, hardDelete: boolean) => {
-            viewHelpers
-                .confirmationMessage(
-                    "Are you sure",
-                    "Do you want to delete database '" + genUtils.escapeHtml(db.name) + "' from node: " + nodeTag + "?",
-                    {
-                        buttons: ["Cancel", "Yes, delete"],
-                        html: true,
-                    }
-                )
-                .done((result) => {
-                    if (result.can) {
-                        // noinspection JSIgnoredPromiseFromCall
-                        databasesService.deleteDatabaseFromNode(db, [nodeTag], hardDelete);
-                    }
-                });
+        async (nodeTag: string, hardDelete: boolean) => {
+            const isConfirmed = await confirm({
+                icon: "trash",
+                title: (
+                    <span>
+                        Do you want to delete database <strong>{db.name}</strong> from node <strong>{nodeTag}</strong>?
+                    </span>
+                ),
+                confirmText: "Delete",
+                actionColor: "danger",
+            });
+
+            if (isConfirmed) {
+                await databasesService.deleteDatabaseFromNode(db, [nodeTag], hardDelete);
+            }
         },
-        [db, databasesService]
+        [confirm, db, databasesService]
     );
 
     const onSave = async () => {
