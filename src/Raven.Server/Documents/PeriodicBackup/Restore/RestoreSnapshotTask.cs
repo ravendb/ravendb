@@ -311,8 +311,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public override void Dispose()
         {
-            _zipArchive?.Dispose();
-            base.Dispose();
+            using (_zipArchive)
+                base.Dispose();
         }
     }
 }
