@@ -85,9 +85,11 @@ namespace Raven.Server.Rachis
 
             public void Dispose()
             {
-                _parent._results.TryRemove(_id, out var task);
-                // cancel it, if someone still awaits
-                task.TrySetCanceled();
+                if (_parent._results.TryRemove(_id, out var task))
+                {
+                    // cancel it, if someone still awaits
+                    task.TrySetCanceled();
+                }
             }
         }
 

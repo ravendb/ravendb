@@ -155,52 +155,38 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         return count;
     }
 
-    private void GenerateDatabaseCommandsEvaluatedResults(List<ClusterTransactionDataCommand> databaseCommands,
-    long index, long count, DateTime lastModified, bool? disableAtomicDocumentWrites,
-    DynamicJsonArray commandsResults)
+    protected abstract void GenerateDatabaseCommandsEvaluatedResults(List<ClusterTransactionDataCommand> databaseCommands,
+        long index, long count, DateTime lastModified, bool? disableAtomicDocumentWrites,
+        DynamicJsonArray commandsResults);
+
+    protected static DynamicJsonValue GetCommandResultJson(ClusterTransactionDataCommand dataCmd, string changeVector, DateTime lastModified)
     {
-        if (count < 0)
-            throw new InvalidOperationException($"ClusterTransactionCommand result is invalid - count lower then 0 ({count}).");
-
-        using var _ = RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
-
-        foreach (var dataCmd in databaseCommands)
+        switch (dataCmd.Type)
         {
-            count++;
-            var info = GetDatabaseGroupIdAndClusterTransactionId(ctx, dataCmd.Id);
-            var cv = GenerateChangeVector(index, count, disableAtomicDocumentWrites, info.DatabaseGroupId, info.ClusterTransactionId);
-
-            switch (dataCmd.Type)
-            {
-                case CommandType.PUT:
-                    commandsResults.Add(new DynamicJsonValue
-                    {
-                        ["Type"] = dataCmd.Type,
-                        [Constants.Documents.Metadata.Id] = dataCmd.Id,
-                        [Constants.Documents.Metadata.Collection] = CollectionName.GetCollectionName(dataCmd.Document),
-                        [Constants.Documents.Metadata.ChangeVector] = cv,
-                        [Constants.Documents.Metadata.LastModified] = lastModified,
-                        [Constants.Documents.Metadata.Flags] = DocumentFlags.FromClusterTransaction.ToString()
-                    });
-                    break;
-                case CommandType.DELETE:
-                    commandsResults.Add(new DynamicJsonValue
-                    {
-                        [nameof(BatchRequestParser.CommandData.Id)] = dataCmd.Id,
-                        [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
-                        ["Deleted"] = true,
-                        [nameof(BatchRequestParser.CommandData.ChangeVector)] = cv
-                    });
-                    break;
-                default:
-                    throw new InvalidOperationException($"Database command type ({dataCmd.Type}) isn't valid");
-            }
+            case CommandType.PUT:
+                return new DynamicJsonValue
+                {
+                    ["Type"] = dataCmd.Type,
+                    [Constants.Documents.Metadata.Id] = dataCmd.Id,
+                    [Constants.Documents.Metadata.Collection] = CollectionName.GetCollectionName(dataCmd.Document),
+                    [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                    [Constants.Documents.Metadata.LastModified] = lastModified,
+                    [Constants.Documents.Metadata.Flags] = DocumentFlags.FromClusterTransaction.ToString()
+                };
+            case CommandType.DELETE:
+                return new DynamicJsonValue
+                {
+                    [nameof(BatchRequestParser.CommandData.Id)] = dataCmd.Id,
+                    [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
+                    ["Deleted"] = true,
+                    [nameof(BatchRequestParser.CommandData.ChangeVector)] = changeVector
+                };
+            default:
+                throw new InvalidOperationException($"Database command type ({dataCmd.Type}) isn't valid");
         }
     }
 
-    protected abstract (string DatabaseGroupId, string ClusterTransactionId) GetDatabaseGroupIdAndClusterTransactionId(TransactionOperationContext ctx, string id);
-
-    private static string GenerateChangeVector(long index, long count, bool? disableAtomicDocumentWrites, string databaseGroupId, string clusterTransactionId)
+    protected static string GenerateChangeVector(long index, long count, bool? disableAtomicDocumentWrites, string databaseGroupId, string clusterTransactionId)
     {
         var cv = $"{ChangeVectorParser.RaftTag}:{count}-{databaseGroupId}";
         if (disableAtomicDocumentWrites == false)

@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Config.Categories;
@@ -10,6 +13,8 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
+using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
 using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches
@@ -42,9 +47,24 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
             return RequestHandler.Database.Time.GetUtcNow();
         }
 
-        protected override (string DatabaseGroupId, string ClusterTransactionId) GetDatabaseGroupIdAndClusterTransactionId(TransactionOperationContext ctx, string id)
+        protected override void GenerateDatabaseCommandsEvaluatedResults(List<ClusterTransactionDataCommand> databaseCommands,
+            long index, long count, DateTime lastModified, bool? disableAtomicDocumentWrites,
+            DynamicJsonArray commandsResults)
         {
-            return (RequestHandler.Database.DatabaseGroupId, RequestHandler.Database.ClusterTransactionId);
+            if (count < 0)
+                throw new InvalidOperationException($"ClusterTransactionCommand result is invalid - count lower then 0 ({count}).");
+
+            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                foreach (var dataCmd in databaseCommands)
+                {
+                    count++;
+                    var cv = GenerateChangeVector(index, count, disableAtomicDocumentWrites, 
+                        RequestHandler.Database.DatabaseGroupId, RequestHandler.Database.ClusterTransactionId);
+
+                    commandsResults.Add(GetCommandResultJson(dataCmd, cv, lastModified));
+                }
+            }
         }
 
         protected override ClusterTransactionCommand CreateClusterTransactionCommand(

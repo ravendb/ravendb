@@ -73,6 +73,7 @@ using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
 using Raven.Server.Documents.Handlers.Batches;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents
 {
