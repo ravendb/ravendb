@@ -257,12 +257,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             // The SUM has the same path as one of the reduce keys
             // from 'Messages'
             // group by Name, Data[].Items[].ProductName
-            // select Name, sum(Data[].Items[].TotalPrice) as Total
+            // select Name, Data[].Items[].ProductName as ProductName, sum(Data[].Items[].TotalPrice) as Total
             // 
             // The SUM has a different path than any of the reduce keys
             // from 'Messages'
             // group by Name, Tries[].ResultMessage
-            // select Name, sum(Data[].Items[].TotalPrice) as Total
+            // select Name, Tries[].ResultMessage as ResultMessage, sum(Data[].Items[].TotalPrice) as Total
 
             var groupByFieldsPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach ((_, AutoIndexField value) in Definition.GroupByFields)
@@ -290,7 +290,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 var autoIndexFieldPath = autoIndexField.Name.Substring(0, lastIndexOfAutoIndexField);
 
-                if (groupByFieldsPaths.Contains(autoIndexFieldPath))
+                if (groupByFieldsPaths.Any(x => autoIndexFieldPath.StartsWith(x)))
                 {
                     autoIndexField.SamePathAsGroupByField = true;
                 }
