@@ -43,6 +43,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
 {
@@ -200,7 +201,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex, Logger);
                 await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
-                    var destination = new StreamDestination(outputStream, context, source);
+                    var destination = new StreamDestination(outputStream, context, source, options.CompressionAlgorithm ?? Database.Configuration.ExportImport.CompressionAlgorithm, options.CompressionLevel ?? Database.Configuration.ExportImport.CompressionLevel);
                     var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();
                 }
@@ -238,7 +239,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
 
-                await using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
+                await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte)))
                 using (var token = CreateHttpRequestBoundOperationToken())
                 using (var source = new StreamSource(stream, context, Database))
                 {
@@ -317,7 +318,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         await using (var file = await getFile())
-                        await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
+                        await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
                         using (var source = new StreamSource(stream, context, Database))
                         {
                             var destination = new DatabaseDestination(Database);
@@ -719,7 +720,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     ApplyBackwardCompatibility(options);
 
                                     var inputStream = GetInputStream(section.Body, options);
-                                    var stream = new GZipStream(inputStream, CompressionMode.Decompress);
+                                    var stream = await BackupUtils.GetDecompressionStreamAsync(inputStream);
                                     await DoImportInternalAsync(context, stream, options, result, onProgress, token);
                                 }
                             }

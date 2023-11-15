@@ -7,8 +7,13 @@ import accessManager = require("common/shell/accessManager");
 import jsonUtil = require("common/jsonUtil");
 
 class connectionOptionModel {
+    
+    static multiLineKeys: string[] = ["ssl.keystore.key", "ssl.keystore.certificate.chain", "ssl.truststore.certificates", "ssl.key.pem", "ssl.certificate.pem", "ssl.ca.pem"]; 
+    
     key = ko.observable<string>();
     value = ko.observable<string>();
+    
+    multiLine: KnockoutComputed<boolean>;
     
     isValidKeyValue = ko.observable<boolean>();
 
@@ -25,6 +30,8 @@ class connectionOptionModel {
             this.key,
             this.value,
         ], false, jsonUtil.newLineNormalizingHashFunction);
+        
+        this.multiLine = ko.pureComputed(() => connectionOptionModel.multiLineKeys.includes(this.key()));
     }
 
     private initValidation() {

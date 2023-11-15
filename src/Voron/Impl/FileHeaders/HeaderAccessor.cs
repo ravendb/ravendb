@@ -8,11 +8,11 @@ using Sparrow;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Impl.Backup;
 using Voron.Impl.Journal;
 using Voron.Schema;
 using Voron.Util;
@@ -264,7 +264,7 @@ namespace Voron.Impl.FileHeaders
             return header->Hash == CalculateFileHeaderHash(header);
         }
 
-        public JournalInfo CopyHeaders(CompressionLevel compressionLevel, ZipArchive package, DataCopier copier, StorageEnvironmentOptions envOptions, string basePath)
+        public JournalInfo CopyHeaders(BackupZipArchive package, DataCopier copier, StorageEnvironmentOptions envOptions, string basePath)
         {
             _locker.EnterReadLock(); //race between reading the headers while modifying them
             try
@@ -278,7 +278,7 @@ namespace Voron.Impl.FileHeaders
 
                     success = true;
 
-                    var headerPart = package.CreateEntry(Path.Combine(basePath, headerFileName), compressionLevel);
+                    var headerPart = package.CreateEntry(Path.Combine(basePath, headerFileName));
                     Debug.Assert(headerPart != null);
 
                     using (var headerStream = headerPart.Open())

@@ -33,6 +33,8 @@ class exportDatabaseModel {
     includedCollections = ko.observableArray<string>([]);
 
     transformScript = ko.observable<string>();
+
+    compressionAlgorithm = ko.observable<Raven.Client.Documents.Smuggler.ExportCompressionAlgorithm>(null);
     
     validationGroup: KnockoutValidationGroup;
     encryptionValidationGroup: KnockoutValidationGroup;
@@ -179,7 +181,8 @@ class exportDatabaseModel {
             MaxStepsForTransformScript: 10 * 1000,
             ReadLegacyEtag: undefined,
             SkipRevisionCreation: undefined,
-            AuthorizationStatus: undefined
+            AuthorizationStatus: undefined,
+            CompressionAlgorithm: this.compressionAlgorithm(),
         };
     }
     

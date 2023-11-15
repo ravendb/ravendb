@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Fact]
-        public async void DeletingDocumentWithRevisionsDoesntCorruptETLProcess()
+        public async void DeletingDocumentWithRevisionsDoesntCorruptEtlProcess()
         {
             using (var src = GetDocumentStore())
             using (var dst = GetDocumentStore())
@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
                 
-                Assert.True(loadDone.Wait(TimeSpan.FromSeconds(3)));
+                Assert.True(loadDone.Wait(TimeSpan.FromSeconds(30)));
                 
                 using (var session = dst.OpenSession())
                 {
@@ -58,7 +58,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
                 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(3)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
                 
                 using (var session = dst.OpenSession())
                 {

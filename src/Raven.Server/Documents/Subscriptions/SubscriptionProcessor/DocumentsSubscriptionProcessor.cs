@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             try
             {
                 InitializeScript();
-                var match = Patch.MatchCriteria(Run, DocsContext, item, ProjectionMetadataModifier.Instance, ref result.Data);
+                var match = Patch.MatchCriteria(Run, DocsContext, result, ProjectionMetadataModifier.Instance, ref result.Data);
 
                 if (match == false)
                 {

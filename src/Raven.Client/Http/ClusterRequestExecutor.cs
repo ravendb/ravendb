@@ -114,6 +114,9 @@ namespace Raven.Client.Http
             if (parameters is null)
                 throw new ArgumentNullException(nameof(parameters));
 
+            if (_disableTopologyUpdates)
+                return false;
+
             if (Disposed)
                 return false;
             var lockTaken = await _clusterTopologySemaphore.WaitAsync(parameters.TimeoutInMs).ConfigureAwait(false);

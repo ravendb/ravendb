@@ -5,13 +5,25 @@ import endpoints = require("endpoints");
 import queryCriteria = require("models/database/query/queryCriteria");
 import queryUtil = require("common/queryUtil");
 
+interface QueryCommandProps {
+    db: database;
+    skip: number;
+    take: number;
+    criteria: queryCriteria;
+    disableCache?: boolean;
+    disableAutoIndexCreation?: boolean;
+    queryId?: string;
+    projectionBehavior?: Raven.Client.Documents.Queries.ProjectionBehavior;
+}
+
 class queryCommand extends commandBase {
 
     private static readonly missingEndOfQuery = "Expected end of query";
+    private readonly props: QueryCommandProps;
     
-    constructor(private db: database, private skip: number, private take: number, private criteria: queryCriteria,
-                private disableCache?: boolean, private disableAutoIndexCreation?: boolean, private queryId?: string) {
+    constructor(props: QueryCommandProps) {
         super();
+        this.props = props;
     }
 
     execute(): JQueryPromise<pagedResultExtended<document>> {
@@ -28,7 +40,7 @@ class queryCommand extends commandBase {
                 includesRevisions: results.RevisionIncludes
             });
         
-        return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.db)
+        return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.props.db)
             .then((results) => selector(results))
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {
@@ -47,14 +59,14 @@ class queryCommand extends commandBase {
     }
 
     private getQueryText() {
-        const queryText = this.criteria.queryText();
+        const queryText = this.props.criteria.queryText();
         if (!queryText) {
             return [undefined, undefined];
         }
 
         const [parameters, rql] = queryCommand.extractQueryParameters(queryText);
 
-        if (this.criteria.showFields()) {
+        if (this.props.criteria.showFields()) {
             return [parameters, queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql)];
         }
         
@@ -118,28 +130,29 @@ f();
         const [parameters, rql] = this.getQueryText();
         const payload = {
             Query: rql,
-            Start: this.skip,
-            PageSize: this.take,
-            DisableCaching: this.disableCache ? Date.now() : undefined,
-            QueryParameters: parameters
+            Start: this.props.skip,
+            PageSize: this.props.take,
+            DisableCaching: this.props.disableCache ? Date.now() : undefined,
+            QueryParameters: parameters,
+            ProjectionBehavior: this.props.projectionBehavior
         }
 
         return JSON.stringify(payload);
     }
     
     getUrl(method: "POST"|"GET" = "POST") {
-        const criteria = this.criteria;
+        const criteria = this.props.criteria;
         const url = endpoints.databases.queries.queries;
         
         const argsForPOST = {
-            diagnostics: this.criteria.diagnostics() ? "true" : undefined,
+            diagnostics: this.props.criteria.diagnostics() ? "true" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
             addTimeSeriesNames: true,
             addSpatialProperties: true,
             metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
-            ignoreLimit: this.criteria.ignoreIndexQueryLimit(),
-            disableAutoIndexCreation: this.disableAutoIndexCreation,
-            clientQueryId: this.queryId
+            ignoreLimit: this.props.criteria.ignoreIndexQueryLimit(),
+            disableAutoIndexCreation: this.props.disableAutoIndexCreation,
+            clientQueryId: this.props.queryId
         };
         
         let urlArgs = this.urlEncodeArgs(argsForPOST);
@@ -151,9 +164,9 @@ f();
                 ...argsForPOST,
                 query: rql,
                 parameters: JSON.stringify(parameters),
-                start: this.skip,
-                pageSize: this.take,
-                disableCache: this.disableCache ? Date.now() : undefined
+                start: this.props.skip,
+                pageSize: this.props.take,
+                disableCache: this.props.disableCache ? Date.now() : undefined
             };
             
             urlArgs = this.urlEncodeArgs(argsForGET);

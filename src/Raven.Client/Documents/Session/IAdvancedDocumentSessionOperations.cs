@@ -177,6 +177,11 @@ namespace Raven.Client.Documents.Session
         IDictionary<string, DocumentsChanges[]> WhatChanged();
 
         /// <summary>
+        /// Returns all changes for the specified entity. Including name of the field/property that changed, its old and new value and change type.
+        /// </summary>
+        DocumentsChanges[] WhatChangedFor(object entity);
+
+        /// <summary>
         /// Returns all the tracked entities in this session.
         /// </summary>
         IDictionary<string, EntityInfo> GetTrackedEntities();
