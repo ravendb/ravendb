@@ -407,17 +407,21 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out var actualChangeVector);
+                string match = null;
+                revisionsStorage.GetLatestRevisionsBinEntry(context, out var actualChangeVector);
+                
                 if (actualChangeVector != null)
                 {
-                    if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == actualChangeVector)
+                    var countRevs = revisionsStorage.GetNumberOfRevisionDocuments(context);
+                    match = $"{actualChangeVector}/{countRevs}";
+                    if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == match)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                         return;
                     }
-
-                    HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
                 }
+
+                HttpContext.Response.Headers["ETag"] = "\"" + match + "\"";
 
                 long count;
                 long totalDocumentsSizeInBytes;
