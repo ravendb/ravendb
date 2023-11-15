@@ -36,7 +36,7 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
     } = props;
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
-        (x) => x !== "@openDetailsForOperationById" && x !== "@hilo"
+        (x) => x !== "@empty" && x !== "@hilo"
     );
 
     const removeCollection = (name: string) => {
