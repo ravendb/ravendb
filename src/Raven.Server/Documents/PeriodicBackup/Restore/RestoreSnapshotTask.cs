@@ -245,10 +245,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             onProgress.Invoke(Result.Progress);
 
+            if (_zipArchive == null)
+                throw new InvalidOperationException($"Restoring of smuggler values failed because {nameof(_zipArchive)} is null");
+
             var entry = _zipArchive.GetEntry(RestoreSettings.SmugglerValuesFileName);
             if (entry != null)
             {
-                using (_zipArchive)
                 await using (var input = entry.Open())
                 await using (var inputStream = GetSnapshotInputStream(input, database.Name))
                 await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
@@ -261,8 +263,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                 }
-
-                _zipArchive = null; // the zip archive is not needed anymore
             }
         }
 
