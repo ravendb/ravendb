@@ -2314,10 +2314,10 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public void GetLatestRevisionsBinEntryEtag(DocumentsOperationContext context, long startEtag, out string latestChangeVector)
+        public void GetLatestRevisionsBinEntry(DocumentsOperationContext context, out string latestChangeVector)
         {
             latestChangeVector = null;
-            foreach (var entry in GetRevisionsBinEntries(context, startEtag, 1))
+            foreach (var entry in GetRevisionsBinEntries(context, 0, 1))
             {
                 latestChangeVector = entry.ChangeVector;
             }
