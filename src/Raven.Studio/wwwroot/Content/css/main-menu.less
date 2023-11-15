@@ -291,7 +291,7 @@
             flex-grow: 1;
         }
 
-        .kilo, .mega {
+        .kilo, .mega, .giga {
             padding: 0 4px 0 4px;
             font-weight: 800;
             line-height: 15px;
@@ -302,7 +302,7 @@
             background-color: fadeout(@label-default-bg,50%);
 
             &::before {
-                content: 'K';
+                content: 'k';
             }
         }
 
@@ -310,7 +310,15 @@
             background-color: fadeout(@label-default-bg,50%);
 
             &::before {
-                content: 'M';
+                content: 'm';
+            }
+        }
+        
+        .giga {
+            background-color: fadeout(@label-default-bg,50%);
+
+            &::before {
+                content: 'g';
             }
         }
     }

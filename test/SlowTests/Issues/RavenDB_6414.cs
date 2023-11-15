@@ -61,7 +61,7 @@ namespace SlowTests.Issues
                         }
                     });
 
-                    Assert.Equal("Catastrophy", ex.Message);
+                    Assert.True(ex.ToString().Contains("Catastrophy"), $"Unexpected exception: {ex}");
 
                     // db unloaded
                     Assert.True(SpinWait.SpinUntil(() => Server.ServerStore.DatabasesLandlord.DatabasesCache.Any() == false, TimeSpan.FromMinutes(1)));

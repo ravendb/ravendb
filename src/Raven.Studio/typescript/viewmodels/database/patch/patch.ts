@@ -392,10 +392,15 @@ class patch extends viewModelBase {
         const matchingDocs = $.Deferred<number>();
         
         if (patchScriptParts.length === 2) {
-            const query = queryCriteria.empty();
-            query.queryText(patchScriptParts[0]);
+            const criteria = queryCriteria.empty();
+            criteria.queryText(patchScriptParts[0]);
 
-            new queryCommand(this.activeDatabase(), 0, 0, query)
+            new queryCommand({
+                    db: this.activeDatabase(),
+                    skip: 0,
+                    take: 0,
+                    criteria
+                })
                 .execute()
                 .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
                 .fail(() => matchingDocs.resolve(-1))

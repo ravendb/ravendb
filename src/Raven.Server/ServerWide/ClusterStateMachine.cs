@@ -732,7 +732,7 @@ namespace Raven.Server.ServerWide
             {
                 foreach (BlittableJsonReaderObject command in subscriptionCommands)
                 {
-                    if (command.TryGet("Type", out string putSubscriptionType) == false && putSubscriptionType != nameof(PutSubscriptionCommand))
+                    if (command.TryGet("Type", out string putSubscriptionType) == false || putSubscriptionType != nameof(PutSubscriptionCommand))
                     {
                         throw new RachisApplyException($"Cannot execute {type} command, wrong format");
                     }

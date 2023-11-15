@@ -53,7 +53,7 @@ namespace Raven.Server.Documents
 
         public void AddAfterCommitNotification(DocumentChange change)
         {
-            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplication;
+            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingInternalReplication;
 
             if (_documentNotifications == null)
                 _documentNotifications = new List<DocumentChange>();
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents
 
         public void AddAfterCommitNotification(CounterChange change)
         {
-            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplication;
+            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingInternalReplication;
 
             if (_counterNotifications == null)
                 _counterNotifications = new List<CounterChange>();
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
 
         public void AddAfterCommitNotification(TimeSeriesChange change)
         {
-            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplication;
+            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingInternalReplication;
 
             if (_timeSeriesNotifications == null)
                 _timeSeriesNotifications = new List<TimeSeriesChange>();

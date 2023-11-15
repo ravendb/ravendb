@@ -10,7 +10,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -338,6 +337,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         database.ClusterTransactionId = databaseRecord.Topology.ClusterTransactionIdBase64;
                         database.DatabaseGroupId = databaseRecord.Topology.DatabaseTopologyIdBase64;
 
+                        database.TxMerger.Start();
+
                         result.Files.FileCount = filesToRestore.Count + (snapshotRestore ? 1 : 0);
                         
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -577,7 +578,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                         ? Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey)
                                         : null;
 
-                                    await using (var stream = GetInputStream(entryStream, snapshotEncryptionKey))
+                                    await using (var decompressionStream = FullBackup.GetDecompressionStream(entryStream))
+                                    await using (var stream = GetInputStream(decompressionStream, snapshotEncryptionKey))
                                     {
                                         var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
                                         json.BlittableValidation();
@@ -908,7 +910,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             await using (var fileStream = await GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
-            await using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            await using (var gzipStream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
             using (var source = new StreamSource(gzipStream, context, database))
             {
                 var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
@@ -956,7 +958,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         await using (var input = entry.Open())
                         await using (var inputStream = GetSnapshotInputStream(input, database.Name))
-                        await using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
+                        await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                         {
                             var source = new StreamSource(uncompressed, context, database);
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,

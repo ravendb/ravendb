@@ -11,13 +11,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Properties;
 using Raven.Client.Util;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
@@ -26,6 +26,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using static Raven.Server.RavenServer;
 using HttpMethods = Raven.Client.Util.HttpMethods;
 
 namespace Raven.Server.Routing
@@ -95,9 +96,9 @@ namespace Raven.Server.Routing
             return tryMatch.Value;
         }
 
-        internal async ValueTask<(bool Authorized, RavenServer.AuthenticationStatus Status)> TryAuthorizeAsync(RouteInformation route, HttpContext context, DocumentDatabase database)
+        internal async ValueTask<(bool Authorized, AuthenticationStatus Status)> TryAuthorizeAsync(RouteInformation route, HttpContext context, DocumentDatabase database)
         {
-            var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var feature = context.Features.Get<IHttpAuthenticationFeature>() as AuthenticateConnection;
 
             if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
             {
@@ -140,13 +141,21 @@ namespace Raven.Server.Routing
                 }
             }
 
-            if (CanAccessRoute(route, context, database?.Name, feature, out var authenticationStatus) == false)
+            if (CanAccessRoute(route, context, database?.Name, feature, out var authenticationStatus)) 
+                return (true, authenticationStatus);
+            
+            if (ShouldRetryToAuthenticateConnection(feature))
             {
-                await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
-                return (false, authenticationStatus);
+                var httpConnectionFeature = context.Features.Get<IHttpConnectionFeature>();
+                feature = _ravenServer.AuthenticateConnectionCertificate(feature.Certificate, httpConnectionFeature);
+                context.Features.Set<IHttpAuthenticationFeature>(feature);
+
+                if (CanAccessRoute(route, context, database?.Name, feature, out authenticationStatus))
+                    return (true, authenticationStatus);
             }
 
-            return (true, authenticationStatus);
+            await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
+            return (false, authenticationStatus);
         }
 
         internal bool CanAccessRoute(RouteInformation route, HttpContext context, string databaseName, RavenServer.AuthenticateConnection feature, out RavenServer.AuthenticationStatus authenticationStatus)
@@ -190,7 +199,7 @@ namespace Raven.Server.Routing
                             // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
                             if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
                                 return true;
-                            ;
+                            
                             goto case RavenServer.AuthenticationStatus.None;
 
                         case RavenServer.AuthenticationStatus.Allowed:
@@ -495,6 +504,11 @@ namespace Raven.Server.Routing
                     });
             }
         }
+
+        private bool ShouldRetryToAuthenticateConnection(AuthenticateConnection authenticateConnection) =>
+            authenticateConnection.Status == AuthenticationStatus.UnfamiliarCertificate &&
+            _ravenServer.ServerStore.LastCertificateUpdateTime.HasValue &&
+            _ravenServer.ServerStore.LastCertificateUpdateTime.Value > authenticateConnection.CreatedAt;
 
         private static void ThrowUnknownAuthStatus(RouteInformation route)
         {

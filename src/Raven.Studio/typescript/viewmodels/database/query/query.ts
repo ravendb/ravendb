@@ -207,6 +207,7 @@ class query extends viewModelBase {
     
     cacheEnabled = ko.observable<boolean>(true);
     disableAutoIndexCreation = ko.observable<boolean>(true);
+    projectionBehavior = ko.observable<Raven.Client.Documents.Queries.ProjectionBehavior>("Default");
     
     private indexEntriesStateWasTrue = false; // Used to save current query settings when switching to a 'dynamic' index
 
@@ -798,14 +799,16 @@ class query extends viewModelBase {
             if (currentIndex) {
                 this.queriedIndexInfo(currentIndex);
             } else {
-                // fetch indexes since this view may not be up-to-date if index was defined outside of studio
-                this.fetchAllIndexes(this.activeDatabase())
-                    .done(() => {
-                        this.queriedIndexInfo(this.indexes() ? this.indexes().find(i => i.Name === indexName) : null);
-                    })
-                    .fail(() => {
-                        this.queriedIndexInfo(null);
-                    });
+                if (!indexName.startsWith(queryUtil.DynamicPrefix)) {
+                    // fetch indexes since this view may not be up-to-date if index was defined outside of studio
+                    this.fetchAllIndexes(this.activeDatabase())
+                        .done(() => {
+                            this.queriedIndexInfo(this.indexes() ? this.indexes().find(i => i.Name === indexName) : null);
+                        })
+                        .fail(() => {
+                            this.queriedIndexInfo(null);
+                        });
+                }
             }
         }
     }
@@ -974,9 +977,11 @@ class query extends viewModelBase {
         this.effectiveFetcher = this.queryFetcher;
         this.currentTab("results");
         this.includesCache.removeAll();
-        this.includesRevisionsCache(new includedRevisions());
-        this.highlightsCache.removeAll();
-        this.explanationsCache.length = 0;
+
+        this.clearHighlightsCache();
+        this.clearIncludesRevisionsCache();
+        this.clearExplanationsCache();
+        
         this.timings(null);
         this.showFanOutWarning(false);
         
@@ -990,6 +995,7 @@ class query extends viewModelBase {
         const criteriaDto = criteria.toStorageDto();
         const disableCache = !this.cacheEnabled();
         const disableAutoIndexCreation = this.disableAutoIndexCreation();
+        const projectionBehavior = this.projectionBehavior();
 
         if (criteria.queryText()) {
             this.spinners.isLoading(true);
@@ -998,7 +1004,15 @@ class query extends viewModelBase {
 
             //TODO: this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
-            const queryCmd = new queryCommand(database, 0, 25, criteria, disableCache, disableAutoIndexCreation);
+            const queryCmd = new queryCommand({
+                db: database,
+                skip: 0,
+                take: 25,
+                criteria,
+                disableCache,
+                disableAutoIndexCreation,
+                projectionBehavior
+            });
 
             // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
             let totalSkippedResults = 0;
@@ -1018,7 +1032,17 @@ class query extends viewModelBase {
             const resultsFetcher = (skip: number, take: number) => {
                 const criteriaForFetcher = this.lastCriteriaExecuted;
 
-                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, criteriaForFetcher, disableCache, disableAutoIndexCreation, query.clientQueryId);
+                const command = new queryCommand({
+                    db: database,
+                    skip: skip + totalSkippedResults,
+                    take: take + 1,
+                    criteria: criteriaForFetcher,
+                    disableCache,
+                    disableAutoIndexCreation,
+                    queryId: query.clientQueryId,
+                    projectionBehavior
+                });
+
                 this.onQueryRun();
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
@@ -1566,14 +1590,26 @@ class query extends viewModelBase {
 
         // since we merge records based on fragments
         // remove all existing highlights & included revisions when going back to 'results' tab
-        this.highlightsCache.removeAll();
-        this.includesRevisionsCache(new includedRevisions());
-
-        this.explanationsCache.length = 0;
-        this.totalExplanations(0);
+        
+        this.clearHighlightsCache(); 
+        this.clearIncludesRevisionsCache();
+        this.clearExplanationsCache();
         
         this.columnsSelector.reset();
         this.refresh();
+    }
+    
+    private clearHighlightsCache() {
+        this.highlightsCache.removeAll();
+    }
+    
+    private clearExplanationsCache() {
+        this.explanationsCache.length = 0;
+        this.totalExplanations(0);
+    }
+    
+    private clearIncludesRevisionsCache() {
+        this.includesRevisionsCache(new includedRevisions());
     }
     
     goToIncludesRevisionsTab(): void {
@@ -1652,12 +1688,15 @@ class query extends viewModelBase {
         this.spinners.isLoadingSpatialResults(true);
         this.failedToGetResultsForSpatial(false);
 
-        const command = new queryCommand(this.activeDatabase(),
-                                         this.allSpatialResultsItems().length,
-                                         query.maxSpatialResultsToFetch + 1,
-                                         this.criteria().clone(),
-                                         !this.cacheEnabled(),
-                                         this.disableAutoIndexCreation());
+        const command = new queryCommand({
+            db: this.activeDatabase(),
+            skip: this.allSpatialResultsItems().length,
+            take: query.maxSpatialResultsToFetch + 1,
+            criteria: this.criteria().clone(),
+            disableCache: !this.cacheEnabled(),
+            disableAutoIndexCreation: this.disableAutoIndexCreation()
+        });
+        
         command.execute()
             .done((queryResults: pagedResultExtended<document>) => {
                 const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;
@@ -1809,6 +1848,12 @@ class query extends viewModelBase {
         const url = appUrl.forDatabaseQuery(this.activeDatabase()) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);
         this.$downloadForm.attr("action", url);
         this.$downloadForm.submit();
+    }
+
+    setProjectionBehavior(projectionBehavior: Raven.Client.Documents.Queries.ProjectionBehavior) {
+        this.projectionBehavior(projectionBehavior);
+        // Force dropdown menu to close. (for nested dropdowns, the menu stays open)
+        $(".projection-behavior-dropdown").removeClass("open");
     }
 }
 

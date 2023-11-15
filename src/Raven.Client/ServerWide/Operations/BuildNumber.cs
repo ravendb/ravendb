@@ -12,6 +12,8 @@ namespace Raven.Client.ServerWide.Operations
 
         public string FullVersion { get; set; }
 
+        public string AssemblyVersion { get; set; }
+
         public override bool Equals(object obj)
         {
             return Equals(obj as BuildNumber);
@@ -22,10 +24,11 @@ namespace Raven.Client.ServerWide.Operations
             if (other == null)
                 return false;
 
-            return string.Equals(ProductVersion, other.ProductVersion) && 
-                   BuildVersion == other.BuildVersion && 
-                   string.Equals(CommitHash, other.CommitHash) && 
-                   string.Equals(FullVersion, other.FullVersion);
+            return string.Equals(ProductVersion, other.ProductVersion) &&
+                   BuildVersion == other.BuildVersion &&
+                   string.Equals(CommitHash, other.CommitHash) &&
+                   string.Equals(FullVersion, other.FullVersion) &&
+                   string.Equals(AssemblyVersion, other.AssemblyVersion);
         }
 
         public override int GetHashCode()
@@ -36,6 +39,7 @@ namespace Raven.Client.ServerWide.Operations
                 hashCode = (hashCode * 397) ^ BuildVersion;
                 hashCode = (hashCode * 397) ^ (CommitHash != null ? CommitHash.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (FullVersion != null ? FullVersion.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (AssemblyVersion != null ? AssemblyVersion.GetHashCode() : 0);
                 return hashCode;
             }
         }
@@ -47,7 +51,8 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(ProductVersion)] = ProductVersion,
                 [nameof(BuildVersion)] = BuildVersion,
                 [nameof(CommitHash)] = CommitHash,
-                [nameof(FullVersion)] = FullVersion
+                [nameof(FullVersion)] = FullVersion,
+                [nameof(AssemblyVersion)] = AssemblyVersion
             };
         }
     }

@@ -514,6 +514,9 @@ namespace Voron.Impl.Journal
             }
             else
             {
+                if ((current->Flags & TransactionPersistenceModeFlags.Encrypted) == TransactionPersistenceModeFlags.Encrypted)
+                    throw new InvalidOperationException("Encountered an encrypted transaction when opening a non encrypted storage. Did you forget to provide the encryption key?");
+
                 hashIsValid = ValidatePagesHash(options, current);
             }
 

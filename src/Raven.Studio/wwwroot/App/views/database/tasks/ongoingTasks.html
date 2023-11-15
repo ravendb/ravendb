@@ -93,7 +93,7 @@
                                     </div>
                                     <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
@@ -451,7 +451,7 @@
                                         <small title="Backup is not encrypted" data-bind="visible: !isBackupEncrypted()"><i class="icon-unlock text-gray"></i></small>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
@@ -805,7 +805,7 @@
 <script type="text/html" id="state-template">
     <div class="btn-group">
         <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false" 
-                data-bind="requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
+                data-bind="disable: isServerWide(), requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
             <!--set-size-->
             <span data-bind="text: stateText()"></span><span class="caret"></span>
         </button>
@@ -862,50 +862,67 @@
             <i class="global-spinner spinner-xs"></i> Loading progress ...
         </div>
         <!-- ko foreach: scriptProgress -->
-        <div class="etl-progress">
-            <div class="overall-container">
-                <div class="text-info flex-horizontal">
-                    <span data-bind="text: name"></span>
-                    <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview margin-left margin-left-xs"></i></a>
-                    <div class="flex-separator"></div>
-                    <div class="text-warning" data-bind="visible: !globalProgress.total() && $parent.taskType() !== 'QueueEtl'">
-                        <small>
-                            <i class="icon-warning"></i>
-                            This script doesn't match any documents.
-                        </small>
-                    </div>
-                </div>
-                <div class="flex-grow"></div>
-                <div class="progress-overall">
-                    <div class="flex-horizontal" data-bind="with: globalProgress">
-                        <div class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></div>
-                        <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
-                    </div>
-                    <div class="progress" data-bind="with: globalProgress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed },
-                                        style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
-                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                        </div>
+        <div class="etl-progress-container">
+            <div class="list-properties" data-bind="visible: transactionalId">
+                <div class="property-item">
+                    <div class="property-name">Transactional Id:</div>
+                    <div class="property-value text-details" >
+                        <span data-bind="text: transactionalId"></span>
+                        <a href="#" title="Copy to clipboard" data-bind="click: _.partial($root.copyTransactionalIdToClipboard, transactionalId());">
+                            <i class="icon-copy-to-clipboard"></i>
+                        </a>
                     </div>
                 </div>
             </div>
-            <div data-bind="foreach: innerProgresses" class="etl-progress-details">
-                <div class="etl-progress-item" data-bind="with: progress, visible: visible">
-                    <div class="etl-label">
-                        <small class="name" data-bind="text: $parent.name"></small>
-                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+            <div class="etl-progress">
+                <div class="overall-container">
+                    <div class="text-info">
+                        <div class="flex-horizontal">
+                            <span data-bind="text: name"></span>
+                            <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview margin-left margin-left-xs"></i></a>
+                            <div class="flex-separator"></div>
+                            <div class="text-warning" data-bind="visible: !globalProgress.total() && $parent.taskType() !== 'QueueEtl'">
+                                <small>
+                                    <i class="icon-warning"></i>
+                                    This script doesn't match any documents.
+                                </small>
+                            </div>
+                        </div>
+
                     </div>
-                    <div class="progress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() },
+                    <div class="flex-grow"></div>
+                    <div class="progress-overall">
+                        <div class="flex-horizontal" data-bind="with: globalProgress">
+                            <div class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></div>
+                            <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+                        </div>
+                        <div class="progress" data-bind="with: globalProgress">
+                            <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed },
                                         style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
-                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                                 class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="foreach: innerProgresses" class="etl-progress-details">
+                    <div class="etl-progress-item" data-bind="with: progress, visible: visible">
+                        <div class="etl-label">
+                            <small class="name" data-bind="text: $parent.name"></small>
+                            <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+                        </div>
+                        <div class="progress">
+                            <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() },
+                                        style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
+                                 class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        
         <!-- /ko -->
     </div>
 </script>

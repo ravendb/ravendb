@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -15,17 +20,67 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Utils;
+using Sparrow.Utils;
+using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
+    internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+    {
+        return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
+            ? new DirectUploadBackupTask(database, backupParameters, configuration, logger, forTestingPurposes) 
+            : new BackupTask(database, backupParameters, configuration, logger, forTestingPurposes);
+    }
+    internal static async Task<Stream> GetDecompressionStreamAsync(Stream stream, CancellationToken token = default)
+    {
+        var buffer = new byte[4];
+
+        var read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+        if (read == 0)
+            throw new InvalidOperationException("Empty stream");
+
+        var backupStream = new BackupStream(stream, buffer);
+
+        if (read != buffer.Length)
+            return backupStream;
+
+        const uint zstdMagicNumber = 0xFD2FB528;
+        var uintMagicNumber = BitConverter.ToUInt32(buffer);
+        if (uintMagicNumber == zstdMagicNumber)
+            return ZstdStream.Decompress(backupStream);
+
+        if (buffer[0] == 0x1F && buffer[1] == 0x8B)
+            return new GZipStream(backupStream, CompressionMode.Decompress);
+
+        return backupStream;
+    }
+
+    internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
+    {
+        switch (compressionAlgorithm)
+        {
+            case ExportCompressionAlgorithm.Gzip:
+                return new GZipStream(stream, compressionLevel, leaveOpen: true);
+            case ExportCompressionAlgorithm.Zstd:
+                if (compressionLevel == CompressionLevel.NoCompression)
+                    return new LeaveOpenStream(stream);
+
+                return ZstdStream.Compress(stream, compressionLevel, leaveOpen: true);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
     internal static BackupInfo GetBackupInfo(BackupInfoParameters parameters)
     {
         var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, taskId: 0L);
@@ -70,7 +125,7 @@ internal static class BackupUtils
             });
             if (nextBackup == null)
                 continue;
-            
+
             if (nextBackup.TimeSpan.Ticks < intervalUntilNextBackupInSec)
                 intervalUntilNextBackupInSec = nextBackup.TimeSpan.Ticks;
         }
@@ -163,7 +218,7 @@ internal static class BackupUtils
 
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
-        var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag );
+        var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag);
         var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
         var nowLocalTime = SystemTime.UtcNow.ToLocalTime();
         var timeSpan = nextBackupTimeLocal - nowLocalTime;
@@ -236,8 +291,8 @@ internal static class BackupUtils
             nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
 
         return delayUntil.HasValue && delayUntil.Value.ToLocalTime() > nextBackup.Value
-            ? delayUntil.Value.ToLocalTime() 
-            : nextBackup.Value;              
+            ? delayUntil.Value.ToLocalTime()
+            : nextBackup.Value;
     }
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,
@@ -290,7 +345,7 @@ internal static class BackupUtils
             };
         }
     }
-    
+
     public static PathSetting GetBackupTempPath(RavenConfiguration configuration, string dir, out PathSetting basePath)
     {
         basePath = configuration.Backup.TempPath ?? configuration.Storage.TempPath ?? configuration.Core.DataDirectory;
@@ -326,8 +381,8 @@ internal static class BackupUtils
         // we will always wake up the database for a full backup.
         // but for incremental we will wake the database only if there were changes made.
 
-        if (parameters.Configuration.Disabled || 
-            parameters.Configuration.IncrementalBackupFrequency == null && parameters.Configuration.FullBackupFrequency == null || 
+        if (parameters.Configuration.Disabled ||
+            parameters.Configuration.IncrementalBackupFrequency == null && parameters.Configuration.FullBackupFrequency == null ||
             parameters.Configuration.HasBackup() == false)
             return null;
 
@@ -594,7 +649,7 @@ internal static class BackupUtils
 
     public class EarliestIdleDatabaseActivityParameters
     {
-                public string DatabaseName { get; set; }
+        public string DatabaseName { get; set; }
 
         public DateTime? DatabaseWakeUpTimeUtc { get; set; }
 

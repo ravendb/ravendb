@@ -372,12 +372,7 @@ namespace Raven.Server.ServerWide
 
             AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password, progress);
 
-            return new CertificateUtils.CertificateHolder
-            {
-                Certificate = loadedCertificate,
-                CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                PrivateKey = privateKey
-            };
+            return new CertificateUtils.CertificateHolder(loadedCertificate, privateKey, Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)));
         }
 
         public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate, bool validateKeyUsages, SetupProgressAndResult progress = null)
@@ -527,12 +522,7 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Got invalid certificate via {executable} {args}", e);
             }
 
-            return new CertificateUtils.CertificateHolder
-            {
-                Certificate = loadedCertificate,
-                CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                PrivateKey = privateKey
-            };
+            return new CertificateUtils.CertificateHolder(loadedCertificate, privateKey, Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)));
         }
 
         public void NotifyExecutableOfCertificateChange(string executable, string args, string newCertificateBase64)
@@ -699,7 +689,7 @@ namespace Raven.Server.ServerWide
             if (string.IsNullOrEmpty(password))
                 CertificateLoaderUtil.Import(collection, rawBytes);
             else
-                CertificateLoaderUtil.Import(collection,rawBytes, password);
+                CertificateLoaderUtil.Import(collection, rawBytes, password);
 
             var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
             using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser,
@@ -761,7 +751,6 @@ namespace Raven.Server.ServerWide
         }
 
         public CertificateUtils.CertificateHolder LoadCertificateFromPath(string path, string password, LicenseType licenseType, bool certificateValidationKeyUsages)
-
         {
             try
             {
@@ -777,12 +766,7 @@ namespace Raven.Server.ServerWide
 
                 ValidateKeyUsages(path, loadedCertificate, certificateValidationKeyUsages);
 
-                return new CertificateUtils.CertificateHolder
-                {
-                    Certificate = loadedCertificate,
-                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                    PrivateKey = privateKey
-                };
+                return new CertificateUtils.CertificateHolder(loadedCertificate, privateKey, Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)));
             }
             catch (Exception e)
             {

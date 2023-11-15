@@ -6,6 +6,8 @@ import cronEditor = require("viewmodels/common/cronEditor");
 
 class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     connectionStringName = ko.observable<string>();
+
+    allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
     
     customPartition = ko.observable<string>();
     customPartitionEnabled = ko.observable<boolean>(false);
@@ -50,7 +52,8 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.manualChooseMentor,
             this.customPartition,
             this.customPartitionEnabled,
-            this.runFrequency
+            this.runFrequency,
+            this.allowEtlOnNonEncryptedChannel
         ])
     }
     
@@ -96,6 +99,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
         const configuration = dto.Configuration;
         if (configuration) {
             this.connectionStringName(configuration.ConnectionStringName);
+            this.allowEtlOnNonEncryptedChannel(configuration.AllowEtlOnNonEncryptedChannel);
             this.manualChooseMentor(!!configuration.MentorNode);
             this.pinMentorNode(configuration.PinToMentorNode);
             this.mentorNode(configuration.MentorNode);
@@ -125,7 +129,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             Name: this.taskName(),
             EtlType: "Olap",
             ConnectionStringName: this.connectionStringName(),
-            AllowEtlOnNonEncryptedChannel: true,
+            AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
             Disabled: this.taskState() === "Disabled",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),

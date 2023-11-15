@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Microsoft.Extensions.Caching.Memory;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client;
@@ -50,7 +49,6 @@ using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Indexing;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.Monitoring;
@@ -149,6 +147,8 @@ namespace Raven.Server.ServerWide
         public Operations Operations { get; }
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
+
+        public DateTime? LastCertificateUpdateTime { get; private set; }
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
@@ -1217,6 +1217,9 @@ namespace Raven.Server.ServerWide
                     LicenseManager.ReloadLicenseLimits();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
+                    break;
+                case nameof(PutCertificateCommand):
+                    LastCertificateUpdateTime = SystemTime.UtcNow;
                     break;
             }
         }

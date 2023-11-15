@@ -115,7 +115,8 @@ public static class SetupWizardUtils
                 throw new InvalidOperationException($"Failed to generate a client certificate for '{domain}'.", e);
             }
 
-            parameters.RegisterClientCertInOs?.Invoke(parameters.OnProgress, parameters.Progress, clientCert);
+            if (parameters.SetupInfo.RegisterClientCert)
+                parameters.RegisterClientCertInOs?.Invoke(parameters.OnProgress, parameters.Progress, clientCert);
 
             return new CompleteClusterConfigurationResult
             {

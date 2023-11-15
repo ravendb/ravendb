@@ -27,6 +27,7 @@ import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefini
 import ongoingTaskReplicationSinkListModel = require("models/database/tasks/ongoingTaskReplicationSinkListModel");
 import accessManager = require("common/shell/accessManager");
 import generalUtils = require("common/generalUtils");
+import copyToClipboard from "common/copyToClipboard";
 
 class ongoingTasks extends viewModelBase {
 
@@ -98,7 +99,7 @@ class ongoingTasks extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask", "toggleDetails", "showItemPreview");
+        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask", "toggleDetails", "showItemPreview", "copyTransactionalIdToClipboard");
 
         this.initObservables();
     }
@@ -618,6 +619,10 @@ class ongoingTasks extends viewModelBase {
     
     getTaskNameForUI(taskType: StudioTaskType) {
         return ko.pureComputed(() => ongoingTaskModel.formatStudioTaskType(taskType));
+    }
+    
+    copyTransactionalIdToClipboard(transactionId: string) {
+        copyToClipboard.copy(transactionId, "Transactional Id was copied to clipboard.");
     }
 }
 

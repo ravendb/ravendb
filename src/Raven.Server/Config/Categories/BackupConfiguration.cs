@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
-using Sparrow;
+using Sparrow.Backups;
 
 namespace Raven.Server.Config.Categories
 {
@@ -58,11 +60,30 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.CloudStorageOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting CloudStorageOperationTimeout { get; set; }
 
-
         [Description("EXPERT: Indicates which library to use when doing Azure backups.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Backup.Azure.Legacy", ConfigurationEntryScope.ServerWideOnly)]
         public bool AzureLegacy { get; set; }
+
+        [Description("Compression algorithm that is used to perform backups.")]
+        [DefaultValue(BackupCompressionAlgorithm.Zstd)]
+        [ConfigurationEntry("Backup.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public BackupCompressionAlgorithm CompressionAlgorithm { get; set; }
+
+        [Description("Compression level that is used to perform backups.")]
+        [DefaultValue(CompressionLevel.Fastest)]
+        [ConfigurationEntry("Backup.Compression.Level", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public CompressionLevel CompressionLevel { get; set; }
+
+        [Description("Compression algorithm that is used to perform snapshot backups.")]
+        [DefaultValue(SnapshotBackupCompressionAlgorithm.Zstd)]
+        [ConfigurationEntry("Backup.Snapshot.Compression.Algorithm", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public SnapshotBackupCompressionAlgorithm SnapshotCompressionAlgorithm { get; set; }
+
+        [Description("Compression level that is used to perform snapshot backups.")]
+        [DefaultValue(CompressionLevel.Fastest)]
+        [ConfigurationEntry("Backup.Snapshot.Compression.Level", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public CompressionLevel SnapshotCompressionLevel { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
@@ -93,7 +114,7 @@ namespace Raven.Server.Config.Categories
                 throw new ArgumentException($"The backup path '{LocalRootPath.FullPath}' defined in the configuration under '{RavenConfiguration.GetKey(x => x.Backup.LocalRootPath)}' doesn't exist.");
             }
         }
-        
+
         internal void ValidateAllowedDestinations()
         {
             if (AllowedDestinations == null)

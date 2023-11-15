@@ -745,7 +745,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Attachment GetAttachmentByKey(DocumentsOperationContext context, Slice key)
+        public static Attachment GetAttachmentByKey(DocumentsOperationContext context, Slice key)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 

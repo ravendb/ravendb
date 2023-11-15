@@ -54,6 +54,14 @@ class queryCriteria {
                 this.ignoreIndexQueryLimit(false);
             }
         });
+
+        this.queryText.subscribe(queryText => {
+            if (queryUtil.isDynamicQuery(queryText)) {
+                this.showFields(false);
+                this.indexEntries(false);
+                this.ignoreIndexQueryLimit(false);
+            }
+        })
     }
 
     updateUsing(storedQuery: storedQueryDto): void {

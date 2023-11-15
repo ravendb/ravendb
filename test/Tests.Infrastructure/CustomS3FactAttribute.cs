@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
 using Xunit;

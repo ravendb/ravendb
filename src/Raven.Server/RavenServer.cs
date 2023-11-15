@@ -158,7 +158,7 @@ namespace Raven.Server
 
             EchoServer.StartEchoSockets(Configuration.Core.EchoSocketPort);
 
-            Certificate = LoadCertificateAtStartup() ?? new CertificateUtils.CertificateHolder();
+            Certificate = LoadCertificateAtStartup() ?? CertificateUtils.CertificateHolder.CreateEmpty();
             ReadWellKnownIssuers();
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
@@ -216,8 +216,7 @@ namespace Raven.Server
 
                     if (Certificate.Certificate != null)
                     {
-                        _httpsConnectionMiddleware = new HttpsConnectionMiddleware(this, options);
-                        _httpsConnectionMiddleware.SetCertificate(Certificate.Certificate);
+                        _httpsConnectionMiddleware = new HttpsConnectionMiddleware(this, options, Certificate.Certificate);
 
                         foreach (var address in ListenEndpoints.Addresses)
                         {
@@ -1041,9 +1040,11 @@ namespace Raven.Server
 
                 if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
                 {
+                    HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(newCertificate.Certificate);
+                    
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
-                        _httpsConnectionMiddleware.SetCertificate(newCertificate.Certificate);
-                    ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+                        ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+
                     return;
                 }
 
@@ -1483,9 +1484,11 @@ namespace Raven.Server
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
+            public readonly DateTime CreatedAt;
 
             public AuthenticateConnection()
             {
+                CreatedAt = SystemTime.UtcNow;
             }
 
             public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
@@ -2350,9 +2353,11 @@ namespace Raven.Server
         {
             var certificateHolder = Certificate;
             var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore.GetLicenseType(), true);
+            
+            HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(certificate);
+
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
             {
-                _httpsConnectionMiddleware.SetCertificate(certificate);
                 ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -2476,7 +2481,7 @@ namespace Raven.Server
 
                 await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                 {
-                    ServerCertificate = Certificate.Certificate,
+                    ServerCertificateContext = Certificate.CertificateContext,
                     ClientCertificateRequired = true,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                     EncryptionPolicy = EncryptionPolicy.RequireEncryption,
@@ -2546,7 +2551,7 @@ namespace Raven.Server
                                 msg = "Cannot allow access. Database name is empty.";
                                 return false;
                             }
-                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: false))
+                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication))
                                 return true;
                             msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;

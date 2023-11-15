@@ -7,6 +7,7 @@ import indexStalenessReasons = require("viewmodels/database/indexes/indexStalene
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import statsModel = require("models/database/stats/statistics");
 import popoverUtils = require("common/popoverUtils");
+import copyToClipboard = require("common/copyToClipboard");
 
 class statistics extends viewModelBase {
 
@@ -23,7 +24,7 @@ class statistics extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("showStaleReasons");
+        this.bindToCurrentInstance("showStaleReasons", "copyChangeVectorToClipboard");
 
         this.rawJsonUrl = ko.pureComputed(() => {
             const activeDatabase = this.activeDatabase();
@@ -138,6 +139,13 @@ class statistics extends viewModelBase {
 
     refreshStats() {
         this.fetchStats();
+    }
+
+    copyChangeVectorToClipboard() { 
+        copyToClipboard.copy(
+            this.stats().databaseChangeVector.map(cv => `${cv.fullFormat}`).join("\r\n"),
+            "Change vector was copied to clipboard"
+        )
     }
 }
 
