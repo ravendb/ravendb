@@ -955,7 +955,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var entry = _zipArchiveForSnapshot.GetEntry(RestoreSettings.SmugglerValuesFileName);
             if (entry != null)
             {
-                using (_zipArchiveForSnapshot)
                 await using (var input = entry.Open())
                 await using (var inputStream = GetSnapshotInputStream(input, database.Name))
                 await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
@@ -969,8 +968,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                 }
-
-                _zipArchiveForSnapshot = null; // the zip archive is not needed anymore
             }
         }
 
