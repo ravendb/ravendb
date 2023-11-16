@@ -812,7 +812,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (_server.DatabasesLandlord.ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
                     _server.DatabasesLandlord.ForTestingPurposes.PreventedRehabOfIdleDatabase = true;
-
+                
                 if (ShouldGiveMoreTimeBeforeMovingToRehab(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime))
                 {
                     if (ShouldGiveMoreTimeBeforeRotating(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime) == false)
@@ -1144,20 +1144,18 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, long graceMs)
         {
-            var grace = DateTime.UtcNow.AddMilliseconds(-graceMs);
+            var now = DateTime.UtcNow;
+            var uptime = databaseUpTime?.TotalMilliseconds ?? (now - StartTime).TotalMilliseconds;
 
-            if (lastSuccessfulUpdate == default) // the node hasn't send a single (good) report
-            {
-                if (grace < StartTime)
-                    return true;
-            }
+            if (graceMs > uptime)
+                return true;
 
-            if (databaseUpTime.HasValue == false) // database isn't loaded
-            {
-                return grace < StartTime;
-            }
+            var grace = now.AddMilliseconds(-graceMs);
+            
+            if (grace < lastSuccessfulUpdate)
+                return true;
 
-            return grace < lastSuccessfulUpdate && graceMs > databaseUpTime.Value.TotalMilliseconds;
+            return false;
         }
 
         private int GetNumberOfRespondingNodes(DatabaseObservationState state)
