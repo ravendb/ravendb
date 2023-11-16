@@ -163,7 +163,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanBackupAndRestoreShardedDatabase_FromS3Backup()
         {
             var s3Settings = GetS3Settings();
@@ -230,7 +230,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanBackupAndRestoreShardedDatabase_FromAzureBackup()
         {
             var azureSettings = GetAzureSettings();
@@ -294,7 +294,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanBackupAndRestoreShardedDatabase_FromGoogleCloudBackup()
         {
             var googleCloudSettings = GetGoogleCloudSettings();
@@ -511,7 +511,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task EncryptedBackupAndRestoreShardedDatabase_UsingDatabaseKey()
         {
             var s3Settings = GetS3Settings();
@@ -633,7 +633,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task EncryptedBackupAndRestoreShardedDatabaseInCluster_UsingDatabaseKey()
         {
             var s3Settings = GetS3Settings();
@@ -1231,7 +1231,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromS3Backup()
         {
             var s3Settings = GetS3Settings();
@@ -1361,7 +1361,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromAzureBackup()
         {
             var azureSettings = GetAzureSettings();
@@ -1491,7 +1491,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromGoogleCloudBackup()
         {
             var googleCloudSettings = GetGoogleCloudSettings();
@@ -1640,7 +1640,7 @@ namespace SlowTests.Sharding.Backup
 
         private S3Settings GetS3Settings([CallerMemberName] string caller = null)
         {
-            var s3Settings = AmazonS3FactAttribute.S3Settings;
+            var s3Settings = AmazonS3RetryFactAttribute.S3Settings;
             if (s3Settings == null)
                 return null;
 
@@ -1659,7 +1659,7 @@ namespace SlowTests.Sharding.Backup
 
         private AzureSettings GetAzureSettings([CallerMemberName] string caller = null)
         {
-            var settings = AzureFactAttribute.AzureSettings;
+            var settings = AzureRetryFactAttribute.AzureSettings;
             if (settings == null)
                 return null;
 
@@ -1678,7 +1678,7 @@ namespace SlowTests.Sharding.Backup
 
         private GoogleCloudSettings GetGoogleCloudSettings([CallerMemberName] string caller = null)
         {
-            var googleCloudSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
+            var googleCloudSettings = GoogleCloudRetryFactAttribute.GoogleCloudSettings;
             if (googleCloudSettings == null)
                 return null;
 

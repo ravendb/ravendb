@@ -68,15 +68,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureFact, Trait("Category", "Smuggler")]
+        [AzureRetryFact, Trait("Category", "Smuggler")]
         public void can_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: false);
 
-        [AzureFact, Trait("Category", "Smuggler")]
+        [AzureRetryFact, Trait("Category", "Smuggler")]
         public void can_onetime_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: true);
 
         private void can_backup_and_restore_internal(bool oneTimeBackup)
         {
-            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -169,10 +169,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureFact, Trait("Category", "Smuggler")]
+        [AzureRetryFact, Trait("Category", "Smuggler")]
         public async Task can_create_azure_snapshot_and_restore_using_restore_point()
         {
-            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {

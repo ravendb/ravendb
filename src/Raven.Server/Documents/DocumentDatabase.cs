@@ -63,12 +63,10 @@ using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
@@ -111,6 +109,10 @@ namespace Raven.Server.Documents
         private Lazy<RequestExecutor> _proxyRequestExecutor;
 
         private readonly DatabasesLandlord.StateChange _databaseStateChange;
+
+        public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
+        private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
+        private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
 
         public void ResetIdleTime()
         {
@@ -1679,6 +1681,7 @@ namespace Raven.Server.Documents
             DataArchivist = DataArchivist.LoadConfiguration(this, record, DataArchivist);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             PeriodicBackupRunner.UpdateConfigurations(record);
+            UpdateCompressionConfigurationFromDatabaseRecord(record);
         }
 
         public void InitializeCompressionFromDatabaseRecord(DatabaseRecord record)
@@ -1695,21 +1698,6 @@ namespace Raven.Server.Documents
 
             _documentsCompression = record.DocumentsCompression;
             _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
-        }
-
-        public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
-
-        private DocumentsCompressionConfiguration _documentsCompression = new DocumentsCompressionConfiguration(false, Array.Empty<string>());
-        private HashSet<string> _compressedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        public TableSchema GetDocsSchemaForCollection(CollectionName collection)
-        {
-            if (_documentsCompression.CompressAllCollections || _compressedCollections.Contains(collection.Name))
-            {
-                return DocumentsStorage.CompressedDocsSchema;
-            }
-
-            return DocumentsStorage.DocsSchema;
         }
 
         public TableSchema GetDocsSchemaForCollection(CollectionName collection, DocumentFlags flags)
@@ -1798,6 +1786,27 @@ namespace Raven.Server.Documents
 
             using (_proxyRequestExecutor.Value)
                 _proxyRequestExecutor = CreateRequestExecutor();
+        }
+
+        public TableSchema GetDocsSchemaForCollection(CollectionName collection) =>
+            _documentsCompression.CompressAllCollections || _compressedCollections.Contains(collection.Name)
+                ? DocumentsStorage.CompressedDocsSchema
+                : DocumentsStorage.DocsSchema;
+
+        private void UpdateCompressionConfigurationFromDatabaseRecord(DatabaseRecord record)
+        {
+            if (_documentsCompression.Equals(record.DocumentsCompression))
+                return;
+
+            if (record.DocumentsCompression == null) // legacy configurations
+            {
+                _compressedCollections.Clear();
+                _documentsCompression = new DocumentsCompressionConfiguration(false);
+                return;
+            }
+
+            _documentsCompression = record.DocumentsCompression;
+            _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
         }
         
         private Lazy<RequestExecutor> CreateRequestExecutor() =>

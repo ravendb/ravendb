@@ -25,13 +25,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public Task put_blob_4MB_chunked()
         {
             return PutBlobAsync(sizeInMB: 4, testBlobKeyAsFolder: false, UploadType.Chunked);
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public Task put_blob_into_folder_4MB_chunked()
         {
             return PutBlobAsync(sizeInMB: 4, testBlobKeyAsFolder: true, UploadType.Chunked);
@@ -41,7 +41,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         private async Task PutBlobAsync(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
             var progress = new Progress();
-            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings, progress))
+            using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings, progress))
             {
                 holder.Client.MaxUploadPutBlob = new Size(3, SizeUnit.Megabytes);
                 holder.Client.MaxSingleBlockSize = new Size(1, SizeUnit.Megabytes);

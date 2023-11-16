@@ -3,13 +3,13 @@ using System.Runtime.CompilerServices;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
-using Xunit;
+using xRetry;
 
 namespace Tests.Infrastructure
 {
-    public class AzureSasTokenFactAttribute : FactAttribute
+    public class AzureRetryTheoryAttribute : RetryTheoryAttribute
     {
-        private const string AzureCredentialEnvironmentVariable = "AZURE_SAS_TOKEN_CREDENTIAL";
+        private const string AzureCredentialEnvironmentVariable = "AZURE_CREDENTIAL";
 
         private static readonly AzureSettings _azureSettings;
 
@@ -17,11 +17,16 @@ namespace Tests.Infrastructure
 
         private static readonly string ParsingError;
 
-        static AzureSasTokenFactAttribute()
+        private static readonly bool EnvVariableMissing;
+
+        static AzureRetryTheoryAttribute()
         {
             var azureSettingsString = Environment.GetEnvironmentVariable(AzureCredentialEnvironmentVariable);
             if (azureSettingsString == null)
+            {
+                EnvVariableMissing = true;
                 return;
+            }
 
             try
             {
@@ -32,11 +37,18 @@ namespace Tests.Infrastructure
                 ParsingError = e.ToString();
             }
         }
-
-        public AzureSasTokenFactAttribute([CallerMemberName] string memberName = "")
+        
+        public AzureRetryTheoryAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
+            : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
             if (RavenTestHelper.IsRunningOnCI)
                 return;
+
+            if (EnvVariableMissing)
+            {
+                Skip = $"Test is missing '{AzureCredentialEnvironmentVariable}' environment variable.";
+                return;
+            }
 
             if (string.IsNullOrEmpty(ParsingError) == false)
             {
@@ -46,7 +58,7 @@ namespace Tests.Infrastructure
 
             if (_azureSettings == null)
             {
-                Skip = $"S3 {memberName} tests missing Azure settings.";
+                Skip = $"Azure {memberName} tests missing {nameof(AzureSettings)}.";
                 return;
             }
         }

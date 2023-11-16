@@ -58,5 +58,6 @@ public enum RavenTestCategory : long
     [Description("Changes API")]
     ChangesApi = 1L << 43,
     Interversion = 1L << 44,
-    Core = 1L << 45
+    Security = 1L << 45,
+    Core = 1L << 46
 }

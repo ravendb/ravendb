@@ -21,10 +21,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public void list_blobs()
         {
-            using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 var blobNames = GenerateBlobNames(holder.Settings, 2, out var prefix);
                 foreach (var blob in blobNames)
@@ -37,10 +37,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public void CanRemoveBlobsInBatch()
         {
-            using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 var blobs = new List<string>();
                 string prefix = holder.Client.RemoteFolderName;
@@ -64,10 +64,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanRemoveBlobsWithNonExistingBlobsInBatch()
         {
-            using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 var blobs = new List<string>();
                 // put blob
@@ -93,10 +93,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task put_blob()
         {
-            using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 var blobKey = GenerateBlobNames(holder.Settings, 1, out _).First();
 
@@ -119,10 +119,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task put_blob_in_folder()
         {
-            using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 var blobNames = GenerateBlobNames(holder.Settings, 1, out _);
 
@@ -143,13 +143,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public Task put_blob_without_sas_token()
         {
             return PutBlobsAsync(5, useSasToken: false);
         }
 
-        [AzureSasTokenFact]
+        [AzureSasTokenRetryFact]
         public Task put_blob_with_sas_token()
         {
             return PutBlobsAsync(5, useSasToken: true);
@@ -157,7 +157,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private static async Task PutBlobsAsync(int blobsCount, bool useSasToken)
         {
-            using (var holder = new AzureClientHolder(useSasToken == false ? AzureFactAttribute.AzureSettings : AzureSasTokenFactAttribute.AzureSettings))
+            using (var holder = new AzureClientHolder(useSasToken == false ? AzureRetryFactAttribute.AzureSettings : AzureSasTokenRetryFactAttribute.AzureSettings))
             {
                 var blobNames = GenerateBlobNames(holder.Settings, blobsCount, out var prefix);
                 for (var i = 0; i < blobsCount; i++)

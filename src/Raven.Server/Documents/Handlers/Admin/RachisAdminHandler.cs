@@ -50,16 +50,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 try
                 {
                     var command = CommandBase.CreateFrom(commandJson);
-                    switch (command)
-                    {
-                        case AddOrUpdateCompareExchangeBatchCommand batchCmpExchangeCommand:
-                            batchCmpExchangeCommand.ContextToWriteResult = context;
-                            break;
-
-                        case CompareExchangeCommandBase cmpExchange:
-                            cmpExchange.ContextToWriteResult = context;
-                            break;
-                    }
+                    if (command is IBlittableResultCommand blittableResultCommand)
+                        blittableResultCommand.ContextToWriteResult = context;
+                    
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(commandJson.ToString(), TrafficWatchChangeType.ClusterCommands);
 

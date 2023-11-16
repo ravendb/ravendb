@@ -507,7 +507,8 @@ namespace Raven.Server.Documents
                     _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
 
                     //make sure that the relevant collection tree exists
-                    var table = tx.OpenTable(_documentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+
+                    var table = tx.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
                     table.Delete(existingDoc.StorageId);
                 }
                 else if (existing.Tombstone != null)

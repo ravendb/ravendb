@@ -14,7 +14,9 @@ namespace Raven.Server.Rachis
         internal sealed class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
         {
             public CommandBase Command;
-            public Task<(long, object)> TaskResult { get; private set; }
+            public Task<(long Index, object Result)> TaskResult { get; private set; }
+            public BlittableResultWriter BlittableResultWriter { get; init; }
+
             private readonly Leader _leader;
             private readonly RachisConsensus _engine;
             private const string _leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
@@ -68,9 +70,12 @@ namespace Raven.Server.Rachis
                         }
                         else
                         {
-                            if (result != null)
+                            if (result != null && BlittableResultWriter != null)
                             {
-                                result = GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
+                                BlittableResultWriter.CopyResult(result);
+                                //The result are consumed by the `CopyResult` and the context of the result from `HasHistoryLog` is not valid outside
+                                //so we `TrySetResult` to null to make sure no use of invalid context 
+                                result = null;
                             }
 
                             TaskResult = Task.FromResult<(long, object)>((index, result));
@@ -88,15 +93,10 @@ namespace Raven.Server.Rachis
                     index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
                 }
                
-                if (_leader._entries.TryGetValue(index, out var state))
-                {
-                    TaskResult = state.TaskCompletionSource.Task;
-                }
-                else
+                if (_leader._entries.TryGetValue(index, out var state) == false)
                 {
                     var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    TaskResult = tcs.Task; //will set only after leader gets consensus on this command and finish with execute 'Command'.
-                    var newState = new CommandState
+                    state = new CommandState
                     {
                         // we need to add entry inside write tx lock to avoid
                         // a situation when command will be applied (and state set)
@@ -104,11 +104,20 @@ namespace Raven.Server.Rachis
 
                         CommandIndex = index,
                         TaskCompletionSource = tcs,
-                        ConvertResult = GetConvertResult(Command),
                     };
-                    _leader._entries[index] = newState;
+                    _leader._entries[index] = state;
                     context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += AfterCommit;
                 }
+
+                TaskResult = state.TaskCompletionSource.Task;
+
+                if (BlittableResultWriter != null)
+                    //If we need to return a blittable as a result the context must be valid for each command that tries to read from it.
+                    //So we let the command provide the method to handle the write while the command is aware of its context validation status.
+                    //We can have multiple delegates if the same command was sent multiple times (multiple attempts)
+                    //https://issues.hibernatingrhinos.com/issue/RavenDB-20762
+                    state.WriteResultAction += BlittableResultWriter.CopyResult;
+
             }
 
             private void AfterCommit(LowLevelTransaction tx)
