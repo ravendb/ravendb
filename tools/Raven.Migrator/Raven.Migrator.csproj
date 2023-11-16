@@ -20,7 +20,7 @@
     <PackageReference Include="MongoDB.Driver" Version="2.22.0" />
     <PackageReference Include="MongoDB.Driver.GridFS" Version="2.22.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Snappier" Version="1.1.1" />
+    <PackageReference Include="Snappier" Version="1.1.2" />
     <PackageReference Include="System.Collections.Immutable" Version="7.0.0" />
     <PackageReference Include="System.Data.HashFunction.Blake2" Version="2.0.0" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="7.0.2" />

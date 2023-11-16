@@ -1,7 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
+using FastTests.Voron.FixedSize;
 using Sparrow;
+using Sparrow.Binary;
+using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +18,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void XXHash64_UseActualValues()
         {
             var r1 = Hashing.XXHash64.CalculateRaw("Public");
@@ -22,7 +27,7 @@ namespace FastTests.Sparrow
             Assert.Equal(r1, r2);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void XXHash32_UseActualValues()
         {
             var r1 = Hashing.XXHash32.CalculateRaw("Public");
@@ -33,7 +38,7 @@ namespace FastTests.Sparrow
             Assert.Equal(r2, r3);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Marvin32_UseActualValues()
         {
             byte[] value = { (byte)'A', 0, (byte)'b', 0, (byte)'c', 0, (byte)'d', 0, (byte)'e', 0, (byte)'f', 0, (byte)'g', 0, }; /* "Abcdefg" in UTF-16-LE */
@@ -45,7 +50,7 @@ namespace FastTests.Sparrow
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void XXHash32_UseLongActualValues()
         {
             var r1 = Hashing.XXHash32.CalculateRaw("PublicPublicPublicPublic");
@@ -57,16 +62,7 @@ namespace FastTests.Sparrow
         }
 
 
-        [Fact]
-        public void Metro128_UseActualValues()
-        {
-            var r1 = Hashing.Metro128.CalculateRaw("Public");
-            var r2 = Hashing.Metro128.CalculateRaw(new string("Public".ToCharArray()));
-
-            Assert.Equal(r1, r2);
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void XXHash32_EqualityImplementationPointerAndSpan()
         {
             var rng = new Random();
@@ -88,7 +84,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void XXHash32()
         {
             string value = "abcd";
@@ -119,16 +115,7 @@ namespace FastTests.Sparrow
         }
 
 
-        [Fact]
-        public void Metro128()
-        {
-            var r1 = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes("012345678901234567890123456789012345678901234567890123456789012"), seed: 0);
-
-            Assert.Equal(r1.H1, 0x9B9FEDA4BFE27CC7UL);
-            Assert.Equal(r1.H2, 0x97A27450ACB24805UL);
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Marvin32()
         {
             byte[] test = { (byte)'A', 0, (byte)'b', 0, (byte)'c', 0, (byte)'d', 0, (byte)'e', 0, (byte)'f', 0, (byte)'g', 0, }; /* "Abcdefg" in UTF-16-LE */
@@ -136,7 +123,7 @@ namespace FastTests.Sparrow
             Assert.Equal(r, 0xba627c81);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Marvin32_IntArrayEquivalence()
         {
             int[] test = { 32, 5, 11588, 5 }; /* "Abcdefg" in UTF-16-LE */
@@ -151,7 +138,7 @@ namespace FastTests.Sparrow
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void XXHash32_EquivalenceInDifferentMemoryLocations()
         {
             string value = "abcd";
@@ -170,7 +157,7 @@ namespace FastTests.Sparrow
             Assert.Equal(expected, result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void XXHash64_EquivalenceInDifferentMemoryLocationsXXHash64()
         {
             string value = "abcd";
@@ -189,27 +176,7 @@ namespace FastTests.Sparrow
             Assert.Equal(expected, result);
         }
 
-        [Fact]
-        public void Metro128_EquivalenceInDifferentMemoryLocations()
-        {
-            string value = "abcd";
-            var result = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            var expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            Assert.Equal(expected, result);
-
-            value = "abc";
-            result = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            Assert.Equal(expected, result);
-
-            value = "κόσμε";
-            result = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            Assert.Equal(expected, result);
-        }
-
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void XXHash32_NotEquivalenceOfBytesWithString()
         {
             string value = "abcd";
@@ -229,7 +196,7 @@ namespace FastTests.Sparrow
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void XXHash64_NotEquivalenceOfBytesWithString()
         {
             string value = "abcd";
@@ -248,26 +215,7 @@ namespace FastTests.Sparrow
             Assert.NotEqual(expected, result);
         }
 
-        [Fact]
-        public void Metro128_NotEquivalenceOfBytesWithString()
-        {
-            string value = "abcd";
-            var result = Hashing.Metro128.CalculateRaw(value, seed: 10);
-            var expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            Assert.NotEqual(expected, result);
-
-            value = "abc";
-            result = Hashing.Metro128.CalculateRaw(value, seed: 10);
-            expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            Assert.NotEqual(expected, result);
-
-            value = "κόσμε";
-            result = Hashing.Metro128.CalculateRaw(value, seed: 10);
-            expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
-            Assert.NotEqual(expected, result);
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void EnsureZeroLengthStringIsAValidHash()
         {
             byte[] zeroLength = Array.Empty<byte>();
@@ -286,11 +234,6 @@ namespace FastTests.Sparrow
                 Assert.Equal(zeroHashLong, Hashing.XXHash64.Calculate(nonZeroLength, 0));
                 Assert.Equal(zeroHashLong, Hashing.XXHash64.Calculate(nonZeroPtr, 0));
 
-                var zeroHash128 = Hashing.Metro128.Calculate(zeroLength);
-                Assert.Equal(zeroHash128, Hashing.Metro128.Calculate(zeroPtr, 0));
-                Assert.Equal(zeroHash128, Hashing.Metro128.Calculate(nonZeroLength, 0));
-                Assert.Equal(zeroHash128, Hashing.Metro128.Calculate(nonZeroPtr, 0));
-
                 var marvinHash = Hashing.Marvin32.Calculate(zeroLength);
                 Assert.Equal(marvinHash, Hashing.Marvin32.CalculateInline(zeroPtr, 0));
                 Assert.Equal(marvinHash, Hashing.Marvin32.CalculateInline(nonZeroPtr, 0));
@@ -298,72 +241,7 @@ namespace FastTests.Sparrow
             }
         }
 
-
-
-
-        public static IEnumerable<object[]> BufferSize
-        {
-            get
-            {
-                return new[]
-                {
-                    new object[] {1},
-                    new object[] {4},
-                    new object[] {15},
-                    new object[] {65},
-                    new object[] {90},
-                    new object[] {128},
-                    new object[] {129},
-                    new object[] {1000},
-                };
-            }
-        }
-
-        [Theory]
-        [MemberData("BufferSize")]
-        public void XXHash32_IterativeHashingEquivalence(int bufferSize)
-        {
-            var rnd = new Random(1000);
-
-            byte[] values = new byte[bufferSize];
-            rnd.NextBytes(values);
-
-            uint seed = 233;
-            var context = Hashing.Iterative.XXHash32.Preprocess(values, values.Length, seed);
-
-            for (int i = 1; i < values.Length; i++)
-            {
-                var expected = Hashing.XXHash32.Calculate(values, i, seed);
-                var result = Hashing.Iterative.XXHash32.Calculate(values, i, context);
-                Assert.Equal(expected, result);
-            }
-        }
-
-        [Theory]
-        [MemberData("BufferSize")]
-        public void XXHash32_IterativeHashingPrefixing(int bufferSize)
-        {
-            var rnd = new Random(1000);
-
-            byte[] values = new byte[bufferSize];
-            rnd.NextBytes(values);
-
-            uint seed = 233;
-            var context = Hashing.Iterative.XXHash32.Preprocess(values, values.Length, seed);
-
-            for (int i = 1; i < values.Length; i++)
-            {
-                var expected = Hashing.XXHash32.Calculate(values, i, seed);
-
-                for (int j = 0; j < i; j++)
-                {
-                    var result = Hashing.Iterative.XXHash32.Calculate(values, i, context, j);
-                    Assert.Equal(expected, result);
-                }
-            }
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Combine()
         {
             int h1 = Hashing.HashCombiner.CombineInline(1991, 13);
@@ -371,59 +249,16 @@ namespace FastTests.Sparrow
             Assert.NotEqual(h1, h2);
         }
 
-
-        [Theory]
-        [MemberData("BufferSize")]
-        public unsafe void XXHash32_StreamedHashingEquivalence(int bufferSize)
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public unsafe void XXHash64_StreamedHashingEquivalence(int randomSeed)
         {
-            var rnd = new Random(1000);
+            var rnd = new Random(randomSeed);
+            var bufferSize = rnd.Next(1, 1000);
+            var seed = (ulong)rnd.Next();
 
             byte[] values = new byte[bufferSize];
             rnd.NextBytes(values);
-
-            uint seed = 233;
-
-            int blockSize;
-            int iteration = 1;
-            do
-            {
-                blockSize = Hashing.Streamed.XXHash32.Alignment * iteration;
-
-                var context = new Hashing.Streamed.XXHash32Context {Seed = seed};
-                Hashing.Streamed.XXHash32.BeginProcess(ref context);
-                fixed (byte* buffer = values)
-                {
-                    byte* current = buffer;
-                    byte* bEnd = buffer + bufferSize;
-                    do
-                    {
-                        int block = Math.Min(blockSize, (int)(bEnd - current));
-                        Hashing.Streamed.XXHash32.Process(ref context, current, block);
-                        current += block;
-                    }
-                    while (current < bEnd);
-                }
-
-                iteration++;
-
-                var result = Hashing.Streamed.XXHash32.EndProcess(ref context);
-                var expected = Hashing.XXHash32.Calculate(values, -1, seed);
-
-                Assert.Equal(expected, result);
-            }
-            while (blockSize <= bufferSize);
-        }
-
-        [Theory]
-        [MemberData("BufferSize")]
-        public unsafe void XXHash64_StreamedHashingEquivalence(int bufferSize)
-        {
-            var rnd = new Random(1000);
-
-            byte[] values = new byte[bufferSize];
-            rnd.NextBytes(values);
-
-            uint seed = 233;
 
             int blockSize;
             int iteration = 1;
@@ -431,8 +266,8 @@ namespace FastTests.Sparrow
             {
                 blockSize = Hashing.Streamed.XXHash64.Alignment * iteration;
 
-                var context = new Hashing.Streamed.XXHash64Context {Seed = seed};
-                Hashing.Streamed.XXHash64.BeginProcess(ref context);
+                var context = new Hashing.Streamed.XXHash64Context { Seed = seed };
+                Hashing.Streamed.XXHash64.Begin(ref context);
                 fixed (byte* buffer = values)
                 {
                     byte* current = buffer;
@@ -448,7 +283,7 @@ namespace FastTests.Sparrow
 
                 iteration++;
 
-                var result = Hashing.Streamed.XXHash64.EndProcess(ref context);
+                var result = Hashing.Streamed.XXHash64.End(ref context);
                 var expected = Hashing.XXHash64.Calculate(values, -1, seed);
 
                 Assert.Equal(expected, result);
@@ -456,45 +291,229 @@ namespace FastTests.Sparrow
             while (blockSize <= bufferSize);
         }
 
-        [Theory]
-        [MemberData("BufferSize")]
-        public unsafe void Metro128_StreamedHashingEquivalence(int bufferSize)
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public unsafe void XXHash64_HashingEquivalenceWithReference(int randomSeed)
         {
-            var rnd = new Random(1000);
+            var rnd = new Random(randomSeed);
+            var bufferSize = rnd.Next(1, 1000);
+            var seed = (ulong)rnd.Next();
 
             byte[] values = new byte[bufferSize];
             rnd.NextBytes(values);
 
-            uint seed = 233;
-
-            int blockSize;
-            int iteration = 1;
-            do
+            fixed (byte* valuePtr = values)
             {
-                blockSize = Hashing.Streamed.Metro128.Alignment * iteration;
-
-                var context = Hashing.Streamed.Metro128.BeginProcess(seed);
-                fixed (byte* buffer = values)
+                for (int i = 1; i < values.Length; i++)
                 {
-                    byte* current = buffer;
-                    byte* bEnd = buffer + bufferSize;
+                    var expected = XXHash64Reference(valuePtr, (ulong)i, seed: seed);
+                    var result = Hashing.XXHash64.CalculateInline(values.AsSpan().Slice(0, i), seed);
+
+                    Assert.Equal(expected, result);
+                }
+            }
+        }
+
+        private static unsafe ulong XXHash64Reference(byte* buffer, ulong len, ulong seed = 0)
+        {
+            ulong h64;
+
+            byte* bEnd = buffer + len;
+
+            if (len >= 32)
+            {
+                byte* limit = bEnd - 32;
+
+                ulong v1 = seed + Hashing.XXHash64Constants.PRIME64_1 + Hashing.XXHash64Constants.PRIME64_2;
+                ulong v2 = seed + Hashing.XXHash64Constants.PRIME64_2;
+                ulong v3 = seed + 0;
+                ulong v4 = seed - Hashing.XXHash64Constants.PRIME64_1;
+
+                do
+                {
+                    v1 += ((ulong*)buffer)[0] * Hashing.XXHash64Constants.PRIME64_2;
+                    v2 += ((ulong*)buffer)[1] * Hashing.XXHash64Constants.PRIME64_2;
+                    v3 += ((ulong*)buffer)[2] * Hashing.XXHash64Constants.PRIME64_2;
+                    v4 += ((ulong*)buffer)[3] * Hashing.XXHash64Constants.PRIME64_2;
+
+                    buffer += 4 * sizeof(ulong);
+
+                    v1 = Bits.RotateLeft64(v1, 31);
+                    v2 = Bits.RotateLeft64(v2, 31);
+                    v3 = Bits.RotateLeft64(v3, 31);
+                    v4 = Bits.RotateLeft64(v4, 31);
+
+                    v1 *= Hashing.XXHash64Constants.PRIME64_1;
+                    v2 *= Hashing.XXHash64Constants.PRIME64_1;
+                    v3 *= Hashing.XXHash64Constants.PRIME64_1;
+                    v4 *= Hashing.XXHash64Constants.PRIME64_1;
+                }
+                while (buffer <= limit);
+
+                h64 = Bits.RotateLeft64(v1, 1) + Bits.RotateLeft64(v2, 7) + Bits.RotateLeft64(v3, 12) + Bits.RotateLeft64(v4, 18);
+
+                v1 *= Hashing.XXHash64Constants.PRIME64_2;
+                v2 *= Hashing.XXHash64Constants.PRIME64_2;
+                v3 *= Hashing.XXHash64Constants.PRIME64_2;
+                v4 *= Hashing.XXHash64Constants.PRIME64_2;
+
+                v1 = Bits.RotateLeft64(v1, 31);
+                v2 = Bits.RotateLeft64(v2, 31);
+                v3 = Bits.RotateLeft64(v3, 31);
+                v4 = Bits.RotateLeft64(v4, 31);
+
+                v1 *= Hashing.XXHash64Constants.PRIME64_1;
+                v2 *= Hashing.XXHash64Constants.PRIME64_1;
+                v3 *= Hashing.XXHash64Constants.PRIME64_1;
+                v4 *= Hashing.XXHash64Constants.PRIME64_1;
+
+                h64 ^= v1;
+                h64 = h64 * Hashing.XXHash64Constants.PRIME64_1 + Hashing.XXHash64Constants.PRIME64_4;
+
+                h64 ^= v2;
+                h64 = h64 * Hashing.XXHash64Constants.PRIME64_1 + Hashing.XXHash64Constants.PRIME64_4;
+
+                h64 ^= v3;
+                h64 = h64 * Hashing.XXHash64Constants.PRIME64_1 + Hashing.XXHash64Constants.PRIME64_4;
+
+                h64 ^= v4;
+                h64 = h64 * Hashing.XXHash64Constants.PRIME64_1 + Hashing.XXHash64Constants.PRIME64_4;
+            }
+            else
+            {
+                h64 = seed + Hashing.XXHash64Constants.PRIME64_5;
+            }
+
+            h64 += (ulong)len;
+
+
+            while (buffer + 8 <= bEnd)
+            {
+                ulong k1 = *((ulong*)buffer);
+                k1 *= Hashing.XXHash64Constants.PRIME64_2;
+                k1 = Bits.RotateLeft64(k1, 31);
+                k1 *= Hashing.XXHash64Constants.PRIME64_1;
+                h64 ^= k1;
+                h64 = Bits.RotateLeft64(h64, 27) * Hashing.XXHash64Constants.PRIME64_1 + Hashing.XXHash64Constants.PRIME64_4;
+                buffer += 8;
+            }
+
+            if (buffer + 4 <= bEnd)
+            {
+                h64 ^= *(uint*)buffer * Hashing.XXHash64Constants.PRIME64_1;
+                h64 = Bits.RotateLeft64(h64, 23) * Hashing.XXHash64Constants.PRIME64_2 + Hashing.XXHash64Constants.PRIME64_3;
+                buffer += 4;
+            }
+
+            while (buffer < bEnd)
+            {
+                h64 ^= ((ulong)*buffer) * Hashing.XXHash64Constants.PRIME64_5;
+                h64 = Bits.RotateLeft64(h64, 11) * Hashing.XXHash64Constants.PRIME64_1;
+                buffer++;
+            }
+
+            h64 ^= h64 >> 33;
+            h64 *= Hashing.XXHash64Constants.PRIME64_2;
+            h64 ^= h64 >> 29;
+            h64 *= Hashing.XXHash64Constants.PRIME64_3;
+            h64 ^= h64 >> 32;
+
+            return h64;
+        }
+
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public unsafe void XXHash32_HashingEquivalenceWithReference(int randomSeed)
+        {
+            var rnd = new Random(randomSeed);
+            var bufferSize = rnd.Next(1, 1000);
+            var seed = (uint)rnd.Next();
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            fixed (byte* valuePtr = values)
+            {
+                for (int i = 1; i < values.Length; i++)
+                {
+                    var expected = XXHash32Reference(valuePtr, i, seed: seed);
+                    var result = Hashing.XXHash32.CalculateInline(values.AsSpan().Slice(0, i), seed);
+
+                    Assert.Equal(expected, result);
+                }
+            }
+        }
+
+        private static unsafe uint XXHash32Reference(byte* buffer, int len, uint seed = 0)
+        {
+            unchecked
+            {
+                uint h32;
+
+                byte* bEnd = buffer + len;
+
+                if (len >= 16)
+                {
+                    byte* limit = bEnd - 16;
+
+                    uint v1 = seed + Hashing.XXHash32Constants.PRIME32_1 + Hashing.XXHash32Constants.PRIME32_2;
+                    uint v2 = seed + Hashing.XXHash32Constants.PRIME32_2;
+                    uint v3 = seed + 0;
+                    uint v4 = seed - Hashing.XXHash32Constants.PRIME32_1;
+
                     do
                     {
-                        int block = Math.Min(blockSize, (int)(bEnd - current));
-                        context = Hashing.Streamed.Metro128.Process(context, current, block);
-                        current += block;
+                        v1 += ((uint*)buffer)[0] * Hashing.XXHash32Constants.PRIME32_2;
+                        v2 += ((uint*)buffer)[1] * Hashing.XXHash32Constants.PRIME32_2;
+                        v3 += ((uint*)buffer)[2] * Hashing.XXHash32Constants.PRIME32_2;
+                        v4 += ((uint*)buffer)[3] * Hashing.XXHash32Constants.PRIME32_2;
+
+                        buffer += 4 * sizeof(uint);
+
+                        v1 = Bits.RotateLeft32(v1, 13);
+                        v2 = Bits.RotateLeft32(v2, 13);
+                        v3 = Bits.RotateLeft32(v3, 13);
+                        v4 = Bits.RotateLeft32(v4, 13);
+
+                        v1 *= Hashing.XXHash32Constants.PRIME32_1;
+                        v2 *= Hashing.XXHash32Constants.PRIME32_1;
+                        v3 *= Hashing.XXHash32Constants.PRIME32_1;
+                        v4 *= Hashing.XXHash32Constants.PRIME32_1;
                     }
-                    while (current < bEnd);
+                    while (buffer <= limit);
+
+                    h32 = Bits.RotateLeft32(v1, 1) + Bits.RotateLeft32(v2, 7) + Bits.RotateLeft32(v3, 12) + Bits.RotateLeft32(v4, 18);
+                }
+                else
+                {
+                    h32 = seed + Hashing.XXHash32Constants.PRIME32_5;
                 }
 
-                iteration++;
+                h32 += (uint)len;
 
-                var result = Hashing.Streamed.Metro128.EndProcess(context);
-                var expected = Hashing.Metro128.Calculate(values, -1, seed);
+                while (buffer + 4 <= bEnd)
+                {
+                    h32 += *((uint*)buffer) * Hashing.XXHash32Constants.PRIME32_3;
+                    h32 = Bits.RotateLeft32(h32, 17) * Hashing.XXHash32Constants.PRIME32_4;
+                    buffer += 4;
+                }
 
-                Assert.Equal(expected, result);
+                while (buffer < bEnd)
+                {
+                    h32 += (uint)(*buffer) * Hashing.XXHash32Constants.PRIME32_5;
+                    h32 = Bits.RotateLeft32(h32, 11) * Hashing.XXHash32Constants.PRIME32_1;
+                    buffer++;
+                }
+
+                h32 ^= h32 >> 15;
+                h32 *= Hashing.XXHash32Constants.PRIME32_2;
+                h32 ^= h32 >> 13;
+                h32 *= Hashing.XXHash32Constants.PRIME32_3;
+                h32 ^= h32 >> 16;
+
+                return h32;
             }
-            while (blockSize <= bufferSize);
         }
     }
 }

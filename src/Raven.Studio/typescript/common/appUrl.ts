@@ -768,9 +768,15 @@ class appUrl {
     }
     
     static defaultModule: any; // will be bind dynamically to avoid cycles in imports
+    static clusterDashboardModule: any; // will be bind dynamically to avoid cycles in imports
 
     static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
+            if (instruction.fragment === "dashboard") {
+                instruction.config.moduleId = appUrl.clusterDashboardModule;
+                return;
+            }
+            
             const queryString = instruction.queryString ? ("?" + instruction.queryString) : "";
 
             messagePublisher.reportWarning("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");

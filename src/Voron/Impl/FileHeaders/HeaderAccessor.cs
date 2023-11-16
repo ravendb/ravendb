@@ -246,7 +246,7 @@ namespace Voron.Impl.FileHeaders
             {
                 Seed = (ulong)header->TransactionId
             };
-            Hashing.Streamed.XXHash64.BeginProcess(ref ctx);
+            Hashing.Streamed.XXHash64.Begin(ref ctx);
 
             // First part of header, until the Hash field
             Hashing.Streamed.XXHash64.Process(ref ctx, (byte*)header, FileHeader.HashOffset);
@@ -256,7 +256,7 @@ namespace Voron.Impl.FileHeaders
             if (secondPartOfHeaderLength > 0)
                 Hashing.Streamed.XXHash64.Process(ref ctx, (byte*)header + FileHeader.HashOffset + sizeof(ulong), secondPartOfHeaderLength);
 
-            return Hashing.Streamed.XXHash64.EndProcess(ref ctx);
+            return Hashing.Streamed.XXHash64.End(ref ctx);
         }
 
         public static bool ValidHash(FileHeader* header)
