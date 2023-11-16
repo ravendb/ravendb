@@ -37,6 +37,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -423,7 +424,7 @@ namespace Raven.Server.Web.System
             {
                 await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, newIndex);
             }
-            catch (Exception e) when (e is AggregateException)
+            catch (RaftIndexWaitAggregateException e)
             {
                 throw new InvalidDataException(
                     $"The database '{name}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", e);

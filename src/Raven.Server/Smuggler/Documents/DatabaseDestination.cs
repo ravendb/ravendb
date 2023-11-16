@@ -27,6 +27,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -1418,10 +1419,9 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         await _database.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, maxIndex);
                     }
-                    catch (Exception e) when (e is AggregateException)
+                    catch (RaftIndexWaitAggregateException e)
                     {
-                        throw new InvalidDataException(
-                            "Respective tasks were dispatched, however, we couldn't achieve consistency across one or more target nodes due to errors.", e);
+                        throw new InvalidDataException("Respective tasks were dispatched, however, we couldn't achieve consistency across one or more target nodes due to errors.", e);
                     }
                 }
 
