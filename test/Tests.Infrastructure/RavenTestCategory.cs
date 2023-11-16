@@ -57,5 +57,6 @@ public enum RavenTestCategory : long
     Lucene = 1L << 42,
     [Description("Changes API")]
     ChangesApi = 1L << 43,
-    Interversion = 1L << 44
+    Interversion = 1L << 44,
+    Security = 1L << 45
 }

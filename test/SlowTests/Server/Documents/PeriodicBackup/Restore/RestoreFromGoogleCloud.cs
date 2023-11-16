@@ -2,19 +2,19 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.Disposables;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit;
-using Nito.Disposables;
-using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Tests.Infrastructure.Entities;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
@@ -28,9 +28,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         private readonly string _cloudPathPrefix = $"{nameof(RestoreFromGoogleCloud)}-{Guid.NewGuid()}";
 
         [Fact]
-        public async Task restore_google_cloud_settings_tests()
+        public void restore_google_cloud_settings_tests()
         {
-            await using (CleanupAsync())
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = s => $"{s}_2"
@@ -59,7 +58,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [GoogleCloudFact, Trait("Category", "Smuggler")]
+        [GoogleCloudRetryFact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore()
         {
             await using (CleanupAsync())
@@ -130,7 +129,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [GoogleCloudFact, Trait("Category", "Smuggler")]
+        [GoogleCloudRetryFact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot()
         {
             await using (CleanupAsync())
@@ -219,7 +218,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         private GoogleCloudSettings GetGoogleCloudSettings(string subPath = null)
         {
-            var testSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
+            var testSettings = GoogleCloudRetryFactAttribute.GoogleCloudSettings;
 
             if (testSettings == null)
                 return null;

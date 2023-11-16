@@ -792,7 +792,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+            var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                 collectionName.GetTableName(CollectionTableType.Documents));
 
             if (table == null)
@@ -925,7 +925,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+            var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                 collectionName.GetTableName(CollectionTableType.Documents));
 
             if (table == null)
@@ -1340,9 +1340,8 @@ namespace Raven.Server.Documents
 
         private bool ReadLastDocument(Transaction transaction, CollectionName collectionName, CollectionTableType collectionType, ref Table.TableValueHolder result)
         {
-            var table = transaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(collectionType)
-            );
+            var table = transaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
+                collectionName.GetTableName(collectionType));
 
             // ReSharper disable once UseNullPropagation
             if (table == null)
@@ -1659,8 +1658,9 @@ namespace Raven.Server.Documents
                     ThrowConcurrencyException(id, expectedChangeVector, doc.ChangeVector);
 
                 collectionName = ExtractCollectionName(context, doc.Data);
-                var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+
                 var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);
+                var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 long etag;
                 using (Slice.From(context.Allocator, doc.LowerId, out Slice tombstoneId))
@@ -2123,7 +2123,7 @@ namespace Raven.Server.Documents
             //make sure that the relevant collection tree exists
             Table table = isTombstone ?
                 tx.OpenTable(TombstonesSchema, collectionName) :
-                tx.OpenTable(DocsSchema, collectionName);
+                tx.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionObject), collectionName);
 
             table.Delete(storageId);
         }
@@ -2172,10 +2172,11 @@ namespace Raven.Server.Documents
             }
             else
             {
-                table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+                table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                     collectionName.GetTableName(CollectionTableType.Documents));
                 indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
+
             if (table == null)
             {
                 totalCount = 0;
@@ -2209,7 +2210,8 @@ namespace Raven.Server.Documents
         {
             foreach (var kvp in _collectionsCache)
             {
-                var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
+                var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(kvp.Value),
+                    kvp.Value.GetTableName(CollectionTableType.Documents));
                 //This is the case where a read transaction reading a collection cached by a later write transaction we can safly ignore it.
                 if (collectionTable == null)
                 {
@@ -2284,7 +2286,7 @@ namespace Raven.Server.Documents
                 };
             }
 
-            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                 collectionName.GetTableName(CollectionTableType.Documents));
 
             if (collectionTable == null)

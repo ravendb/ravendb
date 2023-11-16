@@ -569,7 +569,7 @@ namespace Voron.Impl
 
         private const int InvalidScratchFile = -1;
         private PagerStateCacheItem _lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
-        private TxState _disposed;
+        private TxState _txState;
 
         [Flags]
         private enum TxState
@@ -582,7 +582,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Page GetPage(long pageNumber)
         {
-            if (_disposed != TxState.None)
+            if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page result))
@@ -598,7 +598,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Page GetPageWithoutCache(long pageNumber)
         {
-            if (_disposed != TxState.None)
+            if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             return GetPageInternal(pageNumber);
@@ -657,7 +657,7 @@ namespace Voron.Impl
 
         public T GetPageHeaderForDebug<T>(long pageNumber) where T : unmanaged
         {
-            if (_disposed != TxState.None)
+            if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page page))
@@ -721,13 +721,13 @@ namespace Voron.Impl
 
         private void ThrowObjectDisposed()
         {
-            if (_disposed.HasFlag(TxState.Disposed))
+            if (_txState.HasFlag(TxState.Disposed))
                 throw new ObjectDisposedException("Transaction is already disposed");
 
-            if (_disposed.HasFlag(TxState.Errored))
+            if (_txState.HasFlag(TxState.Errored))
                 throw new InvalidDataException("The transaction is in error state, and cannot be used further");
 
-            throw new ObjectDisposedException("Transaction state is invalid: " + _disposed);
+            throw new ObjectDisposedException("Transaction state is invalid: " + _txState);
         }
 
         public Page AllocatePage(int numberOfPages, long? pageNumber = null, Page? previousPage = null, bool zeroPage = true)
@@ -774,7 +774,7 @@ namespace Voron.Impl
 
         private Page AllocatePage(int numberOfPages, long pageNumber, Page? previousVersion, bool zeroPage)
         {
-            if (_disposed != TxState.None)
+            if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             try
@@ -834,7 +834,7 @@ namespace Voron.Impl
             }
             catch
             {
-                _disposed |= TxState.Errored;
+                _txState |= TxState.Errored;
                 throw;
             }
         }
@@ -852,7 +852,7 @@ namespace Voron.Impl
 
         internal void BreakLargeAllocationToSeparatePages(long pageNumber)
         {
-            if (_disposed != TxState.None)
+            if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             PageFromScratchBuffer value;
@@ -881,7 +881,7 @@ namespace Voron.Impl
 
         internal void ShrinkOverflowPage(long pageNumber, int newSize, TreeMutableState treeState)
         {
-            if (_disposed != TxState.None)
+            if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             PageFromScratchBuffer value;
@@ -932,12 +932,15 @@ namespace Voron.Impl
         }
 
 
-        public bool IsDisposed => _disposed != TxState.None;
+        public bool IsValid => _txState == TxState.None;
+        
+        public bool IsDisposed => _txState.HasFlag(TxState.Disposed);
+
         public NativeMemory.ThreadStats CurrentTransactionHolder { get; set; }
 
         public void Dispose()
         {
-            if (_disposed.HasFlag(TxState.Disposed))
+            if (_txState.HasFlag(TxState.Disposed))
                 return;
 
             try
@@ -945,7 +948,7 @@ namespace Voron.Impl
                 if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
                     Rollback();
 
-                _disposed |= TxState.Disposed;
+                _txState |= TxState.Disposed;
 
                 PersistentContext.FreePageLocator(_pageLocator);
             }
@@ -988,7 +991,7 @@ namespace Voron.Impl
 
         public void MarkTransactionAsFailed()
         {
-            _disposed |= TxState.Errored;
+            _txState |= TxState.Errored;
         }
 
         internal void FreePageOnCommit(long pageNumber)
@@ -1024,7 +1027,7 @@ namespace Voron.Impl
 
         public void FreePage(long pageNumber)
         {
-            if (_disposed != TxState.None)
+            if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             try
@@ -1042,7 +1045,7 @@ namespace Voron.Impl
             }
             catch
             {
-                _disposed |= TxState.Errored;
+                _txState |= TxState.Errored;
                 throw;
             }
         }
@@ -1169,7 +1172,7 @@ namespace Voron.Impl
                     AsyncCommit = null;
                 }
 
-                _disposed |= TxState.Errored;
+                _txState |= TxState.Errored;
 
                 throw;
             }
@@ -1196,7 +1199,7 @@ namespace Voron.Impl
         {
             if (AsyncCommit == null)
             {
-                _disposed |= TxState.Errored;
+                _txState |= TxState.Errored;
                 ThrowInvalidAsyncEndWithoutBegin();
                 return;// never reached
             }
@@ -1211,7 +1214,7 @@ namespace Voron.Impl
                 // of writing to the journal means that we don't know what the current
                 // state of the journal is. We have to shut down and run recovery to 
                 // come to a known good state
-                _disposed |= TxState.Errored;
+                _txState |= TxState.Errored;
                 _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
 
                 throw;
@@ -1261,14 +1264,14 @@ namespace Voron.Impl
             }
             catch
             {
-                _disposed |= TxState.Errored;
+                _txState |= TxState.Errored;
                 throw;
             }
         }
 
         private void CommitStage1_CompleteTransaction()
         {
-            if (_disposed != TxState.None)
+            if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             if (Committed)
@@ -1332,7 +1335,7 @@ namespace Voron.Impl
             }
             catch (Exception e)
             {
-                _disposed |= TxState.Errored;
+                _txState |= TxState.Errored;
                 _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                 throw;
             }
@@ -1354,7 +1357,7 @@ namespace Voron.Impl
         public void Rollback()
         {
             // here we allow rolling back of errored transaction
-            if (_disposed.HasFlag(TxState.Disposed))
+            if (_txState.HasFlag(TxState.Disposed))
                 ThrowObjectDisposed();
 
 
@@ -1394,7 +1397,7 @@ namespace Voron.Impl
 
         public string GetTxState()
         {
-            return _disposed.ToString();
+            return _txState.ToString();
         }
 
         private PagerState _lastState;

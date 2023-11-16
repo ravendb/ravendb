@@ -37,7 +37,7 @@ public sealed class CompareExchangeHandlerProcessorForPutCompareExchangeValue : 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, _requestHandler.ResponseBodyStream()))
             {
                 _requestHandler.ServerStore.ForTestingPurposes?.ModifyCompareExchangeTimeout?.Invoke(command);
-                (var raftIndex, var response) = await _requestHandler.ServerStore.SendToLeaderAsync(context, command);
+                (var raftIndex, var response) = await _requestHandler.ServerStore.SendToLeaderAsync(command);
                 await _requestHandler.ServerStore.Cluster.WaitForIndexNotification(raftIndex);
 
                 var result = (CompareExchangeCommandBase.CompareExchangeResult)response;

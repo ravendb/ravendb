@@ -2,18 +2,18 @@
 using System.Runtime.CompilerServices;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
-using Xunit;
+using xRetry;
 
 namespace Tests.Infrastructure
 {
-    public class GoogleCloudFactAttribute : FactAttribute
+    public class GoogleCloudRetryFactAttribute : RetryFactAttribute
     {
         private const string BucketNameEnvironmentVariable = "GOOGLE_CLOUD_BUCKET_NAME";
         private const string GoogleCloudCredentialEnvironmentVariable = "GOOGLE_CLOUD_CREDENTIAL";
 
         public static GoogleCloudSettings GoogleCloudSettings { get; }
 
-        static GoogleCloudFactAttribute()
+        static GoogleCloudRetryFactAttribute()
         {
             GoogleCloudSettings = new GoogleCloudSettings
             {
@@ -22,7 +22,8 @@ namespace Tests.Infrastructure
             };
         }
 
-        public GoogleCloudFactAttribute([CallerMemberName] string memberName = "")
+        public GoogleCloudRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
+            : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
             if (RavenTestHelper.IsRunningOnCI)
                 return;

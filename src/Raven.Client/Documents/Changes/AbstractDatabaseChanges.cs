@@ -317,7 +317,12 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
                         .ToLower()
                         .ToWebSocketPath(), UriKind.Absolute);
 
-                    await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
+                    using (var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token))
+                    {
+                        timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
+                        await _client.ConnectAsync(_url, timeoutCts.Token).ConfigureAwait(false);
+                    }
+
                     wasConnected = true;
                     Interlocked.Exchange(ref _immediateConnection, 1);
 

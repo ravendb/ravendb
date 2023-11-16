@@ -1048,7 +1048,7 @@ namespace RachisTests.DatabaseCluster
 
                 await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(node));
 
-                await leader.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.RaftCommandIndex + 1);
+                await leader.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.RaftCommandIndex);
                 record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
                 Assert.Null(record);
@@ -1639,7 +1639,7 @@ namespace RachisTests.DatabaseCluster
                     fromNode: toDelete.ServerStore.NodeTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
 
                 await Task.WhenAll(nonDeletedNodes.Select(n =>
-                    n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
+                    n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex)));
 
                 var record = await nonDeletedStores[0].Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
@@ -1734,7 +1734,7 @@ namespace RachisTests.DatabaseCluster
                 var deleteResult = await nonDeletedStores[0].Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true, fromNode: toDelete.ServerStore.NodeTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
 
                 await Task.WhenAll(nonDeletedNodes.Select(n =>
-                    n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
+                    n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex)));
 
                 var record = await nonDeletedStores[0].Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
@@ -1872,12 +1872,12 @@ namespace RachisTests.DatabaseCluster
             }))
             {
                 var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, "A", timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex + 1, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
 
                 result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: false, "B", timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex + 1, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
             }

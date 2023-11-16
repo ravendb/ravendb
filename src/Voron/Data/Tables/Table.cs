@@ -402,6 +402,8 @@ namespace Voron.Data.Tables
 
                     if (builder.Compressed)
                         page.Flags |= PageFlags.Compressed;
+                    else if (page.Flags.HasFlag(PageFlags.Compressed))
+                        page.Flags &= ~PageFlags.Compressed;
 
                     builder.CopyTo(pos);
 

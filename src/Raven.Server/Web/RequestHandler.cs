@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -46,6 +47,13 @@ namespace Raven.Server.Web
         public const string StartParameter = "start";
 
         public const string PageSizeParameter = "pageSize";
+
+        internal static readonly HashSet<string> SafeCsrfMethods = new()
+        {
+            HttpMethod.Head.Method,
+            HttpMethod.Options.Method,
+            HttpMethod.Trace.Method
+        };
 
         private RequestHandlerContext _context;
 
@@ -222,66 +230,55 @@ namespace Raven.Server.Web
             if (members.Count == 0)
                 throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
 
-            var executors = new List<ClusterRequestExecutor>();
-
-            try
+            using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
+            using (var requestExecutor = ClusterRequestExecutor.Create(clusterTopology.Members.Values.ToArray(), ServerStore.Server.Certificate.Certificate,
+                       DocumentConventions.DefaultForServer))
             {
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
+                var waitingTasks = new List<Task<Exception>>();
+                List<Exception> exceptions = null;
+
+                foreach (var member in members)
                 {
-                    cts.CancelAfter(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
+                    var url = clusterTopology.GetUrlFromTag(member);
+                    waitingTasks.Add(ExecuteTask(requestExecutor, member, cts.Token));
+                }
 
-                    var waitingTasks = new List<Task<Exception>>();
-                    List<Exception> exceptions = null;
+                while (waitingTasks.Count > 0)
+                {
+                    var task = await Task.WhenAny(waitingTasks);
+                    waitingTasks.Remove(task);
 
-                    foreach (var member in members)
+                    if (task.Result == null)
+                        continue;
+
+                    var exception = task.Result.ExtractSingleInnerException();
+
+                    if (exceptions == null)
+                        exceptions = new List<Exception>();
+
+                    exceptions.Add(exception);
+                }
+
+                if (exceptions != null)
+                {
+                    var allTimeouts = true;
+                    foreach (var exception in exceptions)
                     {
-                        var url = clusterTopology.GetUrlFromTag(member);
-                        var executor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
-                        executors.Add(executor);
-                        waitingTasks.Add(ExecuteTask(executor, member, cts.Token));
-                    }
-
-                    while (waitingTasks.Count > 0)
-                    {
-                        var task = await Task.WhenAny(waitingTasks);
-                        waitingTasks.Remove(task);
-
-                        if (task.Result == null)
+                        if (exception is OperationCanceledException)
                             continue;
 
-                        var exception = task.Result.ExtractSingleInnerException();
-
-                        if (exceptions == null)
-                            exceptions = new List<Exception>();
-
-                        exceptions.Add(exception);
+                        allTimeouts = false;
                     }
 
-                    if (exceptions != null)
-                    {
-                        var allTimeouts = true;
-                        foreach (var exception in exceptions)
-                        {
-                            if (exception is OperationCanceledException)
-                                continue;
+                    var aggregateException = new AggregateException(exceptions);
 
-                            allTimeouts = false;
-                        }
+                    if (allTimeouts)
+                        throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.",
+                            aggregateException);
 
-                        var aggregateException = new AggregateException(exceptions);
-
-                        if (allTimeouts)
-                            throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.", aggregateException);
-
-                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", aggregateException);
-                    }
-                }
-            }
-            finally
-            {
-                foreach (var executor in executors)
-                {
-                    executor.Dispose();
+                    throw new InvalidDataException(
+                        $"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.",
+                        aggregateException);
                 }
             }
 
@@ -289,7 +286,8 @@ namespace Raven.Server.Web
             {
                 try
                 {
-                    await executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: token);
+                    var cmd = new WaitForRaftIndexCommand(index, nodeTag);
+                    await executor.ExecuteAsync(cmd, context, token: token);
                     return null;
                 }
                 catch (RavenException re) when (re.InnerException is HttpRequestException)
@@ -697,6 +695,70 @@ namespace Raven.Server.Web
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
 
+        public static bool CheckCSRF(HttpContext httpContext, ServerStore serverStore)
+        {
+            if (serverStore.Configuration.Security.EnableCsrfFilter == false)
+                return true;
+            
+            var requestedOrigin = httpContext.Request.Headers[Constants.Headers.Origin];
+            
+            if (requestedOrigin.Count == 0 || requestedOrigin[0] == null)
+                return true;
+            
+            // no origin at this point - it means it is safe request or non-browser
+
+            var host = httpContext.Request.Host;
+            if (string.IsNullOrEmpty(host.Host))
+                return false;
+            
+            if (SafeCsrfMethods.Contains(httpContext.Request.Method))
+                return true;
+            
+            var origin = requestedOrigin[0];
+            var uriOrigin = new Uri(origin);
+            var originHost = uriOrigin.Host;
+            var originAuthority = uriOrigin.Authority;
+            
+            // for hostname matching we validate both hostname and port
+            var hostMatches = host.ToString() == originAuthority;
+            if (hostMatches)
+                return true;
+            
+            // for requests with-in cluster we value both hostname and port
+            var requestWithinCluster = IsOriginAllowed(origin, serverStore);
+            if (requestWithinCluster)
+                return true;
+            
+            // for trusted origins we match hostname only, port is ignored
+            var trustedOrigins = serverStore.Configuration.Security.CsrfTrustedOrigins ?? Array.Empty<string>();
+            if (trustedOrigins.Length > 0)
+            {
+                foreach (var o in trustedOrigins)
+                {
+                    if (originHost == o)
+                        return true;
+                }
+            }
+
+            // for additional origin headers we match hostname only, port is ignored
+            var additionalHeaders = serverStore.Configuration.Security.CsrfAdditionalOriginHeaders ?? Array.Empty<string>();
+            if (additionalHeaders.Length > 0)
+            {
+                foreach (string additionalHeader in additionalHeaders)
+                {
+                    if (httpContext.Request.Headers.TryGetValue(additionalHeader, out var headerValue) == false)
+                        continue;
+
+                    var stringHeader = headerValue.ToString();
+
+                    if (stringHeader == originAuthority)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+        
         public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore, CorsMode corsMode)
         {
             httpContext.Response.Headers.Add("Vary", "Origin");
@@ -717,7 +779,7 @@ namespace Raven.Server.Web
                     allowedOrigin = requestedOrigin;
                     break;
                 case CorsMode.Cluster:
-                    if (IsOriginAllowed(requestedOrigin, serverStore))
+                    if (serverStore.Server.Certificate.Certificate == null || IsOriginAllowed(requestedOrigin, serverStore))
                         allowedOrigin = requestedOrigin;
                     break;
             }
@@ -730,12 +792,6 @@ namespace Raven.Server.Web
 
         private static bool IsOriginAllowed(string origin, ServerStore serverStore)
         {
-            if (serverStore.Server.Certificate.Certificate == null)
-            {
-                // running in unsafe mode - since server can be access via multiple urls/aliases accept them 
-                return true;
-            }
-
             var topology = serverStore.GetClusterTopology();
 
             // check explicitly each topology type to avoid allocations in topology.AllNodes

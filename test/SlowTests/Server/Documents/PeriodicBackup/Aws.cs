@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         private const string EastRegion1 = "us-east-1";
         private const string WestRegion2 = "us-west-2";
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task put_object()
         {
             var settings = GetS3Settings();
@@ -58,7 +58,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task can_get_correct_error_s3()
         {
             var settings = GetS3Settings();
@@ -89,7 +89,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AmazonS3Theory]
+        [AmazonS3RetryTheory]
         [InlineData(5, false, UploadType.Regular, false)]
         [InlineData(5, true, UploadType.Regular, false)]
         [InlineData(11, false, UploadType.Chunked, false)]
@@ -172,7 +172,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AmazonS3Theory]
+        [AmazonS3RetryTheory]
         [InlineData(null)]
         [InlineData("https://some-url.com")]
         public void can_use_custom_region(string customUrl)
@@ -186,7 +186,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AmazonGlacierTheory]
+        [AmazonGlacierRetryTheory]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
         public async Task upload_archive(string region)
@@ -205,7 +205,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AmazonGlacierTheory]
+        [AmazonGlacierRetryTheory]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
         public async Task upload_archive_with_remote_folder_name(string region)
@@ -226,7 +226,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AmazonGlacierTheory]
+        [AmazonGlacierRetryTheory]
         [InlineData(EastRegion1, WestRegion2)]
         [InlineData(WestRegion2, EastRegion1)]
         public void can_get_correct_error_glacier(string region1, string region2)
@@ -255,7 +255,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AmazonGlacierTheory]
+        [AmazonGlacierRetryTheory]
         [InlineData(EastRegion1, 5, 2, UploadType.Regular)]
         [InlineData(EastRegion1, 5, 3, UploadType.Regular)]
         [InlineData(WestRegion2, 5, 2, UploadType.Regular)]
@@ -322,7 +322,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private static GlacierSettings GetGlacierSettings(string region, string vaultName)
         {
-            var glacierSettings = AmazonGlacierFactAttribute.GlacierSettings;
+            var glacierSettings = AmazonGlacierRetryFactAttribute.GlacierSettings;
             if (glacierSettings == null)
                 return null;
 

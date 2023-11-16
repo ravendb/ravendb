@@ -31,7 +31,7 @@ internal sealed class CompareExchangeHandlerProcessorForDeleteCompareExchangeVal
             var command = new RemoveCompareExchangeCommand(RequestHandler.DatabaseName, key, index, context, raftRequestId);
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                (var raftIndex, var response) = await RequestHandler.ServerStore.SendToLeaderAsync(context, command);
+                (var raftIndex, var response) = await RequestHandler.ServerStore.SendToLeaderAsync(command);
                 await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
 
                 var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
