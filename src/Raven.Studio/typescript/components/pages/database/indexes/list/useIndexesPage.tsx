@@ -18,8 +18,6 @@ import useInterval from "hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 import IndexUtils from "components/utils/IndexUtils";
 import genUtils from "common/generalUtils";
-import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";
-import app from "durandal/app";
 import { delay } from "components/utils/common";
 import { useServices } from "hooks/useServices";
 import { useEventsCollector } from "hooks/useEventsCollector";
@@ -40,6 +38,7 @@ import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup
 import useConfirm from "components/common/ConfirmDialog";
 import React from "react";
 import { Alert } from "reactstrap";
+import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shared/DeleteIndexesConfirmBody";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -460,20 +459,35 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
         eventsCollector.reportEvent("indexes", "delete");
-        if (indexes.length > 0) {
-            const deleteIndexesVm = new deleteIndexesConfirm(indexes, db);
-            app.showBootstrapDialog(deleteIndexesVm);
-            deleteIndexesVm.deleteTask.done((succeed: boolean, deletedIndexNames: string[]) => {
-                if (succeed) {
-                    setSelectedIndexes((x) => x.filter((x) => !deletedIndexNames.includes(x)));
-                    dispatch({
-                        type: "DeleteIndexes",
-                        indexNames: deletedIndexNames,
-                    });
-                }
-            });
-            await deleteIndexesVm.deleteTask;
+
+        const confirmData = getIndexInfoForDelete(indexes);
+
+        const isConfirmed = await confirm({
+            title: `Delete ${confirmData.indexesInfoForDelete.length === 1 ? "index" : "indexes"}?`,
+            message: <DeleteIndexesConfirmBody {...confirmData} />,
+            icon: "trash",
+            confirmText: "Delete",
+            actionColor: "danger",
+        });
+
+        if (!isConfirmed) {
+            return;
         }
+
+        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db));
+        await Promise.all(tasks);
+
+        if (tasks.length > 1) {
+            messagePublisher.reportSuccess(`Successfully deleted ${tasks.length} indexes!`);
+        }
+
+        const deletedIndexNames = confirmData.indexesInfoForDelete.map((x) => x.indexName);
+
+        setSelectedIndexes((x) => x.filter((x) => !deletedIndexNames.includes(x)));
+        dispatch({
+            type: "DeleteIndexes",
+            indexNames: deletedIndexNames,
+        });
     };
 
     const setIndexPriority = async (index: IndexSharedInfo, priority: IndexPriority) => {
@@ -840,4 +854,25 @@ function indexMatchesFilter(
     const typeMatch = matchesIndexType(index, filter.types);
 
     return nameMatch && statusMatch && indexingErrorsMatch && typeMatch;
+}
+
+function getIndexInfoForDelete(indexes: IndexSharedInfo[]): DeleteIndexesConfirmBodyProps {
+    const lockedIndexNames = indexes
+        .filter((x) => x.lockMode === "LockedError" || x.lockMode === "LockedIgnore")
+        .map((x) => x.name);
+
+    const indexesInfoForDelete = indexes
+        .filter((x) => x.lockMode === "Unlock")
+        .map((x) => ({
+            indexName: x.name,
+            reduceOutputCollection: x.reduceOutputCollectionName,
+            referenceCollection: x.patternForReferencesToReduceOutputCollection
+                ? x.reduceOutputCollectionName + IndexUtils.ReferenceCollectionExtension
+                : "",
+        }));
+
+    return {
+        lockedIndexNames,
+        indexesInfoForDelete,
+    };
 }

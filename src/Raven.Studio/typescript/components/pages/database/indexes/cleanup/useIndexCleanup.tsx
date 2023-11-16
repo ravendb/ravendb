@@ -5,13 +5,16 @@ import useBoolean from "components/hooks/useBoolean";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { milliSecondsInWeek } from "components/utils/common";
-import app from "durandal/app";
 import database from "models/resources/database";
 import moment from "moment";
 import router from "plugins/router";
 import { useEffect, useRef, useState } from "react";
 import { useAsync } from "react-async-hook";
-import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";
+import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shared/DeleteIndexesConfirmBody";
+import IndexUtils from "components/utils/IndexUtils";
+import useConfirm from "components/common/ConfirmDialog";
+import React from "react";
+import messagePublisher from "common/messagePublisher";
 
 type IndexStats = Map<string, Raven.Client.Documents.Indexes.IndexStats>;
 
@@ -66,6 +69,7 @@ export default function useIndexCleanup(db: database) {
     const { indexesService } = useServices();
     const { appUrl } = useAppUrls();
     const { reportEvent } = useEventsCollector();
+    const confirm = useConfirm();
 
     useEffect(() => {
         if (mergableIndexes.length > 0) {
@@ -235,26 +239,28 @@ export default function useIndexCleanup(db: database) {
     };
 
     const onDelete = async (indexNames: string[], filterIndexes: (deletedIndexNames: string[]) => void) => {
-        const indexesToDelete = indexNames.map((name) => {
-            const index = indexStats.get(name);
+        const confirmData = getIndexInfoForDelete(indexNames.map((x) => indexStats.get(x)));
 
-            return {
-                name: index.Name,
-                reduceOutputCollectionName: index.ReduceOutputCollection,
-                patternForReferencesToReduceOutputCollection: index.PatternReferencesCollectionName,
-                lockMode: index.LockMode,
-            };
+        const isConfirmed = await confirm({
+            title: `Delete ${confirmData.indexesInfoForDelete.length === 1 ? "index" : "indexes"}?`,
+            message: <DeleteIndexesConfirmBody {...confirmData} />,
+            icon: "trash",
+            confirmText: "Delete",
+            actionColor: "danger",
         });
 
-        const deleteIndexesVm = new deleteIndexesConfirm(indexesToDelete, db);
-        app.showBootstrapDialog(deleteIndexesVm);
-        deleteIndexesVm.deleteTask.done((succeed: boolean, deletedIndexNames: string[]) => {
-            if (succeed) {
-                filterIndexes(deletedIndexNames);
-            }
-        });
+        if (!isConfirmed) {
+            return;
+        }
 
-        await deleteIndexesVm.deleteTask;
+        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db));
+        await Promise.all(tasks);
+
+        if (tasks.length > 1) {
+            messagePublisher.reportSuccess(`Successfully deleted ${tasks.length} indexes!`);
+        }
+
+        filterIndexes(confirmData.indexesInfoForDelete.map((x) => x.indexName));
     };
 
     const navigateToMergeSuggestion = (item: MergeIndex) => {
@@ -339,4 +345,25 @@ function findUnusedIndexes(stats: IndexStats): UnusedIndex[] {
     }
 
     return result;
+}
+
+function getIndexInfoForDelete(indexes: Raven.Client.Documents.Indexes.IndexStats[]): DeleteIndexesConfirmBodyProps {
+    const lockedIndexNames = indexes
+        .filter((x) => x.LockMode === "LockedError" || x.LockMode === "LockedIgnore")
+        .map((x) => x.Name);
+
+    const indexesInfoForDelete = indexes
+        .filter((x) => x.LockMode === "Unlock")
+        .map((x) => ({
+            indexName: x.Name,
+            reduceOutputCollection: x.ReduceOutputCollection,
+            referenceCollection: x.ReduceOutputReferencePattern
+                ? x.ReduceOutputCollection + IndexUtils.ReferenceCollectionExtension
+                : "",
+        }));
+
+    return {
+        lockedIndexNames,
+        indexesInfoForDelete,
+    };
 }
