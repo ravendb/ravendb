@@ -49,6 +49,7 @@ using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.Monitoring;
@@ -3124,28 +3125,28 @@ namespace Raven.Server.ServerWide
 
         public async Task WaitForExecutionOnSpecificNode(JsonOperationContext context, string nodeTag, long index)
         {
-            await WaitForExecutionOnRelevantNodesAsync(context, members: new List<string> { nodeTag }, index);
+            await WaitForExecutionOnRelevantNodesAsync(context, members: [nodeTag], index);
         }
 
         public async Task WaitForExecutionOnRelevantNodesAsync(JsonOperationContext context, List<string> members, long index)
         {
             await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 
-            if (members.Count == 0)
-                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
+            if (members == null || members.Count == 0)
+                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute on.");
 
             var executors = GetClusterRequestExecutorsForMembers(members);
+            if (executors.Count != members.Count)
+                throw new InvalidOperationException("Number of executors does not match number of relevant nodes. We cannot wait for execution on all relevant nodes.");
 
             try
             {
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerShutdown))
+                using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
                 {
-                    cts.CancelAfter(Configuration.Cluster.OperationTimeout.AsTimeSpan);
-
                     List<Exception> exceptions = null;
 
                     var tasks = executors.Zip(members, (executor, nodeTag) =>
-                        WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(executor, nodeTag, index, context, cts.Token)).ToList();
+                        WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(executor, nodeTag, index, context, oct.Token)).ToList();
 
                     foreach (var exception in await Task.WhenAll(tasks))
                     {
@@ -3175,7 +3176,7 @@ namespace Raven.Server.ServerWide
                     return;
 
                 var allExceptionsAreTimeouts  = exceptions.All(exception => exception is OperationCanceledException);
-                var aggregateException = new AggregateException(exceptions);
+                var aggregateException = new RaftIndexWaitAggregateException(index, exceptions);
 
                 if (allExceptionsAreTimeouts)
                     throw new TimeoutException($"The raft command (number '{index}') took too long to run on the intended nodes.", aggregateException);

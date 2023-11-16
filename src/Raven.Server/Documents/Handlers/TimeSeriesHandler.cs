@@ -14,6 +14,7 @@ using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -895,7 +896,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, result.Index);
             }
-            catch (Exception e) when (e is AggregateException)
+            catch (RaftIndexWaitAggregateException e)
             {
                 throw new InvalidDataException($"TimeSeries Configuration was modified, but we couldn't send it due to errors on one or more target nodes.", e);
             }
