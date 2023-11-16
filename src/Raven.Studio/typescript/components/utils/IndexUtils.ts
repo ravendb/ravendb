@@ -12,6 +12,7 @@ export default class IndexUtils {
     static readonly DefaultIndexGroupName = "Other";
     static readonly AutoIndexPrefix = "Auto/";
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
+    static readonly ReferenceCollectionExtension = "/References";
 
     static readonly FieldsToHideOnUi = ["_", "__"];
 
