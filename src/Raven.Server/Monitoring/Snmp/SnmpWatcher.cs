@@ -386,7 +386,8 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new ServerConcurrentRequests(server.Metrics));
             store.Add(new ServerTotalRequests(server.Metrics));
-            store.Add(new ServerRequestsPerSecond(server.Metrics));
+            store.Add(new ServerRequestsPerSecond(server.Metrics, ServerRequestsPerSecond.RequestRateType.OneMinute));
+            store.Add(new ServerRequestsPerSecond(server.Metrics, ServerRequestsPerSecond.RequestRateType.FiveSeconds));
             store.Add(new ServerRequestAverageDuration(server.Metrics));
 
             store.Add(new ProcessCpu(server.MetricCacher, server.CpuUsageCalculator));
