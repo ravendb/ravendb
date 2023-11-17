@@ -48,6 +48,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return fileName;
         }
 
+        protected override string GetSmugglerBackupPath(string smugglerFile)
+        {
+            return smugglerFile;
+        }
+
         protected override string GetBackupLocation()
         {
             return _remoteFolderName;
