@@ -11,7 +11,7 @@ interface AzureProps {
 }
 const Azure = (props: AzureProps) => {
     const { className } = props;
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
     const [isOpen, setIsOpen] = useState(false);
     const [isOverrideConfigurationEnabled, setOverrideConfiguration] = useState(false);
     const toggle = () => setIsOpen(!isOpen);

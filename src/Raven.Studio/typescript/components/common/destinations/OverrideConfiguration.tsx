@@ -4,7 +4,7 @@ import { FormInput } from "components/common/Form";
 import { useForm } from "react-hook-form";
 
 const OverrideConfiguration = () => {
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
     return (
         <>
             <div>
@@ -20,6 +20,7 @@ const OverrideConfiguration = () => {
             <div>
                 <Label className="mb-0 md-label">Arguments</Label>
                 <FormInput
+                    type="text"
                     name="arguments"
                     control={control}
                     placeholder="Command line arguments passed to exec"

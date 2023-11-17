@@ -11,7 +11,7 @@ interface FtpProps {
 }
 const Ftp = (props: FtpProps) => {
     const { className } = props;
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
     const [isOpen, setIsOpen] = useState(false);
     const [isOverrideConfigurationEnabled, setOverrideConfiguration] = useState(false);
     const toggle = () => setIsOpen(!isOpen);

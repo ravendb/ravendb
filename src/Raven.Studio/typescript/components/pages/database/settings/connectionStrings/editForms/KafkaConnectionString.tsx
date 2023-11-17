@@ -12,7 +12,7 @@ interface KafkaConnectionStringProps {
     connectionOptions?: string[];
 }
 const KafkaConnectionString = (props: KafkaConnectionStringProps) => {
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
     return (
         <>
             <div>

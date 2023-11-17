@@ -125,6 +125,18 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         );
     }
 
+    withConnectionStrings(dto?: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) {
+        return this.mockResolvedValue(this.mocks.getConnectionStrings, dto, DatabasesStubs.connectionStrings());
+    }
+
+    withNodeConnectionTestResult(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
+        return this.mockResolvedValue(
+            this.mocks.testClusterNodeConnection,
+            dto,
+            DatabasesStubs.nodeConnectionTestSuccessResult()
+        );
+    }
+
     withDatabaseRecord(dto?: document) {
         return this.mockResolvedValue(this.mocks.getDatabaseRecord, dto, DatabasesStubs.databaseRecord());
     }

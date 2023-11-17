@@ -90,21 +90,19 @@ function GatherDebugInfo() {
                                         <ButtonWithSpinner
                                             type="submit"
                                             color="primary"
-                                            className="rounded-pill"
+                                            className="rounded-pill align-self-center"
                                             icon="default"
                                             isSpinning={isDownloading}
-                                            className="align-self-center"
                                         >
                                             Download
                                         </ButtonWithSpinner>
                                         {isDownloading && (
                                             <ButtonWithSpinner
-                                                className="rounded-pill"
+                                                className="rounded-pill align-self-center"
                                                 icon="cancel"
                                                 color="warning"
                                                 isSpinning={abortData.isAborting}
                                                 onClick={abortData.toggleIsConfirmVisible}
-                                                className="align-self-center"
                                             >
                                                 Abort
                                             </ButtonWithSpinner>

@@ -14,6 +14,7 @@ import DatabaseCustomSorters from "components/pages/database/settings/customSort
 import DatabaseCustomAnalyzers from "components/pages/database/settings/customAnalyzers/DatabaseCustomAnalyzers";
 import DocumentCompression from "components/pages/database/settings/documentCompression/DocumentCompression";
 import RevertRevisions from "components/pages/database/settings/documentRevisions/revertRevisions/RevertRevisions";
+import ConnectionStrings from "components/pages/database/settings/connectionStrings/ConnectionStrings";
 import DatabaseRecord from "components/pages/database/settings/databaseRecord/DatabaseRecord";
 import ConflictResolution from "components/pages/database/settings/conflictResolution/ConflictResolution";
 
@@ -34,7 +35,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/connectionStrings',
-            moduleId: require("viewmodels/database/settings/connectionStrings"),
+            moduleId: bridgeToReact(ConnectionStrings, "nonShardedView"),
             title: "Connection Strings",
             nav: true,
             css: 'icon-manage-connection-strings',

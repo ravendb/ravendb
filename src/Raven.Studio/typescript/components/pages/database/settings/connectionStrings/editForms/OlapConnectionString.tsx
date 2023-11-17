@@ -9,7 +9,7 @@ interface OlapConnectionStringProps {
 }
 
 const OlapConnectionString = (props: OlapConnectionStringProps) => {
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
 
     return (
         <>

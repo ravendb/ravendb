@@ -12,7 +12,7 @@ interface ElasticSearchConnectionStringProps {
     authentication?: string;
 }
 const ElasticSearchConnectionString = (props: ElasticSearchConnectionStringProps) => {
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
     const NodesUrls = ["http://localhost", "http://ravendb.net"];
     type AuthenticationType = "No authentication" | "Basic" | "API Key" | "Encoded API Key" | "Certificate";
     const allAuthentication = exhaustiveStringTuple()(
@@ -101,7 +101,7 @@ const ElasticSearchConnectionString = (props: ElasticSearchConnectionStringProps
                     control={control}
                     placeholder="Select an authentication option"
                     options={allAuthenticationOptions}
-                    onChange={(option) => handleAuthenticationChange(option.value)}
+                    // onChange={(option) => handleAuthenticationChange(option.value)}
                 />
             </div>
             {basicAuthentication && (
