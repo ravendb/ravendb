@@ -26,6 +26,11 @@ namespace Raven.Client.ServerWide.Operations
             };
         }
 
+        public UpdateUnusedDatabasesOperation(string database, HashSet<string> unusedDatabaseIds, bool validate) : this(database, unusedDatabaseIds)
+        {
+            _parameters.Validate = validate;
+        }
+
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new UpdateUnusedDatabasesCommand(conventions, _database, _parameters);
@@ -47,6 +52,8 @@ namespace Raven.Client.ServerWide.Operations
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases/unused-ids?name={_database}";
+                if (_parameters.Validate)
+                    url += $"&validate=true";
 
                 return new HttpRequestMessage
                 {
@@ -61,6 +68,7 @@ namespace Raven.Client.ServerWide.Operations
         internal sealed class Parameters
         {
             public HashSet<string> DatabaseIds { get; set; }
+            public bool Validate { get; set; }
         }
     }
 }

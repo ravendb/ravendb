@@ -69,6 +69,10 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly SmugglerSourceType _type;
 
+        private SmugglerResult _result;
+
+        public EventHandler<InvalidOperationException> OnCorruptedDataHandler;
+
         public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex, Logger logger)
         {
             _database = database;
@@ -107,6 +111,12 @@ namespace Raven.Server.Smuggler.Documents
                 using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(_serverContext, _database.Name))
                 {
                     LastRaftIndex = rawRecord.EtagForBackup;
+                }
+
+                if (options.SkipCorruptedData)
+                {
+                    _result = result;
+                    OnCorruptedDataHandler = _result.OnCorruptedData;
                 }
             }
 
@@ -173,7 +183,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (state.StartEtagByCollection.Count != 0)
                         return GetDocumentsFromCollections(_context, state);
 
-                    return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, long.MaxValue);
+                    return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, long.MaxValue, DocumentFields.All, OnCorruptedDataHandler);
                 },
                 new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
@@ -227,7 +237,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (state.StartEtagByCollection.Count != 0)
                         return GetRevisionsFromCollections(_context, state);
 
-                    return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, long.MaxValue);
+                    return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, long.MaxValue, DocumentFields.All, OnCorruptedDataHandler);
                 },
                 new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {

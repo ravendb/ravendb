@@ -91,6 +91,14 @@ namespace Raven.Client.Documents.Smuggler
 
         public List<string> Collections { get; set; }
 
+        /// <summary>
+        /// In case the database is corrupted (for example, Compression Dictionaries are lost), it is possible to export all the remaining data.
+        /// If '<c>true</c>', the process will continue in the presence of corrupted data, with an entry of error data into the export result report.
+        /// If '<c>false</c>', the process of export will be interrupted in the presence of corrupted data. 
+        /// The default value is '<c>false</c>'.
+        /// </summary>
+        public bool SkipCorruptedData { get; set; }
+
         [ForceJsonSerialization]
         internal bool IsShard { get; set; }
     }

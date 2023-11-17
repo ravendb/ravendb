@@ -1219,13 +1219,17 @@ more responsive application.
 
             UpdateMetadataModifications(documentInfo.MetadataInstance, documentInfo.Metadata);
 
-            using var document = JsonConverter.ToBlittable(entity, documentInfo);
+            var document = JsonConverter.ToBlittable(entity, documentInfo);
 
             var changes = new Dictionary<string, DocumentsChanges[]>();
 
             if (EntityChanged(document, documentInfo, changes) == false)
+            {
+                document.Dispose();
                 return Array.Empty<DocumentsChanges>();
+            }
 
+            // we cannot dispose the document, some of the changes are linked to the blittable json
             return changes[documentInfo.Id];
         }
 

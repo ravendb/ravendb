@@ -452,20 +452,18 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, long graceMs)
         {
-            var grace = DateTime.UtcNow.AddMilliseconds(-graceMs);
+            var now = DateTime.UtcNow;
+            var uptime = databaseUpTime?.TotalMilliseconds ?? (now - _observerStartTime).TotalMilliseconds;
 
-            if (lastSuccessfulUpdate == default) // the node hasn't send a single (good) report
-            {
-                if (grace < _observerStartTime)
-                    return true;
-            }
+            if (graceMs > uptime)
+                return true;
 
-            if (databaseUpTime.HasValue == false) // database isn't loaded
-            {
-                return grace < _observerStartTime;
-            }
+            var grace = now.AddMilliseconds(-graceMs);
+            
+            if (grace < lastSuccessfulUpdate)
+                return true;
 
-            return grace < lastSuccessfulUpdate && graceMs > databaseUpTime.Value.TotalMilliseconds;
+            return false;
         }
 
         private int GetNumberOfRespondingNodes(DatabaseObservationState state)

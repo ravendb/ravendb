@@ -821,9 +821,10 @@ namespace Raven.Server.Documents
             public ManualResetEventSlim DelayDocumentLoad;
         }
         
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction, onCorruptedDataHandler);
+
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, start))
             {

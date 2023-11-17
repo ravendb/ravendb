@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying, Skip = "Throws Invalid Json - RavenDB-19126")]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void StreamDocumentQueryWithInclude(Options options)
         {
@@ -89,7 +89,30 @@ namespace SlowTests.MailingList
                         }
                     }
                 });
-                Assert.Contains("Includes are not supported by this type of query", notSupportedException.Message);
+                Assert.Contains("Includes are not supported by this type of query.", notSupportedException.Message);
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.Querying)]
+        public void StreamDocumentCollectionQueryWithInclude()
+        {
+            var store = GetDocumentStore();
+            Setup(store);
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include StepExecutionsId");
+                var notSupportedException = Assert.Throws<RavenException>(() =>
+                {
+                    using (var stream = session.Advanced.Stream(query))
+                    {
+                        while (stream.MoveNext())
+                        {
+
+                        }
+                    }
+                });
+                Assert.Contains("Includes are not supported by this type of query.", notSupportedException.Message);
             }
         }
 
