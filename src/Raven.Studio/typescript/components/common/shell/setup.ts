@@ -3,7 +3,7 @@ import { globalDispatch } from "components/storeCompat";
 import databasesManager from "common/shell/databasesManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
-import { setLocale } from "yup";
+import * as yup from "yup";
 import { ClusterNode, clusterActions } from "components/common/shell/clusterSlice";
 import licenseModel from "models/auth/licenseModel";
 import { licenseActions } from "./licenseSlice";
@@ -13,6 +13,7 @@ import changesContext from "common/changesContext";
 import { services } from "hooks/useServices";
 import viewModelBase from "viewmodels/viewModelBase";
 import buildInfo = require("models/resources/buildInfo");
+import genUtils = require("common/generalUtils");
 
 let initialized = false;
 
@@ -79,8 +80,14 @@ function initRedux() {
     changesContext.default.connectServerWideNotificationCenter();
 }
 
+declare module "yup" {
+    interface StringSchema {
+        basicUrl(msg?: string): this;
+    }
+}
+
 function initYup() {
-    setLocale({
+    yup.setLocale({
         mixed: {
             required: "Required",
             notType(params) {
@@ -114,6 +121,10 @@ function initYup() {
             min: ({ min }) => `The list should contain at least ${min} item${min > 1 ? "s" : ""}`,
             max: ({ max }) => `The list should contain a maximum of ${max} item${max > 1 ? "s" : ""}`,
         },
+    });
+
+    yup.addMethod<yup.StringSchema>(yup.string, "basicUrl", function (msg = genUtils.invalidUrlMessage) {
+        return this.matches(genUtils.urlRegex, msg);
     });
 }
 

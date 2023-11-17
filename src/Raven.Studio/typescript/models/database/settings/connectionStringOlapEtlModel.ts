@@ -8,7 +8,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import database = require("models/resources/database");
-import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import saveConnectionStringCommand_OLD = require("commands/database/settings/saveConnectionStringCommand_OLD");
 import azureSettings = require("viewmodels/database/tasks/destinations/azureSettings");
 import googleCloudSettings = require("viewmodels/database/tasks/destinations/googleCloudSettings");
 import glacierSettings = require("viewmodels/database/tasks/destinations/glacierSettings");
@@ -180,7 +180,7 @@ class connectionStringOlapEtlModel extends connectionStringModel {
     }
 
     saveConnectionString(db: database) : JQueryPromise<void> {
-        return new saveConnectionStringCommand(db, this)
+        return new saveConnectionStringCommand_OLD(db, this)
             .execute();
     }
 }

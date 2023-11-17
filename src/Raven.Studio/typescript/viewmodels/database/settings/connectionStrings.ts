@@ -5,7 +5,7 @@ import connectionStringOlapEtlModel = require("models/database/settings/connecti
 import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
 import connectionStringKafkaModel = require("models/database/settings/connectionStringKafkaModel");
 import connectionStringRabbitMqModel = require("models/database/settings/connectionStringRabbitMqModel");
-import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import saveConnectionStringCommand_OLD = require("commands/database/settings/saveConnectionStringCommand_OLD");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
@@ -21,7 +21,7 @@ import popoverUtils = require("common/popoverUtils");
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import TaskUtils from "components/utils/TaskUtils";
 import licenseModel from "models/auth/licenseModel";
-import { ConnectionStringsInfoHub } from "viewmodels/database/settings/ConnectionStringsInfoHub";
+import { ConnectionStringsInfoHub } from "components/pages/database/settings/connectionStrings/ConnectionStringsInfoHub";
 
 class connectionStrings extends viewModelBase {
 
@@ -748,7 +748,7 @@ class connectionStrings extends viewModelBase {
         }
 
         // 2. Create/add the new connection string
-        new saveConnectionStringCommand(this.activeDatabase(), model)
+        new saveConnectionStringCommand_OLD(this.activeDatabase(), model)
             .execute()
             .done(() => {
                 // 3. Refresh list view....

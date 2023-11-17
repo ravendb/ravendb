@@ -13,7 +13,7 @@ interface AmazonS3Props {
 }
 const AmazonS3 = (props: AmazonS3Props) => {
     const { className } = props;
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
     const [isOpen, setIsOpen] = useState(false);
     const [isOverrideConfigurationEnabled, setOverrideConfiguration] = useState(false);
     const [isCustomHostEnabled, setCustomHost] = useState(false);
@@ -146,10 +146,13 @@ const AmazonS3 = (props: AmazonS3Props) => {
                                 <div>
                                     <Label className="mb-0 md-label">
                                         Region{" "}
-                                        {isCustomHostEnabled && <small className="text-muted fw-light">(optional)</small>}
+                                        {isCustomHostEnabled && (
+                                            <small className="text-muted fw-light">(optional)</small>
+                                        )}
                                     </Label>
                                     {isCustomHostEnabled ? (
                                         <FormInput
+                                            type="text" // text?
                                             name="region"
                                             control={control}
                                             placeholder="Enter an AWS region"

@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import database = require("models/resources/database");
 import connectionStringModel = require("models/database/settings/connectionStringModel");
-import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import saveConnectionStringCommand_OLD = require("commands/database/settings/saveConnectionStringCommand_OLD");
 import testRabbitMqServerConnectionCommand from "commands/database/cluster/testRabbitMqServerConnectionCommand";
 import jsonUtil = require("common/jsonUtil");
 
@@ -73,7 +73,7 @@ class connectionStringRabbitMqModel extends connectionStringModel {
     }
 
     saveConnectionString(db: database) : JQueryPromise<void> {
-        return new saveConnectionStringCommand(db, this)
+        return new saveConnectionStringCommand_OLD(db, this)
             .execute();
     }
 

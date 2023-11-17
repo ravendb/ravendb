@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import database = require("models/resources/database");
 import connectionStringModel = require("models/database/settings/connectionStringModel");
-import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import saveConnectionStringCommand_OLD = require("commands/database/settings/saveConnectionStringCommand_OLD");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
@@ -127,7 +127,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
     }
 
     saveConnectionString(db: database) : JQueryPromise<void> {
-        return new saveConnectionStringCommand(db, this)
+        return new saveConnectionStringCommand_OLD(db, this)
             .execute();
     }
 }

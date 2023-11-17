@@ -48,6 +48,11 @@ import getCustomAnalyzersCommand = require("commands/database/settings/getCustom
 import getDocumentsCompressionConfigurationCommand = require("commands/database/documents/getDocumentsCompressionConfigurationCommand");
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
 import promoteDatabaseNodeCommand = require("commands/database/debug/promoteDatabaseNodeCommand");
+import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
+import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
+import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
 import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
@@ -214,6 +219,26 @@ export default class DatabasesService {
 
     async saveConflictSolverConfiguration(db: database, dto: Raven.Client.ServerWide.ConflictSolver) {
         return new saveConflictSolverConfigurationCommand(db, dto).execute();
+    }
+
+    async getConnectionStrings(db: database) {
+        return new getConnectionStringsCommand(db).execute();
+    }
+
+    async saveConnectionString(db: database, connectionString: ConnectionStringDto) {
+        return new saveConnectionStringCommand(db, connectionString).execute();
+    }
+
+    async deleteConnectionString(
+        db: database,
+        type: Raven.Client.Documents.Operations.ETL.EtlType,
+        connectionStringName: string
+    ) {
+        return new deleteConnectionStringCommand(db, type, connectionStringName).execute();
+    }
+
+    async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {
+        return new testClusterNodeConnectionCommand(serverUrl, databaseName, bidirectional).execute();
     }
 
     async getDatabaseRecord(db: database, reportRefreshProgress = false) {

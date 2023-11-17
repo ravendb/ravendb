@@ -1,77 +1,119 @@
-﻿import React, { useState } from "react";
+﻿import React, { useEffect } from "react";
 import { Button, Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { todo } from "common/developmentHelper";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { NonShardedViewProps } from "components/models/common";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { HrHeader } from "components/common/HrHeader";
-import ConnectionStringsConfigPanel from "components/pages/database/settings/connectionStrings/ConnectionStringsConfigPanel";
-import { ConnectionStringsInfoHub } from "viewmodels/database/settings/ConnectionStringsInfoHub";
-import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
+import ConnectionStringsPanel from "./ConnectionStringsConfigPanel";
+import { ConnectionStringsInfoHub } from "./ConnectionStringsInfoHub";
+import EditConnectionStrings from "./EditConnectionStrings";
+import { LazyLoad } from "components/common/LazyLoad";
+import { connectionStringSelectors, connectionStringsActions } from "./store/connectionStringsSlice";
+import { EmptySet } from "components/common/EmptySet";
 
 todo("Feature", "Damian", "Add missing logic");
 todo("Feature", "Damian", "Connect to Studio");
 todo("Feature", "Damian", "Remove legacy code");
 
-export default function ConnectionStrings({ db }: NonShardedViewProps) {
+export interface ConnectionStringsUrlParameters {
+    name?: string;
+    type?: StudioEtlType;
+}
+
+// todo custom hook to get all license selectors + asyncGetConnectionStrings +
+// todo fix InputGroup after rebase
+
+export default function ConnectionStrings({
+    db,
+    name: nameFromUrl,
+    type: typeFromUrl,
+}: NonShardedViewProps & ConnectionStringsUrlParameters) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
-    const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const dispatch = useAppDispatch();
 
-    const toggleEditModalOpen = () => {
-        setEditModalOpen(!isEditModalOpen);
-    };
+    useEffect(() => {
+        dispatch(
+            connectionStringsActions.urlParametersLoaded({
+                name: nameFromUrl,
+                type: typeFromUrl,
+            })
+        );
+        dispatch(connectionStringsActions.fetchData(db));
+
+        return () => {
+            dispatch(connectionStringsActions.reset());
+        };
+    }, [db, dispatch, nameFromUrl, typeFromUrl]);
+
+    const { loadStatus, connections, isEmpty, initialEditConnection } = useAppSelector(connectionStringSelectors.state);
 
     return (
-        <>
-            <div className="content-margin">
-                <Col xxl={12}>
-                    <Row className="gy-sm">
-                        <Col>
-                            <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
-                            <Button color="primary" onClick={() => setEditModalOpen(true)}>
-                                <Icon icon="plus" />
-                                Add new
-                            </Button>
-                            <div className="mb-3">
-                                <HrHeader
-                                    right={
-                                        isDatabaseAdmin && (
-                                            <div id="addNewCredentialsButton">
+        <Row className="content-margin gy-sm">
+            {initialEditConnection && <EditConnectionStrings initialConnection={initialEditConnection} db={db} />}
+
+            <Col>
+                <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
+                {isDatabaseAdmin && (
+                    <Button
+                        color="primary"
+                        onClick={() => dispatch(connectionStringsActions.openAddNewConnectionModal())}
+                    >
+                        <Icon icon="plus" />
+                        Add new
+                    </Button>
+                )}
+                <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"}>
+                    {isEmpty ? (
+                        <EmptySet>No connection strings</EmptySet>
+                    ) : (
+                        <>
+                            {connections.raven.length > 0 && (
+                                <div className="mb-3">
+                                    <HrHeader
+                                        right={
+                                            isDatabaseAdmin && (
                                                 <Button
                                                     color="info"
                                                     size="sm"
                                                     className="rounded-pill"
                                                     title="Add new credentials"
-                                                    onClick={() => setEditModalOpen(true)}
+                                                    onClick={() =>
+                                                        dispatch(
+                                                            connectionStringsActions.openAddNewConnectionOfTypeModal(
+                                                                "Raven"
+                                                            )
+                                                        )
+                                                    }
                                                 >
                                                     <Icon icon="plus" />
                                                     Add new
                                                 </Button>
-                                                {isEditModalOpen && (
-                                                    <EditConnectionStrings
-                                                        isOpen={isEditModalOpen}
-                                                        toggle={toggleEditModalOpen}
-                                                    />
-                                                )}
-                                            </div>
-                                        )
-                                    }
-                                >
-                                    RavenDB
-                                </HrHeader>
-                                <ConnectionStringsConfigPanel isDatabaseAdmin={isDatabaseAdmin} />
-                            </div>
-                        </Col>
-                        <Col sm={12} lg={4}>
-                            <ConnectionStringsInfoHub />
-                        </Col>
-                    </Row>
-                </Col>
-            </div>
-        </>
+                                            )
+                                        }
+                                    >
+                                        RavenDB
+                                    </HrHeader>
+                                    {connections.raven.map((connection) => (
+                                        <ConnectionStringsPanel
+                                            key={connection.Type + "_" + connection.Name}
+                                            db={db}
+                                            connection={connection}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </LazyLoad>
+            </Col>
+            <Col sm={12} lg={4}>
+                <ConnectionStringsInfoHub />
+            </Col>
+        </Row>
     );
 }

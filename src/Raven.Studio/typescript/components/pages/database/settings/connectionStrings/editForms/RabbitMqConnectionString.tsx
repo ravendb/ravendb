@@ -8,7 +8,7 @@ interface RabbitMqConnectionStringProps {
     connectionString?: string;
 }
 const RabbitMqConnectionString = (props: RabbitMqConnectionStringProps) => {
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
 
     return (
         <>

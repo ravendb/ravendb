@@ -397,6 +397,107 @@ export class DatabasesStubs {
             CompressRevisions: true,
         };
     }
+    static emptyConnectionStrings(): Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult {
+        return {
+            ElasticSearchConnectionStrings: {},
+            OlapConnectionStrings: {},
+            QueueConnectionStrings: {},
+            RavenConnectionStrings: {},
+            SqlConnectionStrings: {},
+        };
+    }
+
+    static connectionStrings(): Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult {
+        return {
+            RavenConnectionStrings: {
+                "raven-name": {
+                    Type: "Raven",
+                    Name: "raven-name",
+                    Database: "some-db",
+                    TopologyDiscoveryUrls: ["http://test"],
+                },
+            },
+            SqlConnectionStrings: {
+                "sql-name": {
+                    Type: "Sql",
+                    Name: "sql-name",
+                    ConnectionString: "some-connection-string",
+                    FactoryName: "System.Data.SqlClient",
+                },
+            },
+            OlapConnectionStrings: {
+                "olap-name": {
+                    Type: "Olap",
+                    Name: "olap-name",
+                    LocalSettings: {
+                        Disabled: false,
+                        GetBackupConfigurationScript: null,
+                        FolderPath: "/bin",
+                    },
+                    S3Settings: null,
+                    AzureSettings: null,
+                    GlacierSettings: null,
+                    GoogleCloudSettings: null,
+                    FtpSettings: null,
+                },
+            },
+            ElasticSearchConnectionStrings: {
+                "elasticsearch-name": {
+                    Type: "ElasticSearch",
+                    Name: "elasticsearch-name",
+                    Nodes: ["http://test"],
+                    EnableCompatibilityMode: false,
+                    Authentication: {
+                        Basic: null,
+                        ApiKey: null,
+                        Certificate: null,
+                    },
+                },
+            },
+            QueueConnectionStrings: {
+                "kafka-name": {
+                    Type: "Queue",
+                    Name: "kafka-name",
+                    BrokerType: "Kafka",
+                    KafkaConnectionSettings: {
+                        BootstrapServers: "test:0",
+                        UseRavenCertificate: false,
+                        ConnectionOptions: {},
+                    },
+                    RabbitMqConnectionSettings: null,
+                },
+                "rabbitmq-name": {
+                    Type: "Queue",
+                    Name: "rabbitmq-name",
+                    BrokerType: "RabbitMq",
+                    KafkaConnectionSettings: null,
+                    RabbitMqConnectionSettings: {
+                        ConnectionString: "some-connection-string",
+                    },
+                },
+            },
+        };
+    }
+
+    static nodeConnectionTestErrorResult(): Raven.Server.Web.System.NodeConnectionTestResult {
+        return {
+            Success: false,
+            HTTPSuccess: false,
+            TcpServerUrl: null,
+            Log: [],
+            Error: "System.UriFormatException: Invalid URI: The format of the URI could not be determined.\n   at System.Uri.CreateThis(String uri, Boolean dontEscape, UriKind uriKind, UriCreationOptions& creationOptions)\n   at System.Uri..ctor(String uriString)\n   at Raven.Server.Documents.ETL.Providers.Queue.QueueBrokerConnectionHelper.CreateRabbitMqConnection(RabbitMqConnectionSettings settings) in D:\\Builds\\RavenDB-6.0-Nightly\\20231123-0200\\src\\Raven.Server\\Documents\\ETL\\Providers\\Queue\\QueueBrokerConnectionHelper.cs:line 80",
+        };
+    }
+
+    static nodeConnectionTestSuccessResult(): Raven.Server.Web.System.NodeConnectionTestResult {
+        return {
+            Success: true,
+            HTTPSuccess: true,
+            TcpServerUrl: null,
+            Log: [],
+            Error: null,
+        };
+    }
 
     static conflictSolverConfiguration(): Raven.Client.ServerWide.ConflictSolver {
         return {

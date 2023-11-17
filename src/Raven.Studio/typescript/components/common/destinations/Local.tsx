@@ -9,7 +9,7 @@ interface LocalProps {
 }
 const Local = (props: LocalProps) => {
     const { className } = props;
-    const { control } = useForm<null>({});
+    const { control } = useForm<any>({});
     const [isOpen, setIsOpen] = useState(false);
     const [isOverrideConfigurationEnabled, setOverrideConfiguration] = useState(false);
     const toggle = () => setIsOpen(!isOpen);
@@ -35,6 +35,7 @@ const Local = (props: LocalProps) => {
                             <div>
                                 <Label className="mb-0 md-label">Folder path</Label>
                                 <FormInput
+                                    type="text"
                                     name="folderPath"
                                     control={control}
                                     placeholder="Select a destination path"

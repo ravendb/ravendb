@@ -1,39 +1,28 @@
-﻿import { Label } from "reactstrap";
+﻿import { Form, Label } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import React from "react";
 import { useForm } from "react-hook-form";
-import { exhaustiveStringTuple } from "components/utils/common";
 import { SelectOption } from "components/common/select/Select";
+import { SQLConnection } from "../connectionStringsTypes";
 
-interface SqlConnectionStringProps {
-    name?: string;
-    factory?: string;
-    connectionString?: string;
+export interface SqlConnectionStringProps {
+    connection: SQLConnection;
 }
 
-const allSqlFactoryOptions = exhaustiveStringTuple()(
-    "Microsoft SQL Server (System.Data.SqlClient)",
-    "MySQL Server (MySql.Data.MySqlClient)",
-    "MySQL Server (MySqlConnector.MySqlConnectorFactory)",
-    "PostgreSQL (Npgsql)",
-    "Oracle Database (Oracle.ManagedDataAccess.Client)"
-);
+const SqlConnectionString = ({ connection }: SqlConnectionStringProps) => {
+    // TODO validation
+    const { control, handleSubmit } = useForm<Omit<SQLConnection, "type">>({
+        defaultValues: { ..._.omit(connection, "type") },
+    });
 
-const sqlFactoryOptions: SelectOption[] = allSqlFactoryOptions.map((type) => ({
-    value: type,
-    label: type,
-}));
-
-const SqlConnectionString = (props: SqlConnectionStringProps) => {
-    const { control } = useForm<null>({});
-
+    // TODO submit
     return (
         <>
             <div>
                 <Label className="mb-0 md-label">Name</Label>
                 <FormInput
                     control={control}
-                    name="name"
+                    name="Name"
                     type="text"
                     placeholder="Enter a name for the connection string"
                 />
@@ -42,17 +31,17 @@ const SqlConnectionString = (props: SqlConnectionStringProps) => {
                 <Label className="mb-0 md-label">Database</Label>
                 <FormSelect
                     control={control}
-                    name="factory"
-                    type="text"
+                    name="FactoryName"
                     options={sqlFactoryOptions}
                     placeholder="Select factory name"
+                    isSearchable={false}
                 />
             </div>
             <div>
                 <Label className="mb-0 md-label">Connection string</Label>
                 <FormInput
                     control={control}
-                    name="connectionString"
+                    name="ConnectionString"
                     type="textarea"
                     placeholder="Enter connection string"
                     rows={3}
@@ -61,4 +50,18 @@ const SqlConnectionString = (props: SqlConnectionStringProps) => {
         </>
     );
 };
+
 export default SqlConnectionString;
+
+const allSqlFactoryOptions = [
+    "Microsoft SQL Server (System.Data.SqlClient)",
+    "MySQL Server (MySql.Data.MySqlClient)",
+    "MySQL Server (MySqlConnector.MySqlConnectorFactory)",
+    "PostgreSQL (Npgsql)",
+    "Oracle Database (Oracle.ManagedDataAccess.Client)",
+];
+
+const sqlFactoryOptions: SelectOption[] = allSqlFactoryOptions.map((type) => ({
+    value: type,
+    label: type,
+}));
