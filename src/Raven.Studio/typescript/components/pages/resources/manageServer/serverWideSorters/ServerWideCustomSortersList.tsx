@@ -10,12 +10,16 @@ import {
     RichPanelInfo,
     RichPanelName,
     RichPanelActions,
+    RichPanelDetails,
 } from "components/common/RichPanel";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import React, { useState } from "react";
 import { AsyncStateStatus, useAsyncCallback } from "react-async-hook";
+import { Button, Collapse } from "reactstrap";
+import useBoolean from "hooks/useBoolean";
+import EditCustomSorter from "components/pages/database/settings/customSorters/EditCustomSorter";
 
 interface ServerWideCustomSortersListProps {
     fetchStatus: AsyncStateStatus;
@@ -31,6 +35,8 @@ export default function ServerWideCustomSortersList({
     isReadOnly,
 }: ServerWideCustomSortersListProps) {
     const { manageServerService } = useServices();
+
+    const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
 
     const asyncDeleteSorter = useAsyncCallback(manageServerService.deleteServerWideCustomSorter, {
         onSuccess: reload,
@@ -64,30 +70,52 @@ export default function ServerWideCustomSortersList({
                         </RichPanelInfo>
                         {!isReadOnly && (
                             <RichPanelActions>
-                                <a
-                                    href={appUrl.forEditServerWideCustomSorter(sorter.Name)}
-                                    className="btn btn-secondary"
-                                >
-                                    <Icon icon="edit" margin="m-0" />
-                                </a>
-
-                                {nameToConfirmDelete != null && (
-                                    <DeleteCustomSorterConfirm
-                                        name={nameToConfirmDelete}
-                                        onConfirm={(name) => asyncDeleteSorter.execute(name)}
-                                        toggle={() => setNameToConfirmDelete(null)}
-                                        isServerWide
-                                    />
+                                {!panelCollapsed && (
+                                    <>
+                                        <Button color="success">
+                                            <Icon icon="save" /> Save changes
+                                        </Button>
+                                        <Button color="secondary">
+                                            <Icon icon="cancel" />
+                                            Discard
+                                        </Button>
+                                    </>
                                 )}
-                                <ButtonWithSpinner
-                                    color="danger"
-                                    onClick={() => setNameToConfirmDelete(sorter.Name)}
-                                    icon="trash"
-                                    isSpinning={asyncDeleteSorter.status === "loading"}
-                                />
+                                {panelCollapsed && (
+                                    <a
+                                        href={appUrl.forEditServerWideCustomSorter(sorter.Name)}
+                                        className="btn btn-secondary"
+                                        onClick={togglePanelCollapsed}
+                                    >
+                                        <Icon icon="edit" margin="m-0" />
+                                    </a>
+                                )}
+                                {!isReadOnly && panelCollapsed && (
+                                    <>
+                                        {nameToConfirmDelete != null && (
+                                            <DeleteCustomSorterConfirm
+                                                name={nameToConfirmDelete}
+                                                onConfirm={(name) => asyncDeleteSorter.execute(name)}
+                                                toggle={() => setNameToConfirmDelete(null)}
+                                                isServerWide
+                                            />
+                                        )}
+                                        <ButtonWithSpinner
+                                            color="danger"
+                                            onClick={() => setNameToConfirmDelete(sorter.Name)}
+                                            icon="trash"
+                                            isSpinning={asyncDeleteSorter.status === "loading"}
+                                        />
+                                    </>
+                                )}
                             </RichPanelActions>
                         )}
                     </RichPanelHeader>
+                    <Collapse isOpen={!panelCollapsed}>
+                        <RichPanelDetails className="vstack gap-3 p-4">
+                            <EditCustomSorter />
+                        </RichPanelDetails>
+                    </Collapse>
                 </RichPanel>
             ))}
         </div>

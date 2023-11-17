@@ -1,12 +1,13 @@
 ﻿import React, { useEffect, useState } from "react";
-import { Alert, Col, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
-import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
+import { Alert, Button, Col, Collapse, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import {
     RichPanel,
     RichPanelActions,
+    RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
     RichPanelName,
@@ -27,13 +28,13 @@ import { NonShardedViewProps } from "components/models/common";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {
-    FeatureAvailabilityData,
-} from "components/common/FeatureAvailabilitySummary";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
+import { CustomSortersInfoHub } from "components/pages/database/settings/customSorters/CustomSortersInfoHub";
+import EditCustomSorter from "components/pages/database/settings/customSorters/EditCustomSorter";
+import useBoolean from "hooks/useBoolean";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
@@ -45,7 +46,6 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
 
     const { appUrl } = useAppUrls();
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
-    const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
 
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
@@ -54,24 +54,6 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
     const numberOfCustomSortersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfCustomSortersInCluster;
     const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
-
-    const featureAvailability = useLimitedFeatureAvailability({
-        defaultFeatureAvailability,
-        overwrites: [
-            {
-                featureName: defaultFeatureAvailability[0].featureName,
-                value: licenseDatabaseLimit,
-            },
-            {
-                featureName: defaultFeatureAvailability[1].featureName,
-                value: licenseClusterLimit,
-            },
-            {
-                featureName: defaultFeatureAvailability[2].featureName,
-                value: hasServerWideCustomSorters,
-            },
-        ],
-    });
 
     const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
     const serverWideResultsCount = asyncGetServerWideSorters.result?.length ?? null;
@@ -226,65 +208,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                             )}
                         </Col>
                         <Col sm={12} lg={4}>
-                            <AboutViewAnchored>
-                                <AccordionItemWrapper
-                                    targetId="1"
-                                    icon="about"
-                                    color="info"
-                                    description="Get additional info on this feature"
-                                    heading="About this view"
-                                >
-                                    <p>
-                                        A <strong>Custom Sorter</strong> allows you to define how documents will be
-                                        ordered in the query results
-                                        <br /> according to your specific requirements.
-                                    </p>
-                                    <div>
-                                        <strong>In this view</strong>, you can add your own sorters:
-                                        <ul className="margin-top-xxs">
-                                            <li>
-                                                The custom sorters added here can be used only with queries in this
-                                                database.
-                                            </li>
-                                            <li>
-                                                The server-wide custom sorters listed can also be applied within this
-                                                database.
-                                            </li>
-                                            <li>The custom sorters can be tested in this view with a sample query.</li>
-                                            <li>Note: custom sorters are not supported when querying Corax indexes.</li>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        Provide <code>C#</code> code in the editor view, or upload from file:
-                                        <ul className="margin-top-xxs">
-                                            <li>
-                                                The sorter name must be the same as the sorter&apos;s class name in your
-                                                code.
-                                            </li>
-                                            <li>
-                                                Inherit from <code>Lucene.Net.Search.FieldComparator</code>
-                                            </li>
-                                            <li>
-                                                Code must be compilable and include all necessary <code>using</code>{" "}
-                                                statements.
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <hr />
-                                    <div className="small-label mb-2">useful links</div>
-                                    <a href={customSortersDocsLink} target="_blank">
-                                        <Icon icon="newtab" /> Docs - Custom Sorters
-                                    </a>
-                                </AccordionItemWrapper>
-                                <FeatureAvailabilitySummaryWrapper
-                                    isUnlimited={
-                                        databaseLimitReachStatus === "notReached" &&
-                                        clusterLimitReachStatus === "notReached" &&
-                                        hasServerWideCustomSorters
-                                    }
-                                    data={featureAvailability}
-                                />
-                            </AboutViewAnchored>
+                            <CustomSortersInfoHub db={db} />
                         </Col>
                     </Row>
                 </Col>
@@ -315,6 +239,8 @@ function DatabaseSortersList({
     const asyncDeleteSorter = useAsyncCallback(deleteCustomSorter, {
         onSuccess: reload,
     });
+
+    const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
 
     const [nameToConfirmDelete, setNameToConfirmDelete] = useState<string>(null);
 
@@ -352,11 +278,28 @@ function DatabaseSortersList({
                                 </>
                             )}
                             <RichPanelActions>
-                                <a href={forEditLink(sorter.Name)} className="btn btn-secondary">
-                                    <Icon icon={isDatabaseAdmin ? "edit" : "preview"} margin="m-0" />
-                                </a>
+                                {!panelCollapsed && (
+                                    <>
+                                        <Button color="success">
+                                            <Icon icon="save" /> Save changes
+                                        </Button>
+                                        <Button color="secondary">
+                                            <Icon icon="cancel" />
+                                            Discard
+                                        </Button>
+                                    </>
+                                )}
+                                {panelCollapsed && (
+                                    <a
+                                        href={forEditLink(sorter.Name)}
+                                        className="btn btn-secondary"
+                                        onClick={togglePanelCollapsed}
+                                    >
+                                        <Icon icon={isDatabaseAdmin ? "edit" : "preview"} margin="m-0" />
+                                    </a>
+                                )}
 
-                                {isDatabaseAdmin && (
+                                {isDatabaseAdmin && panelCollapsed && (
                                     <>
                                         {nameToConfirmDelete != null && (
                                             <DeleteCustomSorterConfirm
@@ -375,30 +318,14 @@ function DatabaseSortersList({
                                 )}
                             </RichPanelActions>
                         </RichPanelHeader>
+                        <Collapse isOpen={!panelCollapsed}>
+                            <RichPanelDetails className="vstack gap-3 p-4">
+                                <EditCustomSorter />
+                            </RichPanelDetails>
+                        </Collapse>
                     </RichPanel>
                 );
             })}
         </div>
     );
 }
-
-const defaultFeatureAvailability: FeatureAvailabilityData[] = [
-    {
-        featureName: "Limit per database",
-        community: { value: 1 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-    {
-        featureName: "Limit per cluster",
-        community: { value: 5 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-    {
-        featureName: "Server-wide custom sorters",
-        community: { value: false },
-        professional: { value: true },
-        enterprise: { value: true },
-    },
-];
