@@ -577,7 +577,9 @@ namespace Raven.Server.Documents.Revisions
             else
             {
                 revisionsToDelete = GetRevisionsForCollectionOrDefault(context, table, lowerIdPrefix,
-                    configuration, result.PreviousCount, result);
+                    configuration, result.PreviousCount,
+                    stopWhenReachingAge: nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false,
+                    result);
             }
 
             var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result, tombstoneFlags: flags);
@@ -730,6 +732,7 @@ namespace Raven.Server.Documents.Revisions
             Slice prefixSlice,
             RevisionsCollectionConfiguration configuration,
             long revisionsCount,
+            bool stopWhenReachingAge,
             DeleteOldRevisionsResult result)
         {
             result.HasMore = false;
@@ -780,6 +783,13 @@ namespace Raven.Server.Documents.Revisions
                         _database.Time.GetUtcNow() - revision.LastModified <= configuration.MinimumRevisionAgeToKeep.Value)
                     {
                         revision.Dispose();
+
+                        if (stopWhenReachingAge == false)
+                        {
+                            result.Skip++;
+                            ended = false;
+                        }
+
                         break;
                     }
 
@@ -2238,10 +2248,10 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public void GetLatestRevisionsBinEntry(DocumentsOperationContext context, long startEtag, out string latestChangeVector)
+        public void GetLatestRevisionsBinEntry(DocumentsOperationContext context, out string latestChangeVector)
         {
             latestChangeVector = null;
-            foreach (var entry in GetRevisionsBinEntries(context, startEtag, 1))
+            foreach (var entry in GetRevisionsBinEntries(context, 0, 1))
             {
                 latestChangeVector = entry.ChangeVector;
             }
@@ -2301,9 +2311,9 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, long take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, long take, DocumentFields fields = DocumentFields.All, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction, onCorruptedDataHandler);
 
             foreach (var tvr in table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, 0))
             {

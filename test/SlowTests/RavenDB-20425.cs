@@ -477,8 +477,6 @@ return oldestDoc;"
             await SetupReplicationAsync(src, dst); // Conflicts resolved
             await EnsureReplicatingAsync(src, dst);
 
-            WaitForUserToContinueTheTest(dst);
-
 
             // Ensure revisions arent ordered by "last modified".
             using (var session = dst.OpenAsyncSession())
@@ -529,7 +527,7 @@ return oldestDoc;"
             using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount); // OLD (DELETED) , NEW, OLD, OLD
+                Assert.Equal(1, doc1RevCount); // OLD (DELETED) , NEW, OLD (DELETED), OLD (DELETED)
             }
 
             dbDst.Time.UtcDateTime = () => DateTime.UtcNow.AddHours(2);
@@ -537,7 +535,7 @@ return oldestDoc;"
             using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(0, doc1RevCount); // OLDER (DELETED EARLIER) , OLD (DELETED), OLDER (DELETED), OLDER (DELETED)
+                Assert.Equal(0, doc1RevCount); // OLDER (DELETED EARLIER) , OLD (DELETED), OLDER (DELETED EARLIER), OLDER (DELETED EARLIER)
             }
 
         }

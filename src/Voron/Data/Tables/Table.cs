@@ -29,6 +29,7 @@ namespace Voron.Data.Tables
         private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;
         internal readonly Transaction _tx;
+        private readonly EventHandler<InvalidOperationException> _onCorruptedDataHandler;
         private readonly Tree _tableTree;
 
         private ActiveRawDataSmallSection _activeDataSmallSection;
@@ -147,12 +148,13 @@ namespace Voron.Data.Tables
         /// this overload is meant to be used for global reads only, when want to use
         /// a global index to find data, without touching the actual table.
         /// </summary>
-        public Table(TableSchema schema, Transaction tx)
+        public Table(TableSchema schema, Transaction tx, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
         {
             _schema = schema;
             _tx = tx;
             _forGlobalReadsOnly = true;
             _tableType = 0;
+            _onCorruptedDataHandler = onCorruptedDataHandler;
         }
 
         public bool ReadByKey(Slice key, out TableValueReader reader)
@@ -776,7 +778,8 @@ namespace Voron.Data.Tables
 
         internal sealed class CompressionDictionariesHolder : IDisposable
         {
-            private readonly ConcurrentDictionary<int, ZstdLib.CompressionDictionary> _compressionDictionaries = new ConcurrentDictionary<int, ZstdLib.CompressionDictionary>();
+            private readonly ConcurrentDictionary<int, ZstdLib.CompressionDictionary> _compressionDictionaries = new();
+            public ConcurrentDictionary<int, ZstdLib.CompressionDictionary> CompressionDictionaries => _compressionDictionaries;
 
             public ZstdLib.CompressionDictionary GetCompressionDictionaryFor(Transaction tx, int id)
             {
@@ -789,6 +792,26 @@ namespace Voron.Data.Tables
                 if (result != current)
                     current.Dispose();
                 return result;
+            }
+
+            public IEnumerable<ZstdLib.CompressionDictionary> GetInStorageDictionaries(Transaction tx)
+            {
+                var tree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
+                if (tree == null)
+                    yield break;
+
+                using (var iterator = tree.Iterate(true))
+                {
+                    if (iterator.Seek(Slices.BeforeAllKeys) == false)
+                        yield break;
+
+                    do
+                    {
+                        var id = iterator.CurrentKey.CreateReader().ReadBigEndianInt32();
+                        var dict = CreateCompressionDictionary(tx, id);
+                        yield return dict;
+                    } while (iterator.MoveNext());
+                }
             }
 
             private ZstdLib.CompressionDictionary CreateCompressionDictionary(Transaction tx, int id)
@@ -819,20 +842,49 @@ namespace Voron.Data.Tables
                 return dic;
             }
 
+            private void ClearCompressionDictionaries()
+            {
+                _compressionDictionaries.Clear();
+            }
+
             public void Dispose()
             {
                 foreach (var (_, dic) in _compressionDictionaries)
                 {
                     dic.Dispose();
-
                 }
             }
 
-            public void Remove(int id)
+            public bool Remove(int id)
             {
                 // Intentionally orphaning the dictionary here, we'll let the 
                 // GC's finalizer to clear it up, this is a *very* rare operation.
-                _compressionDictionaries.TryRemove(id, out _);
+                return _compressionDictionaries.TryRemove(id, out _);
+            }
+
+            internal TestingStuff _forTestingPurposes;
+
+            internal TestingStuff ForTestingPurposesOnly()
+            {
+                if (_forTestingPurposes != null)
+                    return _forTestingPurposes;
+
+                return _forTestingPurposes = new TestingStuff(ClearCompressionDictionaries);
+            }
+
+            internal class TestingStuff
+            {
+                private readonly Action _clearCompressionDictionaries;
+
+                public TestingStuff(Action clearCompressionDictionaries)
+                {
+                    _clearCompressionDictionaries = clearCompressionDictionaries;
+                }
+
+                public void ClearCompressionDictionaries()
+                {
+                    _clearCompressionDictionaries.Invoke();
+                }
             }
         }
 
@@ -1837,11 +1889,34 @@ namespace Voron.Data.Tables
                     yield break;
 
                 var result = new TableValueHolder();
-                do
+                if (_onCorruptedDataHandler == null)
                 {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
-                } while (it.MoveNext());
+                    do
+                    {
+                        GetTableValueReader(it, out result.Reader);
+                        yield return result;
+                    } while (it.MoveNext());
+                }
+                else
+                {
+                    do
+                    {
+                        bool successfully = true;
+                        try
+                        {
+                            GetTableValueReader(it, out result.Reader);
+                        }
+                        catch (InvalidOperationException e)
+                        {
+                            _onCorruptedDataHandler.Invoke(this, e);
+                            successfully = false;
+                        }
+
+                        if (successfully)
+                            yield return result;
+
+                    } while (it.MoveNext());
+                }
             }
         }
 

@@ -29,8 +29,6 @@ class revisionsBin extends shardViewModelBase {
         delete: ko.observable<boolean>(false)
     };
 
-    private revisionsBinEntryNextChangeVector = undefined as string;
-
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
 
@@ -65,14 +63,13 @@ class revisionsBin extends shardViewModelBase {
 
     refresh() {
         eventsCollector.default.reportEvent("revisions-bin", "refresh");
-        this.revisionsBinEntryNextChangeVector = undefined;
         this.gridController().reset(true);
     }
 
     fetchRevisionsBinEntries(skip: number): JQueryPromise<pagedResultWithToken<document>> {
         const task = $.Deferred<pagedResultWithToken<document>>();
 
-        new getRevisionsBinEntryCommand(this.db, this.revisionsBinEntryNextChangeVector, 101, this.continuationToken)
+        new getRevisionsBinEntryCommand(this.db, this.skip, 101, this.continuationToken)
             .execute()
             .done(result => {
                 let totalCount;
@@ -92,10 +89,8 @@ class revisionsBin extends shardViewModelBase {
 
                     if (hasMore) {
                         const nextItem = result.items.pop();
-                        this.revisionsBinEntryNextChangeVector = nextItem.__metadata.changeVector();
                     }
                 }
-
                 task.resolve({
                     totalResultCount: totalCount,
                     items: result.items
