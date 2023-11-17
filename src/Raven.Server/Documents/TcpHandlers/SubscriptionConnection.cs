@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger = LoggingSource.Instance.GetLogger(TcpConnection.DocumentDatabase.Name, $"{nameof(SubscriptionConnection)}<{_options.SubscriptionName}>");
                 context.OpenReadTransaction();
 
-                var subscriptionItemKey = Client.Documents.Subscriptions.SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);
+                var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);
                 var translation = TcpConnection.DocumentDatabase.ServerStore.Cluster.Read(context, subscriptionItemKey);
                 if (translation == null)
                     throw new SubscriptionDoesNotExistException("Cannot find any Subscription Task with name: " + _options.SubscriptionName);
@@ -230,9 +230,7 @@ namespace Raven.Server.Documents.TcpHandlers
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
             // update the state if above data changed
-            await _subscriptionConnectionsState.InitializeAsync(this, afterSubscribe: true);
-
-            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            _subscriptionConnectionsState.Initialize(this, afterSubscribe: true);
 
             await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
                 SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
@@ -258,7 +256,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                var sp = Stopwatch.StartNew();
                 while (true)
                 {
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -280,7 +277,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                         await Task.Delay(timeout);
-                        await SendHeartBeatIfNeededAsync(sp,
+                        await SendHeartBeat(
                             $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
                             $"{_subscriptionConnectionsState.GetConnectionsAsString()} to be released");
                     }
@@ -289,15 +286,6 @@ namespace Raven.Server.Documents.TcpHandlers
             finally
             {
                 _subscriptionConnectionsState._pendingConnections.TryRemove(connectionInfo);
-            }
-        }
-
-        internal async Task SendHeartBeatIfNeededAsync(Stopwatch sp, string reason)
-        {
-            if (sp.ElapsedMilliseconds >= WaitForChangedDocumentsTimeoutInMs)
-            {
-                await SendHeartBeatAsync(reason);
-                sp.Restart();
             }
         }
 
@@ -379,7 +367,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         using (_pendingConnectionScope)
                         {
                             await InitAsync();
-                            _subscriptionConnectionsState = await TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscriptionAsync(this);
+                            _subscriptionConnectionsState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
                             (disposeOnDisconnect, registerConnectionDurationInTicks) = await SubscribeAsync();
                         }
 
@@ -726,7 +714,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     UpdateBatchPerformanceStats(0, false);
 
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                        await SendHeartBeatAsync("Didn't find any documents to send and more then 1000ms passed");
+                                        await SendHeartBeat("Didn't find any documents to send and more then 1000ms passed");
 
                                     using (docsContext.OpenReadTransaction())
                                     {
@@ -820,7 +808,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     break;
                 }
 
-                await SendHeartBeatAsync("Waiting for client ACK");
+                await SendHeartBeat("Waiting for client ACK");
                 await SubscriptionConnectionsState.SendNoopAck();
             }
 
@@ -930,7 +918,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                     {
-                                        await SendHeartBeatAsync("Skipping docs for more than 1000ms without sending any data");
+                                        await SendHeartBeat("Skipping docs for more than 1000ms without sending any data");
                                         sendingCurrentBatchStopwatch.Restart();
                                     }
 
@@ -1090,7 +1078,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        internal async Task SendHeartBeatAsync(string reason)
+        private async Task SendHeartBeat(string reason)
         {
             try
             {
@@ -1153,7 +1141,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     return true;
                 }
 
-                await SendHeartBeatAsync("Waiting for changed documents");
+                await SendHeartBeat("Waiting for changed documents");
                 await SubscriptionConnectionsState.SendNoopAck();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;

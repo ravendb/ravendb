@@ -6,6 +6,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
@@ -64,7 +65,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.True(await signalWhenStartedProcessingDoc.WaitAsync(_reasonableWaitTime));
                 var database = await GetDatabase(store.Database);
 
-                SubscriptionState subscriptionState;
+                SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
