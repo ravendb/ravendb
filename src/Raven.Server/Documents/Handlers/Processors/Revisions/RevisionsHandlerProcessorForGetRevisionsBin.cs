@@ -23,17 +23,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             {
                 var sw = Stopwatch.StartNew();
                 var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
-                revisionsStorage.GetLatestRevisionsBinEntry(context, start, out var actualChangeVector);
+
+                string match = null;
+                revisionsStorage.GetLatestRevisionsBinEntry(context, out var actualChangeVector);
+
                 if (actualChangeVector != null)
                 {
-                    if (RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch) == actualChangeVector)
+                    var countRevs = revisionsStorage.GetNumberOfRevisionDocuments(context);
+                    match = $"{actualChangeVector}/{countRevs}";
+
+                    if (RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch) == match)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                         return;
                     }
-
-                    HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
                 }
+
+                if (match != null)
+                    HttpContext.Response.Headers["ETag"] = "\"" + match + "\"";
+
                 var revisions = revisionsStorage.GetRevisionsBinEntries(context, start, pageSize).ToAsyncEnumerable();
 
                 long count;

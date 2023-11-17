@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             var result = new DocumentQueryResult(indexDefinitionRaftIndex: null);
-            
+
             QueryRunner.AssertValidQuery(query, result);
 
             if (queryContext.AreTransactionsOpened() == false)
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, indexDefinitionRaftIndex: null, token);
-            
+
             QueryRunner.AssertValidQuery(query, result);
 
             using (queryContext.OpenReadTransaction())
@@ -136,9 +136,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 resultToFill.IncludedPaths = query.Metadata.Includes;
 
                 var fieldsToFetch = new FieldsToFetch(query, null, IndexType.None);
-                var includeDocumentsCommand  = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
-                var includeRevisionsCommand  = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes);
-                
+                var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
+                var includeRevisionsCommand = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes);
+
                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
 
                 var totalResults = new Reference<long>();
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 IncludeCountersCommand includeCountersCommand = null;
                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
-                
+
                 if (query.Metadata.RevisionIncludes != null)
                 {
                     includeRevisionsCommand = new IncludeRevisionsCommand(
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         context.Documents,
                         query.Metadata.RevisionIncludes);
                 }
-                
+
                 if (query.Metadata.CounterIncludes != null)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
@@ -222,9 +222,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             includeCountersCommand?.Fill(document);
 
                             includeTimeSeriesCommand?.Fill(document);
-                            
+
                             includeRevisionsCommand?.Fill(document);
-                            
+
                         }
                     }
                 }
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (includeTimeSeriesCommand != null)
                     resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
-                
+
                 if (includeRevisionsCommand != null)
                     resultToFill.AddRevisionIncludes(includeRevisionsCommand);
 

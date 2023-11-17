@@ -449,10 +449,10 @@ namespace Raven.Server.Documents.Queries
         {
             if (result.SupportsInclude == false && query.Metadata.Includes != null && query.Metadata.Includes.Length > 0)
                 throw new NotSupportedException("Includes are not supported by this type of query.");
-            
+
             if (result.SupportsHighlighting == false && query.Metadata.HasHighlightings)
                 throw new NotSupportedException("Highlighting is not supported by this type of query.");
-            
+
             if (query.Metadata.HasHighlightings && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
                 throw new NotSupportedException("Highlighting is not supported by this type of query.");
 

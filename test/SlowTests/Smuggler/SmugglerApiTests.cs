@@ -25,7 +25,10 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
 using Tests.Infrastructure;
+using Voron;
+using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
@@ -92,7 +95,7 @@ namespace SlowTests.Smuggler
                 using (var store2 = GetDocumentStore())
                 {
                     await store1.Maintenance.SendAsync(
-                        new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true, collections: new string[]{"Foo","foo", "bar"})));
+                        new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true, collections: new string[] { "Foo", "foo", "bar" })));
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -1706,7 +1709,7 @@ namespace SlowTests.Smuggler
             const int numberOfUsers = 7;
             const int numberOfOrders = 3;
             DateTime baseTimeline = DateTime.Today.ToUniversalTime();
-            
+
             var file = GetTempFileName();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
@@ -1728,7 +1731,7 @@ namespace SlowTests.Smuggler
                         {
                             // Documents
                             await session.StoreAsync(new User { Name = $"Name{i}" }, $"users/{i}");
-                            
+
                             // Counters
                             var docCounters = session.CountersFor($"users/{i}");
                             docCounters.Increment($"TestCounter{i}", i * i);
@@ -1768,7 +1771,7 @@ namespace SlowTests.Smuggler
                             }
                         }
                     }
-                    
+
                     var statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments);
 
@@ -1815,7 +1818,7 @@ namespace SlowTests.Smuggler
                         }
                     }
                     await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store1, isFullBackup: false);
-                    
+
                     // Check database statistics before export
                     statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments);
@@ -2076,17 +2079,17 @@ namespace SlowTests.Smuggler
             try
             {
                 using (var server = GetNewServer(new ServerCreationOptions
-                       {
-                           CustomSettings = new Dictionary<string, string>
-                           {
-                               [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString()
-                           }
-                       }))
+                {
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString()
+                    }
+                }))
                 using (var sourceStore = GetDocumentStore(new Options { Server = server }))
                 using (var destStore = GetDocumentStore(new Options { Server = server }))
                 {
                     var database = await GetDatabase(server, sourceStore.Database);
-                    
+
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         await using (var session = sourceStore.BulkInsert())
@@ -2107,7 +2110,7 @@ namespace SlowTests.Smuggler
                                 ["Users"] = new() { Disabled = false, MinimumRevisionsToKeep = 10 }
                             }
                         };
-                        await RevisionsHelper.SetupRevisions(server.ServerStore, database.Name, revisionConfiguration);
+                        await RevisionsHelper.SetupRevisionsAsync(sourceStore, database.Name, revisionConfiguration);
 
                         // Now, let's add the documents under the conditions of the configured revisions
                         await using (var session = sourceStore.BulkInsert())
@@ -2159,13 +2162,13 @@ namespace SlowTests.Smuggler
                     var sourceStats = sourceStore.Maintenance.Send(new GetStatisticsOperation());
 
                     // Documents assert
-                    Assert.True(result?.Documents.ReadCount == documentsWithoutRevisions, 
+                    Assert.True(result?.Documents.ReadCount == documentsWithoutRevisions,
                         $"Documents.ReadCount of smuggler export result is {result?.Documents.ReadCount} documents, but should be {documentsWithoutRevisions}");
 
                     Assert.True(result.Documents.ErroredCount == documentsWithRevisions + expectedNumberOfCorruptedRevisions,
                         $"Documents.ErroredCount of smuggler export result is {result.Documents.ErroredCount} documents, but should be {documentsWithRevisions + expectedNumberOfCorruptedRevisions}");
 
-                    Assert.True(sourceStats.CountOfDocuments == expectedNumberOfDocuments, 
+                    Assert.True(sourceStats.CountOfDocuments == expectedNumberOfDocuments,
                         $"The source database contains {sourceStats.CountOfDocuments} documents, but should be {expectedNumberOfDocuments}");
 
                     // Revisions assert
@@ -2183,7 +2186,7 @@ namespace SlowTests.Smuggler
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var destStats = destStore.Maintenance.Send(new GetStatisticsOperation());
-                    Assert.True(destStats.CountOfDocuments == sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments, 
+                    Assert.True(destStats.CountOfDocuments == sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments,
                         $"The destination database contains {destStats.CountOfDocuments} documents, but expected {sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments}");
 
                     Assert.True(destStats.CountOfRevisionDocuments == result.Documents.ReadCount + result.RevisionDocuments.ReadCount * 2,

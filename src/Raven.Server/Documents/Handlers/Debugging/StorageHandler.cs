@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (var processor = new StorageHandlerProcessorForGetEnvironmentPages(this))
                 await processor.ExecuteAsync();
         }
-        
+
         [RavenAction("/databases/*/debug/storage/trees", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
         public async Task Trees()
         {
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (var processor = new StorageHandlerProcessorForGetReport(this))
                 await processor.ExecuteAsync();
         }
-        
+
         [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
         public async Task AllEnvironmentsReport()
         {
@@ -276,15 +276,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 WriteCompressionDictionaries(writer, inMemoryCompressionDictionaries.Values.ToArray(), "InMemory");
 
                 writer.WriteComma();
-                
+
                 var inStorageDictionaries = context.Environment.CompressionDictionariesHolder.GetInStorageDictionaries(tx);
                 WriteCompressionDictionaries(writer, inStorageDictionaries.ToArray(), "InStorage");
-                
+
                 writer.WriteEndObject();
             }
         }
 
-        private static void WriteCompressionDictionaries(AsyncBlittableJsonTextWriter writer, ZstdLib.CompressionDictionary[] dictionaries, string sourceName)
+        private static void WriteCompressionDictionaries(AsyncBlittableJsonTextWriterForDebug writer, ZstdLib.CompressionDictionary[] dictionaries, string sourceName)
         {
             writer.WritePropertyName(sourceName);
 

@@ -39,7 +39,7 @@ public class RavenDB_21569 : RavenTestBase
                 }
             }
         };
-        await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+        await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
 
         await CreateRevisions(store, database);
 
@@ -56,7 +56,7 @@ public class RavenDB_21569 : RavenTestBase
                 }
             }
         };
-        await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+        await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
 
         using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
             await database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, true, token: token);
@@ -83,7 +83,7 @@ public class RavenDB_21569 : RavenTestBase
                 }
             }
         };
-        await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+        await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
 
         await CreateRevisions(store, database);
 
@@ -101,7 +101,7 @@ public class RavenDB_21569 : RavenTestBase
                 }
             }
         };
-        await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+        await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
 
         using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
             await database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, true, token: token);
