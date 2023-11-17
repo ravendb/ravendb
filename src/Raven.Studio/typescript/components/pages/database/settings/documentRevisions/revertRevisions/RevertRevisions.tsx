@@ -13,7 +13,7 @@ import { FormDatePicker, FormInput, FormSelect } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import assertUnreachable from "components/utils/assertUnreachable";
 import moment from "moment";
-import useConfirm from "components/hooks/useConfirm";
+import useConfirm from "components/common/ConfirmDialog";
 import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import notificationCenter from "common/notifications/notificationCenter";
@@ -36,18 +36,12 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
     const { isRevertAllCollections, collections, pointInTime } = useWatch({ control });
 
     const { forCurrentDatabase } = useAppUrls();
+    const confirm = useConfirm();
 
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const formattedPointInTimeUtc = moment(pointInTime).utc().format(defaultDateFormat) + " UTC";
-
-    const [RevertConfirm, confirmRevert] = useConfirm({
-        title: `Do you want to revert documents state to date: ${formattedPointInTimeUtc}?`,
-        icon: "revert-revisions",
-        actionColor: "primary",
-        confirmText: "Revert",
-    });
 
     const { databasesService } = useServices();
 
@@ -56,7 +50,14 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
     );
 
     const onRevert = async (formData: RevertRevisionsFormData) => {
-        if (await confirmRevert()) {
+        const isConfirmed = await confirm({
+            title: `Do you want to revert documents state to date: ${formattedPointInTimeUtc}?`,
+            icon: "revert-revisions",
+            actionColor: "primary",
+            confirmText: "Revert",
+        });
+
+        if (isConfirmed) {
             return tryHandleSubmit(async () => {
                 const result = await asyncRevertRevisions.execute(toDto(formData));
                 notificationCenter.instance.openDetailsForOperationById(db, result.OperationId);
@@ -70,7 +71,6 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                 <AboutViewHeading title="Revert Revisions" icon="revert-revisions" />
                 <Form onSubmit={handleSubmit(onRevert)} autoComplete="off">
                     <div className="d-flex justify-content-between align-items-end">
-                        <RevertConfirm />
                         <ButtonWithSpinner
                             type="submit"
                             color="primary"

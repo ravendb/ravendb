@@ -69,7 +69,7 @@ class revisionsBin extends shardViewModelBase {
     fetchRevisionsBinEntries(skip: number): JQueryPromise<pagedResultWithToken<document>> {
         const task = $.Deferred<pagedResultWithToken<document>>();
 
-        new getRevisionsBinEntryCommand(this.db, this.skip, 101, this.continuationToken)
+        new getRevisionsBinEntryCommand(this.db, skip, 101, this.continuationToken)
             .execute()
             .done(result => {
                 let totalCount;
@@ -88,7 +88,7 @@ class revisionsBin extends shardViewModelBase {
                     totalCount = skip + result.items.length;
 
                     if (hasMore) {
-                        const nextItem = result.items.pop();
+                        result.items.pop();
                     }
                 }
                 task.resolve({
