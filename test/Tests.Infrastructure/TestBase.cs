@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Text;
@@ -32,6 +33,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Extensions;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -641,6 +643,21 @@ namespace FastTests
 
                 exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
             }
+
+            var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
+            var connections = properties.GetActiveTcpConnectionsSafely() ?? Array.Empty<TcpConnectionInformation>();
+
+            var sb = new StringBuilder($"TCP Connections ({connections.Length}): {Environment.NewLine}");
+            var groupedConnections = connections.GroupBy(x => x.State).Select(x => new { State = x.Key, Count = x.Count() }).OrderByDescending(x => x.Count);
+            foreach (var group in groupedConnections)
+            {
+                if (group.Count == 0)
+                    continue;
+
+                sb.AppendLine($"- {group.State} - {group.Count}");
+            }
+
+            Output.WriteLine(sb.ToString());
 
             ServersForDisposal = null;
 
