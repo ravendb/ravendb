@@ -3123,9 +3123,13 @@ namespace Raven.Server.ServerWide
             return (command.Result.RaftCommandIndex, command.Result.Data);
         }
 
-        public async Task WaitForExecutionOnSpecificNode(JsonOperationContext context, string nodeTag, long index)
+        protected internal async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, string node, long index)
         {
-            await WaitForExecutionOnRelevantNodesAsync(context, members: [nodeTag], index);
+            await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+
+            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(GetClusterTopology().GetUrlFromTag(node), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
+                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: oct.Token);
         }
 
         public async Task WaitForExecutionOnRelevantNodesAsync(JsonOperationContext context, List<string> members, long index)
@@ -3135,37 +3139,24 @@ namespace Raven.Server.ServerWide
             if (members == null || members.Count == 0)
                 throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute on.");
 
-            var executors = GetClusterRequestExecutorsForMembers(members);
-            if (executors.Count != members.Count)
-                throw new InvalidOperationException("Number of executors does not match number of relevant nodes. We cannot wait for execution on all relevant nodes.");
-
-            try
+            using (var requestExecutor = ClusterRequestExecutor.Create(GetClusterTopology().Members.Values.ToArray(), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
             {
-                using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
+                List<Exception> exceptions = null;
+
+                var waitingTasks =
+                    members.Select(member => WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(requestExecutor, member, index, context, oct.Token));
+
+                foreach (var exception in await Task.WhenAll(waitingTasks))
                 {
-                    List<Exception> exceptions = null;
+                    if (exception == null)
+                        continue;
 
-                    var tasks = executors.Zip(members, (executor, nodeTag) =>
-                        WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(executor, nodeTag, index, context, oct.Token)).ToList();
-
-                    foreach (var exception in await Task.WhenAll(tasks))
-                    {
-                        if (exception == null)
-                            continue;
-
-                        exceptions ??= new List<Exception>();
-                        exceptions.Add(exception.ExtractSingleInnerException());
-                    }
-
-                    HandleExceptions(exceptions);
+                    exceptions ??= new List<Exception>();
+                    exceptions.Add(exception.ExtractSingleInnerException());
                 }
-            }
-            finally
-            {
-                foreach (var executor in executors)
-                {
-                    executor.Dispose();
-                }
+
+                HandleExceptions(exceptions);
             }
 
             return;
@@ -3185,20 +3176,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<ClusterRequestExecutor> GetClusterRequestExecutorsForMembers(IEnumerable<string> nodeTags)
-        {
-            return nodeTags.Select(member =>
-            {
-                var url = GetClusterTopology().GetUrlFromTag(member);
-                return ClusterRequestExecutor.CreateForSingleNode(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
-            }).ToList();
-        }
-
         private async Task<Exception> WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(RequestExecutor executor, string nodeTag, long index, JsonOperationContext context, CancellationToken token)
         {
             try
             {
-                await executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: token);
+                var cmd = new WaitForRaftIndexCommand(index, nodeTag);
+                await executor.ExecuteAsync(cmd, context, token: token);
                 return null;
             }
             catch (RavenException re) when (re.InnerException is HttpRequestException)
