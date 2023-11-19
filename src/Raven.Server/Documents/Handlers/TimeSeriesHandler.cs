@@ -898,7 +898,7 @@ namespace Raven.Server.Documents.Handlers
             }
             catch (RaftIndexWaitAggregateException e)
             {
-                throw new InvalidDataException($"TimeSeries Configuration was modified, but we couldn't send it due to errors on one or more target nodes.", e);
+                throw new InvalidDataException("TimeSeries Configuration was modified, but we couldn't send it due to errors on one or more target nodes.", e);
             }
 
             return result;

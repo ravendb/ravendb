@@ -4,9 +4,13 @@ using System.Linq;
 
 namespace Raven.Server.Exceptions;
 
-public class RaftIndexWaitAggregateException(long raftCommandIndex, IEnumerable<Exception> innerExceptions)
-    : AggregateException(CreateMessage(raftCommandIndex, innerExceptions), innerExceptions)
+public class RaftIndexWaitAggregateException : AggregateException
 {
+    public RaftIndexWaitAggregateException(long raftCommandIndex, IEnumerable<Exception> innerExceptions)
+        : base(CreateMessage(raftCommandIndex, innerExceptions), innerExceptions)
+    {
+    }
+
     private static string CreateMessage(long raftCommandIndex, IEnumerable<Exception> innerExceptions)
     {
         var count = innerExceptions?.Count() ?? 0;

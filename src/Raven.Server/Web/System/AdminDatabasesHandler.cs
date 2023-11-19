@@ -8,11 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -427,7 +425,7 @@ namespace Raven.Server.Web.System
             catch (RaftIndexWaitAggregateException e)
             {
                 throw new InvalidDataException(
-                    $"The database '{name}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", e);
+                    $"The database '{name}' was created but is not accessible, because one or more of the nodes on which this database was supposed to reside on, threw an exception.", e);
             }
 
             var nodeUrlsAddedTo = new List<string>();
@@ -850,7 +848,14 @@ namespace Raven.Server.Web.System
 
                 if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
                 {
-                    await WaitForExecutionOnRelevantNodes(context, "server", ServerStore.GetClusterTopology(), parameters.FromNodes.ToList(), actualDeletionIndex);
+                    try
+                    {
+                        await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, parameters.FromNodes.ToList(), actualDeletionIndex);
+                    }
+                    catch (RaftIndexWaitAggregateException e)
+                    {
+                        throw new InvalidDataException($"Deletion of databases {string.Join(", ", parameters.DatabaseNames)} was performed, but it could not be propagated due to errors on one or more target nodes.", e);
+                    }
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
