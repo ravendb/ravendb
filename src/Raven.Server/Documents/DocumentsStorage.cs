@@ -1009,11 +1009,10 @@ namespace Raven.Server.Documents
                 if (IsTombstoneOfId(tombstoneKey, lowerId))
                 {
                     var current = TableValueToTombstone(context, ref tvh.Reader);
-                    mostRecent = current;
                     if (mostRecent == null || 
                         GetConflictStatus(context, current.ChangeVector, mostRecent.ChangeVector, ChangeVectorMode.Version) == ConflictStatus.Update)
                     {
-                        using (var old = mostRecent)
+                        using (var _ = mostRecent)
                         {
                             mostRecent = current;
                         }
