@@ -68,15 +68,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureRetryFact, Trait("Category", "Smuggler")]
-        public void can_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: false);
+        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public void can_backup_and_restore(BackupUploadMode backupUploadMode) => can_backup_and_restore_internal(backupUploadMode, oneTimeBackup: false);
 
-        [AzureRetryFact, Trait("Category", "Smuggler")]
-        public void can_onetime_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: true);
+        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public void can_onetime_backup_and_restore(BackupUploadMode backupUploadMode) => can_backup_and_restore_internal(backupUploadMode, oneTimeBackup: true);
 
-        private void can_backup_and_restore_internal(bool oneTimeBackup)
+        private void can_backup_and_restore_internal(BackupUploadMode backupUploadMode, bool oneTimeBackup)
         {
-            using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
+            using (var holder = new Azure.AzureClientHolder(AzureRetryTheoryAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -92,7 +96,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     BackupResult backupResult = null;
                     if (oneTimeBackup == false)
                     {
-                        var config = Backup.CreateBackupConfiguration(azureSettings: holder.Settings);
+                        var config = Backup.CreateBackupConfiguration(azureSettings: holder.Settings, backupUploadMode: backupUploadMode);
                         backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                         backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
                         Assert.NotNull(backupResult);
@@ -169,8 +173,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureRetryFact, Trait("Category", "Smuggler")]
-        public async Task can_create_azure_snapshot_and_restore_using_restore_point()
+        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public async Task can_create_azure_snapshot_and_restore_using_restore_point(BackupUploadMode backupUploadMode)
         {
             using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
@@ -183,7 +189,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         session.SaveChanges();
                     }
 
-                    var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, azureSettings: holder.Settings);
+                    var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, azureSettings: holder.Settings, backupUploadMode: backupUploadMode);
                     var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                     var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
 
