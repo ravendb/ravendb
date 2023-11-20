@@ -302,6 +302,14 @@ namespace Raven.Server.Documents.TimeSeries
                         return null;
                 }
 
+                if (from == DateTime.MinValue && to == DateTime.MaxValue)
+                {
+                    table.DeleteByKey(slicer.TimeSeriesKeySlice);
+                    Stats.DeleteStats(context, collectionName, slicer.StatsKey);
+                    RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+                    return remoteChangeVector;
+                }
+
                 var baseline = GetBaseline(segmentValueReader);
                 string changeVector = null;
                 var deleted = 0;
@@ -354,13 +362,10 @@ namespace Raven.Server.Documents.TimeSeries
                         if (baseline > end)
                             return false;
 
-                        if (remoteChangeVector != null)
+                        if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
                         {
-                            if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
-                            {
-                                // the deleted range is older than this segment, so we don't touch this segment
-                                return false;
-                            }
+                            // the deleted range is older than this segment, so we don't touch this segment
+                            return false;
                         }
 
                         if (readOnlySegment.NumberOfLiveEntries == 0)
