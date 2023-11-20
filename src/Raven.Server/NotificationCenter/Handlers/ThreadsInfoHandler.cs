@@ -14,10 +14,21 @@ namespace Raven.Server.NotificationCenter.Handlers
         [RavenAction("/threads-info/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task GetThreadsInfo()
         {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
-            using (var writer  = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ThreadsInfoNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
+            try
             {
-                await writer.WriteNotifications(null);
+                using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+                using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ThreadsInfoNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
+                {
+                    await writer.WriteNotifications(null);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // disposing
+            }
+            catch (ObjectDisposedException)
+            {
+                // disposing
             }
         }
     }

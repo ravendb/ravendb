@@ -26,26 +26,37 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/debug/io-metrics/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task IoMetricsLive()
         {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            try
             {
-                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
-                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
-
-                await using (var ms = new MemoryStream())
-                using (var collector = new DatabaseLiveIoStatsCollector(Database))
+                using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
                 {
-                    // 1. Send data to webSocket without making UI wait upon opening webSocket
-                    await collector.SendDataOrHeartbeatToWebSocket(receive, webSocket, ms, 100);
+                    var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+                    var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
-                    // 2. Send data to webSocket when available
-                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
+                    await using (var ms = new MemoryStream())
+                    using (var collector = new DatabaseLiveIoStatsCollector(Database))
                     {
-                        if (await collector.SendDataOrHeartbeatToWebSocket(receive, webSocket, ms, 4000) == false)
+                        // 1. Send data to webSocket without making UI wait upon opening webSocket
+                        await collector.SendDataOrHeartbeatToWebSocket(receive, webSocket, ms, 100);
+
+                        // 2. Send data to webSocket when available
+                        while (Database.DatabaseShutdown.IsCancellationRequested == false)
                         {
-                            break;
+                            if (await collector.SendDataOrHeartbeatToWebSocket(receive, webSocket, ms, 4000) == false)
+                            {
+                                break;
+                            }
                         }
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // disposing
+            }
+            catch (ObjectDisposedException)
+            {
+                // disposing
             }
         }
 
