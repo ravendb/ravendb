@@ -13,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
@@ -834,6 +835,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     break;
 
                 case DirectUploadStream<RavenAwsS3Client>:
+                case DirectUploadStream<RavenAzureClient>:
                     break;
 
                 default:

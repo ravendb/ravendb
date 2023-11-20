@@ -10,6 +10,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         Size MaxSingleBlockSize { get; set; }
     }
 
-    public class RavenAzureClient : IProgress<long>, IRavenAzureClient
+    public class RavenAzureClient : IProgress<long>, IRavenAzureClient, IDirectUploader
     {
         private readonly Progress _progress;
 
@@ -46,7 +47,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public Size MaxSingleBlockSize { get; set; } = new Size(256, SizeUnit.Megabytes);
 
-        private RavenAzureClient(AzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        public RavenAzureClient(AzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (azureSettings == null)
                 throw new ArgumentNullException(nameof(azureSettings));
@@ -249,5 +250,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             return new RavenAzureClient(settings, configuration, progress, cancellationToken);
     }
-}
+
+        public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
+        {
+            return new AzureMultiPartUploader(_client, key, metadata, _progress, _cancellationToken);
+        }
+    }
 }
