@@ -64,6 +64,10 @@ namespace Raven.Server.Documents.Handlers
                                 await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
                             }
                         }
+                        catch (ObjectDisposedException)
+                        {
+                            // disposing
+                        }
                         catch (Exception exception)
                         {
                             if (Logger.IsInfoEnabled)
@@ -132,7 +136,7 @@ namespace Raven.Server.Documents.Handlers
 
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
-                        receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, Database.DatabaseShutdown);
+                        receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, connection.CancellationToken.Token);
 
                         while (true)
                         {
@@ -150,7 +154,7 @@ namespace Raven.Server.Documents.Handlers
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
                                         index = 0;
-                                    receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, Database.DatabaseShutdown);
+                                    receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, connection.CancellationToken.Token);
                                 }
 
                                 builder.FinalizeDocument();
@@ -209,7 +213,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            Database.DatabaseShutdown.ThrowIfCancellationRequested();
+            Database.ThrowIfShutdownRequested();
 
             await sendTask;
         }
