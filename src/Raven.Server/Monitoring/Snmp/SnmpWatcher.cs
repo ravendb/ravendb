@@ -33,7 +33,7 @@ using TimeoutException = System.TimeoutException;
 
 namespace Raven.Server.Monitoring.Snmp
 {
-    public class SnmpWatcher
+    public class SnmpWatcher : IDisposable
     {
         private readonly ConcurrentDictionary<string, SnmpDatabase> _loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
 
@@ -619,6 +619,12 @@ namespace Raven.Server.Monitoring.Snmp
             }
 
             return result;
+        }
+
+        public void Dispose()
+        {
+            _snmpEngine?.Dispose();
+            _snmpEngine = null;
         }
 
         private class SnmpLogger : ILogger
