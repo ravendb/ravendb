@@ -108,6 +108,7 @@ namespace Raven.Server.ServerWide
         public const string LicenseLimitsStorageKey = "License/Limits/Key";
 
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
+        private FileLocker _fileLocker;
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
 
@@ -609,6 +610,9 @@ namespace Raven.Server.ServerWide
             }
             else
             {
+                _fileLocker = new FileLocker(Path.Combine(path.FullPath, "system.lock"));
+                _fileLocker.TryAcquireWriteLock(Logger);
+
                 options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, CatastrophicFailureNotification);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
@@ -2442,7 +2446,8 @@ namespace Raven.Server.ServerWide
                         _clusterRequestExecutor,
                         ContextPool,
                         ByteStringMemoryCache.Cleaner,
-                        InitializationCompleted
+                        InitializationCompleted,
+                        _fileLocker
                     };
 
                     foreach (var disposable in toDispose)
