@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.TimeSeries
                     return false;
             }
 
-            AddOffsetIfNeeded(_offset, ref _from, ref _to);
+            (_from, _to) = AddOffsetIfNeeded(_offset, _from, _to);
 
             return true;
         }
@@ -619,31 +619,26 @@ namespace Raven.Server.Documents.TimeSeries
             return (etag, changeVector, baseline);
         }
 
-        internal static void AddOffsetIfNeeded(TimeSpan? offset, ref DateTime from, ref DateTime to)
+        internal static (DateTime From, DateTime To) AddOffsetIfNeeded(TimeSpan? offset, DateTime from, DateTime to)
         {
             if (offset.HasValue == false)
-                return;
+                return (from, to);
 
-            AddOffset(offset.Value, ref from);
-            AddOffset(offset.Value, ref to);
+            from = AddOffset(offset.Value, from);
+            to = AddOffset(offset.Value, to);
+            return (from, to);
         }
 
-        private static void AddOffset(TimeSpan offset, ref DateTime date)
+        private static DateTime AddOffset(TimeSpan offset, DateTime date)
         {
             var withOffset = date.Ticks + offset.Ticks;
             if (withOffset < 0)
-            {
-                date = DateTime.MinValue;
-                return;
-            }
-
+                return DateTime.MinValue;
+            
             if (withOffset > DateTime.MaxValue.Ticks)
-            {
-                date = DateTime.MaxValue;
-                return;
-            }
-
-            date = date.Add(offset);
+                return DateTime.MaxValue;
+            
+            return date.Add(offset);
         }
     }
 
