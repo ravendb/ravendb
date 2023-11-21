@@ -3,6 +3,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
+using static Raven.Server.Documents.TransactionMerger.Commands.JsonPatchCommand;
 
 namespace Raven.Server.Smuggler.Documents.Actions;
 
@@ -12,15 +13,21 @@ public sealed class DatabaseSubscriptionActions : DatabaseSubscriptionActionsBas
     {
     }
 
-    public override PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
+    public override PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState, bool includeState)
     {
-        return new PutSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
+        var command = new PutSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
         {
             SubscriptionName = subscriptionState.SubscriptionName,
             //After restore/export , subscription will start from the start
             InitialChangeVector = null,
             ArchivedDataProcessingBehavior = subscriptionState.ArchivedDataProcessingBehavior
         };
+        if (includeState)
+        {
+            command.InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint;
+            command.Disabled = subscriptionState.Disabled;
+        }
+        return command;
     }
 
     protected override async ValueTask SendCommandsAsync()

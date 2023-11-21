@@ -98,8 +98,10 @@ namespace Raven.Client.Documents.Subscriptions
 
         public static string SubscriptionPrefix(string databaseName)
         {
-            return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}subscriptions/";
+            return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}{Prefix}";
         }
+
+        internal static string Prefix => "subscriptions/";
     }
 
     internal sealed class SubscriptionStateWithNodeDetails : SubscriptionState
