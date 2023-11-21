@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -40,6 +41,7 @@ namespace Raven.Server.Smuggler.Documents
         protected readonly JsonOperationContext _context;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
         public Action<IndexDefinitionAndType> OnIndexAction;
+        public Action<SubscriptionState> ModifySubscriptionBeforeWrite;
         public BackupKind BackupKind = BackupKind.None;
         internal readonly ISmugglerDestination _destination;
         private SmugglerPatcher _patcher;
@@ -1050,7 +1052,14 @@ namespace Raven.Server.Smuggler.Documents
                     if (result.Subscriptions.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
 
-                    await actions.WriteSubscriptionAsync(subscription);
+                    if (ModifySubscriptionBeforeWrite != null)
+                    {
+                        ModifySubscriptionBeforeWrite.Invoke(subscription);
+                        await actions.WriteSubscriptionAsync(subscription, includeState: true);
+                        continue;
+                    }
+
+                    await actions.WriteSubscriptionAsync(subscription, includeState: false);
                 }
             }
 

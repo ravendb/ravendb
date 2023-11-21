@@ -95,7 +95,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface ISubscriptionActions : IAsyncDisposable
     {
-        ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState);
+        ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState, bool includeState);
     }
 
     public interface IReplicationHubCertificateActions : IAsyncDisposable

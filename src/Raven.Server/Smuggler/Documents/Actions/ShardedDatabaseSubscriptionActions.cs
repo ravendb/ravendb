@@ -13,15 +13,21 @@ public sealed class ShardedDatabaseSubscriptionActions : DatabaseSubscriptionAct
     {
     }
 
-    public override PutShardedSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
+    public override PutShardedSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState, bool includeState)
     {
-        return new PutShardedSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
+        var command = new PutShardedSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
         {
             SubscriptionName = subscriptionState.SubscriptionName,
             //After restore/export , subscription will start from the start
             InitialChangeVector = null,
             ArchivedDataProcessingBehavior = subscriptionState.ArchivedDataProcessingBehavior
         };
+        if (includeState)
+        {
+            command.InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint;
+            command.Disabled = subscriptionState.Disabled;
+        }
+        return command;
     }
 
     protected override async ValueTask SendCommandsAsync()
