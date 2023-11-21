@@ -18,7 +18,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
-    public interface IRavenAzureClient : IDisposable
+    public interface IRavenAzureClient : IDirectUploader, IDisposable
     {
         void PutBlob(string blobName, Stream stream, Dictionary<string, string> metadata);
         RavenStorageClient.ListBlobResult ListBlobs(string prefix, string delimiter, bool listFolders, string continuationToken = null);
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         Size MaxSingleBlockSize { get; set; }
     }
 
-    public class RavenAzureClient : IProgress<long>, IRavenAzureClient, IDirectUploader
+    public class RavenAzureClient : IProgress<long>, IRavenAzureClient
     {
         private readonly Progress _progress;
 
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public Size MaxSingleBlockSize { get; set; } = new Size(256, SizeUnit.Megabytes);
 
-        public RavenAzureClient(AzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        private RavenAzureClient(AzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (azureSettings == null)
                 throw new ArgumentNullException(nameof(azureSettings));

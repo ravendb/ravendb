@@ -4,7 +4,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
-public class AzureDirectUploadStream : DirectUploadStream<RavenAzureClient>
+public class AzureDirectUploadStream : DirectUploadStream<IRavenAzureClient>
 {
     private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
 
