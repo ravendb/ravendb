@@ -190,7 +190,13 @@ namespace SlowTests.Sharding
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deleteShardDatabaseRes.RaftCommandIndex);
                 }
 
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                DatabaseRecord record = null;
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.DeletionInProgress.Count;
+                }, expectedVal: 0);
+
                 Assert.Equal(2, record.Sharding.Shards.Count);
 
                 //make sure the nodes that held the deleted shard no longer have any of this shard's db instances
