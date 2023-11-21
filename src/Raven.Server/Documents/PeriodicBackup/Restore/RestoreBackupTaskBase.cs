@@ -10,7 +10,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -23,6 +25,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -345,7 +348,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             if (snapshotRestore)
                             {
                                 await RestoreFromSmugglerFile(onProgress, database, firstFile, context, result);
-                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
+                                await HandleSubscriptionFromSnapshot(filesToRestore, restoreSettings.Subscriptions, databaseName, database);
+                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result, restoreSettings.Subscriptions);
 
                                 result.SnapshotRestore.Processed = true;
 
@@ -490,6 +494,41 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
+        private static void RemoveSubscriptionFromDatabaseValues(RestoreSettings restoreSettings)
+        {
+            foreach (var keyValue in restoreSettings.DatabaseValues)
+            {
+                if (keyValue.Key.StartsWith(SubscriptionState.Prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
+                    restoreSettings.Subscriptions.Add(keyValue.Key, subscriptionState);
+                }
+            }
+
+            foreach (var keyValue in restoreSettings.Subscriptions)
+            {
+                restoreSettings.DatabaseValues.Remove(keyValue.Key);
+            }
+        }
+
+        private static async Task HandleSubscriptionFromSnapshot(List<string> filesToRestore, Dictionary<string, SubscriptionState> subscription, 
+            string databaseName, DocumentDatabase database)
+        {
+            if (filesToRestore.Count > 0)
+                return;
+
+            foreach (var (name, state) in subscription)
+            {
+                var command = new PutSubscriptionCommand(databaseName, state.Query, state.MentorNode, RaftIdGenerator.DontCareId)
+                {
+                    Disabled = state.Disabled,
+                    InitialChangeVector = state.ChangeVectorForNextBatchStartingPoint,
+                };
+
+                await database.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
         private async Task SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
             BlittableJsonReaderObject> databaseValues, SmugglerResult restoreResult, Action<IOperationProgress> onProgress)
         {
@@ -583,10 +622,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                     var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
                                     json.BlittableValidation();
 
-                                    restoreSettings = JsonDeserializationServer.RestoreSettings(json);
-
-                                    restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
-                                    DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
+                                        restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                                        // It's necessary to modify the subscriptionId to prevent collisions with the current database index.
+                                        //we will handle subscription with smuggler
+                                        RemoveSubscriptionFromDatabaseValues(restoreSettings);
+                                        restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
+                                        DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
 
                                     if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
                                         throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
@@ -646,7 +687,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected async Task SmugglerRestore(DocumentDatabase database, List<string> filesToRestore, DocumentsOperationContext context,
-            DatabaseRecord databaseRecord, Action<IOperationProgress> onProgress, RestoreResult result)
+            DatabaseRecord databaseRecord, Action<IOperationProgress> onProgress, RestoreResult result,
+            Dictionary<string, SubscriptionState> subscriptions = null)
         {
             Debug.Assert(onProgress != null);
 
@@ -709,6 +751,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             onProgress.Invoke(result.Progress);
 
             var lastFilePath = GetBackupPath(lastFileName);
+
             await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
@@ -770,6 +813,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
+                },
+                onSubscriptionAction: subscriptionState =>
+                {
+                    //If we obtain a subscription from a snapshot, it's necessary to persist the subscription state.
+                    //This involves determining the ChangeVectorForNextBatchStartingPoint,
+                    //which should be set to the smallest value between the one from the snapshot and the one obtained from the smuggler.
+                    //When we have incremental snapshot, and we have information on a subscription only from smuggler, we don't save the state.
+
+                    if (subscriptions == null || subscriptions.Count == 0)
+                        subscriptionState.ChangeVectorForNextBatchStartingPoint = null;
+                    else
+                    {
+                        if (subscriptions.TryGetValue(SubscriptionState.Prefix + subscriptionState.SubscriptionName, out SubscriptionState oldState))
+                        {
+                            var distance = ChangeVectorUtils.Distance(subscriptionState.ChangeVectorForNextBatchStartingPoint, oldState.ChangeVectorForNextBatchStartingPoint);
+                            if (distance > 0)
+                                subscriptionState.ChangeVectorForNextBatchStartingPoint = oldState.ChangeVectorForNextBatchStartingPoint;
+                        }
+                    }
                 });
 
             result.Files.CurrentFileName = null;
@@ -906,7 +968,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             string filePath, DocumentsOperationContext context,
             DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options, bool isLastFile,
             Action<IndexDefinitionAndType> onIndexAction = null,
-            Action<DatabaseRecord> onDatabaseRecordAction = null)
+            Action<DatabaseRecord> onDatabaseRecordAction = null,
+            Action<SubscriptionState> onSubscriptionAction = null)
         {
             await using (var fileStream = await GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
@@ -918,6 +981,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction,
+                    OnSubscriptionAction = onSubscriptionAction,
                     BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental
                 };
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
