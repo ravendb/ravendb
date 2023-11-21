@@ -306,7 +306,10 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     table.DeleteByKey(slicer.TimeSeriesKeySlice);
                     Stats.DeleteStats(context, collectionName, slicer.StatsKey);
-                    RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+
+                    if (updateMetadata)
+                        RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+
                     return remoteChangeVector;
                 }
 

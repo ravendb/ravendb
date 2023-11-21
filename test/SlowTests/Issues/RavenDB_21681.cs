@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Expiration;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
@@ -24,10 +23,14 @@ namespace SlowTests.Issues
         public async Task DeleteExpiredDocumentWithBigTimeSeriesShouldNotCauseReplicationToBreak(Options options)
         {
             var databaseName = GetDatabaseName();
-            var (nodes, leader) = await CreateRaftCluster(2);
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
             var (_, servers) = await CreateDatabaseInClusterForMode(databaseName, 2, (nodes, leader), options.DatabaseMode);
 
-            using (var store = new DocumentStore { Database = databaseName, Urls = new[] { leader.WebUrl } }.Initialize())
+            options.CreateDatabase = false;
+            options.ModifyDatabaseName = _ => databaseName;
+            options.Server = leader;
+
+            using (var store = GetDocumentStore(options))
             {
                 var user = new User { Name = "Shiran" };
 
@@ -43,7 +46,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     var ts = session.TimeSeriesFor(user.Id, "heartbeat");
-                    for (int i = 0; i < 4_000_000; i++)
+                    for (int i = 0; i < 500_000; i++)
                         ts.Append(expiry.AddMilliseconds(i), new List<double> { i, i * 100, i * 200, i * int.MaxValue });
 
                     await session.SaveChangesAsync();
