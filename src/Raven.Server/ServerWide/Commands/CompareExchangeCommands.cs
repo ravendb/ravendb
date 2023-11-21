@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Raven.Client;
@@ -190,12 +191,14 @@ namespace Raven.Server.ServerWide.Commands
         {
             var compareExchangeResult =  result switch
             {
-                CompareExchangeResult obj => obj,
+                CompareExchangeResult obj => new CompareExchangeResult { Index = obj.Index, Value = obj.Value },
                 BlittableJsonReaderObject blittable => JsonDeserializationCluster.CompareExchangeResult(blittable),
                 _ => throw new RachisApplyException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result)
             };
-            if (compareExchangeResult.Value is BlittableJsonReaderObject val)
-                compareExchangeResult.Value = ContextToWriteResult.ReadObject(val, "cmpXchg result clone");
+            Debug.Assert(compareExchangeResult.Value is null or BlittableJsonReaderObject);
+
+            if (compareExchangeResult.Value is BlittableJsonReaderObject value)
+                compareExchangeResult.Value = value.Clone(ContextToWriteResult);
 
             return compareExchangeResult;
         }
