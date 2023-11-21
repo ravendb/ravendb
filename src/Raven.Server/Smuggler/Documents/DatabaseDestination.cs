@@ -2192,16 +2192,22 @@ namespace Raven.Server.Smuggler.Documents
                 await SendCommandsAsync();
             }
 
-            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
+            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState, bool includeState = false)
             {
                 const int batchSize = 1024;
 
-                _subscriptionCommands.Add(new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
+                var command = new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
                     SubscriptionName = subscriptionState.SubscriptionName,
                     //After restore/export , subscription will start from the start
                     InitialChangeVector = null
-                });
+                };
+                if (includeState)
+                {
+                    command.InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint;
+                    command.Disabled = subscriptionState.Disabled;
+                }
+                _subscriptionCommands.Add(command);
 
                 if (_subscriptionCommands.Count < batchSize)
                     return;
