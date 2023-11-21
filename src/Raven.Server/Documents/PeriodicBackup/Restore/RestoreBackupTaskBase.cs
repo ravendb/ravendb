@@ -514,6 +514,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private static async Task HandleSubscriptionFromSnapshot(List<string> filesToRestore, Dictionary<string, SubscriptionState> subscription, 
             string databaseName, DocumentDatabase database)
         {
+            //When dealing with multiple files, we will manage subscriptions using the smuggler.
             if (filesToRestore.Count > 0)
                 return;
 
@@ -524,7 +525,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     Disabled = state.Disabled,
                     InitialChangeVector = state.ChangeVectorForNextBatchStartingPoint,
                 };
-
+                //There's no need to wait for the execution of this command at this point since we will wait for subsequent commands later.
                 await database.ServerStore.SendToLeaderAsync(command);
             }
         }
@@ -981,7 +982,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction,
-                    OnSubscriptionAction = onSubscriptionAction,
+                    ModifySubscriptionBeforeWrite = onSubscriptionAction,
                     BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental
                 };
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);

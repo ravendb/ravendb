@@ -87,7 +87,7 @@ namespace Raven.Client.Documents.Subscriptions
             return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}{Prefix}";
         }
 
-        public static string Prefix => "subscriptions/";
+        internal static string Prefix => "subscriptions/";
     }
 
     public class SubscriptionStateWithNodeDetails : SubscriptionState
