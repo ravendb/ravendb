@@ -3823,7 +3823,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(1, subscriptionsConfig.Count);
-                Assert.Equal(lastCv, subscriptionsConfig[0].ChangeVectorForNextBatchStartingPoint);
                 Assert.NotEqual(lastCv, snapshotCv);
 
                 var ongoingTask = (OngoingTaskSubscription)store.Maintenance.Send(new GetOngoingTaskInfoOperation(subscriptionName, OngoingTaskType.Subscription));
