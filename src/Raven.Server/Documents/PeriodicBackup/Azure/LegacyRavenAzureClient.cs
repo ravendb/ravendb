@@ -21,6 +21,7 @@ using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Exceptions.PeriodicBackup;
 using Raven.Server.Utils;
@@ -897,6 +898,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 length = 0;
                 return true;
             }
+        }
+
+        public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
+        {
+            throw new NotSupportedException("Multi part uploader isn't supported for the legacy azure client");
         }
     }
 }
