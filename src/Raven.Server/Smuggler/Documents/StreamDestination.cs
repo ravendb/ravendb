@@ -1165,7 +1165,7 @@ namespace Raven.Server.Smuggler.Documents
                 _writer = writer;
             }
 
-            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
+            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState, bool includeState = false)
             {
                 if (First == false)
                     Writer.WriteComma();
