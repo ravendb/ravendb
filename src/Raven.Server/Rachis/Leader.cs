@@ -782,12 +782,19 @@ namespace Raven.Server.Rachis
                                     }
                                     else
                                     {
-                                        if (result != null && cmd.BlittableResultWriter != null)
+                                        if (result != null)
                                         {
-                                            cmd.BlittableResultWriter.CopyResult(result);
-                                            //The result are consumed by the `CopyResult` and the context of the result from `HasHistoryLog` is not valid outside
-                                            //so we `TrySetResult` to null to make sure no use of invalid context 
-                                            result = null;
+                                            if (cmd.BlittableResultWriter != null)
+                                            {
+                                                cmd.BlittableResultWriter.CopyResult(result);
+                                                //The result are consumed by the `CopyResult` and the context of the result from `HasHistoryLog` is not valid outside
+                                                //so we `TrySetResult` to null to make sure no use of invalid context 
+                                                result = null;
+                                            }
+                                            else
+                                            {
+                                                result = cmd.Command.FromRemote(result);
+                                            }
                                         }
 
                                         cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
