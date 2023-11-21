@@ -1,0 +1,21 @@
+@use "Content/scss/bs5variables";
+.sort-dropdown {
+    .sort-dropdown-toggle {
+        background-color: bs5variables.$well-bg-var !important;
+        border-radius: bs5variables.$gutter-sm !important;
+        border-color: bs5variables.$border-color-light-var !important;
+        border-width: bs5variables.$border-width !important;
+        padding: bs5variables.$gutter-xxs bs5variables.$gutter-sm !important;
+        font-size: 13px !important;
+        color: bs5variables.$text-color-var !important;
+        min-height: 37px !important;
+        min-width: 250px;
+    }
+    .dropdown-radio-group {
+        min-width: 170px;
+    }
+
+    &.show .sort-dropdown-toggle {
+        background-color: bs5variables.$panel-bg-1-var !important;
+    }
+}
