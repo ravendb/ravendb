@@ -20,7 +20,6 @@ namespace Corax.Querying.Matches
                 match._token.ThrowIfCancellationRequested();
                 ref var inner = ref match._inner;
                 ref var outer = ref match._outer;
-
                 while (true)
                 {
                     int totalResults = 0;
@@ -35,9 +34,9 @@ namespace Corax.Querying.Matches
                     {
                         // RavenDB-17750: We have to fill everything possible UNTIL there are no more matches available.
                         var results = inner.Fill(resultsSpan);
+                        
                         if (results == 0)
                             break;
-
                         totalResults += results;
 
                         resultsSpan = resultsSpan.Slice(results);
@@ -45,7 +44,7 @@ namespace Corax.Querying.Matches
                     
                     // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
                     // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                    if (match._innerSkipSorting != SkipSortingResult.ResultsNativelySorted)
+                    if (match._inner.AttemptToSkipSorting() != SkipSortingResult.ResultsNativelySorted)
                     {
                         if (totalResults > 0)
                         {
@@ -119,9 +118,7 @@ namespace Corax.Querying.Matches
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence,
-                // For AND, we have to sort the results so we can merge them, so the results are properly sorted by entry id order when they come out
-                SkipSortingResult.ResultsNativelySorted, token);
+            return new BinaryMatch<TInner, TOuter>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, SkipSortingResult.ResultsNativelySorted, token);
         }
 
         public static BinaryMatch<TInner, TOuter> YieldOr(Querying.IndexSearcher indexSearcher, in TInner inner, in TOuter outer, in CancellationToken token)

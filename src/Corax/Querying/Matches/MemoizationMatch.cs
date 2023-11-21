@@ -18,7 +18,6 @@ namespace Corax.Querying.Matches
 
         public SkipSortingResult AttemptToSkipSorting()
         {
-             _inner.SkipSortingResults();
              return SkipSortingResult.WillSkipSorting;
         }
 
