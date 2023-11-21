@@ -22,14 +22,10 @@ namespace SlowTests.Issues
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task DeleteExpiredDocumentWithBigTimeSeriesShouldNotCauseReplicationToBreak(Options options)
         {
-            var databaseName = GetDatabaseName();
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
-            var (_, servers) = await CreateDatabaseInClusterForMode(databaseName, 2, (nodes, leader), options.DatabaseMode);
 
-            options.CreateDatabase = false;
-            options.ModifyDatabaseName = _ => databaseName;
             options.Server = leader;
-
+            options.ReplicationFactor = 2;
             using (var store = GetDocumentStore(options))
             {
                 var user = new User { Name = "Shiran" };
@@ -52,7 +48,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(await WaitForChangeVectorInClusterForModeAsync(nodes, databaseName, options.DatabaseMode, 2, 30_000));
+                Assert.True(await WaitForChangeVectorInClusterForModeAsync(nodes, store.Database, options.DatabaseMode, 2, 30_000));
 
                 await ExpirationHelper.SetupExpirationAsync(store, new ExpirationConfiguration { Disabled = false, DeleteFrequencyInSec = 5 });
 
@@ -73,7 +69,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(await WaitForDocumentInClusterAsync<User>(servers, databaseName, user2.Id, u => u.Name == "Shiran2", TimeSpan.FromSeconds(30)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(nodes, store.Database, user2.Id, u => u.Name == "Shiran2", TimeSpan.FromSeconds(30)));
             }
         }
     }
