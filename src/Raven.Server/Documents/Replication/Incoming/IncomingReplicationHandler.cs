@@ -416,8 +416,15 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 pendingAttachmentsTombstoneUpdates ??= new();
                                 pendingAttachmentsTombstoneUpdates.Add((documentId, incomingChangeVector, attachmentTombstone.LastModifiedTicks));
 
+                                newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local2) switch
+                                {
+                                    ConflictStatus.Conflict => ChangeVector.Merge(incomingChangeVector, local2, context),
+                                    ConflictStatus.Update => attachmentTombstone.ChangeVector,
+                                    _ => throw new ArgumentOutOfRangeException()
+                                };
+
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    incomingChangeVector,
+                                    newChangeVector,
                                     attachmentTombstone.LastModifiedTicks);
                                 break;
 
