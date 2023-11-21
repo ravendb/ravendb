@@ -37,7 +37,7 @@ public class DirectUploadBackupTask : BackupTask
                     settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, Database.Name));
 
                 return new AzureDirectUploadStream(GetDirectUploadParameters(
-                    progress => new RavenAzureClient(azureSettings, Database.Configuration.Backup, progress, TaskCancelToken.Token), 
+                    progress => RavenAzureClient.Create(azureSettings, Database.Configuration.Backup, progress, TaskCancelToken.Token), 
                     azureSettings.RemoteFolderName, folderName, fileName));
 
             default:
