@@ -811,7 +811,7 @@ namespace Raven.Server.Documents
                 if (_skipUsagesCount == false)
                     Interlocked.Increment(ref _parent._usages);
 
-                if (_parent.DatabaseShutdown.IsCancellationRequested)
+                if (_parent.IsShutdownRequested())
                 {
                     Dispose();
                     _parent.ThrowDatabaseShutdown();
@@ -2003,6 +2003,19 @@ namespace Raven.Server.Documents
             }
 
             return hash;
+        }
+
+        public bool IsShutdownRequested()
+        {
+            return _databaseShutdown.IsCancellationRequested;
+        }
+
+        public void ThrowIfShutdownRequested()
+        {
+            if (_databaseShutdown.IsCancellationRequested)
+            {
+                throw new OperationCanceledException($"Database '{Name}' is shutting down.");
+            }
         }
 
         internal TestingStuff ForTestingPurposesOnly()

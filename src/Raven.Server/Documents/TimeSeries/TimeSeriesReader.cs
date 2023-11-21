@@ -113,14 +113,14 @@ namespace Raven.Server.Documents.TimeSeries
         private readonly DocumentsOperationContext _context;
         private readonly string _documentId;
         private readonly string _name;
-        internal readonly DateTime _from, _to;
+        internal DateTime _from, _to;
         private readonly Table _table;
         internal TableValueReader _tvr;
         private double[] _values = Array.Empty<double>();
         private TimestampState[] _states = Array.Empty<TimestampState>();
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
-        private TimeSpan? _offset;
+        private readonly TimeSpan? _offset;
         private DetailedSingleResult _details;
         private readonly CancellationToken _token;
 
@@ -155,13 +155,14 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(_from))
             {
-                if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
-                {
-                    return _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr);
-                }
-
-                return true;
+                if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false &&
+                    _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false) 
+                    return false;
             }
+
+            (_from, _to) = AddOffsetIfNeeded(_offset, _from, _to);
+
+            return true;
         }
 
         public SingleResult First()
@@ -230,14 +231,12 @@ namespace Raven.Server.Documents.TimeSeries
             do
             {
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
-
+                
+                if (_offset.HasValue)
+                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
+                
                 if (baseline > _to)
                     yield break;
-
-                if (_offset.HasValue)
-                {
-                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
-                }
 
                 yield return new TimeSeriesStorage.SegmentSummary
                 {
@@ -305,6 +304,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
+                if (_offset.HasValue)
+                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
+
                 if (baseline > _to)
                     yield break;
 
@@ -312,11 +314,6 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     _values = new double[_currentSegment.NumberOfValues];
                     _states = new TimestampState[_currentSegment.NumberOfValues];
-                }
-
-                if (_offset.HasValue)
-                {
-                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
                 }
 
                 segmentResult.End = _currentSegment.GetLastTimestamp(baseline);
@@ -357,6 +354,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
+                if (_offset.HasValue)
+                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
+
                 if (baseline > _to)
                     yield break;
 
@@ -368,11 +368,6 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         _values = new double[_currentSegment.NumberOfValues];
                         _states = new TimestampState[_currentSegment.NumberOfValues];
-                    }
-
-                    if (_offset.HasValue)
-                    {
-                        baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
                     }
 
                     foreach (var val in YieldSegment(baseline, includeDead))
@@ -624,6 +619,28 @@ namespace Raven.Server.Documents.TimeSeries
 
             return (etag, changeVector, baseline);
         }
+
+        internal static (DateTime From, DateTime To) AddOffsetIfNeeded(TimeSpan? offset, DateTime from, DateTime to)
+        {
+            if (offset.HasValue == false)
+                return (from, to);
+
+            from = AddOffset(offset.Value, from);
+            to = AddOffset(offset.Value, to);
+            return (from, to);
+        }
+
+        private static DateTime AddOffset(TimeSpan offset, DateTime date)
+        {
+            var withOffset = date.Ticks + offset.Ticks;
+            if (withOffset < 0)
+                return DateTime.MinValue;
+            
+            if (withOffset > DateTime.MaxValue.Ticks)
+                return DateTime.MaxValue;
+            
+            return date.Add(offset);
+        }
     }
 
     public sealed class TimeSeriesMultiReader : ITimeSeriesReader, IEnumerator<TimeSeriesReader>
@@ -718,7 +735,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         return true;
                     }
-                    return false; // we prefer the higher resolution and it can't have points newer then prev
+                    return false; // we prefer the higher resolution and it can't have points newer than prev
                 }
             }
         }

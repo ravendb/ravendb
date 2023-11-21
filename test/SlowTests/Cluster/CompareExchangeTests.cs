@@ -53,6 +53,7 @@ public class CompareExchangeTests : RavenTestBase
             var (_, result) = await leader.ServerStore.Engine.CurrentLeader.PutAsync(toRunTwiceCommand2, toRunTwiceCommand2.Timeout.Value);
             Assert.NotNull(result);
             var compareExchangeResult = (CompareExchangeCommandBase.CompareExchangeResult)result;
+            Assert.Equal(context, ((BlittableJsonReaderObject)compareExchangeResult.Value)._context);
             Assert.Equal(value, compareExchangeResult.Value);
 
             await timeoutAttemptTask;

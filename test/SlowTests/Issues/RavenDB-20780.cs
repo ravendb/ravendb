@@ -1,7 +1,12 @@
-﻿using FastTests;
+﻿using System.Collections.Generic;
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities.Faceted;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +18,7 @@ public class RavenDB_20780 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Patching)]
     public void PatchStatementsCountOverflowExceptionLimit()
     {
         using var store = GetDocumentStore();
@@ -40,7 +45,51 @@ from ""Orders"" update {
 
         Assert.Contains("The maximum number of statements executed have been reached - 10000. You can configure it by modifying the configuration option: 'Patching.MaxStepsForScript'.",
             exception.ToString());
+    }
+    
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
+    public void JsIndexStepsCountOverflowExceptionLimit()
+    {
+        var options = new Options() { ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)] = "1" };
+        
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Order());
+                session.SaveChanges();
 
+                var index = new DummyIndex();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
 
+                var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new [] {index.IndexName}));
+
+                Assert.Single(errors);
+                
+                Assert.Contains("The maximum number of statements executed have been reached. You can configure it by modifying the configuration option: 'Indexing.MaxStepsForScript'.", errors[0].Errors[0].Error);
+            }
+        }
+    }
+
+    private class DummyIndex : AbstractJavaScriptIndexCreationTask
+    {
+        public DummyIndex()
+        {
+            Maps = new HashSet<string>() 
+            {
+                @"map('Orders', o => {
+                        for (var i = 0; i < 10; i++) {
+                            var x = metadataFor(o);
+                        }
+                        return {
+                            Blabla: x,
+                            Tax: o.Tax
+                        };
+                    });" 
+            };
+        }
     }
 }

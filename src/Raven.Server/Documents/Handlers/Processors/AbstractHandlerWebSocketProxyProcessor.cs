@@ -29,12 +29,24 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
 
     public override async ValueTask ExecuteAsync()
     {
+
         using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             if (IsCurrentNode(out var nodeTag))
             {
-                await HandleCurrentNodeAsync(webSocket, token);
+                try
+                {
+                    await HandleCurrentNodeAsync(webSocket, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignored
+                }
+                catch (ObjectDisposedException)
+                {
+                    // ignored
+                }
             }
             else
             {
@@ -61,6 +73,10 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
         catch (OperationCanceledException)
         {
             // ignored 
+        }
+        catch (ObjectDisposedException)
+        {
+            // ignored
         }
         catch (Exception ex)
         {
