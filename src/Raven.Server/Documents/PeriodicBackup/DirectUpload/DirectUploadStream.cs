@@ -112,8 +112,10 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
     {
         if (_abortUpload)
         {
-            _backupStatusIDisposable?.Dispose();
-            return;
+            using (_backupStatusIDisposable)
+            using (_uploadStream)
+            using (_writeStream)
+                return;
         }
 
         if (_disposed)
