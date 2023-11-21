@@ -173,6 +173,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 sp.Restart();
 
                 using (var cmd = CreateCommand())
+                using (token.Register(cmd.Cancel))
                 {
                     token.ThrowIfCancellationRequested();
 
@@ -229,15 +230,19 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
+                        if (token.IsCancellationRequested == false)
                         {
-                            _logger.Info(
-                                $"Failed to replicate changes to relational database for: {_etl.Name} " +
-                                $"(doc: {itemToReplicate.DocumentId}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
-                        }
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info(
+                                    $"Failed to replicate changes to relational database for: {_etl.Name} " +
+                                    $"(doc: {itemToReplicate.DocumentId}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
+                            }
 
-                        _etl.Statistics.RecordPartialLoadError($"Insert statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}",
-                            itemToReplicate.DocumentId);
+                            _etl.Statistics.RecordPartialLoadError(
+                                $"Insert statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}",
+                                itemToReplicate.DocumentId);
+                        }
                     }
                     finally
                     {
@@ -245,7 +250,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
                         var elapsedMilliseconds = sp.ElapsedMilliseconds;
 
-                        if (_logger.IsInfoEnabled)
+                        if (_logger.IsInfoEnabled && token.IsCancellationRequested == false)
                             _logger.Info($"Insert took: {elapsedMilliseconds:#,#;;0}ms, statement: {stmt}");
 
                         var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);
@@ -292,6 +297,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
             var sp = new Stopwatch();
             using (var cmd = CreateCommand())
+            using (token.Register(cmd.Cancel))
             {
                 sp.Start();
                 token.ThrowIfCancellationRequested();
@@ -346,11 +352,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Failure to replicate deletions to relational database for: {_etl.Name}, " +
-                                         "will continue trying." + Environment.NewLine + cmd.CommandText, e);
+                        if (token.IsCancellationRequested == false)
+                        {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Failure to replicate deletions to relational database for: {_etl.Name}, " +
+                                             "will continue trying." + Environment.NewLine + cmd.CommandText, e);
 
-                        _etl.Statistics.RecordPartialLoadError($"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}", null);
+                            _etl.Statistics.RecordPartialLoadError($"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}",
+                                null);
+                        }
                     }
                     finally
                     {
@@ -358,7 +368,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
                         var elapsedMilliseconds = sp.ElapsedMilliseconds;
 
-                        if (_logger.IsInfoEnabled)
+                        if (_logger.IsInfoEnabled && token.IsCancellationRequested == false)
                             _logger.Info($"Delete took: {elapsedMilliseconds:#,#;;0}ms, statement: {stmt}");
 
                         var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);

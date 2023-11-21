@@ -2770,6 +2770,7 @@ namespace Raven.Server
                     ea.Execute(() => CloseTcpListeners(_tcpListenerStatus.Listeners));
                 }
                 ea.Execute(() => PostgresServer?.Dispose());
+                ea.Execute(() => SnmpWatcher?.Dispose());
 
                 ea.Execute(() => ServerStore?.Dispose());
                 ea.Execute(() =>
