@@ -641,7 +641,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                         }
                                     }, TaskCancelToken.Token);
 
-                                FlushToDiskIfNeeded(stream);
+                                FlushToDisk(stream);
 
                                 EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
                             }
@@ -806,7 +806,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     smuggler.ExecuteAsync().Wait();
 
-                    FlushToDiskIfNeeded(outputStream);
+                    FlushToDisk(outputStream);
 
                     currentBackupResults.LastEtag = smugglerSource.LastEtag;
                     currentBackupResults.LastDatabaseChangeVector = smugglerSource.LastDatabaseChangeVector;
@@ -822,7 +822,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private static void FlushToDiskIfNeeded(Stream outputStream)
+        protected virtual void FlushToDisk(Stream outputStream)
         {
             switch (outputStream)
             {
@@ -832,10 +832,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 case FileStream file:
                     file.Flush(flushToDisk: true);
-                    break;
-
-                case DirectUploadStream<RavenAwsS3Client>:
-                case DirectUploadStream<RavenAzureClient>:
                     break;
 
                 default:
