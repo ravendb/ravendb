@@ -168,8 +168,8 @@ export default class DatabasesService {
         return new saveRevisionsConfigurationCommand(db, dto).execute();
     }
 
-    async enforceRevisionsConfiguration(db: database) {
-        return new enforceRevisionsConfigurationCommand(db).execute();
+    async enforceRevisionsConfiguration(db: database, includeForceCreated = false, collections: string[] = null) {
+        return new enforceRevisionsConfigurationCommand(db, includeForceCreated, collections).execute();
     }
 
     async revertRevisions(db: database, dto: Raven.Server.Documents.Revisions.RevertRevisionsRequest) {

@@ -1,17 +1,18 @@
-import React from "react";
-import { collectionsTrackerSelectors } from "./shell/collectionsTrackerSlice";
-import { useAppSelector } from "components/store";
+import React, { ComponentProps } from "react";
 import { Collapse, Row, Col, Button } from "reactstrap";
 import { EmptySet } from "./EmptySet";
 import { FlexGrow } from "./FlexGrow";
-import { FormRadioToggleWithIcon, FormSelectCreatable } from "./Form";
+import { FormRadioToggleWithIcon, FormSelect, FormSelectCreatable } from "./Form";
 import { RadioToggleWithIconInputItem } from "./RadioToggle";
 import { Icon } from "./Icon";
 import { SelectOption } from "./select/Select";
 import { FieldPath, FieldValues, Control } from "react-hook-form";
+import { GroupBase } from "react-select";
+import { todo } from "common/developmentHelper";
 
 interface FormCollectionsSelectProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
     control: Control<TFieldValues>;
+    allCollectionNames: string[];
     isAllCollectionsFormName: TName;
     isAllCollections: boolean;
     collectionsFormName: TName;
@@ -19,6 +20,7 @@ interface FormCollectionsSelectProps<TFieldValues extends FieldValues, TName ext
     setValue: (name: TName, collections: string[], options: { shouldDirty: boolean }) => void;
     customOptions?: SelectOption<string>[];
     isReadOnly?: boolean;
+    isCreatable?: boolean;
 }
 
 export default function FormCollectionsSelect<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
@@ -26,6 +28,7 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
 ) {
     const {
         control,
+        allCollectionNames,
         isAllCollectionsFormName,
         isAllCollections,
         collectionsFormName,
@@ -35,9 +38,7 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
         isReadOnly,
     } = props;
 
-    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
-        (x) => x !== "@empty" && x !== "@hilo"
-    );
+    const isCreatable = props.isCreatable ?? true;
 
     const removeCollection = (name: string) => {
         setValue(
@@ -58,6 +59,21 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
 
     const isAddAllCollectionsDisabled = allCollectionNames.filter((name) => !collections.includes(name)).length === 0;
 
+    const formSelectProps: ComponentProps<
+        typeof FormSelect<SelectOption, true, GroupBase<SelectOption>, TFieldValues, TName>
+    > = {
+        control: control,
+        name: collectionsFormName,
+        options: allCollectionNames.map((x) => ({ label: x, value: x })),
+        isMulti: true,
+        controlShouldRenderValue: false,
+        isClearable: false,
+        placeholder: "Select collection" + (isCreatable ? " (or enter new collection)" : ""),
+        maxMenuHeight: 300,
+    };
+
+    todo("Styling", "Matteo", "Fix 'Add all' button height, when validation error occurs.");
+
     return (
         <div className="vstack gap-2">
             {!isReadOnly && (
@@ -73,17 +89,11 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
                 {!isReadOnly && (
                     <Row className="mb-4">
                         <Col>
-                            <FormSelectCreatable
-                                control={control}
-                                name={collectionsFormName}
-                                options={allCollectionNames.map((x) => ({ label: x, value: x }))}
-                                customOptions={customOptions}
-                                isMulti
-                                controlShouldRenderValue={false}
-                                isClearable={false}
-                                placeholder="Select collection (or enter new collection)"
-                                maxMenuHeight={300}
-                            />
+                            {isCreatable ? (
+                                <FormSelectCreatable {...formSelectProps} customOptions={customOptions} />
+                            ) : (
+                                <FormSelect {...formSelectProps} />
+                            )}
                         </Col>
                         <Col sm="auto" className="d-flex">
                             <Button color="info" onClick={addAllCollections} disabled={isAddAllCollectionsDisabled}>
