@@ -223,9 +223,8 @@ namespace Raven.Server.ServerWide
         {
             Sharding.Raw.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderObject shardTopologies);
             if (shardTopologies.TryGet(shardNumber.ToString(), out BlittableJsonReaderObject shardedTopology) == false)
-            {
-                throw new ArgumentException($"Can't fetch topology of shard number {shardNumber} from the raw record because it does not exist.");
-            }
+                return null;
+            
             var shardName = ShardHelper.ToShardName(DatabaseName, shardNumber);
 
             var settings = new Dictionary<string, string>();
@@ -286,7 +285,7 @@ namespace Raven.Server.ServerWide
 
                 var shardedDatabaseRecord = GetShardedDatabaseRecord(shardNumber);
                 if (nodeTag == null || shardedDatabaseRecord.Topology.RelevantFor(nodeTag))
-                    yield return GetShardedDatabaseRecord(shardNumber);
+                    yield return shardedDatabaseRecord;
             }
         }
 
