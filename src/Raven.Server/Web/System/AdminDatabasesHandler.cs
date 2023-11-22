@@ -8,11 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -641,11 +639,8 @@ namespace Raven.Server.Web.System
 
                 using (context.OpenReadTransaction())
                 {
-                    var fromNodes = parameters.FromNodes != null && parameters.FromNodes.Length > 0;
-
                     foreach (var databaseName in parameters.DatabaseNames)
                     {
-                        DatabaseTopology topology = null;
                         var isShard = ShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out string shardedDatabaseName, out int shardNumber);
                         var dbRecordName = isShard ? shardedDatabaseName : databaseName;
 
@@ -685,12 +680,12 @@ namespace Raven.Server.Web.System
                                     throw new ArgumentOutOfRangeException(nameof(rawRecord.LockMode));
                             }
 
-                            if (fromNodes)
+                            if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
                             {
                                 if(rawRecord.IsSharded && isShard == false)
                                     throw new InvalidOperationException($"Deleting entire sharded database {rawRecord.DatabaseName} from a specific node is not allowed.");
 
-                                topology = isShard ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
+                                var topology = isShard ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
 
                                 foreach (var node in parameters.FromNodes)
                                 {
@@ -730,76 +725,7 @@ namespace Raven.Server.Web.System
                     index = newIndex;
                 }
 
-                var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
-
-                await ServerStore.Cluster.WaitForIndexNotification(index, timeToWaitForConfirmation);
-
-                long actualDeletionIndex = index;
-
-                var sp = Stopwatch.StartNew();
-                int databaseIndex = 0;
-                while (waitOnDeletion.Count > databaseIndex)
-                {
-                    var databaseName = waitOnDeletion[databaseIndex];
-                    using (context.OpenReadTransaction())
-                    using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                    {
-                        if (raw == null)
-                        {
-                            waitOnDeletion.RemoveAt(databaseIndex);
-                            continue;
-                        }
-
-                        if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
-                        {
-                            {
-                                var allNodesDeleted = true;
-                                foreach (var node in parameters.FromNodes)
-                                {
-                                    var key = DatabaseRecord.GetKeyForDeletionInProgress(node, databaseName);
-                                    if (raw.DeletionInProgress.ContainsKey(key) == false)
-                                        continue;
-
-                                    allNodesDeleted = false;
-                                    break;
-                                }
-
-                                if (allNodesDeleted)
-                                {
-                                    waitOnDeletion.RemoveAt(databaseIndex);
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-
-                    // we'll now wait for the _next_ operation in the cluster
-                    // since deletion involve multiple operations in the cluster
-                    // we'll now wait for the next command to be applied and check
-                    // whatever that removed the db in question
-                    index++;
-                    var remaining = timeToWaitForConfirmation - sp.Elapsed;
-                    try
-                    {
-                        if (remaining < TimeSpan.Zero)
-                        {
-                            databaseIndex++;
-                            continue; // we are done waiting, but still want to locally check the rest of the dbs
-                        }
-
-                        await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
-                        actualDeletionIndex = index;
-                    }
-                    catch (TimeoutException)
-                    {
-                        databaseIndex++;
-                    }
-                }
-
-                if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
-                {
-                    await WaitForExecutionOnRelevantNodes(context, "server", ServerStore.GetClusterTopology(), parameters.FromNodes.ToList(), actualDeletionIndex);
-                }
+                long actualDeletionIndex = await WaitForDeletionToComplete(context, parameters, index, waitOnDeletion);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -813,6 +739,81 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
+        }
+
+        private async Task<long> WaitForDeletionToComplete(TransactionOperationContext context, DeleteDatabasesOperation.Parameters parameters, long index, IList<string> waitOnDeletion)
+        {
+            var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
+
+            await ServerStore.Cluster.WaitForIndexNotification(index, timeToWaitForConfirmation);
+
+            var fromNodes = parameters.FromNodes is { Length: > 0 };
+            long actualDeletionIndex = index;
+            var sp = Stopwatch.StartNew();
+            int databaseIndex = 0;
+
+            while (waitOnDeletion.Count > databaseIndex)
+            {
+                var databaseName = waitOnDeletion[databaseIndex];
+                using (context.OpenReadTransaction())
+                using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                {
+                    if (raw == null)
+                    {
+                        waitOnDeletion.RemoveAt(databaseIndex);
+                        continue;
+                    }
+
+                    if (fromNodes)
+                    {
+                        var allNodesDeleted = true;
+                        foreach (var node in parameters.FromNodes)
+                        {
+                            var key = DatabaseRecord.GetKeyForDeletionInProgress(node, databaseName);
+                            if (raw.DeletionInProgress.ContainsKey(key) == false)
+                                continue;
+
+                            allNodesDeleted = false;
+                            break;
+                        }
+
+                        if (allNodesDeleted)
+                        {
+                            waitOnDeletion.RemoveAt(databaseIndex);
+                            continue;
+                        }
+                    }
+                }
+
+                // we'll now wait for the _next_ operation in the cluster
+                // since deletion involve multiple operations in the cluster
+                // we'll now wait for the next command to be applied and check
+                // whatever that removed the db in question
+                index++;
+                var remaining = timeToWaitForConfirmation - sp.Elapsed;
+                try
+                {
+                    if (remaining < TimeSpan.Zero)
+                    {
+                        databaseIndex++;
+                        continue; // we are done waiting, but still want to locally check the rest of the dbs
+                    }
+
+                    await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
+                    actualDeletionIndex = index;
+                }
+                catch (TimeoutException)
+                {
+                    databaseIndex++;
+                }
+            }
+
+            if (fromNodes)
+            {
+                await WaitForExecutionOnRelevantNodes(context, "server", ServerStore.GetClusterTopology(), parameters.FromNodes.ToList(), actualDeletionIndex);
+            }
+
+            return actualDeletionIndex;
         }
 
         [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.Operator)]
