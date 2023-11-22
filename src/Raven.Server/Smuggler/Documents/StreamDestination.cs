@@ -1165,7 +1165,7 @@ namespace Raven.Server.Smuggler.Documents
                 _writer = writer;
             }
 
-            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState, bool includeState = false)
+            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -1174,6 +1174,11 @@ namespace Raven.Server.Smuggler.Documents
                 _context.Write(_writer, subscriptionState.ToJson());
 
                 await Writer.MaybeFlushAsync();
+            }
+
+            public ValueTask WriteSubscriptionWithStateAsync(SubscriptionState subscriptionState)
+            {
+                throw new NotImplementedException();
             }
         }
 

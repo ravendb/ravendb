@@ -39,7 +39,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
-        public Action<SubscriptionState> ModifySubscriptionBeforeWrite;
+        public  Func<ISubscriptionActions, SubscriptionState, ValueTask> OnSubscriptionAction;
         public BackupKind BackupKind = BackupKind.None;
 
         public const string PreV4RevisionsDocumentId = "/revisions/";
@@ -1161,13 +1161,12 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (result.Subscriptions.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
-                    if (ModifySubscriptionBeforeWrite != null)
+                    if (OnSubscriptionAction != null)
                     {
-                        ModifySubscriptionBeforeWrite.Invoke(subscription);
-                        await actions.WriteSubscriptionAsync(subscription, includeState:true);
+                        await OnSubscriptionAction.Invoke(actions, subscription);
                         continue;
                     }
-                    await actions.WriteSubscriptionAsync(subscription, includeState:false);
+                    await actions.WriteSubscriptionAsync(subscription);
                 }
             }
 
