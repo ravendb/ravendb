@@ -756,7 +756,8 @@ namespace Raven.Server.Web.System
                                 var allNodesDeleted = true;
                                 foreach (var node in parameters.FromNodes)
                                 {
-                                    if (raw.DeletionInProgress.ContainsKey(node) == false)
+                                    var key = DatabaseRecord.GetKeyForDeletionInProgress(node, databaseName);
+                                    if (raw.DeletionInProgress.ContainsKey(key) == false)
                                         continue;
 
                                     allNodesDeleted = false;
