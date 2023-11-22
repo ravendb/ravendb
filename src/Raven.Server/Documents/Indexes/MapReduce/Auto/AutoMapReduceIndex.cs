@@ -36,6 +36,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             _blittableJsonTraverser = definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.Base60Version
                 ? ConverterBase.DefaultWithTimeOnlyDateOnlySupport
                 : BlittableJsonTraverser.Default;
+
+            UpdateMapFields();
         }
 
         public static AutoMapReduceIndex CreateNew(AutoMapReduceIndexDefinition definition, DocumentDatabase documentDatabase)
@@ -117,105 +119,105 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             var document = ((Document[])mapResults)[0];
             Debug.Assert(indexItem.LowerId == document.LowerId);
 
-            using (_stats.BlittableJsonAggregation.Start())
+            try
             {
-                DynamicJsonValue singleResult = null;
-
-                var groupByFieldsCount = Definition.OrderedGroupByFields.Length;
-
-                for (var i = 0; i < groupByFieldsCount; i++)
+                using (_stats.BlittableJsonAggregation.Start())
                 {
-                    var groupByField = Definition.OrderedGroupByFields[i];
+                    DynamicJsonValue singleResult = null;
+
+                    var groupByFieldsCount = Definition.OrderedGroupByFields.Length;
+
+                    for (var i = 0; i < groupByFieldsCount; i++)
+                    {
+                        var groupByField = Definition.OrderedGroupByFields[i];
 
                     BlittableJsonTraverserHelper.TryRead(_blittableJsonTraverser, document, groupByField.Name, out object result);
 
-                    if (_isFanout == false)
-                    {
-                        if (singleResult == null)
-                            singleResult = new DynamicJsonValue();
-
-                        singleResult[groupByField.Name] = result;
-                        _reduceKeyProcessor.Process(indexContext.Allocator, result);
-                    }
-                    else
-                    {
-                        if (result is IEnumerable array && groupByField.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues)
+                        if (_isFanout == false)
                         {
-                            // fanout
-                            foreach (var item in array)
-                            {
-                                _output.AddGroupByValue(groupByField.Name, item);
-                            }
+                            if (singleResult == null)
+                                singleResult = new DynamicJsonValue();
+
+                            singleResult[groupByField.Name] = result;
+                            _reduceKeyProcessor.Process(indexContext.Allocator, result);
                         }
                         else
                         {
-                            _output.AddGroupByValue(groupByField.Name, result);
+                            if (result is IEnumerable array && groupByField.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues)
+                            {
+                                // fanout
+                                foreach (var item in array)
+                                {
+                                    _output.AddGroupByValue(groupByField.Name, item);
+                                }
+                            }
+                            else
+                            {
+                                _output.AddGroupByValue(groupByField.Name, result);
+                            }
                         }
                     }
-                }
-
-                if (_isFanout == false)
-                {
-                    _output.Results.Add((singleResult, _reduceKeyProcessor.Hash));
-                }
-                else if (_output.GroupByFields.Count >= Definition.GroupByFields.Count)
-                {
-                    for (var i = 0; i < _output.MaxGroupByFieldsCount; i++)
-                    {
-                        var json = new DynamicJsonValue();
-
-                        foreach (var groupBy in _output.GroupByFields)
-                        {
-                            var index = Math.Min(i, groupBy.Value.Count - 1);
-                            var value = _output.GroupByFields[groupBy.Key][index];
-
-                            json[groupBy.Key] = value;
-
-                            _reduceKeyProcessor.Process(indexContext.Allocator, value);
-                        }
-
-                        _output.Results.Add((json, _reduceKeyProcessor.Hash));
-
-                        _reduceKeyProcessor.Reset();
-                    }
-                }
-                // else { } - we have fanout index with multiple group by fields and one is collection
-                // if we have empty collection we cannot create composite key then
-                // let's skip putting such map results
-
-                foreach (var field in Definition.MapFields)
-                {
-                    var autoIndexField = field.Value.As<AutoIndexField>();
-
-                    var value = GetFieldValue(autoIndexField, document);
 
                     if (_isFanout == false)
-                        _output.Results[0].Json[autoIndexField.Name] = value;
-                    else
                     {
-                        var fanoutIndex = 0;
-
-                        if (!(value is IEnumerable array))
+                        _output.Results.Add((singleResult, _reduceKeyProcessor.Hash));
+                    }
+                    else if (_output.GroupByFields.Count >= Definition.GroupByFields.Count)
+                    {
+                        for (var i = 0; i < _output.MaxGroupByFieldsCount; i++)
                         {
-                            for (; fanoutIndex < _output.Results.Count; fanoutIndex++)
+                            var json = new DynamicJsonValue();
+
+                            foreach (var groupBy in _output.GroupByFields)
                             {
-                                _output.Results[fanoutIndex].Json[autoIndexField.Name] = value;
+                                var index = Math.Min(i, groupBy.Value.Count - 1);
+                                var value = _output.GroupByFields[groupBy.Key][index];
+
+                                json[groupBy.Key] = value;
+
+                                _reduceKeyProcessor.Process(indexContext.Allocator, value);
                             }
+
+                            _output.Results.Add((json, _reduceKeyProcessor.Hash));
+
+                            _reduceKeyProcessor.Reset();
                         }
+                    }
+                    // else { } - we have fanout index with multiple group by fields and one is collection
+                    // if we have empty collection we cannot create composite key then
+                    // let's skip putting such map results
+
+                    foreach (var field in Definition.MapFields)
+                    {
+                        var autoIndexField = field.Value.As<AutoIndexField>();
+
+                        var value = GetFieldValue(autoIndexField, document);
+
+                        if (_isFanout == false)
+                            _output.Results[0].Json[autoIndexField.Name] = value;
                         else
                         {
-                            foreach (var arrayValue in array)
+                            var fanoutIndex = 0;
+
+                            if (value is IEnumerable array == false || autoIndexField.SamePathToArrayAsGroupByField == false)
                             {
-                                Debug.Assert(fanoutIndex < _output.Results.Count);
-                                _output.Results[fanoutIndex++].Json[autoIndexField.Name] = arrayValue;
+                                for (; fanoutIndex < _output.Results.Count; fanoutIndex++)
+                                {
+                                    _output.Results[fanoutIndex].Json[autoIndexField.Name] = value;
+                                }
+                            }
+                            else
+                            {
+                                foreach (var arrayValue in array)
+                                {
+                                    Debug.Assert(fanoutIndex < _output.Results.Count);
+                                    _output.Results[fanoutIndex++].Json[autoIndexField.Name] = arrayValue;
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            try
-            {
                 using (_stats.CreateBlittableJson.Start())
                 {
                     for (var i = 0; i < _output.Results.Count; i++)
@@ -242,6 +244,65 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
         }
 
+        private void UpdateMapFields()
+        {
+            if (_isFanout == false)
+                return;
+
+            // we have a fanout in the map reduce index, there are 2 options:
+            // the reduce result has the same OR a different path as one of the reduce keys.
+            // if it's the same path, we need to insert each value separately in the mapped results.
+            // if it isn't, we need to calculate the result for each entry in the fanout (will have the same result).
+            //
+            // Examples:
+            //
+            // The SUM has the same path as one of the reduce keys
+            // from 'Messages'
+            // group by Name, Data[].Items[].ProductName
+            // select Name, Data[].Items[].ProductName as ProductName, sum(Data[].Items[].TotalPrice) as Total
+            // 
+            // The SUM has a different path than any of the reduce keys
+            // from 'Messages'
+            // group by Name, Tries[].ResultMessage
+            // select Name, Tries[].ResultMessage as ResultMessage, sum(Data[].Items[].TotalPrice) as Total
+
+            var groupByFieldsPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            
+            foreach ((_, AutoIndexField value) in Definition.GroupByFields)
+            {
+                if (value.GroupByArrayBehavior != GroupByArrayBehavior.ByIndividualValues)
+                    continue;
+
+                var lastIndexOfGroupByField = value.Name.LastIndexOf("[]", StringComparison.OrdinalIgnoreCase);
+                if (lastIndexOfGroupByField == -1)
+                    continue;
+
+                var groupByFieldPath = value.Name.Substring(0, lastIndexOfGroupByField);
+                groupByFieldsPaths.Add(groupByFieldPath);
+            }
+
+            Debug.Assert(groupByFieldsPaths.Count > 0);
+
+            foreach ((_, IndexFieldBase field) in Definition.MapFields)
+            {
+                var autoIndexField = field.As<AutoIndexField>();
+
+                if (autoIndexField.Aggregation != AggregationOperation.Sum)
+                    continue;
+
+                var lastIndexOfAutoIndexField = autoIndexField.Name.LastIndexOf("[]", StringComparison.OrdinalIgnoreCase);
+
+                var autoIndexFieldPath = lastIndexOfAutoIndexField == -1 
+                    ? autoIndexField.Name 
+                    : autoIndexField.Name.Substring(0, lastIndexOfAutoIndexField);
+
+                if (groupByFieldsPaths.Any(x => autoIndexFieldPath.StartsWith(x)))
+                {
+                    autoIndexField.SamePathToArrayAsGroupByField = true;
+                }
+            }
+        }
+
         private object GetFieldValue(AutoIndexField autoIndexField, Document document)
         {
             switch (autoIndexField.Aggregation)
@@ -259,8 +320,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         return fieldValue;
                     }
 
-
-                    if (_isFanout == false)
+                    if (_isFanout == false || autoIndexField.SamePathToArrayAsGroupByField == false)
                     {
                         decimal total = 0;
 

@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                     }
                     catch (TimeoutException e)
                     {
-                        var errors = Indexes.WaitForIndexingErrors(store, new[] {"Users_ByName"});
+                        var errors = Indexes.WaitForIndexingErrors(store, new[] {"Users_ByName"}, errorsShouldExists: true);
 
                         if (errors != null && errors.Length > 0 && errors[0].Errors.Length > 0)
                             throw new AggregateException($"Got the following index errors: {(string.Join(',', errors[0].Errors.SelectMany(x => x.Error)))}", e);

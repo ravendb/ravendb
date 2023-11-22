@@ -553,19 +553,27 @@ namespace FastTests
                     DebugTag = caller
                 };
 
-                if (options.BeforeDatabasesStartup != null)
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;
+                try
+                {
+                    if (options.BeforeDatabasesStartup != null)
+                        server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;
 
-                server.Initialize();
-                server.ServerStore.ValidateFixedPort = false;
+                    server.Initialize();
+                    server.ServerStore.ValidateFixedPort = false;
 
-                if (options.RegisterForDisposal)
-                    ServersForDisposal.Add(server);
+                    if (options.RegisterForDisposal)
+                        ServersForDisposal.Add(server);
 
-                if (LeakedServers.TryAdd(server, server.DebugTag))
-                    server.AfterDisposal += () => LeakedServers.TryRemove(server, out _);
+                    if (LeakedServers.TryAdd(server, server.DebugTag))
+                        server.AfterDisposal += () => LeakedServers.TryRemove(server, out _);
 
-                return server;
+                    return server;
+                }
+                catch
+                {
+                    server.Dispose();
+                    throw;
+                } 
             }
         }
 
