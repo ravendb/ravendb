@@ -20,6 +20,7 @@ import notificationCenter from "common/notifications/notificationCenter";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { useAsyncCallback } from "react-async-hook";
 import RevertRevisionsRequest = Raven.Server.Documents.Revisions.RevertRevisionsRequest;
+import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 
 export default function RevertRevisions({ db }: NonShardedViewProps) {
     const { control, formState, handleSubmit, setValue } = useForm<RevertRevisionsFormData>({
@@ -47,6 +48,10 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
 
     const asyncRevertRevisions = useAsyncCallback((dto: RevertRevisionsRequest) =>
         databasesService.revertRevisions(db, dto)
+    );
+
+    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
+        (x) => x !== "@empty" && x !== "@hilo"
     );
 
     const onRevert = async (formData: RevertRevisionsFormData) => {
@@ -137,6 +142,7 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                                     collections={collections}
                                     isAllCollectionsFormName="isRevertAllCollections"
                                     isAllCollections={isRevertAllCollections}
+                                    allCollectionNames={allCollectionNames}
                                     setValue={setValue}
                                 />
                             </CardBody>

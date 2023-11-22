@@ -124,6 +124,10 @@ function initYup() {
             min: ({ min }) => `Value must be ${min} or later`,
             max: ({ max }) => `Value must be ${max} or earlier`,
         },
+        array: {
+            min: ({ min }) => `The list should contain at least ${min} item${min > 1 ? "s" : ""}`,
+            max: ({ max }) => `The list should contain a maximum of ${max} item${max > 1 ? "s" : ""}`,
+        },
     });
 }
 

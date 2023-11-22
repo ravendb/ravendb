@@ -143,6 +143,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                     collections={Collections}
                                     isAllCollectionsFormName="CompressAllCollections"
                                     isAllCollections={CompressAllCollections}
+                                    allCollectionNames={allCollectionNames}
                                     setValue={setValue}
                                     customOptions={customCollectionOptions}
                                     isReadOnly={!isDatabaseAdmin}
