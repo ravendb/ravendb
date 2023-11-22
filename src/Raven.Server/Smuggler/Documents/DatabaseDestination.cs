@@ -2192,21 +2192,34 @@ namespace Raven.Server.Smuggler.Documents
                 await SendCommandsAsync();
             }
 
-            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState, bool includeState = false)
+            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
             {
-                const int batchSize = 1024;
-
                 var command = new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
                     SubscriptionName = subscriptionState.SubscriptionName,
                     //After restore/export , subscription will start from the start
                     InitialChangeVector = null
                 };
-                if (includeState)
+                await WriteSubscriptionInternalAsync(command);
+            }
+
+            public async ValueTask WriteSubscriptionWithStateAsync(SubscriptionState subscriptionState)
+            {
+                var command = new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
-                    command.InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint;
-                    command.Disabled = subscriptionState.Disabled;
-                }
+                    SubscriptionName = subscriptionState.SubscriptionName,
+                    //After restore/export , subscription will start from the start
+                    InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint,
+                    Disabled = subscriptionState.Disabled
+
+                };
+                await WriteSubscriptionInternalAsync(command);
+            }
+
+            public async ValueTask WriteSubscriptionInternalAsync(PutSubscriptionCommand command)
+            {
+                const int batchSize = 1024;
+
                 _subscriptionCommands.Add(command);
 
                 if (_subscriptionCommands.Count < batchSize)
@@ -2214,6 +2227,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 await SendCommandsAsync();
             }
+
 
             private async ValueTask SendCommandsAsync()
             {
