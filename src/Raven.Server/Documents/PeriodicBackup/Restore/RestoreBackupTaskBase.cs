@@ -815,7 +815,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 },
-                onSubscriptionAction: subscriptionState =>
+                onSubscriptionAction: (action, subscriptionState) =>
                 {
                     //If we obtain a subscription from a snapshot, it's necessary to persist the subscription state.
                     //This involves determining the ChangeVectorForNextBatchStartingPoint,
@@ -833,6 +833,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                 subscriptionState.ChangeVectorForNextBatchStartingPoint = oldState.ChangeVectorForNextBatchStartingPoint;
                         }
                     }
+
+                    return action.WriteSubscriptionWithStateAsync(subscriptionState);
                 });
 
             result.Files.CurrentFileName = null;
@@ -970,7 +972,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options, bool isLastFile,
             Action<IndexDefinitionAndType> onIndexAction = null,
             Action<DatabaseRecord> onDatabaseRecordAction = null,
-            Action<SubscriptionState> onSubscriptionAction = null)
+            Func<ISubscriptionActions, SubscriptionState, ValueTask> onSubscriptionAction = null)
         {
             await using (var fileStream = await GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
@@ -982,7 +984,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction,
-                    ModifySubscriptionBeforeWrite = onSubscriptionAction,
+                    OnSubscriptionAction = onSubscriptionAction,
                     BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental
                 };
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
