@@ -71,8 +71,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _writeStream.Write(buffer, offset, count);
         _cloudUploadStatus.UploadProgress.SetTotal(_position);
 
-        var toUpload = _writeStream.Position;
-        if (toUpload <= MinOnePartUploadSizeInBytes)
+        if (_writeStream.Position <= MinOnePartUploadSizeInBytes)
             return;
 
         if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
@@ -81,20 +80,16 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             AsyncHelpers.RunSync(() => _uploadTask);
         }
 
-        (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
-        _writeStream.Position = _uploadStream.Position = 0;
-        _uploadTask = _multiPartUploader.UploadPartAsync(_uploadStream, toUpload);
+        StartUploadTask();
     }
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         _position += count;
-
         await _writeStream.WriteAsync(new ReadOnlyMemory<byte>(buffer, offset, count), cancellationToken);
         _cloudUploadStatus.UploadProgress.SetTotal(_position);
 
-        var toUpload = _writeStream.Position;
-        if (toUpload <= MinOnePartUploadSizeInBytes)
+        if (_writeStream.Position <= MinOnePartUploadSizeInBytes)
             return;
 
         if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
@@ -103,9 +98,15 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             await _uploadTask;
         }
 
+        StartUploadTask();
+    }
+
+    private void StartUploadTask()
+    {
         (_writeStream, _uploadStream) = (_uploadStream, _writeStream);
-        _writeStream.Position = _uploadStream.Position = 0;
-        _uploadTask = _multiPartUploader.UploadPartAsync(_uploadStream, toUpload);
+        _writeStream.SetLength(0);
+        _uploadStream.Position = 0;
+        _uploadTask = _multiPartUploader.UploadPartAsync(_uploadStream);
     }
 
     protected override void Dispose(bool disposing)
@@ -138,7 +139,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
                 if (toUpload > 0)
                 {
                     _writeStream.Position = 0;
-                    _multiPartUploader.UploadPart(_writeStream, toUpload);
+                    _multiPartUploader.UploadPart(_writeStream);
                 }
             }
 
