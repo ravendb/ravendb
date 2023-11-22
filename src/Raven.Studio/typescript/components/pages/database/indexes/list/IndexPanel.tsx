@@ -197,12 +197,24 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 <Input type="checkbox" onChange={toggleSelection} checked={selected} />
                             )}
                         </RichPanelSelect>
-
-                        <RichPanelName>
-                            <a href={editUrl} title={index.name}>
-                                {index.name}
-                            </a>
-                        </RichPanelName>
+                        <div className="flex-grow">
+                            <RichPanelName>
+                                <a href={editUrl} title={index.name}>
+                                    {index.name}
+                                </a>
+                            </RichPanelName>
+                            <div className="small hstack gap-4">
+                                <div>
+                                    <span className="text-muted">Created:</span> <strong>3 months ago</strong>
+                                </div>
+                                <div>
+                                    <span className="text-muted">Indexed:</span> <strong>few moments ago</strong>
+                                </div>
+                                <div>
+                                    <span className="text-muted">Queried:</span> <strong>few moments ago</strong>
+                                </div>
+                            </div>
+                        </div>
                     </RichPanelInfo>
                     <RichPanelActions>
                         {!IndexUtils.hasAnyFaultyNode(index) && (
