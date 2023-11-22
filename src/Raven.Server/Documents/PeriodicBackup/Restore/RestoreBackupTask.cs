@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
+using Raven.Server.Smuggler.Documents;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task RestoreAsync()
         {
-            await SmugglerRestoreAsync(Database, Context);
+            await SmugglerRestoreAsync(Database, Context, new DatabaseDestination(Database));
         }
 
         protected override async Task InitializeAsync()

@@ -22,13 +22,13 @@ public abstract class DatabaseSubscriptionActionsBase<T> : ISubscriptionActions
         _name = name;
     }
 
-    public abstract T CreatePutSubscriptionCommand(SubscriptionState subscriptionState, bool includeState);
+    public abstract T CreatePutSubscriptionCommand(SubscriptionState subscriptionState);
 
     protected abstract ValueTask SendCommandsAsync();
 
-    public virtual async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState, bool includeState = false)
+    public virtual async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
     {
-        var cmd = CreatePutSubscriptionCommand(subscriptionState, includeState);
+        var cmd = CreatePutSubscriptionCommand(subscriptionState);
         _subscriptionCommands.Add(cmd);
 
         if (_subscriptionCommands.Count < _batchSize)
