@@ -12,9 +12,11 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -26,7 +28,9 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -133,8 +137,13 @@ namespace SlowTests.Authentication
         public void CanGetDocWithValidPermissionAndHttpVersion(string httpVersion)
         {
             var version = httpVersion != null ? new Version(httpVersion) : null;
+            HttpVersionPolicy? versionPolicy = version == null || version.Major == 1 ? HttpVersionPolicy.RequestVersionOrLower : null;
 
-            var certificates = Certificates.SetupServerAuthentication();
+            var customSettings = new Dictionary<string, string>();
+            if (versionPolicy == HttpVersionPolicy.RequestVersionOrLower)
+                customSettings.Add(RavenConfiguration.GetKey(x => x.Http.Protocols), HttpProtocols.Http1AndHttp2.ToString());
+
+            var certificates = Certificates.SetupServerAuthentication(customSettings);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -147,7 +156,11 @@ namespace SlowTests.Authentication
                 AdminCertificate = adminCert,
                 ClientCertificate = userCert,
                 ModifyDatabaseName = s => dbName,
-                ModifyDocumentStore = s => s.Conventions.HttpVersion = version
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.HttpVersion = version;
+                    s.Conventions.HttpVersionPolicy = versionPolicy;
+                }
             }))
             {
                 StoreSampleDoc(store, "test/1");
@@ -583,7 +596,7 @@ namespace SlowTests.Authentication
             async Task<BlittableJsonReaderObject> ExecuteOperation<T>(IServerOperation<T> operation, JsonOperationContext context)
             {
                 var command = operation.GetCommand(store.Conventions, context);
-                var request = command.CreateRequest(context, new ServerNode { Url = store.Urls.First() }, out var url);
+                var request = command.CreateRequest(context, new ServerNode { Url = store.Urls.First() }, out var url).WithConventions(store.Conventions);
                 request.RequestUri = new Uri(url);
                 var client = store.GetRequestExecutor(store.Database).HttpClient;
                 var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
@@ -746,7 +759,7 @@ namespace SlowTests.Authentication
         }
 
         [Fact]
-        public void Routes_Database_Read()
+        public async Task Routes_Database_Read()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var databaseName1 = GetDatabaseName();
@@ -805,10 +818,10 @@ namespace SlowTests.Authentication
                     httpClientHandler.ClientCertificates.Add(userCert);
                     httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
 
-                    var httpClient = new HttpClient(httpClientHandler);
+                    var httpClient = new HttpClient(httpClientHandler).WithConventions(DocumentConventions.DefaultForServer);
                     httpClient.BaseAddress = new Uri(Server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    await AssertServerRoutesAsync(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -828,7 +841,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -846,7 +859,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -862,7 +875,7 @@ namespace SlowTests.Authentication
         }
 
         [Fact]
-        public void Routes_Database_ReadWrite()
+        public async Task Routes_Database_ReadWrite()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var databaseName1 = GetDatabaseName();
@@ -921,10 +934,10 @@ namespace SlowTests.Authentication
                     httpClientHandler.ClientCertificates.Add(userCert);
                     httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
 
-                    var httpClient = new HttpClient(httpClientHandler);
+                    var httpClient = new HttpClient(httpClientHandler).WithConventions(DocumentConventions.DefaultForServer);
                     httpClient.BaseAddress = new Uri(Server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    await AssertServerRoutesAsync(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -944,7 +957,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = route.AuthorizationStatus == AuthorizationStatus.ValidUser;
 
@@ -956,7 +969,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -972,7 +985,7 @@ namespace SlowTests.Authentication
         }
 
         [Fact]
-        public void Routes_Database_Admin()
+        public async Task Routes_Database_Admin()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var databaseName1 = GetDatabaseName();
@@ -1031,10 +1044,10 @@ namespace SlowTests.Authentication
                     httpClientHandler.ClientCertificates.Add(userCert);
                     httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
 
-                    var httpClient = new HttpClient(httpClientHandler);
+                    var httpClient = new HttpClient(httpClientHandler).WithConventions(DocumentConventions.DefaultForServer);
                     httpClient.BaseAddress = new Uri(Server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    await AssertServerRoutesAsync(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -1054,7 +1067,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1066,7 +1079,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -1082,7 +1095,7 @@ namespace SlowTests.Authentication
         }
 
         [NightlyBuildMultiplatformFact(RavenArchitecture.AllX64)]
-        public void Routes_Operator()
+        public async Task Routes_Operator()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var databaseName1 = GetDatabaseName();
@@ -1138,10 +1151,10 @@ namespace SlowTests.Authentication
                     httpClientHandler.ClientCertificates.Add(userCert);
                     httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
 
-                    var httpClient = new HttpClient(httpClientHandler);
+                    var httpClient = new HttpClient(httpClientHandler).WithConventions(DocumentConventions.DefaultForServer);
                     httpClient.BaseAddress = new Uri(Server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    await AssertServerRoutesAsync(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = route.AuthorizationStatus == AuthorizationStatus.Operator
                             || route.AuthorizationStatus == AuthorizationStatus.ValidUser
@@ -1156,7 +1169,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1168,7 +1181,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1184,7 +1197,7 @@ namespace SlowTests.Authentication
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Certificates, RavenArchitecture.AllX64, NightlyBuildOnly = true)]
-        public void Routes_ClusterAdmin()
+        public async Task Routes_ClusterAdmin()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var databaseName1 = GetDatabaseName();
@@ -1240,10 +1253,10 @@ namespace SlowTests.Authentication
                     httpClientHandler.ClientCertificates.Add(userCert);
                     httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
 
-                    var httpClient = new HttpClient(httpClientHandler);
+                    var httpClient = new HttpClient(httpClientHandler).WithConventions(DocumentConventions.DefaultForServer);
                     httpClient.BaseAddress = new Uri(Server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    await AssertServerRoutesAsync(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1255,7 +1268,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1267,7 +1280,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1282,7 +1295,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        private void AssertServerRoutes(IEnumerable<RouteInformation> routes, HashSet<(string Method, string Path)> endpointsToIgnore, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
+        private async Task AssertServerRoutesAsync(IEnumerable<RouteInformation> routes, HashSet<(string Method, string Path)> endpointsToIgnore, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
         {
             foreach (var route in routes)
             {
@@ -1295,17 +1308,17 @@ namespace SlowTests.Authentication
                 if (endpointsToIgnore.Contains((route.Method, route.Path)))
                     continue;
 
-                var response = httpClient.Send(new HttpRequestMessage
+                var response = await httpClient.SendAsync(new HttpRequestMessage
                 {
                     Method = new HttpMethod(route.Method),
                     RequestUri = new Uri(route.Path, UriKind.Relative)
-                });
+                }.WithConventions(DocumentConventions.DefaultForServer));
 
                 assert(route, response.StatusCode);
             }
         }
 
-        private void AssertDatabaseRoutes(IEnumerable<RouteInformation> routes, string databaseName, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
+        private async Task AssertDatabaseRoutesAsync(IEnumerable<RouteInformation> routes, string databaseName, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
         {
             foreach (var route in routes)
             {
@@ -1315,11 +1328,11 @@ namespace SlowTests.Authentication
                 if (route.Method == "OPTIONS")
                     continue; // artificially added routes for CORS
 
-                var response = httpClient.Send(new HttpRequestMessage
+                var response = await httpClient.SendAsync(new HttpRequestMessage
                 {
                     Method = new HttpMethod(route.Method),
                     RequestUri = new Uri(route.Path.Replace("/databases/*/", $"/databases/{databaseName}/", StringComparison.OrdinalIgnoreCase), UriKind.Relative)
-                });
+                }.WithConventions(DocumentConventions.DefaultForServer));
 
                 assert(route, response.StatusCode);
             }

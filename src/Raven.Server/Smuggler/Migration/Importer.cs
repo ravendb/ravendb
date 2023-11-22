@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -109,7 +110,7 @@ namespace Raven.Server.Smuggler.Migration
             string databaseName, long operationId, TransactionOperationContext context)
         {
             var url = $"{Options.ServerUrl}/databases/{databaseName}/operations/state?id={operationId}";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
             var response = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
@@ -160,7 +161,7 @@ namespace Raven.Server.Smuggler.Migration
             var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = content
-            };
+            }.WithConventions(DocumentConventions.DefaultForServer);
 
             var response = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
@@ -193,7 +194,7 @@ namespace Raven.Server.Smuggler.Migration
         private async Task<long> GetOperationId()
         {
             var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/operations/next-operation-id";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
             var response = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
             {
@@ -233,7 +234,7 @@ namespace Raven.Server.Smuggler.Migration
         public static async Task<List<string>> GetDatabasesToMigrate(string serverUrl, RavenHttpClient httpClient, CancellationToken cancelToken)
         {
             var url = $"{serverUrl}/databases?namesOnly=true";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
             var response = await httpClient.SendAsync(request, cancelToken);
             if (response.IsSuccessStatusCode == false)
             {

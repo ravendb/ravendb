@@ -22,6 +22,7 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Restore.Sharding;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -1177,7 +1178,10 @@ namespace SlowTests.Sharding.Backup
                 {
                     FolderPath = backupPath
                 }), Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Local", data);
+                var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=Local")
+                {
+                    Content = data
+                }.WithConventions(store.Conventions));
                 string result = await response.Content.ReadAsStringAsync();
 
                 var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -1304,7 +1308,10 @@ namespace SlowTests.Sharding.Backup
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(s3Settings), Encoding.UTF8, "application/json");
-                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=S3", data);
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=S3")
+                    {
+                        Content = data
+                    }.WithConventions(store.Conventions));
                     string result = await response.Content.ReadAsStringAsync();
 
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -1434,7 +1441,10 @@ namespace SlowTests.Sharding.Backup
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(azureSettings), Encoding.UTF8, "application/json");
-                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure", data);
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=Azure")
+                    {
+                        Content = data
+                    }.WithConventions(store.Conventions));
                     string result = await response.Content.ReadAsStringAsync();
 
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -1572,7 +1582,11 @@ namespace SlowTests.Sharding.Backup
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(googleCloudSettings), Encoding.UTF8, "application/json");
-                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=GoogleCloud", data);
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=GoogleCloud")
+                    {
+                        Content = data
+                    }.WithConventions(store.Conventions));
+
                     string result = await response.Content.ReadAsStringAsync();
 
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);

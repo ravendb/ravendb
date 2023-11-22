@@ -23,6 +23,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Extensions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -231,7 +232,7 @@ namespace RachisTests
                 {
                     Method = HttpMethod.Put,
                     RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
                 var response = await requestExecutor.HttpClient.SendAsync(request);
                 Assert.False(response.IsSuccessStatusCode);
             }
@@ -261,7 +262,7 @@ namespace RachisTests
                 {
                     Method = HttpMethod.Put,
                     RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
                 var response = await requestExecutor.HttpClient.SendAsync(request);
                 Assert.False(response.IsSuccessStatusCode);
             }
@@ -292,7 +293,7 @@ namespace RachisTests
                 {
                     Method = HttpMethod.Put,
                     RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
                 var response = await requestExecutor.HttpClient.SendAsync(request);
                 Assert.False(response.IsSuccessStatusCode);
             }
@@ -322,7 +323,7 @@ namespace RachisTests
                 {
                     Method = HttpMethod.Put,
                     RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
                 var response = await requestExecutor.HttpClient.SendAsync(request);
                 Assert.False(response.IsSuccessStatusCode);
             }

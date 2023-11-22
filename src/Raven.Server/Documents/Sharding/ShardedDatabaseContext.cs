@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Sharding
 
         private readonly DatabasesLandlord.StateChange _orchestratorStateChange;
         private readonly DatabasesLandlord.StateChange _urlUpdateStateChange;
-        
+
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 reduce the record to the needed fields");
@@ -129,10 +129,14 @@ namespace Raven.Server.Documents.Sharding
                     Debug.Assert(record.Sharding.Shards.ContainsKey(shardNumber));
                     if (CheckForTopologyChangesAndRaiseNotification(topology, _record.Sharding.Shards[shardNumber]))
                     {
-                        _ = ShardExecutor.GetRequestExecutorAt(shardNumber).UpdateTopologyAsync(
-                            new RequestExecutor.UpdateTopologyParameters(
-                                    new ServerNode() { ClusterTag = ServerStore.NodeTag, Database = ShardHelper.ToShardName(DatabaseName, shardNumber), Url = ServerStore.GetNodeHttpServerUrl() })
-                            { DebugTag = "shard-topology-update" });
+                        var re = ShardExecutor.GetRequestExecutorAtLazily(shardNumber);
+                        if (re.IsValueCreated)
+                        {
+                            _ = re.Value.UpdateTopologyAsync(
+                                new RequestExecutor.UpdateTopologyParameters(
+                                        new ServerNode() { ClusterTag = ServerStore.NodeTag, Database = ShardHelper.ToShardName(DatabaseName, shardNumber), Url = ServerStore.GetNodeHttpServerUrl() })
+                                { DebugTag = "shard-topology-update" });
+                        }
                     }
                 }
             }
@@ -146,7 +150,7 @@ namespace Raven.Server.Documents.Sharding
             Indexes.Update(record, index);
 
             SubscriptionsStorage.Update(record);
-            
+
             Interlocked.Exchange(ref _record, record);
         }
 
@@ -171,7 +175,7 @@ namespace Raven.Server.Documents.Sharding
         {
             // we explicitly do not dispose the old executors here to avoid possible memory invalidation and since this is expected to be rare.
             // So we rely on the GC to dispose them via the finalizer
-            
+
             ShardExecutor.ForgetAbout();
             ShardExecutor = new ShardExecutor(ServerStore, _record, _record.DatabaseName);
 

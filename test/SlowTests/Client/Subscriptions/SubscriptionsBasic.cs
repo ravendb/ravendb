@@ -27,6 +27,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
@@ -1450,7 +1451,8 @@ namespace SlowTests.Client.Subscriptions
             Assert.True(await WaitForValueAsync(async () =>
             {
                 var url = Uri.EscapeDataString($"{store.Urls.First()}/admin/debug/databases/idle");
-                var raw = (await re.HttpClient.GetAsync($"{store.Urls.First()}/admin/debug/databases/idle")).Content.ReadAsStringAsync().Result;
+                var response = await re.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/admin/debug/databases/idle").WithConventions(store.Conventions));
+                var raw = await response.Content.ReadAsStringAsync();
                 var idleDatabaseStatistics = JsonConvert.DeserializeObject<IdleDatabaseStatistics>(raw);
                 if (idleDatabaseStatistics == null)
                     return false;

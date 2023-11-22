@@ -22,6 +22,7 @@ using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -1516,7 +1517,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
         private static async Task<EtlProcessProgress> GetEtlProcessProgress(DocumentStore src)
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient().WithConventions(src.Conventions);
             var url = $"{src.Urls.First()}/databases/{src.Database}/etl/progress";
             var response = (await client.GetAsync(url));
             response.EnsureSuccessStatusCode();

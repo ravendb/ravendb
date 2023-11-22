@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Server.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -73,7 +74,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var re = store.GetRequestExecutor())
                     using (re.ContextPool.AllocateOperationContext(out var ctx))
                     {
-                        var request = queryCommand.CreateRequest(ctx, serverNode, out var url);
+                        var request = queryCommand.CreateRequest(ctx, serverNode, out var url).WithConventions(store.Conventions);
                         
                         // add special header so that 'TimeSeriesNamedValues' will be part of the results
                         url += "&addTimeSeriesNames=true";

@@ -216,6 +216,24 @@ public abstract class AbstractExecutor : IDisposable
         }
     }
 
+    protected static void SafelyDisposeExecutors(IEnumerable<Lazy<RequestExecutor>> executors)
+    {
+        foreach (var disposable in executors)
+        {
+            try
+            {
+                if (disposable.IsValueCreated == false)
+                    continue;
+
+                disposable.Value.Dispose();
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+    }
+
     public virtual void Dispose()
     {
         GC.SuppressFinalize(this);

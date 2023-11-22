@@ -40,6 +40,12 @@ namespace Raven.Client.Documents.Conventions
 
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
+#if NETCOREAPP
+        internal static HttpVersionPolicy? DefaultHttpVersionPolicy;
+
+        internal static TimeSpan? DefaultHttpPooledConnectionIdleTimeout;
+#endif
+
         internal static readonly DocumentConventions Default = new();
 
         internal static readonly DocumentConventions DefaultForServer = new()
@@ -257,9 +263,9 @@ namespace Raven.Client.Documents.Conventions
 
             TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
             FindCollectionName = DefaultGetCollectionName;
-            
+
             ShouldApplyPropertyNameConverter = DefaultShouldApplyPropertyNameConverter;
-            
+
             FindPropertyNameForIndex = DefaultFindPropertyNameForIndex;
             FindPropertyNameForDynamicIndex = DefaultFindPropertyNameForDynamicIndex;
 
@@ -357,6 +363,9 @@ namespace Raven.Client.Documents.Conventions
         private bool _disableTopologyCache;
         private string _topologyCacheLocation;
         private Version _httpVersion;
+#if NETCOREAPP
+        private HttpVersionPolicy? _httpVersionPolicy;
+#endif
         private Type _httpClientType;
         private Func<HttpClientHandler, HttpClient> _createHttpClient;
 #if NETCOREAPP3_1_OR_GREATER
@@ -389,7 +398,7 @@ namespace Raven.Client.Documents.Conventions
                 _shouldApplyPropertyNameConverter = value;
             }
         }
-        
+
         public Size MaxContextSizeToKeep
         {
             get => _maxContextSizeToKeep;
@@ -423,6 +432,18 @@ namespace Raven.Client.Documents.Conventions
                 _httpVersion = value;
             }
         }
+
+#if NETCOREAPP
+        public HttpVersionPolicy? HttpVersionPolicy
+        {
+            get => _httpVersionPolicy ?? DefaultHttpVersionPolicy;
+            set
+            {
+                AssertNotFrozen();
+                _httpVersionPolicy = value;
+            }
+        }
+#endif
 
         /// <summary>
         /// Used by HttpClient cache, if you are overriding DocumentConventions.CreateHttpClient convention then it is advisable to return here the type of the HttpClient from that convention
@@ -460,7 +481,7 @@ namespace Raven.Client.Documents.Conventions
 
         public TimeSpan? HttpPooledConnectionIdleTimeout
         {
-            get => _httpPooledConnectionIdleTimeout;
+            get => _httpPooledConnectionIdleTimeout ?? DefaultHttpPooledConnectionIdleTimeout;
             set
             {
                 AssertNotFrozen();
@@ -1059,7 +1080,7 @@ namespace Raven.Client.Documents.Conventions
                 CachedDefaultTypeCollectionNames.Put(t, null);
                 return null;
             }
-            
+
             // we want to reject queries and other operations on abstract types, because you usually
             // want to use them for polymorphic queries, and that require the conventions to be
             // applied properly, so we reject the behavior and hint to the user explicitly
@@ -1303,7 +1324,7 @@ namespace Raven.Client.Documents.Conventions
                 _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
             }
         }
-        
+
         public static bool DefaultShouldApplyPropertyNameConverter(MemberInfo member) => (member.DeclaringType?.Namespace?.StartsWith("System") == true ||
                                                                                             member.DeclaringType?.Namespace?.StartsWith("Microsoft") == true) == false;
         public static string DefaultTransformCollectionNameToDocumentIdPrefix(string collectionName)
@@ -1461,7 +1482,7 @@ namespace Raven.Client.Documents.Conventions
 
             if (objValueFunc != null)
                 return objValueFunc(fieldName, value, forRange, out objValue);
-            
+
             objValue = null;
             return false;
         }

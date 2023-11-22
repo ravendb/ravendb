@@ -539,13 +539,13 @@ namespace Raven.Client.Http
                             var msg = $"Expected topology for database '{_databaseName}', but got the database '{node.Database}' (reason: {parameters.DebugTag})";
                             Debug.Assert(false, msg);
                         }
-                    }          
+                    }
 #endif
-                    
+
                     await DatabaseTopologyLocalCache.TrySavingAsync(_databaseName, TopologyHash, topology, Conventions, context, CancellationToken.None).ConfigureAwait(false);
-                    
+
                     UpdateNodeSelector(topology, parameters.ForceUpdate);
-                    
+
                     var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
                     UpdateConnectionLimit(urls);
 
@@ -636,7 +636,7 @@ namespace Raven.Client.Http
                 }
                 return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
             }
-            
+
             switch (Conventions.LoadBalanceBehavior)
             {
                 case LoadBalanceBehavior.UseSessionContext:
@@ -760,12 +760,12 @@ namespace Raven.Client.Http
 
         protected async Task SingleTopologyUpdateAsync(string[] initialUrls, Guid? applicationIdentifier = null)
         {
-            if(Disposed)
+            if (Disposed)
                 return;
 
             //fetch tag for each of the urls
-            Topology topology = new Topology() {Nodes = new List<ServerNode>(), Etag = TopologyEtag};
-            
+            Topology topology = new Topology() { Nodes = new List<ServerNode>(), Etag = TopologyEtag };
+
             foreach (var url in initialUrls)
             {
                 var serverNode = new ServerNode
@@ -802,7 +802,7 @@ namespace Raven.Client.Http
                 catch (Exception e)
                 {
                     serverNode.ClusterTag = "!";
-                    if(Logger.IsInfoEnabled)
+                    if (Logger.IsInfoEnabled)
                         Logger.Info($"Error occurred while attempting to fetch the Cluster Tag for {url} in {nameof(SingleTopologyUpdateAsync)}", e);
                 }
 
@@ -810,7 +810,7 @@ namespace Raven.Client.Http
 
                 UpdateNodeSelector(topology, forceUpdate: true);
             }
-            
+
             _lastKnownUrls = initialUrls;
         }
 
@@ -1535,7 +1535,14 @@ namespace Raven.Client.Http
             }
 
             if (Conventions.HttpVersion != null)
+            {
                 request.Version = Conventions.HttpVersion;
+            }
+
+#if NETCOREAPP
+            if (Conventions.HttpVersionPolicy != null)
+                request.VersionPolicy = Conventions.HttpVersionPolicy.Value;
+#endif
 
             request.RequestUri = builder.Uri;
 
@@ -1918,7 +1925,7 @@ namespace Raven.Client.Http
 
                 return;
             }
-            
+
             if (serverNode == null || nodeIndex == null)
                 return;
 
@@ -2475,9 +2482,9 @@ namespace Raven.Client.Http
 
             private bool Equals(HttpClientCacheKey other)
             {
-                return _certificateThumbprint == other._certificateThumbprint 
-                       && _useHttpDecompression == other._useHttpDecompression 
-                       && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime) 
+                return _certificateThumbprint == other._certificateThumbprint
+                       && _useHttpDecompression == other._useHttpDecompression
+                       && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime)
                        && Nullable.Equals(_pooledConnectionIdleTimeout, other._pooledConnectionIdleTimeout)
                        && Nullable.Equals(_globalHttpClientTimeout, other._globalHttpClientTimeout)
                        && _httpClientType == other._httpClientType;
