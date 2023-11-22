@@ -82,4 +82,9 @@ public class DirectUploadBackupTask : BackupTask
     {
         // we're uploading directly without using a local file.
     }
+
+    protected override void FlushToDisk(Stream outputStream)
+    {
+        // no need to flush since we're uploading directly without using a local file.
+    }
 }
