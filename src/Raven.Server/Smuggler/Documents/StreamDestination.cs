@@ -1175,11 +1175,6 @@ namespace Raven.Server.Smuggler.Documents
 
                 await Writer.MaybeFlushAsync();
             }
-
-            public ValueTask WriteSubscriptionWithStateAsync(SubscriptionState subscriptionState)
-            {
-                throw new NotImplementedException();
-            }
         }
 
         private class StreamReplicationHubCertificateActions : StreamActionsBase, IReplicationHubCertificateActions
