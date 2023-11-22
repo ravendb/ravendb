@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -294,7 +292,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreConfiguration.DataDirectory;
         }
 
-        protected async Task SmugglerRestoreAsync(DocumentDatabase database, JsonOperationContext context)
+        protected async Task SmugglerRestoreAsync(DocumentDatabase database, JsonOperationContext context, DatabaseDestination lastFileDestination)
         {
             Debug.Assert(Progress != null);
 
@@ -345,8 +343,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Progress.Invoke(Result.Progress);
 
             var lastFilePath = RestoreSource.GetBackupPath(lastFileName);
-            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true);
 
+            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, lastFileDestination, options, isLastFile: true);
             ExecuteClusterTransactions(database);
         }
 
@@ -549,26 +547,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
                     databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
                     databaseRecord.IndexesHistory = smugglerDatabaseRecord.IndexesHistory;
-                };
-                smuggler.ModifySubscriptionBeforeWrite =
-                subscriptionState =>
-                {
-                    //If we obtain a subscription from a snapshot, it's necessary to persist the subscription state.
-                    //This involves determining the ChangeVectorForNextBatchStartingPoint,
-                    //which should be set to the smallest value between the one from the snapshot and the one obtained from the smuggler.
-                    //When we have incremental snapshot, and we have information on a subscription only from smuggler, we don't save the state.
-
-                    if (RestoreSettings.Subscriptions == null || RestoreSettings.Subscriptions.Count == 0)
-                        subscriptionState.ChangeVectorForNextBatchStartingPoint = null;
-                    else
-                    {
-                        if (RestoreSettings.Subscriptions.TryGetValue(SubscriptionState.Prefix + subscriptionState.SubscriptionName, out SubscriptionState oldState))
-                        {
-                            var distance = ChangeVectorUtils.Distance(subscriptionState.ChangeVectorForNextBatchStartingPoint, oldState.ChangeVectorForNextBatchStartingPoint);
-                            if (distance > 0)
-                                subscriptionState.ChangeVectorForNextBatchStartingPoint = oldState.ChangeVectorForNextBatchStartingPoint;
-                        }
-                    }
                 };
             }
 

@@ -130,7 +130,7 @@ namespace Raven.Server.Smuggler.Documents
             return new CounterActions(_database, result);
         }
 
-        public ISubscriptionActions Subscriptions()
+        public virtual ISubscriptionActions Subscriptions()
         {
             return new DatabaseSubscriptionActions(_database.ServerStore, _database.Name);
         }

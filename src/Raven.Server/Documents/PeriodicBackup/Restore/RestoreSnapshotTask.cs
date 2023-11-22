@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             await RestoreFromSmugglerFileAsync(Progress, Database, _firstFile, Context);
             await HandleSubscriptionFromSnapshot(FilesToRestore, RestoreSettings.Subscriptions, DatabaseName, Database);
-            await SmugglerRestoreAsync(Database, Context);
+            await SmugglerRestoreAsync(Database, Context, new SnapshotDatabaseDestination(Database, RestoreSettings.Subscriptions));
 
             Result.SnapshotRestore.Processed = true;
 
