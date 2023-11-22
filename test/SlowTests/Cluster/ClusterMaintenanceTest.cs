@@ -12,6 +12,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Extensions;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 
@@ -44,16 +45,16 @@ namespace SlowTests.Cluster
 
             var cluster = await CreateRaftCluster(3);
 
-            using (var client = new ClientWebSocket())
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
             }))
+            using (var client = new ClientWebSocket().WithConventions(store.Conventions))
             {
                 var str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
                 var sb = new StringBuilder();
 
-                await client.ConnectAsync(new Uri(str), CancellationToken.None);
+                await client.ConnectAsync(new Uri(str), store.GetRequestExecutor().HttpClient, CancellationToken.None);
                 var task = Task.Run(async () =>
                 {
                     ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);

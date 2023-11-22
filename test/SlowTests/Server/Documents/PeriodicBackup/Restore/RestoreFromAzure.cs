@@ -11,6 +11,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -189,7 +190,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(holder.Settings), Encoding.UTF8, "application/json");
-                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure ", data);
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=Azure")
+                    {
+                        Content = data
+                    }.WithConventions(store.Conventions));
+
                     string result = response.Content.ReadAsStringAsync().Result;
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
                     Assert.Equal(1, restorePoints.List.Count);

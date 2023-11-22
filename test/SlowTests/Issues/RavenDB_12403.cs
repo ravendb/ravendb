@@ -8,6 +8,7 @@ using CsvHelper;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Extensions;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -129,10 +130,10 @@ namespace SlowTests.Issues
                         }
                     }));
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
                 }
 
-                var client = new HttpClient();
+                using var client = new HttpClient().WithConventions(store.Conventions);
                 var stream = await client.GetStreamAsync(
                     $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\'&format=csv&debug=entries");
                 TextReader tr = new StreamReader(stream);
@@ -191,9 +192,9 @@ namespace SlowTests.Issues
                         }
                     }));
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
                 }
-                var client = new HttpClient();
+                var client = new HttpClient().WithConventions(store.Conventions);
                 var stream = await client.GetStreamAsync(
                     $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\' select __all_stored_fields&format=csv");
                 TextReader tr = new StreamReader(stream);

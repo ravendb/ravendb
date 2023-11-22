@@ -1,12 +1,14 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
+using Raven.Server.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +30,8 @@ namespace SlowTests.Issues
                 session.CountersFor("order/1").Increment("counter");
                 session.SaveChanges();
             }
-            var json = await store.GetRequestExecutor().HttpClient.GetStringAsync($"{store.Urls.First()}/databases/{store.Database}/studio/collections/preview");
+            var response = await store.GetRequestExecutor().HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/databases/{store.Database}/studio/collections/preview").WithConventions(store.Conventions));
+            var json = await response.Content.ReadAsStringAsync();
             Assert.Contains(nameof(DocumentFlags.HasCounters), json);
             Assert.DoesNotContain(Constants.Documents.Metadata.Counters, json);
         }
@@ -44,7 +47,8 @@ namespace SlowTests.Issues
                 session.SaveChanges();
                 var result = store.Operations.Send(new PutAttachmentOperation("order/1", "name", profileStream, "image/png"));
             }
-            var json = await store.GetRequestExecutor().HttpClient.GetStringAsync($"{store.Urls.First()}/databases/{store.Database}/studio/collections/preview");
+            var response = await store.GetRequestExecutor().HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/databases/{store.Database}/studio/collections/preview").WithConventions(store.Conventions));
+            var json = await response.Content.ReadAsStringAsync();
             Assert.Contains(nameof(DocumentFlags.HasAttachments), json);
             Assert.DoesNotContain(Constants.Documents.Metadata.Attachments, json);
         }
@@ -60,7 +64,8 @@ namespace SlowTests.Issues
                 t.Append(DateTime.MaxValue, new[] { 59d }, "watches/fitbit");
                 session.SaveChanges();
             }
-            var json = await store.GetRequestExecutor().HttpClient.GetStringAsync($"{store.Urls.First()}/databases/{store.Database}/studio/collections/preview");
+            var response = await store.GetRequestExecutor().HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/databases/{store.Database}/studio/collections/preview").WithConventions(store.Conventions));
+            var json = await response.Content.ReadAsStringAsync();
             Assert.Contains(nameof(DocumentFlags.HasTimeSeries), json);
             Assert.DoesNotContain(Constants.Documents.Metadata.TimeSeries, json);
         }
@@ -80,7 +85,8 @@ namespace SlowTests.Issues
                 var result = store.Operations.Send(new PutAttachmentOperation("order/1", "name", profileStream, "image/png"));
             }
 
-            var json = await store.GetRequestExecutor().HttpClient.GetStringAsync($"{store.Urls.First()}/databases/{store.Database}/studio/collections/preview");
+            var response = await store.GetRequestExecutor().HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/databases/{store.Database}/studio/collections/preview").WithConventions(store.Conventions));
+            var json = await response.Content.ReadAsStringAsync();
             Assert.Contains(nameof(DocumentFlags.HasCounters), json);
             Assert.Contains(nameof(DocumentFlags.HasAttachments), json);
             Assert.Contains(nameof(DocumentFlags.HasTimeSeries), json);

@@ -38,6 +38,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
@@ -1848,7 +1849,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var client = store.GetRequestExecutor().HttpClient;
 
                 var data = new StringContent(JsonConvert.SerializeObject(localSettings), Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Local ", data);
+                var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=Local")
+                {
+                    Content = data
+                }.WithConventions(store.Conventions));
                 string result = response.Content.ReadAsStringAsync().Result;
                 var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
                 Assert.Equal(1, restorePoints.List.Count);
@@ -2169,7 +2173,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // check the backup status of one time backup
                 var client = store.GetRequestExecutor().HttpClient;
                 // one time backup always save the status under task id 0
-                var response = await client.GetAsync(store.Urls.First() + $"/periodic-backup/status?name={store.Database}&taskId=0");
+                var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/periodic-backup/status?name={store.Database}&taskId=0").WithConventions(store.Conventions));
                 string result = response.Content.ReadAsStringAsync().Result;
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -2246,7 +2250,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var command = new BackupOperation.BackupCommand(store.Conventions, config);
-                var request = command.CreateRequest(context, new ServerNode { Url = store.Urls.First(), Database = store.Database }, out var url);
+                var request = command.CreateRequest(context, new ServerNode { Url = store.Urls.First(), Database = store.Database }, out var url).WithConventions(store.Conventions);
                 request.RequestUri = new Uri(url);
                 var client = store.GetRequestExecutor(store.Database).HttpClient;
                 var response = await client.SendAsync(request);
@@ -2298,8 +2302,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupResult = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 var client = store.GetRequestExecutor().HttpClient;
-                var response = await client.GetAsync(store.Urls.First() + $"/databases?name={store.Database}");
-                string result = response.Content.ReadAsStringAsync().Result;
+                var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/databases?name={store.Database}").WithConventions(store.Conventions));
+                string result = await response.Content.ReadAsStringAsync();
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
                     using var bjro = ctx.Sync.ReadForMemory(result, "test");

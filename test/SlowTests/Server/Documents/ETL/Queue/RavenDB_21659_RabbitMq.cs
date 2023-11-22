@@ -4,10 +4,11 @@ using System.Text;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL.Queue;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+
+namespace SlowTests.Server.Documents.ETL.Queue;
 
 public class RavenDB_21659_RabbitMq : RabbitMqEtlTestBase
 {

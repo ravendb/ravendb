@@ -7,7 +7,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -89,12 +91,11 @@ namespace FastTests.Sharding.Subscriptions
                     session.SaveChanges();
                 }
 
-                using var client = new HttpClient();
                 var url = $"{store.Urls.First()}/databases/{Uri.EscapeDataString(store.Database)}/subscriptions/try?pageSize=10";
                 var tryout = new SubscriptionTryout() { Query = "from Users" };
                 var serializeObject = JsonConvert.SerializeObject(tryout);
                 var data = new StringContent(serializeObject, Encoding.UTF8, "application/json");
-                var rawVersionRespond = (await client.PostAsync(url, data)).Content.ReadAsStringAsync().Result;
+                var rawVersionRespond = await SendPostAndReadString(store.GetRequestExecutor(), url, data);
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
                     using var bjro = ctx.Sync.ReadForMemory(rawVersionRespond, "test");
@@ -116,6 +117,20 @@ namespace FastTests.Sharding.Subscriptions
             }
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "RavenDB-16279");
+        }
+
+        private static async Task<string> SendPostAndReadString(RequestExecutor requestExecutor, string url, StringContent content)
+        {
+            var message = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = content
+            }.WithConventions(requestExecutor.Conventions);
+
+            if (requestExecutor.Conventions.HttpVersionPolicy.HasValue)
+                message.VersionPolicy = requestExecutor.Conventions.HttpVersionPolicy.Value;
+
+            var response = await requestExecutor.HttpClient.SendAsync(message);
+            return await response.Content.ReadAsStringAsync();
         }
     }
 }

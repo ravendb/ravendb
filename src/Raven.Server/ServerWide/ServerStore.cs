@@ -156,6 +156,8 @@ namespace Raven.Server.ServerWide
 
         internal ClusterRequestExecutor ClusterRequestExecutor => _clusterRequestExecutor.Value;
 
+        private bool IsClusterRequestExecutorCreated => _clusterRequestExecutor.IsValueCreated;
+
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             // we want our servers to be robust get early errors about such issues
@@ -1175,7 +1177,7 @@ namespace Raven.Server.ServerWide
 
                         if (_engine.CurrentState != RachisState.Follower)
                         {
-                            OnTopologyChangeInternal(clusterTopology, leaderClusterTopology: null, new ServerNode(){ClusterTag = NodeTag, Url = GetNodeHttpServerUrl()});
+                            OnTopologyChangeInternal(clusterTopology, leaderClusterTopology: null, new ServerNode() { ClusterTag = NodeTag, Url = GetNodeHttpServerUrl() });
                             return;
                         }
 
@@ -1224,11 +1226,14 @@ namespace Raven.Server.ServerWide
 
             if (ShouldUpdateTopology(topology.Etag, _lastClusterTopologyIndex, out _, localClusterTopology))
             {
-                _ = ClusterRequestExecutor.UpdateTopologyAsync(
-                    new RequestExecutor.UpdateTopologyParameters(topologyNode)
-                    {
-                        DebugTag = "cluster-topology-update"
-                    });
+                if (IsClusterRequestExecutorCreated)
+                {
+                    _ = ClusterRequestExecutor.UpdateTopologyAsync(
+                        new RequestExecutor.UpdateTopologyParameters(topologyNode)
+                        {
+                            DebugTag = "cluster-topology-update"
+                        });
+                }
 
                 _lastClusterTopologyIndex = topology.Etag;
             }
@@ -2011,7 +2016,7 @@ namespace Raven.Server.ServerWide
             var editExpiration = new EditExpirationCommand(expiration, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
         }
-        
+
         public Task<(long Index, object Result)> ModifyDatabaseDataArchival(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var dataArchivalConfiguration = JsonDeserializationCluster.DataArchivalConfiguration(configurationJson);
@@ -2178,7 +2183,7 @@ namespace Raven.Server.ServerWide
 
             return await SendToLeaderAsync(command);
         }
-        
+
         public async Task<(long, object)> AddQueueSink(TransactionOperationContext context,
             string databaseName, BlittableJsonReaderObject queueSinkConfiguration, string raftRequestId)
         {
@@ -2203,7 +2208,7 @@ namespace Raven.Server.ServerWide
 
             return await SendToLeaderAsync(command);
         }
-        
+
         public async Task<(long, object)> UpdateQueueSink(TransactionOperationContext context, string databaseName,
             long id, BlittableJsonReaderObject queueSinkConfiguration, string raftRequestId)
         {
@@ -2214,7 +2219,7 @@ namespace Raven.Server.ServerWide
             {
                 var queueSink = JsonDeserializationCluster.QueueSinkConfiguration(queueSinkConfiguration);
                 queueSink.Validate(out var queueSinkErr, validateName: false, validateConnection: false);
-                
+
                 var queueConnectionString = rawRecord.QueueConnectionStrings;
                 var result = queueConnectionString != null && queueConnectionString.TryGetValue(queueSink.ConnectionStringName, out _);
 
@@ -2251,7 +2256,7 @@ namespace Raven.Server.ServerWide
 
             throw new InvalidOperationException(sb.ToString());
         }
-        
+
         private void ThrowInvalidQueueSinkConfigurationIfNecessary(BlittableJsonReaderObject queueSinkConfiguration,
             IReadOnlyCollection<string> errors)
         {

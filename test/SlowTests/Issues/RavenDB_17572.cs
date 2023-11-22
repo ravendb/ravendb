@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,11 +38,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                new JavaScriptIndexWithGroupByOnDouble().Execute(store);
-                new IndexWithGroupByOnDouble().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new JavaScriptIndexWithGroupByOnDouble().ExecuteAsync(store);
+                await new IndexWithGroupByOnDouble().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                var client = new HttpClient();
+                using var client = new HttpClient().WithConventions(store.Conventions);
                 var jsRes = await client.PostAsync($"{store.Urls[0]}/databases/{store.Database}/queries?debug=entries&addTimeSeriesNames=true&addSpatialProperties=true&metadataOnly=false&ignoreLimit=true", new StringContent($"{{\"Query\":\"from index 'JavaScriptIndexWithGroupByOnDouble'\",\"Start\":0,\"PageSize\":101,\"QueryParameters\":{{}}}}"));
                 var jsonString1 = await jsRes.Content.ReadAsStringAsync();
                 dynamic resultsObj1 = JsonConvert.DeserializeObject<ExpandoObject>(jsonString1);

@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Xunit;
@@ -76,7 +78,7 @@ namespace SlowTests.Authentication
                 "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
-                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", 
+                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
                 "admin.tombstones.state.json", "indexes.performance.json"
             };
@@ -94,7 +96,7 @@ namespace SlowTests.Authentication
                 "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
-                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", 
+                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
                 "admin.tombstones.state.json", "indexes.performance.json"
             };
@@ -113,7 +115,7 @@ namespace SlowTests.Authentication
                 "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
-                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", 
+                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
                 "etl.stats.json", "etl.progress.json", "indexes.performance.json"
             };
 
@@ -134,8 +136,9 @@ namespace SlowTests.Authentication
 
             using var store = GetDocumentStore(new Options { AdminCertificate = adminCert, ClientCertificate = userCert, ModifyDatabaseName = s => dbName });
             var requestExecutor = store.GetRequestExecutor(store.Database);
-            await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{dbName}/debug/info-package");
-            using var archive = new ZipArchive(response);
+            var response = await requestExecutor.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/databases/{dbName}/debug/info-package").WithConventions(store.Conventions));
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var archive = new ZipArchive(stream);
             var entries = archive.Entries.Select(e => e.Name).ToArray();
 
             var shouldContainButNot = shouldContain.Except(entries).ToArray();
@@ -156,8 +159,9 @@ namespace SlowTests.Authentication
             {
                 Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(store.Database);
-                await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/admin/debug/info-package");
-                using var archive = new ZipArchive(response);
+                var response = await requestExecutor.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/admin/debug/info-package").WithConventions(store.Conventions));
+                await using var stream = await response.Content.ReadAsStreamAsync();
+                using var archive = new ZipArchive(stream);
 
                 var allDatabaseEntries = DebugInfoPackageUtils.Routes.Where(route => route.TypeOfRoute == RouteInformation.RouteType.Databases)
                     .Select(route => GetFileNameWithoutExtension(route, store.Database)).ToList();
@@ -186,8 +190,9 @@ namespace SlowTests.Authentication
             {
                 Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
-                await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/admin/debug/info-package");
-                using var archive = new ZipArchive(response);
+                var response = await requestExecutor.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get,$"{store.Urls.First()}/admin/debug/info-package").WithConventions(store.Conventions));
+                await using var stream = await response.Content.ReadAsStreamAsync();
+                using var archive = new ZipArchive(stream);
 
                 var databaseEntries = DebugInfoPackageUtils.Routes
                     .Where(route => route.TypeOfRoute == RouteInformation.RouteType.Databases && OperatorAccess(route))
@@ -224,8 +229,9 @@ namespace SlowTests.Authentication
             {
                 Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
-                await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{store.Database}/debug/info-package");
-                using var archive = new ZipArchive(response);
+                var response = await requestExecutor.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get,$"{store.Urls.First()}/databases/{store.Database}/debug/info-package").WithConventions(store.Conventions));
+                await using var stream = await response.Content.ReadAsStreamAsync();
+                using var archive = new ZipArchive(stream);
 
                 var nonAdminDatabaseEntries = DebugInfoPackageUtils.Routes
                     .Where(route => route.TypeOfRoute == RouteInformation.RouteType.Databases && ReadWriteAccess(route))
@@ -255,8 +261,9 @@ namespace SlowTests.Authentication
             {
                 Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
-                await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{store.Database}/debug/info-package");
-                using var archive = new ZipArchive(response);
+                var response = await requestExecutor.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get,$"{store.Urls.First()}/databases/{store.Database}/debug/info-package").WithConventions(store.Conventions));
+                await using var stream = await response.Content.ReadAsStreamAsync();
+                using var archive = new ZipArchive(stream);
 
                 var nonAdminDatabaseEntries = DebugInfoPackageUtils.Routes
                     .Where(route => route.TypeOfRoute == RouteInformation.RouteType.Databases && DatabaseAdminAccess(route))

@@ -1,8 +1,11 @@
 ﻿using System.Linq;
+using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -19,23 +22,23 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanDeserializeDatabaseInfoForDisabledDb()
+        public async Task CanDeserializeDatabaseInfoForDisabledDb()
         {
             using (var store = GetDocumentStore())
             {
-                new UserIndex().Execute(store);
-                using (var session = store.OpenSession())
+                await new UserIndex().ExecuteAsync(store);
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User() { Name = "egor" });
-                    session.SaveChanges();
+                    await session.StoreAsync(new User() { Name = "egor" });
+                    await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
 
                 var client = store.GetRequestExecutor().HttpClient;
-                var response = client.GetAsync(store.Urls.First() + $"/databases?name={store.Database}", CancellationToken.None).Result;
-                var result = response.Content.ReadAsStringAsync().Result;
+                var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/databases?name={store.Database}").WithConventions(store.Conventions));
+                var result = await response.Content.ReadAsStringAsync();
 
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {

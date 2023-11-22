@@ -242,6 +242,8 @@ namespace Raven.Server.Documents
 
         public RequestExecutor RequestExecutor => _proxyRequestExecutor.Value;
 
+        private bool IsRequestExecutorCreated => _proxyRequestExecutor.IsValueCreated;
+
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
         public DateTime LastAccessTime;
@@ -273,7 +275,7 @@ namespace Raven.Server.Documents
         public DocumentsStorage DocumentsStorage { get; private set; }
 
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner { get; private set; }
-        
+
         public DataArchivist DataArchivist { get; private set; }
 
         public TimeSeriesPolicyRunner TimeSeriesPolicyRunner { get; private set; }
@@ -303,7 +305,7 @@ namespace Raven.Server.Documents
         public ReplicationLoader ReplicationLoader { get; internal set; }
 
         public EtlLoader EtlLoader { get; private set; }
-        
+
         public QueueSinkLoader QueueSinkLoader { get; private set; }
 
         public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
@@ -972,7 +974,7 @@ namespace Raven.Server.Documents
                 EtlLoader?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed EtlLoader");
-            
+
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing QueueSinkLoader");
             exceptionAggregator.Execute(() =>
             {
@@ -1532,13 +1534,18 @@ namespace Raven.Server.Documents
                         Database = Name
                     });
 
-                    _ = RequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode()
+                    if (IsRequestExecutorCreated)
                     {
-                        ClusterTag = _serverStore.NodeTag, Database = Name, Url = ServerStore.GetNodeHttpServerUrl()
-                    })
-                    {
-                        DebugTag = "database-topology-update"
-                    });
+                        _ = RequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode()
+                        {
+                            ClusterTag = _serverStore.NodeTag,
+                            Database = Name,
+                            Url = ServerStore.GetNodeHttpServerUrl()
+                        })
+                        {
+                            DebugTag = "database-topology-update"
+                        });
+                    }
                 }
 
                 ClientConfiguration = record.Client;
@@ -1808,10 +1815,10 @@ namespace Raven.Server.Documents
             _documentsCompression = record.DocumentsCompression;
             _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
         }
-        
+
         private Lazy<RequestExecutor> CreateRequestExecutor() =>
             new(
-                () => RequestExecutor.CreateForProxy(new[] {ServerStore.Configuration.Core.GetNodeHttpServerUrl(ServerStore.Server.WebUrl)}, Name,
+                () => RequestExecutor.CreateForProxy(new[] { ServerStore.Configuration.Core.GetNodeHttpServerUrl(ServerStore.Server.WebUrl) }, Name,
                     ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)

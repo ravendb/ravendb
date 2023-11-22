@@ -4,13 +4,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Debug.StackTrace;
@@ -33,6 +37,7 @@ using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Debugging;
+using Sparrow.Server.Extensions;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -45,6 +50,8 @@ namespace FastTests
 {
     public abstract class TestBase : ParallelTestBase
     {
+        private static readonly HttpProtocols? DefaultHttpProtocols;
+
         private static int _counter;
 
         private const string ServerName = "Raven.Tests.Core.Server";
@@ -93,6 +100,10 @@ namespace FastTests
             RavenFtpClient.ValidateAnyCertificate = true;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
+
+            DocumentConventions.DefaultHttpPooledConnectionIdleTimeout = TimeSpan.FromSeconds(20);
+            //DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+            //DefaultHttpProtocols = HttpProtocols.Http2;
 
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
@@ -253,7 +264,7 @@ namespace FastTests
                 return Servers;
             }
 
-            return new List<RavenServer> { _localServer ?? _globalServer ?? throw new ArgumentNullException(nameof(Server))};
+            return new List<RavenServer> { _localServer ?? _globalServer ?? throw new ArgumentNullException(nameof(Server)) };
         }
 
         public IEnumerable<RavenServer> GetServersInCluster(RavenServer server)
@@ -492,6 +503,9 @@ namespace FastTests
             {
                 var configuration = RavenConfiguration.CreateForServer(Guid.NewGuid().ToString(), options.CustomConfigPath);
 
+                if (DefaultHttpProtocols != null)
+                    configuration.SetSetting(RavenConfiguration.GetKey(x => x.Http.Protocols), DefaultHttpProtocols.ToString());
+
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat), "1");
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter), "3");
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout), "3");
@@ -677,6 +691,21 @@ namespace FastTests
 
                 exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
             }
+
+            var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
+            var connections = properties.GetActiveTcpConnectionsSafely() ?? Array.Empty<TcpConnectionInformation>();
+
+            var sb = new StringBuilder($"TCP Connections '{Context.UniqueTestName}' ({connections.Length}): {Environment.NewLine}");
+            var groupedConnections = connections.GroupBy(x => x.State).Select(x => new { State = x.Key, Count = x.Count() }).OrderByDescending(x => x.Count);
+            foreach (var group in groupedConnections)
+            {
+                if (group.Count == 0)
+                    continue;
+
+                sb.AppendLine($"- {group.State} - {group.Count}");
+            }
+
+            Output.WriteLine(sb.ToString());
 
             ServersForDisposal = null;
 

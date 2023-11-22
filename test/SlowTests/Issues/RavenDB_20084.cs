@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
@@ -81,7 +83,7 @@ public class RavenDB_20084 : ClusterTestBase
                 leaderServer.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
 
                 // Awaiting the next backup event to verify that the '/database' endpoint provides an updated value for the last incremental backup timestamp
-                var client = leaderStore.GetRequestExecutor().HttpClient;
+                using var client = new HttpClient().WithConventions(leaderStore.Conventions);
                 DateTime lastBackupTime = default;
                 await WaitForValueAsync(async () =>
                     {

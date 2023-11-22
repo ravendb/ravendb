@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -1819,7 +1820,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
             {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri($"{store.Urls[0]}/databases/{store.Database}/indexes/progress")
-            };
+            }.WithConventions(store.Conventions);
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync();

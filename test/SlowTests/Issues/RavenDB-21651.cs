@@ -6,9 +6,11 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Extensions;
 using Xunit.Abstractions;
 using Tests.Infrastructure;
 using Xunit;
@@ -42,7 +44,7 @@ public class RavenDB_21651 : ReplicationTestBase
 
         await Act(testUrl, leaderHost, sameHostAsLeaderButDifferentPort, leader);
     }
-    
+
     [RavenFact(RavenTestCategory.Studio | RavenTestCategory.Security)]
     public async Task CsrfProtectionForUnsecuredSingleNodeServer_WithoutCsrf()
     {
@@ -101,53 +103,53 @@ public class RavenDB_21651 : ReplicationTestBase
 
         var nodes = server.ServerStore.GetClusterTopology().AllNodes.Values.ToList();
         var differentNode = nodes.FirstOrDefault(x => !x.Contains(host));
-        
+
         // no CSRF for OPTIONS
         var clusterObserverDecisionsUrl = server.WebUrl + "/admin/cluster/observer/decisions";
 
         await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string>(), true, certificate);
-        await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string> {{"Host", host}}, true, certificate);
-        await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", EvilOrigin}}, true, certificate);
+        await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string> { { "Host", host } }, true, certificate);
+        await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", EvilOrigin } }, true, certificate);
         await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl,
-            new Dictionary<string, string> {{"Host", host}, {"Origin", sameHostAsLeaderButDifferentPort}}, true, certificate);
-        await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", ExternalTrustedOriginUrl}},
+            new Dictionary<string, string> { { "Host", host }, { "Origin", sameHostAsLeaderButDifferentPort } }, true, certificate);
+        await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", ExternalTrustedOriginUrl } },
             true, certificate);
         await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl,
-            new Dictionary<string, string> {{"Host", host}, {"Origin", ProxyServerUrl}, {OriginHeader, ProxyServerHost}}, true, certificate);
+            new Dictionary<string, string> { { "Host", host }, { "Origin", ProxyServerUrl }, { OriginHeader, ProxyServerHost } }, true, certificate);
         await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl,
-            new Dictionary<string, string> {{"Host", ProxyServerHost}, {"Origin", EvilOrigin}, {OriginHeader, server.WebUrl}}, true, certificate);
+            new Dictionary<string, string> { { "Host", ProxyServerHost }, { "Origin", EvilOrigin }, { OriginHeader, server.WebUrl } }, true, certificate);
 
         await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string>(), true, certificate);
-        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> {{"Host", host}}, true, certificate);
-        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", EvilOrigin}}, !csrfEnabled, certificate);
-        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", sameHostAsLeaderButDifferentPort}}, !csrfEnabled,
+        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> { { "Host", host } }, true, certificate);
+        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", EvilOrigin } }, !csrfEnabled, certificate);
+        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", sameHostAsLeaderButDifferentPort } }, !csrfEnabled,
             certificate);
-        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", ExternalTrustedOriginUrl}}, acceptAllowedOrigin,
+        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", ExternalTrustedOriginUrl } }, acceptAllowedOrigin,
             certificate);
         await ExecuteRequest(HttpMethod.Get, testUrl,
-            new Dictionary<string, string> {{"Host", host}, {"Origin", ProxyServerUrl}, {OriginHeader, ProxyServerHost}}, acceptProxy, certificate);
-        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> {{"Host", ProxyServerHost}, {"Origin", EvilOrigin}, {OriginHeader, server.WebUrl}},
+            new Dictionary<string, string> { { "Host", host }, { "Origin", ProxyServerUrl }, { OriginHeader, ProxyServerHost } }, acceptProxy, certificate);
+        await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> { { "Host", ProxyServerHost }, { "Origin", EvilOrigin }, { OriginHeader, server.WebUrl } },
             !csrfEnabled, certificate);
 
         var eulaUrl = server.WebUrl + "/admin/license/eula/accept";
         await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string>(), true, certificate);
-        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> {{"Host", host}}, true, certificate);
-        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", EvilOrigin}}, !csrfEnabled, certificate);
-        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", sameHostAsLeaderButDifferentPort}}, !csrfEnabled,
+        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> { { "Host", host } }, true, certificate);
+        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", EvilOrigin } }, !csrfEnabled, certificate);
+        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", sameHostAsLeaderButDifferentPort } }, !csrfEnabled,
             certificate);
-        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", ExternalTrustedOriginUrl}}, acceptAllowedOrigin,
+        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", ExternalTrustedOriginUrl } }, acceptAllowedOrigin,
             certificate);
         await ExecuteRequest(HttpMethod.Post, eulaUrl,
-            new Dictionary<string, string> {{"Host", host}, {"Origin", ProxyServerUrl}, {OriginHeader, ProxyServerHost}}, acceptProxy, certificate);
-        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> {{"Host", ProxyServerHost}, {"Origin", EvilOrigin}, {OriginHeader, server.WebUrl}},
+            new Dictionary<string, string> { { "Host", host }, { "Origin", ProxyServerUrl }, { OriginHeader, ProxyServerHost } }, acceptProxy, certificate);
+        await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> { { "Host", ProxyServerHost }, { "Origin", EvilOrigin }, { OriginHeader, server.WebUrl } },
             !csrfEnabled, certificate);
-        
+
         if (differentNode != null)
         {
             // cross-cluster
-            await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", differentNode}}, true, certificate);
-            await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", differentNode}}, true, certificate);
-            await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> {{"Host", host}, {"Origin", differentNode}}, true, certificate);
+            await ExecuteRequest(HttpMethod.Options, clusterObserverDecisionsUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", differentNode } }, true, certificate);
+            await ExecuteRequest(HttpMethod.Get, testUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", differentNode } }, true, certificate);
+            await ExecuteRequest(HttpMethod.Post, eulaUrl, new Dictionary<string, string> { { "Host", host }, { "Origin", differentNode } }, true, certificate);
         }
     }
 
@@ -156,7 +158,7 @@ public class RavenDB_21651 : ReplicationTestBase
     {
         var handler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true, 
+            ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
             SslProtocols = TcpUtils.SupportedSslProtocols,
             AllowAutoRedirect = true
         };
@@ -168,7 +170,11 @@ public class RavenDB_21651 : ReplicationTestBase
 
         using (var httpClient = new HttpClient(handler))
         {
-            HttpRequestMessage request = new() {Method = method, RequestUri = new Uri(uri)};
+            var request = new HttpRequestMessage
+            {
+                Method = method,
+                RequestUri = new Uri(uri)
+            }.WithConventions(DocumentConventions.DefaultForServer);
 
             if (headers != null)
             {
