@@ -55,9 +55,14 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
         _partEtags = new List<PartETag>();
     }
 
-    public void UploadPart(Stream stream, long size)
+    public void UploadPart(Stream stream)
     {
-        AsyncHelpers.RunSync(() => UploadPartAsync(stream, size));
+        AsyncHelpers.RunSync(() => UploadPartAsync(stream));
+    }
+
+    public async Task UploadPartAsync(Stream stream)
+    {
+        await UploadPartAsync(stream, stream.Length);
     }
 
     public async Task UploadPartAsync(Stream stream, long size)

@@ -38,17 +38,15 @@ public class AzureMultiPartUploader : IMultiPartUploader
         return Task.CompletedTask;
     }
 
-    public void UploadPart(Stream stream, long size)
+    public void UploadPart(Stream stream)
     {
-        AsyncHelpers.RunSync(() => UploadPartAsync(stream, size));
+        AsyncHelpers.RunSync(() => UploadPartAsync(stream));
     }
 
-    public async Task UploadPartAsync(Stream stream, long size)
+    public async Task UploadPartAsync(Stream stream)
     {
         var blockID = Convert.ToBase64String(BitConverter.GetBytes(_partNumber++));
         _base64BlockIds.Add(blockID);
-
-        stream.SetLength(size); // there is no upload size parameter that we can use in the Azure API (unlike AWS)
 
         var uploadedSoFar = _progress.UploadProgress.UploadedInBytes;
         await _blockBlobClient.StageBlockAsync(blockID, stream, new BlockBlobStageBlockOptions
