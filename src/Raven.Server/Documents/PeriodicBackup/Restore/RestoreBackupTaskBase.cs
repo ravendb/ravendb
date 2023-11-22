@@ -349,7 +349,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             {
                                 await RestoreFromSmugglerFile(onProgress, database, firstFile, context, result);
                                 await HandleSubscriptionFromSnapshot(filesToRestore, restoreSettings.Subscriptions, databaseName, database);
-                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result, restoreSettings.Subscriptions);
+                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result, new SnapshotDatabaseDestination(database, restoreSettings.Subscriptions));
 
                                 result.SnapshotRestore.Processed = true;
 
@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             }
                             else
                             {
-                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
+                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result, new DatabaseDestination(database));
                             }
 
                             DisableOngoingTasksIfNeeded(databaseRecord);
@@ -623,12 +623,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                     var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
                                     json.BlittableValidation();
 
-                                        restoreSettings = JsonDeserializationServer.RestoreSettings(json);
-                                        // It's necessary to modify the subscriptionId to prevent collisions with the current database index.
-                                        //we will handle subscription with smuggler
-                                        RemoveSubscriptionFromDatabaseValues(restoreSettings);
-                                        restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
-                                        DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
+                                    restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                                    // It's necessary to modify the subscriptionId to prevent collisions with the current database index.
+                                    //we will handle subscription with smuggler
+                                    RemoveSubscriptionFromDatabaseValues(restoreSettings);
+                                    restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
+                                    DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
 
                                     if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
                                         throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
@@ -688,8 +688,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected async Task SmugglerRestore(DocumentDatabase database, List<string> filesToRestore, DocumentsOperationContext context,
-            DatabaseRecord databaseRecord, Action<IOperationProgress> onProgress, RestoreResult result,
-            Dictionary<string, SubscriptionState> subscriptions = null)
+            DatabaseRecord databaseRecord, Action<IOperationProgress> onProgress, RestoreResult result, DatabaseDestination lastFileDestination)
         {
             Debug.Assert(onProgress != null);
 
@@ -753,8 +752,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var lastFilePath = GetBackupPath(lastFileName);
 
-            var des = (subscriptions == null || subscriptions.Count == 0) ? destination : new SnapshotDatabaseDestination(database, subscriptions);
-            await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, des , options, isLastFile: true,
+            await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, lastFileDestination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
                     if (this.RestoreFromConfiguration.SkipIndexes)

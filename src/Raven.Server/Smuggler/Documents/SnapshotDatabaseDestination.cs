@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -13,10 +12,12 @@ namespace Raven.Server.Smuggler.Documents
     public class SnapshotDatabaseDestination : DatabaseDestination
     {
         private readonly Dictionary<string, SubscriptionState> _subscriptions;
+        private readonly DocumentDatabase _database;
 
         public SnapshotDatabaseDestination(DocumentDatabase database, Dictionary<string, SubscriptionState> subscriptions, CancellationToken token = default) : base(database, token)
         {
             _subscriptions = subscriptions;
+            _database = database;
         }
 
         public override ISubscriptionActions Subscriptions()
@@ -32,8 +33,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _subscriptions = subscriptions;
             }
-
-            public override async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
+            public override PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
             {
                 if (_subscriptions.TryGetValue(SubscriptionState.Prefix + subscriptionState.SubscriptionName, out SubscriptionState oldState))
                 {
@@ -41,16 +41,20 @@ namespace Raven.Server.Smuggler.Documents
                     if (distance > 0)
                         subscriptionState.ChangeVectorForNextBatchStartingPoint = oldState.ChangeVectorForNextBatchStartingPoint;
                 }
+                else
+                {
+                    subscriptionState.ChangeVectorForNextBatchStartingPoint = null;
+                }
 
                 var command = new PutSubscriptionCommand(Database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
                     SubscriptionName = subscriptionState.SubscriptionName,
-                    //After restore/export , subscription will start from the start
                     InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint,
                     Disabled = subscriptionState.Disabled
 
                 };
-                await WriteSubscriptionInternalAsync(command);
+
+                return command;
             }
         }
     }
