@@ -310,6 +310,9 @@ namespace FastTests.Sparrow
                     var result = Hashing.XXHash64.CalculateInline(values.AsSpan().Slice(0, i), seed);
 
                     Assert.Equal(expected, result);
+
+                    result = Hashing.XXHash64.CalculateInline(valuePtr, (ulong)i, seed);
+                    Assert.Equal(expected, result);
                 }
             }
         }

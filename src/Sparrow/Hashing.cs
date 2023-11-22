@@ -284,6 +284,12 @@ namespace Sparrow
         /// <remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
         internal static class XXHash64
         {
+            // RavenDB-21728: There are 2 different methods here, one uses span which is limited
+            // to the size of the memory we can use. While it's performance characteristics are
+            // slightly better because of the ability to avoid pointer fixation, and the JIT
+            // exploiting specific optimizations, we cannot use it when we expect a length that is not
+            // of integer size. 
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static ulong CalculateInline(ReadOnlySpan<byte> source, ulong seed = 0)
             {
@@ -384,16 +390,93 @@ namespace Sparrow
                 return h64;
             }
 
-
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static ulong CalculateInline(byte* buffer, ulong len, ulong seed = 0)
             {
-                return CalculateInline(new ReadOnlySpan<byte>(buffer, (int)len), seed);
+                // RavenDB-21728: This version of hashing is more general and is able to handle the 'unlikely' case
+                // of having to hash beyond the int.MaxValue size supported by the Span implementation therefore it can
+                // only accept a pointer and a ulong as length. 
+
+                ulong h64;
+
+                byte* bEnd = buffer + len;
+
+                if (len >= 32)
+                {
+                    byte* limit = bEnd - 32;
+
+                    ulong v1 = seed + XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_2;
+                    ulong v2 = seed + XXHash64Constants.PRIME64_2;
+                    ulong v3 = seed + 0;
+                    ulong v4 = seed - XXHash64Constants.PRIME64_1;
+
+                    do
+                    {
+                        v1 = Bits.RotateLeft64(v1 + ((ulong*)buffer)[0] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                        v2 = Bits.RotateLeft64(v2 + ((ulong*)buffer)[1] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                        v3 = Bits.RotateLeft64(v3 + ((ulong*)buffer)[2] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                        v4 = Bits.RotateLeft64(v4 + ((ulong*)buffer)[3] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+
+                        buffer += 4 * sizeof(ulong);
+                    }
+                    while (buffer <= limit);
+
+                    h64 = Bits.RotateLeft64(v1, 1) + Bits.RotateLeft64(v2, 7) + Bits.RotateLeft64(v3, 12) + Bits.RotateLeft64(v4, 18);
+
+                    v1 = Bits.RotateLeft64(v1 * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                    v2 = Bits.RotateLeft64(v2 * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                    v3 = Bits.RotateLeft64(v3 * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                    v4 = Bits.RotateLeft64(v4 * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+
+                    h64 = (h64 ^ v1) * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
+                    h64 = (h64 ^ v2) * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
+                    h64 = (h64 ^ v3) * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
+                    h64 = (h64 ^ v4) * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
+                }
+                else
+                {
+                    h64 = seed + XXHash64Constants.PRIME64_5;
+                }
+
+                h64 += (ulong)len;
+
+
+                while (buffer + 8 <= bEnd)
+                {
+                    var k1 = Bits.RotateLeft64(*((ulong*)buffer) * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                    h64 = Bits.RotateLeft64(h64 ^ k1, 27) * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
+                    buffer += 8;
+                }
+
+                if (buffer + 4 <= bEnd)
+                {
+                    h64 = Bits.RotateLeft64(h64 ^ (*(uint*)buffer * XXHash64Constants.PRIME64_1), 23) * XXHash64Constants.PRIME64_2 + XXHash64Constants.PRIME64_3;
+                    buffer += 4;
+                }
+
+                while (buffer < bEnd)
+                {
+                    h64 = Bits.RotateLeft64(h64 ^ (*buffer * XXHash64Constants.PRIME64_5), 11) * XXHash64Constants.PRIME64_1;
+                    buffer++;
+                }
+
+                h64 ^= h64 >> 33;
+                h64 *= XXHash64Constants.PRIME64_2;
+                h64 ^= h64 >> 29;
+                h64 *= XXHash64Constants.PRIME64_3;
+                h64 ^= h64 >> 32;
+
+                return h64;
             }
 
             public static ulong Calculate(byte* buffer, ulong len, ulong seed = 0)
             {
-                return CalculateInline(new ReadOnlySpan<byte>(buffer, (int)len), seed);
+                return CalculateInline(buffer, len, seed);
+            }
+
+            public static ulong Calculate(byte* buffer, int len, ulong seed = 0)
+            {
+                return CalculateInline(new ReadOnlySpan<byte>(buffer, len), seed);
             }
 
             public static ulong Calculate(string value, Encoding encoder, ulong seed = 0)
