@@ -19,7 +19,7 @@ public class RavenDB_21588 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void TimeSpanInBetweenQuery(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -32,8 +32,8 @@ public class RavenDB_21588 : RavenTestBase
         }
        
         using var session = store.OpenSession();
-        var timeSpan2 = new TimeSpan(9, 0, 0);
-        var timeSpan1 = new TimeSpan(8, 0, 0);
+        var timeSpan2 = new TimeSpan(0, 9, 0, 0, 0, 0);
+        var timeSpan1 = new TimeSpan(0, 9, 0, 0, 0, 0);
 
         var res1 = database.Where(p => p.TimeSpan >= timeSpan1 && p.TimeSpan <= timeSpan2).ToList();
         
@@ -45,7 +45,7 @@ public class RavenDB_21588 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void TimeSpanInGteQuery(Options options)
     {
         using var store = GetDocumentStore(options);
