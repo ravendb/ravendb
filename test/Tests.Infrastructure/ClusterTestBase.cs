@@ -1035,9 +1035,11 @@ namespace Tests.Infrastructure
             }
 
             if (numberOfInstances != replicationFactor)
-                throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances}
-                                                    out of {replicationFactor}{Environment.NewLine}
-                                                    Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster (members) urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentCluster.Select(x => x.WebUrl))}");
+                throw new InvalidOperationException($"Couldn't create the db on all nodes, just on {numberOfInstances} out of {replicationFactor}{Environment.NewLine}" +
+                                                    $"Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))};{Environment.NewLine}" +
+                                                    $"Current cluster (members) urls are : {string.Join(",", urls)};{Environment.NewLine}" +
+                                                    $"The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))};{Environment.NewLine}" +
+                                                    $"current servers are: {string.Join(",", currentCluster.Select(x => x.WebUrl))}");
             return (databaseResult, relevantServers.ToList());
         }
 
