@@ -753,7 +753,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var lastFilePath = GetBackupPath(lastFileName);
 
-            await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
+            var des = (subscriptions == null || subscriptions.Count == 0) ? destination : new SnapshotDatabaseDestination(database, subscriptions);
+            await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, des , options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
                     if (this.RestoreFromConfiguration.SkipIndexes)
@@ -814,27 +815,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-                },
-                onSubscriptionAction: (action, subscriptionState) =>
-                {
-                    //If we obtain a subscription from a snapshot, it's necessary to persist the subscription state.
-                    //This involves determining the ChangeVectorForNextBatchStartingPoint,
-                    //which should be set to the smallest value between the one from the snapshot and the one obtained from the smuggler.
-                    //When we have incremental snapshot, and we have information on a subscription only from smuggler, we don't save the state.
-
-                    if (subscriptions == null || subscriptions.Count == 0)
-                        subscriptionState.ChangeVectorForNextBatchStartingPoint = null;
-                    else
-                    {
-                        if (subscriptions.TryGetValue(SubscriptionState.Prefix + subscriptionState.SubscriptionName, out SubscriptionState oldState))
-                        {
-                            var distance = ChangeVectorUtils.Distance(subscriptionState.ChangeVectorForNextBatchStartingPoint, oldState.ChangeVectorForNextBatchStartingPoint);
-                            if (distance > 0)
-                                subscriptionState.ChangeVectorForNextBatchStartingPoint = oldState.ChangeVectorForNextBatchStartingPoint;
-                        }
-                    }
-
-                    return action.WriteSubscriptionWithStateAsync(subscriptionState);
                 });
 
             result.Files.CurrentFileName = null;
@@ -971,8 +951,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             string filePath, DocumentsOperationContext context,
             DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options, bool isLastFile,
             Action<IndexDefinitionAndType> onIndexAction = null,
-            Action<DatabaseRecord> onDatabaseRecordAction = null,
-            Func<ISubscriptionActions, SubscriptionState, ValueTask> onSubscriptionAction = null)
+            Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
             await using (var fileStream = await GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
@@ -984,7 +963,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction,
-                    OnSubscriptionAction = onSubscriptionAction,
                     BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental
                 };
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
