@@ -56,7 +56,7 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class DatabaseDestination : ISmugglerDestination
     {
-        protected readonly DocumentDatabase _database;
+        private readonly DocumentDatabase _database;
         private readonly CancellationToken _token;
         internal DuplicateDocsHandler _duplicateDocsHandler;
 
@@ -2192,7 +2192,7 @@ namespace Raven.Server.Smuggler.Documents
                 await SendCommandsAsync();
             }
 
-            public virtual async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
+            public virtual PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
             {
                 var command = new PutSubscriptionCommand(Database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
@@ -2200,21 +2200,20 @@ namespace Raven.Server.Smuggler.Documents
                     //After restore/export , subscription will start from the start
                     InitialChangeVector = null
                 };
-                await WriteSubscriptionInternalAsync(command);
+                return command;
             }
 
-            public async ValueTask WriteSubscriptionInternalAsync(PutSubscriptionCommand command)
+            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
             {
                 const int batchSize = 1024;
 
-                _subscriptionCommands.Add(command);
+                _subscriptionCommands.Add(CreatePutSubscriptionCommand(subscriptionState));
 
                 if (_subscriptionCommands.Count < batchSize)
                     return;
 
                 await SendCommandsAsync();
             }
-
 
             private async ValueTask SendCommandsAsync()
             {
