@@ -404,6 +404,15 @@ namespace Raven.Server.Documents
                 nameof(str));
         }
 
+        public static void ThrowDocumentIdTooBig(string id, string changeVector)
+        {
+            throw new ArgumentException(
+                $"Revision change vector cannot exceed {MaxIdSize} bytes, but the change vector was {Encoding.GetByteCount(changeVector)} bytes. " +
+                $"The invalid change vector for revision '{id}' is '{changeVector}'.{Environment.NewLine}" +
+                $"For more details visit https://ravendb.net/l/ZH9AK4/5.4.{Environment.NewLine}",
+                nameof(changeVector));
+        }
+
         public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
         {
             return GetLowerIdSliceAndStorageKey(context, str, out var _, out strSlice);
