@@ -550,7 +550,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     _command = new MergedBatchPutCommand(_database, _buildType, _log,
-                        _missingDocumentsForRevisions, _documentIdsOfMissingAttachments) { IsRevision = _isRevision, };
+                        _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
+                    { IsRevision = _isRevision, };
 
                     if (_throwOnCollectionMismatchError == false)
                         _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
@@ -1381,7 +1382,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring Indexes History configuration from smuggler");
-                    
+
                     foreach (var newIndexHistory in databaseRecord.IndexesHistory)
                     {
                         if (currentDatabaseRecord.IndexesHistory.ContainsKey(newIndexHistory.Key))
@@ -1896,7 +1897,7 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove,  null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                         }
 
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -2192,7 +2193,7 @@ namespace Raven.Server.Smuggler.Documents
                 await SendCommandsAsync();
             }
 
-            public virtual PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
+            protected virtual PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
             {
                 var command = new PutSubscriptionCommand(Database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
@@ -2324,7 +2325,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _cmd.AddToReturn(data);
             }
-            
+
             private async ValueTask HandleBatchOfTimeSeriesIfNecessaryAsync()
             {
                 if (_segmentsSize < _maxBatchSize)
