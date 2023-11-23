@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
@@ -8,5 +9,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         public OngoingTasksHandlerProcessorForUpdatePeriodicBackup([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
+
+        protected override BackupConfiguration GetBackupConfiguration() => RequestHandler.Database.Configuration.Backup;
     }
 }

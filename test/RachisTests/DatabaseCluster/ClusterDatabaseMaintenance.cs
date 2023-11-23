@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -21,12 +22,10 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using SlowTests.Rolling;
 using Sparrow.Json;
@@ -203,7 +202,7 @@ namespace RachisTests.DatabaseCluster
                     await session.StoreAsync(new User(), "users/2");
                     await session.SaveChangesAsync();
                 }
-                
+
                 val = await WaitForValueAsync(async () => await GetMembersCount(store), 1);
                 Assert.Equal(1, val);
 
@@ -410,24 +409,24 @@ namespace RachisTests.DatabaseCluster
             var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, shouldRunInMemory: false, watcherCluster: true);
             var nonLeader = cluster.Nodes.First(x => x.ServerStore.NodeTag != cluster.Leader.ServerStore.NodeTag).ServerStore.NodeTag;
             using (var store = GetDocumentStore(new Options
-                   {
-                       ReplicationFactor = 1,
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Topology = new DatabaseTopology()
-                           {
-                               Members = new List<string>() {nonLeader}
-                           };
-                       },
-                       Server = cluster.Leader,
-                   }))
+            {
+                ReplicationFactor = 1,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Topology = new DatabaseTopology()
+                    {
+                        Members = new List<string>() { nonLeader }
+                    };
+                },
+                Server = cluster.Leader,
+            }))
             {
                 var re = store.GetRequestExecutor();
                 await WaitAndAssertForValueAsync(() =>
                 {
                     return re.Topology?.Nodes.Count == 1;
                 }, true);
-                
+
                 var otherNode = cluster.Nodes.Single(x => x.ServerStore.NodeTag != nonLeader).ServerStore.NodeTag;
 
                 //prevent leader from promoting the replica - should stay promotable
@@ -493,7 +492,7 @@ namespace RachisTests.DatabaseCluster
                     record = GetDatabaseRecord(store);
                     return record.Sharding.Shards[promotableShard].Count == 1 && record.Sharding.Shards[promotableShard].Promotables.Count == 1;
                 }, true);
-                
+
                 // force update the shard's executor topology
                 var orchestrator = Sharding.GetOrchestratorInCluster(store.Database, cluster.Nodes);
                 foreach (var shardNumber in record.Sharding.Shards.Keys)
@@ -501,7 +500,7 @@ namespace RachisTests.DatabaseCluster
                     var orchestratorRequestExecutor = orchestrator.ShardExecutor.GetRequestExecutorAt(shardNumber);
                     await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode() { ClusterTag = orchestrator.ServerStore.NodeTag, Database = ShardHelper.ToShardName(orchestrator.DatabaseName, shardNumber), Url = orchestrator.ServerStore.GetNodeHttpServerUrl() }));
                 }
-                
+
                 var error = await Assert.ThrowsAnyAsync<Exception>(async () =>
                 {
                     await store.Maintenance.SendAsync(new GetEssentialStatisticsOperation("test"));
@@ -524,7 +523,7 @@ namespace RachisTests.DatabaseCluster
                 var promotableShard = 2;
                 var nodeToRemove = record.Sharding.Shards[promotableShard].AllNodes.Single();
                 var nodeForPromotable = cluster.Nodes.Single(x => x.ServerStore.NodeTag != nodeToRemove).ServerStore.NodeTag;
-                
+
                 //prevent leader from promoting the replica - should stay promotable
                 cluster.Leader.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventNodePromotion = true;
 
@@ -548,11 +547,11 @@ namespace RachisTests.DatabaseCluster
                     var orchestratorRequestExecutor = orchestrator.ShardExecutor.GetRequestExecutorAt(promotableShard);
                     await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode() { ClusterTag = orchestrator.ServerStore.NodeTag, Database = ShardHelper.ToShardName(orchestrator.DatabaseName, promotableShard), Url = orchestrator.ServerStore.GetNodeHttpServerUrl() }));
                 }
-                
+
                 await store.Maintenance.ForNode(nodeForPromotable).ForShardWithProxy(promotableShard).SendAsync(new GetIndexesProgressOperation(nodeTag: nodeForPromotable));
             }
         }
-        
+
         [Fact]
         public async Task DontMoveToRehabOnNoChangeAfterTimeout()
         {
@@ -1052,6 +1051,59 @@ namespace RachisTests.DatabaseCluster
                 record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
                 Assert.Null(record);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task TakingIntoAccountMoveToRehabGraceTimeConfiguration()
+        {
+            const int moveToRehabGraceTimeInSec = 60;
+            var databaseName = GetDatabaseName();
+            var settings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = moveToRehabGraceTimeInSec.ToString(),
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1"
+            };
+
+            var (servers, leader) = await CreateRaftCluster(numberOfNodes: 3, shouldRunInMemory: false, customSettings: settings);
+            using (var leaderStore = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName, }.Initialize())
+            {
+                var topology = new DatabaseTopology { Members = new List<string> { "A", "B", "C" }, DynamicNodesDistribution = true };
+
+                var (index, _) = await CreateDatabaseInCluster(new DatabaseRecord { DatabaseName = databaseName, Topology = topology }, replicationFactor: 3,
+                    leader.WebUrl);
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
+
+                using (var session = leaderStore.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+                var databaseTopology = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(3, databaseTopology.AllNodes.Count());
+                Assert.Equal(0, databaseTopology.Promotables.Count);
+                Assert.True(await WaitForDocumentInClusterAsync<User>(topology, databaseName, "users/1", null, TimeSpan.FromSeconds(30)));
+
+                var serverA = servers.Single(s => s.ServerStore.NodeTag == "A");
+
+                await Task.Delay(TimeSpan.FromSeconds(moveToRehabGraceTimeInSec)); // we need to take into account database uptime
+
+                var sw = Stopwatch.StartNew();
+                await DisposeServerAndWaitForFinishOfDisposalAsync(serverA);
+
+                var disposeTime = sw.Elapsed;
+
+                var count = await WaitForValueAsync(async () => await GetRehabCount(leaderStore, databaseName),
+                    expectedVal: 1,
+                    timeout: (int)TimeSpan.FromSeconds(moveToRehabGraceTimeInSec * 2).TotalMilliseconds);
+
+                sw.Stop();
+
+                Assert.Equal(1, count);
+                Assert.True(sw.Elapsed > TimeSpan.FromSeconds(moveToRehabGraceTimeInSec) - disposeTime,
+                    userMessage: $"The grace period was not considered and node 'A' went into rehab after {sw.Elapsed}, " +
+                                 $"but grace period is '{moveToRehabGraceTimeInSec}' sec (disposing of the node took '{disposeTime}').");
             }
         }
 
