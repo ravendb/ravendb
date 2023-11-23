@@ -63,7 +63,7 @@ from ""Orders"" update {
                 
                 index.Execute(store);
                 
-                Indexes.WaitForIndexing(store);
+                Indexes.WaitForIndexing(store, allowErrors: true);
 
                 var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new [] {index.IndexName}));
 
