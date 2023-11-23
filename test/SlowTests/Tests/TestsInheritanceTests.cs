@@ -15,7 +15,6 @@ using Raven.TestDriver;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static SlowTests.Issues.RavenDB_13335;
 
 namespace SlowTests.Tests
 {

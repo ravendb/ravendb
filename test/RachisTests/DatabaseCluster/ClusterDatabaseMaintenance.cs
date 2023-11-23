@@ -112,7 +112,7 @@ namespace RachisTests.DatabaseCluster
                     session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
-                
+
                 Indexes.WaitForIndexing(store);
 
                 var database = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -220,9 +220,9 @@ namespace RachisTests.DatabaseCluster
             var clusterSize = 2;
             var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, shouldRunInMemory: false, watcherCluster: true);
             using (var store = GetDocumentStore(new Options
-                   {
-                       ReplicationFactor = 2,
-                       Server = cluster.Nodes[0],
+            {
+                ReplicationFactor = 2,
+                Server = cluster.Nodes[0],
             }))
             {
                 var watcher = cluster.Nodes[1];
@@ -230,7 +230,7 @@ namespace RachisTests.DatabaseCluster
 
                 //prevent leader from promoting any rehabs
                 leader.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventNodePromotion = true;
-                
+
                 var re = store.GetRequestExecutor();
                 await WaitAndAssertForValueAsync(() =>
                 {
@@ -265,7 +265,7 @@ namespace RachisTests.DatabaseCluster
                 await re.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
 
                 await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
-                
+
                 await WaitAndAssertForValueAsync(() =>
                 {
                     return re.Topology?.Nodes.Count(x => x.ServerRole == ServerNode.Role.Rehab);
@@ -290,14 +290,14 @@ namespace RachisTests.DatabaseCluster
 
             var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
             using (var store = GetDocumentStore(new Options
-                   {
-                       ReplicationFactor = 3,
-                       Server = cluster.Leader,
-                       ModifyDocumentStore = s => s.Conventions = new DocumentConventions
-                       {
-                           DisableTopologyUpdates = true
-                       }
-                   }))
+            {
+                ReplicationFactor = 3,
+                Server = cluster.Leader,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }))
             {
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
                 Assert.Equal(3, val);
@@ -336,7 +336,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     mre.Set();
                 }
-                
+
                 val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
                 Assert.Equal(3, val);
             }
@@ -347,7 +347,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             DebuggerAttachedTimeout.DisableLongTimespan = true;
-            
+
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MaxChangeVectorDistance)] = "1";
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "50";
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.OnErrorDelayTime)] = "15";
@@ -355,10 +355,10 @@ namespace RachisTests.DatabaseCluster
 
             var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
             using (var store = GetDocumentStore(new Options
-                   {
-                       ReplicationFactor = 3, 
-                       Server = cluster.Leader,
-                   }))
+            {
+                ReplicationFactor = 3,
+                Server = cluster.Leader,
+            }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -844,7 +844,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenFact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task TakingIntoAccountMoveToRehabGraceTimeConfiguration()
         {
             const int moveToRehabGraceTimeInSec = 60;
@@ -1168,7 +1168,7 @@ namespace RachisTests.DatabaseCluster
                     dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                     return dbToplogy.Rehabs.Count;
                 }, 1, interval: 500);
-                
+
                 Assert.True(1 == rehabs, $"topology: {dbToplogy}");
                 Assert.Equal(groupSize - 1, dbToplogy.Members.Count);
             }
