@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System
 
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
                 BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
-                BackupConfigurationHelper.AssertBackupConfiguration(configuration);
+                BackupConfigurationHelper.AssertBackupConfiguration(configuration, ServerStore.Configuration.Backup);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
 
                 var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configuration, GetRaftRequestIdFromQuery());
