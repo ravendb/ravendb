@@ -10,9 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -25,7 +23,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
-using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -348,8 +345,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             if (snapshotRestore)
                             {
                                 await RestoreFromSmugglerFile(onProgress, database, firstFile, context, result);
-                                await HandleSubscriptionFromSnapshot(filesToRestore, restoreSettings.Subscriptions, databaseName, database);
-                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result, new SnapshotDatabaseDestination(database, restoreSettings.Subscriptions));
+                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
 
                                 result.SnapshotRestore.Processed = true;
 
@@ -377,7 +373,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             }
                             else
                             {
-                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result, new DatabaseDestination(database));
+                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
                             }
 
                             DisableOngoingTasksIfNeeded(databaseRecord);
@@ -494,42 +490,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private static void RemoveSubscriptionFromDatabaseValues(RestoreSettings restoreSettings)
-        {
-            foreach (var keyValue in restoreSettings.DatabaseValues)
-            {
-                if (keyValue.Key.StartsWith(SubscriptionState.Prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                    restoreSettings.Subscriptions.Add(keyValue.Key, subscriptionState);
-                }
-            }
-
-            foreach (var keyValue in restoreSettings.Subscriptions)
-            {
-                restoreSettings.DatabaseValues.Remove(keyValue.Key);
-            }
-        }
-
-        private static async Task HandleSubscriptionFromSnapshot(List<string> filesToRestore, Dictionary<string, SubscriptionState> subscription, 
-            string databaseName, DocumentDatabase database)
-        {
-            //When dealing with multiple files, we will manage subscriptions using the smuggler.
-            if (filesToRestore.Count > 0)
-                return;
-
-            foreach (var (name, state) in subscription)
-            {
-                var command = new PutSubscriptionCommand(databaseName, state.Query, state.MentorNode, RaftIdGenerator.DontCareId)
-                {
-                    Disabled = state.Disabled,
-                    InitialChangeVector = state.ChangeVectorForNextBatchStartingPoint,
-                };
-                //There's no need to wait for the execution of this command at this point since we will wait for subsequent commands later.
-                await database.ServerStore.SendToLeaderAsync(command);
-            }
-        }
-
         private async Task SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
             BlittableJsonReaderObject> databaseValues, SmugglerResult restoreResult, Action<IOperationProgress> onProgress)
         {
@@ -624,9 +584,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                     json.BlittableValidation();
 
                                     restoreSettings = JsonDeserializationServer.RestoreSettings(json);
-                                    // It's necessary to modify the subscriptionId to prevent collisions with the current database index.
-                                    //we will handle subscription with smuggler
-                                    RemoveSubscriptionFromDatabaseValues(restoreSettings);
+
                                     restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
                                     DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
 
@@ -688,7 +646,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected async Task SmugglerRestore(DocumentDatabase database, List<string> filesToRestore, DocumentsOperationContext context,
-            DatabaseRecord databaseRecord, Action<IOperationProgress> onProgress, RestoreResult result, DatabaseDestination lastFileDestination)
+            DatabaseRecord databaseRecord, Action<IOperationProgress> onProgress, RestoreResult result)
         {
             Debug.Assert(onProgress != null);
 
@@ -751,8 +709,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             onProgress.Invoke(result.Progress);
 
             var lastFilePath = GetBackupPath(lastFileName);
-
-            await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, lastFileDestination, options, isLastFile: true,
+            await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
                     if (this.RestoreFromConfiguration.SkipIndexes)

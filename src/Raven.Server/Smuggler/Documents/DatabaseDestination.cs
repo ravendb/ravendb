@@ -147,7 +147,7 @@ namespace Raven.Server.Smuggler.Documents
             return new CounterActions(_database, result);
         }
 
-        public virtual ISubscriptionActions Subscriptions()
+        public ISubscriptionActions Subscriptions()
         {
             return new SubscriptionActions(_database);
         }
@@ -550,8 +550,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     _command = new MergedBatchPutCommand(_database, _buildType, _log,
-                        _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
-                    { IsRevision = _isRevision, };
+                        _missingDocumentsForRevisions, _documentIdsOfMissingAttachments) { IsRevision = _isRevision, };
 
                     if (_throwOnCollectionMismatchError == false)
                         _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
@@ -1382,7 +1381,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring Indexes History configuration from smuggler");
-
+                    
                     foreach (var newIndexHistory in databaseRecord.IndexesHistory)
                     {
                         if (currentDatabaseRecord.IndexesHistory.ContainsKey(newIndexHistory.Key))
@@ -1897,7 +1896,7 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove,  null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                         }
 
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -2175,14 +2174,14 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        protected class SubscriptionActions : ISubscriptionActions
+        private class SubscriptionActions : ISubscriptionActions
         {
-            protected readonly DocumentDatabase Database;
+            private readonly DocumentDatabase _database;
             private readonly List<PutSubscriptionCommand> _subscriptionCommands = new List<PutSubscriptionCommand>();
 
             public SubscriptionActions(DocumentDatabase database)
             {
-                Database = database;
+                _database = database;
             }
 
             public async ValueTask DisposeAsync()
@@ -2193,22 +2192,16 @@ namespace Raven.Server.Smuggler.Documents
                 await SendCommandsAsync();
             }
 
-            protected virtual PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
-            {
-                var command = new PutSubscriptionCommand(Database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
-                {
-                    SubscriptionName = subscriptionState.SubscriptionName,
-                    //After restore/export , subscription will start from the start
-                    InitialChangeVector = null
-                };
-                return command;
-            }
-
             public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
             {
                 const int batchSize = 1024;
 
-                _subscriptionCommands.Add(CreatePutSubscriptionCommand(subscriptionState));
+                _subscriptionCommands.Add(new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
+                {
+                    SubscriptionName = subscriptionState.SubscriptionName,
+                    //After restore/export , subscription will start from the start
+                    InitialChangeVector = null
+                });
 
                 if (_subscriptionCommands.Count < batchSize)
                     return;
@@ -2218,7 +2211,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private async ValueTask SendCommandsAsync()
             {
-                await Database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands, RaftIdGenerator.DontCareId));
+                await _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands, RaftIdGenerator.DontCareId));
                 _subscriptionCommands.Clear();
             }
         }
@@ -2325,7 +2318,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _cmd.AddToReturn(data);
             }
-
+            
             private async ValueTask HandleBatchOfTimeSeriesIfNecessaryAsync()
             {
                 if (_segmentsSize < _maxBatchSize)
