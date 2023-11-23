@@ -4,6 +4,7 @@ using System.Net.WebSockets;
 using Raven.Client;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Extensions
 {
@@ -24,6 +25,20 @@ namespace Raven.Server.Extensions
         }
 
         public static HttpClient WithConventions(this HttpClient httpClient, DocumentConventions conventions)
+        {
+            if (httpClient == null)
+                throw new ArgumentNullException(nameof(httpClient));
+            if (conventions == null)
+                throw new ArgumentNullException(nameof(conventions));
+
+            httpClient.DefaultRequestVersion = conventions.HttpVersion;
+            if (conventions.HttpVersionPolicy.HasValue)
+                httpClient.DefaultVersionPolicy = conventions.HttpVersionPolicy.Value;
+
+            return httpClient;
+        }
+
+        public static RavenHttpClient WithConventions(this RavenHttpClient httpClient, DocumentConventions conventions)
         {
             if (httpClient == null)
                 throw new ArgumentNullException(nameof(httpClient));

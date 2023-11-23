@@ -68,13 +68,7 @@ namespace Raven.Server.Smuggler.Migration
                     domain);
             }
 
-            _httpClient = new RavenHttpClient(httpClientHandler)
-            {
-                DefaultRequestVersion = DocumentConventions.DefaultForServer.HttpVersion
-            };
-
-            if (DocumentConventions.DefaultForServer.HttpVersionPolicy.HasValue)
-                _httpClient.DefaultVersionPolicy = DocumentConventions.DefaultForServer.HttpVersionPolicy.Value;
+            _httpClient = new RavenHttpClient(httpClientHandler).WithConventions(DocumentConventions.DefaultForServer);
         }
 
         public async Task UpdateBuildInfoIfNeeded()
