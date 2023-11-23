@@ -587,7 +587,7 @@ namespace FastTests
                 {
                     server.Dispose();
                     throw;
-                } 
+                }
             }
         }
 
@@ -692,6 +692,7 @@ namespace FastTests
                 exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
             }
 
+#if DEBUG2
             var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
             var connections = properties.GetActiveTcpConnectionsSafely() ?? Array.Empty<TcpConnectionInformation>();
 
@@ -706,6 +707,7 @@ namespace FastTests
             }
 
             Output.WriteLine(sb.ToString());
+#endif
 
             ServersForDisposal = null;
 
