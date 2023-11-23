@@ -21,8 +21,7 @@ public abstract class DatabaseSubscriptionActionsBase<T> : ISubscriptionActions
         _serverStore = serverStore;
         _name = name;
     }
-
-    public abstract T CreatePutSubscriptionCommand(SubscriptionState subscriptionState);
+    protected abstract T CreatePutSubscriptionCommand(SubscriptionState subscriptionState);
 
     protected abstract ValueTask SendCommandsAsync();
 
