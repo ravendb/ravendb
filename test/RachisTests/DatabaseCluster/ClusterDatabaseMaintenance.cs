@@ -21,10 +21,12 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using SlowTests.Rolling;
 using Sparrow.Json;
@@ -497,8 +499,7 @@ namespace RachisTests.DatabaseCluster
                 foreach (var shardNumber in record.Sharding.Shards.Keys)
                 {
                     var orchestratorRequestExecutor = orchestrator.ShardExecutor.GetRequestExecutorAt(shardNumber);
-                    var preferredNode = await orchestratorRequestExecutor.GetPreferredNode();
-                    await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
+                    await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode() { ClusterTag = orchestrator.ServerStore.NodeTag, Database = ShardHelper.ToShardName(orchestrator.DatabaseName, shardNumber), Url = orchestrator.ServerStore.GetNodeHttpServerUrl() }));
                 }
                 
                 var error = await Assert.ThrowsAnyAsync<Exception>(async () =>
@@ -545,8 +546,7 @@ namespace RachisTests.DatabaseCluster
                 foreach (var orchestrator in orchestrators)
                 {
                     var orchestratorRequestExecutor = orchestrator.ShardExecutor.GetRequestExecutorAt(promotableShard);
-                    var preferredNode = await orchestratorRequestExecutor.GetPreferredNode();
-                    await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(preferredNode.Node));
+                    await orchestratorRequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode() { ClusterTag = orchestrator.ServerStore.NodeTag, Database = ShardHelper.ToShardName(orchestrator.DatabaseName, promotableShard), Url = orchestrator.ServerStore.GetNodeHttpServerUrl() }));
                 }
                 
                 await store.Maintenance.ForNode(nodeForPromotable).ForShardWithProxy(promotableShard).SendAsync(new GetIndexesProgressOperation(nodeTag: nodeForPromotable));

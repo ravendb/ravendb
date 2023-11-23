@@ -50,7 +50,7 @@ namespace FastTests
 {
     public abstract class TestBase : ParallelTestBase
     {
-        private static readonly HttpProtocols? DefaultHttpProtocols;
+        private static readonly HttpProtocols? DefaultHttpProtocols = null;
 
         private static int _counter;
 
@@ -101,7 +101,7 @@ namespace FastTests
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 
-            DocumentConventions.DefaultHttpPooledConnectionIdleTimeout = TimeSpan.FromSeconds(20);
+            //DocumentConventions.DefaultHttpPooledConnectionIdleTimeout = TimeSpan.FromSeconds(30);
             //DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionExact;
             //DefaultHttpProtocols = HttpProtocols.Http2;
 
