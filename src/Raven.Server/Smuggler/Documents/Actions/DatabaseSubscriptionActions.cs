@@ -12,7 +12,7 @@ public sealed class DatabaseSubscriptionActions : DatabaseSubscriptionActionsBas
     {
     }
 
-    public override PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
+    protected override PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
     {
         var command = new PutSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
         {

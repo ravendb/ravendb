@@ -13,7 +13,7 @@ public sealed class ShardedDatabaseSubscriptionActions : DatabaseSubscriptionAct
     {
     }
 
-    public override PutShardedSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
+    protected override PutShardedSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
     {
         var command = new PutShardedSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
         {

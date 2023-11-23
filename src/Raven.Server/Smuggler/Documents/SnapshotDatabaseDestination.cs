@@ -34,7 +34,7 @@ namespace Raven.Server.Smuggler.Documents
                 _subscriptions = subscriptions;
             }
 
-            public override PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
+            protected override PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
             {
                 if (_subscriptions.TryGetValue(SubscriptionState.Prefix + subscriptionState.SubscriptionName, out SubscriptionState oldState))
                 {
