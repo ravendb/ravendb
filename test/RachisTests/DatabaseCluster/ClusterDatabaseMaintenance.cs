@@ -844,7 +844,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact]
         public async Task TakingIntoAccountMoveToRehabGraceTimeConfiguration()
         {
             const int moveToRehabGraceTimeInSec = 60;
