@@ -7,11 +7,7 @@ import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
 
 export function storybookContainerPublicContainer(storyFn: any) {
-    return (
-        <div className="container">
-            <div className="padding">{storyFn()}</div>
-        </div>
-    );
+    return <div className="container">{storyFn()}</div>;
 }
 
 let needsTestMock = true;
@@ -42,7 +38,10 @@ export function withStorybookContexts(storyFn: any) {
 export function withBootstrap5(storyFn: any) {
     return (
         <>
-            <div className="bs5" style={{ padding: "30px" }}>
+            <div
+                className="bs5"
+                style={{ padding: "30px", minHeight: "100vh", display: "flex", flexDirection: "column" }}
+            >
                 {storyFn()}
             </div>
             <style>{`body {overflow: auto !important;}`}</style>

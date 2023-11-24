@@ -71,7 +71,7 @@ $font-size-lg: $font-size-base * 1.25 !default;
 $font-size-xs: $font-size-base * 0.7 !default;
 
 $border-width: 1px;
-$btn-border-width: 2px;
+$btn-border-width: 1px;
 
 // scss-docs-start border-radius-variables
 $border-radius-sm: decimal-round((math.div($gutter-xxs, $gutter-ratio)), 1) !default;

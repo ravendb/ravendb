@@ -12,7 +12,7 @@ export default {
     // excludeStories: /Template$/,
 } satisfies Meta<typeof AboutPage>;
 
-export const AboutTemplate = (args: { db: database; stats?: IndexStats[] }) => {
+export const AboutTemplate = () => {
     return <AboutPage />;
 };
 
