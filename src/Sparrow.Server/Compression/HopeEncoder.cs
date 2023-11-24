@@ -33,7 +33,7 @@ namespace Sparrow.Server.Compression
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Train<TSampleEnumerator>(in TSampleEnumerator enumerator, int dictionarySize)
-            where TSampleEnumerator : struct, IReadOnlySpanEnumerator
+            where TSampleEnumerator : IReadOnlySpanEnumerator
         {
             _encoder.Train(enumerator, dictionarySize);
             _maxSequenceLength = _encoder.MaxBitSequenceLength;

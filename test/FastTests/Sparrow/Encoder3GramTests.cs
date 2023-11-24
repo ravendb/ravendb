@@ -44,6 +44,8 @@ namespace FastTests.Sparrow
 
             public int Length => _values.Length;
 
+            public int Count { get; private set;}
+
             public bool IsNull(int i)
             {
                 if (i < 0 || i >= Length)
@@ -80,6 +82,7 @@ namespace FastTests.Sparrow
             public void Reset()
             {
                 _currentIdx = 0;
+                Count = 0;
             }
 
             public bool MoveNext(out ReadOnlySpan<byte> result)
@@ -91,6 +94,7 @@ namespace FastTests.Sparrow
                 }
 
                 result = new(_values[_currentIdx++]);
+                Count++;
                 return true;
             }
         }
@@ -99,6 +103,8 @@ namespace FastTests.Sparrow
         {
             private readonly byte[][] _values;
             private int _currentIdx = 0;
+
+            public int Count { get; private set; }
 
             public int Length => _values.Length;
 
@@ -122,6 +128,7 @@ namespace FastTests.Sparrow
             public void Reset()
             {
                 _currentIdx = 0;
+                Count = 0;
             }
 
             public bool MoveNext(out ReadOnlySpan<byte> result)
@@ -133,6 +140,7 @@ namespace FastTests.Sparrow
                 }
 
                 result = _values[_currentIdx++].AsSpan();
+                Count++;
                 return true;
             }
         }
@@ -141,11 +149,14 @@ namespace FastTests.Sparrow
         private struct EmptyKeys : IReadOnlySpanIndexer, IReadOnlySpanEnumerator
         {
             public int Length => 0;
+            public int Count { get; private set; }
 
             public ReadOnlySpan<byte> this[int i] => throw new IndexOutOfRangeException();
 
             public void Reset()
-            {}
+            {
+                Count = 0;
+            }
 
             public bool MoveNext(out ReadOnlySpan<byte> result)
             {

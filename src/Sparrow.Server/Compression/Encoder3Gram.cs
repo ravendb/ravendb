@@ -61,7 +61,7 @@ namespace Sparrow.Server.Compression
         }
 
         public void Train<TSampleEnumerator>(in TSampleEnumerator enumerator, int dictionarySize)
-            where TSampleEnumerator : struct, IReadOnlySpanEnumerator
+            where TSampleEnumerator : IReadOnlySpanEnumerator
         {
             var symbolSelector = new Encoder3GramSymbolSelector<TSampleEnumerator>();
             var frequencyList = symbolSelector.SelectSymbols(enumerator, dictionarySize);
