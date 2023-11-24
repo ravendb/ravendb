@@ -25,6 +25,8 @@ export interface ConnectionStringsUrlParameters {
 
 // todo custom hook to get all license selectors + asyncGetConnectionStrings +
 // todo fix InputGroup after rebase
+// todo test adding connection string when list is empty
+// todo test handle other types
 
 export default function ConnectionStrings({
     db,

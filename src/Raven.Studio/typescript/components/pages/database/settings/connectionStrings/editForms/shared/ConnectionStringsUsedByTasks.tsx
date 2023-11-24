@@ -1,10 +1,10 @@
 import React from "react";
 import { Label } from "reactstrap";
-import { ConnectionStringsUsedTask } from "../../connectionStringsTypes";
+import { ConnectionStringUsedTask } from "../../connectionStringsTypes";
 import { Icon } from "components/common/Icon";
 
 interface ConnectionStringsUsedByTasks {
-    tasks: ConnectionStringsUsedTask[];
+    tasks: ConnectionStringUsedTask[];
     urlProvider: (taskId: number) => () => string;
 }
 

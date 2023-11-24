@@ -4,40 +4,24 @@ import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.Qu
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import SqlConnectionStringDto = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
 
-type WithoutType<T> = Partial<Omit<T, "Type">>;
-
-export interface ConnectionStringsUsedTask {
+export interface ConnectionStringUsedTask {
     id: number;
     name: string;
 }
 
-interface ConnectionBase {
-    UsedByTasks?: ConnectionStringsUsedTask[];
-}
+type ConnectionCreator<
+    Type extends StudioEtlType,
+    Dto extends Raven.Client.Documents.Operations.ConnectionStrings.ConnectionString
+> = Partial<Omit<Dto, "Type">> & { Type: Type } & {
+    UsedByTasks?: ConnectionStringUsedTask[];
+};
 
-export interface RavenDbConnection extends ConnectionBase, WithoutType<RavenConnectionStringDto> {
-    Type: Extract<StudioEtlType, "Raven">;
-}
-
-export interface SqlConnection extends ConnectionBase, WithoutType<SqlConnectionStringDto> {
-    Type: Extract<StudioEtlType, "Sql">;
-}
-
-export interface OlapConnection extends ConnectionBase, WithoutType<OlapConnectionStringDto> {
-    Type: Extract<StudioEtlType, "Olap">;
-}
-
-export interface ElasticSearchConnection extends ConnectionBase, WithoutType<ElasticSearchConnectionStringDto> {
-    Type: Extract<StudioEtlType, "ElasticSearch">;
-}
-
-export interface KafkaConnection extends ConnectionBase, WithoutType<QueueConnectionStringDto> {
-    Type: Extract<StudioEtlType, "Kafka">;
-}
-
-export interface RabbitMqConnection extends ConnectionBase, WithoutType<RavenConnectionStringDto> {
-    Type: Extract<StudioEtlType, "RabbitMQ">;
-}
+export type RavenDbConnection = ConnectionCreator<"Raven", RavenConnectionStringDto>;
+export type SqlConnection = ConnectionCreator<"Sql", SqlConnectionStringDto>;
+export type OlapConnection = ConnectionCreator<"Olap", OlapConnectionStringDto>;
+export type ElasticSearchConnection = ConnectionCreator<"ElasticSearch", ElasticSearchConnectionStringDto>;
+export type KafkaConnection = ConnectionCreator<"Kafka", QueueConnectionStringDto>;
+export type RabbitMqConnection = ConnectionCreator<"RabbitMQ", QueueConnectionStringDto>;
 
 export type Connection =
     | RavenDbConnection
