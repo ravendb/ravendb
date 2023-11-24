@@ -7,6 +7,13 @@ import RavenConnectionString from "./editForms/RavenConnectionString";
 import database from "models/resources/database";
 import { useDispatch } from "react-redux";
 import { connectionStringsActions } from "./store/connectionStringsSlice";
+import ElasticSearchConnectionString from "./editForms/ElasticSearchConnectionString";
+import KafkaConnectionString from "./editForms/KafkaConnectionString";
+import OlapConnectionString from "./editForms/OlapConnectionString";
+import RabbitMqConnectionString from "./editForms/RabbitMqConnectionString";
+import SqlConnectionString from "./editForms/SqlConnectionString";
+import { getStudioEtlTypeLabel } from "./ConnectionStringsPanels";
+import { exhaustiveStringTuple } from "components/utils/common";
 
 export interface EditConnectionStringsProps {
     db: database;
@@ -15,6 +22,8 @@ export interface EditConnectionStringsProps {
 
 export default function EditConnectionStrings(props: EditConnectionStringsProps) {
     const { db, initialConnection } = props;
+
+    const isForNewConnection = !initialConnection.Name;
 
     const dispatch = useDispatch();
     const [connectionStringType, setConnectionStringType] = useState<StudioEtlType>(initialConnection?.Type);
@@ -33,9 +42,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                 <div className="text-center">
                     <Icon icon="manage-connection-strings" color="info" className="fs-1" margin="m-0" />
                 </div>
-                <div className="text-center lead">
-                    {initialConnection.Name ? "Edit" : "Create a new"} connection string
-                </div>
+                <div className="text-center lead">{isForNewConnection ? "Create a new" : "Edit"} connection string</div>
                 <InputGroup className="gap-1 flex-wrap flex-column">
                     <Label className="mb-0 md-label">Type</Label>
                     <Select
@@ -44,12 +51,16 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         onChange={(x) => setConnectionStringType(x.value)}
                         placeholder="Select a connection string type"
                         isSearchable={false}
-                        isDisabled={!!initialConnection.Name}
+                        isDisabled={!isForNewConnection}
                     />
                 </InputGroup>
             </ModalBody>
             {EditConnectionStringComponent ? (
-                <EditConnectionStringComponent initialConnection={initialConnection} db={db} />
+                <EditConnectionStringComponent
+                    initialConnection={initialConnection}
+                    db={db}
+                    isForNewConnection={isForNewConnection}
+                />
             ) : (
                 <ModalFooter className="mt-3">
                     <Button
@@ -67,40 +78,33 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     );
 }
 
-// TODO move to parent
-function getStudioEtlTypeLabel(type: StudioEtlType) {
-    switch (type) {
-        case "Raven":
-            return "RavenDB";
-        case "Sql":
-            return "SQL";
-        default:
-            return type;
-    }
-}
-
-// TODO add all types
-const connectionStringsOptions: SelectOption<StudioEtlType>[] = (["Raven"] satisfies StudioEtlType[]).map((type) => ({
+const connectionStringsOptions: SelectOption<StudioEtlType>[] = exhaustiveStringTuple<StudioEtlType>()(
+    "Raven",
+    "Sql",
+    "Olap",
+    "ElasticSearch",
+    "Kafka",
+    "RabbitMQ"
+).map((type) => ({
     value: type,
     label: getStudioEtlTypeLabel(type),
 }));
 
-// TODO type
+// TODO return type
 function getEditConnectionStringComponent(type: StudioEtlType): any {
     switch (type) {
         case "Raven":
             return RavenConnectionString;
-        // case "SQL":
-        //     return SqlConnectionString;
-        //     TODO;
-        // case "OLAP":
-        //     return <OlapConnectionString />;
-        // case "ElasticSearch":
-        //     return <ElasticSearchConnectionString />;
-        // case "Kafka":
-        //     return <KafkaConnectionString />;
-        // case "RabbitMQ":
-        //     return <RabbitMqConnectionString />;
+        case "Sql":
+            return SqlConnectionString;
+        case "Olap":
+            return OlapConnectionString;
+        case "ElasticSearch":
+            return ElasticSearchConnectionString;
+        case "Kafka":
+            return KafkaConnectionString;
+        case "RabbitMQ":
+            return RabbitMqConnectionString;
         default:
             return null;
     }

@@ -3,7 +3,7 @@ import { FormInput } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { Icon } from "components/common/Icon";
-import { RavenDBConnection } from "../connectionStringsTypes";
+import { RavenDbConnection } from "../connectionStringsTypes";
 import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import database from "models/resources/database";
@@ -18,11 +18,16 @@ import ConnectionStringsUsedByTasks from "./shared/ConnectionStringsUsedByTasks"
 import ConnectionStringError from "./shared/ConnectionStringError";
 
 export interface RavenConnectionStringProps {
-    initialConnection: RavenDBConnection;
+    initialConnection: RavenDbConnection;
     db: database;
+    isForNewConnection: boolean;
 }
 
-export default function RavenConnectionString({ db, initialConnection }: RavenConnectionStringProps) {
+export default function RavenConnectionString({
+    db,
+    initialConnection,
+    isForNewConnection,
+}: RavenConnectionStringProps) {
     const dispatch = useDispatch();
 
     const { control, handleSubmit, formState, watch } = useForm<FormData>({
@@ -60,7 +65,7 @@ export default function RavenConnectionString({ db, initialConnection }: RavenCo
         return tryHandleSubmit(async () => {
             const TopologyDiscoveryUrls = formData.TopologyDiscoveryUrls.map((x) => x.url);
 
-            const newConnection: RavenDBConnection = {
+            const newConnection: RavenDbConnection = {
                 ...formData,
                 Type: "Raven",
                 TopologyDiscoveryUrls,
@@ -68,15 +73,15 @@ export default function RavenConnectionString({ db, initialConnection }: RavenCo
 
             await databasesService.saveConnectionString(db, newConnection);
 
-            if (initialConnection.Name) {
+            if (isForNewConnection) {
+                dispatch(connectionStringsActions.addConnection(newConnection));
+            } else {
                 dispatch(
                     connectionStringsActions.editConnection({
                         oldName: initialConnection.Name,
                         newConnection,
                     })
                 );
-            } else {
-                dispatch(connectionStringsActions.addConnection(newConnection));
             }
 
             dispatch(connectionStringsActions.closeEditConnectionModal());

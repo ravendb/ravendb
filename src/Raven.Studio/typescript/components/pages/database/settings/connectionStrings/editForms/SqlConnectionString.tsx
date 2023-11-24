@@ -3,15 +3,15 @@ import { FormInput, FormSelect } from "components/common/Form";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { SelectOption } from "components/common/select/Select";
-import { SQLConnection } from "../connectionStringsTypes";
+import { SqlConnection } from "../connectionStringsTypes";
 
 export interface SqlConnectionStringProps {
-    connection: SQLConnection;
+    connection: SqlConnection;
 }
 
 const SqlConnectionString = ({ connection }: SqlConnectionStringProps) => {
     // TODO validation
-    const { control, handleSubmit } = useForm<Omit<SQLConnection, "type">>({
+    const { control, handleSubmit } = useForm<Omit<SqlConnection, "type">>({
         defaultValues: { ..._.omit(connection, "type") },
     });
 

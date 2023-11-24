@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useId } from "react";
 import {
     RichPanel,
     RichPanelHeader,
@@ -31,18 +31,15 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     const dispatch = useDispatch();
     const { databasesService } = useServices();
 
+    const deleteButtonId = useId();
+    const isDeleteDisabled = connection.UsedByTasks?.length > 0;
+
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const asyncDelete = useAsyncCallback(async () => {
         await databasesService.deleteConnectionString(db, getDtoEtlType(connection.Type), connection.Name);
-
-        dispatch(
-            connectionStringsActions.deleteConnection({
-                type: connection.Type,
-                name: connection.Name,
-            })
-        );
+        dispatch(connectionStringsActions.deleteConnection(connection));
     });
 
     const onDelete = async () => {
@@ -61,9 +58,6 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
             await asyncDelete.execute();
         }
     };
-
-    const deleteButtonId = "delete-" + connection.Type + "_" + connection.Name;
-    const isDeleteDisabled = connection.UsedByTasks?.length > 0;
 
     return (
         <RichPanel className="flex-row">
