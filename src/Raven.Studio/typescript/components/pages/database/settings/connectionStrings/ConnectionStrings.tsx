@@ -6,13 +6,13 @@ import { todo } from "common/developmentHelper";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { NonShardedViewProps } from "components/models/common";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import { HrHeader } from "components/common/HrHeader";
-import ConnectionStringsPanel from "./ConnectionStringsConfigPanel";
 import { ConnectionStringsInfoHub } from "./ConnectionStringsInfoHub";
 import EditConnectionStrings from "./EditConnectionStrings";
 import { LazyLoad } from "components/common/LazyLoad";
 import { connectionStringSelectors, connectionStringsActions } from "./store/connectionStringsSlice";
 import { EmptySet } from "components/common/EmptySet";
+import ConnectionStringsPanels from "./ConnectionStringsPanels";
+import { exhaustiveStringTuple } from "components/utils/common";
 
 todo("Feature", "Damian", "Add missing logic");
 todo("Feature", "Damian", "Connect to Studio");
@@ -72,41 +72,9 @@ export default function ConnectionStrings({
                         <EmptySet>No connection strings</EmptySet>
                     ) : (
                         <>
-                            {connections.raven.length > 0 && (
-                                <div className="mb-3">
-                                    <HrHeader
-                                        right={
-                                            isDatabaseAdmin && (
-                                                <Button
-                                                    color="info"
-                                                    size="sm"
-                                                    className="rounded-pill"
-                                                    title="Add new credentials"
-                                                    onClick={() =>
-                                                        dispatch(
-                                                            connectionStringsActions.openAddNewConnectionOfTypeModal(
-                                                                "Raven"
-                                                            )
-                                                        )
-                                                    }
-                                                >
-                                                    <Icon icon="plus" />
-                                                    Add new
-                                                </Button>
-                                            )
-                                        }
-                                    >
-                                        RavenDB
-                                    </HrHeader>
-                                    {connections.raven.map((connection) => (
-                                        <ConnectionStringsPanel
-                                            key={connection.Type + "_" + connection.Name}
-                                            db={db}
-                                            connection={connection}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                            {allStudioEtlTypes.map((type) => (
+                                <ConnectionStringsPanels key={type} db={db} connections={connections[type]} />
+                            ))}
                         </>
                     )}
                 </LazyLoad>
@@ -117,3 +85,12 @@ export default function ConnectionStrings({
         </Row>
     );
 }
+
+const allStudioEtlTypes = exhaustiveStringTuple<StudioEtlType>()(
+    "Raven",
+    "Sql",
+    "Olap",
+    "ElasticSearch",
+    "Kafka",
+    "RabbitMQ"
+);

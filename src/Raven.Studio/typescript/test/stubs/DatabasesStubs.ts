@@ -410,9 +410,9 @@ export class DatabasesStubs {
     static connectionStrings(): Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult {
         return {
             RavenConnectionStrings: {
-                "raven-name": {
+                "raven-name (used by task)": {
                     Type: "Raven",
-                    Name: "raven-name",
+                    Name: "raven-name (used by task)",
                     Database: "some-db",
                     TopologyDiscoveryUrls: ["http://test"],
                 },

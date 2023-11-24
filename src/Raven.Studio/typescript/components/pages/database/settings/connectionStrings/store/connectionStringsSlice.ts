@@ -2,73 +2,75 @@ import { PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import database from "models/resources/database";
-import { Connection, RavenDBConnection } from "../connectionStringsTypes";
+import {
+    Connection,
+    ConnectionStringDto,
+    ElasticSearchConnection,
+    KafkaConnection,
+    OlapConnection,
+    RabbitMqConnection,
+    RavenDbConnection,
+    SqlConnection,
+} from "../connectionStringsTypes";
 import OngoingTaskRavenEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
 import { RootState } from "components/store";
 import { ConnectionStringsUrlParameters } from "../ConnectionStrings";
 
-interface Connections {
-    raven: RavenDBConnection[];
-}
-
 interface ConnectionStringsState {
     loadStatus: loadStatus;
-    connections: Connections;
+    connections: { [key in StudioEtlType]: Connection[] };
     urlParameters: ConnectionStringsUrlParameters;
     initialEditConnection: Connection;
+    isEmpty: boolean;
 }
 
 const initialState: ConnectionStringsState = {
     loadStatus: "idle",
     connections: {
-        raven: [],
+        Raven: [],
+        Sql: [],
+        Olap: [],
+        ElasticSearch: [],
+        Kafka: [],
+        RabbitMQ: [],
     },
     urlParameters: {
         name: null,
         type: null,
     },
     initialEditConnection: null,
+    isEmpty: true,
 };
 
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
     initialState,
     reducers: {
-        urlParametersLoaded: (state, { payload }: PayloadAction<ConnectionStringsUrlParameters>) => {
-            state.urlParameters = payload;
+        urlParametersLoaded: (state, { payload: urlParameters }: PayloadAction<ConnectionStringsUrlParameters>) => {
+            state.urlParameters = urlParameters;
         },
         openAddNewConnectionModal: (state) => {
             state.initialEditConnection = { Type: null };
         },
-        openAddNewConnectionOfTypeModal: (state, { payload: Type }: PayloadAction<"Raven">) => {
-            // TODO add types
+        openAddNewConnectionOfTypeModal: (state, { payload: Type }: PayloadAction<StudioEtlType>) => {
             state.initialEditConnection = { Type };
         },
-        openEditConnectionModal: (state, { payload }: PayloadAction<Connection>) => {
-            state.initialEditConnection = payload;
+        openEditConnectionModal: (state, { payload: connection }: PayloadAction<Connection>) => {
+            state.initialEditConnection = connection;
         },
         closeEditConnectionModal: (state) => {
             state.initialEditConnection = null;
         },
-        addConnection: (state, { payload }: PayloadAction<Connection>) => {
-            getConnectionsOfType(state.connections, payload.Type).push(payload);
+        addConnection: (state, { payload: connection }: PayloadAction<Connection>) => {
+            state.connections[connection.Type].push(connection);
         },
         editConnection: (state, { payload }: PayloadAction<{ oldName: string; newConnection: Connection }>) => {
-            const connectionsOfType = getConnectionsOfType(state.connections, payload.newConnection.Type);
-
-            connectionsOfType.splice(
-                connectionsOfType.indexOf(connectionsOfType.find((x) => x.Name === payload.oldName)),
-                1,
-                payload.newConnection
+            state.connections[payload.newConnection.Type] = state.connections[payload.newConnection.Type].map((x) =>
+                x.Name === payload.oldName ? payload.newConnection : x
             );
         },
-        deleteConnection: (state, { payload }: PayloadAction<{ type: "Raven"; name: string }>) => {
-            const connectionsOfType = getConnectionsOfType(state.connections, payload.type);
-
-            connectionsOfType.splice(
-                connectionsOfType.indexOf(connectionsOfType.find((x) => x.Name === payload.name)),
-                1
-            );
+        deleteConnection: (state, { payload }: PayloadAction<Connection>) => {
+            state.connections[payload.Type] = state.connections[payload.Type].filter((x) => x.Name === payload.Name);
         },
         reset: () => initialState,
     },
@@ -76,32 +78,59 @@ export const connectionStringsSlice = createSlice({
         builder
             .addCase(fetchData.fulfilled, (state, { payload }) => {
                 const { connectionStringsDto, ongoingTasksDto } = payload;
+                const ongoingTasks = ongoingTasksDto.OngoingTasks;
+
                 const { connections, urlParameters } = state;
 
-                connections.raven = Object.values(connectionStringsDto.RavenConnectionStrings).map(
-                    (ravenConnectionString) => ({
-                        ...ravenConnectionString,
-                        Type: "Raven",
-                        UsedByTasks: ongoingTasksDto.OngoingTasks.filter(
-                            (task: OngoingTaskRavenEtl) =>
-                                task.TaskType === "RavenEtl" && task.ConnectionStringName === ravenConnectionString.Name
-                        ).map((x) => ({
-                            id: x.TaskId,
-                            name: x.TaskName,
-                        })),
-                    })
+                connections.Raven = mapDtoToState<RavenDbConnection>(
+                    connectionStringsDto.RavenConnectionStrings,
+                    "Raven",
+                    ongoingTasks,
+                    "RavenEtl"
                 );
+
+                connections.Sql = mapDtoToState<SqlConnection>(
+                    connectionStringsDto.SqlConnectionStrings,
+                    "Sql",
+                    ongoingTasks,
+                    "SqlEtl"
+                );
+
+                connections.Olap = mapDtoToState<OlapConnection>(
+                    connectionStringsDto.OlapConnectionStrings,
+                    "Olap",
+                    ongoingTasks,
+                    "OlapEtl"
+                );
+
+                connections.ElasticSearch = mapDtoToState<ElasticSearchConnection>(
+                    connectionStringsDto.ElasticSearchConnectionStrings,
+                    "ElasticSearch",
+                    ongoingTasks,
+                    "ElasticSearchEtl"
+                );
+
+                connections.Kafka = mapDtoToState<KafkaConnection>(
+                    connectionStringsDto.SqlConnectionStrings,
+                    "Kafka",
+                    ongoingTasks,
+                    "QueueEtl"
+                );
+
+                connections.RabbitMQ = mapDtoToState<RabbitMqConnection>(
+                    connectionStringsDto.SqlConnectionStrings,
+                    "RabbitMQ",
+                    ongoingTasks,
+                    "QueueEtl"
+                );
+
+                state.isEmpty = _.isEqual(initialState.connections, state.connections);
 
                 state.loadStatus = "success";
 
                 if (urlParameters.name && urlParameters.type) {
-                    const foundConnection = getConnectionsOfType(connections, urlParameters.type).find(
-                        (x) => x.Name === urlParameters.name
-                    );
-
-                    if (foundConnection) {
-                        state.initialEditConnection = foundConnection;
-                    }
+                    state.initialEditConnection =
+                        state.connections[urlParameters.type]?.find((x) => x.Name === urlParameters.name) ?? null;
                 }
             })
             .addCase(fetchData.pending, (state) => {
@@ -113,15 +142,26 @@ export const connectionStringsSlice = createSlice({
     },
 });
 
-const getConnectionsOfType = (connections: Connections, type: StudioEtlType) => {
-    switch (type) {
-        case "Raven":
-            return connections.raven;
-        // TODO others
-        default:
-            return null; // TODO
-    }
-};
+function mapDtoToState<T extends Connection>(
+    connectionStrings: { [key: string]: ConnectionStringDto },
+    etlType: T["Type"],
+    ongoingTasks: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask[],
+    taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType
+): T[] {
+    return Object.values(connectionStrings).map((connection) => ({
+        ...connection,
+        Type: etlType,
+        UsedByTasks: ongoingTasks
+            .filter(
+                (task: OngoingTaskRavenEtl) =>
+                    task.TaskType === taskType && task.ConnectionStringName === connection.Name
+            )
+            .map((x) => ({
+                id: x.TaskId,
+                name: x.TaskName,
+            })),
+    })) as T[];
+}
 
 interface FetchDataResult {
     ongoingTasksDto: Raven.Server.Web.System.OngoingTasksResult;
@@ -155,14 +195,10 @@ export const connectionStringsActions = {
 };
 
 export const connectionStringSelectors = {
-    state: (store: RootState) => {
-        const connections = store.connectionStrings.connections;
-
-        return {
-            loadStatus: store.connectionStrings.loadStatus,
-            connections: store.connectionStrings.connections,
-            initialEditConnection: store.connectionStrings.initialEditConnection,
-            isEmpty: connections.raven.length === 0,
-        };
-    },
+    state: (store: RootState) => ({
+        loadStatus: store.connectionStrings.loadStatus,
+        connections: store.connectionStrings.connections,
+        initialEditConnection: store.connectionStrings.initialEditConnection,
+        isEmpty: store.connectionStrings.isEmpty,
+    }),
 };

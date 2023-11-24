@@ -3,7 +3,6 @@ import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.Olap
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import SqlConnectionStringDto = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
-import ConnectionStringTypeDto = Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType;
 
 type WithoutType<T> = Partial<Omit<T, "Type">>;
 
@@ -16,15 +15,37 @@ interface ConnectionBase {
     UsedByTasks?: ConnectionStringsUsedTask[];
 }
 
-export interface RavenDBConnection extends ConnectionBase, WithoutType<RavenConnectionStringDto> {
-    Type: Extract<ConnectionStringTypeDto, "Raven">;
+export interface RavenDbConnection extends ConnectionBase, WithoutType<RavenConnectionStringDto> {
+    Type: Extract<StudioEtlType, "Raven">;
 }
 
-export interface SQLConnection extends ConnectionBase, WithoutType<SqlConnectionStringDto> {
-    Type: Extract<ConnectionStringTypeDto, "Sql">;
+export interface SqlConnection extends ConnectionBase, WithoutType<SqlConnectionStringDto> {
+    Type: Extract<StudioEtlType, "Sql">;
 }
 
-export type Connection = RavenDBConnection;
+export interface OlapConnection extends ConnectionBase, WithoutType<OlapConnectionStringDto> {
+    Type: Extract<StudioEtlType, "Olap">;
+}
+
+export interface ElasticSearchConnection extends ConnectionBase, WithoutType<ElasticSearchConnectionStringDto> {
+    Type: Extract<StudioEtlType, "ElasticSearch">;
+}
+
+export interface KafkaConnection extends ConnectionBase, WithoutType<QueueConnectionStringDto> {
+    Type: Extract<StudioEtlType, "Kafka">;
+}
+
+export interface RabbitMqConnection extends ConnectionBase, WithoutType<RavenConnectionStringDto> {
+    Type: Extract<StudioEtlType, "RabbitMQ">;
+}
+
+export type Connection =
+    | RavenDbConnection
+    | SqlConnection
+    | OlapConnection
+    | ElasticSearchConnection
+    | KafkaConnection
+    | RabbitMqConnection;
 
 export type ConnectionStringDto = Partial<
     | ElasticSearchConnectionStringDto
