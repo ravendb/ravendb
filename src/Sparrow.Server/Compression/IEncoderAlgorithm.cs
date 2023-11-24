@@ -8,7 +8,7 @@ namespace Sparrow.Server.Compression
         public int MinBitSequenceLength { get; }
 
         void Train<TSampleEnumerator>(in TSampleEnumerator enumerator, int dictionarySize)
-            where TSampleEnumerator : struct, IReadOnlySpanEnumerator;
+            where TSampleEnumerator : IReadOnlySpanEnumerator;
 
         void EncodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSizes, in TOutputEnumerator outputBuffer)
             where TSampleEnumerator : struct, IReadOnlySpanIndexer

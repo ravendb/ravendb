@@ -90,6 +90,7 @@ public struct StringArrayIterator : IReadOnlySpanIndexer, IReadOnlySpanEnumerato
         _values = values;
     }
 
+    public int Count { get; private set; }
     public int Length => _values.Length;
 
     public ReadOnlySpan<byte> this[int i] => Encoding.UTF8.GetBytes(_values[i]);
@@ -99,6 +100,7 @@ public struct StringArrayIterator : IReadOnlySpanIndexer, IReadOnlySpanEnumerato
     public void Reset()
     {
         _currentIdx = 0;
+        Count = 0;
     }
 
     public bool MoveNext(out ReadOnlySpan<byte> result)
@@ -110,6 +112,7 @@ public struct StringArrayIterator : IReadOnlySpanIndexer, IReadOnlySpanEnumerato
         }
         
         result = Encoding.UTF8.GetBytes(_values[_currentIdx++]);
+        Count++;
         return true;
     }
 }

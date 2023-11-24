@@ -152,28 +152,10 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token, indexingStatsScope, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
-            var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);
-            var defaultDictionary = new PersistentDictionary(llt.GetPage(defaultDictionaryId));
 
-            var trainedDictionary = PersistentDictionary.Create(llt, enumerator);
+            if (PersistentDictionary.TryCreate(llt, enumerator, out var _) == false)
+                PersistentDictionary.CreateDefault(llt);
 
-            if (defaultDictionaryId != trainedDictionary.DictionaryId)
-            {
-                var previousDictionaryPage = llt.GetPage(defaultDictionary.DictionaryId);
-                if (previousDictionaryPage.IsOverflow == false)
-                {
-                    llt.FreePage(defaultDictionaryId);
-                }
-                else
-                {
-                    var overflowPageNumber = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(previousDictionaryPage.OverflowSize);
-                    for (long pageToRelease = defaultDictionaryId; pageToRelease < defaultDictionaryId + overflowPageNumber; ++pageToRelease)
-                    {
-                        llt.FreePage(pageToRelease);
-                    }
-                }
-            }
-            
             tx.Commit();
         }
     }
