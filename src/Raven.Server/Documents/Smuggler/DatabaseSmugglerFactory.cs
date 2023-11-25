@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -24,6 +26,11 @@ public sealed class DatabaseSmugglerFactory : AbstractDatabaseSmugglerFactory
     public override DatabaseDestination CreateDestination(CancellationToken token = default)
     {
         return new DatabaseDestination(_database, token);
+    }
+
+    public override DatabaseDestination CreateDestinationForSnapshotRestore(Dictionary<string, SubscriptionState> subscriptions, CancellationToken token = default)
+    {
+        return new SnapshotDatabaseDestination(_database, subscriptions, token);
     }
 
     public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger)
