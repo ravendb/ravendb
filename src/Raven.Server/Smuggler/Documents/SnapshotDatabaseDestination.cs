@@ -15,7 +15,8 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly Dictionary<string, SubscriptionState> _subscriptions;
 
-        public SnapshotDatabaseDestination(DocumentDatabase database, Dictionary<string, SubscriptionState> subscriptions, CancellationToken token = default) : base(database, token)
+        public SnapshotDatabaseDestination(DocumentDatabase database, Dictionary<string, SubscriptionState> subscriptions, CancellationToken token = default)
+            : base(database, token)
         {
             _subscriptions = subscriptions;
         }

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -13,6 +15,8 @@ namespace Raven.Server.Documents.Smuggler;
 public abstract class AbstractDatabaseSmugglerFactory
 {
     public abstract DatabaseDestination CreateDestination(CancellationToken token = default);
+
+    public abstract DatabaseDestination CreateDestinationForSnapshotRestore(Dictionary<string, SubscriptionState> subscriptions, CancellationToken token = default);
 
     public abstract DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger);
 
