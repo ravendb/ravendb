@@ -404,6 +404,8 @@ namespace Raven.Client.Documents.Subscriptions
                     DatabaseDoesNotExistException.ThrowWithMessage(_dbName, connectionStatus.Message);
                 else if (connectionStatus.Exception.Contains(nameof(NotSupportedInShardingException)))
                     throw new NotSupportedInShardingException(connectionStatus.Message);
+                else if (connectionStatus.Exception.Contains(nameof(DatabaseDisabledException)))
+                    throw new DatabaseDisabledException(connectionStatus.Message);
             }
 
             if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus)
