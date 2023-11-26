@@ -68,19 +68,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [AzureTheory, Trait("Category", "Smuggler")]
         [InlineData(BackupUploadMode.Default)]
         [InlineData(BackupUploadMode.DirectUpload)]
         public void can_backup_and_restore(BackupUploadMode backupUploadMode) => can_backup_and_restore_internal(backupUploadMode, oneTimeBackup: false);
 
-        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [AzureTheory, Trait("Category", "Smuggler")]
         [InlineData(BackupUploadMode.Default)]
         [InlineData(BackupUploadMode.DirectUpload)]
         public void can_onetime_backup_and_restore(BackupUploadMode backupUploadMode) => can_backup_and_restore_internal(backupUploadMode, oneTimeBackup: true);
 
         private void can_backup_and_restore_internal(BackupUploadMode backupUploadMode, bool oneTimeBackup)
         {
-            using (var holder = new Azure.AzureClientHolder(AzureRetryTheoryAttribute.AzureSettings))
+            using (var holder = new Azure.AzureClientHolder(AzureTheoryAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -173,12 +173,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [AzureTheory, Trait("Category", "Smuggler")]
         [InlineData(BackupUploadMode.Default)]
         [InlineData(BackupUploadMode.DirectUpload)]
         public async Task can_create_azure_snapshot_and_restore_using_restore_point(BackupUploadMode backupUploadMode)
         {
-            using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
+            using (var holder = new Azure.AzureClientHolder(AzureTheoryAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
