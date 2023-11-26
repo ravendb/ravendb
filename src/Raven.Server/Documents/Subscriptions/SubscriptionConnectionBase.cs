@@ -509,6 +509,9 @@ namespace Raven.Server.Documents.Subscriptions
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(ServerStore.NodeTag))
                     throw new DatabaseDoesNotExistException(
                         $"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
+                
+                if (record.IsDisabled)
+                    throw new DatabaseDisabledException($"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is disabled.");
 
                 if (whoseTaskIsIt != ServerStore.NodeTag)
                 {

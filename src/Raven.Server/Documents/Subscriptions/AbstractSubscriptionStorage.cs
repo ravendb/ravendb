@@ -137,7 +137,14 @@ public abstract class AbstractSubscriptionStorage
 
     public void ReleaseSubscriptionsSemaphore()
     {
-        _concurrentConnectionsSemiSemaphore.Release();
+        try
+        {
+            _concurrentConnectionsSemiSemaphore.Release();
+        }
+        catch
+        {
+            //
+        }
     }
 }
 
