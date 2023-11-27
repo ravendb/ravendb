@@ -110,7 +110,7 @@ namespace SlowTests.Issues
         public async Task DisableAutoMapReduceIndexClusterWideAndEnableAutoMapReduceIndexClusterWide()
         {
             const int numberOfNodes = 3;
-            var (_, leader) = await CreateRaftCluster(numberOfNodes);
+            var (nodes, leader) = await CreateRaftCluster(numberOfNodes);
             using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = numberOfNodes });
             var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -118,12 +118,32 @@ namespace SlowTests.Issues
 
             await DisableIndexClusterWide(store, index.Instance.Name);
 
+            foreach (var server in nodes)
+            {
+                await WaitForValueAsync(async () =>
+                {
+                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    return documentDatabase.IndexStore.GetIndex(index.Instance.Name).Status;
+                }, IndexRunningStatus.Disabled);
+                var autoIndex = documentDatabase.IndexStore.GetIndex(index.Instance.Name);
+                Assert.Equal(IndexState.Disabled, autoIndex.State);
+                Assert.Equal(IndexRunningStatus.Disabled, autoIndex.Status);
+            }
+
             //Enable index cluster wide
             await EnableIndexClusterWide(store, index.Instance.Name);
 
-            var autoIndex = documentDatabase.IndexStore.GetIndex(index.Instance.Name);
-            Assert.Equal(IndexState.Normal, autoIndex.State);
-            Assert.Equal(IndexRunningStatus.Running, autoIndex.Status);
+            foreach (var server in nodes)
+            {
+                await WaitForValueAsync(async () =>
+                {
+                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    return documentDatabase.IndexStore.GetIndex(index.Instance.Name).Status;
+                }, IndexRunningStatus.Running);
+                var autoIndex = documentDatabase.IndexStore.GetIndex(index.Instance.Name);
+                Assert.Equal(IndexState.Normal, autoIndex.State);
+                Assert.Equal(IndexRunningStatus.Running, autoIndex.Status);
+            }
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
