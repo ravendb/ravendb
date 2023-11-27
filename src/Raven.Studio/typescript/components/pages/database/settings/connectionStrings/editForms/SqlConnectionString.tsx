@@ -14,7 +14,7 @@ import { connectionStringsActions } from "../store/connectionStringsSlice";
 import { tryHandleSubmit } from "components/utils/common";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAsyncCallback } from "react-async-hook";
-import EditConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
+import ConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
 import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
@@ -122,7 +122,7 @@ export default function SqlConnectionString({ db, initialConnection, isForNewCon
                     </div>
                     {isTestButtonDisabled && (
                         <UncontrolledTooltip target={testButtonId}>
-                            Select a factory and enter a connection string.
+                            Select factory and enter connection string.
                         </UncontrolledTooltip>
                     )}
                 </div>
@@ -132,7 +132,7 @@ export default function SqlConnectionString({ db, initialConnection, isForNewCon
                 />
                 <ConnectionStringTestResult testResult={asyncTest.result} />
             </ModalBody>
-            <EditConnectionStringFormFooter isSubmitting={formState.isSubmitting} />
+            <ConnectionStringFormFooter isSubmitting={formState.isSubmitting} />
         </Form>
     );
 }

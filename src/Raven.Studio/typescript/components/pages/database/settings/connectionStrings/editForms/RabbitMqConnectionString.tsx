@@ -28,6 +28,7 @@ export default function RabbitMqConnectionString({
     const dispatch = useDispatch();
 
     const { control, handleSubmit, formState } = useForm<FormData>({
+        mode: "all",
         defaultValues: {
             Name: initialConnection.Name,
             ConnectionString: initialConnection.RabbitMqConnectionSettings?.ConnectionString,
@@ -111,7 +112,7 @@ export default function RabbitMqConnectionString({
                         </ButtonWithSpinner>
                     </div>
                     {isTestButtonDisabled && (
-                        <UncontrolledTooltip target={testButtonId}>Enter a connection string.</UncontrolledTooltip>
+                        <UncontrolledTooltip target={testButtonId}>Enter connection string.</UncontrolledTooltip>
                     )}
                 </div>
                 <ConnectionStringUsedByTasks

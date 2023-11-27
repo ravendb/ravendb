@@ -15,7 +15,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ConnectionStringError from "./shared/ConnectionStringError";
-import EditConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
+import ConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
 
 export interface RavenConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: RavenDbConnection;
@@ -30,11 +30,7 @@ export default function RavenConnectionString({
 
     const { control, handleSubmit, formState, watch } = useForm<FormData>({
         mode: "all",
-        defaultValues: {
-            Name: initialConnection.Name,
-            Database: initialConnection.Database,
-            TopologyDiscoveryUrls: initialConnection.TopologyDiscoveryUrls?.map((x) => ({ url: x })) ?? [{ url: "" }],
-        },
+        defaultValues: getDefaultValues(initialConnection),
         resolver: yupSchemaResolver,
     });
 
@@ -143,11 +139,11 @@ export default function RavenConnectionString({
                         <Icon icon="plus" />
                         Add URL
                     </Button>
-                    <ConnectionStringUsedByTasks
-                        tasks={initialConnection.UsedByTasks}
-                        urlProvider={forCurrentDatabase.editRavenEtl}
-                    />
                 </div>
+                <ConnectionStringUsedByTasks
+                    tasks={initialConnection.UsedByTasks}
+                    urlProvider={forCurrentDatabase.editRavenEtl}
+                />
                 {asyncTest.result?.Success && <Alert color="success">Successfully connected</Alert>}
                 {asyncTest.result?.Error && (
                     <>
@@ -156,9 +152,17 @@ export default function RavenConnectionString({
                     </>
                 )}
             </ModalBody>
-            <EditConnectionStringFormFooter isSubmitting={formState.isSubmitting} />
+            <ConnectionStringFormFooter isSubmitting={formState.isSubmitting} />
         </Form>
     );
+}
+
+function getDefaultValues(initialConnection: RavenDbConnection): FormData {
+    return {
+        Name: initialConnection.Name,
+        Database: initialConnection.Database,
+        TopologyDiscoveryUrls: initialConnection.TopologyDiscoveryUrls?.map((x) => ({ url: x })) ?? [{ url: "" }],
+    };
 }
 
 function AboutError({ isHTTPSuccess }: { isHTTPSuccess: boolean }) {
