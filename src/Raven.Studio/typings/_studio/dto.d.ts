@@ -1018,3 +1018,16 @@ type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.Tombst
 
 // Server ToJson() method converts the version object to a string
 type LicenseStatus = Omit<Raven.Server.Commercial.LicenseStatus, "Version"> & { Version: string };
+
+
+type SqlConnectionStringFactoryName =
+    | "System.Data.SqlClient"
+    | "MySql.Data.MySqlClient"
+    | "MySqlConnector.MySqlConnectorFactory"
+    | "Npgsql"
+    | "Oracle.ManagedDataAccess.Client";
+
+type SqlConnectionString = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString & { FactoryName: SqlConnectionStringFactoryName }
+type GetConnectionStringsResult = Omit<Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult, "SqlConnectionStrings"> & {
+    SqlConnectionStrings: {[key: string]: SqlConnectionString;};
+}

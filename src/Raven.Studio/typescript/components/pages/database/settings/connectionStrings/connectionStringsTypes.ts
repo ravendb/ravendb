@@ -1,8 +1,9 @@
+import database = require("models/resources/database");
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
 import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
-import SqlConnectionStringDto = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
+type SqlConnectionStringDto = SqlConnectionString;
 
 export interface ConnectionStringUsedTask {
     id: number;
@@ -38,3 +39,9 @@ export type ConnectionStringDto = Partial<
     | RavenConnectionStringDto
     | SqlConnectionStringDto
 >;
+
+export interface EditConnectionStringFormProps {
+    initialConnection: Connection;
+    db: database;
+    isForNewConnection: boolean;
+}

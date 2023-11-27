@@ -55,6 +55,7 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
 import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
+import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
@@ -239,6 +240,10 @@ export default class DatabasesService {
 
     async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {
         return new testClusterNodeConnectionCommand(serverUrl, databaseName, bidirectional).execute();
+    }
+
+    async testSqlConnectionString(db: database, connectionString: string, factoryName: string) {
+        return new testSqlConnectionStringCommand(db, connectionString, factoryName).execute();
     }
 
     async getDatabaseRecord(db: database, reportRefreshProgress = false) {

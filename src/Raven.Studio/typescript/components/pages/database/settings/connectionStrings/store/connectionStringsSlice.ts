@@ -157,7 +157,7 @@ function getConnectionStringUsedTasks(
 
 interface FetchDataResult {
     ongoingTasksDto: Raven.Server.Web.System.OngoingTasksResult;
-    connectionStringsDto: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult;
+    connectionStringsDto: GetConnectionStringsResult;
 }
 
 const fetchData = createAsyncThunk<

@@ -3,10 +3,9 @@ import { FormInput } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { Icon } from "components/common/Icon";
-import { RavenDbConnection } from "../connectionStringsTypes";
+import { EditConnectionStringFormProps, RavenDbConnection } from "../connectionStringsTypes";
 import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
-import database from "models/resources/database";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -14,13 +13,12 @@ import { useDispatch } from "react-redux";
 import { connectionStringsActions } from "../store/connectionStringsSlice";
 import { useAsyncCallback } from "react-async-hook";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import ConnectionStringsUsedByTasks from "./shared/ConnectionStringsUsedByTasks";
+import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ConnectionStringError from "./shared/ConnectionStringError";
+import EditConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
 
-export interface RavenConnectionStringProps {
+export interface RavenConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: RavenDbConnection;
-    db: database;
-    isForNewConnection: boolean;
 }
 
 export default function RavenConnectionString({
@@ -37,7 +35,7 @@ export default function RavenConnectionString({
             Database: initialConnection.Database,
             TopologyDiscoveryUrls: initialConnection.TopologyDiscoveryUrls?.map((x) => ({ url: x })) ?? [{ url: "" }],
         },
-        resolver: yupResolver(schema),
+        resolver: yupSchemaResolver,
     });
 
     const urlFieldArray = useFieldArray({
@@ -98,6 +96,7 @@ export default function RavenConnectionString({
                         name="Name"
                         type="text"
                         placeholder="Enter a name for the connection string"
+                        disabled={!isForNewConnection}
                     />
                 </div>
                 <div>
@@ -144,7 +143,7 @@ export default function RavenConnectionString({
                         <Icon icon="plus" />
                         Add URL
                     </Button>
-                    <ConnectionStringsUsedByTasks
+                    <ConnectionStringUsedByTasks
                         tasks={initialConnection.UsedByTasks}
                         urlProvider={forCurrentDatabase.editRavenEtl}
                     />
@@ -157,26 +156,7 @@ export default function RavenConnectionString({
                     </>
                 )}
             </ModalBody>
-            <ModalFooter>
-                <Button
-                    type="button"
-                    color="link"
-                    className="link-muted"
-                    onClick={() => dispatch(connectionStringsActions.closeEditConnectionModal())}
-                    title="Cancel"
-                >
-                    Cancel
-                </Button>
-                <ButtonWithSpinner
-                    type="submit"
-                    color="success"
-                    title="Save credentials"
-                    icon="save"
-                    isSpinning={formState.isSubmitting}
-                >
-                    Save connection string
-                </ButtonWithSpinner>
-            </ModalFooter>
+            <EditConnectionStringFormFooter isSubmitting={formState.isSubmitting} />
         </Form>
     );
 }
@@ -225,4 +205,5 @@ const schema = yup
     })
     .required();
 
+const yupSchemaResolver = yupResolver(schema);
 type FormData = Required<yup.InferType<typeof schema>>;
