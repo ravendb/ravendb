@@ -687,20 +687,28 @@ namespace Corax.Indexing
             _tempListBuffer = new NativeIntegersList(_entriesAllocator);
             _termsPerEntryId = new NativeList<NativeList<RecordedTerm>>();
             _termsPerEntryIds = new NativeList<long>();
-
+            _numberOfModifications = 0;
+            _numberOfTermModifications = 0;
+            _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
 
         public void TryDeleteEntryByField(string field, string term)
         {
+            if (_fieldsMapping.TryGetByFieldName(field, out var binding) && binding.FieldId == 0)
+            {
+                TryDeleteEntry(term);
+                return;
+            }
+            
             using var __ = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
             using var ___ = Slice.From(_entriesAllocator, field, ByteStringType.Immutable, out var fieldSlice);
+            
             if (TryGetEntryTermId(fieldSlice, termSlice.AsSpan(), out long idInTree) == false) 
                 return;
-
+            
             RecordDeletion(idInTree, out _);
         }
-  
         
         /// <summary>
         /// Record term for deletion from Index.
@@ -763,7 +771,8 @@ namespace Corax.Indexing
             }
 
             singleEntryId = containerId;
-            Debug.Assert(containerId>0);
+            Debug.Assert(containerId > 0);
+            
             _deletedEntries.Add(containerId);
             _numberOfModifications--;
             return true;
