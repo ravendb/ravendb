@@ -141,9 +141,9 @@ public abstract class AbstractSubscriptionStorage
         {
             _concurrentConnectionsSemiSemaphore.Release();
         }
-        catch
+        catch (ObjectDisposedException)
         {
-            //
+            // Do nothing
         }
     }
 }
