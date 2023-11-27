@@ -182,17 +182,6 @@ interface DirtyFlag {
     forceDirty(): void;
 }
 
-interface Cronstrue {
-    toString(string: string): string;
-}
-
-declare module "cronstrue" {
-    const module: Cronstrue;
-    export = module;
-}
-declare var cronstrue: Cronstrue;
-
-
 interface Storage {
     getObject: (string: string) => any;
     setObject: (key: string, value: any) => void;
