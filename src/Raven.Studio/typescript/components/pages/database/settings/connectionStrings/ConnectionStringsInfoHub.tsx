@@ -1,51 +1,46 @@
-﻿import {AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
-import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { useAppSelector } from "components/store";
+﻿import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
+import useConnectionStringsLicense from "./useConnectionStringsLicense";
 
 export function ConnectionStringsInfoHub() {
-    const hasRavenEtl = useAppSelector(licenseSelectors.statusValue("HasRavenEtl"));
-    const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
-    const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
-    const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
-    const hasQueueEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const { hasAll, features } = useConnectionStringsLicense();
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
             {
                 featureName: defaultFeatureAvailability[0].featureName,
-                value: hasRavenEtl,
+                value: features.hasRavenEtl,
             },
             {
                 featureName: defaultFeatureAvailability[1].featureName,
-                value: hasSqlEtl,
+                value: features.hasSqlEtl,
             },
             {
                 featureName: defaultFeatureAvailability[2].featureName,
-                value: hasOlapEtl,
+                value: features.hasOlapEtl,
             },
             {
                 featureName: defaultFeatureAvailability[3].featureName,
-                value: hasElasticSearchEtl,
+                value: features.hasElasticSearchEtl,
             },
             {
                 featureName: defaultFeatureAvailability[4].featureName,
-                value: hasQueueEtl,
+                value: features.hasQueueEtl,
             },
             {
                 featureName: defaultFeatureAvailability[5].featureName,
-                value: hasQueueEtl,
+                value: features.hasQueueEtl,
             },
         ],
     });
 
-    const hasAllFeaturesInLicense = hasRavenEtl && hasSqlEtl && hasOlapEtl && hasElasticSearchEtl && hasQueueEtl;
-
     return (
-        <AboutViewAnchored defaultOpen={hasAllFeaturesInLicense ? null : "licensing"}>
+        <AboutViewAnchored defaultOpen={hasAll ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -74,10 +69,7 @@ export function ConnectionStringsInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasAllFeaturesInLicense}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasAll} data={featureAvailability} />
         </AboutViewAnchored>
     );
 }
@@ -89,7 +81,8 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
-    },{
+    },
+    {
         featureName: "SQL ETL",
         featureIcon: "sql-etl",
         community: { value: false },
