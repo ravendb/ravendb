@@ -31,7 +31,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     const dispatch = useDispatch();
     const { databasesService } = useServices();
 
-    const deleteButtonId = useId();
+    const deleteButtonId = "delete-button-" + _.uniqueId();
     const isDeleteDisabled = connection.UsedByTasks?.length > 0;
 
     const isDatabaseAdmin =
