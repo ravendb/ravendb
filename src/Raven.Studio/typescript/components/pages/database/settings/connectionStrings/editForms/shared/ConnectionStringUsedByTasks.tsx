@@ -3,12 +3,12 @@ import { Label } from "reactstrap";
 import { ConnectionStringUsedTask } from "../../connectionStringsTypes";
 import { Icon } from "components/common/Icon";
 
-interface ConnectionStringsUsedByTasks {
+interface ConnectionStringUsedByTasks {
     tasks: ConnectionStringUsedTask[];
     urlProvider: (taskId: number) => () => string;
 }
 
-export default function ConnectionStringsUsedByTasks({ tasks, urlProvider }: ConnectionStringsUsedByTasks) {
+export default function ConnectionStringUsedByTasks({ tasks, urlProvider }: ConnectionStringUsedByTasks) {
     if (!tasks || tasks.length === 0) {
         return null;
     }
