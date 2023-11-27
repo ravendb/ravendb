@@ -1,0 +1,132 @@
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
+using Xunit;
+
+
+using Xunit.Abstractions;
+
+namespace SlowTests.Issues
+{
+    public class RavenDB_21233 : RavenTestBase
+    {
+        private IndexQuery q1 = new()
+        {
+            Query = @"
+from ""Orders"" update {
+    for (var i = 0; i < 10000; i++){
+        this.Freight = 13;
+    }
+}"
+        };
+
+        private IndexQuery q2 = new()
+        {
+            Query = @"
+from index ""Orders/ByCompany""
+ update {
+    for (var i = 0; i < 10000; i++){
+        this.Total = 0;
+    }
+}"
+        };
+
+        private IndexDefinition indexDefinition = new()
+        {
+            Name = "Orders/ByCompany",
+            Maps =
+            {
+                @"from order in docs.Orders
+select new
+{
+    order.Company,
+    Count = 1,
+    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}"
+            }
+        };
+
+        public RavenDB_21233(ITestOutputHelper output) : base(output)
+        {
+        }
+
+        [Fact]
+        public async Task ExecutePatchScriptShouldRespectIgnoreMaxStepsForScriptFlag()
+        {
+            Operation operation;
+            QueryOperationOptions options = new();
+
+            using (var store = GetDocumentStore())
+            {
+
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                /*
+                 * Execute the script q1 with a greater number of steps than the default configuration
+                 * IgnoreMaxStepsForScript=true
+                 * should work
+                 */
+
+                options.IgnoreMaxStepsForScript = true;
+                operation = await store.Operations.SendAsync(new PatchByQueryOperation(q1, options));
+                await operation.WaitForCompletionAsync();
+
+                /*
+                 * Execute the script q1 with a greater number of steps than the default configuration
+                 * IgnoreMaxStepsForScript=false
+                 * shouldn't work
+                 */
+                var exception = await Assert.ThrowsAsync<Raven.Client.Exceptions.Documents.Patching.JavaScriptException>(async () =>
+                {
+                    options.IgnoreMaxStepsForScript = false;
+                    operation = await store.Operations.SendAsync(new PatchByQueryOperation(q1, options));
+                    await operation.WaitForCompletionAsync();
+
+                });
+
+                Assert.Contains(
+                    "The maximum number of statements executed have been reached - 10000. You can configure it by modifying the configuration option: 'Patching.MaxStepsForScript'.",
+                    exception.ToString());
+
+
+                /*
+                 * Execute the script q2 (static index query) with a greater number of steps than the default configuration
+                 * IgnoreMaxStepsForScript=true
+                 * should work
+                 */
+
+                await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
+                Indexes.WaitForIndexing(store);
+
+                options.IgnoreMaxStepsForScript = true;
+                operation = await store.Operations.SendAsync(new PatchByQueryOperation(q2, options));
+                await operation.WaitForCompletionAsync();
+
+                Indexes.WaitForIndexing(store);
+
+                /*
+                 * Execute the script q2 (static index query) with a greater number of steps than the default configuration
+                 * IgnoreMaxStepsForScript=false
+                 * shouldn't work
+                 */
+
+                var exception2 = await Assert.ThrowsAsync<Raven.Client.Exceptions.Documents.Patching.JavaScriptException>(async () =>
+                {
+                    options.IgnoreMaxStepsForScript = false;
+                    operation = await store.Operations.SendAsync(new PatchByQueryOperation(q2, options));
+                    await operation.WaitForCompletionAsync();
+                });
+
+                Assert.Contains(
+                    "The maximum number of statements executed have been reached - 10000. You can configure it by modifying the configuration option: 'Patching.MaxStepsForScript'.",
+                    exception2.ToString());
+            }
+        }
+    }
+}

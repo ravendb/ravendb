@@ -109,6 +109,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             return runner.ExecutePatch(query.Metadata.CollectionName, query.Start, query.PageSize, new CollectionOperationOptions
             {
+                IgnoreMaxStepsForScript = options.IgnoreMaxStepsForScript,
                 MaxOpsPerSecond = options.MaxOpsPerSecond
             }, patch, patchArgs, onProgress, token);
         }
