@@ -21,7 +21,6 @@ interface ConnectionStringsState {
     connections: { [key in StudioEtlType]: Connection[] };
     urlParameters: ConnectionStringsUrlParameters;
     initialEditConnection: Connection;
-    isEmpty: boolean;
 }
 
 const initialState: ConnectionStringsState = {
@@ -39,7 +38,6 @@ const initialState: ConnectionStringsState = {
         type: null,
     },
     initialEditConnection: null,
-    isEmpty: true,
 };
 
 export const connectionStringsSlice = createSlice({
@@ -65,12 +63,14 @@ export const connectionStringsSlice = createSlice({
             state.connections[connection.Type].push(connection);
         },
         editConnection: (state, { payload }: PayloadAction<{ oldName: string; newConnection: Connection }>) => {
-            state.connections[payload.newConnection.Type] = state.connections[payload.newConnection.Type].map((x) =>
+            const type = payload.newConnection.Type;
+
+            state.connections[type] = state.connections[type].map((x) =>
                 x.Name === payload.oldName ? payload.newConnection : x
             );
         },
         deleteConnection: (state, { payload }: PayloadAction<Connection>) => {
-            state.connections[payload.Type] = state.connections[payload.Type].filter((x) => x.Name === payload.Name);
+            state.connections[payload.Type] = state.connections[payload.Type].filter((x) => x.Name !== payload.Name);
         },
         reset: () => initialState,
     },
@@ -124,12 +124,11 @@ export const connectionStringsSlice = createSlice({
                         UsedByTasks: getConnectionStringUsedTasks(ongoingTasks, "QueueEtl", connection.Name),
                     })) satisfies RabbitMqConnection[];
 
-                state.isEmpty = _.isEqual(initialState.connections, state.connections);
                 state.loadStatus = "success";
 
                 if (urlParameters.name && urlParameters.type) {
                     state.initialEditConnection =
-                        state.connections[urlParameters.type]?.find((x) => x.Name === urlParameters.name) ?? null;
+                        state.connections[urlParameters.type]?.find((x) => x?.Name === urlParameters.name) ?? null;
                 }
             })
             .addCase(fetchData.pending, (state) => {
@@ -192,6 +191,6 @@ export const connectionStringSelectors = {
         loadStatus: store.connectionStrings.loadStatus,
         connections: store.connectionStrings.connections,
         initialEditConnection: store.connectionStrings.initialEditConnection,
-        isEmpty: store.connectionStrings.isEmpty,
+        isEmpty: _.isEqual(store.connectionStrings.connections, initialState.connections),
     }),
 };
