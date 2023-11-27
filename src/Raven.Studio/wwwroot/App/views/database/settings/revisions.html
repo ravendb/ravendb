@@ -170,6 +170,16 @@
                     <div class="bg-info padding padding-xs margin-top small" data-bind="visible: humaneRetentionDescription">
                         <div data-bind="html: humaneRetentionDescription"></div>
                     </div>
+                    
+                    <div class="bg-warning padding margin-top small flex-horizontal" data-bind="visible: !limitRevisions()">
+                        <div class="flex-start text-warning">
+                            <i class="icon-warning"></i>
+                        </div>
+                        <div>
+                            No limit has been set on the number of revisions to keep.<br />
+                            An excessive number of revisions will lead to increased storage usage and may affect system performance.
+                        </div>
+                    </div>
                     <hr>
                     <div class="text-right margin-top">
                         <button class="btn btn-default" data-bind="click: $root.exitEditMode"><i class="icon-cancel"></i><span>Cancel</span></button>
