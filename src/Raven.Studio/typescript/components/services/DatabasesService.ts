@@ -57,6 +57,7 @@ import revertRevisionsCommand = require("commands/database/documents/revertRevis
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import testRabbitMqServerConnectionCommand = require("commands/database/cluster/testRabbitMqServerConnectionCommand");
+import testKafkaServerConnectionCommand = require("commands/database/cluster/testKafkaServerConnectionCommand");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
@@ -249,6 +250,22 @@ export default class DatabasesService {
 
     async testRabbitMqServerConnection(db: database, connectionString: string) {
         return new testRabbitMqServerConnectionCommand(db, connectionString).execute();
+    }
+
+    async testKafkaServerConnection(
+        db: database,
+        bootstrapServers: string,
+        useServerCertificate: boolean,
+        connectionOptionsDto: {
+            [optionKey: string]: string;
+        }
+    ) {
+        return new testKafkaServerConnectionCommand(
+            db,
+            bootstrapServers,
+            useServerCertificate,
+            connectionOptionsDto
+        ).execute();
     }
 
     async getDatabaseRecord(db: database, reportRefreshProgress = false) {

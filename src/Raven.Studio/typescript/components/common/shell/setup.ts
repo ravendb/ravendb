@@ -83,6 +83,7 @@ function initRedux() {
 declare module "yup" {
     interface StringSchema {
         basicUrl(msg?: string): this;
+        bootstrapConnections(msg?: string): this;
     }
 }
 
@@ -126,6 +127,15 @@ function initYup() {
     yup.addMethod<yup.StringSchema>(yup.string, "basicUrl", function (msg = genUtils.invalidUrlMessage) {
         return this.matches(genUtils.urlRegex, msg);
     });
+
+    // TODO add "A bootstrap server cannot start with http/https" validation
+    yup.addMethod<yup.StringSchema>(
+        yup.string,
+        "bootstrapConnections",
+        function (msg = "Format should be: 'hostA:portNumber,hostB:portNumber,...'") {
+            return this.matches(/^[\w\d\-_.]+:\d+(,[\w\d\-_.]+:\d+)*$/, msg);
+        }
+    );
 }
 
 export function commonInit() {

@@ -3,9 +3,13 @@ import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
 class testRabbitMqServerConnectionCommand extends commandBase {
+    private readonly db: database;
+    private readonly connectionString: string;
 
-    constructor(private db: database, private connectionString: string) {
+    constructor(db: database, connectionString: string) {
         super();
+        this.db = db;
+        this.connectionString = connectionString;
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
