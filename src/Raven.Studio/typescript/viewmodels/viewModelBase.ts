@@ -46,7 +46,6 @@ abstract class viewModelBase {
     isBusy = ko.observable<boolean>(false);
     
     private keyboardShortcutDomContainers: string[] = [];
-    static modelPollingHandle: ReturnType<typeof setTimeout>; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
     private disposableActions: Array<disposable> = [];
     appUrls: computedAppUrls;
@@ -117,7 +116,6 @@ abstract class viewModelBase {
         }
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();
-        this.modelPollingStart();
 
         this.updateHelpLink(null); // clean link
     }
@@ -200,7 +198,6 @@ abstract class viewModelBase {
 
     deactivate() {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
-        this.modelPollingStop();
 
         this.disposableActions.forEach(f => f.dispose());
         this.disposableActions = [];
@@ -292,35 +289,6 @@ abstract class viewModelBase {
             trigger: false
         };
         router.navigate(url, options);
-    }
-
-    modelPolling(): JQueryPromise<any> {
-        return null;
-    }
-
-    pollingWithContinuation() {
-        const poolPromise = this.modelPolling();
-        if (poolPromise) {
-            poolPromise.always(() => {
-                viewModelBase.modelPollingHandle = setTimeout(() => {
-                    viewModelBase.modelPollingHandle = null;
-                    this.pollingWithContinuation();
-                    }, 5000);
-            });
-        }
-    }
-
-    modelPollingStart() {
-        // clear previous pooling handle (if any)
-        if (viewModelBase.modelPollingHandle) {
-            this.modelPollingStop();
-        }
-        this.pollingWithContinuation();
-    }
-
-    modelPollingStop() {
-        clearTimeout(viewModelBase.modelPollingHandle);
-        viewModelBase.modelPollingHandle = null;
     }
 
     protected confirmationMessage(title: string, confirmationMessage: string, options?: confirmationDialogOptions): JQueryPromise<confirmDialogResult> {
