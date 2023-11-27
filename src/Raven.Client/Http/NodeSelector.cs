@@ -210,11 +210,8 @@ namespace Raven.Client.Http
             if (state.Failures[state.Fastest] == 0 && state.Nodes[state.Fastest].ServerRole == ServerNode.Role.Member)
                 return (state.Fastest, state.Nodes[state.Fastest]);
             
-            // if the fastest node has failures, we'll immediately schedule
-            // another run of finding who the fastest node is, in the meantime
-            // we'll just use the server preferred node or failover as usual
-            
-            SwitchToSpeedTestPhase(null);
+            // until new fastest node is selected, we'll just use the server preferred node or failover as usual
+            ScheduleSpeedTest();
             return GetPreferredNode();
         }
 
@@ -297,19 +294,24 @@ namespace Raven.Client.Http
         {
             state.Fastest = index;
             Interlocked.Exchange(ref state.SpeedTestMode, 0);
-            EnsureFastestNodeTimerExists();
-            _updateFastestNodeTimer.Change(TimeSpan.FromMinutes(1), Timeout.InfiniteTimeSpan);
+            ScheduleSpeedTest();
         }
+
+        private readonly object _timerCreationLocker = new object();
 
         public void ScheduleSpeedTest()
         {
-            EnsureFastestNodeTimerExists();
-            SwitchToSpeedTestPhase(null);
-        }
+            if (_updateFastestNodeTimer != null)
+                return;
 
-        private void EnsureFastestNodeTimerExists()
-        {
-            _updateFastestNodeTimer ??= new Timer(SwitchToSpeedTestPhase, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            lock (_timerCreationLocker)
+            {
+                if (_updateFastestNodeTimer != null)
+                    return;
+
+                SwitchToSpeedTestPhase(null);
+                _updateFastestNodeTimer = new Timer(SwitchToSpeedTestPhase, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            }
         }
 
         public void Dispose()
