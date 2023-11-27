@@ -107,7 +107,7 @@ public static class CoraxIndexingHelpers
         }
         
         //Adding id of document        
-        mappingBuilder.AddBinding(0, keyFieldName, defaultAnalyzer);
+        mappingBuilder.AddBinding(global::Corax.Constants.IndexWriter.PrimaryKeyFieldId, keyFieldName, defaultAnalyzer);
         
         foreach (var field in indexDefinition.IndexFields.Values)
         {

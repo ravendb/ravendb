@@ -598,7 +598,7 @@ namespace Corax.Indexing
         public bool TryDeleteEntry(string term)
         {
             using var _ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
-            return TryDeleteEntry(termSlice);
+            return TryDeleteEntry(termSlice, out var _);
         }
         
         public bool TryDeleteEntry(ReadOnlySpan<byte> term)
@@ -612,14 +612,15 @@ namespace Corax.Indexing
             if (_indexedEntries.Contains(termSlice) == false)
             {
                 _compactKeyScope.Key.Set(termSlice);
-                //
-                var exists = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(0).FieldName).TryGetValue(_compactKeyScope.Key, out var containerId);
+                var exists = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName).TryGetValue(_compactKeyScope.Key, out var containerId);
                 if (exists)
                 {
                     // note that the containerId may be a single value or many(!), if it is many items
                     // we'll delete them, but treat this as a _new_ entry, not an update to an existing
                     // one
-                    return RecordDeletion(containerId, out entryId);
+                    var result = RecordDeletion(containerId, out entryId, out var setsAreDisjoint);
+                    Debug.Assert(setsAreDisjoint, "The set scheduled for deletion shares common elements with the posting list. This should not be possible here.");
+                    return result;
                 }
                 entryId = -1;
                 return false;
@@ -627,26 +628,22 @@ namespace Corax.Indexing
 
             FlushBatch();
             return TryDeleteEntry(termSlice, out entryId);
-
-            void FlushBatch()
+        }
+        
+        private void FlushBatch()
+        {
+            // We cannot actually handles modifications to the same entry in the same batch, so we cheat
+            // we do a side channel flush at this point, then reset the state of the writer back to its initial level
+            bool prevValue = _ownsTransaction;
+            _ownsTransaction = false;
+            try
             {
-                // calling ResetWriter will reset the _entriesAllocator, so we need to clone it to the side
-                var cloned = _transaction.Allocator.Clone(termSlice.Content);
-
-                // We cannot actually handles modifications to the same entry in the same batch, so we cheat
-                // we do a side channel flush at this point, then reset the state of the writer back to its initial level
-                bool prevValue = _ownsTransaction;
-                _ownsTransaction = false;
-                try
-                {
-                    Commit();
-                    ResetWriter();
-                }
-                finally
-                {
-                    _transaction.Allocator.Release(ref cloned);
-                    _ownsTransaction = prevValue;
-                }
+                Commit();
+                ResetWriter();
+            }
+            finally
+            {
+                _ownsTransaction = prevValue;
             }
         }
 
@@ -695,28 +692,41 @@ namespace Corax.Indexing
 
         public void TryDeleteEntryByField(string field, string term)
         {
-            if (_fieldsMapping.TryGetByFieldName(field, out var binding) && binding.FieldId == 0)
+            if (_fieldsMapping.TryGetByFieldName(field, out var binding) && binding.FieldId == Constants.IndexWriter.PrimaryKeyFieldId)
             {
                 TryDeleteEntry(term);
                 return;
             }
+
+            long idInTree;
+            using (Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice))
+            using (Slice.From(_entriesAllocator, field, ByteStringType.Immutable, out var fieldSlice))
+            {
+
+                if (TryGetEntryTermId(fieldSlice, termSlice.AsSpan(), out idInTree) == false)
+                    return;
+            }
+
+            RecordDeletion(idInTree, out _, out var setsAreDisjoint);
+            if (setsAreDisjoint == false)
+            {
+                FlushBatch();
+                TryDeleteEntryByField(field, term);
+            }
             
-            using var __ = Slice.From(_entriesAllocator, term, ByteStringType.Immutable, out var termSlice);
-            using var ___ = Slice.From(_entriesAllocator, field, ByteStringType.Immutable, out var fieldSlice);
-            
-            if (TryGetEntryTermId(fieldSlice, termSlice.AsSpan(), out long idInTree) == false) 
-                return;
-            
-            RecordDeletion(idInTree, out _);
         }
         
         /// <summary>
         /// Record term for deletion from Index.
         /// </summary>
         /// <param name="idInTree">With frequencies and container type.</param>
+        /// <param name="setsAreDisjoint">Intersection between PostingList and _deletedEntries. We may use it as indicate for flushing batch.</param>
         [SkipLocalsInit]
-        private bool RecordDeletion(long idInTree, out long singleEntryId)
+        private bool RecordDeletion(long idInTree, out long singleEntryId, out bool setsAreDisjoint)
         {
+            var countOfAlreadyDeletedEntries = _deletedEntries.Count;
+            var totalRead = 0L;
+            setsAreDisjoint = true;
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
             if ((idInTree & (long)TermIdMask.PostingList) != 0)
             {
@@ -734,12 +744,13 @@ namespace Corax.Indexing
                     {
                         long entryId = buffer[i];
                         Debug.Assert(entryId>0);
-                        _deletedEntries.Add(entryId);
+                        setsAreDisjoint &= _deletedEntries.Add(entryId);
                     }
-                    _numberOfModifications -= read;
+                    totalRead += read;
                 }
 
                 singleEntryId = -1;
+                _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
                 return false;
                 
             }
@@ -762,10 +773,12 @@ namespace Corax.Indexing
                     {
                         long entryId = output[i];
                         Debug.Assert(entryId>0);
-                        _deletedEntries.Add(entryId);
+                        setsAreDisjoint &= _deletedEntries.Add(entryId);
                     }
-                    _numberOfModifications -= read;
+                    totalRead += read;
                 }
+
+                _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
                 singleEntryId = -1;
                 return false;
             }
@@ -773,8 +786,8 @@ namespace Corax.Indexing
             singleEntryId = containerId;
             Debug.Assert(containerId > 0);
             
-            _deletedEntries.Add(containerId);
-            _numberOfModifications--;
+            setsAreDisjoint &= _deletedEntries.Add(containerId);
+            _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
             return true;
         }
 
