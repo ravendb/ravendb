@@ -63,13 +63,11 @@ from ""Orders"" update {
                 
                 index.Execute(store);
                 
-                Indexes.WaitForIndexing(store);
+                var indexErrors = Indexes.WaitForIndexingErrors(store);
 
-                var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new [] {index.IndexName}));
-
-                Assert.Single(errors);
+                Assert.Single(indexErrors);
                 
-                Assert.Contains("The maximum number of statements executed have been reached. You can configure it by modifying the configuration option: 'Indexing.MaxStepsForScript'.", errors[0].Errors[0].Error);
+                Assert.Contains("The maximum number of statements executed has been reached. You can configure it by modifying the configuration option: 'Indexing.MaxStepsForScript'.", indexErrors[0].Errors[0].Error);
             }
         }
     }
