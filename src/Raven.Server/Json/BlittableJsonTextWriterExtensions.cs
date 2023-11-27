@@ -886,14 +886,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.Timings));
-                writer.WriteQueryTimings(context, result.Timings);
-                if (result.Timings.QueryPlan != null)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(result.Timings.QueryPlan));
-                    var value = result.Timings.QueryPlan.ToJson();
-                    writer.WriteObject(context.ReadObject(value, nameof(result.Timings.QueryPlan)));
-                }
+                writer.WriteQueryTimings(context, result.Timings, attachQueryPlan: true);
             }
 
             if (partial == false)
@@ -902,14 +895,21 @@ namespace Raven.Server.Json
             return (numberOfResults, totalDocumentsSizeInBytes);
         }
 
-        private static void WriteQueryTimings(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryTimings queryTimings)
+        private static void WriteQueryTimings(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryTimings queryTimings, bool attachQueryPlan)
         {
             writer.WriteStartObject();
 
             writer.WritePropertyName(nameof(QueryTimings.DurationInMs));
             writer.WriteInteger(queryTimings.DurationInMs);
+            if (attachQueryPlan && queryTimings.QueryPlan != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(queryTimings.QueryPlan));
+                var value = queryTimings.QueryPlan.ToJson();
+                writer.WriteObject(context.ReadObject(value, nameof(queryTimings.QueryPlan)));
+            }
+            
             writer.WriteComma();
-
             writer.WritePropertyName(nameof(QueryTimings.Timings));
             if (queryTimings.Timings != null)
             {
@@ -924,7 +924,7 @@ namespace Raven.Server.Json
                     first = false;
 
                     writer.WritePropertyName(kvp.Key);
-                    writer.WriteQueryTimings(context, kvp.Value);
+                    writer.WriteQueryTimings(context, kvp.Value, attachQueryPlan: false);
                 }
 
                 writer.WriteEndObject();

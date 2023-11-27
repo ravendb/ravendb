@@ -2,6 +2,7 @@
 using Corax.Querying.Matches.Meta;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Server.Utils.Stats;
+using QueryInspectionNode = Corax.Querying.Matches.Meta.QueryInspectionNode;
 
 namespace Raven.Server.Documents.Queries.Timings
 {
