@@ -189,6 +189,56 @@ namespace FastTests.Corax
                 Assert.Equal(0, read);
             }
         }
+        
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+        public void CanRemoveDocumentUpdatedTwiceInSameBatchNotByMainKey()
+        {
+            var fields = CreateKnownFields(_bsc);
+            using (var writer = new IndexWriter(Env, fields))
+            {
+                using (var builder = writer.Index("users/1"u8))
+                {
+                    builder.Write(0, "users/1"u8);
+                    builder.Write(1, "dancing queen"u8);
+                    builder.Write(2, "someKey"u8);
+                }
+                
+                writer.Commit();
+            }
+
+            using (var writer = new IndexWriter(Env, fields))
+            {
+                {
+                    using (var builder = writer.Update("users/1"u8))
+                    {
+                        builder.Write(0, "users/1"u8);
+                        builder.Write(1, "fernando"u8);
+                        builder.Write(2, "someKey"u8);
+                    }
+                }
+
+                {
+                    writer.TryDeleteEntryByField("NumField", "someKey");
+                }
+
+                writer.Commit();
+            }
+
+            {
+                Span<long> matches = stackalloc long[16];
+                using var searcher = new IndexSearcher(Env, fields);
+                Assert.Equal(0, searcher.NumberOfEntries);
+                Span<long> ids = stackalloc long[16];
+                var read = searcher.AllEntries().Fill(ids);
+                Assert.Equal(0, read);
+
+                read = searcher.TermQuery(fields.GetByFieldId(1).Metadata, "fernando").Fill(ids);
+                Assert.Equal(0, read);
+
+                read = searcher.TermQuery(fields.GetByFieldId(1).Metadata, "dancing queen").Fill(ids);
+                Assert.Equal(0, read);
+            }
+        }
 
         private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
         {

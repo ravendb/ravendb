@@ -67,6 +67,8 @@ namespace Corax
             
             public const int DynamicField = -2;
 
+            public const int PrimaryKeyFieldId = 0;
+
             public const string SuggestionsTreePrefix = "__Suggestion_";
 
             static IndexWriter()
