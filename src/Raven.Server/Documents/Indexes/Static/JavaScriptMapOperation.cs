@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         catch (StatementsCountOverflowException e)
                         {
                             throw new Raven.Client.Exceptions.Documents.Patching.JavaScriptException(
-                                $"The maximum number of statements executed have been reached. You can configure it by modifying the configuration option: '{RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)}'.", e);
+                                $"The maximum number of statements executed has been reached. You can configure it by modifying the configuration option: '{RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)}'.", e);
                         }
                         catch (JavaScriptException jse)
                         {
