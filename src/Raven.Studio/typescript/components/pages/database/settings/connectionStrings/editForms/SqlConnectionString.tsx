@@ -23,10 +23,10 @@ export interface SqlConnectionStringProps extends EditConnectionStringFormProps 
     initialConnection: SqlConnection;
 }
 
-const SqlConnectionString = ({ db, initialConnection, isForNewConnection }: SqlConnectionStringProps) => {
+export default function SqlConnectionString({ db, initialConnection, isForNewConnection }: SqlConnectionStringProps) {
     const dispatch = useDispatch();
 
-    const { control, handleSubmit, formState, watch } = useForm<FormData>({
+    const { control, handleSubmit, formState } = useForm<FormData>({
         mode: "all",
         defaultValues: _.omit(initialConnection, "Type"),
         resolver: yupSchemaResolver,
@@ -95,7 +95,7 @@ const SqlConnectionString = ({ db, initialConnection, isForNewConnection }: SqlC
                                 Syntax <Icon icon="help" />
                             </small>
                             <PopoverWithHover target={syntaxHelpElement}>
-                                <div className="p-2">{getSyntaxHelp(watch("FactoryName"))}</div>
+                                <div className="p-2">{getSyntaxHelp(formValues.FactoryName)}</div>
                             </PopoverWithHover>
                         </>
                     )}
@@ -135,9 +135,7 @@ const SqlConnectionString = ({ db, initialConnection, isForNewConnection }: SqlC
             <EditConnectionStringFormFooter isSubmitting={formState.isSubmitting} />
         </Form>
     );
-};
-
-export default SqlConnectionString;
+}
 
 const testButtonId = "test-button";
 

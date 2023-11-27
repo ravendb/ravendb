@@ -56,6 +56,7 @@ import deleteConnectionStringCommand = require("commands/database/settings/delet
 import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
+import testRabbitMqServerConnectionCommand = require("commands/database/cluster/testRabbitMqServerConnectionCommand");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
@@ -244,6 +245,10 @@ export default class DatabasesService {
 
     async testSqlConnectionString(db: database, connectionString: string, factoryName: string) {
         return new testSqlConnectionStringCommand(db, connectionString, factoryName).execute();
+    }
+
+    async testRabbitMqServerConnection(db: database, connectionString: string) {
+        return new testRabbitMqServerConnectionCommand(db, connectionString).execute();
     }
 
     async getDatabaseRecord(db: database, reportRefreshProgress = false) {
