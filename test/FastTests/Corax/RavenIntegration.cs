@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -274,6 +275,32 @@ public class RavenIntegration : RavenTestBase
             using var s = store.OpenSession();
             var q = s.Advanced.RawQuery<DoubleItem>("from DoubleItems where 'Value' < 3 and 'Value' > 1.5").ToList();
             Assert.Equal(1, q.Count);
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanGetQueryPlanViaQuery(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var s = store.OpenSession();
+            s.Store(new DoubleItem(2));
+            s.SaveChanges();
+        }
+
+        {
+            using var s = store.OpenSession();
+            QueryTimings timings = null;
+            var q = s.Query<DoubleItem>()
+                .Customize(x => 
+                    x
+                        .WaitForNonStaleResults()
+                        .Timings(out timings))
+                .Where(x => x.Value > 1D)
+                .ToList();
+            Assert.Equal(1, q.Count);
+            Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
         }
     }
 

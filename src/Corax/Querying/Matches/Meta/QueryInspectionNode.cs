@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Corax.Querying.Matches.Meta
 {
+    // This class is reflected in the Raven.Client solution for deserialization purposes. Please ensure that any changes made here are also reflected in the Client's code.
     public sealed class QueryInspectionNode : IDynamicJson
     {
         public readonly string Operation;
