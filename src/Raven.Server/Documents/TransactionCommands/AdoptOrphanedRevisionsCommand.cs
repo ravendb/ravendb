@@ -12,12 +12,12 @@ using static Raven.Server.Documents.TransactionCommands.AdoptOrphanedRevisionsCo
 
 namespace Raven.Server.Documents.TransactionCommands
 {
-    internal class AdoptOrphanedRevisionsCommand : RevisionsScanningOperationCommand<AdoptOrphanedResult>
+    internal class AdoptOrphanedRevisionsCommand : RevisionsScanningOperationCommand<AdoptOrphanedRevisionsResult>
     {
         public AdoptOrphanedRevisionsCommand(
             RevisionsStorage revisionsStorage,
             List<string> ids,
-            AdoptOrphanedResult result,
+            AdoptOrphanedRevisionsResult result,
             OperationCancelToken token) : base(revisionsStorage, ids, result, token)
         {
             MoreWork = false;
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.TransactionCommands
             {
                 _token.ThrowIfCancellationRequested();
                 if(_revisionsStorage.AdoptOrphanedFor(context, id))
-                    _result.AdoptedDocsCount++;
+                    _result.AdoptedCount++;
             }
 
             return _ids.Count;
@@ -53,19 +53,19 @@ namespace Raven.Server.Documents.TransactionCommands
 
             public AdoptOrphanedRevisionsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new AdoptOrphanedRevisionsCommand(_revisionsStorage, _ids, new AdoptOrphanedResult(), OperationCancelToken.None);
+                return new AdoptOrphanedRevisionsCommand(_revisionsStorage, _ids, new AdoptOrphanedRevisionsResult(), OperationCancelToken.None);
             }
         }
 
 
-        public class AdoptOrphanedResult : OperationResult
+        public class AdoptOrphanedRevisionsResult : OperationResult
         {
-            public long AdoptedDocsCount { get; set; }
+            public long AdoptedCount { get; set; }
 
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
-                json[nameof(AdoptedDocsCount)] = AdoptedDocsCount;
+                json[nameof(AdoptedCount)] = AdoptedCount;
                 return json;
             }
         }

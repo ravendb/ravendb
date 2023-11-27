@@ -1766,7 +1766,7 @@ namespace Raven.Server.Documents.Revisions
         public async Task<IOperationResult> AdoptOrphanedAsync(Action<IOperationProgress> onProgress,
             OperationCancelToken token)
         {
-            var result = new AdoptOrphanedRevisionsCommand.AdoptOrphanedResult();
+            var result = new AdoptOrphanedRevisionsCommand.AdoptOrphanedRevisionsResult();
             await PerformRevisionsOperationAsync(onProgress, result,
                 (ids, res, tk) => new AdoptOrphanedRevisionsCommand(this, ids, result, tk), 
                 collections: null, token);
