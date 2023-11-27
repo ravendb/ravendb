@@ -167,6 +167,7 @@ public unsafe struct NativeIntegersList : IDisposable
         var val = *RawItems;
         RawItems++;
         Count--;
+        Capacity--;
         return val;
     }
 
