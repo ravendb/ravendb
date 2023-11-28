@@ -462,25 +462,17 @@ namespace Raven.Server.Documents.Patch
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             ScriptRunner.SingleRun runIfMissing = null;
-            int originalMaxStepsForScript = context.DocumentDatabase.Configuration.Patching.MaxStepsForScript;
 
             using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
             {
-                try
+                using (_ignoreMaxStepsForScript ? run.ScriptEngine.DisableMaxStatements() : null)
                 {
-                    if (_ignoreMaxStepsForScript)
-                        run.ScriptEngine.DisableMaxStatements();
-
                     using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
                     {
 
                         PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
                         return 1;
                     }
-                }
-                finally
-                {
-                    run.ScriptEngine.ChangeMaxStatements(originalMaxStepsForScript);
                 }
             }
         }
