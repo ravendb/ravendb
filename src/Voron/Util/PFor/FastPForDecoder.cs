@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using Microsoft.VisualBasic.CompilerServices;
 using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Server;
@@ -104,6 +105,7 @@ public unsafe struct FastPForDecoder : IDisposable
         var prefixAmount = _prefixShiftAmount;
         var sharedPrefixMask = Vector256.Create<long>(_sharedPrefix);
 
+        var bigDeltaStart = 0;
         var bigDeltaOffsets = new NativeIntegersList(_allocator, -1);
         var buffer = stackalloc uint[256];
         int read = 0;
@@ -170,9 +172,9 @@ public unsafe struct FastPForDecoder : IDisposable
             }
 
             var expectedBufferIndex = -1;
-            if (bigDeltaOffsets.Count > 0)
+            if ((bigDeltaOffsets.Count - bigDeltaStart) > 0)
             {
-                expectedBufferIndex = *(byte*)bigDeltaOffsets.First;
+                expectedBufferIndex = *(byte*)bigDeltaOffsets.RawItems[bigDeltaStart];
             }
 
             for (int i = 0; i + Vector256<uint>.Count <= 256; i += Vector256<uint>.Count)
@@ -180,29 +182,31 @@ public unsafe struct FastPForDecoder : IDisposable
                 var (a, b) = Vector256.Widen(Vector256.Load(buffer + i));
                 if (expectedBufferIndex == i)
                 {
-                    a |= GetDeltaHighBits();
+                    a |= GetDeltaHighBits(ref bigDeltaStart);
                 }
                 PrefixSumAndStoreToOutput(a, ref _prev);
                 if (expectedBufferIndex == i + 4)
                 {
-                    b |= GetDeltaHighBits();
+                    b |= GetDeltaHighBits(ref bigDeltaStart);
                 }
                 PrefixSumAndStoreToOutput(b, ref _prev);
             }
+
+            bigDeltaStart = 0;
             bigDeltaOffsets.Clear();
 
-            Vector256<ulong> GetDeltaHighBits()
+            Vector256<ulong> GetDeltaHighBits(ref int index)
             {
-                var ptr = (byte*)bigDeltaOffsets.Pop() + 1;
+                var ptr = (byte*)bigDeltaOffsets.RawItems[index] + 1;
+                index++;
 
                 Vector256<int> highBitsDelta = PlatformSpecific.IsArm == false 
                     ? Vector128.Load(ptr).AsInt32().ToVector256() 
                     : Vector256.Create(*(int*)ptr, *(int*)(ptr + sizeof(int)), *(int*)(ptr + 2 * sizeof(int)), *(int*)(ptr + 3 * sizeof(int)), 0, 0, 0, 0);
-                    
-                
-                if (bigDeltaOffsets.Count > 0)
+
+                if ((bigDeltaOffsets.Count - index) > 0)
                 {
-                    expectedBufferIndex = *(byte*)bigDeltaOffsets.First;
+                    expectedBufferIndex = *(byte*)bigDeltaOffsets.RawItems[index];
                 }
                 else
                 {
