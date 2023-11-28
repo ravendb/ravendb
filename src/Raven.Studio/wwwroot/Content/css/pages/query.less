@@ -255,6 +255,22 @@
     }
 }
 
+.queryPlan {
+    pre {
+        @color-list: @color-1, @color-1-2, @color-2, @color-2-2, @color-3, @color-3-2, @color-4, @color-4-2, @color-5, @color-5-2;
+        .loop(@index) when (@index > 0) {
+            @color: extract(@color-list, @index);
+
+            .indent-@{index} {
+                color: @color;
+            }
+
+            .loop(@index - 1);
+        }
+        .loop(length(@color-list));
+    }
+}
+
 .js-timings-container {
     .timing-legend-item {
         div {
