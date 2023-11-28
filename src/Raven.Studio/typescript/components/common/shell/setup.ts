@@ -23,21 +23,6 @@ function updateDatabases() {
 
 const throttledUpdateDatabases = _.throttle(updateDatabases, 200);
 
-function updateReduxCollectionsTracker() {
-    globalDispatch(
-        collectionsTrackerActions.collectionsLoaded(
-            collectionsTracker.default.collections().map((x) => ({
-                name: x.name,
-                countPrefix: x.countPrefix(),
-                documentCount: x.documentCount(),
-                hasBounceClass: x.hasBounceClass(),
-                lastDocumentChangeVector: x.lastDocumentChangeVector(),
-                sizeClass: x.sizeClass(),
-            }))
-        )
-    );
-}
-
 export const throttledUpdateLicenseLimitsUsage = _.throttle(() => {
     services.licenseService
         .getClusterLimitsUsage()
@@ -87,8 +72,9 @@ function initRedux() {
         throttledUpdateLicenseLimitsUsage();
     });
 
-    collectionsTracker.default.registerOnGlobalChangeVectorUpdatedHandler(updateReduxCollectionsTracker);
-    collectionsTracker.default.onUpdateCallback = updateReduxCollectionsTracker;
+    collectionsTracker.default.collections.subscribe((collections) =>
+        globalDispatch(collectionsTrackerActions.collectionsLoaded(collections.map((x) => x.toCollectionState())))
+    );
 
     changesContext.default.connectServerWideNotificationCenter();
 }
