@@ -784,7 +784,7 @@ namespace Raven.Server.Utils.Cli
 
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, RaftIdGenerator.NewId()).Wait();
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, RaftIdGenerator.NewId(), null).Wait();
                 }
                 catch (Exception e)
                 {

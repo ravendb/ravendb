@@ -4,7 +4,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Org.BouncyCastle.OpenSsl;
@@ -19,6 +21,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -152,6 +155,8 @@ namespace Raven.Server.Web.Authentication
             {
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
+                certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string twoFactorAuthenticationKey);
+
                 ValidateCertificateDefinition(certificate, ServerStore);
 
                 using (ctx.OpenReadTransaction())
@@ -199,7 +204,7 @@ namespace Raven.Server.Web.Authentication
                 
                 try
                 {
-                    await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx, GetRaftRequestIdFromQuery());
+                    await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx, GetRaftRequestIdFromQuery(), twoFactorAuthenticationKey);
                 }
                 catch (Exception e)
                 {
@@ -210,7 +215,8 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore, TransactionOperationContext ctx, string raftRequestId)
+        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore,
+            TransactionOperationContext ctx, string raftRequestId, string twoFactorAuthenticationKey)
         {
             var collection = new X509Certificate2Collection();
 
@@ -283,6 +289,10 @@ namespace Raven.Server.Web.Authentication
                 var certKey = currentCertDef.Thumbprint;
                 if (serverStore.CurrentRachisState == RachisState.Passive)
                 {
+                    if (twoFactorAuthenticationKey != null)
+                    {
+                        throw new InvalidOperationException("Cannot define two factor auth key when the node is in passive mode");
+                    }
                     using (var certificate = ctx.ReadObject(currentCertDef.ToJson(), "Client/Certificate/Definition"))
                     using (var tx = ctx.OpenWriteTransaction())
                     {
@@ -292,7 +302,11 @@ namespace Raven.Server.Web.Authentication
                 }
                 else
                 {
-                    var putResult = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, currentCertDef, $"{raftRequestId}/{certKey}"));
+                    var putCertificateCommand = new PutCertificateCommand(certKey, currentCertDef, $"{raftRequestId}/{certKey}")
+                    {
+                        TwoFactorAuthenticationKey = twoFactorAuthenticationKey
+                    };
+                    var putResult = await serverStore.PutValueInClusterAsync(putCertificateCommand);
                     await serverStore.Cluster.WaitForIndexNotification(putResult.Index);
                 }
 
@@ -1162,5 +1176,6 @@ namespace Raven.Server.Web.Authentication
                 }
             }
         }
+        
     }
 }

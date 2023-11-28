@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
@@ -85,7 +86,7 @@ namespace Raven.Server.Https
                 certificate = await tlsConnectionFeature.GetClientCertificateAsync(context.ConnectionClosed);
 
             var httpConnectionFeature = context.Features.Get<IHttpConnectionFeature>();
-            var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, httpConnectionFeature);
+            var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, httpConnectionFeature, ((IPEndPoint)context.RemoteEndPoint)?.Address);
 
             // build the token
             context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);
