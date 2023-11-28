@@ -3,6 +3,7 @@
 import messagePublisher = require("common/messagePublisher");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
+import endpoints = require("endpoints");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
@@ -117,7 +118,7 @@ class commandBase {
             }, false);
         };
         
-        const defaultOptions = {
+        const defaultOptions: JQueryAjaxSettings = {
             url: url,
             data: args,
             dataType: "json",
@@ -128,6 +129,11 @@ class commandBase {
                 const xhr = new XMLHttpRequest();
                 xhrConfiguration(xhr);
                 return xhr;
+            },
+            statusCode: {
+                428: function () {
+                    window.location.href = location.origin + endpoints.global.studio._2faIndex_html;
+                }
             }
         };
         

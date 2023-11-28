@@ -37,6 +37,24 @@ namespace Raven.Server.Web.Authentication
 {
     public class AdminCertificatesHandler : ServerRequestHandler
     {
+        [RavenAction("/admin/certificates/2fa/generate", "GET", AuthorizationStatus.Operator)]
+        public async Task GenerateSecret()
+        {
+            await ServerStore.EnsureNotPassiveAsync();
+
+            var secret = TwoFactorAuthentication.GenerateSecret();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Secret");
+                writer.WriteString(secret);
+                writer.WriteEndObject();
+            }
+        }
+        
         [RavenAction("/admin/certificates", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task Generate()
         {

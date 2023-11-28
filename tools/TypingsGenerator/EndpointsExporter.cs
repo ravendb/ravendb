@@ -64,8 +64,9 @@ namespace TypingsGenerator
                 {
                     currentUrl++;
                     var urlSeparator = urlsLength == currentUrl ? "" : ",";
+                    var keyEscaped = (char.IsDigit(urlKvp.Key[0]) ? "_" : string.Empty) + urlKvp.Key;
 
-                    builder.AppendLine("            " + urlKvp.Key + ": \"" + urlKvp.Value + "\"" + urlSeparator);
+                    builder.AppendLine("            " + keyEscaped + ": \"" + urlKvp.Value + "\"" + urlSeparator);
                 }
 
                 builder.AppendLine("        }" + handlerSeparator);

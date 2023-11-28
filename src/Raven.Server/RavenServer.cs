@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -98,6 +99,8 @@ namespace Raven.Server
         private readonly Logger _tcpLogger;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
+
+        private readonly ConcurrentDictionary<string, TwoFactorAuthRegistration> _twoFactorAuthTimeByCertThumbprintExpiry = new();
 
         public event Action AfterDisposal;
 
@@ -1484,12 +1487,7 @@ namespace Raven.Server
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
-            public readonly DateTime CreatedAt;
-
-            public AuthenticateConnection()
-            {
-                CreatedAt = SystemTime.UtcNow;
-            }
+            public readonly DateTime CreatedAt = SystemTime.UtcNow;
 
             public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
             {
@@ -1546,10 +1544,23 @@ namespace Raven.Server
 
             public string WrongProtocolMessage;
 
-            private AuthenticationStatus _status;
+            private AuthenticationStatus _status, _statusAfterTwoFactorAuth;
 
             public AuthenticationStatus StatusForAudit => _status;
 
+            public TwoFactorAuthRegistration TwoFactorAuthRegistration;
+            
+            public void WaitingForTwoFactorAuthentication()
+            {
+                _statusAfterTwoFactorAuth = _status;
+                _status = AuthenticationStatus.TwoFactorAuthNotProvided;
+            }
+
+            public void SuccessfulTwoFactorAuthentication()
+            {
+                _status = _statusAfterTwoFactorAuth;
+            }
+            
             public AuthenticationStatus Status
             {
                 get
@@ -1594,7 +1605,7 @@ namespace Raven.Server
             }
         }
 
-        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
+        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo, IPAddress address)
         {
             var authenticationStatus = new AuthenticateConnection
             {
@@ -1652,6 +1663,37 @@ namespace Raven.Server
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
 
                         authenticationStatus.SetBasedOnCertificateDefinition(definition);
+                        
+                        if (cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _))
+                        {
+                            
+                            bool hasTotpRecently = false;
+                            if (_twoFactorAuthTimeByCertThumbprintExpiry.TryGetValue(certificate.Thumbprint, out var twoFactorAuthRegistration))
+                            {
+                                if (Time.GetUtcNow() < twoFactorAuthRegistration.Expiry)
+                                {
+                                    if (twoFactorAuthRegistration.HasLimits && twoFactorAuthRegistration.IpAddresses != null &&
+                                        Array.IndexOf(twoFactorAuthRegistration.IpAddresses, address.ToString()) == -1)
+                                    {
+                                        authenticationStatus.Status = AuthenticationStatus.TwoFactorAuthFromInvalidLimit;
+                                        return authenticationStatus;
+                                    }
+
+                                    authenticationStatus.TwoFactorAuthRegistration = twoFactorAuthRegistration;
+                                    hasTotpRecently = true;
+                                }
+                                else
+                                {
+                                    _twoFactorAuthTimeByCertThumbprintExpiry.TryRemove(new KeyValuePair<string, TwoFactorAuthRegistration>(certificate.Thumbprint, twoFactorAuthRegistration));
+                                }
+                            }
+                            if (hasTotpRecently == false)
+                            {
+                                authenticationStatus.WaitingForTwoFactorAuthentication();
+                                return authenticationStatus;
+                            }
+                        }
+     
                     }
                 }
             }
@@ -2518,7 +2560,7 @@ namespace Raven.Server
             }
 
             var certificate = (X509Certificate2)sslStream.RemoteCertificate;
-            var auth = AuthenticateConnectionCertificate(certificate, tcpClient);
+            var auth = AuthenticateConnectionCertificate(certificate, tcpClient, ((IPEndPoint)tcpClient.Client.RemoteEndPoint)?.Address);
 
             switch (auth.Status)
             {
@@ -2797,7 +2839,9 @@ namespace Raven.Server
             Operator,
             ClusterAdmin,
             Expired,
-            NotYetValid
+            NotYetValid,
+            TwoFactorAuthNotProvided,
+            TwoFactorAuthFromInvalidLimit
         }
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -2903,6 +2947,28 @@ namespace Raven.Server
             }
 
             ArrayPool<byte>.Shared.Return(buffer);
+        }
+
+        public void RegisterTwoFactorAuthSuccess(TwoFactorAuthRegistration registration)
+        {
+            registration.Expiry = Time.GetUtcNow() + registration.Period;
+            _twoFactorAuthTimeByCertThumbprintExpiry[registration.Thumbprint] = registration;
+        }
+
+        public void ForgotTwoFactorAuthSuccess(TwoFactorAuthRegistration registration)
+        {
+            _twoFactorAuthTimeByCertThumbprintExpiry.TryRemove(new KeyValuePair<string, TwoFactorAuthRegistration>(registration.Thumbprint, registration));
+        }
+
+        public class TwoFactorAuthRegistration
+        {
+            public string Thumbprint;
+            public DateTime Expiry;
+            
+            public TimeSpan Period;
+            public string[] IpAddresses;
+            public bool HasLimits;
+            public string ExpectedCookieValue;
         }
     }
 }
