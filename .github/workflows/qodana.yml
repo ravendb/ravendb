@@ -1,11 +1,6 @@
 name: Qodana
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - v5.4
-      - v6.0
-      - 'release/*'
 
 jobs:
   qodana:
