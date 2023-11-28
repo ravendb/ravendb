@@ -515,7 +515,7 @@ namespace SlowTests.Authentication
                 {
                     var certBytes = certificate.Export(X509ContentType.Cert);
                     var certDef = new CertificateDefinition { Name = name, Permissions = permissions, SecurityClearance = clearance };
-                    await AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, string.Empty, Server.ServerStore, ctx, RaftIdGenerator.NewId());
+                    await AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, string.Empty, Server.ServerStore, ctx, RaftIdGenerator.NewId(), null);
                 }
             }
             {
