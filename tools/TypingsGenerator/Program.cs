@@ -81,6 +81,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
@@ -172,6 +173,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                 .WithTypeMapping(TsPrimitive.String, typeof(LazyStringValue))
                 .WithTypeMapping(TsPrimitive.Any, typeof(DynamicJsonValue))
+                .WithTypeMapping(TsPrimitive.Any, typeof(IDynamicJson))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(BlittableJsonReaderArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(DynamicJsonArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IEnumerable))
@@ -248,6 +250,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PutIndexResult));
             scripter.AddType(typeof(IndexQuery));
             scripter.AddType(typeof(QueryTimings));
+            scripter.AddType(typeof(QueryInspectionNode));
             scripter.AddType(typeof(DynamicQueryToIndexMatcher.Explanation));
 
             // attachments

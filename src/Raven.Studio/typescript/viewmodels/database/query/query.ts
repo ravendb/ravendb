@@ -47,7 +47,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import killQueryCommand from "commands/database/query/killQueryCommand";
 import getEssentialDatabaseStatsCommand from "commands/resources/getEssentialDatabaseStatsCommand";
 
-type queryResultTab = "results" | "explanations" | "timings" | "revisions";
+type queryResultTab = "results" | "explanations" | "queryPlan" | "timings" | "revisions";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
@@ -231,6 +231,8 @@ class query extends shardViewModelBase {
     explanationsCache: explanationItem[] = [];
     totalExplanations = ko.observable<number>(0);
     timings = ko.observable<Raven.Client.Documents.Queries.Timings.QueryTimings>();
+    
+    queryPlan = ko.observable<string>();
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     deleteDocumentDisableReason: KnockoutComputed<string>;
@@ -529,7 +531,7 @@ class query extends shardViewModelBase {
         
         this.showVirtualTable = ko.pureComputed(() => {
             const currentTab = this.currentTab();
-            return currentTab !== 'timings' && !this.showTimeSeriesGraph() && !this.showMapView();
+            return currentTab !== 'timings'&& currentTab !== "queryPlan" && !this.showTimeSeriesGraph() && !this.showMapView();
         });
 
         this.spatialResultsOnMapText = ko.pureComputed(() => 
@@ -969,6 +971,7 @@ class query extends shardViewModelBase {
         
         this.timings(null);
         this.showFanOutWarning(false);
+        this.queryPlan(null);
         
         this.isEmptyFieldsResult(false);
         
@@ -1151,7 +1154,7 @@ class query extends shardViewModelBase {
                             if (queryResults.explanations) {
                                 this.onExplanationsLoaded(queryResults.explanations, queryResults.items);
                             }
-                            this.onTimingsLoaded(queryResults.timings);
+                            this.onTimingsLoaded(queryResults);
                             this.onSpatialLoaded(queryResults);
                         }
                         
@@ -1382,8 +1385,17 @@ class query extends shardViewModelBase {
         this.totalExplanations(this.explanationsCache.length);
     }
     
-    private onTimingsLoaded(timings: Raven.Client.Documents.Queries.Timings.QueryTimings): void {
+    private onTimingsLoaded(queryResults: pagedResultExtended<document>): void { 
+        const timings = queryResults.timings;
         this.timings(timings);
+        this.queryPlan(queryResults.queryPlan ? query.formatQueryPlan(queryResults.queryPlan) : null);
+    }
+    
+    private static formatQueryPlan(node: Raven.Client.Documents.Queries.Timings.QueryInspectionNode, indent = 0): string {
+        const indentation = "".padStart(indent * 4, " ");
+        const parameters = Object.entries(node.Parameters).map(value => value.join(": ")).join(", ");
+        const children = node.Children.map(child => query.formatQueryPlan(child, indent + 1)).join("");
+        return indentation + node.Operation + " " + parameters + "\r\n" + children;
     }
     
     private onIncludesLoaded(includes: dictionary<any>): void {
@@ -1626,6 +1638,10 @@ class query extends shardViewModelBase {
         
         this.columnsSelector.reset();
         this.refresh();
+    }
+
+    goToQueryPlanTab(): void {
+        this.currentTab("queryPlan");
     }
 
     goToHighlightsTab(highlight: highlightSection): void {
