@@ -86,7 +86,8 @@ class cronEditor {
                     this.period("week");
                     this.minutes(parts[0]);
                     this.hour(parts[1]);
-                    this.dayOfWeek(parts[4]);
+                    const dayOfWeek = parts[4] === "7" ? "0" : parts[4]; // normalize week day
+                    this.dayOfWeek(dayOfWeek);
                 } else if (/^(\d{1,2}\s){3}\*\s\*$/.test(value)) { // "? ? ? * *"
                     this.period("month");
                     this.minutes(parts[0]);
