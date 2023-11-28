@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using GeoAPI.CoordinateSystems;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Extensions;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
@@ -34,15 +36,15 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
         return RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id, out task);
     }
 
-    public override Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask)
+    public override Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask, CancellationToken token)
     {
         if (onDatabaseCompletionTask.IsCompletedSuccessfully)
-            return onDatabaseCompletionTask;
+            return onDatabaseCompletionTask.WithCancellation(token);
 
         var t = new Task<long?>(() => null);
         t.Start();
 
-        return t;
+        return t.WithCancellation(token);
     }
 
     protected override DateTime GetUtcNow()

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -37,9 +38,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
             return RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTaskForDatabase(id, index, RequestHandler.Database, out task);
         }
 
-        public override Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask)
+        public override Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask, CancellationToken token)
         {
-            return onDatabaseCompletionTask.WithCancellation(RequestHandler.HttpContext.RequestAborted);
+            return onDatabaseCompletionTask.WithCancellation(token);
         }
 
         protected override DateTime GetUtcNow()

@@ -95,7 +95,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
     public abstract AsyncWaiter<long?>.RemoveTask CreateClusterTransactionTask(string id, long index, out Task<long?> task);
 
-    public abstract Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask);
+    public abstract Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask, CancellationToken token);
     protected abstract DateTime GetUtcNow();
 
     private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
@@ -113,7 +113,9 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             return null;
 
         RequestHandler.ServerStore.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
-        var count = await WaitForDatabaseCompletion(onDatabaseCompletionTask);
+        long? count;
+        using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
+            count = await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
 
         if (count.HasValue)
             return count;
