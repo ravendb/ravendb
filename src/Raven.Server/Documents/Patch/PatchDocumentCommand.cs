@@ -450,7 +450,7 @@ namespace Raven.Server.Documents.Patch
             bool debugMode,
             bool collectResultsNeeded,
             bool returnDocument,
-            bool ignoreMaxStepsForScript =false) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, database, isTest, debugMode, collectResultsNeeded, returnDocument)
+            bool ignoreMaxStepsForScript = false) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, database, isTest, debugMode, collectResultsNeeded, returnDocument)
         {
             _id = id;
             _expectedChangeVector = expectedChangeVector;
@@ -469,7 +469,7 @@ namespace Raven.Server.Documents.Patch
                 try
                 {
                     if (_ignoreMaxStepsForScript)
-                        run.ScriptEngine.ChangeMaxStatements(int.MaxValue);
+                        run.ScriptEngine.DisableMaxStatements();
 
                     using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
                     {

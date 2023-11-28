@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
             Query = @"
 from ""Orders"" update {
-    for (var i = 0; i < 10000; i++){
+    for (var i = 0; i < 100; i++){
         this.Freight = 13;
     }
 }"
@@ -31,7 +32,7 @@ from ""Orders"" update {
             Query = @"
 from index ""Orders/ByCompany""
  update {
-    for (var i = 0; i < 10000; i++){
+    for (var i = 0; i < 100; i++){
         this.Total = 0;
     }
 }"
@@ -56,13 +57,17 @@ select new
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task ExecutePatchScriptShouldRespectIgnoreMaxStepsForScriptFlag()
         {
             Operation operation;
             QueryOperationOptions options = new();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+               ModifyDatabaseRecord = record =>
+                   record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "100"
+            }))
             {
 
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
@@ -91,7 +96,7 @@ select new
                 });
 
                 Assert.Contains(
-                    "The maximum number of statements executed have been reached - 10000. You can configure it by modifying the configuration option: 'Patching.MaxStepsForScript'.",
+                    "The maximum number of statements executed have been reached - 100. You can configure it by modifying the configuration option: 'Patching.MaxStepsForScript'.",
                     exception.ToString());
 
 
@@ -124,7 +129,7 @@ select new
                 });
 
                 Assert.Contains(
-                    "The maximum number of statements executed have been reached - 10000. You can configure it by modifying the configuration option: 'Patching.MaxStepsForScript'.",
+                    "The maximum number of statements executed have been reached - 100. You can configure it by modifying the configuration option: 'Patching.MaxStepsForScript'.",
                     exception2.ToString());
             }
         }
