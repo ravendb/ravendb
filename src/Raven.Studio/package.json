@@ -116,7 +116,7 @@
         "bootstrap-multiselect": "^0.9.13-1",
         "bootstrap-select": "^1.13.18",
         "classnames": "^2.3.1",
-        "cronstrue": "^0.8.0",
+        "cronstrue": "^2.44.0",
         "diff": "^4.0.2",
         "draggabilly": "^2.4.1",
         "durandal": "^2.2.0",
