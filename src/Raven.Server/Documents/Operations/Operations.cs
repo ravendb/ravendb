@@ -480,10 +480,7 @@ namespace Raven.Server.Documents.Operations
             DumpRawIndexData,
             
             [Description("Lucene: optimize index")]
-            LuceneOptimizeIndex,
-
-            [Description("Adopt Orphaned Revisions")]
-            AdoptOrphanedRevisions
+            LuceneOptimizeIndex
         }
     }
 }

@@ -157,27 +157,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/revisions/orphaned/adopt", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task AdoptOrphans()
-        {
-            var token = CreateTimeLimitedBackgroundOperationToken();
-            var operationId = ServerStore.Operations.GetNextOperationId();
-
-            var t = Database.Operations.AddOperation(
-                Database,
-                $"Adopting orphaned revisions in database '{Database.Name}'.",
-                Operations.Operations.OperationType.AdoptOrphanedRevisions,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.AdoptOrphanedAsync(onProgress, token),
-                operationId,
-                token: token);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
-            }
-        }
-
         [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsCountFor()
         {

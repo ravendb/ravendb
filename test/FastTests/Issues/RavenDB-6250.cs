@@ -49,7 +49,6 @@ namespace FastTests.Issues
                 Operations.OperationType.ReplayTransactionCommands,
                 Operations.OperationType.DatabaseRevert,
                 Operations.OperationType.EnforceRevisionConfiguration,
-                Operations.OperationType.AdoptOrphanedRevisions,
                 Operations.OperationType.DumpRawIndexData
             };
 
