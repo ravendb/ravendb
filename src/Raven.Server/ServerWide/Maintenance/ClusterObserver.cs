@@ -26,6 +26,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Extensions;
 using Sparrow.Server.Utils;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -1116,43 +1117,30 @@ namespace Raven.Server.ServerWide.Maintenance
             return true;
         }
 
-        private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
+        private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime) => 
+            ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _moveToRehabTimeMs);
+
+        private bool ShouldGiveMoreTimeBeforeRotating(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime) => 
+            ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _rotateGraceTimeMs);
+
+        private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, long graceMs)
         {
             if (databaseUpTime.HasValue)
             {
-                if (databaseUpTime.Value.TotalMilliseconds < _moveToRehabTimeMs)
-                {
-                    return true;
-                }
-            }
-
-            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _moveToRehabTimeMs);
-        }
-
-        private bool ShouldGiveMoreTimeBeforeRotating(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
-        {
-            if (databaseUpTime.HasValue)
-            {
-                if (databaseUpTime.Value.TotalMilliseconds > _rotateGraceTimeMs)
+                if (databaseUpTime.Value.TotalMilliseconds > graceMs)
                 {
                     return false;
                 }
             }
 
-            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _rotateGraceTimeMs);
-        }
-
-        private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, long graceMs)
-        {
             var now = DateTime.UtcNow;
             var uptime = databaseUpTime?.TotalMilliseconds ?? (now - StartTime).TotalMilliseconds;
 
             if (graceMs > uptime)
                 return true;
-
-            var grace = now.AddMilliseconds(-graceMs);
             
-            if (grace < lastSuccessfulUpdate)
+            var grace = now.AddMilliseconds(-graceMs);
+            if (grace < RavenDateTimeExtensions.Max(lastSuccessfulUpdate, StartTime))
                 return true;
 
             return false;
