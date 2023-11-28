@@ -44,7 +44,7 @@ public static class TwoFactorAuthentication
     // https://github.com/dotnet/aspnetcore/blob/6a7bcda42de7b98196b38924cc354216eba57c9b/src/Identity/Extensions.Core/src/Rfc6238AuthenticationService.cs#L15
     public static class Rfc6238AuthenticationService
     {
-        private static readonly TimeSpan _timestep = TimeSpan.FromMinutes(3);
+        private static readonly TimeSpan _timestep = TimeSpan.FromSeconds(30);
         private static readonly Encoding _encoding = new UTF8Encoding(false, true);
 
         
@@ -113,8 +113,7 @@ public static class TwoFactorAuthentication
     // base 32 taken from:
     // https://github.com/dotnet/aspnetcore/blob/74389644ecb9f7abc63b2d54bf615e1c3887ffd5/src/Identity/Extensions.Core/src/Base32.cs
     private const string _base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    public const string CookieName = "csrf-cookie";
-    public const string HeaderName = "Csrf-Token";
+    public const string CookieName = "2fa-cookie";
 
     private static string GenerateBase32()
     {

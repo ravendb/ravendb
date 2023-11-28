@@ -483,6 +483,28 @@
                                     </div>
                                 </div>
                             </div>
+                            <div data-bind="visible: mode() === 'generate' || mode() === 'upload' || mode() === 'editExisting'">
+                                <div class="checkbox">
+                                    <input id="requireTwoFactor" type="checkbox" data-bind="checked: requireTwoFactor">
+                                    <label for="requireTwoFactor">Require two-factor authentication</label>
+                                </div>
+                                <div class="form-group" data-bind="visible: requireTwoFactor">
+                                    <label class="control-label">
+                                        Authentication Key
+                                    </label>
+                                    <input class="form-control" type="text" disabled data-bind="textInput: authenticationKey" />
+                                    <button class="btn btn-default" data-bind="click: _.partial($root.copyAuthenticationKeyToClipboard, authenticationKey())" title="Copy Authentication Key to clipboard">
+                                        <i class="icon-copy"></i>
+                                    </button>
+                                </div>
+                                <div data-bind="visible: requireTwoFactor() && authenticationKey()">
+                                    <p>QR Code:</p>
+                                    <div class="text-center">
+                                        <div id="encryption_qrcode">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <hr class="margin-top-lg" />
                             <div class="toggle margin-left-sm" data-bind="visible: mode() === 'regenerate'">
                                 <input id="deleteExpired" type="checkbox" class="styled" data-bind="checked: deleteExpired" />

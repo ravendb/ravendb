@@ -6,6 +6,8 @@ import changesContext = require("common/changesContext");
 import changeSubscription = require("common/changeSubscription");
 import appUrl = require("common/appUrl");
 import license = require("models/auth/licenseModel");
+import forgotTwoFactorSecretCommand from "commands/auth/forgotTwoFactorSecretCommand";
+import endpoints = require("endpoints");
 
 class footerStats {
     countOfDocuments = ko.observable<number>();
@@ -62,6 +64,14 @@ class footer {
             })
             .always(() => this.spinners.loading(false));
 
+    }
+    
+    logout() {
+        new forgotTwoFactorSecretCommand()
+            .execute()
+            .done(() => {
+                window.location.href = location.origin + endpoints.global.studio._2faIndex_html;
+            });
     }
 
     private fetchStats(): JQueryPromise<Raven.Server.Documents.Studio.FooterStatistics> {

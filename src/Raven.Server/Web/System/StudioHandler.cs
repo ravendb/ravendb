@@ -212,6 +212,20 @@ namespace Raven.Server.Web.System
             );
             return GetStudioFileInternal(serverRelativeFileName);
         }
+        
+        [RavenAction("/2fa/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetTwoFactorIndexFile()
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            if (feature?.Status == RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided)
+            {
+                return GetStudioFileInternal("index.html");
+            }
+            
+            HttpContext.Response.Headers["Location"] = "/studio/index.html";
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+            return Task.CompletedTask;
+        }
 
         [RavenAction("/wizard/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupIndexFile()

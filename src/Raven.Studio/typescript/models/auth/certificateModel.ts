@@ -35,6 +35,9 @@ class certificateModel {
     name = ko.observable<string>();
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>("ValidUser");
     
+    requireTwoFactor = ko.observable<boolean>(false);
+    authenticationKey = ko.observable<string>("");
+    
     certificateAsBase64 = ko.observable<string>();
     certificatePassphrase = ko.observable<string>();
 
@@ -150,7 +153,8 @@ class certificateModel {
             Password: this.certificatePassphrase(),
             Permissions: this.serializePermissions(),
             SecurityClearance: this.securityClearance(),
-            NotAfter: this.expirationDateFormatted()
+            NotAfter: this.expirationDateFormatted(),
+            TwoFactorAuthenticationKey: this.requireTwoFactor() ? this.authenticationKey() : null,
         }
     }
     
@@ -168,7 +172,8 @@ class certificateModel {
             Password: this.certificatePassphrase(),
             Permissions: this.serializePermissions(),
             SecurityClearance: this.securityClearance(),
-            NotAfter: this.expirationDateFormatted()
+            NotAfter: this.expirationDateFormatted(),
+            TwoFactorAuthenticationKey: this.requireTwoFactor() ? this.authenticationKey() : null,
         }
     }
 
