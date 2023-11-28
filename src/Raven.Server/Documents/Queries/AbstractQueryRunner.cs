@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Queries
                         isTest: false,
                         collectResultsNeeded: true,
                         returnDocument: false,
-                        ignoreMaxStepsForScript:options.IgnoreMaxStepsForScript);
+                        ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
 
                     return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails,
                         x => new BulkOperationResult.PatchDetails
