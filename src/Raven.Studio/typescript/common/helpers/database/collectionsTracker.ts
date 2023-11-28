@@ -26,10 +26,6 @@ class collectionsTracker {
         globalChangeVector: [] as Array<(changeVector: string) => void>
     };
 
-    onUpdateCallback: () => void = () => {
-        // empty by default
-    };
-
     onDatabaseChanged(db: database) {
         this.db = db;
         
@@ -60,8 +56,6 @@ class collectionsTracker {
         this.collections([allDocsCollection].concat(collections));
 
         this.conflictsCount(collectionsStats.numberOfConflicts);
-
-        this.onUpdateCallback();
     }
 
     getCollectionCount(collectionName: string) {

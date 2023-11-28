@@ -1,4 +1,5 @@
 import generalUtils = require("common/generalUtils");
+import { Collection } from "components/common/shell/collectionsTrackerSlice";
 
 class collection {
     static readonly allDocumentsCollectionName = "All Documents";
@@ -53,6 +54,16 @@ class collection {
         return new collection(collection.allDocumentsCollectionName, documentsCount);
     }
 
+    toCollectionState(): Collection {
+        return {
+            name: this.name,
+            countPrefix: this.countPrefix(),
+            documentCount: this.documentCount(),
+            hasBounceClass: this.hasBounceClass(),
+            lastDocumentChangeVector: this.lastDocumentChangeVector(),
+            sizeClass: this.sizeClass(),
+        }
+    }
 }
 
 export = collection;
