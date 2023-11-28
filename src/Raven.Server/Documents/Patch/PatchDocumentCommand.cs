@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -279,7 +280,7 @@ namespace Raven.Server.Documents.Patch
                 return _createIfMissing;
             }
 
-            using (var scriptResult = run.Run(patchContext, context, "execute", id, new[] {documentInstance, args}))
+            using (var scriptResult = run.Run(patchContext, context, "execute", id, new[] { documentInstance, args }))
             {
                 return scriptResult.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
@@ -437,7 +438,7 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
-
+        private readonly bool _ignoreMaxStepsForScript;
         public PatchResult PatchResult { get; private set; }
 
         public PatchDocumentCommand(
@@ -452,25 +453,31 @@ namespace Raven.Server.Documents.Patch
             bool isTest,
             bool debugMode,
             bool collectResultsNeeded,
-            bool returnDocument) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, isTest, debugMode, collectResultsNeeded, returnDocument)
+            bool returnDocument,
+            bool ignoreMaxStepsForScript = false) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, isTest, debugMode, collectResultsNeeded, returnDocument)
         {
             _id = id;
             _expectedChangeVector = expectedChangeVector;
-
+            _ignoreMaxStepsForScript = ignoreMaxStepsForScript;
             if (string.IsNullOrEmpty(id) || id.EndsWith(identityPartsSeparator) || id.EndsWith('|'))
                 throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
         }
-        
+
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             ScriptRunner.SingleRun runIfMissing = null;
             _database = context.DocumentDatabase;
 
             using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
-            using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
             {
-                PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
-                return 1;
+                using (_ignoreMaxStepsForScript ? run.ScriptEngine.DisableMaxStatements() : null)
+                {
+                    using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
+                    {
+                        PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
+                        return 1;
+                    }
+                }
             }
         }
 
