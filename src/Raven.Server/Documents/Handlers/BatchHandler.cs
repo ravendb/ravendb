@@ -277,7 +277,22 @@ namespace Raven.Server.Documents.Handlers
                 return null;
 
             Database.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
-            var count = await onDatabaseCompletionTask.WithCancellation(HttpContext.RequestAborted);
+            long? count;
+            try
+            {
+                using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Engine.OperationTimeout))
+                {
+                    count = await onDatabaseCompletionTask.WithCancellation(cts.Token);
+                }
+            }
+            catch (Exception e)
+            {
+                if (Database.IsShutdownRequested())
+                    Database.ThrowDatabaseShutdown(e);
+
+                throw;
+            }
+            
 
             if (count.HasValue)
                 return count;
