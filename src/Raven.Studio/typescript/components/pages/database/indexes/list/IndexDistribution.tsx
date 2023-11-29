@@ -16,6 +16,8 @@ import { Button } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import IndexDistributionStatusChecker from "./IndexDistributionStatusChecker";
+import moment = require("moment");
+import genUtils = require("common/generalUtils");
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -31,6 +33,10 @@ interface ItemWithTooltipProps {
     openFaulty: (location: databaseLocationSpecifier) => void;
     nodeInfo: IndexNodeInfo;
     sharded: boolean;
+}
+
+function getFormattedTime(date: Date): string {
+    return date ? genUtils.formatDurationByDate(moment(date)) + " ago" : "-";
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
@@ -61,6 +67,8 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                 </div>
                 <div className="entries">{entriesCount.toLocaleString()}</div>
                 <div className="errors">{nodeInfo.details?.errorCount.toLocaleString() ?? ""}</div>
+                <div>{getFormattedTime(nodeInfo.details?.lastIndexingTime)}</div>
+                <div>{getFormattedTime(nodeInfo.details?.lastQueryingTime)}</div>
 
                 <IndexProgress nodeInfo={nodeInfo} />
 
@@ -135,6 +143,12 @@ export function IndexDistribution(props: IndexDistributionProps) {
                 </div>
                 <div>
                     <Icon icon="warning" /> Errors
+                </div>
+                <div>
+                    <Icon icon="index-history" /> Indexed
+                </div>
+                <div>
+                    <Icon icon="queries" /> Queried
                 </div>
                 <div>
                     <Icon icon="changes" /> State

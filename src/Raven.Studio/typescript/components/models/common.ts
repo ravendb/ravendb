@@ -64,3 +64,5 @@ export interface NonShardedViewProps {
 export interface ShardedViewProps extends NonShardedViewProps {
     location?: databaseLocationSpecifier;
 }
+
+export type SortDirection = "asc" | "desc";

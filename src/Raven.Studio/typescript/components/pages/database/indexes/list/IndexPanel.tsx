@@ -1,8 +1,10 @@
 ﻿import React, { ForwardedRef, forwardRef, MouseEvent, useState } from "react";
 import classNames from "classnames";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
-import { IndexSharedInfo } from "components/models/indexes";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
+import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
+import { IndexSharedInfo } from "components/models/indexes";
 import { useAppUrls } from "hooks/useAppUrls";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { useEventsCollector } from "hooks/useEventsCollector";
@@ -10,9 +12,7 @@ import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessRea
 import database = require("models/resources/database");
 import app from "durandal/app";
 import { useAccessManager } from "hooks/useAccessManager";
-import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { IndexDistribution, JoinedIndexProgress } from "./IndexDistribution";
-import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import {
     RichPanel,
     RichPanelActions,
@@ -40,8 +40,10 @@ import assertUnreachable from "../../../../utils/assertUnreachable";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { Icon } from "components/common/Icon";
+import genUtils from "common/generalUtils";
+import moment = require("moment");
 
-interface IndexPanelProps {
+export interface IndexPanelProps {
     database: database;
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
@@ -187,6 +189,10 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
     const reduceOutputId = useId("reduce-output-id");
 
+    const formattedCreatedTimestamp = genUtils.formatDurationByDate(moment(index.createdTimestamp)) + " ago";
+    const formattedLastIndexingTime = getFormattedMaxNodeTime(index, "lastIndexingTime");
+    const formattedLastQueryingTime = getFormattedMaxNodeTime(index, "lastQueryingTime");
+
     return (
         <>
             <RichPanel className={classNames({ "index-sidebyside": hasReplacement || isReplacement })} innerRef={ref}>
@@ -205,14 +211,21 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             </RichPanelName>
                             <div className="small hstack gap-4">
                                 <div>
-                                    <span className="text-muted">Created:</span> <strong>3 months ago</strong>
+                                    <span className="text-muted">Created:</span>{" "}
+                                    <strong>{formattedCreatedTimestamp}</strong>
                                 </div>
-                                <div>
-                                    <span className="text-muted">Indexed:</span> <strong>few moments ago</strong>
-                                </div>
-                                <div>
-                                    <span className="text-muted">Queried:</span> <strong>few moments ago</strong>
-                                </div>
+                                {formattedLastIndexingTime && (
+                                    <div>
+                                        <span className="text-muted">Indexed:</span>{" "}
+                                        <strong>{formattedLastIndexingTime}</strong>
+                                    </div>
+                                )}
+                                {formattedLastQueryingTime && (
+                                    <div>
+                                        <span className="text-muted">Queried:</span>{" "}
+                                        <strong>{formattedLastQueryingTime}</strong>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </RichPanelInfo>
@@ -489,6 +502,20 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
             </RichPanel>
         </>
     );
+}
+
+function getFormattedMaxNodeTime<T extends IndexSharedInfo>(
+    index: T,
+    value: Extract<keyof T["nodesInfo"][number]["details"], "lastIndexingTime" | "lastQueryingTime">
+) {
+    const allDates = index.nodesInfo.map((x) => x.details?.[value]);
+    const maxDate = _.max(allDates);
+
+    if (!maxDate) {
+        return null;
+    }
+
+    return genUtils.formatDurationByDate(moment(maxDate)) + " ago";
 }
 
 function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {

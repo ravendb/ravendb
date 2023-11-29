@@ -39,10 +39,25 @@ import useConfirm from "components/common/ConfirmDialog";
 import React from "react";
 import { Alert } from "reactstrap";
 import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shared/DeleteIndexesConfirmBody";
+import assertUnreachable from "components/utils/assertUnreachable";
+import moment = require("moment");
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
     | Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
+
+export interface ResetIndexData {
+    indexName: string;
+    setIndexName: (x: string) => void;
+    onConfirm: (contexts: DatabaseActionContexts[]) => Promise<void>;
+}
+
+export interface SwapSideBySideData {
+    indexName: string;
+    setIndexName: React.Dispatch<React.SetStateAction<string>>;
+    onConfirm: (contexts: DatabaseActionContexts[]) => Promise<void>;
+    inProgress: (indexName: string) => boolean;
+}
 
 export function useIndexesPage(database: database, stale: boolean) {
     //TODO: use DatabaseSharedInfo?
@@ -92,7 +107,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [globalLockChanges, setGlobalLockChanges] = useState(false);
 
-    const { groups, replacements } = useMemo(() => {
+    const { regularIndexes, groups, replacements } = useMemo(() => {
         const collections = collectionsTracker.default.collections();
         const groupedIndexes = groupAndFilterIndexStats(stats.indexes, collections, filter, globalIndexingStatus);
 
@@ -695,6 +710,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         setFilter,
         filterByStatusOptions,
         filterByTypeOptions,
+        regularIndexes,
         groups,
         replacements,
         swapNowProgress,
@@ -712,13 +728,13 @@ export function useIndexesPage(database: database, stale: boolean) {
             indexName: resetIndexName,
             setIndexName: setResetIndexName,
             onConfirm: onResetIndexConfirm,
-        },
+        } satisfies ResetIndexData,
         swapSideBySideData: {
             indexName: swapSideBySideConfirmIndexName,
             setIndexName: setSwapSideBySideConfirmIndexName,
             onConfirm: onSwapSideBySideIndexConfirm,
             inProgress: (indexName: string) => swapNowProgress.includes(indexName),
-        },
+        } satisfies SwapSideBySideData,
         openFaulty,
         confirmDeleteIndexes,
         globalIndexingStatus,
@@ -731,6 +747,9 @@ export const defaultFilterCriteria: IndexFilterCriteria = {
     autoRefresh: true,
     showOnlyIndexesWithIndexingErrors: false,
     searchText: "",
+    sortBy: "lastIndexingTime",
+    sortDirection: "desc",
+    groupBy: "Collection",
 };
 
 export function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
@@ -749,18 +768,39 @@ export function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInf
     return allIndexes;
 }
 
+function getSortedRegularIndexes(
+    indexes: IndexSharedInfo[],
+    { sortBy, sortDirection }: IndexFilterCriteria
+): IndexSharedInfo[] {
+    switch (sortBy) {
+        case "name":
+        case "createdTimestamp":
+            return _.orderBy(indexes, [sortBy], [sortDirection]);
+        case "lastIndexingTime":
+        case "lastQueryingTime":
+            return _.orderBy(
+                indexes,
+                (index) => _.max(index.nodesInfo.map((nodesInfo) => nodesInfo.details?.[sortBy])),
+                [sortDirection]
+            );
+        default:
+            assertUnreachable(sortBy);
+    }
+}
+
 function groupAndFilterIndexStats(
     indexes: IndexSharedInfo[],
     collections: collection[],
     filter: IndexFilterCriteria,
     globalIndexingStatus: IndexRunningStatus
-): { groups: IndexGroup[]; replacements: IndexSharedInfo[] } {
+): { regularIndexes: IndexSharedInfo[]; groups: IndexGroup[]; replacements: IndexSharedInfo[] } {
     const result = new Map<string, IndexGroup>();
 
     const replacements = indexes.filter(IndexUtils.isSideBySide);
     const regularIndexes = indexes.filter((x) => !IndexUtils.isSideBySide(x));
+    const sortedRegularIndexes = getSortedRegularIndexes(regularIndexes, filter);
 
-    regularIndexes.forEach((index) => {
+    sortedRegularIndexes.forEach((index) => {
         let match = indexMatchesFilter(index, filter, globalIndexingStatus);
 
         if (!match) {
@@ -788,15 +828,15 @@ function groupAndFilterIndexStats(
         group.indexes.push(index);
     });
 
-    // sort groups
     const groups = Array.from(result.values());
-    groups.sort((l, r) => genUtils.sortAlphaNumeric(l.name, r.name));
 
+    // sort groups
     groups.forEach((group) => {
-        group.indexes.sort((a, b) => genUtils.sortAlphaNumeric(a.name, b.name));
+        group.indexes = getSortedRegularIndexes(group.indexes, filter);
     });
 
     return {
+        regularIndexes: sortedRegularIndexes,
         groups,
         replacements,
     };

@@ -1,6 +1,5 @@
 ﻿import React from "react";
 import database from "models/resources/database";
-import { IndexPanel } from "./IndexPanel";
 import IndexFilter from "./IndexFilter";
 import IndexSelectActions from "./IndexSelectActions";
 import IndexUtils from "../../../../utils/IndexUtils";
@@ -18,7 +17,6 @@ import { NoIndexes } from "components/pages/database/indexes/list/partials/NoInd
 import { Icon } from "components/common/Icon";
 import { ConfirmSwapSideBySideIndex } from "./ConfirmSwapSideBySideIndex";
 import ActionContextUtils from "components/utils/actionContextUtils";
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { todo } from "common/developmentHelper";
@@ -28,6 +26,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
+import IndexesPageList, { IndexesPageListProps } from "./IndexesPageList";
 
 interface IndexesPageProps {
     db: database;
@@ -58,6 +57,7 @@ export function IndexesPage(props: IndexesPageProps) {
         setFilter,
         filterByStatusOptions,
         filterByTypeOptions,
+        regularIndexes,
         groups,
         replacements,
         highlightCallback,
@@ -143,6 +143,25 @@ export function IndexesPage(props: IndexesPageProps) {
     if (stats.indexes.length === 0) {
         return <NoIndexes database={db} />;
     }
+
+    const indexesPageListCommonProps: Omit<IndexesPageListProps, "indexes"> = {
+        db,
+        replacements,
+        selectedIndexes,
+        indexToHighlight,
+        globalIndexingStatus,
+        resetIndexData,
+        swapSideBySideData,
+        setIndexPriority,
+        setIndexLockMode,
+        openFaulty,
+        startIndexes,
+        disableIndexes,
+        pauseIndexes,
+        confirmDeleteIndexes,
+        toggleSelection,
+        highlightCallback,
+    };
 
     return (
         <>
@@ -345,85 +364,20 @@ export function IndexesPage(props: IndexesPageProps) {
             )}
             <div className="indexes p-4 pt-0 no-transition">
                 <div className="indexes-list">
-                    {groups.map((group) => {
-                        return (
-                            <div className="mb-4" key={"group-" + group.name}>
-                                <h2 className="mt-0" title={"Collection: " + group.name}>
-                                    {group.name}
-                                </h2>
-
-                                {group.indexes.map((index) => {
-                                    const replacement = replacements.find(
-                                        (x) => x.name === IndexUtils.SideBySideIndexPrefix + index.name
-                                    );
-                                    return (
-                                        <React.Fragment key={index.name}>
-                                            <IndexPanel
-                                                setPriority={(p) => setIndexPriority(index, p)}
-                                                setLockMode={(l) => setIndexLockMode(index, l)}
-                                                globalIndexingStatus={globalIndexingStatus}
-                                                resetIndex={() => resetIndexData.setIndexName(index.name)}
-                                                openFaulty={(location: databaseLocationSpecifier) =>
-                                                    openFaulty(index, location)
-                                                }
-                                                startIndexing={() => startIndexes([index])}
-                                                disableIndexing={() => disableIndexes([index])}
-                                                pauseIndexing={() => pauseIndexes([index])}
-                                                index={index}
-                                                hasReplacement={!!replacement}
-                                                database={db}
-                                                deleteIndex={() => confirmDeleteIndexes(db, [index])}
-                                                selected={selectedIndexes.includes(index.name)}
-                                                toggleSelection={() => toggleSelection(index)}
-                                                key={index.name}
-                                                ref={indexToHighlight === index.name ? highlightCallback : undefined}
-                                            />
-                                            {replacement && (
-                                                <Card className="mb-0 px-5 py-2 bg-faded-warning">
-                                                    <div className="flex-horizontal">
-                                                        <div className="title me-4">
-                                                            <Icon icon="swap" /> Side by side
-                                                        </div>
-                                                        <ButtonWithSpinner
-                                                            color="warning"
-                                                            size="sm"
-                                                            onClick={() => swapSideBySideData.setIndexName(index.name)}
-                                                            title="Click to replace the current index definition with the replacement index"
-                                                            isSpinning={swapSideBySideData.inProgress(index.name)}
-                                                            icon="force"
-                                                        >
-                                                            Swap now
-                                                        </ButtonWithSpinner>
-                                                    </div>
-                                                </Card>
-                                            )}
-                                            {replacement && (
-                                                <IndexPanel
-                                                    setPriority={(p) => setIndexPriority(replacement, p)}
-                                                    setLockMode={(l) => setIndexLockMode(replacement, l)}
-                                                    globalIndexingStatus={globalIndexingStatus}
-                                                    resetIndex={() => resetIndexData.setIndexName(replacement.name)}
-                                                    openFaulty={(location: databaseLocationSpecifier) =>
-                                                        openFaulty(replacement, location)
-                                                    }
-                                                    startIndexing={() => startIndexes([replacement])}
-                                                    disableIndexing={() => disableIndexes([replacement])}
-                                                    pauseIndexing={() => pauseIndexes([replacement])}
-                                                    index={replacement}
-                                                    database={db}
-                                                    deleteIndex={() => confirmDeleteIndexes(db, [replacement])}
-                                                    selected={selectedIndexes.includes(replacement.name)}
-                                                    toggleSelection={() => toggleSelection(replacement)}
-                                                    key={replacement.name}
-                                                    ref={undefined}
-                                                />
-                                            )}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </div>
-                        );
-                    })}
+                    {filter.groupBy === "None" && (
+                        <IndexesPageList {...indexesPageListCommonProps} indexes={regularIndexes} />
+                    )}
+                    {filter.groupBy === "Collection" &&
+                        groups.map((group) => {
+                            return (
+                                <div className="mb-4" key={"group-" + group.name}>
+                                    <h2 className="mt-0" title={"Collection: " + group.name}>
+                                        {group.name}
+                                    </h2>
+                                    <IndexesPageList {...indexesPageListCommonProps} indexes={group.indexes} />
+                                </div>
+                            );
+                        })}
                 </div>
             </div>
 

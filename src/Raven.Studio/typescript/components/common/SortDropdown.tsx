@@ -1,5 +1,4 @@
 ﻿import React, { ReactNode } from "react";
-import useId from "hooks/useId";
 import "./SortDropdown.scss";
 import { Icon } from "./Icon";
 import { DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
@@ -7,7 +6,7 @@ import { Radio } from "./Checkbox";
 import IconName from "typings/server/icons";
 
 interface SortDropdownProps {
-    label: string | ReactNode | ReactNode[];
+    label: ReactNode | ReactNode[];
     children: ReactNode | ReactNode[];
 }
 
@@ -25,23 +24,30 @@ export function SortDropdown(props: SortDropdownProps) {
     );
 }
 
-interface SortDropdownRadioListProps {
-    radioOptions: sortItem[];
-    label?: string;
-    selected: string;
-    setSelected: (value: string) => void;
+type SortableValue = string | number | boolean;
+
+export interface sortItem<T extends SortableValue = string> {
+    label: string;
+    value: T;
+    icon?: IconName;
 }
 
-export function SortDropdownRadioList<T extends string | number = string>(props: SortDropdownRadioListProps) {
+interface SortDropdownRadioListProps<T extends SortableValue = string> {
+    radioOptions: sortItem<T>[];
+    label?: string;
+    selected: T;
+    setSelected: (value: T) => void;
+}
+
+export function SortDropdownRadioList<T extends SortableValue = string>(props: SortDropdownRadioListProps<T>) {
     const { radioOptions, label, selected, setSelected } = props;
-    const uniqueId = useId("sort-dropdown-list");
 
     return (
         <div className="vstack gap-1 dropdown-radio-group">
             {label && <div className="small-label mb-2">{label}</div>}
             {radioOptions.map((item) => (
                 <Radio
-                    key={uniqueId + item.value}
+                    key={item.value.toString()}
                     selected={item.value === selected}
                     toggleSelection={() => setSelected(item.value)}
                 >
@@ -51,10 +57,4 @@ export function SortDropdownRadioList<T extends string | number = string>(props:
             ))}
         </div>
     );
-}
-
-export interface sortItem<T extends string | number = string> {
-    label: string;
-    value: T;
-    icon?: IconName;
 }

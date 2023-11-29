@@ -1,11 +1,11 @@
-﻿import React, { useState } from "react";
+﻿import React from "react";
 import { shardingTodo } from "common/developmentHelper";
-import { IndexStatus, IndexFilterCriteria, IndexType } from "components/models/indexes";
+import { IndexStatus, IndexFilterCriteria, IndexType, IndexGroupBy, IndexSortBy } from "components/models/indexes";
 import { Button, Input, PopoverBody, UncontrolledPopover } from "reactstrap";
 import produce from "immer";
 import { Icon } from "components/common/Icon";
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
-import { InputItem } from "components/models/common";
+import { InputItem, SortDirection } from "components/models/common";
 import { Switch } from "components/common/Checkbox";
 import { SortDropdown, SortDropdownRadioList, sortItem } from "components/common/SortDropdown";
 
@@ -63,58 +63,13 @@ export default function IndexFilter(props: IndexFilterProps) {
         ""
     );*/
 
-    const onSearchTextChange = (searchText: string) => {
+    const onFilterValueChange = <T extends keyof IndexFilterCriteria>(key: T, value: IndexFilterCriteria[T]) => {
         setFilter(
             produce(filter, (draft) => {
-                draft.searchText = searchText;
+                draft[key] = value;
             })
         );
     };
-
-    const onSearchStatusesChange = (statuses: IndexStatus[]) => {
-        setFilter(
-            produce(filter, (draft) => {
-                draft.statuses = statuses;
-            })
-        );
-    };
-
-    const onSearchTypesChange = (types: IndexType[]) => {
-        setFilter(
-            produce(filter, (draft) => {
-                draft.types = types;
-            })
-        );
-    };
-
-    const toggleAutoRefreshSelection = () => {
-        setFilter(
-            produce(filter, (draft) => {
-                draft.autoRefresh = !draft.autoRefresh;
-            })
-        );
-    };
-
-    const sortBy: sortItem[] = [
-        { value: "alphabetically", label: "Alphabetically" },
-        { value: "creationDate", label: "Creation date" },
-        { value: "lastIndexedDate", label: "Last indexed date" },
-        { value: "lastQueryDate", label: "Last query date" },
-    ];
-
-    const sortDirection: sortItem[] = [
-        { value: "asc", label: "Ascending", icon: "arrow-thin-top" },
-        { value: "desc", label: "Descending", icon: "arrow-thin-bottom" },
-    ];
-
-    const groupBy: sortItem[] = [
-        { value: "byCollection", label: "By collection" },
-        { value: "none", label: "none" },
-    ];
-
-    const [selectedSortBy, setSelectedSortBy] = useState<string>(sortBy[0].value);
-    const [selectedSortDirection, setSelectedSortDirection] = useState<string>(sortDirection[0].value);
-    const [selectedGroupBy, setSelectedGroupBy] = useState<string>(groupBy[0].value);
 
     return (
         <div className="hstack flex-wrap align-items-end gap-3 my-3 justify-content-end">
@@ -128,11 +83,11 @@ export default function IndexFilter(props: IndexFilterProps) {
                         title="Filter indexes"
                         className="filtering-input"
                         value={filter.searchText}
-                        onChange={(e) => onSearchTextChange(e.target.value)}
+                        onChange={(e) => onFilterValueChange("searchText", e.target.value)}
                     />
                     {filter.searchText && (
                         <div className="clear-button">
-                            <Button color="secondary" size="sm" onClick={() => onSearchTextChange("")}>
+                            <Button color="secondary" size="sm" onClick={() => onFilterValueChange("searchText", "")}>
                                 <Icon icon="clear" margin="m-0" />
                             </Button>
                         </div>
@@ -144,7 +99,7 @@ export default function IndexFilter(props: IndexFilterProps) {
                 inputItems={filterByStatusOptions}
                 label="Filter by state"
                 selectedItems={filter.statuses}
-                setSelectedItems={onSearchStatusesChange}
+                setSelectedItems={(x) => onFilterValueChange("statuses", x)}
                 selectAll
                 selectAllLabel="All"
                 selectAllCount={indexesCount}
@@ -153,53 +108,37 @@ export default function IndexFilter(props: IndexFilterProps) {
                 inputItems={filterByTypeOptions}
                 label="Filter by type"
                 selectedItems={filter.types}
-                setSelectedItems={onSearchTypesChange}
+                setSelectedItems={(x) => onFilterValueChange("types", x)}
                 selectAllCount={indexesCount}
             />
             <div>
                 <div className="small-label ms-1 mb-1">Sort & Group</div>
 
-                <SortDropdown
-                    label={
-                        <>
-                            {sortBy.find((item) => item.value === selectedSortBy).label}{" "}
-                            {selectedSortDirection === "asc" ? (
-                                <Icon icon="arrow-thin-top" margin="ms-1" />
-                            ) : (
-                                <Icon icon="arrow-thin-bottom" margin="ms-1" />
-                            )}{" "}
-                            {selectedGroupBy !== "none" && (
-                                <span className="ms-2">
-                                    {groupBy.find((item) => item.value === selectedGroupBy).label}
-                                </span>
-                            )}
-                        </>
-                    }
-                >
+                <SortDropdown label={<SortLabel filter={filter} />}>
                     <SortDropdownRadioList
-                        radioOptions={sortBy}
+                        radioOptions={sortByOptions}
                         label="Sort by"
-                        selected={selectedSortBy}
-                        setSelected={setSelectedSortBy}
+                        selected={filter.sortBy}
+                        setSelected={(x) => onFilterValueChange("sortBy", x)}
                     />
                     <SortDropdownRadioList
-                        radioOptions={sortDirection}
+                        radioOptions={sortDirectionOptions}
                         label="Sort direction"
-                        selected={selectedSortDirection}
-                        setSelected={setSelectedSortDirection}
+                        selected={filter.sortDirection}
+                        setSelected={(x) => onFilterValueChange("sortDirection", x)}
                     />
                     <SortDropdownRadioList
-                        radioOptions={groupBy}
+                        radioOptions={groupByOptions}
                         label="Group by"
-                        selected={selectedGroupBy}
-                        setSelected={setSelectedGroupBy}
+                        selected={filter.groupBy}
+                        setSelected={(x) => onFilterValueChange("groupBy", x)}
                     />
                 </SortDropdown>
             </div>
             {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
             <Switch
                 id="autoRefresh"
-                toggleSelection={toggleAutoRefreshSelection}
+                toggleSelection={() => onFilterValueChange("autoRefresh", !filter.autoRefresh)}
                 selected={filter.autoRefresh}
                 color="info"
                 className="mt-1"
@@ -214,5 +153,38 @@ export default function IndexFilter(props: IndexFilterProps) {
                 </PopoverBody>
             </UncontrolledPopover>
         </div>
+    );
+}
+
+const sortByOptions: sortItem<IndexSortBy>[] = [
+    { value: "name", label: "Name" },
+    { value: "createdTimestamp", label: "Creation date" },
+    { value: "lastIndexingTime", label: "Last indexing date" },
+    { value: "lastQueryingTime", label: "Last querying date" },
+];
+
+const sortDirectionOptions: sortItem<SortDirection>[] = [
+    { value: "asc", label: "Ascending" },
+    { value: "desc", label: "Descending" },
+];
+
+const groupByOptions: sortItem<IndexGroupBy>[] = (["Collection", "None"] satisfies IndexGroupBy[]).map((x) => ({
+    value: x,
+    label: x,
+}));
+
+function SortLabel({ filter }: { filter: IndexFilterCriteria }) {
+    return (
+        <>
+            {sortByOptions.find((x) => x.value === filter.sortBy).label}
+            {filter.sortDirection === "asc" ? (
+                <Icon icon="arrow-thin-bottom" margin="ms-1" />
+            ) : (
+                <Icon icon="arrow-thin-top" margin="ms-1" />
+            )}
+            {filter.groupBy !== "None" && (
+                <span className="ms-2">{groupByOptions.find((x) => x.value === filter.groupBy).label}</span>
+            )}
+        </>
     );
 }
