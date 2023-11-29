@@ -2,6 +2,7 @@
 This repository contains source code for the [RavenDB](https://ravendb.net/) document database. With a RavenDB database you can set up a NoSQL data architecture or add a NoSQL layer to your current relational database.
 
 ![RavenDB Studio](docs/readmeScreenshot.png)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fravendb%2Fravendb.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fravendb%2Fravendb?ref=badge_shield)
 
 ## Supported Platforms
 - Windows
@@ -15,6 +16,9 @@ This repository contains source code for the [RavenDB](https://ravendb.net/) doc
 Request [your license](https://ravendb.net/free).
 
 Download [the latest version of RavenDB](https://ravendb.net/downloads).
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fravendb%2Fravendb.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fravendb%2Fravendb?ref=badge_large)
 
 ## Getting Started
 Install and [set up your database](https://ravendb.net/docs/article-page/6.0/csharp/start/getting-started).
