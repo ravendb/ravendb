@@ -1973,7 +1973,7 @@ namespace Raven.Server.Documents
             internal ManualResetEvent DatabaseRecordLoadHold;
             internal ManualResetEvent HealthCheckHold;
 
-            internal int BulkInsertStreamWriteTimeout;
+            internal int BulkInsertStreamReadTimeout;
         }
     }
 
