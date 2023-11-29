@@ -40,7 +40,6 @@ import React from "react";
 import { Alert } from "reactstrap";
 import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shared/DeleteIndexesConfirmBody";
 import assertUnreachable from "components/utils/assertUnreachable";
-import moment = require("moment");
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
