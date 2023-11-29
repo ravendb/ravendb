@@ -249,6 +249,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(result.LongTotalResults));
+            writer.WriteInteger(result.LongTotalResults);
+            writer.WriteComma();
+
             if (result.CappedMaxResults != null)
             {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
@@ -273,6 +277,10 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.LongTotalResults));
+            writer.WriteInteger(result.LongTotalResults);
             writer.WriteComma();
 
             if (result.CappedMaxResults != null)
