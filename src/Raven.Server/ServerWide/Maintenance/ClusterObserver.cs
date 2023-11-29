@@ -1125,25 +1125,20 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, long graceMs)
         {
-            if (databaseUpTime.HasValue)
-            {
-                if (databaseUpTime.Value.TotalMilliseconds > graceMs)
-                {
-                    return false;
-                }
-            }
-
             var now = DateTime.UtcNow;
-            var uptime = databaseUpTime?.TotalMilliseconds ?? (now - StartTime).TotalMilliseconds;
+            var observerUptime = (now - StartTime).TotalMilliseconds;
 
-            if (graceMs > uptime)
+            if (graceMs > observerUptime)
                 return true;
             
-            var grace = now.AddMilliseconds(-graceMs);
-            if (grace < RavenDateTimeExtensions.Max(lastSuccessfulUpdate, StartTime))
-                return true;
+            if (databaseUpTime.HasValue) // if this has value, it means that we have a connectivity
+            {
+                return databaseUpTime.Value.TotalMilliseconds < graceMs;
+            }
 
-            return false;
+            var lastUpdate = RavenDateTimeExtensions.Max(lastSuccessfulUpdate, StartTime);
+            var graceThreshold = lastUpdate.AddMilliseconds(graceMs);
+            return graceThreshold > now;
         }
 
         private int GetNumberOfRespondingNodes(DatabaseObservationState state)
