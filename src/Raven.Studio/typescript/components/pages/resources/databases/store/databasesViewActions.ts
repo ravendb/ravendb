@@ -6,7 +6,6 @@ import {
 } from "components/pages/resources/databases/store/databasesViewSlice";
 import databasesManager from "common/shell/databasesManager";
 import notificationCenter from "common/notifications/notificationCenter";
-import viewHelpers from "common/helpers/view/viewHelpers";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { UnsubscribeListener } from "@reduxjs/toolkit";
 import { addAppListener } from "components/storeUtils";

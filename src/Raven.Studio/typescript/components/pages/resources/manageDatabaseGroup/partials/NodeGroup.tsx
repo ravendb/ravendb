@@ -12,8 +12,6 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
 import app from "durandal/app";
 import { DatabaseSharedInfo } from "components/models/databases";
-import viewHelpers from "common/helpers/view/viewHelpers";
-import genUtils from "common/generalUtils";
 import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
 import classNames from "classnames";
 import {

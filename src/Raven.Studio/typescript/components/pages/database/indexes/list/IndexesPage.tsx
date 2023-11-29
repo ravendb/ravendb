@@ -6,7 +6,7 @@ import IndexUtils from "../../../../utils/IndexUtils";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import "./IndexesPage.scss";
-import { Alert, Button, Card, Col, Row, UncontrolledPopover } from "reactstrap";
+import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
@@ -17,16 +17,14 @@ import { NoIndexes } from "components/pages/database/indexes/list/partials/NoInd
 import { Icon } from "components/common/Icon";
 import { ConfirmSwapSideBySideIndex } from "./ConfirmSwapSideBySideIndex";
 import ActionContextUtils from "components/utils/actionContextUtils";
-import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { todo } from "common/developmentHelper";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {
-    FeatureAvailabilityData,
-} from "components/common/FeatureAvailabilitySummary";
 import IndexesPageList, { IndexesPageListProps } from "./IndexesPageList";
+import IndexesPageLicenseLimits from "./IndexesPageLicenseLimits";
+import IndexesPageAboutView from "./IndexesPageAboutView";
 
 interface IndexesPageProps {
     db: database;
@@ -89,35 +87,11 @@ export function IndexesPage(props: IndexesPageProps) {
     const allActionContexts = ActionContextUtils.getContexts(db.getLocations());
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
-    const overviewDocsLink = useRavenLink({ hash: "8VWNHJ" });
-    const listDocsLink = useRavenLink({ hash: "7HOOEA" });
 
     const autoClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerCluster"));
     const staticClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerCluster"));
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
-
-    const featureAvailability = useLimitedFeatureAvailability({
-        defaultFeatureAvailability,
-        overwrites: [
-            {
-                featureName: defaultFeatureAvailability[0].featureName,
-                value: autoClusterLimit,
-            },
-            {
-                featureName: defaultFeatureAvailability[1].featureName,
-                value: staticClusterLimit,
-            },
-            {
-                featureName: defaultFeatureAvailability[2].featureName,
-                value: autoDatabaseLimit,
-            },
-            {
-                featureName: defaultFeatureAvailability[3].featureName,
-                value: staticDatabaseLimit,
-            },
-        ],
-    });
 
     const autoClusterCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfAutoIndexesInCluster;
     const staticClusterCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfStaticIndexesInCluster;
@@ -165,87 +139,21 @@ export function IndexesPage(props: IndexesPageProps) {
 
     return (
         <>
-            <>
-                {staticClusterLimitStatus !== "notReached" && (
-                    <Alert
-                        color={staticClusterLimitStatus === "limitReached" ? "danger" : "warning"}
-                        className="text-center mb-3"
-                    >
-                        <Icon icon="cluster" />
-                        Cluster {staticClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
-                        <strong>maximum number of static indexes</strong> allowed per cluster by your license{" "}
-                        <strong>
-                            ({staticClusterCount}/{staticClusterLimit})
-                        </strong>
-                        <br /> Delete unused indexes or{" "}
-                        <strong>
-                            <a href={upgradeLicenseLink} target="_blank">
-                                upgrade your license
-                            </a>
-                        </strong>
-                    </Alert>
-                )}
-
-                {autoClusterLimitStatus !== "notReached" && (
-                    <Alert
-                        color={autoClusterLimitStatus === "limitReached" ? "danger" : "warning"}
-                        className="text-center mb-3"
-                    >
-                        <Icon icon="cluster" />
-                        Cluster {autoClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
-                        <strong>maximum number of auto indexes</strong> allowed per cluster by your license{" "}
-                        <strong>
-                            ({autoClusterCount}/{autoClusterLimit})
-                        </strong>
-                        <br /> Delete unused indexes or{" "}
-                        <strong>
-                            <a href={upgradeLicenseLink} target="_blank">
-                                upgrade your license
-                            </a>
-                        </strong>
-                    </Alert>
-                )}
-
-                {staticDatabaseLimitStatus !== "notReached" && (
-                    <Alert
-                        color={staticDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                        className="text-center mb-3"
-                    >
-                        <Icon icon="database" />
-                        Database {staticDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
-                        <strong>maximum number of static indexes</strong> allowed per database by your license{" "}
-                        <strong>
-                            ({staticDatabaseCount}/{staticDatabaseLimit})
-                        </strong>
-                        <br /> Delete unused indexes or{" "}
-                        <strong>
-                            <a href={upgradeLicenseLink} target="_blank">
-                                upgrade your license
-                            </a>
-                        </strong>
-                    </Alert>
-                )}
-
-                {autoDatabaseLimitStatus !== "notReached" && (
-                    <Alert
-                        color={autoDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                        className="text-center mb-3"
-                    >
-                        <Icon icon="database" />
-                        Database {autoDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
-                        <strong>maximum number of auto indexes</strong> allowed per database by your license{" "}
-                        <strong>
-                            ({autoDatabaseCount}/{autoDatabaseLimit})
-                        </strong>
-                        <br /> Delete unused indexes or{" "}
-                        <strong>
-                            <a href={upgradeLicenseLink} target="_blank">
-                                upgrade your license
-                            </a>
-                        </strong>
-                    </Alert>
-                )}
-            </>
+            <IndexesPageLicenseLimits
+                staticClusterLimitStatus={staticClusterLimitStatus}
+                staticClusterCount={staticClusterCount}
+                staticClusterLimit={staticClusterLimit}
+                upgradeLicenseLink={upgradeLicenseLink}
+                autoClusterLimitStatus={autoClusterLimitStatus}
+                autoClusterCount={autoClusterCount}
+                autoClusterLimit={autoClusterLimit}
+                staticDatabaseLimitStatus={staticDatabaseLimitStatus}
+                staticDatabaseCount={staticDatabaseCount}
+                staticDatabaseLimit={staticDatabaseLimit}
+                autoDatabaseLimitStatus={autoDatabaseLimitStatus}
+                autoDatabaseCount={autoDatabaseCount}
+                autoDatabaseLimit={autoDatabaseLimit}
+            />
 
             {stats.indexes.length > 0 && (
                 <StickyHeader>
@@ -290,51 +198,12 @@ export function IndexesPage(props: IndexesPageProps) {
                             )}
                         </Col>
                         <Col xs="auto">
-                            <AboutViewFloating>
-                                <AccordionItemWrapper
-                                    icon="about"
-                                    color="info"
-                                    heading="About this view"
-                                    description="Get additional info on this feature"
-                                    targetId="about-view"
-                                >
-                                    <p>
-                                        Manage all indexes in the database from this view.
-                                        <br />
-                                        The indexes are grouped based on their associated collections.
-                                    </p>
-                                    <ul>
-                                        <li>
-                                            <strong>Detailed information</strong> for each index is provided such as:
-                                            <br />
-                                            the index type and data source, its current state, staleness status, the
-                                            number of index-entries, etc.
-                                        </li>
-                                        <li className="margin-top-xs">
-                                            <strong>Various actions</strong> can be performed such as:
-                                            <br />
-                                            create a new index, modify existing, delete, restart, disable or pause
-                                            indexing, set index priority, and more.
-                                        </li>
-                                    </ul>
-                                    <hr />
-                                    <div className="small-label mb-2">useful links</div>
-                                    <a href={overviewDocsLink} target="_blank">
-                                        <Icon icon="newtab" /> Docs - Indexes Overview
-                                    </a>
-                                    <br />
-                                    <a href={listDocsLink} target="_blank">
-                                        <Icon icon="newtab" /> Docs - Indexes List View
-                                    </a>
-                                </AccordionItemWrapper>
-                                <FeatureAvailabilitySummaryWrapper
-                                    isUnlimited={
-                                        staticClusterLimitStatus === "notReached" &&
-                                        staticDatabaseLimitStatus === "notReached"
-                                    }
-                                    data={featureAvailability}
-                                />
-                            </AboutViewFloating>
+                            <IndexesPageAboutView
+                                isUnlimited={
+                                    staticClusterLimitStatus === "notReached" &&
+                                    staticDatabaseLimitStatus === "notReached"
+                                }
+                            />
                         </Col>
                     </Row>
                     <IndexFilter
@@ -403,30 +272,3 @@ export function IndexesPage(props: IndexesPageProps) {
         </>
     );
 }
-
-const defaultFeatureAvailability: FeatureAvailabilityData[] = [
-    {
-        featureName: "Auto indexes limit per cluster",
-        community: { value: 120 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-    {
-        featureName: "Static indexes limit per cluster",
-        community: { value: 60 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-    {
-        featureName: "Auto indexes limit per database",
-        community: { value: 24 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-    {
-        featureName: "Static indexes limit per database",
-        community: { value: 12 },
-        professional: { value: Infinity },
-        enterprise: { value: Infinity },
-    },
-];

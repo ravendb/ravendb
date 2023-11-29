@@ -75,7 +75,7 @@ export function EditSubscriptionTaskInfoHub() {
     );
 }
 
-export const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Concurrent Data Subscriptions",
         featureIcon: "data-subscriptions",
