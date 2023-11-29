@@ -76,6 +76,7 @@ public unsafe struct NativeUnmanagedList<T> : IDisposable
         var read = Math.Min(Count, matches.Length);
         new Span<T>(this.RawItems, read).CopyTo(matches);
         Count -= read;
+        Capacity -= read;
         RawItems += read;
         return read;
     }

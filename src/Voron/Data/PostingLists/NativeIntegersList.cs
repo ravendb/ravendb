@@ -16,8 +16,8 @@ public unsafe struct NativeIntegersList : IDisposable
 {
     private readonly ByteStringContext _ctx;
     public int Count;
-    public int Capacity;
-    public long* RawItems;
+    public int Capacity { get; private set; }
+    public long* RawItems { get; private set; }
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseItems;
 
     public NativeIntegersList(ByteStringContext ctx, int initialCapacity = 0)
@@ -150,6 +150,7 @@ public unsafe struct NativeIntegersList : IDisposable
         var read = Math.Min(Count, matches.Length);
         new Span<long>(this.RawItems, read).CopyTo(matches);
         Count -= read;
+        Capacity -= read;
         RawItems += read;
         return read;
     }
