@@ -1,5 +1,5 @@
 ﻿import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
-import { loadStatus } from "./common";
+import { SortDirection, loadStatus } from "./common";
 import SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType;
 
 export type IndexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
@@ -22,6 +22,7 @@ export interface IndexSharedInfo {
     patternForReferencesToReduceOutputCollection: string;
     collectionNameForReferenceDocuments: string;
     nodesInfo: IndexNodeInfo[];
+    createdTimestamp: Date;
 }
 
 export interface IndexNodeInfo {
@@ -54,12 +55,22 @@ export interface IndexNodeInfoDetails {
     state: Raven.Client.Documents.Indexes.IndexState;
     stale: boolean;
     faulty: boolean;
+    lastIndexingTime: Date;
+    lastQueryingTime: Date;
 }
+
+export type IndexGroupBy = "Collection" | "None";
+export type IndexSortBy =
+    | Extract<keyof IndexSharedInfo, "name" | "createdTimestamp">
+    | Extract<keyof IndexNodeInfoDetails, "lastIndexingTime" | "lastQueryingTime">;
 
 export interface IndexFilterCriteria {
     searchText: string;
     statuses: IndexStatus[];
     types: IndexType[];
     showOnlyIndexesWithIndexingErrors: boolean;
-    autoRefresh: boolean; //TODO:
+    autoRefresh: boolean;
+    sortBy: IndexSortBy;
+    sortDirection: SortDirection;
+    groupBy: IndexGroupBy;
 }

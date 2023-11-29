@@ -111,6 +111,7 @@ function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
         patternForReferencesToReduceOutputCollection: stats.ReduceOutputReferencePattern,
         collectionNameForReferenceDocuments: stats.PatternReferencesCollectionName,
         searchEngine: stats.SearchEngineType,
+        createdTimestamp: stats.CreatedTimestamp ? new Date(stats.CreatedTimestamp) : null,
     };
 }
 
@@ -125,6 +126,8 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
             status: stats.Status,
             stale: stats.IsStale,
             faulty: stats.Type === "Faulty",
+            lastIndexingTime: stats.LastIndexingTime ? new Date(stats.LastIndexingTime) : null,
+            lastQueryingTime: stats.LastQueryingTime ? new Date(stats.LastQueryingTime) : null,
         },
         progress: null,
     };

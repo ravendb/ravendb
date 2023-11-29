@@ -8,27 +8,29 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 };
 
+type SortBy = "Alphabetically" | "Creation date";
+type SortDirection = "Ascending" | "Descending";
+type GroupBy = "Collection" | "None";
+
 export function Sort() {
-    const sortBy: sortItem[] = [
-        { value: "alphabetically", label: "Alphabetically" },
-        { value: "creationDate", label: "Creation date" },
-        { value: "lastIndexedDate", label: "Last indexed date" },
-        { value: "lastQueryDate", label: "Last query date" },
+    const sortBy: sortItem<SortBy>[] = [
+        { value: "Alphabetically", label: "Alphabetically" },
+        { value: "Creation date", label: "Creation date" },
     ];
 
-    const sortDirection: sortItem[] = [
-        { value: "asc", label: "Ascending", icon: "arrow-thin-top" },
-        { value: "desc", label: "Descending", icon: "arrow-thin-bottom" },
+    const sortDirection: sortItem<SortDirection>[] = [
+        { value: "Ascending", label: "Ascending", icon: "arrow-thin-top" },
+        { value: "Descending", label: "Descending", icon: "arrow-thin-bottom" },
     ];
 
-    const groupBy: sortItem[] = [
-        { value: "byCollection", label: "By collection" },
-        { value: "none", label: "none" },
+    const groupBy: sortItem<GroupBy>[] = [
+        { value: "Collection", label: "Collection" },
+        { value: "None", label: "None" },
     ];
 
-    const [selectedSortBy, setSelectedSortBy] = useState<string>(sortBy[0].value);
-    const [selectedSortDirection, setSelectedSortDirection] = useState<string>(sortDirection[0].value);
-    const [selectedGroupBy, setSelectedGroupBy] = useState<string>(groupBy[0].value);
+    const [selectedSortBy, setSelectedSortBy] = useState<SortBy>("Alphabetically");
+    const [selectedSortDirection, setSelectedSortDirection] = useState<SortDirection>("Descending");
+    const [selectedGroupBy, setSelectedGroupBy] = useState<GroupBy>("None");
 
     return (
         <div>
@@ -36,30 +38,30 @@ export function Sort() {
                 label={
                     <>
                         {sortBy.find((item) => item.value === selectedSortBy).label}{" "}
-                        {selectedSortDirection === "asc" ? (
-                            <Icon icon="arrow-thin-top" margin="ms-1" />
-                        ) : (
+                        {selectedSortDirection === "Ascending" ? (
                             <Icon icon="arrow-thin-bottom" margin="ms-1" />
-                        )}{" "}
-                        {selectedGroupBy !== "none" && (
+                        ) : (
+                            <Icon icon="arrow-thin-top" margin="ms-1" />
+                        )}
+                        {selectedGroupBy !== "None" && (
                             <span className="ms-2">{groupBy.find((item) => item.value === selectedGroupBy).label}</span>
                         )}
                     </>
                 }
             >
-                <SortDropdownRadioList
+                <SortDropdownRadioList<SortBy>
                     radioOptions={sortBy}
                     label="Sort by"
                     selected={selectedSortBy}
                     setSelected={setSelectedSortBy}
                 />
-                <SortDropdownRadioList
+                <SortDropdownRadioList<SortDirection>
                     radioOptions={sortDirection}
                     label="Sort direction"
                     selected={selectedSortDirection}
                     setSelected={setSelectedSortDirection}
                 />
-                <SortDropdownRadioList
+                <SortDropdownRadioList<GroupBy>
                     radioOptions={groupBy}
                     label="Group by"
                     selected={selectedGroupBy}
