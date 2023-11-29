@@ -145,31 +145,29 @@ public unsafe struct NativeIntegersList : IDisposable
         Count = (int)(outputBufferPtr - RawItems + 1);
     }
 
-    public int MoveTo(Span<long> matches)
+    public int MoveTo(Span<long> output)
     {
-        var read = Math.Min(Count, matches.Length);
-        new Span<long>(this.RawItems, read).CopyTo(matches);
-        Count -= read;
-        Capacity -= read;
-        RawItems += read;
-        return read;
+        var count = Math.Min(Count, output.Length);
+        new Span<long>(RawItems, count).CopyTo(output);
+
+        // Check if we have moved the entire content.
+        if (Count == count)
+        {
+            Count = 0;
+            return count;
+        }
+
+        var theRestToCopy = new Span<long>(RawItems + count, Count - count);
+        theRestToCopy.CopyTo(new Span<long>(RawItems, Capacity));
+        Count = theRestToCopy.Length;
+
+        return count;
     }
 
     public void Clear()
     {
         Count = 0;
         RawItems = (long*)_releaseItems.GetStringStartPtr();
-    }
-
-    public long First => *RawItems;
-    
-    public long Pop()
-    {
-        var val = *RawItems;
-        RawItems++;
-        Count--;
-        Capacity--;
-        return val;
     }
 
     public void EnsureCapacity(int requiredSize)
