@@ -2,38 +2,51 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents
 {
     public class ClusterTransactionWaiter
     {
         internal readonly DocumentDatabase Database;
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _results = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<long?>> _results = new ConcurrentDictionary<string, TaskCompletionSource<long?>>();
 
         public ClusterTransactionWaiter(DocumentDatabase database)
         {
             Database = database;
         }
 
-        public RemoveTask CreateTask(out string id)
+        public RemoveTask CreateTask(string id, long index, out Task<long?> task)
         {
-            id = Guid.NewGuid().ToString();
-            _results.TryAdd(id, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+            var t = new TaskCompletionSource<long?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var current = _results.GetOrAdd(id, t);
+
+            if (current == t)
+            {
+                var lastCompleted = Interlocked.Read(ref Database.LastCompletedClusterTransactionIndex);
+                if (lastCompleted >= index)
+                {
+                    current.TrySetResult(null);
+                }
+            }
+
+            task = current.Task;
             return new RemoveTask(this, id);
         }
 
-        public TaskCompletionSource<object> Get(string id)
+        public TaskCompletionSource<long?> Get(string id)
         {
             _results.TryGetValue(id, out var val);
             return val;
         }
 
-        public void SetResult(string id, long index, object result)
+        public void SetResult(string id, long index, long count)
         {
             Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetResult(result);
+                task.SetResult(count);
             }
         }
 
@@ -59,13 +72,15 @@ namespace Raven.Server.Documents
 
             public void Dispose()
             {
-                _parent._results.TryRemove(_id, out var task);
-                // cancel it, if someone still awaits
-                task.TrySetCanceled();
+                if (_parent._results.TryRemove(_id, out var task))
+                {
+                    // cancel it, if someone still awaits
+                    task.TrySetCanceled();
+                }
             }
         }
 
-        public async Task<object> WaitForResults(string id, CancellationToken token)
+        public async Task WaitForResults(string id, CancellationToken token)
         {
             if (_results.TryGetValue(id, out var task) == false)
             {
@@ -74,7 +89,7 @@ namespace Raven.Server.Documents
 
             await using (token.Register(() => task.TrySetCanceled()))
             {
-                return await task.Task.ConfigureAwait(false);
+                await task.Task.ConfigureAwait(false);
             }
         }
     }

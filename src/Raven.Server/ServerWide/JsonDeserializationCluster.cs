@@ -136,6 +136,7 @@ namespace Raven.Server.ServerWide
         public static Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 
         public static Func<BlittableJsonReaderObject, PostgreSqlConfiguration> PostgreSqlConfiguration = GenerateJsonDeserializationRoutine<PostgreSqlConfiguration>();
+        public static Func<BlittableJsonReaderObject, ClusterTransactionResult> ClusterTransactionResult = GenerateJsonDeserializationRoutine<ClusterTransactionResult>();
         
         public static readonly Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {

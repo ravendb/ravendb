@@ -397,10 +397,12 @@ namespace Raven.Server.ServerWide.Commands
             return Constants.CompareExchange.RvnAtomicPrefix + docId;
         }
 
-        public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)
+        public unsafe ClusterTransactionResult SaveCommandsBatch(ClusterOperationContext context, long index)
         {
+            var result = new ClusterTransactionResult();
+
             if (HasDocumentsInTransaction == false)
-                return;
+                return result;
 
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
@@ -419,6 +421,9 @@ namespace Raven.Server.ServerWide.Commands
                     using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
                         *(long*)ptr = count + DatabaseCommandsCount;
                 }
+
+                result.Count = count;
+                return result;
             }
         }
 
@@ -610,20 +615,30 @@ namespace Raven.Server.ServerWide.Commands
 
         public override object FromRemote(object remoteResult)
         {
-            var errors = new List<ClusterTransactionErrorInfo>();
-            if (remoteResult is BlittableJsonReaderArray array)
+            if (remoteResult is BlittableJsonReaderObject bjro)
             {
-                foreach (var o in array)
-                {
-                    if (o is not BlittableJsonReaderObject blittable)
-                        continue;
-
-                    errors.Add(ToClusterTransactionErrorInfo(blittable));
-                }
-
-                return errors;
+                return JsonDeserializationCluster.ClusterTransactionResult(bjro);
             }
+
+            if (remoteResult is BlittableJsonReaderArray bjra)
+            {
+                return GetErrors(bjra);
+            }
+
             return base.FromRemote(remoteResult);
+        }
+
+        private static List<ClusterTransactionErrorInfo> GetErrors(BlittableJsonReaderArray array)
+        {
+            var errors = new List<ClusterTransactionErrorInfo>();
+            foreach (var o in array)
+            {
+                if (o is not BlittableJsonReaderObject blittable)
+                    continue;
+
+                errors.Add(ToClusterTransactionErrorInfo(blittable));
+            }
+            return errors;
         }
 
         private static ClusterTransactionErrorInfo ToClusterTransactionErrorInfo(BlittableJsonReaderObject bjro)
@@ -631,22 +646,22 @@ namespace Raven.Server.ServerWide.Commands
             var current = new ConcurrencyViolation();
             var errorInfo = new ClusterTransactionErrorInfo { Violation = current };
             bjro.TryGet(nameof(ClusterTransactionErrorInfo.Message), out errorInfo.Message);
-
+        
             if (!bjro.TryGet(nameof(ClusterTransactionErrorInfo.Violation), out BlittableJsonReaderObject violation))
                 return errorInfo;
-
+        
             if (violation.TryGet(nameof(ConcurrencyViolation.Id), out string id))
                 current.Id = id;
-
+        
             if (violation.TryGet(nameof(ConcurrencyViolation.Type), out ViolationOnType type))
                 current.Type = type;
-
+        
             if (violation.TryGet(nameof(ConcurrencyViolation.Expected), out long expected))
                 current.Expected = expected;
-
+        
             if (violation.TryGet(nameof(ConcurrencyViolation.Actual), out long actual))
                 current.Actual = actual;
-
+        
             return errorInfo;
         }
 

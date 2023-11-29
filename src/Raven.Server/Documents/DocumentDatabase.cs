@@ -55,6 +55,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
+using static Raven.Server.Documents.ClusterTransactionWaiter;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -380,6 +381,12 @@ namespace Raven.Server.Documents
                         _logger);
                     try
                     {
+                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
+                            Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
+                        }
                         _hasClusterTransaction.Set();
                         ExecuteClusterTransaction();
                     }
@@ -450,6 +457,9 @@ namespace Raven.Server.Documents
         private long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+
+        public long LastCompletedClusterTransactionIndex;
+
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -540,6 +550,7 @@ namespace Raven.Server.Documents
 
             try
             {
+
                 try
                 {
                     //If we get a database shutdown while we process a cluster tx command this
@@ -595,6 +606,7 @@ namespace Raven.Server.Documents
                     command
                 };
                 var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
+
                 try
                 {
                     TxMerger.EnqueueSync(mergedCommand);
@@ -631,25 +643,48 @@ namespace Raven.Server.Documents
             try
             {
                 var index = command.Index;
+
                 var options = mergedCommands.Options[index];
                 if (exception == null)
                 {
-                    Task indexTask = null;
                     if (options.WaitForIndexesTimeout != null)
                     {
-                        indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                        var indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
                             options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                             mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+
+                        var removeTask = ClusterTransactionWaiter.CreateTask(command.Options.TaskId, command.Index, out _);
+                        /*
+                            the remove task that we are creating here is relevant only for a failover with wait for index:
+                            We need the task only when we do a failover during cluster transaction (batch handler) with 'wait for index'.
+                            Only then we will want the task that created here, because we'll want to 'wait for index' in the new node after the failover.
+                        */
+
+                        indexTask.ContinueWith(t =>
+                        {
+                            try
+                            {
+                                t.GetAwaiter().GetResult(); // Task t is already completed here
+                                ClusterTransactionWaiter.SetResult(options.TaskId, index, command.PreviousCount);
+                            }
+                            catch (Exception e)
+                            {
+                                ClusterTransactionWaiter.SetException(options.TaskId, index, e);
+                            }
+
+                            removeTask.Dispose();
+                        });
+                    }
+                    else
+                    {
+                        ClusterTransactionWaiter.SetResult(options.TaskId, index, command.PreviousCount);
                     }
 
-                    var result = new BatchHandler.ClusterTransactionCompletionResult
-                    {
-                        Array = mergedCommands.Replies[index],
-                        IndexTask = indexTask,
-                    };
-                    ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
+                    ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
+
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+
                     return;
                 }
 
@@ -1939,6 +1974,8 @@ namespace Raven.Server.Documents
             internal bool ForceSendTombstones = false;
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
+
+            internal Action AfterCommitInClusterTransaction;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {
