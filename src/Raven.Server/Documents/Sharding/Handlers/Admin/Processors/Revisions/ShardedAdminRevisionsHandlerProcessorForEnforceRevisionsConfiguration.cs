@@ -1,40 +1,34 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
+using Raven.Client.Http;
 using Raven.Server.Documents.Operations;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.Json;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
-    internal sealed class ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration : AbstractAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration : ShardedAdminRevisionsHandlerProcessorForRevisionsOperation<EnforceRevisionsConfigurationOperation.Parameters>
     {
-        public ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) 
-            : base(requestHandler)
+        public ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, OperationType.EnforceRevisionConfiguration)
         {
+            Description = $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.";
         }
 
-        protected override long GetNextOperationId()
+        protected override EnforceRevisionsConfigurationOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
         {
-            return RequestHandler.DatabaseContext.Operations.GetNextOperationId();
+            return JsonDeserializationServer.Parameters.EnforceRevisionsConfigurationOperationParameters(json);
         }
 
-        protected override void ScheduleEnforceConfigurationOperation(long operationId, EnforceRevisionsConfigurationOperation.Parameters parameters, OperationCancelToken token)
+        protected override RavenCommand<OperationIdResult> GetCommand(JsonOperationContext context, int shardNumber, EnforceRevisionsConfigurationOperation.Parameters parameters)
         {
-            var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, EnforceConfigurationResult, EnforceConfigurationResult>(
-                operationId,
-                OperationType.EnforceRevisionConfiguration,
-                $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.",
-                detailedDescription: null,
-                (_, shardNumber) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(parameters, DocumentConventions.DefaultForServer),
-                token: token);
-
-            _ = task.ContinueWith(_ =>
-            {
-                task.Dispose();
-            });
+            return new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(parameters, DocumentConventions.DefaultForServer);
         }
     }
 }

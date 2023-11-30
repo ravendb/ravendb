@@ -1,6 +1,13 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Http;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions;
 using Raven.Server.Routing;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
@@ -24,6 +31,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         public async Task EnforceConfigRevisions()
         {
             using (var processor = new ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/revisions/orphaned/adopt", "POST")]
+        public async Task AdoptOrphans()
+        {
+            using (var processor = new ShardedAdminRevisionsHandlerProcessorForAdoptOrphanedRevisions(this))
                 await processor.ExecuteAsync();
         }
     }

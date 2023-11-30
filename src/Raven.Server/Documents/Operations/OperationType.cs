@@ -77,5 +77,8 @@ public enum OperationType
     LuceneOptimizeIndex,
 
     [Description("Resharding")]
-    Resharding
+    Resharding,
+
+    [Description("Adopt Orphaned Revisions")]
+    AdoptOrphanedRevisions
 }

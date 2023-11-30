@@ -336,6 +336,8 @@ namespace Raven.Server.Json
 
             public static readonly Func<BlittableJsonReaderObject, EnforceRevisionsConfigurationOperation.Parameters> EnforceRevisionsConfigurationOperationParameters = GenerateJsonDeserializationRoutine<EnforceRevisionsConfigurationOperation.Parameters>();
 
+            public static readonly Func<BlittableJsonReaderObject, AdoptOrphanedRevisionsOperation.Parameters> AdoptOrphanedRevisionsConfigurationOperationParameters = GenerateJsonDeserializationRoutine<AdoptOrphanedRevisionsOperation.Parameters>();
+
         }
     }
 }
