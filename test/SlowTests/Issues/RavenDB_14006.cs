@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -412,7 +413,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript()
+        public async Task CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript()
         {
             using (var store = GetDocumentStore())
             {
@@ -476,13 +477,19 @@ select incl(c)"
                     Assert.Equal(-1, stats.DurationInMs); // from cache
                     Assert.Equal(resultEtag, stats.ResultEtag);
 
+                    long lastClusterTxIndex;
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
                     using (var innerSession = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
                         var value = innerSession.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
                         value.Value.City = "Bydgoszcz";
 
                         innerSession.SaveChanges();
+                        lastClusterTxIndex = value.Index;
                     }
+
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(lastClusterTxIndex, TimeSpan.FromSeconds(5));
 
                     companies = companies = session.Advanced
                         .RawQuery<Company>(
