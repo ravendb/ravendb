@@ -13,7 +13,14 @@ export default {
 } satisfies Meta<typeof AboutPage>;
 
 export const AboutTemplate = () => {
-    return <AboutPage />;
+    return (
+        <AboutPage
+            licenseType="Community" //Community, Professional, Production
+            supportType="valid" //valid, professional-support, production-support, invalid, dev-only, no-support, commercial
+            licenseServerConnection={true}
+            updateAvailable={false}
+        />
+    );
 };
 
 // export const StatsSingleNode = boundCopy(StatisticsTemplate, {
