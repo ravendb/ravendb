@@ -806,7 +806,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
@@ -819,6 +819,7 @@ namespace Raven.Server.Documents
         internal sealed class TestingStuff
         {
             public ManualResetEventSlim DelayDocumentLoad;
+            public Action<string> OnBeforeOpenTableWhenPutDocumentWithSpecificId { get; set; }
         }
         
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
@@ -2779,6 +2780,12 @@ namespace Raven.Server.Documents
         {
             var ptr = tvr.Read(index, out int size);
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
+        }
+
+        public bool? DocumentIsCompressed(DocumentsOperationContext context, Slice lowerDocumentId, out bool? isLargeValue)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            return table.TableValueIsCompressed(lowerDocumentId, out isLargeValue);
         }
     }
 
