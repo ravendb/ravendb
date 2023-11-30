@@ -67,8 +67,8 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                 </div>
                 <div className="entries">{entriesCount.toLocaleString()}</div>
                 <div className="errors">{nodeInfo.details?.errorCount.toLocaleString() ?? ""}</div>
-                <div>{getFormattedTime(nodeInfo.details?.lastIndexingTime)}</div>
-                <div>{getFormattedTime(nodeInfo.details?.lastQueryingTime)}</div>
+                <div className="text-center">{getFormattedTime(nodeInfo.details?.lastIndexingTime)}</div>
+                <div className="text-center">{getFormattedTime(nodeInfo.details?.lastQueryingTime)}</div>
 
                 <IndexProgress nodeInfo={nodeInfo} />
 
