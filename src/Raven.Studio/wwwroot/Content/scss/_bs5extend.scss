@@ -448,6 +448,10 @@ select {
     }
 }
 
+.max-paragraph-width {
+    max-width: 50em;
+}
+
 //Styling for eye button that allows to preview password
 .preview-password {
     border-top-right-radius: $border-radius-sm !important;

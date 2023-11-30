@@ -16,11 +16,16 @@ import "./AboutPage.scss";
 import { act } from "react-dom/test-utils";
 
 interface AboutPageProps {
-    test?: boolean;
+    licenseType: string;
+    licenseExpiration?: string;
+    licenseServerConnection: boolean;
+    supportType: string;
+    supportId?: string;
+    updateAvailable?: boolean;
 }
 
 export function AboutPage(props: AboutPageProps) {
-    const { test } = props;
+    const { supportType, supportId } = props;
 
     //External Links
     const ravendbHomeUrl = "https://ravendb.net";
@@ -28,6 +33,7 @@ export function AboutPage(props: AboutPageProps) {
     const facebookUrl = "https://github.com/ravendb/ravendb/discussions";
     const xUrl = "https://twitter.com/ravendb";
     const linkedinUrl = "https://www.linkedin.com/company/ravendb";
+    const supportTermsUrl = "https://ravendb.net/terms";
 
     //Image urls
     const LogoImg = require("Content/img/ravendb_logo.svg");
@@ -157,18 +163,18 @@ export function AboutPage(props: AboutPageProps) {
                 </div>
                 <Card className="flex-grow">
                     <CardHeader>
-                        <Nav justified pills>
-                            <NavItem>
-                                <NavLink className={activeTab === "1" && "active"} onClick={() => handleTabClick("1")}>
-                                    <Icon icon="license" /> License details
-                                </NavLink>
-                            </NavItem>
-                            <NavItem>
-                                <NavLink className={activeTab === "2" && "active"} onClick={() => handleTabClick("2")}>
-                                    <Icon icon="support" /> Support plan
-                                </NavLink>
-                            </NavItem>
-                        </Nav>
+                        <Row>
+                            <Col>
+                                <a className={activeTab === "1" && "active"} onClick={() => handleTabClick("1")}>
+                                    <Icon icon="license" /> <strong>License details</strong>
+                                </a>
+                            </Col>
+                            <Col>
+                                <a className={activeTab === "2" && "active"} onClick={() => handleTabClick("2")}>
+                                    <Icon icon="support" /> <strong>Support plan</strong>
+                                </a>
+                            </Col>
+                        </Row>
                     </CardHeader>
                     <TabContent activeTab={activeTab}>
                         <TabPane tabId="1">
@@ -193,23 +199,57 @@ export function AboutPage(props: AboutPageProps) {
                                     <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-2" />
                                 </Button>
                             </RichPanelHeader>
-                            <div className="text-center p-4">
+                            <div className="text-center p-4 vstack align-items-center">
                                 <h2 className="hstack justify-content-center">
                                     <img src={supportImg} width={70} className="me-4" />
                                     Elevate your experience
                                 </h2>
-                                <p>
-                                    RavenDB Cloud Support has you covered. Whether it’s a simple question or a
-                                    mission-critical emergency, our core developers will be on hand to provide expert
-                                    assistance and advice around the clock.
-                                </p>
-                                <p>Here’s what you’ll get:</p>
+                                <div>
+                                    <p className="max-paragraph-width">
+                                        RavenDB Cloud Support has you covered. Whether it’s a simple question or a
+                                        mission-critical emergency, our core developers will be on hand to provide
+                                        expert assistance and advice around the clock.
+                                    </p>
+                                    <p>Here’s what you’ll get:</p>
+                                </div>
+                                <Row className="support-advantages">
+                                    <SupportAdvantage icon="phone">Phone & Email support</SupportAdvantage>
+                                    <SupportAdvantage icon="notifications">
+                                        Request support directly from RavenDB Studio
+                                    </SupportAdvantage>
+                                    <SupportAdvantage icon="user">Access to RavenDB core developers</SupportAdvantage>
+                                    <SupportAdvantage icon="clock">
+                                        Up to 2 hour SLA
+                                        <br />
+                                        24/7 AVAILABILITY
+                                    </SupportAdvantage>
+                                </Row>
+                                <Button color="success" className="px-4 rounded-pill mt-4" size="lg">
+                                    <Icon icon="upgrade-arrow" /> <strong>Upgrade Your Support</strong>
+                                </Button>
                             </div>
                         </TabPane>
                     </TabContent>
                 </Card>
             </div>
         </>
+    );
+}
+
+interface SupportAdvantageProps {
+    icon: IconName;
+    children: ReactNode | ReactNode[];
+}
+
+function SupportAdvantage(props: SupportAdvantageProps) {
+    const { icon, children } = props;
+    return (
+        <Col>
+            <Icon icon={icon} margin="m-0" className="fs-2" />
+            <div className="small mt-1">
+                <strong>{children}</strong>
+            </div>
+        </Col>
     );
 }
 
