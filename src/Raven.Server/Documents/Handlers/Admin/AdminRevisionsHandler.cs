@@ -40,5 +40,12 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (var processor = new AdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenAction("/databases/*/admin/revisions/orphaned/adopt", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task AdoptOrphans()
+        {
+            using (var processor = new AdminRevisionsHandlerProcessorForAdoptOrphanedRevisions(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

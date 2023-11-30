@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Revisions;
@@ -86,7 +88,7 @@ public class RavenDB_20846 : ClusterTestBase
 
         var db = await Databases.GetDocumentDatabaseInstanceFor(store);
         using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, collections: new[] { "Users", "Products" }, token: token);
+            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, collections: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Users", "Products" }, token: token);
 
         using (var session = store.OpenAsyncSession())
         {

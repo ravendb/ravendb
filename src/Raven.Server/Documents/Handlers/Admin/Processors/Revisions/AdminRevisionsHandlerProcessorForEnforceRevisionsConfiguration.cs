@@ -1,37 +1,33 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
+namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
+internal sealed class AdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration : AdminRevisionsHandlerProcessorForRevisionsOperation<EnforceRevisionsConfigurationOperation.Parameters>
 {
-    internal sealed class AdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration : AbstractAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
+    public AdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, OperationType.EnforceRevisionConfiguration)
     {
-        public AdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration([NotNull] DatabaseRequestHandler requestHandler)
-            : base(requestHandler)
-        {
-        }
+        Description = $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.";
+    }
 
-        protected override long GetNextOperationId()
-        {
-            return RequestHandler.Database.Operations.GetNextOperationId();
-        }
+    protected override EnforceRevisionsConfigurationOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
+    {
+        return JsonDeserializationServer.Parameters.EnforceRevisionsConfigurationOperationParameters(json);
+    }
 
-        protected override void ScheduleEnforceConfigurationOperation(long operationId, EnforceRevisionsConfigurationOperation.Parameters parameters, OperationCancelToken token)
-        {
-            var t = RequestHandler.Database.Operations.AddLocalOperation(
-                operationId,
-                OperationType.EnforceRevisionConfiguration,
-                $"Enforce revision configuration in database '{RequestHandler.Database.Name}'.",
-                detailedDescription: null,
-                onProgress => RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, parameters.IncludeForceCreated, parameters.Collections, token),
-                token: token);
-
-            _ = t.ContinueWith(_ =>
-            {
-                token.Dispose();
-            });
-        }
+    protected override Task<IOperationResult> ExecuteOperation(Action<IOperationProgress> onProgress, EnforceRevisionsConfigurationOperation.Parameters parameters, OperationCancelToken token)
+    {
+        return RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, parameters.IncludeForceCreated, 
+            parameters.Collections.ToHashSet(StringComparer.OrdinalIgnoreCase), token);
     }
 }
+
