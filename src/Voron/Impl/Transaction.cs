@@ -38,7 +38,27 @@ namespace Voron.Impl
 
         private Dictionary<Slice, PostingList> _postingLists;
         
-        private Dictionary<Slice, Table> _tables;
+        private Dictionary<TableKey, Table> _tables;
+        private readonly struct TableKey
+        {
+            private readonly Slice _tableName;
+            private readonly bool _compressed;
+
+            public TableKey(Slice tableName, bool compressed)
+            {
+                _tableName = tableName;
+                _compressed = compressed;
+            }
+
+            private bool Equals(TableKey other) =>
+                SliceComparer.Equals(_tableName, other._tableName) && _compressed == other._compressed;
+
+            public override bool Equals(object obj) =>
+                obj is TableKey other && Equals(other);
+
+            public override int GetHashCode() =>
+                HashCode.Combine(_tableName.GetHashCode(), _compressed);
+        }
 
         private Dictionary<Slice, Tree> _trees;
 
@@ -213,21 +233,20 @@ namespace Voron.Impl
 
         public Table OpenTable(TableSchema schema, Slice name)
         {
-            _tables ??= new Dictionary<Slice, Table>(SliceStructComparer.Instance);
-
-            if (_tables.TryGetValue(name, out Table value))
-                return value;
+            _tables ??= new Dictionary<TableKey, Table>();
 
             var clonedName = name.Clone(Allocator);
+            var key = new TableKey(clonedName, schema.Compressed);
+            if (_tables.TryGetValue(key, out Table value))
+                return value;
 
             var tableTree = ReadTree(clonedName, RootObjectType.Table);
 
             if (tableTree == null)
                 return null;
 
-
             value = new Table(schema, clonedName, this, tableTree, schema.TableType);
-            _tables[clonedName] = value;
+            _tables[key] = value;
             return value;
         }
 
@@ -685,7 +704,7 @@ namespace Voron.Impl
 
             using (Slice.From(Allocator, name, ByteStringType.Immutable, out var nameSlice))
             {
-                _tables.Remove(nameSlice);
+                _tables.Remove(new TableKey(nameSlice, schema.Compressed));
             }
         }
 
