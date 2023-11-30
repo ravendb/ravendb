@@ -2414,6 +2414,26 @@ namespace Voron.Data.Tables
             return report;
         }
 
+        public bool? TableValueIsCompressed(Slice key, out bool? isLargeValue)
+        {
+            if (TryFindIdFromPrimaryKey(key, out long id) == false)
+            {
+                isLargeValue = default;
+                return default;
+            }
+
+            isLargeValue = id % Constants.Storage.PageSize == 0;
+
+            if (isLargeValue.Value)
+            {
+                var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
+                return page.Flags.HasFlag(PageFlags.Compressed);
+            }
+
+            var sizes = RawDataSection.GetRawDataEntrySizeFor(_tx.LowLevelTransaction, id);
+            return sizes->IsCompressed;
+        }
+
         [Conditional("DEBUG")]
         private void AssertWritableTable()
         {

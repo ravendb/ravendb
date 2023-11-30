@@ -7,8 +7,11 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -63,19 +66,19 @@ public class RavenDB_19529 : ReplicationTestBase
 
     private const char CharToAppend = 'a';
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Compression | RavenTestCategory.Voron)]
     public async Task MergedTransaction_DeleteOneDoc_Then_PutAnotherToLargeSection_CompressionSetOnServerCreation()
     {
         const string specificSizeAndContentDocumentId = "users/1-A";
         const string documentToDeleteId = "users/2-A";
 
         using (var server = GetNewServer(new ServerCreationOptions
-        {
-            CustomSettings = new Dictionary<string, string>
-            {
-                [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString(),
-            }
-        }))
+                    {
+                        CustomSettings = new Dictionary<string, string>
+                        {
+                            [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString(),
+                        }
+                    }))
         using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
         {
             using (var session = store.OpenAsyncSession())
@@ -101,10 +104,19 @@ public class RavenDB_19529 : ReplicationTestBase
 
             Assert.True(WaitForDocument<User>(store, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
                 $"The document '{specificSizeAndContentDocumentId}' wasn't updated as expected");
+
+            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            {
+                Assert.True(database.DocumentsStorage.DocumentIsCompressed(context, lowerDocumentId, out var isLargeValue));
+                Assert.True(isLargeValue);
+            }
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Compression | RavenTestCategory.Voron)]
     public async Task MergedTransaction_DeleteOneDoc_Then_PutAnotherToLargeSection_CompressionSetInTheMiddle()
     {
         const string specificSizeAndContentDocumentId = "users/1-A";
@@ -138,10 +150,19 @@ public class RavenDB_19529 : ReplicationTestBase
 
             Assert.True(WaitForDocument<User>(store, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
                 $"The document '{specificSizeAndContentDocumentId}' wasn't updated as expected");
+
+            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            {
+                Assert.True(database.DocumentsStorage.DocumentIsCompressed(context, lowerDocumentId, out var isLargeValue));
+                Assert.True(isLargeValue);
+            }
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Compression | RavenTestCategory.Voron)]
     public async Task MergedTransaction_AddConflict_Then_PutUpdateDocumentOnLargeSection_CompressionSetInTheMiddle()
     {
         const string specificSizeAndContentDocumentId = "users/1-A";
@@ -149,12 +170,12 @@ public class RavenDB_19529 : ReplicationTestBase
 
         using (var storeSrc = GetDocumentStore())
         using (var storeDst = GetDocumentStore(new Options
-        {
-            ModifyDatabaseRecord = record =>
-            {
-                record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
-            }
-        }))
+               {
+                   ModifyDatabaseRecord = record =>
+                   {
+                       record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                   }
+               }))
         {
             storeDst.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = true }));
 
@@ -164,7 +185,7 @@ public class RavenDB_19529 : ReplicationTestBase
                 sessionSrc.SaveChanges();
             }
 
-            var taskId = (await SetupReplicationAsync(storeSrc, storeDst)).First().TaskId;
+            var taskId = SetupReplicationAsync(storeSrc, storeDst).Result.First().TaskId;
             Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
 
             await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));
@@ -192,66 +213,127 @@ public class RavenDB_19529 : ReplicationTestBase
             WaitUntilHasConflict(storeDst, documentToConflictId, count: 1);
             Assert.True(WaitForDocument<User>(storeDst, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
                 $"The document '{specificSizeAndContentDocumentId}' wasn't replicated as expected");
+
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeDst.Database);
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            {
+                Assert.True(database.DocumentsStorage.DocumentIsCompressed(context, lowerDocumentId, out var isLargeValue));
+                Assert.True(isLargeValue);
+            }
         }
     }
 
-
-    [Fact(Skip = "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
-    public async Task MergedTransaction_ConflictForDocumentInDifferentCollection_Then_PutUpdateDocumentOnLargeSection_CompressionSetInTheMiddle()
+    [RavenFact(RavenTestCategory.Compression | RavenTestCategory.Voron)]
+    public async Task CanHandleChangingCompressionConfigurationInTheMiddleOfTransaction()
     {
         const string specificSizeAndContentDocumentId = "users/1-A";
-        const string documentToConflictId = "users/2-A";
+        const string documentToDeleteId = "users/2-A";
 
-        using (var storeSrc = GetDocumentStore(new Options
+        using (var server = GetNewServer(new ServerCreationOptions
+               {
+                   CustomSettings = new Dictionary<string, string>
+                   {
+                       [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString(),
+                   }
+               }))
+        using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
         {
-            ModifyDatabaseRecord = record =>
+            using (var session = store.OpenAsyncSession())
             {
-                record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
-            }
-        }))
-        using (var storeDst = GetDocumentStore(new Options
-        {
-            ModifyDatabaseRecord = record =>
-            {
-                record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
-            }
-        }))
-        {
-            storeDst.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = true }));
+                await session.StoreAsync(new User { Name = SpecificContentWithSpecificSize }, specificSizeAndContentDocumentId);
+                await session.StoreAsync(new User { Name = "Document To Delete" }, documentToDeleteId);
 
-            using (var session = storeSrc.OpenSession())
-            {
-                session.Store(new User { Name = SpecificContentWithSpecificSize }, specificSizeAndContentDocumentId);
-                session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
-            var taskId = (await SetupReplicationAsync(storeSrc, storeDst)).First().TaskId;
-            Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
-
-            await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));
-
-            using (var sessionDst = storeDst.OpenSession())
+            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            database.DocumentsStorage.ForTestingPurposesOnly().OnBeforeOpenTableWhenPutDocumentWithSpecificId = id =>
             {
-                sessionDst.Store(new User { Name = "Document To Conflict" }, documentToConflictId);
-                sessionDst.SaveChanges();
-            }
+                if (id == specificSizeAndContentDocumentId)
+                    store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = false }));
+            };
 
-            using (var sessionSrc = storeSrc.OpenSession())
+            using (var operationSession = store.OpenSession())
             {
-                // To create a merge transaction that will be formed after enabling replication, we first need to create a Conflict in different collection...
-                sessionSrc.Store(new Company { Name = "Another Document To Conflict" }, documentToConflictId);
+                // Form a merge transaction within which there will first be a DELETE command...
+                var userToDelete = operationSession.Load<User>(documentToDeleteId);
+                operationSession.Delete(userToDelete);
 
                 // ...and then a PUT command
-                var specificSizeAndContentUser = sessionSrc.Load<User>(specificSizeAndContentDocumentId);
+                var specificSizeAndContentUser = operationSession.Load<User>(specificSizeAndContentDocumentId);
                 specificSizeAndContentUser.Name += CharToAppend;
 
-                sessionSrc.SaveChanges();
+                operationSession.SaveChanges();
             }
 
+            Assert.True(WaitForDocument<User>(store, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
+                $"The document '{specificSizeAndContentDocumentId}' wasn't updated as expected");
+
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            {
+                Assert.False(database.DocumentsStorage.DocumentIsCompressed(context, lowerDocumentId, out var isLargeValue));
+                Assert.True(isLargeValue);
+            }
+        }
+    }
+
+     [Fact(Skip= "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
+     public async Task MergedTransaction_ConflictForDocumentInDifferentCollection_Then_PutUpdateDocumentOnLargeSection()
+     {
+         const string specificSizeAndContentDocumentId = "users/1-A";
+         const string documentToConflictId = "users/2-A";
+
+         using (var storeSrc = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+         using (var storeDst = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+         {
+             storeDst.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = true }));
+
+             using (var session = storeSrc.OpenSession())
+             {
+                 session.Store(new User { Name = SpecificContentWithSpecificSize }, specificSizeAndContentDocumentId);
+                 session.SaveChanges();
+             }
+
+             var taskId = SetupReplicationAsync(storeSrc, storeDst).Result.First().TaskId;
+             Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
+
+             await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));
+
+             using (var sessionDst = storeDst.OpenSession())
+             {
+                 sessionDst.Store(new User { Name = "Document To Conflict" }, documentToConflictId);
+                 sessionDst.SaveChanges();
+             }
+
+             using (var sessionSrc = storeSrc.OpenSession())
+             {
+                 // To create a merge transaction that will be formed after enabling replication, we first need to create a Conflict in different collection...
+                 sessionSrc.Store(new Company { Name = "Another Document To Conflict" }, documentToConflictId);
+
+                 // ...and then a PUT command
+                var specificSizeAndContentUser = sessionSrc.Load<User>(specificSizeAndContentDocumentId);
+                specificSizeAndContentUser.Name += CharToAppend;
+                 sessionSrc.SaveChanges();
+            }
             await SetReplicationConflictResolutionAsync(storeDst, StraightforwardConflictResolution.ResolveToLatest);
             await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: false));
-
-            Assert.True(WaitForDocument<User>(storeDst, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
+             Assert.True(WaitForDocument<User>(storeDst, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
                 $"The document '{specificSizeAndContentDocumentId}' wasn't replicated as expected");
         }
     }
