@@ -1010,7 +1010,61 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 _modeStack.Pop();
             }
         }
+        
+        internal IDisposable SetAnyMode()
+        {
+            return new AnyModeScope(this);
+        }
 
+        private class AnyModeScope : IDisposable
+        {
+            private readonly AbstractDocumentQuery<T, TSelf> _documentQuery;
+            private LinkedListNode<QueryToken> _lastNodeBeforeClauseStart;
+            
+            public AnyModeScope(AbstractDocumentQuery<T, TSelf> documentQuery)
+            {
+                _documentQuery = documentQuery;
+                _lastNodeBeforeClauseStart = _documentQuery.GetCurrentWhereTokens().Last;
+            }
+            
+            public void Dispose()
+            {
+                if (_documentQuery.IndexName != null || _documentQuery.IsDynamicMapReduce)
+                    return;
+                
+                _lastNodeBeforeClauseStart ??= _documentQuery.GetCurrentWhereTokens().First;
+
+                if (_lastNodeBeforeClauseStart == null)
+                    return;
+                
+                for (var node = _lastNodeBeforeClauseStart.Next; node != null ; node = node.Next)
+                {
+                    if (node.Value is QueryOperatorToken queryOperatorToken && queryOperatorToken == QueryOperatorToken.And)
+                    {
+                        if (node.Previous?.Value is WhereToken left && node.Next?.Value is WhereToken right && left.FieldName != right.FieldName)
+                        {
+                            if (UsesKeyAndValue(left, right))
+                                continue;
+                            
+                            throw new InvalidOperationException($"Using multiple fields inside method '{nameof(Enumerable.Any)}' can lead to unexpected query results.");
+                        }
+                    }
+                }
+
+                bool UsesKeyAndValue(WhereToken left, WhereToken right)
+                {
+                    if (left.FieldName.EndsWith("Value") && right.FieldName.EndsWith("Key"))
+                        return true;
+                    
+                    if (left.FieldName.EndsWith("Key") && right.FieldName.EndsWith("Value"))
+                        return true;
+                    
+                    return false;
+                }
+            }
+        }
+    
+        
         /// <summary>
         ///   Specifies a boost weight to the previous where clause.
         ///   The higher the boost factor, the more relevant the term will be.
