@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
@@ -25,7 +26,6 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
-    
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
         _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
@@ -221,5 +221,15 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             _converter,
             _logger
         );
+    }
+
+    public override void AssertCanOptimize()
+    {
+        throw new NotSupportedInCoraxException("Optimize is not supported in Corax.");
+    }
+
+    public override void AssertCanDump()
+    {
+        throw new NotSupportedInCoraxException("Dump is not supported in Corax.");
     }
 }

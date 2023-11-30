@@ -138,6 +138,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var index = Database.IndexStore.GetIndex(name);
+                
                 if (index == null)
                     IndexDoesNotExistException.ThrowFor(name);
 
