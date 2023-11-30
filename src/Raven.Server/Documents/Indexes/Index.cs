@@ -4968,8 +4968,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void Optimize(IndexOptimizeResult result, CancellationToken token)
         {
-            if (IndexPersistence is CoraxIndexPersistence)
-                throw new NotImplementedInCoraxException($"{nameof(Optimize)} is not implemented yet.");
+            IndexPersistence.AssertCanOptimize();
 
             AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Optimize));
 
@@ -5367,11 +5366,7 @@ namespace Raven.Server.Documents.Indexes
 
         public int Dump(string path, Action<IOperationProgress> onProgress)
         {
-            if (IndexPersistence is CoraxIndexPersistence)
-            {
-                //todo maciej
-                return 0;
-            }
+            IndexPersistence.AssertCanDump();
 
             LuceneIndexPersistence indexPersistence = (LuceneIndexPersistence)IndexPersistence;
             if (Directory.Exists(path) == false)
