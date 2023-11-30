@@ -373,7 +373,7 @@
         </div>
     </div>
     <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.hasRavenEtl }">
-        <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
+        <div class="absolute-center text-center z-1" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
             <i class="icon-info icon-xl"></i>
             Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.
         </div>
