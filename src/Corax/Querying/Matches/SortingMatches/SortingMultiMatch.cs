@@ -34,8 +34,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private ContextBoundNativeList<long> _results;
 
     private SortingDataTransfer _sortingDataTransfer;
-    private NativeUnmanagedList<SpatialResult> _distancesResults;
-    private NativeUnmanagedList<float> _scoresResults;
+    private ContextBoundNativeList<SpatialResult> _distancesResults;
+    private ContextBoundNativeList<float> _scoresResults;
     
     public long TotalResults;
     public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();

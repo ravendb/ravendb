@@ -151,6 +151,9 @@ public unsafe struct NativeList<T>
 
     public int MoveTo(Span<T> output)
     {
+        if (Count == 0)
+            return 0;
+
         var count = Math.Min(Count, output.Length);
         new Span<T>(RawItems, count).CopyTo(output);
 
