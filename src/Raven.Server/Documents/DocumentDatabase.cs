@@ -336,8 +336,6 @@ namespace Raven.Server.Documents
                 _addToInitLog("Initializing ETL");
                 EtlLoader.Initialize(record);
 
-                TombstoneCleaner.Start();
-
                 try
                 {
                     // we need to wait here for the task to complete
@@ -357,6 +355,8 @@ namespace Raven.Server.Documents
 
                 SubscriptionStorage.Initialize();
                 _addToInitLog("Initializing SubscriptionStorage completed");
+
+                TombstoneCleaner.Start();
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
