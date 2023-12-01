@@ -54,7 +54,7 @@ namespace RachisTests
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
-            
+
             options.Server = leader;
             options.ReplicationFactor = 5;
 
@@ -746,7 +746,7 @@ namespace RachisTests
                 {
                     var res = await store.Maintenance.ForNode(forNode).SendAsync(op);
                     string tag = res.ResponsibleNode.NodeTag;
-                   
+
                     if (toBecomeNull)
                     {
                         if (tag != null)
@@ -771,29 +771,6 @@ namespace RachisTests
             {
                 sp.Stop();
                 Assert.True(sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds);
-            }
-        }
-
-        protected static async Task ThrowsAsync<T>(Task task) where T : Exception
-        {
-            var threw = false;
-            try
-            {
-                await task.ConfigureAwait(false);
-            }
-            catch (T)
-            {
-                threw = true;
-            }
-            catch (Exception ex)
-            {
-                threw = true;
-                throw new ThrowsException(typeof(T), ex);
-            }
-            finally
-            {
-                if (threw == false)
-                    throw new ThrowsException(typeof(T));
             }
         }
     }
