@@ -8,7 +8,6 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Web.ResponseCompression
 {
-#if FEATURE_ZSTD_SUPPORT
     public sealed class ZstdCompressionProvider : ICompressionProvider
     {
         public ZstdCompressionProvider(IOptions<ZstdCompressionProviderOptions> options)
@@ -31,5 +30,4 @@ namespace Raven.Server.Web.ResponseCompression
         public string EncodingName => Constants.Headers.Encodings.Zstd;
         public bool SupportsFlush => true;
     }
-#endif
 }

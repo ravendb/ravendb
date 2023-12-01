@@ -46,6 +46,8 @@ namespace Raven.Client.Documents.Conventions
         internal static TimeSpan? DefaultHttpPooledConnectionIdleTimeout;
 #endif
 
+        internal static HttpCompressionAlgorithm DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+
         internal static readonly DocumentConventions Default = new();
 
         internal static readonly DocumentConventions DefaultForServer = new()
@@ -229,6 +231,8 @@ namespace Raven.Client.Documents.Conventions
                     throw new InvalidOperationException($"Could not parse 'RAVEN_COMPRESSION_ALGORITHM' env variable with value '{httpCompressionAlgorithmAsString}'.", e);
                 }
 
+                DefaultHttpCompressionAlgorithm = httpCompressionAlgorithm;
+                Default.HttpCompressionAlgorithm = httpCompressionAlgorithm;
                 DefaultForServer.HttpCompressionAlgorithm = httpCompressionAlgorithm;
             }
 #endif
@@ -326,7 +330,7 @@ namespace Raven.Client.Documents.Conventions
 
             _disposeCertificate = true;
 
-            _httpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+            _httpCompressionAlgorithm = DefaultHttpCompressionAlgorithm;
         }
 
         private bool _frozen;

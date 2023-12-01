@@ -22,7 +22,9 @@ public class RavenDB_19852 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.ClientApi)]
     [InlineData(HttpCompressionAlgorithm.Gzip)]
+#if FEATURE_BROTLI_SUPPORT
     [InlineData(HttpCompressionAlgorithm.Brotli)]
+#endif
     [InlineData(HttpCompressionAlgorithm.Zstd)]
     public void ResponseFromMultiGetIsCompressed(HttpCompressionAlgorithm compressionAlgorithm)
     {
@@ -69,11 +71,13 @@ public class RavenDB_19852 : RavenTestBase
             switch (_compressionAlgorithm)
             {
                 case HttpCompressionAlgorithm.Gzip:
-                    Assert.True(contentTypeName.Contains("Brotli"), $"{contentTypeName}.Contains('Brotli')"); // we are picking the best one based on the order of compression providers in the RavenServer
+                    Assert.True(contentTypeName.Contains("GZip"), $"{contentTypeName}.Contains('GZip')");
                     break;
+#if FEATURE_BROTLI_SUPPORT
                 case HttpCompressionAlgorithm.Brotli:
                     Assert.True(contentTypeName.Contains("Brotli"), $"{contentTypeName}.Contains('Brotli')");
                     break;
+#endif
                 case HttpCompressionAlgorithm.Zstd:
                     Assert.True(contentTypeName.Contains("Zstd"), $"{contentTypeName}.Contains('Zstd')");
                     break;

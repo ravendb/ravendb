@@ -154,10 +154,8 @@ namespace Raven.Server.Web
                 case HttpCompressionAlgorithm.Brotli:
                     return new BrotliStream(stream, CompressionMode.Decompress);
 #endif
-#if FEATURE_ZSTD_SUPPORT
                 case HttpCompressionAlgorithm.Zstd:
                     return ZstdStream.Decompress(stream);
-#endif
                 case null:
                     return stream;
                 default:
@@ -196,10 +194,8 @@ namespace Raven.Server.Web
             {
                 switch (encoding)
                 {
-#if FEATURE_ZSTD_SUPPORT
                     case Constants.Headers.Encodings.Zstd:
                         return HttpCompressionAlgorithm.Zstd;
-#endif
 #if FEATURE_BROTLI_SUPPORT
                     case Constants.Headers.Encodings.Brotli:
                         return HttpCompressionAlgorithm.Brotli;
