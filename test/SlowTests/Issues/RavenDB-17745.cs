@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        private readonly int _writeTimeout = 500;
+        private readonly int _readTimeout = 500;
         private readonly TimeSpan _delay = TimeSpan.FromSeconds(1);
 
         [RavenFact(RavenTestCategory.BulkInsert, Skip = "RavenDB-17745")]
@@ -27,9 +27,9 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                db.ForTestingPurposesOnly().BulkInsertStreamWriteTimeout = _writeTimeout;
+                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = _readTimeout;
                 var bulkInsertOptions = new BulkInsertOptions();
-                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _writeTimeout;
+                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
 
                 var bulk = store.BulkInsert(bulkInsertOptions);
 
@@ -67,9 +67,9 @@ namespace SlowTests.Issues
             {
                 var mre = new ManualResetEvent(false);
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                db.ForTestingPurposesOnly().BulkInsertStreamWriteTimeout = _writeTimeout;
+                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = _readTimeout;
                 var bulkInsertOptions = new BulkInsertOptions();
-                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _writeTimeout;
+                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
 
                 using (var bulk = store.BulkInsert(bulkInsertOptions))
                 {

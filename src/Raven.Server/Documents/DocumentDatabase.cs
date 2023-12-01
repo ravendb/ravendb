@@ -411,7 +411,7 @@ namespace Raven.Server.Documents
                 EtlLoader.Initialize(record);
                 QueueSinkLoader.Initialize(record);
 
-                TombstoneCleaner.Start();
+
                 InitializeAndStartDocumentsMigration();
 
                 try
@@ -432,6 +432,8 @@ namespace Raven.Server.Documents
                 DatabaseShutdown.ThrowIfCancellationRequested();
 
                 _addToInitLog("Initializing SubscriptionStorage completed");
+
+                TombstoneCleaner.Start();
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
@@ -2099,7 +2101,7 @@ namespace Raven.Server.Documents
             internal ManualResetEvent DatabaseRecordLoadHold;
             internal ManualResetEvent HealthCheckHold;
 
-            internal int BulkInsertStreamWriteTimeout;
+            internal int BulkInsertStreamReadTimeout;
         }
     }
 

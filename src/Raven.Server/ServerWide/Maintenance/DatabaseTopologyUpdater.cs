@@ -13,6 +13,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server.Extensions;
 using Sparrow.Utils;
 using static Raven.Server.ServerWide.Maintenance.ClusterObserver;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -31,7 +32,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly long _rotateGraceTimeMs;
         private readonly TimeSpan _breakdownTimeout;
         private readonly TimeSpan _supervisorSamplePeriod;
-        
+
         public DatabaseTopologyUpdater(ServerStore server,
             RachisConsensus<ClusterStateMachine> engine,
             ClusterConfiguration clusterConfiguration,
@@ -58,7 +59,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var current = state.Current;
             var previous = state.Previous;
             var dbName = state.Name;
-            
+
             var someNodesRequireMoreTime = false;
             var rotatePreferredNode = false;
 
@@ -72,7 +73,7 @@ namespace Raven.Server.ServerWide.Maintenance
             foreach (var member in databaseTopology.Members)
             {
                 var status = DatabaseStatus.None;
-                
+
                 if (current.TryGetValue(member, out var nodeStats) == false)
                 {
                     // there isn't much we can do here, except for log it.
@@ -89,7 +90,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     RaiseNodeNotFoundAlert(msg, member, state.ObserverIteration);
                     continue;
                 }
-                
+
                 DatabaseStatusReport dbStats = null;
                 if (nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
                     nodeStats.Report.TryGetValue(dbName, out dbStats))
@@ -111,10 +112,10 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
                 }
-                
+
                 if (_server.DatabasesLandlord.ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
                     _server.DatabasesLandlord.ForTestingPurposes.PreventedRehabOfIdleDatabase = true;
-                
+
                 if (ShouldGiveMoreTimeBeforeMovingToRehab(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime))
                 {
                     if (ShouldGiveMoreTimeBeforeRotating(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime) == false)
@@ -131,10 +132,10 @@ namespace Raven.Server.ServerWide.Maintenance
                     someNodesRequireMoreTime = true;
                     continue;
                 }
-                
+
                 if (TryMoveToRehab(dbName, databaseTopology, current, member, state.ObserverIteration))
                     return $"Node {member} is currently not responding (with status: {status}) and moved to rehab ({DateTime.UtcNow - nodeStats.LastSuccessfulUpdateDateTime})";
-                
+
                 // database distribution is off and the node is down
                 if (databaseTopology.DynamicNodesDistribution == false && (
                         databaseTopology.PromotablesStatus.TryGetValue(member, out var currentStatus) == false
@@ -314,7 +315,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             // already tried to promote, so we just ignore and continue
                             continue;
                         }
-                        
+
                         var tryPromote = TryPromote(context, state, rehab, nodeStats);
 
                         if (tryPromote.Promote)
@@ -345,7 +346,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             return null;
         }
-        
+
         protected virtual (bool Promote, string UpdateTopologyReason) TryPromote(ClusterOperationContext context, DatabaseObservationState state, string promotable, ClusterNodeStatusReport _)
         {
             if (_server.DatabasesLandlord.ForTestingPurposes?.PreventNodePromotion == true)
@@ -424,52 +425,34 @@ namespace Raven.Server.ServerWide.Maintenance
             return true;
         }
 
-        private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
-        {
-            if (databaseUpTime.HasValue)
-            {
-                if (databaseUpTime.Value.TotalMilliseconds < _moveToRehabTimeMs)
-                {
-                    return true;
-                }
-            }
+        private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime) =>
+            ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _moveToRehabTimeMs);
 
-            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _moveToRehabTimeMs);
-        }
-
-        private bool ShouldGiveMoreTimeBeforeRotating(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
-        {
-            if (databaseUpTime.HasValue)
-            {
-                if (databaseUpTime.Value.TotalMilliseconds > _rotateGraceTimeMs)
-                {
-                    return false;
-                }
-            }
-
-            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _rotateGraceTimeMs);
-        }
+        private bool ShouldGiveMoreTimeBeforeRotating(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime) =>
+            ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _rotateGraceTimeMs);
 
         private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, long graceMs)
         {
             var now = DateTime.UtcNow;
-            var uptime = databaseUpTime?.TotalMilliseconds ?? (now - _observerStartTime).TotalMilliseconds;
+            var observerUptime = (now - _observerStartTime).TotalMilliseconds;
 
-            if (graceMs > uptime)
+            if (graceMs > observerUptime)
                 return true;
 
-            var grace = now.AddMilliseconds(-graceMs);
-            
-            if (grace < lastSuccessfulUpdate)
-                return true;
+            if (databaseUpTime.HasValue) // if this has value, it means that we have a connectivity
+            {
+                return databaseUpTime.Value.TotalMilliseconds < graceMs;
+            }
 
-            return false;
+            var lastUpdate = RavenDateTimeExtensions.Max(lastSuccessfulUpdate, _observerStartTime);
+            var graceThreshold = lastUpdate.AddMilliseconds(graceMs);
+            return graceThreshold > now;
         }
 
         private int GetNumberOfRespondingNodes(DatabaseObservationState state)
         {
             var topology = state.DatabaseTopology;
-            
+
             var goodMembers = topology.Members.Count;
             foreach (var promotable in topology.Promotables)
             {
@@ -506,7 +489,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         break;
                 }
             }
-            
+
             string reason;
             if (nodeStats == null)
             {
@@ -820,7 +803,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 return alreadyInDeletionProgress;
             }
-            
+
             alreadyInDeletionProgress.AddRange(state.RawDatabase.DeletionInProgress?.Keys);
             return alreadyInDeletionProgress;
         }
@@ -859,7 +842,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             return DateTime.UtcNow - lastGoodTime > _breakdownTimeout ? DatabaseHealth.Bad : DatabaseHealth.Good;
         }
-        
+
         private DatabaseHealth CheckNodeHealth(string node, ClusterTopology clusterTopology, Dictionary<string, ClusterNodeStatusReport> current, out ClusterNodeStatusReport nodeStats)
         {
             if (clusterTopology.Contains(node) == false) // this node is no longer part of the *Cluster* databaseTopology and need to be replaced.
