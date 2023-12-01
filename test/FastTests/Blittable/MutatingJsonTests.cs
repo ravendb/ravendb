@@ -164,7 +164,7 @@ namespace FastTests.Blittable
             b.Modifications = new DynamicJsonValue(b) { ["name"] = "fa" };
 
             BlittableJsonReaderObject blittableJsonReaderObject = ctx.ReadObject(obj, "a");
-            Assert.Equal("fa", ((BlittableJsonReaderObject)blittableJsonReaderObject["item"])["name"]);
+            Assert.Equal("fa", ((BlittableJsonReaderObject)blittableJsonReaderObject["item"])["name"]?.ToString());
         }
     }
 }
