@@ -12,7 +12,7 @@ TasksMax=infinity
 User=ravendb
 StartLimitBurst=0
 Restart=on-failure
-Type=simple
+Type=exec
 TimeoutStopSec=300
 Environment="RAVEN_DataDir=/var/lib/ravendb/data"
 Environment="RAVEN_Indexing_NugetPackagesPath=/var/lib/ravendb/nuget"
