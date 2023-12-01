@@ -85,6 +85,7 @@ public sealed class ShardedSuggestionQueryOperation : AbstractShardedQueryOperat
         }
 
         result.Results = new List<SuggestionResult>(suggestions.Count);
+        result.TotalResults = suggestions.Count;
 
         foreach (var suggestion in suggestions)
         {
