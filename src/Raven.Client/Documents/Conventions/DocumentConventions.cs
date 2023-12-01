@@ -661,7 +661,7 @@ namespace Raven.Client.Documents.Conventions
         internal bool HasExplicitlySetDecompressionUsage => _useHttpDecompression.HasValue;
 
         /// <summary>
-        /// Can accept compressed HTTP response content and will use brotli/gzip/deflate decompression methods
+        /// Can accept compressed HTTP response content and will use zstd/gzip/deflate decompression methods
         /// </summary>
         public bool UseHttpDecompression
         {
