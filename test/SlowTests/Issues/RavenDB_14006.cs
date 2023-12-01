@@ -7,6 +7,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -488,7 +489,12 @@ select incl(c)"
                     Assert.Equal(resultEtag, stats.ResultEtag);
 
                     long lastClusterTxIndex;
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                    List<DocumentDatabase> databases;
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                        databases = await Sharding.GetShardsDocumentDatabaseInstancesFor(store).Select(x => (DocumentDatabase)x).ToListAsync();
+                    else
+                        databases = new List<DocumentDatabase> { await Databases.GetDocumentDatabaseInstanceFor(store) };
 
                     using (var innerSession = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
@@ -499,7 +505,8 @@ select incl(c)"
                         lastClusterTxIndex = value.Index;
                     }
 
-                    await database.RachisLogIndexNotifications.WaitForIndexNotification(lastClusterTxIndex, TimeSpan.FromSeconds(5));
+                    foreach (var database in databases)
+                        await database.RachisLogIndexNotifications.WaitForIndexNotification(lastClusterTxIndex, TimeSpan.FromSeconds(5));
 
                     companies = session.Advanced
                         .RawQuery<Company>(
