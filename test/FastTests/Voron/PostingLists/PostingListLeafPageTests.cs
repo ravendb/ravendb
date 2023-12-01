@@ -6,6 +6,7 @@ using Voron;
 using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Util;
 using Voron.Util.PFor;
 using Xunit;
 using Xunit.Abstractions;
@@ -48,7 +49,7 @@ namespace FastTests.Voron.Sets
 
             Span<long> span = list.ToArray();
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            var tempList = new NativeIntegersList(bsc);
+            var tempList = new ContextBoundNativeList<long>(bsc);
             fixed (long* p = span)
             {
                 using var encoder = new FastPForEncoder(bsc);
@@ -85,7 +86,7 @@ namespace FastTests.Voron.Sets
             }
             Span<long> additions = list;
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            var tempList = new NativeIntegersList(bsc);
+            var tempList = new ContextBoundNativeList<long>(bsc);
             fixed (long* p = additions)
             {
                 using var encoder = new FastPForEncoder(bsc);
@@ -141,7 +142,7 @@ namespace FastTests.Voron.Sets
             Span<long> additions = list.ToArray();
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            var tempList = new NativeIntegersList(bsc);
+            var tempList = new ContextBoundNativeList<long>(bsc);
 
             fixed (long* p = additions)
             {

@@ -11,9 +11,9 @@ public unsafe struct NativeUnmanagedList<T> : IDisposable
     where T : unmanaged
 {
     private readonly ByteStringContext _ctx;
-    public int Count;
-    public int Capacity;
-    public T* RawItems;
+    public int Count { get; private set; }
+    public int Capacity { get; private set; }
+    public T* RawItems { get; private set; }
     public readonly bool Initialized = false; 
     
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseItems;
@@ -67,19 +67,29 @@ public unsafe struct NativeUnmanagedList<T> : IDisposable
         _releaseItems = scope;
         RawItems = (T*)mem.Ptr;
     }
-    
-    public int MoveTo(Span<T> matches)
+
+    public int MoveTo(Span<T> output)
     {
-        if (Initialized == false || matches.Length == 0)
+        if (Initialized == false || output.Length == 0)
             return 0;
-        
-        var read = Math.Min(Count, matches.Length);
-        new Span<T>(this.RawItems, read).CopyTo(matches);
-        Count -= read;
-        RawItems += read;
-        return read;
+
+        var count = Math.Min(Count, output.Length);
+        new Span<T>(RawItems, count).CopyTo(output);
+
+        // Check if we have moved the entire content.
+        if (Count == count)
+        {
+            Count = 0;
+            return count;
+        }
+
+        var theRestToCopy = new Span<T>(RawItems + count, Count - count);
+        theRestToCopy.CopyTo(new Span<T>(RawItems, Capacity));
+        Count = theRestToCopy.Length;
+
+        return count;
     }
-    
+
     public void Dispose()
     {
         _releaseItems.Dispose();

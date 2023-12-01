@@ -17,6 +17,7 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron;
@@ -50,9 +51,9 @@ namespace Corax.Indexing
         private bool _ownsTransaction;
         private JsonOperationContext _jsonOperationContext;
         private readonly Transaction _transaction;
-        private NativeIntegersList _entriesToTermsBuffer;
+        private ContextBoundNativeList<long> _entriesToTermsBuffer;
+        private ContextBoundNativeList<long> _entriesForTermsRemovalsBuffer;
         private NativeList<(long EntryId, long TermId)> _entriesForTermsAdditionsBuffer;
-        private NativeIntegersList _entriesForTermsRemovalsBuffer;
 
         private Token[] _tokensBufferHandler;
         private byte[] _encodingBufferHandler;
@@ -130,11 +131,12 @@ namespace Corax.Indexing
             _nullEntriesPostingLists = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
             _entriesAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
-            _pforDecoder = new FastPForDecoder(_entriesAllocator);
-            _tempListBuffer = new NativeIntegersList(_entriesAllocator);
-            _entriesToTermsBuffer = new NativeIntegersList(_entriesAllocator);
-            _entriesForTermsRemovalsBuffer = new NativeIntegersList(_entriesAllocator);
+            _tempListBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
+            _entriesToTermsBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
+            _entriesForTermsRemovalsBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
             _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
+
+            _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
         
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -182,7 +184,7 @@ namespace Corax.Indexing
             _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, 1);
             _termsPerEntryIds.EnsureCapacityFor(_entriesAllocator, 1);
             _termsPerEntryId.AddByRefUnsafe() = new NativeList<RecordedTerm>();
-            _termsPerEntryIds.PushUnsafe(entryId);
+            _termsPerEntryIds.AddUnsafe(entryId);
             return index;
         }
 
@@ -337,7 +339,7 @@ namespace Corax.Indexing
         private readonly IndexOperationsDumper _indexDebugDumper;
         private FastPForDecoder _pforDecoder;
         private long _lastEntryId;
-        private NativeIntegersList _tempListBuffer;
+        private ContextBoundNativeList<long> _tempListBuffer;
         private FastPForEncoder _pForEncoder;
 
         private NativeList<long> _termsPerEntryIds;
@@ -662,7 +664,7 @@ namespace Corax.Indexing
             _entriesAlreadyAdded.Clear();
             _additionsForTerm.Clear();
             _removalsForTerm.Clear();
-            _tempListBuffer.Dispose();
+            //_tempListBuffer.Dispose();
             
             for (int i = 0; i < _knownFieldsTerms.Length; i++)
             {
@@ -680,13 +682,15 @@ namespace Corax.Indexing
             _entriesAllocator.Reset();
             _entriesToTermsBuffer = new(_entriesAllocator);
             _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
-            _entriesForTermsRemovalsBuffer = new NativeIntegersList(_entriesAllocator);
-            _tempListBuffer = new NativeIntegersList(_entriesAllocator);
+            _entriesForTermsRemovalsBuffer = new (_entriesAllocator);
+
+            _tempListBuffer = new (_entriesAllocator);
             _termsPerEntryId = new NativeList<NativeList<RecordedTerm>>();
             _termsPerEntryIds = new NativeList<long>();
             _numberOfModifications = 0;
             _numberOfTermModifications = 0;
             _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
 
@@ -988,10 +992,10 @@ namespace Corax.Indexing
                         lng: lng
                     );
 
-                    if (entryTerms.TryPush(recordedTerm) == false)
+                    if (entryTerms.TryAdd(recordedTerm) == false)
                     {
                         entryTerms.Grow(_entriesAllocator, 1);
-                        entryTerms.PushUnsafe(recordedTerm);
+                        entryTerms.AddUnsafe(recordedTerm);
                     }
                 }
 
@@ -1096,11 +1100,13 @@ namespace Corax.Indexing
             private readonly Tree _entriesToTermsTree;
             private readonly IndexedField _indexedField;
             private readonly Span<byte> _tmpBuf;
-            private CompactTree _fieldTree;
+            private readonly CompactTree _fieldTree;
+            private readonly TextualFieldBuffers _buffers;
+
             private IndexTermDumper _dumper;
             private NativeList<TermInEntryModification> _entriesForTerm;
-            private NativeIntegersList _pagesToPrefetch;
-            private TextualFieldBuffers _buffers;
+            private ContextBoundNativeList<long> _pagesToPrefetch;
+
             private int _offsetAdjustment;
             private long _curPage;
 
@@ -1116,7 +1122,7 @@ namespace Corax.Indexing
                 _fieldTree.InitializeStateForTryGetNextValue();
                 _entriesForTerm = new NativeList<TermInEntryModification>();
                 _entriesForTerm.Initialize(_writer._entriesAllocator);
-                _pagesToPrefetch = new NativeIntegersList(_writer._entriesAllocator);
+                _pagesToPrefetch = new ContextBoundNativeList<long>(_writer._entriesAllocator);
                 _buffers = _writer._textualFieldBuffers ??= new TextualFieldBuffers(_writer);
             }
 
@@ -1407,10 +1413,10 @@ namespace Corax.Indexing
             
             
 
-            private void PrefetchContainerPages(ref NativeIntegersList pagesToPrefetch, Span<long> postListIds)
+            private void PrefetchContainerPages(ref ContextBoundNativeList<long> pagesToPrefetch, Span<long> postListIds)
             {
                 pagesToPrefetch.Clear();
-                pagesToPrefetch.EnsureCapacity(postListIds.Length);
+                pagesToPrefetch.EnsureCapacityFor(postListIds.Length);
 
                 foreach (var cur in postListIds)
                 {
@@ -1423,8 +1429,8 @@ namespace Corax.Indexing
                     pagesToPrefetch.Add(containerId / Voron.Global.Constants.Storage.PageSize);
                 }
 
-                pagesToPrefetch.SortAndRemoveDuplicates();
-            
+                pagesToPrefetch.Count = Sorting.SortAndRemoveDuplicates(pagesToPrefetch.RawItems, pagesToPrefetch.Count);
+
                 _writer._transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch.GetEnumerator());
             }
 
@@ -1524,7 +1530,7 @@ namespace Corax.Indexing
             var count = VariableSizeEncoding.Read<int>(item.Address, out var offset);
 
             int capacity = Math.Max(256, count + entries.Additions.Count + entries.Removals.Count);
-            _entriesToTermsBuffer.EnsureCapacity(capacity);
+            _entriesToTermsBuffer.EnsureCapacityFor(capacity);
             _pforDecoder.Init(item.Address + offset, item.Length - offset);
             Debug.Assert(_entriesToTermsBuffer.Capacity > 0 && _entriesToTermsBuffer.Capacity % 256 ==0, "The buffer must be multiple of 256 for PForDecoder.REad");
             _entriesToTermsBuffer.Count = _pforDecoder.Read(_entriesToTermsBuffer.RawItems, _entriesToTermsBuffer.Capacity);
@@ -1539,14 +1545,13 @@ namespace Corax.Indexing
                               // here we test if the first new addition is smaller than the largest existing, requiring sorting  
                               (entries.Additions.Count > 0 && additions[0] <= _entriesToTermsBuffer.RawItems[_entriesToTermsBuffer.Count - 1]);
             
-            _entriesToTermsBuffer.Add(additions, entries.Additions.Count);
-            _entriesToTermsBuffer.Add(removals, entries.Removals.Count);
+            _entriesToTermsBuffer.AddRange(new ReadOnlySpan<long>(additions, entries.Additions.Count));
+            _entriesToTermsBuffer.AddRange(new ReadOnlySpan<long>(removals, entries.Removals.Count));
 
             if (needSorting)
             {
-                _entriesToTermsBuffer.SortAndRemoveDuplicatesAndRemovals();
+                PostingList.SortEntriesAndRemoveDuplicatesAndRemovals(ref _entriesToTermsBuffer);
             }
-            
 
             if (_entriesToTermsBuffer.Count == 0)
             {
@@ -1748,7 +1753,7 @@ namespace Corax.Indexing
 
         private void InsertEntriesForTerm(long term)
         {
-            _entriesForTermsRemovalsBuffer.EnsureCapacity(_removalsForTerm.Count + _entriesForTermsRemovalsBuffer.Count);
+            _entriesForTermsRemovalsBuffer.EnsureCapacityFor(_removalsForTerm.Count + _entriesForTermsRemovalsBuffer.Count);
             foreach (long removal in _removalsForTerm)
             {
                 // if already added, we don't need to remove it in this batch

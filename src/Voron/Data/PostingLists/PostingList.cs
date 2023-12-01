@@ -5,9 +5,12 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.VxSort;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Util;
 using Voron.Util.PFor;
 
 namespace Voron.Data.PostingLists
@@ -24,7 +27,7 @@ namespace Voron.Data.PostingLists
         public PostingListState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
-        private NativeIntegersList _additions, _removals;
+        private ContextBoundNativeList<long> _additions, _removals;
 
         public PostingList(LowLevelTransaction llt, Slice name, in PostingListState state)
         {
@@ -41,8 +44,8 @@ namespace Voron.Data.PostingLists
             _stk = new UnmanagedSpan<PostingListCursorState>(buffer.Ptr, buffer.Size);
             if (llt.Flags == TransactionFlags.ReadWrite)
             {
-                _additions = new NativeIntegersList(llt.Allocator);
-                _removals = new NativeIntegersList(llt.Allocator);
+                _additions = new(llt.Allocator, 1);
+                _removals = new(llt.Allocator, 1);
             }
         }
 
@@ -371,28 +374,27 @@ namespace Voron.Data.PostingLists
 
         public void PrepareForCommit()
         {
-            _additions.SortAndRemoveDuplicates();
-            _removals.SortAndRemoveDuplicates();
+            if (_additions.Count > 1)
+                _additions.Count = Sorting.SortAndRemoveDuplicates(_additions.RawItems, _additions.Count);
+            if (_removals.Count > 1)
+                _removals.Count = Sorting.SortAndRemoveDuplicates(_removals.RawItems, _removals.Count);
 
-            var encoder = new FastPForEncoder(_llt.Allocator);
-            var tempList = new NativeIntegersList(_llt.Allocator, _additions.Count + _removals.Count);
-            
             var additionsCount = _additions.Count;
             var removalsCount = _removals.Count;
-            var additions = _additions.RawItems;
-            var removals = _removals.RawItems;
 
+            var encoder = new FastPForEncoder(_llt.Allocator);
             var decoder = new FastPForDecoder(_llt.Allocator);
-            
-            UpdateList(additions, additionsCount, removals, removalsCount, encoder, ref tempList, ref decoder);
-            
-            decoder.Dispose();
+
+            var tempList = new ContextBoundNativeList<long>(_llt.Allocator);
+            UpdateList(_additions.RawItems, additionsCount, _removals.RawItems, removalsCount, encoder, ref tempList, ref decoder);
             tempList.Dispose();
+
+            decoder.Dispose();
             encoder.Dispose();
         }
 
         private void UpdateList(long* additions, int additionsCount, long* removals, int removalsCount, 
-            FastPForEncoder encoder, ref NativeIntegersList tempList, ref FastPForDecoder decoder)
+            FastPForEncoder encoder, ref ContextBoundNativeList<long> tempList, ref FastPForDecoder decoder)
         {
             tempList.Clear();
 
@@ -673,13 +675,50 @@ namespace Voron.Data.PostingLists
         }
 
         public static long Update(LowLevelTransaction transactionLowLevelTransaction, ref PostingListState postingListState,
-            long* additions, int additionsCount, long* removals, int removalsCount, FastPForEncoder encoder, ref NativeIntegersList tempList, ref FastPForDecoder decoder)
+            long* additions, int additionsCount, long* removals, int removalsCount, FastPForEncoder encoder, ref ContextBoundNativeList<long> tempList, ref FastPForDecoder decoder)
         {
             using var pl = new PostingList(transactionLowLevelTransaction, Slices.Empty, postingListState);
             pl.UpdateList(additions, additionsCount, removals, removalsCount, encoder, ref tempList, ref decoder);
             postingListState = pl.State;
 
             return pl.State.NumberOfEntries;
+        }
+
+        public static void SortEntriesAndRemoveDuplicatesAndRemovals(ref ContextBoundNativeList<long> list)
+        {
+            if (list.Count <= 1)
+                return;
+
+            Sort.Run(list.RawItems, list.Count);
+
+            // blog post explaining this
+            // https://ayende.com/blog/200065-B/optimizing-a-three-way-merge?key=67d6f65d63ba4fb79d31dfc49ae5aa1d
+
+            // The idea here is that we can do all of the process with no branches at all and make this 
+            // easily predictable to the CPU
+
+            // Here we rely on the fact that the removals has been set with 1 at the bottom bit
+            // so existing / additions values would always sort *before* the removals
+            var outputBufferPtr = list.RawItems;
+
+            var bufferPtr = outputBufferPtr;
+            var bufferEndPtr = bufferPtr + list.Count - 1;
+            Debug.Assert((*bufferPtr & 1) == 0,
+                "Removal as first item means that we have an orphaned removal, not supposed to happen!");
+            while (bufferPtr < bufferEndPtr)
+            {
+                // here we check equality without caring if this is removal or not, skipping moving
+                // to the next value if this it is the same entry twice
+                outputBufferPtr += ((bufferPtr[1] & ~1) != bufferPtr[0]).ToInt32();
+                *outputBufferPtr = bufferPtr[1];
+                // here we check if the entry is a removal, in which can we _decrement_ the position
+                // in effect, removing it
+                outputBufferPtr -= (bufferPtr[1] & 1);
+
+                bufferPtr++;
+            }
+
+            list.Count = (int)(outputBufferPtr - list.RawItems + 1);
         }
     }
 }

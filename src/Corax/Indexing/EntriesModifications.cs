@@ -182,7 +182,7 @@ internal unsafe struct EntriesModifications
         }
 
         var term = new TermInEntryModification {EntryId = entryId, TermsPerEntryIndex = termsPerEntryIndex, Frequency = freq};
-        list.PushUnsafe(term);
+        list.AddUnsafe(term);
     }
 
     private void DeleteAllDuplicates([NotNull] ByteStringContext context)
@@ -212,10 +212,10 @@ internal unsafe struct EntriesModifications
             //This is made for Set structure.
             if (currentAdd.Equals(currentRemoval))
             {
-                if (Updates.TryPush(currentAdd) == false)
+                if (Updates.TryAdd(currentAdd) == false)
                 {
                     Updates.Grow(context, 1);
-                    Updates.PushUnsafe(currentAdd);
+                    Updates.AddUnsafe(currentAdd);
                 }
 
                 rem++;

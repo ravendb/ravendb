@@ -210,7 +210,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
 
@@ -374,7 +374,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
 
@@ -457,7 +457,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
 
@@ -537,7 +537,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
 
@@ -601,7 +601,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             if (_reader.IsValid == false) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
             

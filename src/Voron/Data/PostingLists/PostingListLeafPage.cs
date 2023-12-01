@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron.Impl;
+using Voron.Util;
 using Voron.Util.PFor;
 using Constants = Voron.Global.Constants;
 
@@ -42,9 +44,10 @@ public readonly unsafe struct PostingListLeafPage
     /// Additions and removals are *sorted* by the caller
     /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
     /// </summary>
-    public void Update(LowLevelTransaction tx, FastPForEncoder encoder, ref NativeIntegersList tempList, ref long* additions, ref int additionsCount,
+    public void Update(LowLevelTransaction tx, FastPForEncoder encoder, ref ContextBoundNativeList<long> tempList, ref long* additions, ref int additionsCount,
         ref long* removals, ref int removalsCount, long maxValidValue)
     {
+        // TODO: We need to change the tempList to be context bound as we applied operations here that requires the context.
         var maxAdditionsLimit = new Span<long>(additions, additionsCount).BinarySearch(maxValidValue);
         if (maxAdditionsLimit < 0)
             maxAdditionsLimit = ~maxAdditionsLimit;
@@ -79,10 +82,11 @@ public readonly unsafe struct PostingListLeafPage
 
         int numberOfEntriesToReserve = Header->NumberOfEntries + maxAdditionsLimit + maxRemovalsLimit;
         int requiredSizeAligned256 = (numberOfEntriesToReserve+255)/256 * 256;
-        tempList.EnsureCapacity(requiredSizeAligned256);
+        tempList.EnsureCapacityFor(requiredSizeAligned256);
 
-        tempList.Count = ReadAllEntries(tx.Allocator,tempList.RawItems, tempList.Capacity);
+        tempList.Count = ReadAllEntries(tx.Allocator, tempList.RawItems, tempList.Capacity);
         Debug.Assert(tempList.Count == Header->NumberOfEntries);
+        Debug.Assert(tempList.Capacity - tempList.Count >= maxAdditionsLimit + maxRemovalsLimit);
         
         // Merging between existing, additions and removals, there is one scenario where we can just concat the lists together
         // if we have no removals and all of the new additions are *after* the existing ones. Since everything is sorted, this is
@@ -93,12 +97,12 @@ public readonly unsafe struct PostingListLeafPage
                           // here we test if the first new addition is smaller than the largest existing, requiring sorting  
                           (maxAdditionsLimit > 0 && additions[0] <= tempList.RawItems[tempList.Count - 1]);
 
-        tempList.AddUnsafe(additions, maxAdditionsLimit);
-        tempList.AddUnsafe(removals, maxRemovalsLimit);
+        tempList.AddRangeUnsafe(additions, maxAdditionsLimit);
+        tempList.AddRangeUnsafe(removals, maxRemovalsLimit);
 
         if (needSorting)
         {
-           tempList.SortAndRemoveDuplicatesAndRemovals();
+            PostingList.SortEntriesAndRemoveDuplicatesAndRemovals(ref tempList);
         }
 
         int entriesCount = 0;
@@ -126,8 +130,8 @@ public readonly unsafe struct PostingListLeafPage
         removals += maxRemovalsLimit;
         removalsCount -= maxRemovalsLimit;
     }
-    
-     /// <summary>
+
+    /// <summary>
     /// Additions and removals are *sorted* by the caller
     /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
     /// </summary>
@@ -215,13 +219,14 @@ public readonly unsafe struct PostingListLeafPage
         }
     }
 
-    private int ReadAllEntries(ByteStringContext context, long* existing, int count)
+    private int ReadAllEntries(ByteStringContext context, long* existing, int capacity)
     {
         int existingCount = 0;
         var reader = new FastPForBufferedReader(context, _page.DataPointer, Header->SizeUsed);
+
         while (true) 
         {
-            var read = reader.Fill(existing + existingCount, count - existingCount);
+            var read = reader.Fill(existing + existingCount, capacity - existingCount);
             existingCount += read;
             if (read == 0)
             {
@@ -262,7 +267,7 @@ public readonly unsafe struct PostingListLeafPage
         InitLeaf(newHeader);
 
         // using +256 here to ensure that we always have at least 256 available in the buffer
-        var mergedList = new NativeIntegersList(allocator, first->NumberOfEntries + second->NumberOfEntries + 256);
+        var mergedList = new ContextBoundNativeList<long>(allocator, first->NumberOfEntries + second->NumberOfEntries + 256);
 
         if (first->SizeUsed > 0)
         {
