@@ -36,8 +36,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesBufferScope;
 
     private ContextBoundNativeList<long> _results;
-    private NativeUnmanagedList<SpatialResult> _distancesResults;
-    private NativeUnmanagedList<float> _scoresResults;
+    private ContextBoundNativeList<SpatialResult> _distancesResults;
+    private ContextBoundNativeList<float> _scoresResults;
     
     
     private SortingDataTransfer _sortingDataTransfer;
