@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -11,6 +11,7 @@ using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.PostingLists;
+using Voron.Util;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -30,7 +31,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesBufferScope;
 
-    private NativeIntegersList _results;
+    private ContextBoundNativeList<long> _results;
 
     private SortingDataTransfer _sortingDataTransfer;
     private NativeUnmanagedList<SpatialResult> _distancesResults;
@@ -46,7 +47,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         _orderMetadata = orderMetadata;
         _take = take;
         _token = token;
-        _results = new NativeIntegersList(searcher.Allocator);
+        _results = new ContextBoundNativeList<long>(searcher.Allocator);
         TotalResults = NotStarted;
         AssertNoScoreInnerComparer(orderMetadata);
         _fillFunc = SortBy(orderMetadata);

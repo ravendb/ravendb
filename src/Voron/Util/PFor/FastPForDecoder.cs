@@ -106,7 +106,8 @@ public unsafe struct FastPForDecoder : IDisposable
         var sharedPrefixMask = Vector256.Create<long>(_sharedPrefix);
 
         var bigDeltaStart = 0;
-        var bigDeltaOffsets = new NativeIntegersList(_allocator, -1);
+        var bigDeltaOffsets = new NativeList<long>();
+        bigDeltaOffsets.Initialize(_allocator);
         var buffer = stackalloc uint[256];
         int read = 0;
         while (_metadata < _end && read < outputCount)
@@ -117,7 +118,7 @@ public unsafe struct FastPForDecoder : IDisposable
             switch (numOfBits)
             {
                 case FastPForEncoder.BiggerThanMaxMarker:
-                    bigDeltaOffsets.Add((long)_metadata);
+                    bigDeltaOffsets.Add(_allocator, (long)_metadata);
                     // we don't need to worry about block fit, because we are ensured that we have at least
                     // 256 items to read into the output here, and these marker are for the next blcok
                     

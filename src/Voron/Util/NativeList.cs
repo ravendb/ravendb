@@ -1,6 +1,9 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
@@ -26,7 +29,7 @@ public unsafe struct NativeList<T>
         _storage = default;
     }
 
-    public bool TryPush(in T l)
+    public bool TryAdd(in T l)
     {
         if (Count == Capacity)
             return false;
@@ -35,15 +38,44 @@ public unsafe struct NativeList<T>
         return true;
     }
 
+    public bool TryAddRange(ReadOnlySpan<T> values)
+    {
+        if (Count + values.Length >= Capacity)
+            return false;
+
+        values.CopyTo(new Span<T>(RawItems + Count, Capacity - Count));
+        Count += values.Length;
+        return true;
+    }
+
+    public void Add(ByteStringContext ctx, T value)
+    {
+        EnsureCapacityFor(ctx, 1);
+        AddUnsafe(value);
+    }
+
+    public void AddRangeUnsafe(ReadOnlySpan<T> range)
+    {
+        Debug.Assert(Count + range.Length <= Capacity);
+        Debug.Assert((uint)(range.Length * sizeof(T)) > (uint)range.Length || range.Length == 0);
+
+        Unsafe.CopyBlockUnaligned(
+            ref Unsafe.AsRef<byte>(RawItems + Count), 
+            ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, byte>(range)), 
+            (uint)(range.Length * sizeof(T)));
+
+        Count += range.Length;
+    }
     public void AddRangeUnsafe(T* items, int count)
     {
         Debug.Assert(Count + count <= Capacity);
         Debug.Assert((uint)(count * sizeof(T)) > (uint)count || count == 0);
+
         Unsafe.CopyBlock(RawItems + Count, items, (uint)(count * sizeof(T)));
         Count += count;
     }
 
-    public void PushUnsafe(in T l)
+    public void AddUnsafe(in T l)
     {
         Debug.Assert(Count < Capacity);
         RawItems[Count++] = l;
@@ -117,6 +149,25 @@ public unsafe struct NativeList<T>
         Count = 0;
     }
 
+    public int MoveTo(Span<T> output)
+    {
+        var count = Math.Min(Count, output.Length);
+        new Span<T>(RawItems, count).CopyTo(output);
+
+        // Check if we have moved the entire content.
+        if (Count == count)
+        {
+            Count = 0;
+            return count;
+        }
+
+        var theRestToCopy = new Span<T>(RawItems + count, Count - count);
+        theRestToCopy.CopyTo(new Span<T>(RawItems, Capacity));
+        Count = theRestToCopy.Length;
+
+        return count;
+    }
+
     public void Dispose(ByteStringContext ctx)
     {
         if(_storage.HasValue)
@@ -126,5 +177,54 @@ public unsafe struct NativeList<T>
     public void Clear()
     {
         Count = 0;
+    }
+
+
+    public Enumerator GetEnumerator() => new(RawItems, Count);
+
+    public struct Enumerator : IEnumerator<T>
+    {
+        private readonly T* _items;
+        private readonly int _len;
+        private int _index;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Enumerator(T* items, int len)
+        {
+            _items = items;
+            _len = len;
+            _index = -1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext()
+        {
+            int index = _index + 1;
+            if (index < _len)
+            {
+                _index = index;
+                return true;
+            }
+
+            return false;
+        }
+
+        public void Reset()
+        {
+            _index = -1;
+        }
+
+        object IEnumerator.Current => Current;
+
+        public T Current
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _items[_index];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose()
+        {
+        }
     }
 }

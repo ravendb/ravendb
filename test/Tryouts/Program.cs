@@ -7,7 +7,7 @@ using Raven.Server.Utils;
 using SlowTests.Corax;
 using SlowTests.Sharding.Cluster;
 using Xunit;
-using FastTests.Sparrow;
+using FastTests.Voron.Util;
 
 namespace Tryouts;
 
@@ -28,17 +28,13 @@ public static class Program
 
             try
             {
-                //TryRemoveDatabasesFolder();
-
-                Parallel.For(0, 100, x =>
+                using (var testOutputHelper = new ConsoleTestOutputHelper())
+                using (var test = new PForEncoderTests(testOutputHelper))
                 {
-                    using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new MemoryTests(testOutputHelper))
-                    {
-                        DebuggerAttachedTimeout.DisableLongTimespan = true;
-                        test.IncreasingSizeForLoop();
-                    }
-                });
+                    DebuggerAttachedTimeout.DisableLongTimespan = true;
+                    //test.CanRoundTripSmallContainer("GreaterThan42B");
+                    test.CanRespectBufferBoundaryForPage2();
+                }
             }
             catch (Exception e)
             {
