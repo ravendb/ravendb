@@ -247,9 +247,8 @@ namespace Raven.Server
                             services.Configure<ResponseCompressionOptions>(options =>
                             {
                                 options.EnableForHttps = Configuration.Http.AllowResponseCompressionOverHttps;
-#if FEATURE_ZSTD_SUPPORT
+
                                 options.Providers.Add(typeof(ZstdCompressionProvider));
-#endif
 #if FEATURE_BROTLI_SUPPORT
                                 options.Providers.Add(typeof(BrotliCompressionProvider));
 #endif
@@ -257,9 +256,7 @@ namespace Raven.Server
                                 options.Providers.Add(typeof(DeflateCompressionProvider));
                             });
 
-#if FEATURE_ZSTD_SUPPORT
                             services.Configure<ZstdCompressionProviderOptions>(options => { options.Level = Configuration.Http.ZstdResponseCompressionLevel; });
-#endif
 
 #if FEATURE_BROTLI_SUPPORT
                             services.Configure<BrotliCompressionProviderOptions>(options => { options.Level = Configuration.Http.BrotliResponseCompressionLevel; });
