@@ -2414,26 +2414,6 @@ namespace Voron.Data.Tables
             return report;
         }
 
-        public bool? TableValueIsCompressed(Slice key, out bool? isLargeValue)
-        {
-            if (TryFindIdFromPrimaryKey(key, out long id) == false)
-            {
-                isLargeValue = default;
-                return default;
-            }
-
-            isLargeValue = id % Constants.Storage.PageSize == 0;
-
-            if (isLargeValue.Value)
-            {
-                var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
-                return page.Flags.HasFlag(PageFlags.Compressed);
-            }
-
-            var sizes = RawDataSection.GetRawDataEntrySizeFor(_tx.LowLevelTransaction, id);
-            return sizes->IsCompressed;
-        }
-
         [Conditional("DEBUG")]
         private void AssertWritableTable()
         {
@@ -2489,6 +2469,46 @@ namespace Voron.Data.Tables
                 if (_tx.LowLevelTransaction.Environment.WriteTransactionPool.BuilderUsages-- != 1)
                     throw new InvalidOperationException("Cannot use a cached table value builder when it is already removed");
 #endif
+            }
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff(this);
+        }
+
+        internal class TestingStuff
+        {
+            private readonly Table _table;
+
+            public TestingStuff(Table table)
+            {
+                _table = table;
+            }
+
+            public bool? IsTableValueCompressed(Slice key, out bool? isLargeValue)
+            {
+                if (_table.TryFindIdFromPrimaryKey(key, out long id) == false)
+                {
+                    isLargeValue = default;
+                    return default;
+                }
+
+                isLargeValue = id % Constants.Storage.PageSize == 0;
+
+                if (isLargeValue.Value)
+                {
+                    var page = _table._tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
+                    return page.Flags.HasFlag(PageFlags.Compressed);
+                }
+
+                var sizes = RawDataSection.GetRawDataEntrySizeFor(_table._tx.LowLevelTransaction, id);
+                return sizes->IsCompressed;
             }
         }
     }

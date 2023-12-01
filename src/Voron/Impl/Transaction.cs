@@ -37,26 +37,6 @@ namespace Voron.Impl
         private Dictionary<Slice, PostingList> _postingLists;
         
         private Dictionary<TableKey, Table> _tables;
-        private readonly struct TableKey
-        {
-            private readonly Slice _tableName;
-            private readonly bool _compressed;
-
-            public TableKey(Slice tableName, bool compressed)
-            {
-                _tableName = tableName;
-                _compressed = compressed;
-            }
-
-            private bool Equals(TableKey other) =>
-                SliceComparer.Equals(_tableName, other._tableName) && _compressed == other._compressed;
-
-            public override bool Equals(object obj) =>
-                obj is TableKey other && Equals(other);
-
-            public override int GetHashCode() =>
-                HashCode.Combine(_tableName.GetHashCode(), _compressed);
-        }
 
         private Dictionary<Slice, Tree> _trees;
 
@@ -767,6 +747,27 @@ namespace Voron.Impl
             state = new Container.TransactionState(containerId);
             _containers[containerId] = state;
             return state;
+        }
+
+        private readonly struct TableKey
+        {
+            private readonly Slice _tableName;
+            private readonly bool _compressed;
+
+            public TableKey(Slice tableName, bool compressed)
+            {
+                _tableName = tableName;
+                _compressed = compressed;
+            }
+
+            private bool Equals(TableKey other) =>
+                SliceComparer.Equals(_tableName, other._tableName) && _compressed == other._compressed;
+
+            public override bool Equals(object obj) =>
+                obj is TableKey other && Equals(other);
+
+            public override int GetHashCode() =>
+                HashCode.Combine(_tableName.GetHashCode(), _compressed);
         }
     }
 }
