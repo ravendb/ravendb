@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using FastTests;
 using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
@@ -21,16 +22,23 @@ public class RavenDB_19852 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(null)]
     [InlineData(HttpCompressionAlgorithm.Gzip)]
 #if FEATURE_BROTLI_SUPPORT
     [InlineData(HttpCompressionAlgorithm.Brotli)]
 #endif
     [InlineData(HttpCompressionAlgorithm.Zstd)]
-    public void ResponseFromMultiGetIsCompressed(HttpCompressionAlgorithm compressionAlgorithm)
+    public void ResponseFromMultiGetIsCompressed(HttpCompressionAlgorithm? compressionAlgorithm)
     {
         using var store = GetDocumentStore(new Options
         {
-            ModifyDocumentStore = s => s.Conventions.HttpCompressionAlgorithm = compressionAlgorithm
+            ModifyDocumentStore = s =>
+            {
+                if (compressionAlgorithm == null)
+                    return;
+
+                s.Conventions.HttpCompressionAlgorithm = compressionAlgorithm.Value;
+            }
         });
 
         const string docs = "/docs";
@@ -44,7 +52,7 @@ public class RavenDB_19852 : RavenTestBase
         using (var commands = store.Commands())
         {
             using var firstCommand = new MultiGetCommandForCompressionTest(
-                compressionAlgorithm,
+                compressionAlgorithm ?? DocumentConventions.DefaultHttpCompressionAlgorithm,
                 commands.RequestExecutor,
                 new List<GetRequest> { new GetRequest { Url = docs, Query = "?id=doc/1" } });
 
