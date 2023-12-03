@@ -132,14 +132,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             continue;
 
                         var hasLogDateTime = LoggingSource.LogInfo.TryGetDate(filePath, out var logDateTime);
-                        if (hasLogDateTime)
-                        {
-                            if (from != null && logDateTime < from)
-                                continue;
-
-                            if (to != null && logDateTime > to)
-                                continue;
-                        }
+                        if (hasLogDateTime && from.HasValue && logDateTime < from)
+                            continue;
 
                         try
                         {
@@ -161,6 +155,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                         {
                             await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, fileName);
                         }
+
+                        if (hasLogDateTime && to.HasValue && logDateTime > to)
+                            break;
                     }
                 }
 
