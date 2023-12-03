@@ -26,73 +26,91 @@
 }
 
 .about-page-tabs {
-    .circle-border {
-        display: block;
-        width: 48px;
-        height: 48px;
+    a {
+        color: colors.$text-muted-var;
         display: flex;
         justify-content: center;
         align-items: center;
         position: relative;
+        opacity: 0.9;
+        cursor: pointer;
 
-        &:after,
-        &:before {
-            content: "";
-            display: block;
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 300px;
-            border: 2px solid;
-            -webkit-transform: rotate(45deg);
-            transform: rotate(45deg);
+        &:hover {
+            opacity: 1;
         }
+        &.active {
+            opacity: 1;
+            color: colors.$text-emphasis-var;
+        }
+    }
+    .circle-border {
+        display: block;
+        width: 1.7em;
+        height: 1.7em;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: sizes.$gutter;
+        border: 2px solid;
 
-        &:before {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 85%;
-            height: 85%;
-            border: none;
-            -webkit-transform: translateX(-50%) translateY(-50%);
-            transform: translateX(-50%) translateY(-50%);
-        }
+        // &:after,
+        // &:before {
+        //     content: "";
+        //     display: block;
+        //     position: absolute;
+        //     width: 100%;
+        //     height: 100%;
+        //     border-radius: 300px;
+        //     border: 2px solid;
+        //     -webkit-transform: rotate(45deg);
+        //     transform: rotate(45deg);
+        // }
 
-        i {
-            font-size: 21px;
-        }
+        // &:before {
+        //     position: absolute;
+        //     left: 50%;
+        //     top: 50%;
+        //     width: 85%;
+        //     height: 85%;
+        //     border: none;
+        //     -webkit-transform: translateX(-50%) translateY(-50%);
+        //     transform: translateX(-50%) translateY(-50%);
+        // }
 
-        &.valid,
-        &.professional-support,
-        &.production-support {
-            color: colors.$success;
-        }
+        // i {
+        //     font-size: 21px;
+        // }
 
-        &.invalid {
-            color: colors.$danger;
-        }
+        // &.valid,
+        // &.professional-support,
+        // &.production-support {
+        //     color: colors.$success;
+        // }
 
-        &.expired {
-            color: colors.$color-1-2;
-        }
+        // &.invalid {
+        //     color: colors.$danger;
+        // }
 
-        &.dev-only,
-        &.no-support {
-            color: colors.$color-1-2;
-        }
+        // &.expired {
+        //     color: colors.$color-1-2;
+        // }
 
-        &.invalid i {
-            color: colors.$color-1;
-        }
+        // &.dev-only,
+        // &.no-support {
+        //     color: colors.$color-1-2;
+        // }
 
-        &.dev-only,
-        &.no-support {
-            color: colors.$text-color;
-        }
+        // &.invalid i {
+        //     color: colors.$color-1;
+        // }
 
-        .commercial i {
-            color: colors.$success;
-        }
+        // &.dev-only,
+        // &.no-support {
+        //     color: colors.$text-color;
+        // }
+
+        // .commercial i {
+        //     color: colors.$success;
+        // }
     }
 }

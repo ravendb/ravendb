@@ -9,23 +9,39 @@ import { IndexesDatabaseStats } from "components/pages/database/status/statistic
 import { StatsHeader } from "components/pages/database/status/statistics/partials/StatsHeader";
 import { NonShardedViewProps } from "components/models/common";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
-import { Button, Card, CardBody, CardHeader, Col, Nav, NavItem, NavLink, Row, TabContent, TabPane } from "reactstrap";
+import {
+    Badge,
+    Button,
+    Card,
+    CardBody,
+    CardHeader,
+    Col,
+    Modal,
+    ModalBody,
+    ModalFooter,
+    Row,
+    TabContent,
+    TabPane,
+} from "reactstrap";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import "./AboutPage.scss";
 import { act } from "react-dom/test-utils";
+import classNames from "classnames";
+import genUtils from "common/generalUtils";
+import useBoolean from "components/hooks/useBoolean";
 
 interface AboutPageProps {
-    licenseType: string;
+    licenseType: Raven.Server.Commercial.LicenseType;
+    status: Raven.Server.Commercial.Status;
     licenseExpiration?: string;
     licenseServerConnection: boolean;
-    supportType: string;
     supportId?: string;
-    updateAvailable?: boolean;
+    newVersionAvailable?: string;
 }
 
 export function AboutPage(props: AboutPageProps) {
-    const { supportType, supportId } = props;
+    const { licenseType, status, licenseExpiration, licenseServerConnection, supportId } = props;
 
     //External Links
     const ravendbHomeUrl = "https://ravendb.net";
@@ -34,6 +50,7 @@ export function AboutPage(props: AboutPageProps) {
     const xUrl = "https://twitter.com/ravendb";
     const linkedinUrl = "https://www.linkedin.com/company/ravendb";
     const supportTermsUrl = "https://ravendb.net/terms";
+    const updateInstructionsUrl = "#";
 
     //Image urls
     const LogoImg = require("Content/img/ravendb_logo.svg");
@@ -42,12 +59,38 @@ export function AboutPage(props: AboutPageProps) {
 
     const [activeTab, setActiveTab] = useState("2");
 
+    //Logic
+    const getSupportType = (status: Raven.Server.Commercial.Status) => {
+        switch (status) {
+            case "ProfessionalSupport":
+                return "Professional";
+            case "ProductionSupport":
+                return "Production";
+            default:
+                return "Community";
+        }
+    };
+
+    const supportType = getSupportType(status);
+
+    const PaidSupportAvailable = (supportType: string) => {
+        return supportType === "Community";
+    };
+
+    const [newVersionAvailable, setNewVersionAvailable] = useState(null);
+
+    const checkForUpdates = () => {
+        setNewVersionAvailable("6.0.2 (60002) - 12.11.2023");
+    };
+
     const handleTabClick = (tab: string) => {
         setActiveTab(tab);
         {
             console.log(activeTab);
         }
     };
+
+    const { value: showChangelogModal, toggle: toggleShowChangelogModal } = useBoolean(false);
 
     return (
         <>
@@ -60,18 +103,26 @@ export function AboutPage(props: AboutPageProps) {
                                 <h4>License</h4>
                                 <Row>
                                     <OverallInfoItem icon="license" label="License type">
-                                        <span className="text-cloud">Community (Cloud)</span>
+                                        <span className="text-cloud">{licenseType}</span>
                                     </OverallInfoItem>
                                     <OverallInfoItem icon="calendar" label="Expires">
-                                        2024 January 26th
-                                        <br />
-                                        <small>(in 2 months 30 days)</small>
+                                        {genUtils.formatUtcDateAsLocal(licenseExpiration)}
+                                        <div className="lh-sm small text-muted">
+                                            ({genUtils.timeSpanAsAgo(licenseExpiration, false)})
+                                        </div>
                                     </OverallInfoItem>
                                     <OverallInfoItem icon="raven" label="License server">
-                                        <span className="text-success">
-                                            <Icon icon="check" />
-                                            Connected
-                                        </span>
+                                        {licenseServerConnection ? (
+                                            <span className="text-success">
+                                                <Icon icon="check" />
+                                                Connected
+                                            </span>
+                                        ) : (
+                                            <span className="text-warning">
+                                                <Icon icon="warning" />
+                                                Couldn't connect
+                                            </span>
+                                        )}
                                     </OverallInfoItem>
                                     <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
                                         <Button outline className="rounded-pill">
@@ -96,16 +147,29 @@ export function AboutPage(props: AboutPageProps) {
                                         6.0.1-nightly-20231011-1134
                                     </OverallInfoItem>
                                     <OverallInfoItem icon="global" label="Updates">
-                                        <span className="text-success">
-                                            <Icon icon="check" />
-                                            You are using the latest version
-                                        </span>
+                                        {newVersionAvailable ? (
+                                            <>
+                                                <span className="text-warning">
+                                                    <Icon icon="star-filled" />
+                                                    Update Available
+                                                </span>
+                                                <div className="small lh-sm text-muted">{newVersionAvailable}</div>
+                                                <a href={updateInstructionsUrl} className="small" target="_blank">
+                                                    Update istructions <Icon icon="newtab" margin="ms-1" />
+                                                </a>
+                                            </>
+                                        ) : (
+                                            <span className="text-success">
+                                                <Icon icon="check" />
+                                                You are using the latest version
+                                            </span>
+                                        )}
                                     </OverallInfoItem>
                                     <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
-                                        <Button outline className="rounded-pill">
+                                        <Button outline className="rounded-pill" onClick={toggleShowChangelogModal}>
                                             <Icon icon="logs" /> Changelog
                                         </Button>
-                                        <Button outline className="rounded-pill">
+                                        <Button outline className="rounded-pill" onClick={checkForUpdates}>
                                             <Icon icon="refresh" /> Check for updates
                                         </Button>
                                     </Col>
@@ -117,11 +181,16 @@ export function AboutPage(props: AboutPageProps) {
                                 <h4>Support</h4>
                                 <Row>
                                     <OverallInfoItem icon="support" label="Support type">
-                                        Community
+                                        <span className={classNames()}>{supportType}</span>
                                     </OverallInfoItem>
+                                    {supportId && (
+                                        <OverallInfoItem icon="user" label="Support ID">
+                                            {supportId}
+                                        </OverallInfoItem>
+                                    )}
 
                                     <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
-                                        <Button className="rounded-pill">
+                                        <Button className="rounded-pill" disabled={!PaidSupportAvailable}>
                                             <Icon icon="notifications" /> Request support
                                         </Button>
                                         <Button outline className="rounded-pill">
@@ -163,15 +232,36 @@ export function AboutPage(props: AboutPageProps) {
                 </div>
                 <Card className="flex-grow">
                     <CardHeader>
-                        <Row>
+                        <Row className="about-page-tabs">
                             <Col>
-                                <a className={activeTab === "1" && "active"} onClick={() => handleTabClick("1")}>
-                                    <Icon icon="license" /> <strong>License details</strong>
+                                <a
+                                    className={classNames({ active: activeTab === "1" })}
+                                    onClick={() => handleTabClick("1")}
+                                >
+                                    <Icon
+                                        icon="license"
+                                        className="circle-border fs-2"
+                                        color={licenseServerConnection === true ? "success" : "warning"}
+                                        margin="me-2"
+                                    />
+                                    <span className="fs-3">License details</span>
+                                    <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
+                                        1
+                                    </Badge>
                                 </a>
                             </Col>
                             <Col>
-                                <a className={activeTab === "2" && "active"} onClick={() => handleTabClick("2")}>
-                                    <Icon icon="support" /> <strong>Support plan</strong>
+                                <a
+                                    className={classNames({ active: activeTab === "2" })}
+                                    onClick={() => handleTabClick("2")}
+                                >
+                                    <Icon icon="support" className="circle-border" margin="fs-2 me-2" />
+                                    <span className="fs-3">Support plan</span>
+                                    {!PaidSupportAvailable && (
+                                        <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
+                                            1
+                                        </Badge>
+                                    )}
                                 </a>
                             </Col>
                         </Row>
@@ -184,54 +274,139 @@ export function AboutPage(props: AboutPageProps) {
                             <div className="bg-faded-info hstack justify-content-center">
                                 <img src={supportCharacterImg} className="support-character-img mt-4" />
                             </div>
-                            <RichPanelHeader className="text-center p-4">
-                                You are using
-                                <h2 className="text-info">Free Community Support</h2>
-                                <p>
-                                    Get help and connect with fellow users and RavenDB developers through our community
-                                    forum
-                                </p>
-                                <Button
-                                    outline
-                                    href={githubDiscussionsUrl}
-                                    className="rounded-pill align-self-center px-3"
-                                >
-                                    <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-2" />
-                                </Button>
-                            </RichPanelHeader>
-                            <div className="text-center p-4 vstack align-items-center">
-                                <h2 className="hstack justify-content-center">
-                                    <img src={supportImg} width={70} className="me-4" />
-                                    Elevate your experience
-                                </h2>
-                                <div>
-                                    <p className="max-paragraph-width">
-                                        RavenDB Cloud Support has you covered. Whether it’s a simple question or a
-                                        mission-critical emergency, our core developers will be on hand to provide
-                                        expert assistance and advice around the clock.
-                                    </p>
-                                    <p>Here’s what you’ll get:</p>
-                                </div>
-                                <Row className="support-advantages">
-                                    <SupportAdvantage icon="phone">Phone & Email support</SupportAdvantage>
-                                    <SupportAdvantage icon="notifications">
-                                        Request support directly from RavenDB Studio
-                                    </SupportAdvantage>
-                                    <SupportAdvantage icon="user">Access to RavenDB core developers</SupportAdvantage>
-                                    <SupportAdvantage icon="clock">
-                                        Up to 2 hour SLA
-                                        <br />
-                                        24/7 AVAILABILITY
-                                    </SupportAdvantage>
-                                </Row>
-                                <Button color="success" className="px-4 rounded-pill mt-4" size="lg">
-                                    <Icon icon="upgrade-arrow" /> <strong>Upgrade Your Support</strong>
-                                </Button>
-                            </div>
+                            {supportType === "Community" && (
+                                <>
+                                    <RichPanelHeader className="text-center p-4">
+                                        You are using
+                                        <h2 className="text-info">Free Community Support</h2>
+                                        <p>
+                                            Get help and connect with fellow users and RavenDB developers through our
+                                            community forum
+                                        </p>
+                                        <Button
+                                            outline
+                                            href={githubDiscussionsUrl}
+                                            className="rounded-pill align-self-center px-3"
+                                        >
+                                            <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-2" />
+                                        </Button>
+                                    </RichPanelHeader>
+                                    <div className="text-center p-4 vstack align-items-center">
+                                        <h2 className="hstack justify-content-center">
+                                            <img src={supportImg} width={70} className="me-4" />
+                                            Elevate your experience
+                                        </h2>
+                                        <div>
+                                            <p className="max-paragraph-width">
+                                                RavenDB Cloud Support has you covered. Whether it’s a simple question or
+                                                a mission-critical emergency, our core developers will be on hand to
+                                                provide expert assistance and advice around the clock.
+                                            </p>
+                                            <p>Here’s what you’ll get:</p>
+                                        </div>
+                                        <Row className="support-advantages">
+                                            <SupportAdvantage icon="phone">Phone & Email support</SupportAdvantage>
+                                            <SupportAdvantage icon="notifications">
+                                                Request support directly from RavenDB Studio
+                                            </SupportAdvantage>
+                                            <SupportAdvantage icon="user">
+                                                Access to RavenDB core developers
+                                            </SupportAdvantage>
+                                            <SupportAdvantage icon="clock">
+                                                Up to 2 hour SLA
+                                                <br />
+                                                24/7 AVAILABILITY
+                                            </SupportAdvantage>
+                                        </Row>
+                                        <Button color="success" className="px-4 rounded-pill mt-4" size="lg">
+                                            <Icon icon="upgrade-arrow" /> <strong>Upgrade Your Support</strong>
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                            {supportType !== "Community" && (
+                                <>
+                                    <RichPanelHeader className="p-4">
+                                        <Row>
+                                            <Col xs={12} sm={6}>
+                                                You are using
+                                                <h2 className="text-info">{supportType} Support</h2>
+                                            </Col>
+                                            <Col xs={12} sm={6}></Col>
+                                        </Row>
+
+                                        <p>
+                                            Get help and connect with fellow users and RavenDB developers through our
+                                            community forum
+                                        </p>
+                                        <Button
+                                            outline
+                                            href={githubDiscussionsUrl}
+                                            className="rounded-pill align-self-center px-3"
+                                        >
+                                            <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-2" />
+                                        </Button>
+                                    </RichPanelHeader>
+                                    <div className="text-center p-4 vstack align-items-center">
+                                        <h2 className="hstack justify-content-center">
+                                            <img src={supportImg} width={70} className="me-4" />
+                                            Elevate your experience
+                                        </h2>
+                                        <div>
+                                            <p className="max-paragraph-width">
+                                                RavenDB Cloud Support has you covered. Whether it’s a simple question or
+                                                a mission-critical emergency, our core developers will be on hand to
+                                                provide expert assistance and advice around the clock.
+                                            </p>
+                                            <p>Here’s what you’ll get:</p>
+                                        </div>
+                                        <Row className="support-advantages">
+                                            <SupportAdvantage icon="phone">Phone & Email support</SupportAdvantage>
+                                            <SupportAdvantage icon="notifications">
+                                                Request support directly from RavenDB Studio
+                                            </SupportAdvantage>
+                                            <SupportAdvantage icon="user">
+                                                Access to RavenDB core developers
+                                            </SupportAdvantage>
+                                            <SupportAdvantage icon="clock">
+                                                Up to 2 hour SLA
+                                                <br />
+                                                24/7 AVAILABILITY
+                                            </SupportAdvantage>
+                                        </Row>
+                                        <Button color="success" className="px-4 rounded-pill mt-4" size="lg">
+                                            <Icon icon="upgrade-arrow" /> <strong>Upgrade Your Support</strong>
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
                         </TabPane>
                     </TabContent>
                 </Card>
             </div>
+            <Modal
+                isOpen={showChangelogModal}
+                toggle={toggleShowChangelogModal}
+                wrapClassName="bs5"
+                centered
+                contentClassName={`modal-border bulge-warning`}
+            >
+                <ModalBody className="vstack gap-4 position-relative">
+                    <div className="text-center">
+                        <Icon icon="logs" color="warning" className="fs-1" margin="m-0" />
+                    </div>
+
+                    <div className="position-absolute m-2 end-0 top-0">
+                        <Button close onClick={toggleShowChangelogModal} />
+                    </div>
+                    <div className="text-center lead">Changelog</div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="link" onClick={toggleShowChangelogModal} className="link-muted">
+                        Cancel
+                    </Button>
+                </ModalFooter>
+            </Modal>
         </>
     );
 }
