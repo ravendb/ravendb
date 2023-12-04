@@ -172,7 +172,7 @@ namespace Tests.Infrastructure
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
-                    Assert.False(true, store.Identifier + " -> Timed out while waiting for tombstones, we have " + tombstones.Count + " tombstones, but should have " + count);
+                    Assert.Fail(store.Identifier + " -> Timed out while waiting for tombstones, we have " + tombstones.Count + " tombstones, but should have " + count);
                 }
                 Thread.Sleep(100);
             } while (true);

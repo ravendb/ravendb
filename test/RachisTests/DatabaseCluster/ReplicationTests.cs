@@ -276,7 +276,7 @@ namespace RachisTests.DatabaseCluster
                         {
                             if (info.Reason.Contains("Cannot have replication with source and destination being the same database"))
                             {
-                                Assert.False(true, "Cannot have replication with source and destination being the same database");
+                                Assert.Fail("Cannot have replication with source and destination being the same database");
                             }
                         }
                     }

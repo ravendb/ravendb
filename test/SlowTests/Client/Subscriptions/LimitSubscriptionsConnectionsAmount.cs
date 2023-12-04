@@ -74,7 +74,7 @@ namespace SlowTests.Client.Subscriptions
                 if (completed.Equals(subscriptionTask) == false)
                 {
                     var msg = errors.Count == 0 ? "None" : string.Join($"{Environment.NewLine}--------{Environment.NewLine}", errors);
-                    Assert.True(false, $"Could not connect subscription on time, task status: {subscriptionTask.Status} but excepted {nameof(TaskStatus.Faulted)}, connection retry errors:{Environment.NewLine}{msg}");
+                    Assert.Fail($"Could not connect subscription on time, task status: {subscriptionTask.Status} but excepted {nameof(TaskStatus.Faulted)}, connection retry errors:{Environment.NewLine}{msg}");
                 }
                 await Assert.ThrowsAsync(typeof(SubscriptionClosedException), () => subscriptionTask);
 

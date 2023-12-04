@@ -101,7 +101,7 @@ namespace FastTests.Server.Documents.TimeSeries
                         var val = newBuf.ReadValue(ref offset, values[i].Item2);
                         if (val != values[i].Item1)
                         {
-                            Assert.False(true, "Unmatch value at index: " + i);
+                            Assert.Fail("Unmatch value at index: " + i);
                         }
                     }
                 }

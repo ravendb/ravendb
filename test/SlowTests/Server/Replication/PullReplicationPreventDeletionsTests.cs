@@ -301,7 +301,7 @@ namespace SlowTests.Server.Replication
             if (result == false)
             {
                 Assert.NotNull(lastException);
-                Assert.True(false, $"The actual exception: {lastException}");
+                Assert.Fail($"The actual exception: {lastException}");
             }
         }
 

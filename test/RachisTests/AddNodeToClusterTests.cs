@@ -717,7 +717,7 @@ namespace RachisTests
                     x.ServerStore.LoadDatabaseTopology(db)
                         .WhoseTaskIsIt(x.ServerStore.Engine.CurrentState, new PromotableTask(x.ServerStore.NodeTag, x.WebUrl, db, firstFollowerTag), null) == firstFollowerTag);
 
-                Assert.True(false, $"removed node was selected :/ Leader: {cluster.Leader.ServerStore.NodeTag}, first: {firstFollowerTag}, second {res.ServerStore.NodeTag}");
+                Assert.Fail($"removed node was selected :/ Leader: {cluster.Leader.ServerStore.NodeTag}, first: {firstFollowerTag}, second {res.ServerStore.NodeTag}");
             });
         }
 

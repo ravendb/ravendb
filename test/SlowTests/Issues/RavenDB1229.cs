@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
                     op.WaitForCompletion(TimeSpan.FromSeconds(15));
 
-                    Assert.False(true, "Should have thrown");
+                    Assert.Fail("Should have thrown");
                 }
                 catch (Exception e)
                 {

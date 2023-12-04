@@ -58,7 +58,7 @@ namespace FastTests
                             Assert.NotNull(ts);
                             var expected = ((TimeSpan)retentionTime).TotalMinutes / ((TimeSpan)policy.AggregationTime).TotalMinutes;
                             if ((int)expected != ts.Count && Math.Ceiling(expected) != ts.Count)
-                                Assert.False(true, $"Expected {expected}, but got {ts.Count}");
+                                Assert.Fail($"Expected {expected}, but got {ts.Count}");
                         }
                     }
                     return true;
@@ -77,7 +77,7 @@ namespace FastTests
                         return;
                 }
 
-                Assert.True(false, $"We still have pending rollups left.");
+                Assert.Fail($"We still have pending rollups left.");
             }
         }
     }

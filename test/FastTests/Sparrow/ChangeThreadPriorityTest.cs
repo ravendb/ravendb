@@ -41,7 +41,7 @@ namespace FastTests.Sparrow
             {
                 Assert.True(threadPriority == ThreadPriority.Lowest);
                 if (e != null)
-                    Assert.False(true, e.ToString());
+                    Assert.Fail(e.ToString());
             }
         }
     }

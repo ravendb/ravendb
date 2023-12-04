@@ -225,7 +225,7 @@ namespace SlowTests.Client.Subscriptions
                     if (enteredResend == false)
                     {
                         ReleaseConnections();
-                        Assert.False(true, "user/1 and user/2 did not enter the resend table");
+                        Assert.Fail("user/1 and user/2 did not enter the resend table");
                     }
 
                     //add new conn3 to trigger noop, it will fetch user/1 OR user/2 and then we pause it in server

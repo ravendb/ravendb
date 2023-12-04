@@ -200,7 +200,7 @@ namespace SlowTests.Issues
                 fetcher.Initialize(ctx, ctx2, new HashSet<long>());
                 foreach (var x in fetcher.GetEnumerator())
                 {
-                    Assert.False(true, $"got unexpected {x.Id}");
+                    Assert.Fail($"got unexpected {x.Id}");
                 }
             }
         }

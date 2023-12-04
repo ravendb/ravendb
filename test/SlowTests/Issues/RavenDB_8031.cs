@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                             }
                         }
 
-                        Assert.True(false, "All attempts to get stats failed");
+                        Assert.Fail("All attempts to get stats failed");
                     }
                     finally
                     {
