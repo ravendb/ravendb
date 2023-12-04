@@ -205,7 +205,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void returns_metadata_async()
+        public async Task returns_metadata_async()
         {
             using (var store = GetDocumentStore())
             {
@@ -224,7 +224,7 @@ namespace SlowTests.Issues
                 {
                     var customerAsync = session.Query<Customer>().FirstOrDefaultAsync();
                     Assert.NotNull(customerAsync);
-                    var customer = customerAsync.Result;
+                    var customer = await customerAsync;
                     Assert.NotNull(customer.Id);
                     Assert.Equal(customer.Name, "John");
                     Assert.Equal(customer.Address, "Tel Aviv");
@@ -463,7 +463,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void load_lazily_returns_metadata_async()
+        public async Task load_lazily_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
             {
@@ -481,7 +481,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     var customerLazy = session.Advanced.Lazily.LoadAsync<Customer>("customers/1-A");
-                    var customer = customerLazy.Value.Result;
+                    var customer = await customerLazy.Value;
                     Assert.NotNull(customer);
                     Assert.NotNull(customer.Id);
                     Assert.Equal(customer.Name, "John");

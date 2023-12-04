@@ -190,7 +190,7 @@ namespace SlowTests.Issues
             using (var hub = GetDocumentStore())
             using (var sink = GetDocumentStore())
             {
-                var hubCreationTaskId = hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(taskName)).Result.TaskId;
+                var hubCreationTaskId = (await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(taskName))).TaskId;
                 var sinkCreationTaskId = PullReplicationTests.SetupPullReplicationAsync(taskName, sink, hub).Result.First().TaskId;
 
                 // Documents creation

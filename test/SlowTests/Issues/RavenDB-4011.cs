@@ -26,7 +26,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void get_index_names()
+        public async Task get_index_names()
         {
             using (IDocumentStore store = GetDocumentStore())
             {
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    Task.Run(() => LoopResetIndex(session)).Wait();
+                    await Task.Run(() => LoopResetIndex(session));
                 }
             }
         }

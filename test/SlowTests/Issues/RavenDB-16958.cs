@@ -283,7 +283,7 @@ namespace SlowTests.Issues
                 using (var client = new HttpClient(handler).WithConventions(DocumentConventions.DefaultForServer))
                 {
                     var url = $"{serverA.WebUrl}/admin/debug/node/ping?url={Uri.EscapeDataString(serverB.WebUrl)}";
-                    var rawResponse = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
+                    var rawResponse = await (await client.GetAsync(url)).Content.ReadAsStringAsync();
                     var res = JsonConvert.DeserializeObject<HttpPingResult>(rawResponse);
                     Assert.NotNull(res);
                     Assert.Equal(1, res.Result.Count);
