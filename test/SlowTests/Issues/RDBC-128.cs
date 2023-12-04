@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -131,7 +132,7 @@ update {
         }
 
         [Fact]
-        public void IndexingOfLoadDocument_UnderLowMemory()
+        public async Task IndexingOfLoadDocument_UnderLowMemory()
         {
             using (var store = GetDocumentStore())
             {
@@ -174,7 +175,7 @@ update {
                     }
                 }
 
-                GetDatabase(store.Database).Result.IndexStore.GetIndex(invoicesSearch.IndexName).SimulateLowMemory();
+                (await GetDatabase(store.Database)).IndexStore.GetIndex(invoicesSearch.IndexName).SimulateLowMemory();
 
                 store.Maintenance.Send(new StartIndexingOperation());
 

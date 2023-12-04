@@ -147,11 +147,11 @@ public class RavenDB_20084 : ClusterTestBase
                 {
                     var response = await client.GetAsync($"{leaderServer.WebUrl}/admin/debug/databases/idle");
                     debugInfo.Add($"{leaderServer.WebUrl}/admin/debug/databases/idle");
-                    debugInfo.Add(response.Content.ReadAsStringAsync().Result);
+                    debugInfo.Add(await response.Content.ReadAsStringAsync());
 
                     response = await client.GetAsync($"{leaderServer.WebUrl}/admin/debug/periodic-backup/timers");
                     debugInfo.Add($"{leaderServer.WebUrl}/admin/debug/periodic-backup/timers");
-                    debugInfo.Add(response.Content.ReadAsStringAsync().Result);
+                    debugInfo.Add(await response.Content.ReadAsStringAsync());
                 }
 
                 Assert.True(backupInfoUpdated, $"lastBackupTime >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");

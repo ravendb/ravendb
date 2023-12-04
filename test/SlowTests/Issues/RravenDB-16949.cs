@@ -103,7 +103,7 @@ namespace SlowTests.Issues
                     Assert.Equal(402, revisionCount);
                     revisionCount = (await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000)).Count;
                     Assert.Equal(532, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000).Result.Count;
+                    revisionCount = (await session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000)).Count;
                     Assert.Equal(467, revisionCount);
                 }
 
@@ -124,7 +124,7 @@ namespace SlowTests.Issues
                     Assert.Equal(10, revisionCount);
                     revisionCount = (await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000)).Count;
                     Assert.Equal(136, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000).Result.Count;
+                    revisionCount = (await session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000)).Count;
                     Assert.Equal(331, revisionCount);
                 }
 
@@ -145,7 +145,7 @@ namespace SlowTests.Issues
                     Assert.Equal(10, revisionCount);
                     revisionCount = (await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000)).Count;
                     Assert.Equal(10, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000).Result.Count;
+                    revisionCount = (await session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000)).Count;
                     Assert.Equal(33, revisionCount);
                 }
                 WaitForUserToContinueTheTest(store);
