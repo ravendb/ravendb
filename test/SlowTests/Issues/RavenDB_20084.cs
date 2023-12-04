@@ -90,7 +90,7 @@ public class RavenDB_20084 : ClusterTestBase
                         try
                         {
                             var response = await client.GetAsync($"{leaderServer.WebUrl}/databases");
-                            string result = response.Content.ReadAsStringAsync().Result;
+                            string result = await response.Content.ReadAsStringAsync();
 
                             var databaseResponse = serverStoreContext.Sync.ReadForMemory(result, "Databases");
 
