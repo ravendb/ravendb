@@ -162,52 +162,28 @@ namespace Raven.Server.Routing
                 await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
                 return (false, feature.Status);
             }
+
+
+            var twoFactorRegistration = feature.TwoFactorAuthRegistration;
             
-            
-            if (feature.TwoFactorAuthRegistration is { HasLimits: true })
+            if (_ravenServer.TwoFactor.ValidateTwoFactorRequestLimits(route, context, twoFactorRegistration, out var twoFactorMsg) == false)
             {
-                if (ValidateTwoFactorLimits(route, context, feature, out var msg) == false)
+                if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    if (LoggingSource.AuditLog.IsInfoEnabled)
-                    {
-                        var auditLog = LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit");
-                        auditLog.Info($"Rejected request {context.Request.Method} {context.Request.GetFullUrl()} because: {msg}");
-                    }
-
-                    await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
-
-                    return (false, RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidLimit);
+                    var auditLog = LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit");
+                    auditLog.Info($"Rejected request {context.Request.Method} {context.Request.GetFullUrl()} because: {twoFactorMsg}");
                 }
+                
+                feature.WaitingForTwoFactorAuthentication();
+
+                await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
+                
+                return (false, RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidLimit);
             }
             
             return (true, feature.Status);
         }
 
-        private bool ValidateTwoFactorLimits(RouteInformation routeInformation, HttpContext context, RavenServer.AuthenticateConnection feature, out string msg)
-        {
-            if (routeInformation.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients)
-            {
-                msg = null;
-                return true;
-            }
-            
-            if (context.Request.Cookies.TryGetValue(TwoFactorAuthentication.CookieName, out var cookieStr) == false)
-            {
-                msg = $"Missing the '{TwoFactorAuthentication.CookieName}' in the request";
-                return false;
-            }
-
-            var cookie = MemoryMarshal.Cast<char, byte>(cookieStr);
-            var expected = MemoryMarshal.Cast<char, byte>(feature.TwoFactorAuthRegistration.ExpectedCookieValue);
-            if (CryptographicOperations.FixedTimeEquals(cookie, expected) == false)
-            {
-                msg = "Expected cookie value does not match provided value";
-                return false;
-            }
-
-            msg = null;
-            return true;
-        }
 
         internal bool CanAccessRoute(RouteInformation route, HttpContext context, string databaseName, RavenServer.AuthenticateConnection feature)
         {

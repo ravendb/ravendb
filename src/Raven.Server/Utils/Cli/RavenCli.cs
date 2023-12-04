@@ -784,7 +784,7 @@ namespace Raven.Server.Utils.Cli
 
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, RaftIdGenerator.NewId(), null).Wait();
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, null, RaftIdGenerator.NewId()).Wait();
                 }
                 catch (Exception e)
                 {
@@ -829,7 +829,7 @@ namespace Raven.Server.Utils.Cli
             byte[] outputBytes;
             try
             {
-                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore, RaftIdGenerator.NewId()).Result;
+                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore, null, RaftIdGenerator.NewId()).Result;
             }
             catch (Exception e)
             {

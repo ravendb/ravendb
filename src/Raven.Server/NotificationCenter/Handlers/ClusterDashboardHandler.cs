@@ -110,7 +110,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                         // we're already connected as ClusterAdmin, here we're just limiting the access to databases based on the thumbprint of the originally connected certificated
                         // so we'll send notifications only about relevant databases
 
-                        var authenticationStatus = new RavenServer.AuthenticateConnection();
+                        var authenticationStatus = new RavenServer.AuthenticateConnection(Server.TwoFactor);
 
                         authenticationStatus.SetBasedOnCertificateDefinition(clientConnectedCertificate);
 

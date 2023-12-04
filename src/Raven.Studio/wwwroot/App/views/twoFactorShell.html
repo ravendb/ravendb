@@ -1,0 +1,18 @@
+<div class="layout-container">
+    <div class="container">
+
+        <h1>Two factor</h1>
+
+        <form data-bind="submit: verify">
+            <input type="text" class="form-control" data-bind="textInput: code"  placeholder="Enter 6 digits code" />
+
+            <div class="toggle">
+                <input type="checkbox" class="styled" data-bind="checked: withLimits">
+                <label>With limits</label>
+            </div>
+            
+            
+            <button class="btn btn-primary">Verify</button>
+        </form>
+    </div>
+</div>

@@ -226,6 +226,9 @@
                                     <div title="This is the client certificate currently used by the browser" class="label label-success"
                                          data-bind="visible: _.includes(Thumbprints, $root.clientCertificateThumbprint())">current browser certificate
                                     </div>
+                                    <div title="This is the certificate which requires two-factor authentication" class="label label-success"
+                                         data-bind="visible: HasTwoFactor"> 2FA
+                                    </div>
                                 </a>
                                 <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
                                 </div>

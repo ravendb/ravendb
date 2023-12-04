@@ -643,6 +643,8 @@ class certificates extends viewModelBase {
                 const secondaryCertificates: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition[] = [];
                 
                 certificatesInfo.Certificates.forEach(cert => {
+                    cert.HasTwoFactor = cert.HasTwoFactor ?? false; // force property to exist
+                    
                     if (cert.CollectionPrimaryKey) {
                         secondaryCertificates.push(cert);
                     } else {
