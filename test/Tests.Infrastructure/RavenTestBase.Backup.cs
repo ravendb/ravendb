@@ -478,8 +478,7 @@ namespace FastTests
 
                     TryGetBackupStatusFromPeriodicBackupAndPrint(expected, actual, opId, periodicBackupRunner, status, result: null);
 
-                    Assert.True(false,
-                        $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Backup status from storage for current operation id: '{opId}':{Environment.NewLine}" +
+                    Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Backup status from storage for current operation id: '{opId}':{Environment.NewLine}" +
                         PrintBackupStatus(status));
                 }
                 else if (expected == OperationStatus.Completed && actual == OperationStatus.InProgress)
@@ -491,14 +490,12 @@ namespace FastTests
                         // print previous backup status saved in memory
                         var operation = new GetPeriodicBackupStatusOperation(taskId);
                         var status = (await store.Maintenance.SendAsync(operation)).Status;
-                        Assert.True(false,
-                            $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch running backup status for current task id: '{taskId}', previous backup status:{Environment.NewLine}" +
+                        Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch running backup status for current task id: '{taskId}', previous backup status:{Environment.NewLine}" +
                             PrintBackupStatus(status));
                     }
                     else
                     {
-                        Assert.True(false,
-                            $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Running backup status for current task id: '{taskId}':{Environment.NewLine}" +
+                        Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Running backup status for current task id: '{taskId}':{Environment.NewLine}" +
                             PrintBackupStatus(pb.RunningBackupStatus));
                     }
                 }
@@ -512,14 +509,12 @@ namespace FastTests
                     var pb = periodicBackupRunner?.PeriodicBackups.FirstOrDefault(x => x.BackupStatus != null && x.BackupStatus.LastOperationId == opId);
                     if (pb == null)
                     {
-                        Assert.True(false,
-                            $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch backup status for current operation id: '{opId}', previous backup status:{Environment.NewLine}" +
+                        Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch backup status for current operation id: '{opId}', previous backup status:{Environment.NewLine}" +
                             PrintBackupStatus(status) + Environment.NewLine + "BackupResult Messages:" + Environment.NewLine + PrintBackupResultMessagesStatus(result));
                     }
                     else
                     {
-                        Assert.True(false,
-                            $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch backup status from storage for current operation id: '{opId}', current in memory backup status:{Environment.NewLine}" +
+                        Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch backup status from storage for current operation id: '{opId}', current in memory backup status:{Environment.NewLine}" +
                             PrintBackupStatus(pb.BackupStatus) + Environment.NewLine + "BackupResult Messages:" + Environment.NewLine +
                             PrintBackupResultMessagesStatus(result));
                     }

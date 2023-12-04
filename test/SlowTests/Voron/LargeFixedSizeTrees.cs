@@ -371,7 +371,7 @@ namespace SlowTests.Voron
                     if (status[i] != fst.Contains(i))
                     {
                         fst.DebugRenderAndShow();
-                        Assert.False(true, i.ToString());
+                        Assert.Fail(i.ToString());
                     }
                 }
             }

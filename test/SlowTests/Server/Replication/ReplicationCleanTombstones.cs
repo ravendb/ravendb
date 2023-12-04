@@ -386,7 +386,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 if (sent.Wait(TimeSpan.FromSeconds(30)) == false)
-                    Assert.False(true, "timeout!");
+                    Assert.Fail("timeout!");
 
                 using (var session = store.OpenSession())
                 {

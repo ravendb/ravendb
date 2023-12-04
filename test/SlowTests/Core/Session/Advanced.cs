@@ -372,7 +372,7 @@ namespace SlowTests.Core.Session
                         company.Name = "2";
                         session.Store(company);
                         session.SaveChanges();
-                        Assert.False(true, "I expected InvalidOperationException to be thrown here.");
+                        Assert.Fail("I expected InvalidOperationException to be thrown here.");
                     }
                     catch (InvalidOperationException)
                     {

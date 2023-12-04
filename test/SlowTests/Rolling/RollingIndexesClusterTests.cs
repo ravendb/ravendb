@@ -961,7 +961,7 @@ namespace SlowTests.Rolling
                 Assert.Equal(2, deployment.Count);
                 Assert.True(deployment.All(x => x.Value.State == RollingIndexState.Done));
                 if (record.RollingIndexes?.ContainsKey(nameof(MyRollingIndex)) == true)
-                    Assert.True(false, "RollingIndexes shouldn't contain 'MyRollingIndex'");
+                    Assert.Fail("RollingIndexes shouldn't contain 'MyRollingIndex'");
             }
         }
 
@@ -986,7 +986,7 @@ namespace SlowTests.Rolling
             {
                 var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, store.Database);
                 if (record.RollingIndexes?.ContainsKey(nameof(MyRollingIndex)) == true)
-                    Assert.True(false, "RollingIndexes shouldn't contain 'MyRollingIndex'");
+                    Assert.Fail("RollingIndexes shouldn't contain 'MyRollingIndex'");
             }
 
         }
@@ -1003,7 +1003,7 @@ namespace SlowTests.Rolling
                     return running.Key;
                 }
 
-                Assert.True(false, "RollingIndexes should contain 'MyRollingIndex'");
+                Assert.Fail("RollingIndexes should contain 'MyRollingIndex'");
             }
 
             return null;

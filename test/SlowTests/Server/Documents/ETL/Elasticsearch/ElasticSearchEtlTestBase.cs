@@ -146,7 +146,7 @@ loadToOrders" + IndexSuffix + @"(orderData);";
                 Etl.TryGetLoadError(databaseName, config, out var loadError);
                 Etl.TryGetTransformationError(databaseName, config, out var transformationError);
 
-                Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
+                Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
             }
         }
     }

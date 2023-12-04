@@ -32,7 +32,7 @@ namespace FastTests.Voron
             {
                 var offsetOf = Marshal.OffsetOf<FileHeader>(fieldInfo.Name);
                 if (pos != offsetOf)
-                    Assert.False(true, fieldInfo.Name + " " + pos + " != " + offsetOf);
+                    Assert.Fail(fieldInfo.Name + " " + pos + " != " + offsetOf);
                 pos += GetSizeOf(fieldInfo.FieldType);
             }
         }

@@ -25,7 +25,7 @@ namespace FastTests.Issues
                 {
                     are.Set();
                     await amre.WaitAsync(cts.Token);
-                    Assert.True(false, "AsyncManualResetEvent is expected to throw when canceled and it didn't");
+                    Assert.Fail("AsyncManualResetEvent is expected to throw when canceled and it didn't");
                 }
                 finally
                 {

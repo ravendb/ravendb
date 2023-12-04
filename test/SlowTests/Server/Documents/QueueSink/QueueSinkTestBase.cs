@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.QueueSink
             {
                 TryErrorFromAlert(databaseName, config, out var error);
 
-                Assert.True(false, $"Queue Sink wasn't done. Error: {error?.Error}");
+                Assert.Fail($"Queue Sink wasn't done. Error: {error?.Error}");
             }
         }
 

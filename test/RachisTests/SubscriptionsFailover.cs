@@ -219,13 +219,13 @@ namespace RachisTests
             if (await reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime) == false)
             {
                 Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in batch {BatchCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");
-                Assert.True(false, $"{iteration}. Reached in batch {BatchCounter}/10");
+                Assert.Fail($"{iteration}. Reached in batch {BatchCounter}/10");
             }
 
             if (await reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime) == false)
             {
                 Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in ack {AckCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");
-                Assert.True(false, $"{iteration}. Reached in ack {AckCounter}/10");
+                Assert.Fail($"{iteration}. Reached in ack {AckCounter}/10");
             }
 
             Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in batch {BatchCounter}/10, Reached in ack {AckCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");

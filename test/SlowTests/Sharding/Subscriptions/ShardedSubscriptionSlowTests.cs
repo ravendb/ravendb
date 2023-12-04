@@ -810,7 +810,7 @@ namespace SlowTests.Sharding.Subscriptions
                     foreach (var item in items)
                     {
                         if (item.Age > 20 && item.Age < 30)
-                            Assert.True(false, "Got age " + item.Age);
+                            Assert.Fail("Got age " + item.Age);
                     }
                 }
             }

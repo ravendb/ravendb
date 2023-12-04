@@ -81,7 +81,7 @@ public class RavenDB_19033 : NoDisposalNeeded
 
             if (database2 == task2)
             {
-                Assert.False(true, "we should never be allowed to start a new database since the database disabled lock created by RemoveLockAndReturn() is still acquired");
+                Assert.Fail("we should never be allowed to start a new database since the database disabled lock created by RemoveLockAndReturn() is still acquired");
 
                 task2.Start();
                 task2.Wait();

@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                 }
                 catch (Exception exception)
                 {
-                    Assert.True(false, $"Got unexpected exception {exception}");
+                    Assert.Fail($"Got unexpected exception {exception}");
                 }
             }
         }

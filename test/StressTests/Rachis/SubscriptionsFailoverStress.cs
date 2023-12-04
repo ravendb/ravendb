@@ -131,7 +131,7 @@ namespace StressTests.Rachis
                         using (var session = store.OpenAsyncSession())
                         {
                             var result = await session.Query<User>().Where(u => u.Count > 0).ToListAsync(token: cts.Token);
-                            Assert.True(false, string.Join(Environment.NewLine, result.Select(r => $"{r.Id} has {r.Count}")));
+                            Assert.Fail(string.Join(Environment.NewLine, result.Select(r => $"{r.Id} has {r.Count}")));
                         }
                     }
                 }

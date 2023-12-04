@@ -134,7 +134,7 @@ namespace SlowTests.Server.Replication
                     try
                     {
                         session.Load<User>("users/1");
-                        Assert.False(true, "Expected a confclit here");
+                        Assert.Fail("Expected a confclit here");
                     }
                     catch (DocumentConflictException e)
                     {

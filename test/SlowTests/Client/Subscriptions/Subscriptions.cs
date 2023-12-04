@@ -140,7 +140,7 @@ namespace SlowTests.Client.Subscriptions
                         try
                         {
                             await rejectedSubscription.Run(_ => { });
-                            Assert.False(true, "Exepcted a throw here");
+                            Assert.Fail("Exepcted a throw here");
                         }
                         catch (SubscriptionInUseException)
                         {
