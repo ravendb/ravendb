@@ -11,12 +11,17 @@ using Sorting = Sparrow.Server.Utils.VxSort.Sort;
 
 namespace Voron.Util;
 
+/// <summary>
+/// NativeList of T is a very low level primitive where you have to deal with the context as an external entity (correctness is on the caller's hands).
+/// ContextBoundNativeList of T is the high level primitive that should be used for most uses and purposes. For example, there are cases where the
+/// NativeList has to contain other native lists, therefore, the requirement of NativeList of T to be completely unmanaged is important for those uses.
+/// </summary>
 public unsafe struct NativeList<T>
     where T: unmanaged
 {
     private ByteString _storage;
 
-    public T* RawItems => (T*)_storage.Ptr;
+    public T* RawItems => Capacity > 0 ? (T*)_storage.Ptr : null;
     public int Capacity => _storage.Length / sizeof(T);
     public int Count;
 
@@ -31,7 +36,7 @@ public unsafe struct NativeList<T>
 
     public bool TryAdd(in T l)
     {
-        if (Count == Capacity)
+        if (Capacity == 0 || Count == Capacity)
             return false;
 
         RawItems[Count++] = l;
