@@ -166,8 +166,12 @@ namespace Raven.Server.Web.System
 
             if (authStatus == RavenServer.AuthenticationStatus.ClusterAdmin ||
                 authStatus == RavenServer.AuthenticationStatus.Operator ||
-                authStatus == RavenServer.AuthenticationStatus.Allowed)
+                authStatus == RavenServer.AuthenticationStatus.Allowed ||
+                authStatus == RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidLimit)
             {
+                // if we detect invalid limit to redirect to studio anyway 
+                // studio then checks 2fa status and redirects to 2fa if needed
+                
                 HttpContext.Response.Headers["Location"] = "/studio/index.html";
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Redirect;
                 return Task.CompletedTask;
@@ -217,7 +221,7 @@ namespace Raven.Server.Web.System
         public Task GetTwoFactorIndexFile()
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            if (feature?.Status == RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided)
+            if (feature?.Status is RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided or RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidLimit)
             {
                 return GetStudioFileInternal("index.html");
             }
