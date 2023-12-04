@@ -791,7 +791,7 @@ namespace RachisTests.DatabaseCluster
                     foreach (var node in topology.AllNodes)
                     {
                         var serverStore = Servers.Single(s => s.ServerStore.NodeTag == node).ServerStore;
-                        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        var database = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {

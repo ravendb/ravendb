@@ -438,7 +438,7 @@ namespace SlowTests.Sharding.ETL
 
                 Assert.True(WaitForDocument<User>(dest, id, u => u.Name == "Joe Doe", 30_000));
 
-                var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
+                var dbRecord = await src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database));
                 var shardedCtx = new ShardedDatabaseContext(srcNodes.Servers[0].ServerStore, dbRecord);
                 var shardNumber = 0;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -454,7 +454,7 @@ namespace SlowTests.Sharding.ETL
 
                 var originalTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == responsibleNodeNodeTag);
 
-                var originalResult = DisposeServerAndWaitForFinishOfDisposal(originalTaskNodeServer);
+                var originalResult = await DisposeServerAndWaitForFinishOfDisposalAsync(originalTaskNodeServer);
 
                 id = "users/5";
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

@@ -1844,7 +1844,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
-            var database = GetDatabase(src.Database).Result;
+            var database = await GetDatabase(src.Database);
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (var tr = context.OpenWriteTransaction())
             {

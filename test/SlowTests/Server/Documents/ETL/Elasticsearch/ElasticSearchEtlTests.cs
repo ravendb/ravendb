@@ -768,7 +768,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 }));
                 Assert.NotNull(result1.RaftCommandIndex);
 
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
@@ -868,7 +868,7 @@ output('test output')"
                 }));
                 Assert.NotNull(result1.RaftCommandIndex);
 
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
