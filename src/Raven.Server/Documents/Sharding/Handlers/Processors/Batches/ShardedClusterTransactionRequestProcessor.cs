@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using GeoAPI.CoordinateSystems;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
@@ -41,10 +40,7 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
         if (onDatabaseCompletionTask.IsCompletedSuccessfully)
             return onDatabaseCompletionTask.WithCancellation(token);
 
-        var t = new Task<long?>(() => null);
-        t.Start();
-
-        return t.WithCancellation(token);
+        return Task.FromResult<long?>(null).WithCancellation(token);
     }
 
     protected override DateTime GetUtcNow()

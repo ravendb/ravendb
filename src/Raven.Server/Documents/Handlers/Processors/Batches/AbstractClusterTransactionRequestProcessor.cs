@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -73,21 +72,29 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         var clusterTransactionCommandResult = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
         var index = clusterTransactionCommandResult.Index;
-        using var _ = CreateClusterTransactionTask(id: options.TaskId, index, out var onDatabaseCompletionTask);
-        var result = clusterTransactionCommandResult.Result;
         var array = new DynamicJsonArray();
 
-        if (result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
-            ThrowClusterTransactionConcurrencyException(errors);
+        using (CreateClusterTransactionTask(id: options.TaskId, index, out var onDatabaseCompletionTask))
+        {
+            var result = clusterTransactionCommandResult.Result;
 
-        var count = await GetClusterTransactionCount(result, raftRequestId, clusterTransactionCommand.DatabaseCommandsCount, onDatabaseCompletionTask);
-        if (count.HasValue)
-            GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count.Value, lastModified: GetUtcNow(),
-                options.DisableAtomicDocumentWrites, array);
+            if (result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
+                ThrowClusterTransactionConcurrencyException(errors);
+
+            var count = await GetClusterTransactionCount(result, raftRequestId, clusterTransactionCommand.DatabaseCommandsCount, onDatabaseCompletionTask);
+            if (count.HasValue)
+                GenerateDatabaseCommandsEvaluatedResults(clusterTransactionCommand.DatabaseCommands, index, count.Value, lastModified: GetUtcNow(),
+                    options.DisableAtomicDocumentWrites, array);
+        }
 
         foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
         {
-            array.Add(new DynamicJsonValue { ["Type"] = clusterCommands.Type, ["Key"] = clusterCommands.Id, ["Index"] = index });
+            array.Add(new DynamicJsonValue
+            {
+                [nameof(ICommandData.Type)] = clusterCommands.Type, 
+                [nameof(ICompareExchangeValue.Key)] = clusterCommands.Id, 
+                [nameof(ICompareExchangeValue.Index)] = index
+            });
         }
 
         return (clusterTransactionCommandResult.Index, array);

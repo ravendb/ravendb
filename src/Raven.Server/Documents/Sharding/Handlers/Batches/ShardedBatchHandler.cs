@@ -9,15 +9,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Batches
         [RavenShardedAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            // if sharded :
-            // this.DatabaseContext.LastIndex;
-            //else
-            // Database.index
-
-            // DatabaseContext
-
-            // var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(DatabaseName);
-
             using (var processor = new ShardedBatchHandlerProcessorForBulkDocs(this))
                 await processor.ExecuteAsync();
         }

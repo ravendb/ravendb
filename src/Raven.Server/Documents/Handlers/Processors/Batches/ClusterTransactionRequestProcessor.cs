@@ -55,16 +55,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
             if (count < 0)
                 throw new InvalidOperationException($"ClusterTransactionCommand result is invalid - count lower then 0 ({count}).");
 
-            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            foreach (var dataCmd in databaseCommands)
             {
-                foreach (var dataCmd in databaseCommands)
-                {
-                    count++;
-                    var cv = GenerateChangeVector(index, count, disableAtomicDocumentWrites, 
-                        RequestHandler.Database.DatabaseGroupId, RequestHandler.Database.ClusterTransactionId);
+                count++;
+                var cv = GenerateChangeVector(index, count, disableAtomicDocumentWrites,
+                    RequestHandler.Database.DatabaseGroupId, RequestHandler.Database.ClusterTransactionId);
 
-                    commandsResults.Add(GetCommandResultJson(dataCmd, cv, lastModified));
-                }
+                commandsResults.Add(GetCommandResultJson(dataCmd, cv, lastModified));
             }
         }
 

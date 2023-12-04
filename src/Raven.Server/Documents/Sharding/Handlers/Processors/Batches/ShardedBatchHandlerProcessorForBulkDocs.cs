@@ -11,7 +11,6 @@ using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -19,7 +18,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;
 
 internal sealed class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorForBulkDocs<ShardedBatchCommand, ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-
     public ShardedBatchHandlerProcessorForBulkDocs([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }

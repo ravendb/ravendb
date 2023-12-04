@@ -771,7 +771,6 @@ namespace Raven.Server.Documents
                         mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
 
                     var removeTask = ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(command.Options.TaskId);
-                    // TODO: FOR DATABASE AND SHARDING CREATE TASK IS DIFFERENT
 
                     /*
                         the remove task that we are creating here is relevant only for a failover with wait for index:
