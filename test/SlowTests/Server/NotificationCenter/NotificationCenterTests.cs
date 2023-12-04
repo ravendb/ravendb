@@ -184,7 +184,7 @@ namespace SlowTests.Server.NotificationCenter
         }
 
         [Fact]
-        public void Can_postpone_persistent_action_and_get_notified_about_it()
+        public async Task Can_postpone_persistent_action_and_get_notified_about_it()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -204,7 +204,7 @@ namespace SlowTests.Server.NotificationCenter
                 }
 
                 Assert.Equal(1, actions.Count);
-                var notification = actions.DequeueAsync().Result;
+                var notification = await actions.DequeueAsync();
                 Assert.NotNull(notification);
                 Assert.Equal(alert.Id, notification[nameof(NotificationUpdated.NotificationId)]);
                 Assert.Equal(NotificationUpdateType.Postponed, notification[nameof(NotificationUpdated.UpdateType)]);
@@ -228,7 +228,7 @@ namespace SlowTests.Server.NotificationCenter
         }
 
         [Fact]
-        public void Can_dismiss_persistent_action_and_get_notified_about_it()
+        public async Task Can_dismiss_persistent_action_and_get_notified_about_it()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -255,7 +255,7 @@ namespace SlowTests.Server.NotificationCenter
                 }
 
                 Assert.Equal(1, actions.Count);
-                var notification = actions.DequeueAsync().Result;
+                var notification = await actions.DequeueAsync();
                 Assert.NotNull(notification);
                 Assert.Equal(alert.Id, notification[nameof(NotificationUpdated.NotificationId)]);
                 Assert.Equal(NotificationUpdateType.Dismissed, notification[nameof(NotificationUpdated.UpdateType)]);
@@ -363,7 +363,7 @@ namespace SlowTests.Server.NotificationCenter
         }
 
         [Fact]
-        public void Should_send_postponed_notification_when_postpone_date_reached()
+        public async Task Should_send_postponed_notification_when_postpone_date_reached()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -389,7 +389,7 @@ namespace SlowTests.Server.NotificationCenter
 
                     for (int i = 0; i < 2; i++)
                     {
-                        var posponed = actions.DequeueAsync().Result;
+                        var posponed = await actions.DequeueAsync();
 
                         Assert.NotNull(posponed);
                         Assert.Equal(NotificationUpdateType.Postponed, posponed[(nameof(NotificationUpdated.UpdateType))]);
@@ -548,7 +548,7 @@ namespace SlowTests.Server.NotificationCenter
                 }
             }
         }
-        
+
         [LinuxFact]
         public void WhenActualSwapSmallerThenMinSwapConfigured_ShouldRaiseNotification()
         {
