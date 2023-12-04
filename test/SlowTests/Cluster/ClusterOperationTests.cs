@@ -133,8 +133,8 @@ namespace SlowTests.Cluster
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var result = store.Maintenance.SendAsync(new SeedIdentityForOperation("users", 1990));
-                    Assert.Equal(1990, result.Result);
+                    var result = await store.Maintenance.SendAsync(new SeedIdentityForOperation("users", 1990));
+                    Assert.Equal(1990, result);
 
                     var user = new User
                     {
@@ -261,9 +261,9 @@ namespace SlowTests.Cluster
 
                 server.ServerStore.Initialized = true;
 
-                var current = WaitForValue(() =>
+                var current = await WaitForValueAsync(async () =>
                 {
-                    var p = re.GetPreferredNode().Result;
+                    var p = await re.GetPreferredNode();
 
                     return p.Item2.ClusterTag;
                 }, tag);

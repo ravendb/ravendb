@@ -70,11 +70,11 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new People_ByName();
-                await index.ExecuteAsync(store).ConfigureAwait(false);
+                await index.ExecuteAsync(store);
 
                 store.Maintenance.Send(new SetIndexesLockOperation(index.IndexName, IndexLockMode.LockedError));
 
-                await index.ExecuteAsync(store).ConfigureAwait(false);
+                await index.ExecuteAsync(store);
 
                 store.Maintenance.Send(new SetIndexesLockOperation(index.IndexName, IndexLockMode.Unlock));
 

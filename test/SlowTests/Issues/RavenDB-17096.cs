@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(newResponsibleTag);
 
                 var newResponsible = nodes.Single(s => s.ServerStore.NodeTag == newResponsibleTag);
-                var db = await newResponsible.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(src.Database).ConfigureAwait(false);
+                var db = await newResponsible.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(src.Database);
                 var etlDone = WaitForEtl(db, (s, statistics) => statistics.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())

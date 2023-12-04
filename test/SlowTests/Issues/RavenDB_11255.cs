@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Can_update_lock_mode_and_priority_of_index_even_if_indexing_is_running()
+        public async Task Can_update_lock_mode_and_priority_of_index_even_if_indexing_is_running()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                             index.SetPriority(IndexPriority.High);
                         }, TaskCreationOptions.LongRunning);
 
-                        Assert.True(task.Wait(TimeSpan.FromMinutes(1)));
+                        await task.WaitAsync(TimeSpan.FromMinutes(1));
                     }
 
                     index.Start(); // will persist the introduced changes

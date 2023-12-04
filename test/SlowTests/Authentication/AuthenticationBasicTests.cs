@@ -602,7 +602,7 @@ namespace SlowTests.Authentication
                 var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                 response.EnsureSuccessStatusCode();
                 var content = await response.Content.ReadAsStreamAsync();
-                return await context.ReadForMemoryAsync(content, "response/object").ConfigureAwait(false);
+                return await context.ReadForMemoryAsync(content, "response/object");
             }
         }
 

@@ -131,7 +131,7 @@ namespace SlowTests.Cluster
                     while (topology.Nodes?.Count != 3)
                     {
                         var topologyGetCommand = new GetDatabaseTopologyCommand();
-                        await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context).ConfigureAwait(false);
+                        await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context);
                         topology = topologyGetCommand.Result;
                         Thread.Sleep(50);
                     }
@@ -160,7 +160,7 @@ namespace SlowTests.Cluster
                     }
                 }
 
-                var fastest = leaderRequestExecutor.GetFastestNode().Result.Node;
+                var fastest = (await leaderRequestExecutor.GetFastestNode()).Node;
                 var follower2Proxy = ReplacePort(followers[1].WebUrl, serversToProxies[followers[1]].Port);
 
                 Assert.Equal(follower2Proxy, fastest.Url);
