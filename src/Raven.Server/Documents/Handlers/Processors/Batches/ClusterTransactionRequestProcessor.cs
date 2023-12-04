@@ -11,6 +11,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -33,12 +34,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
         protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(MergedBatchCommand command) => command.ParsedCommands;
 
         protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.Database.Configuration.Cluster;
-        public override AsyncWaiter<long?>.RemoveTask CreateClusterTransactionTask(string id, long index, out Task<long?> task)
+        public override AsyncWaiter<ClusterTransactionResult>.RemoveTask CreateClusterTransactionTask(string id, long index, out Task<ClusterTransactionResult> task)
         {
             return RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTaskForDatabase(id, index, RequestHandler.Database, out task);
         }
 
-        public override Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask, CancellationToken token)
+        public override Task<ClusterTransactionResult> WaitForDatabaseCompletion(Task<ClusterTransactionResult> onDatabaseCompletionTask, CancellationToken token)
         {
             return onDatabaseCompletionTask.WithCancellation(token);
         }

@@ -11,6 +11,7 @@ using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -30,17 +31,17 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
     protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(ShardedBatchCommand command) => command.ParsedCommands;
     
     protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.DatabaseContext.Configuration.Cluster;
-    public override AsyncWaiter<long?>.RemoveTask CreateClusterTransactionTask(string id, long index, out Task<long?> task)
+    public override AsyncWaiter<ClusterTransactionResult>.RemoveTask CreateClusterTransactionTask(string id, long index, out Task<ClusterTransactionResult> task)
     {
         return RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id, out task);
     }
 
-    public override Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask, CancellationToken token)
+    public override Task<ClusterTransactionResult> WaitForDatabaseCompletion(Task<ClusterTransactionResult> onDatabaseCompletionTask, CancellationToken token)
     {
         if (onDatabaseCompletionTask.IsCompletedSuccessfully)
             return onDatabaseCompletionTask.WithCancellation(token);
 
-        return Task.FromResult<long?>(null).WithCancellation(token);
+        return Task.FromResult<ClusterTransactionResult>(null).WithCancellation(token);
     }
 
     protected override DateTime GetUtcNow()

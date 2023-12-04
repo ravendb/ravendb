@@ -100,9 +100,9 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         return (clusterTransactionCommandResult.Index, array);
     }
 
-    public abstract AsyncWaiter<long?>.RemoveTask CreateClusterTransactionTask(string id, long index, out Task<long?> task);
+    public abstract AsyncWaiter<ClusterTransactionResult>.RemoveTask CreateClusterTransactionTask(string id, long index, out Task<ClusterTransactionResult> task);
 
-    public abstract Task<long?> WaitForDatabaseCompletion(Task<long?> onDatabaseCompletionTask, CancellationToken token);
+    public abstract Task<ClusterTransactionResult> WaitForDatabaseCompletion(Task<ClusterTransactionResult> onDatabaseCompletionTask, CancellationToken token);
     protected abstract DateTime GetUtcNow();
 
     private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
@@ -114,7 +114,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         };
     }
 
-    private async Task<long?> GetClusterTransactionCount(object result, string raftRequestId, long databaseCommandsCount, Task<long?> onDatabaseCompletionTask)
+    private async Task<long?> GetClusterTransactionCount(object result, string raftRequestId, long databaseCommandsCount, Task<ClusterTransactionResult> onDatabaseCompletionTask)
     {
         if (databaseCommandsCount == 0)
             return null;
@@ -122,7 +122,10 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         RequestHandler.ServerStore.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
         long? count;
         using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
-            count = await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
+        {
+            var dbResult = await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
+            count = dbResult?.Count;
+        }
 
         if (count.HasValue)
             return count;

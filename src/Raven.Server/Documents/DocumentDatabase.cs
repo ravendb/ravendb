@@ -763,6 +763,10 @@ namespace Raven.Server.Documents
             try
             {
                 var index = command.Index;
+                var taskResult = new ClusterTransactionResult
+                {
+                    Count = command.PreviousCount
+                };
                 var options = mergedCommands.Options[index];
                 if (options.WaitForIndexesTimeout != null)
                 {
@@ -784,7 +788,7 @@ namespace Raven.Server.Documents
                         {
                             t.GetAwaiter().GetResult(); // Task t is already completed here
                             RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                            ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId, command.PreviousCount);
+                            ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId, taskResult);
                         }
                         catch (Exception e)
                         {
@@ -798,7 +802,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                    ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId, command.PreviousCount);
+                    ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId, taskResult);
                 }
 
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);

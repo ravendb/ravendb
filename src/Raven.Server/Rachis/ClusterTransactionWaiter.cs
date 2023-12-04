@@ -4,15 +4,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
+using Raven.Server.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Rachis
 {
-    public sealed class ClusterTransactionWaiter : AsyncWaiter<long?>
+    public sealed class ClusterTransactionWaiter : AsyncWaiter<ClusterTransactionResult>
     {
-        public RemoveTask CreateTaskForDatabase(string id, long index, DocumentDatabase database, out Task<long?> task)
+        public RemoveTask CreateTaskForDatabase(string id, long index, DocumentDatabase database, out Task<ClusterTransactionResult> task)
         {
-            var t = new TaskCompletionSource<long?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var t = new TaskCompletionSource<ClusterTransactionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             var current = _results.GetOrAdd(id, t);
         
             if (current == t)
