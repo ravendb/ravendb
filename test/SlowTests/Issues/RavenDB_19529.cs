@@ -70,12 +70,12 @@ public class RavenDB_19529 : ReplicationTestBase
         const string documentToDeleteId = "users/2-A";
 
         using (var server = GetNewServer(new ServerCreationOptions
-                    {
-                        CustomSettings = new Dictionary<string, string>
-                        {
-                            [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString(),
-                        }
-                    }))
+        {
+            CustomSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString(),
+            }
+        }))
         using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
         {
             using (var session = store.OpenAsyncSession())
@@ -149,12 +149,12 @@ public class RavenDB_19529 : ReplicationTestBase
 
         using (var storeSrc = GetDocumentStore())
         using (var storeDst = GetDocumentStore(new Options
-               {
-                   ModifyDatabaseRecord = record =>
-                   {
-                       record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
-                   }
-               }))
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+            }
+        }))
         {
             storeDst.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = true }));
 
@@ -164,7 +164,7 @@ public class RavenDB_19529 : ReplicationTestBase
                 sessionSrc.SaveChanges();
             }
 
-            var taskId = SetupReplicationAsync(storeSrc, storeDst).Result.First().TaskId;
+            var taskId = (await SetupReplicationAsync(storeSrc, storeDst)).First().TaskId;
             Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
 
             await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));
@@ -196,63 +196,63 @@ public class RavenDB_19529 : ReplicationTestBase
     }
 
 
-     [Fact(Skip= "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
-     public async Task MergedTransaction_ConflictForDocumentInDifferentCollection_Then_PutUpdateDocumentOnLargeSection_CompressionSetInTheMiddle()
-     {
-         const string specificSizeAndContentDocumentId = "users/1-A";
-         const string documentToConflictId = "users/2-A";
+    [Fact(Skip = "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
+    public async Task MergedTransaction_ConflictForDocumentInDifferentCollection_Then_PutUpdateDocumentOnLargeSection_CompressionSetInTheMiddle()
+    {
+        const string specificSizeAndContentDocumentId = "users/1-A";
+        const string documentToConflictId = "users/2-A";
 
-         using (var storeSrc = GetDocumentStore(new Options
-                {
-                    ModifyDatabaseRecord = record =>
-                    {
-                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
-                    }
-                }))
-         using (var storeDst = GetDocumentStore(new Options
-                {
-                    ModifyDatabaseRecord = record =>
-                    {
-                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
-                    }
-                }))
-         {
-             storeDst.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = true }));
+        using (var storeSrc = GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+            }
+        }))
+        using (var storeDst = GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+            }
+        }))
+        {
+            storeDst.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = true }));
 
-             using (var session = storeSrc.OpenSession())
-             {
-                 session.Store(new User { Name = SpecificContentWithSpecificSize }, specificSizeAndContentDocumentId);
-                 session.SaveChanges();
-             }
+            using (var session = storeSrc.OpenSession())
+            {
+                session.Store(new User { Name = SpecificContentWithSpecificSize }, specificSizeAndContentDocumentId);
+                session.SaveChanges();
+            }
 
-             var taskId = SetupReplicationAsync(storeSrc, storeDst).Result.First().TaskId;
-             Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
+            var taskId = (await SetupReplicationAsync(storeSrc, storeDst)).First().TaskId;
+            Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
 
-             await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));
+            await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));
 
-             using (var sessionDst = storeDst.OpenSession())
-             {
-                 sessionDst.Store(new User { Name = "Document To Conflict" }, documentToConflictId);
-                 sessionDst.SaveChanges();
-             }
+            using (var sessionDst = storeDst.OpenSession())
+            {
+                sessionDst.Store(new User { Name = "Document To Conflict" }, documentToConflictId);
+                sessionDst.SaveChanges();
+            }
 
-             using (var sessionSrc = storeSrc.OpenSession())
-             {
-                 // To create a merge transaction that will be formed after enabling replication, we first need to create a Conflict in different collection...
-                 sessionSrc.Store(new Company { Name = "Another Document To Conflict" }, documentToConflictId);
+            using (var sessionSrc = storeSrc.OpenSession())
+            {
+                // To create a merge transaction that will be formed after enabling replication, we first need to create a Conflict in different collection...
+                sessionSrc.Store(new Company { Name = "Another Document To Conflict" }, documentToConflictId);
 
-                 // ...and then a PUT command
-                 var specificSizeAndContentUser = sessionSrc.Load<User>(specificSizeAndContentDocumentId);
-                 specificSizeAndContentUser.Name += CharToAppend;
+                // ...and then a PUT command
+                var specificSizeAndContentUser = sessionSrc.Load<User>(specificSizeAndContentDocumentId);
+                specificSizeAndContentUser.Name += CharToAppend;
 
-                 sessionSrc.SaveChanges();
-             }
+                sessionSrc.SaveChanges();
+            }
 
-             await SetReplicationConflictResolutionAsync(storeDst, StraightforwardConflictResolution.ResolveToLatest);
-             await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: false));
+            await SetReplicationConflictResolutionAsync(storeDst, StraightforwardConflictResolution.ResolveToLatest);
+            await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: false));
 
-             Assert.True(WaitForDocument<User>(storeDst, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
-                 $"The document '{specificSizeAndContentDocumentId}' wasn't replicated as expected");
-         }
-     }
+            Assert.True(WaitForDocument<User>(storeDst, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
+                $"The document '{specificSizeAndContentDocumentId}' wasn't replicated as expected");
+        }
+    }
 }

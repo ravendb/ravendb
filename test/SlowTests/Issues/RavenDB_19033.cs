@@ -84,7 +84,7 @@ public class RavenDB_19033 : NoDisposalNeeded
                 Assert.Fail("we should never be allowed to start a new database since the database disabled lock created by RemoveLockAndReturn() is still acquired");
 
                 task2.Start();
-                task2.Wait();
+                await task2.WaitAsync(TimeSpan.FromSeconds(30));
             }
         }
 

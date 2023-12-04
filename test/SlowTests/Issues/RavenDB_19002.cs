@@ -37,7 +37,7 @@ public class RavenDB_19002 : NoDisposalNeeded
     }
 
     [Fact]
-    public void ResourceCacheMustNotAllowToLeakDatabaseInstance()
+    public async Task ResourceCacheMustNotAllowToLeakDatabaseInstance()
     {
         var dbsCache = new ResourceCache<MyDb>();
 
@@ -59,7 +59,7 @@ public class RavenDB_19002 : NoDisposalNeeded
         if (database1 == task1)
         {
             task1.Start();
-            task1.Wait();
+            await task1.WaitAsync(TimeSpan.FromSeconds(30));
 
             dbsCache.ForTestingPurposesOnly().OnRemoveLockAndReturnDispose = cache =>
             {
@@ -105,7 +105,7 @@ public class RavenDB_19002 : NoDisposalNeeded
         if (database3 == task3)
         {
             task3.Start();
-            task3.Wait();
+            await task3.WaitAsync(TimeSpan.FromSeconds(30));
         }
 
         using (dbsCache.RemoveLockAndReturn(dbName, x => x.Dispose(), out var db))

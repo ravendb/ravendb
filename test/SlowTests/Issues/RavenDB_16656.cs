@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldIncludeReferenceIndexingDetails()
+        public async Task ShouldIncludeReferenceIndexingDetails()
         {
             using (var store = GetDocumentStore())
             {
@@ -45,7 +46,7 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                var indexInstance = GetDatabase(store.Database).Result.IndexStore.GetIndex(index.IndexName);
+                var indexInstance = (await GetDatabase(store.Database)).IndexStore.GetIndex(index.IndexName);
 
                 var stats = indexInstance.GetIndexingPerformance();
 
