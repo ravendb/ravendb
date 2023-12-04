@@ -74,7 +74,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 Assert.Equal(1, backups1.Count);
 
                 var taskId = backups1.First().TaskId;
-                var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(responsibleDatabase);
                 var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                 Assert.Equal(server.ServerStore.NodeTag, tag);
