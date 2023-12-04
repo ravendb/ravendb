@@ -83,9 +83,14 @@ namespace Voron.Util
             Inner.Grow(_ctx, addition);
         }
 
-        public int MoveTo(Span<T> output)
+        public int CopyTo(Span<T> destination, int startFrom)
         {
-            return Inner.MoveTo(output);
+            return Inner.CopyTo(destination, startFrom);
+        }
+
+        public void CopyTo(Span<T> destination, int startFrom, int count)
+        {
+            Inner.CopyTo(destination, startFrom, count);
         }
 
         public readonly void Sort()

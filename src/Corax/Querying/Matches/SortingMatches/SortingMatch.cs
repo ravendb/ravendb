@@ -26,7 +26,7 @@ namespace Corax.Querying.Matches.SortingMatches;
 public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
-    private readonly Querying.IndexSearcher _searcher;
+    private readonly IndexSearcher _searcher;
     private readonly TInner _inner;
     private readonly OrderMetadata _orderMetadata;
     private readonly CancellationToken _cancellationToken;
@@ -38,19 +38,21 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private ContextBoundNativeList<long> _results;
     private ContextBoundNativeList<SpatialResult> _distancesResults;
     private ContextBoundNativeList<float> _scoresResults;
+    private int _alreadyReadIdx;
     
     
     private SortingDataTransfer _sortingDataTransfer;
     public long TotalResults;
     public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();
 
-    public SortingMatch(Querying.IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
+    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
         _cancellationToken = cancellationToken;
         _take = take;
+        _alreadyReadIdx = 0;
         _results = new ContextBoundNativeList<long>(searcher.Allocator);
         TotalResults = NotStarted;
 
@@ -204,18 +206,24 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             }
         }
 
-        var read = match._results.MoveTo(matches);
-        match._distancesResults.MoveTo(match._sortingDataTransfer.DistancesBuffer);
-        match._scoresResults.MoveTo(match._sortingDataTransfer.ScoresBuffer);
-        
-        if (read != 0) 
+
+        var read = match._results.CopyTo(matches, match._alreadyReadIdx);
+        match._distancesResults.CopyTo(match._sortingDataTransfer.DistancesBuffer, match._alreadyReadIdx, read);
+        match._scoresResults.CopyTo(match._sortingDataTransfer.ScoresBuffer, match._alreadyReadIdx, read);
+
+        if (read != 0)
+        {
+            match._alreadyReadIdx += read;
             return read;
-            
+        }
+
+        match._alreadyReadIdx = 0;
+        
         match._results.Dispose();
         match._entriesBufferScope.Dispose();
         match._scoresResults.Dispose();
         match._distancesResults.Dispose();
-        
+
         return 0;
     }
 

@@ -47,7 +47,6 @@ public readonly unsafe struct PostingListLeafPage
     public void Update(LowLevelTransaction tx, FastPForEncoder encoder, ref ContextBoundNativeList<long> tempList, ref long* additions, ref int additionsCount,
         ref long* removals, ref int removalsCount, long maxValidValue)
     {
-        // TODO: We need to change the tempList to be context bound as we applied operations here that requires the context.
         var maxAdditionsLimit = new Span<long>(additions, additionsCount).BinarySearch(maxValidValue);
         if (maxAdditionsLimit < 0)
             maxAdditionsLimit = ~maxAdditionsLimit;

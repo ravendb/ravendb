@@ -154,26 +154,26 @@ public unsafe struct NativeList<T>
         Count = 0;
     }
 
-    public int MoveTo(Span<T> output)
+    public int CopyTo(Span<T> destination, int startFrom) 
     {
         if (Count == 0)
             return 0;
 
-        var count = Math.Min(Count, output.Length);
-        new Span<T>(RawItems, count).CopyTo(output);
-
-        // Check if we have moved the entire content.
-        if (Count == count)
-        {
-            Count = 0;
-            return count;
-        }
-
-        var theRestToCopy = new Span<T>(RawItems + count, Count - count);
-        theRestToCopy.CopyTo(new Span<T>(RawItems, Capacity));
-        Count = theRestToCopy.Length;
+        var count = Math.Min(Count - startFrom, destination.Length);
+        new Span<T>(RawItems + startFrom, count).CopyTo(destination);
 
         return count;
+    }
+
+    public void CopyTo(Span<T> destination, int startFrom, int count)
+    {
+        if (Count == 0)
+            return;
+
+        if (Math.Min(Count - startFrom, destination.Length) < count)
+            throw new ArgumentOutOfRangeException(nameof(count));
+
+        new Span<T>(RawItems + startFrom, count).CopyTo(destination);
     }
 
     public void Dispose(ByteStringContext ctx)
@@ -235,4 +235,6 @@ public unsafe struct NativeList<T>
         {
         }
     }
+
+
 }
