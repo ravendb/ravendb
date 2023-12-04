@@ -457,7 +457,7 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
-                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -519,7 +519,7 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
-                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -570,7 +570,7 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
-                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -636,7 +636,7 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
-                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -694,7 +694,7 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections)); 
-                var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -735,7 +735,7 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60));
-                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenAsyncSession())
                 {

@@ -355,11 +355,11 @@ namespace SlowTests.Smuggler
                     {
                         await SetupExpiration(exportStore);
                         var person1 = new Person { Name = "Name1" };
-                        await session.StoreAsync(person1).ConfigureAwait(false);
+                        await session.StoreAsync(person1);
                         var metadata = session.Advanced.GetMetadataFor(person1);
                         metadata[Constants.Documents.Metadata.Expires] = database.Time.GetUtcNow().AddSeconds(10).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
-                        await session.SaveChangesAsync().ConfigureAwait(false);
+                        await session.SaveChangesAsync();
                     }
 
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(11);
@@ -377,7 +377,7 @@ namespace SlowTests.Smuggler
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                     using (var session = importStore.OpenAsyncSession())
                     {
-                        var person = await session.LoadAsync<Person>("people/1").ConfigureAwait(false);
+                        var person = await session.LoadAsync<Person>("people/1");
                         Assert.Null(person);
                     }
                 }

@@ -188,9 +188,9 @@ namespace SlowTests.Issues
                 Operation deleteOperation = await store
                     .Operations
                     .SendAsync(new DeleteByQueryOperation("from Users"))
-                    .ConfigureAwait(false);
+;
 
-                await deleteOperation.WaitForCompletionAsync().ConfigureAwait(false);
+                await deleteOperation.WaitForCompletionAsync();
             });
 
             using var newServer = GetNewServer(new ServerCreationOptions
@@ -204,9 +204,9 @@ namespace SlowTests.Issues
             Operation deleteOperation = await store
                 .Operations
                 .SendAsync(new DeleteByQueryOperation("from Users"))
-                .ConfigureAwait(false);
+;
 
-            await deleteOperation.WaitForCompletionAsync().ConfigureAwait(false);
+            await deleteOperation.WaitForCompletionAsync();
         }
 
         [Fact]
@@ -238,9 +238,9 @@ namespace SlowTests.Issues
                 Operation deleteOperation1 = await store
                     .Operations
                     .SendAsync(new DeleteByQueryOperation("from Users"))
-                    .ConfigureAwait(false);
+;
 
-                await deleteOperation1.WaitForCompletionAsync().ConfigureAwait(false);
+                await deleteOperation1.WaitForCompletionAsync();
             }
             catch (Exception e)
             {
@@ -260,9 +260,9 @@ namespace SlowTests.Issues
             Operation deleteOperation = await store
                 .Operations
                 .SendAsync(new DeleteByQueryOperation("from Users"))
-                .ConfigureAwait(false);
+;
 
-            await deleteOperation.WaitForCompletionAsync().ConfigureAwait(false);
+            await deleteOperation.WaitForCompletionAsync();
         }
     }
 }

@@ -396,7 +396,7 @@ namespace SlowTests.Bugs.Caching
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
                 {
-                    await requestExecutor.ExecuteAsync(multiGetCommand, context).ConfigureAwait(false);
+                    await requestExecutor.ExecuteAsync(multiGetCommand, context);
 
                     using (var session2 = store.OpenAsyncSession())
                     {
@@ -470,7 +470,7 @@ namespace SlowTests.Bugs.Caching
                 using var multiGetCommand = multiGetOperation.CreateRequest(requests);
 
                 //Should use the cache here and release it in after that
-                await requestExecutor.ExecuteAsync(multiGetCommand, context).ConfigureAwait(false);
+                await requestExecutor.ExecuteAsync(multiGetCommand, context);
                 Assert.Equal(HttpStatusCode.NotModified, multiGetCommand.Result.First().StatusCode);
             }
         }

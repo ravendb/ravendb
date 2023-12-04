@@ -1596,7 +1596,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (Directory.Exists(backupPath1))
                     Directory.Delete(backupPath1, recursive: true);
 
-                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(documentDatabase);
                 try
                 {
@@ -1658,7 +1658,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (Directory.Exists(backupPath1))
                     Directory.Delete(backupPath1, recursive: true);
 
-                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(documentDatabase);
 
                 try

@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await Server.ServerStore.EnsureNotPassiveAsync();
 
                 using var store = GetDocumentStore();
-                documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(documentDatabase);
                 documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
 

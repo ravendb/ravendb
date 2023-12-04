@@ -94,7 +94,7 @@ namespace SlowTests.Cluster
 
                     try
                     {
-                        task.Wait(TimeSpan.FromSeconds(60));
+                        await task.WaitAsync(TimeSpan.FromSeconds(60));
                     }
                     catch
                     {

@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanMigrateTablesWithCounterWord()
+        public async Task CanMigrateTablesWithCounterWord()
         {
             var backupPath = NewDataPath(forceCreateDir: true);
             var fullBackupPath = Path.Combine(backupPath, "northwind.ravendb-snapshot");
@@ -57,7 +58,7 @@ namespace SlowTests.Issues
                         Assert.Equal(1, details.Counters[0].TotalValue);
                     }
 
-                    var db = GetDatabase(databaseName).Result;
+                    var db = await GetDatabase(databaseName);
 
                     using (var tx = db.DocumentsStorage.Environment.ReadTransaction())
                     {
