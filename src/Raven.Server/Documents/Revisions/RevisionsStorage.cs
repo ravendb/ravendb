@@ -1772,16 +1772,14 @@ namespace Raven.Server.Documents.Revisions
             {
                 foreach (var collection in collections)
                 {
-                    IEnumerable<Table.TableValueHolder> table = null;
-                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: true);
-                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                    var tableName = new CollectionName(collection).GetTableName(CollectionTableType.Revisions);
                     var revisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
                     if (revisions == null) // there is no revisions for that collection
                     {
                         continue;
                     }
 
-                    table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
+                    var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
 
                     collectionsTables.Add(table);
                 }
