@@ -23,7 +23,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 
         protected override EnforceRevisionsConfigurationOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
         {
-            return JsonDeserializationServer.Parameters.EnforceRevisionsConfigurationOperationParameters(json);
+            var parameters = JsonDeserializationServer.Parameters.EnforceRevisionsConfigurationOperationParameters(json);
+            parameters.Collections = parameters.Collections?.Length > 0 ? parameters.Collections : null;
+            return parameters;
         }
 
         protected override RavenCommand<OperationIdResult> GetCommand(JsonOperationContext context, int shardNumber, EnforceRevisionsConfigurationOperation.Parameters parameters)

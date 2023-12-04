@@ -21,13 +21,15 @@ internal sealed class AdminRevisionsHandlerProcessorForEnforceRevisionsConfigura
 
     protected override EnforceRevisionsConfigurationOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
     {
-        return JsonDeserializationServer.Parameters.EnforceRevisionsConfigurationOperationParameters(json);
+        var parameters = JsonDeserializationServer.Parameters.EnforceRevisionsConfigurationOperationParameters(json);
+        parameters.Collections = parameters.Collections?.Length > 0 ? parameters.Collections : null;
+        return parameters;
     }
 
     protected override Task<IOperationResult> ExecuteOperation(Action<IOperationProgress> onProgress, EnforceRevisionsConfigurationOperation.Parameters parameters, OperationCancelToken token)
     {
         return RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, parameters.IncludeForceCreated, 
-            parameters.Collections.ToHashSet(StringComparer.OrdinalIgnoreCase), token);
+            parameters.Collections?.ToHashSet(StringComparer.OrdinalIgnoreCase), token);
     }
 }
 

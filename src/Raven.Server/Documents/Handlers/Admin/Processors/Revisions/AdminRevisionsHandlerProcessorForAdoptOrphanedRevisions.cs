@@ -22,12 +22,14 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
         protected override AdoptOrphanedRevisionsOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
         {
-            return JsonDeserializationServer.Parameters.AdoptOrphanedRevisionsConfigurationOperationParameters(json);
+            var parameters = JsonDeserializationServer.Parameters.AdoptOrphanedRevisionsConfigurationOperationParameters(json);
+            parameters.Collections = parameters.Collections?.Length > 0 ? parameters.Collections : null;
+            return parameters;
         }
 
         protected override Task<IOperationResult> ExecuteOperation(Action<IOperationProgress> onProgress, AdoptOrphanedRevisionsOperation.Parameters parameters, OperationCancelToken token)
         {
-            return RequestHandler.Database.DocumentsStorage.RevisionsStorage.AdoptOrphanedAsync(onProgress, parameters.Collections.ToHashSet(), token);
+            return RequestHandler.Database.DocumentsStorage.RevisionsStorage.AdoptOrphanedAsync(onProgress, parameters.Collections?.ToHashSet(), token);
         }
     }
 }
