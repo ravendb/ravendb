@@ -651,24 +651,15 @@ namespace Corax.Indexing
 
         private void ResetWriter()
         {
-            _pforDecoder.Dispose();
             _indexedEntries.Clear();
-
-            for (int i = 0; i < _termsPerEntryId.Count; i++)
-            {
-                _termsPerEntryId.RawItems[i].Dispose(_entriesAllocator);
-            }
-            _termsPerEntryId.Dispose(_entriesAllocator);
-            _termsPerEntryIds.Dispose(_entriesAllocator);
             _deletedEntries.Clear();
             _entriesAlreadyAdded.Clear();
             _additionsForTerm.Clear();
             _removalsForTerm.Clear();
-            //_tempListBuffer.Dispose();
-            
-            for (int i = 0; i < _knownFieldsTerms.Length; i++)
+
+            foreach (var term in _knownFieldsTerms)
             {
-                _knownFieldsTerms[i].Clear();
+                term.Clear();
             }
             
             if (_dynamicFieldsTerms != null)
@@ -679,6 +670,8 @@ namespace Corax.Indexing
                 }
             }
             
+            // PERF: Since we are resetting the entries allocator, we can avoid disposing every internal data structure
+            // that uses the allocator internally. 
             _entriesAllocator.Reset();
             _entriesToTermsBuffer = new(_entriesAllocator);
             _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
