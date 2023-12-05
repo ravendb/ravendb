@@ -72,8 +72,7 @@ public class RavenDataAttribute : DataAttribute
 
     internal static IEnumerable<(RavenSearchEngineMode SearchEngineMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
     {
-        //We do not have the possibility to easily skip the test when only inline data is Corax, so let's run it. In the case of 'All,' we will not run Corax.
-        if (mode is RavenSearchEngineMode.Corax)
+        if (mode.HasFlag(RavenSearchEngineMode.Corax))
         {
             var coraxOptions = options.Clone();
             coraxOptions.SearchEngineMode = RavenSearchEngineMode.Corax;
