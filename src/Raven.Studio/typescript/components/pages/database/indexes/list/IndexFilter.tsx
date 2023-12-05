@@ -158,9 +158,9 @@ export default function IndexFilter(props: IndexFilterProps) {
 
 const sortByOptions: sortItem<IndexSortBy>[] = [
     { value: "name", label: "Name" },
-    { value: "createdTimestamp", label: "Creation date" },
-    { value: "lastIndexingTime", label: "Last indexing date" },
-    { value: "lastQueryingTime", label: "Last querying date" },
+    { value: "createdTimestamp", label: "Creation time" },
+    { value: "lastIndexingTime", label: "Last indexing time" },
+    { value: "lastQueryingTime", label: "Last querying time" },
 ];
 
 const sortDirectionOptions: sortItem<SortDirection>[] = [
