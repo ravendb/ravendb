@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
@@ -29,7 +30,7 @@ public class RavenDB_19951 : RavenTestBase
             new PutClientCertificateOperation("test",
                 certificates.ClientCertificate1.Value,
                 new(),
-                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key, TwoFactorAuthenticationValidityPeriod = TimeSpan.FromMinutes(5)});
+                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key});
 
 
         using (var firstClient = new TwoFactorClient(store, certificates.ClientCertificate1.Value))
@@ -68,7 +69,7 @@ public class RavenDB_19951 : RavenTestBase
             new PutClientCertificateOperation("test",
                 certificates.ClientCertificate1.Value,
                 new(),
-                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key, TwoFactorAuthenticationValidityPeriod = TimeSpan.FromMinutes(5)});
+                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key});
 
         using (var firstClient = new TwoFactorClient(store, certificates.ClientCertificate1.Value))
         {
@@ -100,7 +101,7 @@ public class RavenDB_19951 : RavenTestBase
             new PutClientCertificateOperation("test",
                 certificates.ClientCertificate1.Value,
                 new(),
-                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key, TwoFactorAuthenticationValidityPeriod = TimeSpan.FromMinutes(5)});
+                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key});
 
         using (var firstClient = new TwoFactorClient(store, certificates.ClientCertificate1.Value))
         {
@@ -140,7 +141,7 @@ public class RavenDB_19951 : RavenTestBase
             new PutClientCertificateOperation("test",
                 certificates.ClientCertificate1.Value,
                 new(),
-                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key, TwoFactorAuthenticationValidityPeriod = TimeSpan.FromMinutes(5)});
+                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key});
 
         using (var firstClient = new TwoFactorClient(store, certificates.ClientCertificate1.Value))
         {
@@ -161,6 +162,112 @@ public class RavenDB_19951 : RavenTestBase
             }
         }
     }
+
+    [Fact]
+    public async Task Disable2FAWorksProperly()
+    {
+        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        
+        string key = TwoFactorAuthentication.GenerateSecret();
+        
+        await store.Maintenance.Server.SendAsync(
+            new PutClientCertificateOperation("test",
+                certificates.ClientCertificate1.Value,
+                new(),
+                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key});
+
+        using (var firstClient = new TwoFactorClient(store, certificates.ClientCertificate1.Value))
+        {
+        }
+    }
+
+    [Fact]
+    public async Task DoNotOutputAuthenticationKeyInCertificatesResponse()
+    {
+        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        
+        string key = TwoFactorAuthentication.GenerateSecret();
+        
+        await store.Maintenance.Server.SendAsync(
+            new PutClientCertificateOperation("test",
+                certificates.ClientCertificate1.Value,
+                new(),
+                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key});
+
+        using (var client = new TwoFactorClient(store, certificates.ClientCertificate1.Value))
+        {
+            string validationCode = TwoFactorAuthentication.CreateValidationCode(key);
+            await client.PostToken(validationCode, true);
+            
+            // certificates endpoint (metadata only)
+            var certificatesResponse = await client.CertificatesRequest(true);
+            Assert.DoesNotContain(key, certificatesResponse);
+            
+            // certificates endpoint (all info)
+            certificatesResponse = await client.CertificatesRequest(false);
+            Assert.DoesNotContain(key, certificatesResponse);
+            
+            // who am I endpoint
+            var whoAmI = await client.WhoAmIRequest();
+            Assert.DoesNotContain(key, whoAmI);
+        }
+    }
+    
+    [Fact]
+    public async Task CantAccessWhenCodeIsInvalid()
+    {
+        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        
+        string key = TwoFactorAuthentication.GenerateSecret();
+        
+        await store.Maintenance.Server.SendAsync(
+            new PutClientCertificateOperation("test",
+                certificates.ClientCertificate1.Value,
+                new(),
+                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key});
+
+        using (var client = new TwoFactorClient(store, certificates.ClientCertificate1.Value))
+        {
+            string validationCode = "000000"; // invalid code
+            
+            var e = await Assert.ThrowsAsync<Exception>(() => client.PostToken(validationCode, true));
+            Assert.Contains("Wrong token provided for", e.Message);
+            
+            e = await Assert.ThrowsAsync<Exception>(() => client.ProtectedRequest());
+            Assert.Contains("requires two factor authorization to be valid", e.Message);
+        }
+    }
+
+    [Fact]
+    public async Task EditCertificateDoesntOverrideTwoFactorConfig()
+    {
+        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        
+        string key = TwoFactorAuthentication.GenerateSecret();
+        
+        await store.Maintenance.Server.SendAsync(
+            new PutClientCertificateOperation("test",
+                certificates.ClientCertificate1.Value,
+                new(),
+                SecurityClearance.Operator) {TwoFactorAuthenticationKey = key});
+        
+        await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+        {
+            Thumbprint = certificates.ClientCertificate1.Value.Thumbprint, Name = "test", Clearance = SecurityClearance.Operator, Permissions = new Dictionary<string, DatabaseAccess>()
+        }));
+        
+        using (var firstClient = new TwoFactorClient(store, certificates.ClientCertificate1.Value))
+        {
+            var e = await Assert.ThrowsAsync<Exception>(() => firstClient.ProtectedRequest());
+            Assert.Contains("requires two factor authorization to be valid", e.Message);
+
+            string validationCode = TwoFactorAuthentication.CreateValidationCode(key);
+            await firstClient.PostToken(validationCode, false);
+
+            await firstClient.ProtectedRequest();
+        }
+    }
+
 
     class TwoFactorClient : IDisposable
     {
@@ -203,6 +310,22 @@ public class RavenDB_19951 : RavenTestBase
         {
             var response = await _client.GetAsync(_store.Urls[0] + "/databases");
             await HandleResponse(response);
+        }
+
+        public async Task<string> WhoAmIRequest()
+        {
+            var response = await _client.GetAsync(_store.Urls[0] + "/certificates/whoami");
+            await HandleResponse(response);
+
+            return await response.Content.ReadAsStringAsync();
+        }
+        
+        public async Task<string> CertificatesRequest(bool metadataOnly)
+        {
+            var response = await _client.GetAsync(_store.Urls[0] + "/admin/certificates?metadataOnly=" + metadataOnly);
+            await HandleResponse(response);
+
+            return await response.Content.ReadAsStringAsync();
         }
 
         public async Task Logout()

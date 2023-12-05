@@ -39,11 +39,11 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
 
     [RavenAction("/authentication/2fa", "POST", AuthorizationStatus.UnauthenticatedClients)]
     public async Task ValidateTotp()
-    {        
+    {
         using var _ = ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
         ctx.OpenReadTransaction();
 
-        bool hasLimits = GetBoolValueQueryString("hasLimits", false) ?? true; //tODO: default to false?
+        bool hasLimits = GetBoolValueQueryString("hasLimits", false) ?? true;
 
         var clientCert = GetCurrentCertificate();
 
@@ -72,10 +72,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
 
         if (TwoFactorAuthentication.ValidateCode(key, token))
         {
-            if (certificate.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationValidityPeriod), out TimeSpan period) == false)
-            {
-                period = TimeSpan.FromHours(2); //TODO: configure this time!
-            }
+            var period = TimeSpan.FromHours(2);
             
             if (_auditLogger.IsInfoEnabled)
             {

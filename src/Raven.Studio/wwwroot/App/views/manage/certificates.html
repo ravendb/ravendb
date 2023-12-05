@@ -477,7 +477,7 @@
                                         </a>
                                     </li>
                                 </ul>
-                                <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: !$root.showDatabasesSelector()">
+                                <div class="bg-info padding padding-sm flex-horizontal margin-bottom" data-bind="visible: !$root.showDatabasesSelector()">
                                     <div class="flex-start">
                                         <i class="icon-info"></i>
                                     </div>
@@ -486,8 +486,34 @@
                                     </div>
                                 </div>
                             </div>
+                            <div data-bind="visible: mode() === 'editExisting' && hasTwoFactor()">
+                                <div class="form-group">
+                                    <label class="control-label">
+                                        Two-factor
+                                    </label>
+                                    <div class="btn-group btn-block">
+                                        <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                            <span data-bind="text: twoFactorActionOnEditLabel"></span> <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: $data.constructor.twoFactorEditModes">
+                                            <li>
+                                                <a href="#" data-bind="text: label, click: _.partial($parent.twoFactorActionOnEdit, value)"></a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="bg-warning padding padding-sm flex-horizontal margin-bottom" data-bind="visible: twoFactorActionOnEdit() === 'delete'">
+                                    <div class="flex-start">
+                                        <i class="icon-info"></i>
+                                    </div>
+                                    <div class="small">
+                                        Two-Factor authentication (2FA) will be disabled for this certificate.
+                                    </div>
+                                </div>
+                            </div>
                             <div data-bind="visible: mode() === 'generate' || mode() === 'upload' || mode() === 'editExisting'">
-                                <div class="checkbox">
+                                <div class="checkbox" data-bind="visible: !hasTwoFactor()">
                                     <input id="requireTwoFactor" type="checkbox" data-bind="checked: requireTwoFactor">
                                     <label for="requireTwoFactor">Require two-factor authentication</label>
                                 </div>

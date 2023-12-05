@@ -8,6 +8,9 @@ import appUrl = require("common/appUrl");
 import license = require("models/auth/licenseModel");
 import forgotTwoFactorSecretCommand from "commands/auth/forgotTwoFactorSecretCommand";
 import endpoints = require("endpoints");
+import moment = require("moment");
+import clientCertificateModel from "models/auth/clientCertificateModel";
+import viewHelpers from "common/helpers/view/viewHelpers";
 
 class footerStats {
     countOfDocuments = ko.observable<number>();
@@ -32,10 +35,23 @@ class footer {
     urlForStaleIndexes = ko.pureComputed(() => appUrl.forIndexes(this.db(), null, true));
     urlForIndexingErrors = ko.pureComputed(() => appUrl.forIndexErrors(this.db()));
     urlForAbout = appUrl.forAbout();
+    
+    twoFactorSessionExpiration: KnockoutComputed<moment.Moment>;
 
     licenseClass = license.licenseCssClass;
     supportClass = license.supportCssClass;
 
+    constructor() {
+        this.twoFactorSessionExpiration = ko.pureComputed(() => {
+            const certInfo = clientCertificateModel.certificateInfo();
+            if (certInfo.HasTwoFactor) {
+                return moment.utc(certInfo.TwoFactorExpirationDate);
+            } else {
+                return null;
+            }
+        });
+    }
+    
     forDatabase(db: database) {
         this.db(db);
         this.stats(null);
@@ -63,14 +79,18 @@ class footer {
                 this.stats(newStats);
             })
             .always(() => this.spinners.loading(false));
-
     }
     
     logout() {
-        new forgotTwoFactorSecretCommand()
-            .execute()
-            .done(() => {
-                window.location.href = location.origin + endpoints.global.studio._2faIndex_html;
+        viewHelpers.confirmationMessage("Log out", "Are you sure you want to log out?")
+            .done(result => {
+                if (result.can) {
+                    new forgotTwoFactorSecretCommand()
+                        .execute()
+                        .done(() => {
+                            window.location.href = location.origin + endpoints.global.studio._2faIndex_html;
+                        });
+                }
             });
     }
 

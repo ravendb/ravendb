@@ -330,6 +330,11 @@
                     <i class="icon-play"></i> <span>Continue test</span>
                 </button>
             </div>
+            <div class="footer-item" data-bind="visible: twoFactorSessionExpiration">
+                <a class="btn btn-warning btn-sm" title="Log out" data-bind="click: logout">
+                    Log out
+                </a>
+            </div>
             <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
                 <a data-bind="attr: { href: $root.urlForCluster() }" title="Voting in progress"><i class="icon-cluster-node"></i><span>Voting in progress</span></a>
             </div>
@@ -388,11 +393,6 @@
             <div class="footer-item">
                 <a title="Support Information" data-bind="attr: { href: urlForAbout, class: supportClass() + ' support btn btn-sm' }">
                     <i class="icon-support"></i>
-                </a>
-            </div>
-            <div class="footer-item">
-                <a class="btn btn-success btn-sm" title="Log out" data-bind="click: logout">
-                    <i class="icon-user"></i>
                 </a>
             </div>
         </div>
