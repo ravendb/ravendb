@@ -18,7 +18,6 @@ import { Icon } from "components/common/Icon";
 import { ConfirmSwapSideBySideIndex } from "./ConfirmSwapSideBySideIndex";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
-import { todo } from "common/developmentHelper";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
@@ -107,8 +106,6 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const isNewIndexDisabled =
         staticClusterLimitStatus === "limitReached" || staticDatabaseLimitStatus === "limitReached";
-
-    todo("Other", "Damian", "Move limits to separate component");
 
     if (loading) {
         return <LoadingView />;
