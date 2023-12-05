@@ -46,7 +46,8 @@ public class TwoFactor
         public string ExpectedCookieValue;
     }
     
-    public bool ValidateTwoFactorConnectionLimits(string certificateThumbprint, string userIpAddress)
+    
+    public bool ValidateTwoFactorConnectionLimits(string certificateThumbprint)
     {
         if (_twoFactorAuthTimeByCertThumbprintExpiry.TryGetValue(certificateThumbprint, out var twoFactorAuthRegistration))
         {
@@ -62,31 +63,41 @@ public class TwoFactor
         return false;
     }
     
-    public bool ValidateTwoFactorRequestLimits(RouteInformation routeInformation, HttpContext context, TwoFactor.TwoFactorAuthRegistration twoFactorAuthRegistration, out string msg)
+    public bool ValidateTwoFactorRequestLimits(RouteInformation routeInformation, HttpContext context, TwoFactorAuthRegistration twoFactorAuthRegistration, out string msg)
     {
-        if (twoFactorAuthRegistration is {HasLimits: true})
+        
+        if (routeInformation.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients)
         {
-            if (routeInformation.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients)
-            {
-                msg = null;
-                return true;
-            }
-
-            if (context.Request.Cookies.TryGetValue(TwoFactorAuthentication.CookieName, out var cookieStr) == false)
-            {
-                msg = $"Missing the '{TwoFactorAuthentication.CookieName}' in the request";
-                return false;
-            }
-
-            var cookie = MemoryMarshal.Cast<char, byte>(cookieStr);
-            var expected = MemoryMarshal.Cast<char, byte>(twoFactorAuthRegistration.ExpectedCookieValue);
-            if (CryptographicOperations.FixedTimeEquals(cookie, expected) == false)
-            {
-                msg = "Expected cookie value does not match provided value";
-                return false;
-            }
+            msg = null;
+            return true;
         }
         
+        switch (twoFactorAuthRegistration)
+        {
+            case null:
+                msg = "Missing TwoFactor Session. User either was logged out or session expired.";
+                return false;
+            
+            case {HasLimits: true}:
+            {
+                if (context.Request.Cookies.TryGetValue(TwoFactorAuthentication.CookieName, out var cookieStr) == false)
+                {
+                    msg = $"Missing the '{TwoFactorAuthentication.CookieName}' in the request";
+                    return false;
+                }
+
+                var cookie = MemoryMarshal.Cast<char, byte>(cookieStr);
+                var expected = MemoryMarshal.Cast<char, byte>(twoFactorAuthRegistration.ExpectedCookieValue);
+                if (CryptographicOperations.FixedTimeEquals(cookie, expected) == false)
+                {
+                    msg = "Expected cookie value does not match provided value";
+                    return false;
+                }
+
+                break;
+            }
+        }
+
         msg = null;
         return true;
     }

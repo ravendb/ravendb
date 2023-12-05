@@ -86,7 +86,7 @@ namespace Raven.Server.Https
                 certificate = await tlsConnectionFeature.GetClientCertificateAsync(context.ConnectionClosed);
 
             var httpConnectionFeature = context.Features.Get<IHttpConnectionFeature>();
-            var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, httpConnectionFeature, ((IPEndPoint)context.RemoteEndPoint)?.Address);
+            var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, httpConnectionFeature);
 
             // build the token
             context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);

@@ -1484,6 +1484,7 @@ namespace Raven.Server
 
         public class AuthenticateConnection : IHttpAuthenticationFeature
         {
+            public bool RequiresTwoFactor;
             private TwoFactor _twoFactor;
             
             public Dictionary<string, DatabaseAccess> AuthorizedDatabases = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
@@ -1491,6 +1492,7 @@ namespace Raven.Server
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
+            
             public readonly DateTime CreatedAt = SystemTime.UtcNow;
 
             public AuthenticateConnection(TwoFactor twoFactor)
@@ -1553,7 +1555,8 @@ namespace Raven.Server
 
             public string WrongProtocolMessage;
 
-            private AuthenticationStatus _status, _statusAfterTwoFactorAuth;
+            private AuthenticationStatus _status;
+            private AuthenticationStatus? _statusAfterTwoFactorAuth;
 
             public AuthenticationStatus StatusForAudit => _status;
 
@@ -1567,7 +1570,13 @@ namespace Raven.Server
 
             public void SuccessfulTwoFactorAuthentication()
             {
-                _status = _statusAfterTwoFactorAuth;
+                // _statusAfterTwoFactorAuth is nullable
+                // when we override existing configuration we skip WaitingForTwoFactorAuthentication stage
+                
+                if (_statusAfterTwoFactorAuth.HasValue)
+                    _status = _statusAfterTwoFactorAuth.Value;
+
+                _statusAfterTwoFactorAuth = null;
             }
             
             public AuthenticationStatus Status
@@ -1614,7 +1623,7 @@ namespace Raven.Server
             }
         }
 
-        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo, IPAddress address)
+        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
         {
             var authenticationStatus = new AuthenticateConnection(TwoFactor)
             {
@@ -1672,14 +1681,15 @@ namespace Raven.Server
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
 
                         authenticationStatus.SetBasedOnCertificateDefinition(definition);
+
+                        var hasTwoFactorKey = cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
+
+                        authenticationStatus.RequiresTwoFactor = hasTwoFactorKey;
                         
-                        if (cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _))
+                        if (authenticationStatus.RequiresTwoFactor && TwoFactor.ValidateTwoFactorConnectionLimits(certificate.Thumbprint) == false)
                         {
-                            if (TwoFactor.ValidateTwoFactorConnectionLimits(certificate.Thumbprint, address.ToString()) == false)
-                            {
-                                authenticationStatus.WaitingForTwoFactorAuthentication();
-                                return authenticationStatus;
-                            }
+                            authenticationStatus.WaitingForTwoFactorAuthentication();
+                            return authenticationStatus;
                         }
                     }
                 }
@@ -2547,7 +2557,7 @@ namespace Raven.Server
             }
 
             var certificate = (X509Certificate2)sslStream.RemoteCertificate;
-            var auth = AuthenticateConnectionCertificate(certificate, tcpClient, ((IPEndPoint)tcpClient.Client.RemoteEndPoint)?.Address);
+            var auth = AuthenticateConnectionCertificate(certificate, tcpClient);
 
             switch (auth.Status)
             {

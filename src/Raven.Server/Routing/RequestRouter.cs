@@ -151,7 +151,7 @@ namespace Raven.Server.Routing
                 {
                     var httpConnectionFeature = context.Features.Get<IHttpConnectionFeature>();
                     
-                    feature = _ravenServer.AuthenticateConnectionCertificate(feature.Certificate, httpConnectionFeature, context.Connection.RemoteIpAddress);
+                    feature = _ravenServer.AuthenticateConnectionCertificate(feature.Certificate, httpConnectionFeature);
                     context.Features.Set<IHttpAuthenticationFeature>(feature);
 
                     if (CanAccessRoute(route, context, database?.Name, feature))
@@ -163,24 +163,21 @@ namespace Raven.Server.Routing
                 return (false, feature.Status);
             }
 
-
-            var twoFactorRegistration = feature.TwoFactorAuthRegistration;
-            
-            if (_ravenServer.TwoFactor.ValidateTwoFactorRequestLimits(route, context, twoFactorRegistration, out var twoFactorMsg) == false)
+            if (feature.RequiresTwoFactor && _ravenServer.TwoFactor.ValidateTwoFactorRequestLimits(route, context, feature.TwoFactorAuthRegistration, out var twoFactorMsg) == false)
             {
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
                     var auditLog = LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit");
                     auditLog.Info($"Rejected request {context.Request.Method} {context.Request.GetFullUrl()} because: {twoFactorMsg}");
                 }
-                
+
                 feature.WaitingForTwoFactorAuthentication();
 
                 await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
-                
+
                 return (false, RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidLimit);
             }
-            
+
             return (true, feature.Status);
         }
 
