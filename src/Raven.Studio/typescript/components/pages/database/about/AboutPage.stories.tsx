@@ -29,6 +29,9 @@ export default {
 
 interface DefaultAboutPageProps {
     licenseType: Raven.Server.Commercial.LicenseType;
+    isCloud: boolean;
+    isEnabled: boolean;
+    isIsv: boolean;
     status: Raven.Server.Commercial.Status;
     licenseServerConnection: boolean;
     newVersionAvailable?: string;
@@ -39,6 +42,9 @@ export const AboutTemplate: StoryObj<DefaultAboutPageProps> = {
     name: "About Page",
     render: ({
         licenseType,
+        isCloud,
+        isEnabled,
+        isIsv,
         status,
         licenseServerConnection,
         newVersionAvailable,
@@ -47,9 +53,11 @@ export const AboutTemplate: StoryObj<DefaultAboutPageProps> = {
         return (
             <AboutPage
                 licenseType={licenseType}
+                isCloud={isCloud}
+                isEnabled={isEnabled}
+                isIsv={isIsv}
                 status={status}
                 licenseExpiration={Date()}
-                supportId="5234067"
                 licenseServerConnection={licenseServerConnection}
                 newVersionAvailable={newVersionAvailable}
             />
@@ -57,6 +65,9 @@ export const AboutTemplate: StoryObj<DefaultAboutPageProps> = {
     },
     args: {
         licenseType: "Enterprise",
+        isCloud: false,
+        isEnabled: true,
+        isIsv: false,
         status: "NoSupport",
         licenseServerConnection: true,
         databaseAccess: "DatabaseAdmin",
