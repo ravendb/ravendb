@@ -11,7 +11,6 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string PublicKeyPinningHash;
         public string TwoFactorAuthenticationKey;
-        public TimeSpan TwoFactorAuthenticationValidityPeriod = TimeSpan.FromHours(2);
 
         public PutCertificateCommand()
         {
@@ -47,7 +46,6 @@ namespace Raven.Server.ServerWide.Commands
             djv[nameof(Name)] = Name;
             djv[nameof(Value)] = Value?.ToJson();
             djv[nameof(TwoFactorAuthenticationKey)] = TwoFactorAuthenticationKey;
-            djv[nameof(TwoFactorAuthenticationValidityPeriod)] = TwoFactorAuthenticationValidityPeriod;
             djv[nameof(PublicKeyPinningHash)] = PublicKeyPinningHash;
             return djv;
         }
@@ -60,7 +58,6 @@ namespace Raven.Server.ServerWide.Commands
             if (string.IsNullOrEmpty(TwoFactorAuthenticationKey) == false)
             {
                 djv[nameof(TwoFactorAuthenticationKey)] = TwoFactorAuthenticationKey;
-                djv[nameof(TwoFactorAuthenticationValidityPeriod)] = TwoFactorAuthenticationValidityPeriod;
             }
             return djv;
         }

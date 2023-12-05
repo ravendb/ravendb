@@ -101,7 +101,6 @@ class shell extends viewModelBase {
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
     
-    
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
@@ -291,23 +290,31 @@ class shell extends viewModelBase {
         super.attached();
 
         if (this.clientCertificate() && this.clientCertificate().Name) {
-            const dbAccessArray = certificateModel.resolveDatabasesAccess(this.clientCertificate());
+            
+            const tooltipProvider = () => {
+                const dbAccessArray = certificateModel.resolveDatabasesAccess(this.clientCertificate());
 
-            const allowedDatabasesText = dbAccessArray.length ?
-                dbAccessArray.map(x => `<div>
+                const allowedDatabasesText = dbAccessArray.length ?
+                    dbAccessArray.map(x => `<div>
                                             <strong>${genUtils.escapeHtml(x.dbName)}</strong>
                                             <span class="${this.accessManager.getAccessColor(x.accessLevel)} margin-left">
                                                          ${accessManager.default.getAccessLevelText(x.accessLevel)}
                                             </span>
                                         </div>`).join("")
-                : "No access granted";
-            
-            const notAfter = this.clientCertificate().NotAfter;
-            const notAfterUtc = moment(notAfter).utc();
-            
-            const expirationDate = notAfter ? `${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span>` : "n/a";
-            
-            const authenticationInfo = `<dl class="dl-horizontal margin-none client-certificate-info">
+                    : "No access granted";
+
+                const notAfter = this.clientCertificate().NotAfter;
+                const notAfterUtc = moment(notAfter).utc();
+
+                const expirationDate = notAfter ? `${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span>` : "n/a";
+
+                const twoFactorPart = this.footer.twoFactorSessionExpiration() ?
+                    `<dt>2FA Session Expiration:</dt>
+                      <dd><strong>${this.footer.twoFactorSessionExpiration().local().format("YYYY-MM-DD HH:mm:ss")}
+                       (${genUtils.formatDurationByDate(this.footer.twoFactorSessionExpiration(), true)})</strong></dd>`
+                    : "";
+
+                return `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
                             <dt>Expiration Date</dt>
@@ -318,11 +325,13 @@ class shell extends viewModelBase {
                             <dd><strong>${certificateModel.clearanceLabelFor(this.clientCertificate().SecurityClearance)}</strong></dd>
                             <dt><span>Access to databases:</span></dt>
                             <dd><span>${allowedDatabasesText}</span></dd>
+                            ${twoFactorPart}
                           </dl>`;
+            }
             
             popoverUtils.longWithHover($(".js-client-cert"),
                 {
-                    content: authenticationInfo,
+                    content: tooltipProvider,
                     placement: 'top',
                     sanitize: false
                 } as PopoverOptions);

@@ -501,11 +501,6 @@ namespace Raven.Server.Routing
                     statusCode = (int)HttpStatusCode.PreconditionRequired;
                     message = $"The supplied client certificate '{name}' requires two factor authorization to be valid. Please POST the relevant TOTP value to /authentication/2fa";
                 }
-                else if (feature.Status == RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidLimit)
-                {
-                    statusCode = (int)HttpStatusCode.PreconditionRequired;
-                    message = $"The supplied client certificate '{name}' requires two factor authorization and is limited to a specified IP address, but this request came from a different IP address. Please POST the relevant TOTP value to /authentication/2fa to register this IP address";
-                }
                 else
                 {
                     message = "Access to the server was denied.";
