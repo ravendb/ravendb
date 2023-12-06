@@ -366,11 +366,22 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (from == DateTime.MinValue && to == DateTime.MaxValue)
                 {
-                    table.DeleteByKey(slicer.TimeSeriesKeySlice);
+                    table.DeleteByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice);
                     Stats.DeleteStats(context, collectionName, slicer.StatsKey);
 
                     if (updateMetadata)
                         RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+
+                    context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
+                    {
+                        ChangeVector = remoteChangeVector,
+                        DocumentId = documentId,
+                        Name = name,
+                        Type = TimeSeriesChangeTypes.Delete,
+                        From = from,
+                        To = to,
+                        CollectionName = collection
+                    });
 
                     return remoteChangeVector;
                 }
@@ -427,13 +438,10 @@ namespace Raven.Server.Documents.TimeSeries
                         if (baseline > end)
                             return false;
 
-                        if (remoteChangeVector != null)
+                        if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
                         {
-                            if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
-                            {
-                                // the deleted range is older than this segment, so we don't touch this segment
-                                return false;
-                            }
+                            // the deleted range is older than this segment, so we don't touch this segment
+                            return false;
                         }
 
                         if (readOnlySegment.NumberOfLiveEntries == 0)

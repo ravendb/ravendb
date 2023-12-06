@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
@@ -71,6 +72,12 @@ namespace SlowTests.Issues
                 }
 
                 Assert.True(await WaitForDocumentInClusterAsync<User>(nodes, store.Database, user2.Id, u => u.Name == "Shiran2", TimeSpan.FromSeconds(30)));
+
+                foreach (var server in nodes)
+                {
+                    var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation(server.DebugTag, server.ServerStore.NodeTag));
+                    Assert.Equal(0, stats.CountOfTimeSeriesSegments);
+                }
             }
         }
     }
