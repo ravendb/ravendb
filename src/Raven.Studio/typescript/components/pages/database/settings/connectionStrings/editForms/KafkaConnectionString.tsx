@@ -3,19 +3,18 @@ import { FormInput } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
-import { tryHandleSubmit } from "components/utils/common";
-import { EditConnectionStringFormProps, KafkaConnection } from "../connectionStringsTypes";
+import { ConnectionFormData, EditConnectionStringFormProps, KafkaConnection } from "../connectionStringsTypes";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
-import { useDispatch } from "react-redux";
-import { connectionStringsActions } from "../store/connectionStringsSlice";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
 import ConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+
+type FormData = ConnectionFormData<KafkaConnection>;
 
 interface KafkaConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: KafkaConnection;
@@ -25,17 +24,16 @@ export default function KafkaConnectionString({
     db,
     initialConnection,
     isForNewConnection,
+    onSave,
 }: KafkaConnectionStringProps) {
-    const dispatch = useDispatch();
-
     const { control, handleSubmit, formState } = useForm<FormData>({
         mode: "all",
-        defaultValues: getDefaultValues(initialConnection),
+        defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
     });
 
     const connectionOptionsFieldArray = useFieldArray({
-        name: "ConnectionOptions",
+        name: "connectionOptions",
         control,
     });
 
@@ -46,55 +44,29 @@ export default function KafkaConnectionString({
     const asyncTest = useAsyncCallback(() => {
         return databasesService.testKafkaServerConnection(
             db,
-            formValues.BootstrapServers,
+            formValues.bootstrapServers,
             false,
-            getConnectionOptionsDto(formValues.ConnectionOptions)
+            getConnectionOptionsDto(formValues.connectionOptions)
         );
     });
 
-    const isTestButtonDisabled = !formValues.BootstrapServers;
+    const isTestButtonDisabled = !formValues.bootstrapServers;
 
-    const onSave: SubmitHandler<FormData> = async (formData) => {
-        return tryHandleSubmit(async () => {
-            await databasesService.saveConnectionString(db, {
-                Type: "Queue",
-                BrokerType: "Kafka",
-                Name: formData.Name,
-                KafkaConnectionSettings: {
-                    BootstrapServers: formData.BootstrapServers,
-                    ConnectionOptions: getConnectionOptionsDto(formValues.ConnectionOptions),
-                    UseRavenCertificate: initialConnection.KafkaConnectionSettings?.UseRavenCertificate ?? false,
-                },
-                RabbitMqConnectionSettings: null,
-            });
-
-            const newConnection: KafkaConnection = {
-                ...formData,
-                Type: "Kafka",
-            };
-
-            if (isForNewConnection) {
-                dispatch(connectionStringsActions.addConnection(newConnection));
-            } else {
-                dispatch(
-                    connectionStringsActions.editConnection({
-                        oldName: initialConnection.Name,
-                        newConnection,
-                    })
-                );
-            }
-
-            dispatch(connectionStringsActions.closeEditConnectionModal());
-        });
+    const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
+        onSave({
+            ...formData,
+            type: "Kafka",
+        } satisfies KafkaConnection);
     };
+
     return (
-        <Form onSubmit={handleSubmit(onSave)}>
+        <Form onSubmit={handleSubmit(handleSave)}>
             <ModalBody className="vstack gap-3">
                 <div>
                     <Label className="mb-0 md-label">Name</Label>
                     <FormInput
                         control={control}
-                        name="Name"
+                        name="name"
                         type="text"
                         placeholder="Enter a name for the connection string"
                     />
@@ -103,7 +75,7 @@ export default function KafkaConnectionString({
                     <Label className="mb-0 md-label">Bootstrap Servers</Label>
                     <FormInput
                         control={control}
-                        name="BootstrapServers"
+                        name="bootstrapServers"
                         type="text"
                         placeholder="Enter comma-separated Bootstrap Servers"
                     />
@@ -118,13 +90,13 @@ export default function KafkaConnectionString({
                                 <FormInput
                                     type="text"
                                     control={control}
-                                    name={`ConnectionOptions.${idx}.key`}
+                                    name={`connectionOptions.${idx}.key`}
                                     placeholder="Enter an option key"
                                 />
                                 <FormInput
                                     type="text"
                                     control={control}
-                                    name={`ConnectionOptions.${idx}.value`}
+                                    name={`connectionOptions.${idx}.value`}
                                     placeholder="Enter an option value"
                                 />
                                 <Button color="danger" onClick={() => connectionOptionsFieldArray.remove(idx)}>
@@ -157,7 +129,7 @@ export default function KafkaConnectionString({
                     )}
                 </div>
                 <ConnectionStringUsedByTasks
-                    tasks={initialConnection.UsedByTasks}
+                    tasks={initialConnection.usedByTasks}
                     urlProvider={forCurrentDatabase.editRavenEtl}
                 />
 
@@ -170,19 +142,6 @@ export default function KafkaConnectionString({
 }
 
 const testButtonId = "test-button";
-
-function getDefaultValues(initialConnection: KafkaConnection): FormData {
-    return {
-        Name: initialConnection.Name,
-        BootstrapServers: initialConnection.KafkaConnectionSettings?.BootstrapServers,
-        ConnectionOptions: Object.keys(initialConnection.KafkaConnectionSettings?.ConnectionOptions ?? {}).map(
-            (key) => ({
-                key,
-                value: initialConnection.KafkaConnectionSettings?.ConnectionOptions?.[key],
-            })
-        ),
-    };
-}
 
 function getConnectionOptionsDto(connectionOptions: { key?: string; value?: string }[]): { [key: string]: string } {
     return Object.fromEntries(connectionOptions.map((x) => [x.key, x.value]));
@@ -199,4 +158,15 @@ const schema = yup
     .required();
 
 const yupSchemaResolver = yupResolver(schema);
-type FormData = Required<yup.InferType<typeof schema>>;
+
+function getDefaultValues(initialConnection: KafkaConnection, isForNewConnection: boolean): FormData {
+    if (isForNewConnection) {
+        return {
+            name: null,
+            bootstrapServers: null,
+            connectionOptions: [],
+        };
+    }
+
+    return _.omit(initialConnection, "type", "usedByTasks");
+}

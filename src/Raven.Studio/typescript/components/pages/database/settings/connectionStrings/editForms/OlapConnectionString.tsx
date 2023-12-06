@@ -1,29 +1,96 @@
-﻿import { Label } from "reactstrap";
+﻿import { Form, Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
-import { useForm } from "react-hook-form";
-import Destinations from "components/common/destinations/Destinations";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
+import { ConnectionFormData, EditConnectionStringFormProps, OlapConnection } from "../connectionStringsTypes";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { yupObjectSchema } from "components/utils/yupUtils";
+import FormDestinationList from "components/common/formDestinations/FormDestinationList";
+import {
+    defaultAzureFormData,
+    defaultFtpFormData,
+    defaultGlacierFormData,
+    defaultGoogleCloudFormData,
+    defaultLocalFormData,
+    defaultS3FormData,
+    destinationsSchema,
+} from "components/common/formDestinations/formDestinationsUtils";
+import { DevTool } from "@hookform/devtools";
 
-interface OlapConnectionStringProps {
-    name?: string;
+type FormData = ConnectionFormData<OlapConnection>;
+
+interface OlapConnectionStringProps extends EditConnectionStringFormProps {
+    initialConnection: OlapConnection;
 }
 
-const OlapConnectionString = (props: OlapConnectionStringProps) => {
-    const { control } = useForm<any>({});
+export default function OlapConnectionString({
+    initialConnection,
+    isForNewConnection,
+    onSave,
+}: OlapConnectionStringProps) {
+    const form = useForm<FormData>({
+        mode: "all",
+        defaultValues: getDefaultValues(initialConnection, isForNewConnection),
+        resolver: yupSchemaResolver,
+    });
+
+    const { control, handleSubmit, formState } = form;
+    const formValues = useWatch({ control });
+
+    const mySubmit = async (e: any) => {
+        e.preventDefault();
+        // TODO typing
+        if ((formState.errors as any).customError) {
+            return;
+        }
+
+        handleSubmit(() => {
+            onSave({
+                ...formValues,
+                type: "Olap",
+            } as OlapConnection);
+        })(e);
+    };
 
     return (
-        <>
-            <div>
-                <Label className="mb-0 md-label">Name</Label>
-                <FormInput
-                    control={control}
-                    name="name"
-                    type="text"
-                    placeholder="Enter a name for the connection string"
-                />
-                <Destinations />
-            </div>
-        </>
+        <FormProvider {...form}>
+            <Form id="connection-string-form" onSubmit={mySubmit} className="vstack gap-2">
+                <DevTool control={control} />
+                <div>
+                    <Label className="mb-0 md-label">Name</Label>
+                    <FormInput
+                        control={control}
+                        name="name"
+                        type="text"
+                        placeholder="Enter a name for the connection string"
+                        disabled={!isForNewConnection}
+                    />
+                </div>
+                <FormDestinationList />
+            </Form>
+        </FormProvider>
     );
-};
-export default OlapConnectionString;
+}
+
+const schema = yupObjectSchema<Pick<FormData, "name">>({
+    name: yup.string().nullable().required(),
+}).concat(destinationsSchema);
+
+const yupSchemaResolver = yupResolver(schema);
+
+function getDefaultValues(initialConnection: OlapConnection, isForNewConnection: boolean): FormData {
+    if (isForNewConnection) {
+        return {
+            name: null,
+            local: defaultLocalFormData,
+            s3: defaultS3FormData,
+            azure: defaultAzureFormData,
+            googleCloud: defaultGoogleCloudFormData,
+            glacier: defaultGlacierFormData,
+            ftp: defaultFtpFormData,
+        };
+    }
+
+    return _.omit(initialConnection, "type", "usedByTasks");
+}

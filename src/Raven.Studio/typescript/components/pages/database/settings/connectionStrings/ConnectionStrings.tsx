@@ -20,7 +20,7 @@ export interface ConnectionStringsUrlParameters {
 }
 
 // todo fix InputGroup after rebase
-// todo test handle other types
+// todo test for all destinations
 // todo remove legacy code
 
 export default function ConnectionStrings(props: NonShardedViewProps & ConnectionStringsUrlParameters) {
@@ -76,10 +76,15 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
                 )}
                 <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"}>
                     {isEmpty ? (
-                        <EmptySet>No connection strings</EmptySet>
+                        <EmptySet className="mw-100">No connection strings</EmptySet>
                     ) : (
                         allStudioEtlTypes.map((type) => (
-                            <ConnectionStringsPanels key={type} db={db} connections={connections[type]} />
+                            <ConnectionStringsPanels
+                                key={type}
+                                db={db}
+                                connections={connections[type]}
+                                connectionsType={type}
+                            />
                         ))
                     )}
                 </LazyLoad>

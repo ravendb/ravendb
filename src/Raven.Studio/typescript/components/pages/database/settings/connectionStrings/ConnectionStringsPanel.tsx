@@ -1,4 +1,4 @@
-﻿import React, { useId } from "react";
+﻿import React from "react";
 import {
     RichPanel,
     RichPanelHeader,
@@ -32,13 +32,13 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     const { databasesService } = useServices();
 
     const deleteButtonId = "delete-button-" + _.uniqueId();
-    const isDeleteDisabled = connection.UsedByTasks?.length > 0;
+    const isDeleteDisabled = connection.usedByTasks?.length > 0;
 
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const asyncDelete = useAsyncCallback(async () => {
-        await databasesService.deleteConnectionString(db, getDtoEtlType(connection.Type), connection.Name);
+        await databasesService.deleteConnectionString(db, getDtoEtlType(connection.type), connection.name);
         dispatch(connectionStringsActions.deleteConnection(connection));
     });
 
@@ -46,7 +46,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
         const isConfirmed = await confirm({
             title: (
                 <span>
-                    Delete <strong>{connection.Name}</strong> connection string?
+                    Delete <strong>{connection.name}</strong> connection string?
                 </span>
             ),
             icon: "trash",
@@ -64,7 +64,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
             <div className="flex-grow-1">
                 <RichPanelHeader>
                     <RichPanelInfo>
-                        <RichPanelName>{connection.Name}</RichPanelName>
+                        <RichPanelName>{connection.name}</RichPanelName>
                     </RichPanelInfo>
                     {isDatabaseAdmin && (
                         <RichPanelActions>
