@@ -3,15 +3,12 @@ import { FormInput, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { SelectOption } from "components/common/select/Select";
-import { EditConnectionStringFormProps, SqlConnection } from "../connectionStringsTypes";
+import { ConnectionFormData, EditConnectionStringFormProps, SqlConnection } from "../connectionStringsTypes";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useDispatch } from "react-redux";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
-import { connectionStringsActions } from "../store/connectionStringsSlice";
-import { tryHandleSubmit } from "components/utils/common";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
@@ -19,16 +16,21 @@ import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 
+type FormData = ConnectionFormData<SqlConnection>;
+
 export interface SqlConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: SqlConnection;
 }
 
-export default function SqlConnectionString({ db, initialConnection, isForNewConnection }: SqlConnectionStringProps) {
-    const dispatch = useDispatch();
-
+export default function SqlConnectionString({
+    db,
+    initialConnection,
+    isForNewConnection,
+    onSave,
+}: SqlConnectionStringProps) {
     const { control, handleSubmit, formState } = useForm<FormData>({
         mode: "all",
-        defaultValues: _.omit(initialConnection, "Type"),
+        defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
     });
 
@@ -38,43 +40,26 @@ export default function SqlConnectionString({ db, initialConnection, isForNewCon
     const [syntaxHelpElement, setSyntaxHelpElement] = useState<HTMLElement>();
 
     const asyncTest = useAsyncCallback(() => {
-        return databasesService.testSqlConnectionString(db, formValues.ConnectionString, formValues.FactoryName);
+        return databasesService.testSqlConnectionString(db, formValues.connectionString, formValues.factoryName);
     });
 
-    const isTestButtonDisabled = !formValues.ConnectionString || !formValues.FactoryName;
+    const isTestButtonDisabled = !formValues.connectionString || !formValues.factoryName;
 
-    const onSave: SubmitHandler<FormData> = async (formData) => {
-        return tryHandleSubmit(async () => {
-            const newConnection: SqlConnection = {
-                ...formData,
-                Type: "Sql",
-            };
-
-            await databasesService.saveConnectionString(db, newConnection);
-
-            if (isForNewConnection) {
-                dispatch(connectionStringsActions.addConnection(newConnection));
-            } else {
-                dispatch(
-                    connectionStringsActions.editConnection({
-                        oldName: initialConnection.Name,
-                        newConnection,
-                    })
-                );
-            }
-
-            dispatch(connectionStringsActions.closeEditConnectionModal());
-        });
+    const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
+        onSave({
+            type: "Sql",
+            ...formData,
+        } satisfies SqlConnection);
     };
 
     return (
-        <Form onSubmit={handleSubmit(onSave)}>
+        <Form onSubmit={handleSubmit(handleSave)}>
             <ModalBody className="vstack gap-3">
                 <div>
                     <Label className="mb-0 md-label">Name</Label>
                     <FormInput
                         control={control}
-                        name="Name"
+                        name="name"
                         type="text"
                         placeholder="Enter a name for the connection string"
                         disabled={!isForNewConnection}
@@ -84,18 +69,18 @@ export default function SqlConnectionString({ db, initialConnection, isForNewCon
                     <Label className="mb-0 md-label">Factory</Label>
                     <FormSelect
                         control={control}
-                        name="FactoryName"
+                        name="factoryName"
                         options={sqlFactoryOptions}
                         placeholder="Select factory name"
                         isSearchable={false}
                     />
-                    {formValues.FactoryName && (
+                    {formValues.factoryName && (
                         <>
                             <small ref={setSyntaxHelpElement} className="text-primary">
                                 Syntax <Icon icon="help" />
                             </small>
                             <PopoverWithHover target={syntaxHelpElement}>
-                                <div className="p-2">{getSyntaxHelp(formValues.FactoryName)}</div>
+                                <div className="p-2">{getSyntaxHelp(formValues.factoryName)}</div>
                             </PopoverWithHover>
                         </>
                     )}
@@ -104,9 +89,9 @@ export default function SqlConnectionString({ db, initialConnection, isForNewCon
                     <Label className="mb-0 md-label">Connection string</Label>
                     <FormInput
                         control={control}
-                        name="ConnectionString"
+                        name="connectionString"
                         type="textarea"
-                        placeholder={getConnectionStringPlaceholder(formValues.FactoryName)}
+                        placeholder={getConnectionStringPlaceholder(formValues.factoryName)}
                         rows={3}
                     />
                     <div id={testButtonId} className="mt-2" style={{ width: "fit-content" }}>
@@ -127,7 +112,7 @@ export default function SqlConnectionString({ db, initialConnection, isForNewCon
                     )}
                 </div>
                 <ConnectionStringUsedByTasks
-                    tasks={initialConnection.UsedByTasks}
+                    tasks={initialConnection.usedByTasks}
                     urlProvider={forCurrentDatabase.editRavenEtl}
                 />
                 <ConnectionStringTestResult testResult={asyncTest.result} />
@@ -231,4 +216,15 @@ const schema = yup
     .required();
 
 const yupSchemaResolver = yupResolver(schema);
-type FormData = Required<yup.InferType<typeof schema>>;
+
+function getDefaultValues(initialConnection: SqlConnection, isForNewConnection: boolean): FormData {
+    if (isForNewConnection) {
+        return {
+            name: null,
+            factoryName: null,
+            connectionString: null,
+        };
+    }
+
+    return _.omit(initialConnection, "type", "usedByTasks");
+}

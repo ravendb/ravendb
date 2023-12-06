@@ -2,19 +2,17 @@ import { PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import database from "models/resources/database";
-import {
-    Connection,
-    ConnectionStringUsedTask,
-    ElasticSearchConnection,
-    KafkaConnection,
-    OlapConnection,
-    RabbitMqConnection,
-    RavenDbConnection,
-    SqlConnection,
-} from "../connectionStringsTypes";
-import OngoingTaskRavenEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
+import { Connection } from "../connectionStringsTypes";
 import { RootState } from "components/store";
 import { ConnectionStringsUrlParameters } from "../ConnectionStrings";
+import {
+    mapElasticSearchConnectionsFromDto,
+    mapKafkaConnectionsFromDto,
+    mapOlapConnectionsFromDto,
+    mapRabbitMqConnectionsFromDto,
+    mapRavenConnectionsFromDto,
+    mapSqlConnectionsFromDto,
+} from "./connectionStringsMapsFromDto";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
@@ -40,6 +38,8 @@ const initialState: ConnectionStringsState = {
     initialEditConnection: null,
 };
 
+type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ";
+
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
     initialState,
@@ -48,10 +48,10 @@ export const connectionStringsSlice = createSlice({
             state.urlParameters = urlParameters;
         },
         openAddNewConnectionModal: (state) => {
-            state.initialEditConnection = { Type: null };
+            state.initialEditConnection = { type: null };
         },
-        openAddNewConnectionOfTypeModal: (state, { payload: Type }: PayloadAction<StudioEtlType>) => {
-            state.initialEditConnection = { Type };
+        openAddNewConnectionOfTypeModal: (state, { payload: type }: PayloadAction<StudioEtlType>) => {
+            state.initialEditConnection = { type };
         },
         openEditConnectionModal: (state, { payload: connection }: PayloadAction<Connection>) => {
             state.initialEditConnection = connection;
@@ -60,17 +60,22 @@ export const connectionStringsSlice = createSlice({
             state.initialEditConnection = null;
         },
         addConnection: (state, { payload: connection }: PayloadAction<Connection>) => {
-            state.connections[connection.Type].push(connection);
+            const newConnection: Connection = {
+                ...connection,
+                usedByTasks: connection.usedByTasks ?? [],
+            };
+
+            state.connections[connection.type].push(newConnection);
         },
         editConnection: (state, { payload }: PayloadAction<{ oldName: string; newConnection: Connection }>) => {
-            const type = payload.newConnection.Type;
+            const type = payload.newConnection.type;
 
             state.connections[type] = state.connections[type].map((x) =>
-                x.Name === payload.oldName ? payload.newConnection : x
+                x.name === payload.oldName ? payload.newConnection : x
             );
         },
         deleteConnection: (state, { payload }: PayloadAction<Connection>) => {
-            state.connections[payload.Type] = state.connections[payload.Type].filter((x) => x.Name !== payload.Name);
+            state.connections[payload.type] = state.connections[payload.type].filter((x) => x.name !== payload.name);
         },
         reset: () => initialState,
     },
@@ -82,53 +87,34 @@ export const connectionStringsSlice = createSlice({
 
                 const { connections, urlParameters } = state;
 
-                connections.Raven = Object.values(connectionStringsDto.RavenConnectionStrings).map((connection) => ({
-                    ...connection,
-                    Type: "Raven",
-                    UsedByTasks: getConnectionStringUsedTasks(ongoingTasks, "RavenEtl", connection.Name),
-                })) satisfies RavenDbConnection[];
+                connections.Sql = mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings, ongoingTasks);
+                connections.Olap = mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings, ongoingTasks);
 
-                connections.Sql = Object.values(connectionStringsDto.SqlConnectionStrings).map((connection) => ({
-                    ...connection,
-                    Type: "Sql",
-                    UsedByTasks: getConnectionStringUsedTasks(ongoingTasks, "SqlEtl", connection.Name),
-                })) satisfies SqlConnection[];
-
-                connections.Olap = Object.values(connectionStringsDto.OlapConnectionStrings).map((connection) => ({
-                    ...connection,
-                    Type: "Olap",
-                    UsedByTasks: getConnectionStringUsedTasks(ongoingTasks, "OlapEtl", connection.Name),
-                })) satisfies OlapConnection[];
-
-                connections.ElasticSearch = Object.values(connectionStringsDto.ElasticSearchConnectionStrings).map(
-                    (connection) => ({
-                        ...connection,
-                        Type: "ElasticSearch",
-                        UsedByTasks: getConnectionStringUsedTasks(ongoingTasks, "ElasticSearchEtl", connection.Name),
-                    })
-                ) satisfies ElasticSearchConnection[];
-
-                connections.Kafka = Object.values(connectionStringsDto.QueueConnectionStrings)
-                    .filter((x) => x.BrokerType === "Kafka")
-                    .map((connection) => ({
-                        ...connection,
-                        Type: "Kafka",
-                        UsedByTasks: getConnectionStringUsedTasks(ongoingTasks, "QueueEtl", connection.Name),
-                    })) satisfies KafkaConnection[];
-
-                connections.RabbitMQ = Object.values(connectionStringsDto.QueueConnectionStrings)
-                    .filter((x) => x.BrokerType === "RabbitMq")
-                    .map((connection) => ({
-                        ...connection,
-                        Type: "RabbitMQ",
-                        UsedByTasks: getConnectionStringUsedTasks(ongoingTasks, "QueueEtl", connection.Name),
-                    })) satisfies RabbitMqConnection[];
+                connections.Raven = mapRavenConnectionsFromDto(
+                    connectionStringsDto.RavenConnectionStrings,
+                    ongoingTasks
+                );
+                connections.ElasticSearch = mapElasticSearchConnectionsFromDto(
+                    connectionStringsDto.ElasticSearchConnectionStrings,
+                    ongoingTasks
+                );
+                connections.Kafka = mapKafkaConnectionsFromDto(
+                    connectionStringsDto.QueueConnectionStrings,
+                    ongoingTasks
+                );
+                connections.RabbitMQ = mapRabbitMqConnectionsFromDto(
+                    connectionStringsDto.QueueConnectionStrings,
+                    ongoingTasks
+                );
 
                 state.loadStatus = "success";
 
                 if (urlParameters.name && urlParameters.type) {
-                    state.initialEditConnection =
-                        state.connections[urlParameters.type]?.find((x) => x?.Name === urlParameters.name) ?? null;
+                    const foundConnection = state.connections?.[urlParameters.type]?.find(
+                        (x) => x?.name === urlParameters.name
+                    );
+
+                    state.initialEditConnection = foundConnection ?? null;
                 }
             })
             .addCase(fetchData.pending, (state) => {
@@ -139,21 +125,6 @@ export const connectionStringsSlice = createSlice({
             });
     },
 });
-
-function getConnectionStringUsedTasks(
-    tasks: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask[],
-    taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
-    connectionName: string
-): ConnectionStringUsedTask[] {
-    return tasks
-        .filter(
-            (task: OngoingTaskRavenEtl) => task.TaskType === taskType && task.ConnectionStringName === connectionName
-        )
-        .map((x) => ({
-            id: x.TaskId,
-            name: x.TaskName,
-        }));
-}
 
 interface FetchDataResult {
     ongoingTasksDto: Raven.Server.Web.System.OngoingTasksResult;

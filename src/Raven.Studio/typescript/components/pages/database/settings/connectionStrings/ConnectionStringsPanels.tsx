@@ -12,10 +12,11 @@ import { Icon } from "components/common/Icon";
 
 interface ConnectionStringsPanelsProps {
     connections: Connection[];
+    connectionsType: Connection["type"];
     db: database;
 }
 
-export default function ConnectionStringsPanels({ connections, db }: ConnectionStringsPanelsProps) {
+export default function ConnectionStringsPanels({ connections, connectionsType, db }: ConnectionStringsPanelsProps) {
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
     const dispatch = useDispatch();
@@ -23,8 +24,6 @@ export default function ConnectionStringsPanels({ connections, db }: ConnectionS
     if (connections.length === 0) {
         return null;
     }
-
-    const connectionType = connections[0].Type;
 
     return (
         <div className="mb-3">
@@ -36,7 +35,9 @@ export default function ConnectionStringsPanels({ connections, db }: ConnectionS
                             size="sm"
                             className="rounded-pill"
                             title="Add new credentials"
-                            onClick={() => dispatch(connectionStringsActions.openAddNewConnectionOfTypeModal("Raven"))}
+                            onClick={() =>
+                                dispatch(connectionStringsActions.openAddNewConnectionOfTypeModal(connectionsType))
+                            }
                         >
                             <Icon icon="plus" />
                             Add new
@@ -44,16 +45,16 @@ export default function ConnectionStringsPanels({ connections, db }: ConnectionS
                     )
                 }
             >
-                {getStudioEtlTypeLabel(connectionType)}
+                {getTypeLabel(connectionsType)}
             </HrHeader>
             {connections.map((connection) => (
-                <ConnectionStringsPanel key={connection.Type + "_" + connection.Name} db={db} connection={connection} />
+                <ConnectionStringsPanel key={connection.type + "_" + connection.name} db={db} connection={connection} />
             ))}
         </div>
     );
 }
 
-export function getStudioEtlTypeLabel(type: StudioEtlType): string {
+export function getTypeLabel(type: StudioEtlType): string {
     switch (type) {
         case "Raven":
             return "RavenDB";

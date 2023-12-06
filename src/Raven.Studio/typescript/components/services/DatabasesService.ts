@@ -58,6 +58,7 @@ import getConflictSolverConfigurationCommand = require("commands/database/docume
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import testRabbitMqServerConnectionCommand = require("commands/database/cluster/testRabbitMqServerConnectionCommand");
 import testKafkaServerConnectionCommand = require("commands/database/cluster/testKafkaServerConnectionCommand");
+import testElasticSearchNodeConnectionCommand = require("commands/database/cluster/testElasticSearchNodeConnectionCommand");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
@@ -266,6 +267,14 @@ export default class DatabasesService {
             useServerCertificate,
             connectionOptionsDto
         ).execute();
+    }
+
+    async testElasticSearchNodeConnection(
+        db: database,
+        serverUrl: string,
+        authenticationDto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication
+    ) {
+        return new testElasticSearchNodeConnectionCommand(db, serverUrl, authenticationDto).execute();
     }
 
     async getDatabaseRecord(db: database, reportRefreshProgress = false) {

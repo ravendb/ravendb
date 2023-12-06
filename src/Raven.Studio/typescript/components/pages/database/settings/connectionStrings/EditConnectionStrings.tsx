@@ -12,8 +12,12 @@ import KafkaConnectionString from "./editForms/KafkaConnectionString";
 import OlapConnectionString from "./editForms/OlapConnectionString";
 import RabbitMqConnectionString from "./editForms/RabbitMqConnectionString";
 import SqlConnectionString from "./editForms/SqlConnectionString";
-import { getStudioEtlTypeLabel } from "./ConnectionStringsPanels";
-import { exhaustiveStringTuple } from "components/utils/common";
+import { getTypeLabel } from "./ConnectionStringsPanels";
+import { exhaustiveStringTuple, tryHandleSubmit } from "components/utils/common";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { useServices } from "components/hooks/useServices";
+import { useAsyncCallback } from "react-async-hook";
+import { mapConnectionStringToDto } from "./store/connectionStringsMapsToDto";
 
 export interface EditConnectionStringsProps {
     db: database;
@@ -23,12 +27,34 @@ export interface EditConnectionStringsProps {
 export default function EditConnectionStrings(props: EditConnectionStringsProps) {
     const { db, initialConnection } = props;
 
-    const isForNewConnection = !initialConnection.Name;
+    const isForNewConnection = !initialConnection.name;
 
     const dispatch = useDispatch();
-    const [connectionStringType, setConnectionStringType] = useState<StudioEtlType>(initialConnection?.Type);
+    const { databasesService } = useServices();
+    const [connectionStringType, setConnectionStringType] = useState<StudioEtlType>(initialConnection?.type);
 
     const EditConnectionStringComponent = getEditConnectionStringComponent(connectionStringType);
+
+    const asyncSave = useAsyncCallback((dto: any) => databasesService.saveConnectionString(db, dto));
+
+    const save = async (newConnection: Connection) => {
+        return tryHandleSubmit(async () => {
+            await asyncSave.execute(mapConnectionStringToDto(newConnection));
+
+            if (isForNewConnection) {
+                dispatch(connectionStringsActions.addConnection(newConnection));
+            } else {
+                dispatch(
+                    connectionStringsActions.editConnection({
+                        oldName: initialConnection.name,
+                        newConnection,
+                    })
+                );
+            }
+
+            dispatch(connectionStringsActions.closeEditConnectionModal());
+        });
+    };
 
     return (
         <Modal
@@ -38,7 +64,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
             contentClassName="modal-border bulge-info"
             zIndex="var(--zindex-modal)"
         >
-            <ModalBody className="pb-0">
+            <ModalBody className="pb-0 vstack gap-2">
                 <div className="text-center">
                     <Icon icon="manage-connection-strings" color="info" className="fs-1" margin="m-0" />
                 </div>
@@ -47,33 +73,45 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                     <Label className="mb-0 md-label">Type</Label>
                     <Select
                         options={connectionStringsOptions}
-                        value={connectionStringsOptions.find((x) => x.value === initialConnection.Type)}
+                        value={connectionStringsOptions.find((x) => x.value === initialConnection.type)}
                         onChange={(x) => setConnectionStringType(x.value)}
                         placeholder="Select a connection string type"
                         isSearchable={false}
                         isDisabled={!isForNewConnection}
                     />
                 </InputGroup>
+                {EditConnectionStringComponent && (
+                    <EditConnectionStringComponent
+                        initialConnection={initialConnection}
+                        db={db}
+                        isForNewConnection={isForNewConnection}
+                        onSave={save}
+                    />
+                )}
             </ModalBody>
-            {EditConnectionStringComponent ? (
-                <EditConnectionStringComponent
-                    initialConnection={initialConnection}
-                    db={db}
-                    isForNewConnection={isForNewConnection}
-                />
-            ) : (
-                <ModalFooter className="mt-3">
-                    <Button
-                        type="button"
-                        color="link"
-                        className="link-muted"
-                        onClick={() => dispatch(connectionStringsActions.closeEditConnectionModal())}
-                        title="Cancel"
+            <ModalFooter className="mt-2">
+                <Button
+                    type="button"
+                    color="link"
+                    className="link-muted"
+                    onClick={() => dispatch(connectionStringsActions.closeEditConnectionModal())}
+                    title="Cancel"
+                >
+                    Cancel
+                </Button>
+                {EditConnectionStringComponent && (
+                    <ButtonWithSpinner
+                        form="connection-string-form"
+                        type="submit"
+                        color="success"
+                        title="Save credentials"
+                        icon="save"
+                        isSpinning={asyncSave.loading}
                     >
-                        Cancel
-                    </Button>
-                </ModalFooter>
-            )}
+                        Save connection string
+                    </ButtonWithSpinner>
+                )}
+            </ModalFooter>
         </Modal>
     );
 }
@@ -87,7 +125,7 @@ const connectionStringsOptions: SelectOption<StudioEtlType>[] = exhaustiveString
     "RabbitMQ"
 ).map((type) => ({
     value: type,
-    label: getStudioEtlTypeLabel(type),
+    label: getTypeLabel(type),
 }));
 
 // TODO return type

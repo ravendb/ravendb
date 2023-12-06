@@ -1,11 +1,19 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import database = require("models/resources/database");
+import Authentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication;
 
 class testElasticSearchNodeConnectionCommand extends commandBase {
 
-    constructor(private db: database, private serverUrl: string, private authenticationDto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication) {
+    private readonly db: database;
+    private readonly serverUrl: string;
+    private readonly authenticationDto: Authentication;
+
+    constructor(db: database, serverUrl: string, authenticationDto: Authentication) {
         super();
+        this.db = db;
+        this.serverUrl = serverUrl;
+        this.authenticationDto = authenticationDto;
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {

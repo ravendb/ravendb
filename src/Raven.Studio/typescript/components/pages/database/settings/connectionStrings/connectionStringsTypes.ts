@@ -4,28 +4,71 @@ import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.Olap
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 type SqlConnectionStringDto = SqlConnectionString;
+import { FormDestinations } from "components/common/formDestinations/formDestinationsUtils";
 
 export interface ConnectionStringUsedTask {
     id: number;
     name: string;
 }
 
-type ConnectionCreator<
-    Type extends StudioEtlType,
-    Dto extends Raven.Client.Documents.Operations.ConnectionStrings.ConnectionString
-> = Partial<Omit<Dto, "Type">> & { Type: Type } & {
-    UsedByTasks?: ConnectionStringUsedTask[];
-};
+interface ConnectionBase {
+    name?: string;
+    usedByTasks?: ConnectionStringUsedTask[];
+}
 
-export type RavenDbConnection = ConnectionCreator<"Raven", RavenConnectionStringDto>;
-export type SqlConnection = ConnectionCreator<"Sql", SqlConnectionStringDto>;
-export type OlapConnection = ConnectionCreator<"Olap", OlapConnectionStringDto>;
-export type ElasticSearchConnection = ConnectionCreator<"ElasticSearch", ElasticSearchConnectionStringDto>;
-export type KafkaConnection = ConnectionCreator<"Kafka", QueueConnectionStringDto>;
-export type RabbitMqConnection = ConnectionCreator<"RabbitMQ", QueueConnectionStringDto>;
+export interface RavenConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "Raven">;
+    database?: string;
+    topologyDiscoveryUrls?: {
+        url: string;
+    }[];
+}
+
+export interface SqlConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "Sql">;
+    connectionString?: string;
+    factoryName?: SqlConnectionStringFactoryName;
+}
+
+export interface OlapConnection extends ConnectionBase, FormDestinations {
+    type: Extract<StudioEtlType, "Olap">;
+}
+
+export type ElasticSearchAuthenticationMethod =
+    | "No authentication"
+    | "Basic"
+    | "API Key"
+    | "Encoded API Key"
+    | "Certificate";
+
+export interface ElasticSearchConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "ElasticSearch">;
+    authMethodUsed?: ElasticSearchAuthenticationMethod;
+    apiKey?: string;
+    apiKeyId?: string;
+    encodedApiKey?: string;
+    password?: string;
+    username?: string;
+    certificatesBase64?: string[];
+    nodes?: {
+        url?: string;
+    }[];
+}
+
+export interface KafkaConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "Kafka">;
+    bootstrapServers?: string;
+    connectionOptions?: { key: string; value: string }[];
+    useRavenCertificate?: boolean;
+}
+
+export interface RabbitMqConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "RabbitMQ">;
+    connectionString?: string;
+}
 
 export type Connection =
-    | RavenDbConnection
+    | RavenConnection
     | SqlConnection
     | OlapConnection
     | ElasticSearchConnection
@@ -44,4 +87,7 @@ export interface EditConnectionStringFormProps {
     initialConnection: Connection;
     db: database;
     isForNewConnection: boolean;
+    onSave: (x: Connection) => void;
 }
+
+export type ConnectionFormData<T extends Connection> = Omit<T, "type" | "usedByTasks">;
