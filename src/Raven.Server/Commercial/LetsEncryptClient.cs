@@ -65,6 +65,7 @@ namespace Raven.Server.Commercial
         private Jws _jws;
         private readonly string _path;
         private readonly string _url;
+        private readonly string _directoryPath;
         private string _nonce;
         private RSACryptoServiceProvider _accountKey;
         private RegistrationCache _cache;
@@ -73,9 +74,10 @@ namespace Raven.Server.Commercial
         private List<AuthorizationChallenge> _challenges = new List<AuthorizationChallenge>();
         private Order _currentOrder;
 
-        public LetsEncryptClient(string url)
+        public LetsEncryptClient(string url, string directoryPath)
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
+            _directoryPath = directoryPath ?? throw new ArgumentNullException(nameof(directoryPath));
 
             var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
                 Environment.SpecialFolderOption.Create);
@@ -89,10 +91,7 @@ namespace Raven.Server.Commercial
         {
             _accountKey = new RSACryptoServiceProvider(4096);
             _client = GetCachedClient(_url);
-            (_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("directory", UriKind.Relative), null, token);
-
-            // Use this when testing against pebble
-            //(_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("dir", UriKind.Relative), null, token);
+            (_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri(_directoryPath, UriKind.Relative), null, token);
 
             if (File.Exists(_path))
             {

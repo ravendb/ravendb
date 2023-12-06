@@ -49,7 +49,7 @@ namespace Raven.Server.Commercial
             if (EmailValidator.IsValid(email) == false)
                 throw new ArgumentException("Invalid e-mail format" + email);
 
-            var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
+            var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl, serverStore.Configuration.Core.AcmeDirectoryPath);
             await acmeClient.Init(email);
             return acmeClient.GetTermsOfServiceUri();
         }
@@ -224,7 +224,7 @@ namespace Raven.Server.Commercial
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
-            var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
+            var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl, serverStore.Configuration.Core.AcmeDirectoryPath);
             await acmeClient.Init(setupInfo.Email, token);
 
             // here we explicitly want to refresh the cert, so we don't want it cached
@@ -636,7 +636,7 @@ namespace Raven.Server.Commercial
             progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
             onProgress(progress);
 
-            var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
+            var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl, serverStore.Configuration.Core.AcmeDirectoryPath);
             await acmeClient.Init(setupInfo.Email, token);
 
             var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
