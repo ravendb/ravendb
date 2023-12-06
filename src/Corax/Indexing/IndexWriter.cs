@@ -946,16 +946,22 @@ namespace Corax.Indexing
         private void WriteIndexEntries()
         {
             using var writer = new EntryTermsWriter(_entriesAllocator);
+
+            var termsPerEntryId = _termsPerEntryId.ToSpan();
+            var termsPerEntryIds = _termsPerEntryIds.ToSpan();
+
             for (int i = 0; i < _termsPerEntryId.Count; i++)
             {
-                ref var termsRef = ref _termsPerEntryId.RawItems[i];
+                ref var termsRef = ref termsPerEntryId[i];
                 if (termsRef.Count == 0)
                     continue;
+
                 int size = writer.Encode(termsRef);
+
                 long entryTermsId = Container.Allocate(_transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
                 writer.Write(space);
-                var entry = _termsPerEntryIds.RawItems[i];
-                _entryIdToLocation.Add(entry, entryTermsId);
+
+                _entryIdToLocation.Add(termsPerEntryIds[i], entryTermsId);
             }
         }
 
@@ -1287,13 +1293,8 @@ namespace Corax.Indexing
             
             private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
             {
-                var entriesForTermCount = entriesForTerm.Count;
-                var rawItems = entriesForTerm.RawItems;
-            
-                for (int i = 0; i < entriesForTermCount; i++)
+                foreach (var entry in entriesForTerm)
                 {
-                    var entry = rawItems[i];
-                
                     ref var recordedTermList = ref _writer.GetEntryTerms(entry.TermsPerEntryIndex);
 
                     if ( recordedTermList.HasCapacityFor(1) == false)
@@ -1332,8 +1333,8 @@ namespace Corax.Indexing
             private void UpdateEntriesForTerm(ref NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries)
             {
                 entriesForTerm.ResetAndEnsureCapacity(_writer._entriesAllocator, entries.Additions.Count + entries.Updates.Count);
-                entriesForTerm.AddRangeUnsafe(entries.Additions.RawItems, entries.Additions.Count);
-                entriesForTerm.AddRangeUnsafe(entries.Updates.RawItems, entries.Updates.Count);
+                entriesForTerm.AddRangeUnsafe(entries.Additions.ToSpan());
+                entriesForTerm.AddRangeUnsafe(entries.Updates.ToSpan());
             }
 
             private void PrepareTextualFieldBatch(TextualFieldBuffers buffers,
@@ -1432,7 +1433,7 @@ namespace Corax.Indexing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ref NativeList<RecordedTerm> GetEntryTerms(int termsPerEntryIndex)
         {
-            return ref _termsPerEntryId.ToSpan()[termsPerEntryIndex];
+            return ref _termsPerEntryId[termsPerEntryIndex];
         }
 
         private void ClearEntriesForTerm()
@@ -1447,11 +1448,13 @@ namespace Corax.Indexing
             var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(name);
             if (_entriesForTermsRemovalsBuffer.Count > 0)
             {
-                Sort.Run(_entriesForTermsRemovalsBuffer.RawItems, _entriesForTermsRemovalsBuffer.Count);
+                Sort.Run(_entriesForTermsRemovalsBuffer.ToSpan());
+
                 entriesToTerms.InitializeCursorState();
-                for (int i = 0; i < _entriesForTermsRemovalsBuffer.Count; i++)
+
+                foreach (var entryId in _entriesForTermsRemovalsBuffer)
                 {
-                    Int64LookupKey key = _entriesForTermsRemovalsBuffer.RawItems[i];
+                    Int64LookupKey key = entryId;
                     if (entriesToTerms.TryGetNextValue(ref key, out _))
                         entriesToTerms.TryRemoveExistingValue(ref key, out _);
                 }
@@ -1461,12 +1464,11 @@ namespace Corax.Indexing
             {
                 _entriesForTermsAdditionsBuffer.Sort();
                 entriesToTerms.InitializeCursorState();
-                for (int i = 0; i < _entriesForTermsAdditionsBuffer.Count; i++)
+                foreach (var (entryId, termId) in _entriesForTermsAdditionsBuffer)
                 {
-                    ref var cur = ref _entriesForTermsAdditionsBuffer.RawItems[i];
-                    Int64LookupKey key = cur.EntryId;
+                    Int64LookupKey key = entryId;
                     entriesToTerms.TryGetNextValue(ref key, out _);
-                    entriesToTerms.AddOrSetAfterGetNext(ref key, cur.TermId);
+                    entriesToTerms.AddOrSetAfterGetNext(ref key, termId);
                 }
             }
         }
@@ -1477,9 +1479,7 @@ namespace Corax.Indexing
         {
             list.Clear();
             for (int i = 0; i < span.Count; i++)
-            {
-                list.Add(span.RawItems[i].EntryId);
-            }
+                list.Add(span[i].EntryId);
         }
 
         private enum AddEntriesToTermResult
@@ -1597,13 +1597,13 @@ namespace Corax.Indexing
             // Let's assert whether the current document will output the same ID as the previous one.
             // We can assume that removals are "agnostic" for us since the already stored document has the same ID as this one.
             // In any other case, where did the different ID come from?
-            var additions = entries.Additions.RawItems;
+            var additions = entries.Additions.ToSpan();
             if (entries.Additions.Count == 1) 
             {
                 ref var single = ref additions[0];
                 if (single.EntryId == existingEntryId)
                 {
-                    Debug.Assert(entries.Removals.Count == 0 || entries.Removals.RawItems[0].EntryId == existingEntryId);
+                    Debug.Assert(entries.Removals.Count == 0 || entries.Removals.ToSpan()[0].EntryId == existingEntryId);
 
                     var newId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, (long)TermIdMask.Single);
                     if (newId == idInTree)
@@ -1621,7 +1621,7 @@ namespace Corax.Indexing
                     ThrowMoreThanOneRemovalFoundForSingleItem(idInTree, entries, existingEntryId, existingFrequency);
                 }
                 
-                Debug.Assert(EntryIdEncodings.QuantizeAndDequantize(entries.Removals.RawItems[0].Frequency) == existingFrequency, "The item stored and the item we're trying to delete are different, which is impossible.");
+                Debug.Assert(EntryIdEncodings.QuantizeAndDequantize(entries.Removals[0].Frequency) == existingFrequency, "The item stored and the item we're trying to delete are different, which is impossible.");
                 
                 termId = -1;
                 return AddEntriesToTermResult.RemoveTermId;
@@ -1634,14 +1634,14 @@ namespace Corax.Indexing
                 bool isIncluded = false;
                 for (int idX = 0; idX < entries.Additions.Count && isIncluded == false; ++idX)
                 {
-                    if (entries.Additions.RawItems[idX].EntryId == existingEntryId)
+                    if (entries.Additions[idX].EntryId == existingEntryId)
                         isIncluded = true;
                 }
                 
                 //User may wants to delete it.
                 for (int idX = 0; idX < entries.Removals.Count && isIncluded == false; ++idX)
                 {
-                    if (entries.Removals.RawItems[idX].EntryId == existingEntryId)
+                    if (entries.Removals[idX].EntryId == existingEntryId)
                         isIncluded = true;
                 }
 
@@ -1812,7 +1812,7 @@ namespace Corax.Indexing
             InsertEntriesForTermBulk(entriesToTermsTree,indexedField.NameDouble);
         }
         
-        private bool TryEncodingToBuffer(long * additions, int additionsCount, Span<byte> tmpBuf, out Span<byte> encoded)
+        private bool TryEncodingToBuffer(long* additions, int additionsCount, Span<byte> tmpBuf, out Span<byte> encoded)
         {
             fixed (byte* pOutput = tmpBuf)
             {
@@ -1843,7 +1843,7 @@ namespace Corax.Indexing
             if (entries.Additions.Count == 1)
             {
                 entries.AssertPreparationIsNotFinished();
-                ref var single = ref entries.Additions.RawItems[0]; 
+                ref var single = ref entries.Additions.ToSpan()[0]; 
                 termId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, (long)TermIdMask.Single);                
                 return;
             }

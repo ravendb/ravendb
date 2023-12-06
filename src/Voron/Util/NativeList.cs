@@ -22,6 +22,7 @@ public unsafe struct NativeList<T>
     private ByteString _storage;
 
     public T* RawItems => Capacity > 0 ? (T*)_storage.Ptr : null;
+
     public int Capacity => _storage.Length / sizeof(T);
     public int Count;
 
@@ -32,6 +33,11 @@ public unsafe struct NativeList<T>
     public NativeList()
     {
         _storage = default;
+    }
+
+    public ref T this[int index]
+    {
+        get => ref Unsafe.AsRef<T>((T*)_storage.Ptr + index);
     }
 
     public bool TryAdd(in T l)
