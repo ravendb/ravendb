@@ -25,6 +25,9 @@ namespace Raven.Server.Documents.Sharding
 
             internal int ModifyShardNumber(int shardNumber) =>
                 _databaseContext.ShardsTopology.Keys.ElementAt(0) == shardNumber ? _databaseContext.ShardsTopology.Keys.ElementAt(1) : shardNumber;
+
+            internal int BulkInsertStreamWriteTimeout;
+
         }
     }
 }
