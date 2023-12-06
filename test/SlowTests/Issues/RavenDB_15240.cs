@@ -61,7 +61,7 @@ namespace SlowTests.Issues
                 state = tombstoneCleaner.GetState().Tombstones;
 
                 Assert.Equal(0, state["Companies"].Documents.Etag);
-                Assert.Equal(8, state["Companies"].TimeSeries.Etag);
+                Assert.Equal(2, state["Companies"].TimeSeries.Etag);
 
                 using (var session = store.OpenSession())
                 {
@@ -76,8 +76,8 @@ namespace SlowTests.Issues
 
                 state = tombstoneCleaner.GetState().Tombstones;
 
-                Assert.Equal(10, state["Companies"].Documents.Etag);
-                Assert.Equal(8, state["Companies"].TimeSeries.Etag);
+                Assert.Equal(9, state["Companies"].Documents.Etag);
+                Assert.Equal(2, state["Companies"].TimeSeries.Etag);
             }
         }
 
