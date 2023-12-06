@@ -3,15 +3,13 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Microsoft.Extensions.Primitives;
-using Raven.Server.Json;
+using Raven.Server.Config.Settings;
+using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Json.Sync;
 using Sparrow.Logging;
 
 namespace Raven.Server.Web.Authentication;
@@ -23,6 +21,24 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
     public TwoFactorAuthenticationHandler()
     {
         _auditLogger = LoggingSource.AuditLog.GetLogger(nameof(TwoFactorAuthenticationHandler), "Audit");
+    }
+
+    [RavenAction("/authentication/2fa/configuration", "GET", AuthorizationStatus.UnauthenticatedClients)]
+    public async Task TotpConfiguration()
+    {
+        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+        {
+            await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(TotpServerConfiguration.DefaultTwoFactorSessionDurationInMin));
+                writer.WriteInteger(Server.Configuration.Security.DefaultTwoFactorSessionDuration.GetValue(TimeUnit.Minutes));
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(TotpServerConfiguration.MaxTwoFactorSessionDurationInMin));
+                writer.WriteInteger(Server.Configuration.Security.MaxTwoFactorSessionDuration.GetValue(TimeUnit.Minutes));
+                writer.WriteEndObject();
+            }
+        }
     }
 
     [RavenAction("/authentication/2fa", "DELETE", AuthorizationStatus.UnauthenticatedClients)]
@@ -44,6 +60,16 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
         ctx.OpenReadTransaction();
 
         bool hasLimits = GetBoolValueQueryString("hasLimits", false) ?? true;
+        var sessionDuration = GetIntValueQueryString("sessionDurationInMin", false) 
+                              ?? Server.Configuration.Security.DefaultTwoFactorSessionDuration.GetValue(TimeUnit.Minutes);
+
+        var maxSessionDuration = Server.Configuration.Security.MaxTwoFactorSessionDuration.GetValue(TimeUnit.Minutes);
+        if (sessionDuration > maxSessionDuration)
+        {
+            await ReplyWith(ctx, $"Requested two factor authentication duration is higher than maximum session length ({maxSessionDuration})", HttpStatusCode.BadRequest);
+            return;
+        }
+        
 
         var clientCert = GetCurrentCertificate();
 
@@ -72,7 +98,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
 
         if (TwoFactorAuthentication.ValidateCode(key, token))
         {
-            var period = TimeSpan.FromHours(2);
+            var period = TimeSpan.FromMinutes(sessionDuration);
             
             if (_auditLogger.IsInfoEnabled)
             {
@@ -133,5 +159,12 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
             writer.WriteString(err);
             writer.WriteEndObject();
         }
+    }
+
+
+    public class TotpServerConfiguration
+    {
+        public int DefaultTwoFactorSessionDurationInMin;
+        public int MaxTwoFactorSessionDurationInMin;
     }
 }

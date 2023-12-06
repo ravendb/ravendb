@@ -198,6 +198,18 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Csrf.AdditionalOriginHeaders", ConfigurationEntryScope.ServerWideOnly)]
         public string[] CsrfAdditionalOriginHeaders { get; set; }
+        
+        [Description("Default (in minutes) two-factor session duration")]
+        [DefaultValue(120)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Security.TwoFactor.DefaultSessionDuration", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting DefaultTwoFactorSessionDuration { get; set; }
+        
+        [Description("Maximum (in minutes) two-factor session duration")]
+        [DefaultValue(1440)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Security.TwoFactor.MaxSessionDuration", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting MaxTwoFactorSessionDuration { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 

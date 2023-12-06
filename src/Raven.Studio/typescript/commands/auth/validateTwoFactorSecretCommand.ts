@@ -3,12 +3,12 @@ import endpoints = require("endpoints");
 
 class validateTwoFactorSecretCommand extends commandBase {
 
-    constructor(private secret: string, private limits: boolean) {
+    constructor(private secret: string, private limits: boolean, private sessionDuration: number) {
         super();
     }
     
     execute(): JQueryPromise<void> {
-        const url = endpoints.global.twoFactorAuthentication.authentication2fa + this.urlEncodeArgs({ hasLimits: this.limits});
+        const url = endpoints.global.twoFactorAuthentication.authentication2fa + this.urlEncodeArgs({ hasLimits: this.limits, sessionDurationInMin: this.sessionDuration });
         
         const payload = {
             Token: this.secret
