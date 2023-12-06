@@ -61,82 +61,77 @@ export default function KafkaConnectionString({
 
     return (
         <Form onSubmit={handleSubmit(handleSave)}>
-            <ModalBody className="vstack gap-3">
-                <div>
-                    <Label className="mb-0 md-label">Name</Label>
-                    <FormInput
-                        control={control}
-                        name="name"
-                        type="text"
-                        placeholder="Enter a name for the connection string"
-                    />
-                </div>
-                <div>
-                    <Label className="mb-0 md-label">Bootstrap Servers</Label>
-                    <FormInput
-                        control={control}
-                        name="bootstrapServers"
-                        type="text"
-                        placeholder="Enter comma-separated Bootstrap Servers"
-                    />
-                </div>
-                <div>
-                    <div>
-                        <Label className="mb-0 md-label">
-                            Connection Options <small className="text-muted fw-light">(optional)</small>
-                        </Label>
-                        {connectionOptionsFieldArray.fields.map((option, idx) => (
-                            <div key={option.id} className="d-flex mb-1 gap-1">
-                                <FormInput
-                                    type="text"
-                                    control={control}
-                                    name={`connectionOptions.${idx}.key`}
-                                    placeholder="Enter an option key"
-                                />
-                                <FormInput
-                                    type="text"
-                                    control={control}
-                                    name={`connectionOptions.${idx}.value`}
-                                    placeholder="Enter an option value"
-                                />
-                                <Button color="danger" onClick={() => connectionOptionsFieldArray.remove(idx)}>
-                                    <Icon icon="trash" margin="m-0" title="Delete" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                    <Button
-                        color="info"
-                        className="mt-1"
-                        onClick={() => connectionOptionsFieldArray.append({ key: "", value: "" })}
-                    >
-                        <Icon icon="plus" />
-                        Add new connection option
-                    </Button>
-                    <div id={testButtonId} className="mt-2" style={{ width: "fit-content" }}>
-                        <ButtonWithSpinner
-                            color="primary"
-                            icon="rocket"
-                            onClick={asyncTest.execute}
-                            disabled={isTestButtonDisabled}
-                            isSpinning={asyncTest.loading}
-                        >
-                            Test Connection
-                        </ButtonWithSpinner>
-                    </div>
-                    {isTestButtonDisabled && (
-                        <UncontrolledTooltip target={testButtonId}>Enter bootstrap servers.</UncontrolledTooltip>
-                    )}
-                </div>
-                <ConnectionStringUsedByTasks
-                    tasks={initialConnection.usedByTasks}
-                    urlProvider={forCurrentDatabase.editRavenEtl}
+            <div>
+                <Label className="mb-0 md-label">Name</Label>
+                <FormInput
+                    control={control}
+                    name="name"
+                    type="text"
+                    placeholder="Enter a name for the connection string"
                 />
-
-                <ConnectionStringTestResult testResult={asyncTest.result} />
-            </ModalBody>
-
-            <ConnectionStringFormFooter isSubmitting={formState.isSubmitting} />
+            </div>
+            <div>
+                <Label className="mb-0 md-label">Bootstrap Servers</Label>
+                <FormInput
+                    control={control}
+                    name="bootstrapServers"
+                    type="text"
+                    placeholder="Enter comma-separated Bootstrap Servers"
+                />
+            </div>
+            <div>
+                <div>
+                    <Label className="mb-0 md-label">
+                        Connection Options <small className="text-muted fw-light">(optional)</small>
+                    </Label>
+                    {connectionOptionsFieldArray.fields.map((option, idx) => (
+                        <div key={option.id} className="d-flex mb-1 gap-1">
+                            <FormInput
+                                type="text"
+                                control={control}
+                                name={`connectionOptions.${idx}.key`}
+                                placeholder="Enter an option key"
+                            />
+                            <FormInput
+                                type="text"
+                                control={control}
+                                name={`connectionOptions.${idx}.value`}
+                                placeholder="Enter an option value"
+                            />
+                            <Button color="danger" onClick={() => connectionOptionsFieldArray.remove(idx)}>
+                                <Icon icon="trash" margin="m-0" title="Delete" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+                <Button
+                    color="info"
+                    className="mt-1"
+                    onClick={() => connectionOptionsFieldArray.append({ key: "", value: "" })}
+                >
+                    <Icon icon="plus" />
+                    Add new connection option
+                </Button>
+                <div id={testButtonId} className="mt-2" style={{ width: "fit-content" }}>
+                    <ButtonWithSpinner
+                        color="primary"
+                        icon="rocket"
+                        onClick={asyncTest.execute}
+                        disabled={isTestButtonDisabled}
+                        isSpinning={asyncTest.loading}
+                    >
+                        Test Connection
+                    </ButtonWithSpinner>
+                </div>
+                {isTestButtonDisabled && (
+                    <UncontrolledTooltip target={testButtonId}>Enter bootstrap servers.</UncontrolledTooltip>
+                )}
+            </div>
+            <ConnectionStringUsedByTasks
+                tasks={initialConnection.usedByTasks}
+                urlProvider={forCurrentDatabase.editKafkaEtl}
+            />
+            <ConnectionStringTestResult testResult={asyncTest.result} />
         </Form>
     );
 }

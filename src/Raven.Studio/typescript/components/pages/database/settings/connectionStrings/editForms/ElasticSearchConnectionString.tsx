@@ -23,6 +23,9 @@ import messagePublisher from "common/messagePublisher";
 import replicationCertificateModel from "models/database/tasks/replicationCertificateModel";
 import forge = require("node-forge");
 import { mapElasticSearchAuthenticationToDto } from "../store/connectionStringsMapsToDto";
+import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
+import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 type FormData = ConnectionFormData<ElasticSearchConnection>;
 
@@ -49,8 +52,7 @@ export default function ElasticSearchConnectionString({
 
     const formValues = useWatch({ control });
 
-    console.log("kalczur formValues", formValues);
-
+    const { forCurrentDatabase } = useAppUrls();
     const { databasesService } = useServices();
 
     const asyncTest = useAsyncCallback((idx: number) => {
@@ -214,6 +216,11 @@ export default function ElasticSearchConnectionString({
                     ))}
                 </div>
             )}
+            <ConnectionStringUsedByTasks
+                tasks={initialConnection.usedByTasks}
+                urlProvider={forCurrentDatabase.editElasticSearchEtl}
+            />
+            <ConnectionStringTestResult testResult={asyncTest.result} />
         </Form>
     );
 }
