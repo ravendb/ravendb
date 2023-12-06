@@ -240,10 +240,12 @@ namespace Voron.Impl
         {
             _tables ??= new Dictionary<TableKey, Table>();
 
-            var clonedName = name.Clone(Allocator);
-            var key = new TableKey(clonedName, schema.Compressed);
+            var key = new TableKey(name, schema.Compressed);
             if (_tables.TryGetValue(key, out Table value))
                 return value;
+
+            var clonedName = name.Clone(Allocator);
+            key = new TableKey(clonedName, schema.Compressed);
 
             var tableTree = ReadTree(clonedName, RootObjectType.Table);
 
