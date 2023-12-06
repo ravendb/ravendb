@@ -371,13 +371,25 @@ namespace Sparrow.Logging
                 }
             }
 
-            public static bool TryGetDate(string fileName, out DateTime dateTime)
+            public static bool TryGetDateUtc(string fileName, out DateTime dateTimeUtc)
+            {
+                if (TryGetDateLocal(fileName, out var dateTimeLocal))
+                {
+                    dateTimeUtc = dateTimeLocal.ToUniversalTime();
+                    return true;
+                }
+
+                dateTimeUtc = default;
+                return false;
+            }
+
+            public static bool TryGetDateLocal(string fileName, out DateTime dateTimeLocal)
             {
                 try
                 {
                     if (File.Exists(fileName))
                     {
-                        dateTime = File.GetLastWriteTime(fileName);
+                        dateTimeLocal = File.GetLastWriteTime(fileName);
                         return true;
                     }
                 }
@@ -386,7 +398,7 @@ namespace Sparrow.Logging
                     // ignored
                 }
 
-                dateTime = default;
+                dateTimeLocal = default;
                 return false;
             }
             public static bool TryGetNumber(string fileName, out int n)
@@ -434,7 +446,7 @@ namespace Sparrow.Logging
         {
             for (int i = files.Length - 1; i >= 0; i--)
             {
-                if(LogInfo.TryGetDate(files[i], out var fileDate) == false || fileDate.Date.Equals(_today) == false)
+                if(LogInfo.TryGetDateLocal(files[i], out var fileDate) == false || fileDate.Date.Equals(_today) == false)
                     continue;
                 
                 if (LogInfo.TryGetNumber(files[i], out var n))
@@ -451,7 +463,7 @@ namespace Sparrow.Logging
 
             foreach (var logFile in logFiles)
             {
-                if (LogInfo.TryGetDate(logFile, out var logDateTime) == false
+                if (LogInfo.TryGetDateLocal(logFile, out var logDateTime) == false
                     || DateTime.Now - logDateTime <= RetentionTime)
                     continue;
 
