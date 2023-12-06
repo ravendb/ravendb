@@ -94,7 +94,7 @@ public readonly unsafe struct PostingListLeafPage
         // In all other scenarios, we have to sort and remove duplicates & removals
         var needSorting = removalsCount > 0 || // any removal force sorting
                           // here we test if the first new addition is smaller than the largest existing, requiring sorting  
-                          (maxAdditionsLimit > 0 && additions[0] <= tempList.RawItems[tempList.Count - 1]);
+                          (maxAdditionsLimit > 0 && additions[0] <= tempList[^1]);
 
         tempList.AddRangeUnsafe(additions, maxAdditionsLimit);
         tempList.AddRangeUnsafe(removals, maxRemovalsLimit);

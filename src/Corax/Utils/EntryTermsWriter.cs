@@ -38,9 +38,11 @@ public unsafe struct EntryTermsWriter : IDisposable
         int offset = 0;
         long prevTermId = 0;
         long prevLong = 0;
+
+        var termsSpan = terms.ToSpan();
         for (int i = 0; i < terms.Count; i++)
         {
-            ref var cur = ref terms.RawItems[i];
+            ref var cur = ref termsSpan[i];
 
             // no need for zig/zag, since we are working on sorted values
             offset += VariableSizeEncoding.Write(buffer + offset, cur.TermContainerId - prevTermId);

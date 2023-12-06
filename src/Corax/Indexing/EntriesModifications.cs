@@ -160,7 +160,7 @@ internal unsafe struct EntriesModifications
         NeedToUpdate = true;
         if (list.Count > 0)
         {
-            ref var cur = ref list.RawItems[list.Count - 1];
+            ref var cur = ref list[list.Count - 1];
             if (cur.EntryId == entryId)
             {
                 if (cur.Frequency + freq < short.MaxValue)
@@ -181,14 +181,15 @@ internal unsafe struct EntriesModifications
             }
         }
 
-        var term = new TermInEntryModification {EntryId = entryId, TermsPerEntryIndex = termsPerEntryIndex, Frequency = freq};
-        list.AddUnsafe(term);
+        ref var term = ref list.AddByRefUnsafe();
+        term = new TermInEntryModification(entryId, termsPerEntryIndex, freq);
     }
 
     private void DeleteAllDuplicates([NotNull] ByteStringContext context)
     {
         if (NeedToUpdate == false)
             return;
+
         NeedToUpdate = false;
 
         if (NeedToSort)
@@ -200,13 +201,12 @@ internal unsafe struct EntriesModifications
 
         var oldUpdates = Updates.Count;
         int additionPos = 0, removalPos = 0;
-        var additions = Additions.RawItems;
-        var removals = Removals.RawItems;
+
         int add = 0, rem = 0;
         for (; add < Additions.Count && rem < Removals.Count; ++add)
         {
-            ref var currentAdd = ref additions[add];
-            ref var currentRemoval = ref removals[rem];
+            ref var currentAdd = ref Additions[add];
+            ref var currentRemoval = ref Removals[rem];
 
             //We've to delete exactly same item in additions and removals and delete those.
             //This is made for Set structure.
@@ -226,23 +226,23 @@ internal unsafe struct EntriesModifications
             // the remove is the old one in this case
             if (currentAdd.EntryId >= currentRemoval.EntryId)
             {
-                removals[removalPos++] = currentRemoval;
+                Removals[removalPos++] = currentRemoval;
                 rem++;
                 add--; // so the loop increment will stay the same
                 continue;
             }
 
-            additions[additionPos++] = currentAdd;
+            Additions[additionPos++] = currentAdd;
         }
 
         for (; add < Additions.Count; add++)
         {
-            additions[additionPos++] = additions[add];
+            Additions[additionPos++] = Additions[add];
         }
 
         for (; rem < Removals.Count; rem++)
         {
-            removals[removalPos++] = removals[rem];
+            Removals[removalPos++] = Removals[rem];
         }
 
         Additions.Shrink(additionPos);
@@ -272,14 +272,14 @@ internal unsafe struct EntriesModifications
         additions = (long*)Additions.RawItems;
         for (int i = 0; i < Additions.Count; i++)
         {
-            ref var cur = ref Additions.RawItems[i];
+            ref var cur = ref Additions[i];
             additions[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, TermIdMask.Single);
         }
 
         removals = (long*)Removals.RawItems;
         for (int i = 0; i < Removals.Count; i++)
         {
-            ref var cur = ref Removals.RawItems[i];
+            ref var cur = ref Removals[i];
             // Here we use a trick, we want to avoid a 3 way merge, so we use the last bit as indication that this is a
             // value that needs to be removed, after the sorting, we can scan, find the matching removal & addition and skip both
             removals[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, (TermIdMask)1);

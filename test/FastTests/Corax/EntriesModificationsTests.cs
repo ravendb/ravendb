@@ -40,7 +40,7 @@ public class EntriesModificationsTests : NoDisposalNeeded
             bool found = false;
             for (int i = 0; i < removals.Count; i++)
             {
-                if (add.EntryId == removals.RawItems[i].EntryId)
+                if (add.EntryId == removals[i].EntryId)
                     found = true;
             }
             Assert.False(found);
@@ -52,7 +52,7 @@ public class EntriesModificationsTests : NoDisposalNeeded
             bool found = false;
             for (int i = 0; i < additions.Count; i++)
             {
-                if (removal.EntryId == additions.RawItems[i].EntryId)
+                if (removal.EntryId == additions[i].EntryId)
                     found = true;
             }
             Assert.False(found);

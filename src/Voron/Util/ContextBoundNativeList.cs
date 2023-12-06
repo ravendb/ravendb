@@ -20,6 +20,7 @@ namespace Voron.Util
 
         public T* RawItems => Inner.RawItems;
         public int Capacity => Inner.Capacity;
+
         public int Count
         {
             get { return Inner.Count; }
@@ -29,6 +30,12 @@ namespace Voron.Util
         public bool IsValid => RawItems != null;
 
         public readonly Span<T> ToSpan() => Inner.ToSpan();
+
+
+        public ref T this[int index]
+        {
+            get => ref Inner[index];
+        }
 
         public bool TryAdd(in T l)
         {
