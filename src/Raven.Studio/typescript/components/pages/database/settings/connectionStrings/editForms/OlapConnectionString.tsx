@@ -7,6 +7,7 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import FormDestinationList from "components/common/formDestinations/FormDestinationList";
+import { destinationsSchema } from "components/common/formDestinations/utils/formDestinationsValidation";
 import {
     defaultAzureFormData,
     defaultFtpFormData,
@@ -14,9 +15,10 @@ import {
     defaultGoogleCloudFormData,
     defaultLocalFormData,
     defaultS3FormData,
-    destinationsSchema,
-} from "components/common/formDestinations/formDestinationsUtils";
+} from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 import { DevTool } from "@hookform/devtools";
+import { useAppUrls } from "components/hooks/useAppUrls";
+import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 
 type FormData = ConnectionFormData<OlapConnection>;
 
@@ -37,6 +39,8 @@ export default function OlapConnectionString({
 
     const { control, handleSubmit, formState } = form;
     const formValues = useWatch({ control });
+
+    const { forCurrentDatabase } = useAppUrls();
 
     const mySubmit = async (e: any) => {
         e.preventDefault();
@@ -69,6 +73,11 @@ export default function OlapConnectionString({
                 </div>
                 <FormDestinationList />
             </Form>
+
+            <ConnectionStringUsedByTasks
+                tasks={initialConnection.usedByTasks}
+                urlProvider={forCurrentDatabase.editOlapEtl}
+            />
         </FormProvider>
     );
 }

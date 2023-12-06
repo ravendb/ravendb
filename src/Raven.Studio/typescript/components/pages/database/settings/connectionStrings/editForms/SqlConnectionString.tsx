@@ -1,4 +1,4 @@
-﻿import { Form, Label, ModalBody, UncontrolledTooltip } from "reactstrap";
+﻿import { Form, Label, UncontrolledTooltip } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -11,7 +11,6 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAsyncCallback } from "react-async-hook";
-import ConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
 import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
@@ -54,70 +53,67 @@ export default function SqlConnectionString({
 
     return (
         <Form onSubmit={handleSubmit(handleSave)}>
-            <ModalBody className="vstack gap-3">
-                <div>
-                    <Label className="mb-0 md-label">Name</Label>
-                    <FormInput
-                        control={control}
-                        name="name"
-                        type="text"
-                        placeholder="Enter a name for the connection string"
-                        disabled={!isForNewConnection}
-                    />
-                </div>
-                <div>
-                    <Label className="mb-0 md-label">Factory</Label>
-                    <FormSelect
-                        control={control}
-                        name="factoryName"
-                        options={sqlFactoryOptions}
-                        placeholder="Select factory name"
-                        isSearchable={false}
-                    />
-                    {formValues.factoryName && (
-                        <>
-                            <small ref={setSyntaxHelpElement} className="text-primary">
-                                Syntax <Icon icon="help" />
-                            </small>
-                            <PopoverWithHover target={syntaxHelpElement}>
-                                <div className="p-2">{getSyntaxHelp(formValues.factoryName)}</div>
-                            </PopoverWithHover>
-                        </>
-                    )}
-                </div>
-                <div>
-                    <Label className="mb-0 md-label">Connection string</Label>
-                    <FormInput
-                        control={control}
-                        name="connectionString"
-                        type="textarea"
-                        placeholder={getConnectionStringPlaceholder(formValues.factoryName)}
-                        rows={3}
-                    />
-                    <div id={testButtonId} className="mt-2" style={{ width: "fit-content" }}>
-                        <ButtonWithSpinner
-                            color="primary"
-                            icon="rocket"
-                            onClick={asyncTest.execute}
-                            disabled={isTestButtonDisabled}
-                            isSpinning={asyncTest.loading}
-                        >
-                            Test Connection
-                        </ButtonWithSpinner>
-                    </div>
-                    {isTestButtonDisabled && (
-                        <UncontrolledTooltip target={testButtonId}>
-                            Select factory and enter connection string.
-                        </UncontrolledTooltip>
-                    )}
-                </div>
-                <ConnectionStringUsedByTasks
-                    tasks={initialConnection.usedByTasks}
-                    urlProvider={forCurrentDatabase.editRavenEtl}
+            <div>
+                <Label className="mb-0 md-label">Name</Label>
+                <FormInput
+                    control={control}
+                    name="name"
+                    type="text"
+                    placeholder="Enter a name for the connection string"
+                    disabled={!isForNewConnection}
                 />
-                <ConnectionStringTestResult testResult={asyncTest.result} />
-            </ModalBody>
-            <ConnectionStringFormFooter isSubmitting={formState.isSubmitting} />
+            </div>
+            <div>
+                <Label className="mb-0 md-label">Factory</Label>
+                <FormSelect
+                    control={control}
+                    name="factoryName"
+                    options={sqlFactoryOptions}
+                    placeholder="Select factory name"
+                    isSearchable={false}
+                />
+                {formValues.factoryName && (
+                    <>
+                        <small ref={setSyntaxHelpElement} className="text-primary">
+                            Syntax <Icon icon="help" />
+                        </small>
+                        <PopoverWithHover target={syntaxHelpElement}>
+                            <div className="p-2">{getSyntaxHelp(formValues.factoryName)}</div>
+                        </PopoverWithHover>
+                    </>
+                )}
+            </div>
+            <div>
+                <Label className="mb-0 md-label">Connection string</Label>
+                <FormInput
+                    control={control}
+                    name="connectionString"
+                    type="textarea"
+                    placeholder={getConnectionStringPlaceholder(formValues.factoryName)}
+                    rows={3}
+                />
+                <div id={testButtonId} className="mt-2" style={{ width: "fit-content" }}>
+                    <ButtonWithSpinner
+                        color="primary"
+                        icon="rocket"
+                        onClick={asyncTest.execute}
+                        disabled={isTestButtonDisabled}
+                        isSpinning={asyncTest.loading}
+                    >
+                        Test Connection
+                    </ButtonWithSpinner>
+                </div>
+                {isTestButtonDisabled && (
+                    <UncontrolledTooltip target={testButtonId}>
+                        Select factory and enter connection string.
+                    </UncontrolledTooltip>
+                )}
+            </div>
+            <ConnectionStringUsedByTasks
+                tasks={initialConnection.usedByTasks}
+                urlProvider={forCurrentDatabase.editSqlEtl}
+            />
+            <ConnectionStringTestResult testResult={asyncTest.result} />
         </Form>
     );
 }

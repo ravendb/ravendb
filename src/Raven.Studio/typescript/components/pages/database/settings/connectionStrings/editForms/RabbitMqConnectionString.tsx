@@ -86,7 +86,7 @@ export default function RabbitMqConnectionString({
             </div>
             <ConnectionStringUsedByTasks
                 tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editRavenEtl}
+                urlProvider={forCurrentDatabase.editRabbitMqEtl}
             />
             <ConnectionStringTestResult testResult={asyncTest.result} />
         </Form>
