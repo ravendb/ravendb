@@ -12,6 +12,15 @@
             </div>
             
             
+            Session duration:
+
+            <div class="input-group">
+                <input type="number" class="form-control" data-bind="value: sessionDurationInMin, attr: { max: maxSessionDurationInMin() }" />
+                <div class="input-group-addon">minutes</div>
+            </div>
+            
+            <br />
+            
             <button class="btn btn-primary">Verify</button>
         </form>
     </div>
