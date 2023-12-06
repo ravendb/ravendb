@@ -23,6 +23,9 @@ namespace Raven.Server.Documents.Handlers.BulkInsert
                 {
                     using (var bulkInsertProcessor = new BulkInsertHandlerProcessor(this, Database, progress, skipOverwriteIfUnchanged, operationCancelToken.Token))
                     {
+                        if (Database.ForTestingPurposes?.BulkInsertStreamReadTimeout > 0)
+                            bulkInsertProcessor.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = Database.ForTestingPurposes.BulkInsertStreamReadTimeout;
+
                         await bulkInsertProcessor.ExecuteAsync();
 
                         return bulkInsertProcessor.OperationResult;
