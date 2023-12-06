@@ -162,7 +162,7 @@ namespace SlowTests.SparrowTests
             {
                 var afterEndFiles = Directory.GetFiles(path);
                 todayLog = afterEndFiles.FirstOrDefault(f =>
-                    LoggingSource.LogInfo.TryGetDate(f, out var date) && date.Date.Equals(DateTime.Today));
+                    LoggingSource.LogInfo.TryGetDateLocal(f, out var date) && date.Date.Equals(DateTime.Today));
                 return todayLog != null;
             }, true, 10_000, 1_000);
 
@@ -210,7 +210,7 @@ namespace SlowTests.SparrowTests
                 var strings = Directory.GetFiles(path);
                 return strings.Any(f =>
                 {
-                    if (LoggingSource.LogInfo.TryGetDate(f, out var d) == false || d.Date.Equals(DateTime.Today) == false)
+                    if (LoggingSource.LogInfo.TryGetDateLocal(f, out var d) == false || d.Date.Equals(DateTime.Today) == false)
                         return false;
 
                     return LoggingSource.LogInfo.TryGetNumber(f, out var n) && n == 11;
