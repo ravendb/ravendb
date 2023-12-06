@@ -116,8 +116,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             var adminLogsFileName = $"admin.logs.download.{Guid.NewGuid():N}";
             var adminLogsFilePath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(adminLogsFileName);
 
-            var from = GetDateTimeQueryString("from", required: false);
-            var to = GetDateTimeQueryString("to", required: false);
+            var fromUtc = GetDateTimeQueryString("from", required: false);
+            var toUtc = GetDateTimeQueryString("to", required: false);
 
             using (var stream = SafeFileStream.Create(adminLogsFilePath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
                        FileOptions.DeleteOnClose | FileOptions.SequentialScan))
@@ -131,15 +131,15 @@ namespace Raven.Server.Documents.Handlers.Admin
                             fileName.EndsWith(LoggingSource.LogInfo.FullCompressExtension, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
 
-                        var hasLogDateTime = LoggingSource.LogInfo.TryGetDate(filePath, out var logDateTime);
-                        if (hasLogDateTime && from.HasValue && logDateTime < from)
+                        var hasLogDateTime = LoggingSource.LogInfo.TryGetDateUtc(filePath, out var logDateTimeUtc);
+                        if (hasLogDateTime && fromUtc.HasValue && logDateTimeUtc < fromUtc)
                             continue;
 
                         try
                         {
                             var entry = archive.CreateEntry(fileName);
                             if (hasLogDateTime)
-                                entry.LastWriteTime = logDateTime;
+                                entry.LastWriteTime = logDateTimeUtc;
 
                             using (var fs = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, fileName);
                         }
 
-                        if (hasLogDateTime && to.HasValue && logDateTime > to)
+                        if (hasLogDateTime && toUtc.HasValue && logDateTimeUtc >= toUtc)
                             break;
                     }
                 }
