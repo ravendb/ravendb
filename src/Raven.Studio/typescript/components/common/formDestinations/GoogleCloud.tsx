@@ -1,25 +1,43 @@
 ﻿import React from "react";
-import { Button, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
-import { FormDestinations } from "./formDestinationsUtils";
+import { FormDestinations } from "./utils/formDestinationsTypes";
+import ButtonWithSpinner from "../ButtonWithSpinner";
+import { useServices } from "components/hooks/useServices";
+import { useAsyncCallback } from "react-async-hook";
+import { mapGoogleCloudToDto } from "./utils/formDestinationsMapsToDto";
+import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 
 export default function GoogleCloud() {
-    const { control } = useFormContext<FormDestinations>();
-    const { googleCloud: formValues } = useWatch({ control });
+    const { control, trigger } = useFormContext<FormDestinations>();
+    const {
+        destinations: { googleCloud: formValues },
+    } = useWatch({ control });
+
+    const { manageServerService } = useServices();
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger(fieldBase);
+        if (!isValid) {
+            return;
+        }
+
+        return manageServerService.testPeriodicBackupCredentials("GoogleCloud", mapGoogleCloudToDto(formValues));
+    });
 
     return (
         <Card className="well">
             <CardBody>
-                <FormSwitch name="googleCloud.isEnabled" control={control}>
+                <FormSwitch name={getName("isEnabled")} control={control}>
                     Google Cloud
                 </FormSwitch>
                 <Collapse isOpen={formValues.isEnabled} className="mt-2">
                     <FormSwitch
-                        name="googleCloud.isOverrideConfig"
+                        name={getName("isOverrideConfig")}
                         control={control}
                         className="ms-3 mb-2 w-100"
                         color="secondary"
@@ -27,7 +45,7 @@ export default function GoogleCloud() {
                         Override configuration via external script
                     </FormSwitch>
                     {formValues.isOverrideConfig ? (
-                        <OverrideConfiguration formName="googleCloud" />
+                        <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
                         <>
                             <div>
@@ -52,7 +70,7 @@ export default function GoogleCloud() {
                                     </PopoverBody>
                                 </UncontrolledPopover>
                                 <FormInput
-                                    name="googleCloud.bucketName"
+                                    name={getName("bucketName")}
                                     control={control}
                                     placeholder="Enter a bucket"
                                     type="text"
@@ -64,7 +82,7 @@ export default function GoogleCloud() {
                                     Remote folder name <small className="text-muted fw-light">(optional)</small>
                                 </Label>
                                 <FormInput
-                                    name="googleCloud.remoteFolderName"
+                                    name={getName("remoteFolderName")}
                                     control={control}
                                     placeholder="Enter a remote folder name"
                                     type="text"
@@ -74,7 +92,7 @@ export default function GoogleCloud() {
                             <div>
                                 <Label className="mb-0 md-label">Google Credentials Json</Label>
                                 <FormInput
-                                    name="googleCloud.googleCredentialsJson"
+                                    name={getName("googleCredentialsJson")}
                                     control={control}
                                     placeholder={googleCredentialsJsonPlaceholder}
                                     type="textarea"
@@ -83,10 +101,18 @@ export default function GoogleCloud() {
                             </div>
                             <div className="d-flex mt-3">
                                 <FlexGrow />
-                                <Button color="info">
+                                <ButtonWithSpinner
+                                    type="button"
+                                    color="info"
+                                    onClick={asyncTest.execute}
+                                    isSpinning={asyncTest.loading}
+                                >
                                     <Icon icon="rocket" />
                                     Test credentials
-                                </Button>
+                                </ButtonWithSpinner>
+                            </div>
+                            <div className="mt-2">
+                                <ConnectionTestResult testResult={asyncTest.result} />
                             </div>
                         </>
                     )}
@@ -96,17 +122,25 @@ export default function GoogleCloud() {
     );
 }
 
-const googleCredentialsJsonPlaceholder =
-    "e.g.\n" +
-    "{\n" +
-    '    "type": "service_account",\n' +
-    '    "project_id": "test-raven-237012",\n' +
-    '    "private_key_id": "12345678123412341234123456789101",\n' +
-    '    "private_key": "-----BEGIN PRIVATE KEY-----\\abCse=\\n-----END PRIVATE KEY-----\\n",\n' +
-    '    "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",\n' +
-    '    "client_id": "111390682349634407434",\n' +
-    '    "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n' +
-    '    "token_uri": "https://oauth2.googleapis.com/token",\n' +
-    '    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n' +
-    '    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"\n' +
-    "}";
+const googleCredentialsJsonPlaceholder = `
+e.g.
+{
+    "type": "service_account",
+    "project_id": "test-raven-237012",
+    "private_key_id": "12345678123412341234123456789101",
+    "private_key": "-----BEGIN PRIVATE KEY-----\\abCse=-----END PRIVATE KEY-----",
+    "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
+    "client_id": "111390682349634407434",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
+}`;
+
+const fieldBase = "destinations.googleCloud";
+
+type FormFieldNames = keyof FormDestinations["destinations"]["googleCloud"];
+
+function getName(fieldName: FormFieldNames): `${typeof fieldBase}.${FormFieldNames}` {
+    return `${fieldBase}.${fieldName}`;
+}

@@ -2,13 +2,15 @@
 import { InputGroup, InputGroupText, Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import { useFormContext } from "react-hook-form";
-import { BackupConfigurationScript, FormDestinations } from "./formDestinationsUtils";
+import { BackupConfigurationScript, FormDestinations } from "./utils/formDestinationsTypes";
+
+type FieldBase = `destinations.${keyof FormDestinations["destinations"]}`;
 
 interface OverrideConfigurationProps {
-    formName: keyof FormDestinations;
+    fieldBase: FieldBase;
 }
 
-const OverrideConfiguration = ({ formName }: OverrideConfigurationProps) => {
+const OverrideConfiguration = ({ fieldBase }: OverrideConfigurationProps) => {
     const { control } = useFormContext<FormDestinations>();
 
     return (
@@ -16,7 +18,7 @@ const OverrideConfiguration = ({ formName }: OverrideConfigurationProps) => {
             <div>
                 <Label className="mb-0 md-label">Exec</Label>
                 <FormInput
-                    name={getName(formName, "exec")}
+                    name={getName(fieldBase, "exec")}
                     control={control}
                     placeholder="Path to executable"
                     className="mb-2"
@@ -27,7 +29,7 @@ const OverrideConfiguration = ({ formName }: OverrideConfigurationProps) => {
                 <Label className="mb-0 md-label">Arguments</Label>
                 <FormInput
                     type="text"
-                    name={getName(formName, "arguments")}
+                    name={getName(fieldBase, "arguments")}
                     control={control}
                     placeholder="Command line arguments passed to exec"
                     className="mb-2"
@@ -37,7 +39,7 @@ const OverrideConfiguration = ({ formName }: OverrideConfigurationProps) => {
                 <Label className="mb-0 md-label">Timeout</Label>
                 <InputGroup>
                     <FormInput
-                        name={getName(formName, "timeoutInMs")}
+                        name={getName(fieldBase, "timeoutInMs")}
                         control={control}
                         placeholder="10000 (default)"
                         type="number"
@@ -50,10 +52,10 @@ const OverrideConfiguration = ({ formName }: OverrideConfigurationProps) => {
 };
 
 function getName(
-    formName: keyof FormDestinations,
+    fieldBase: `destinations.${keyof FormDestinations["destinations"]}`,
     fieldName: keyof BackupConfigurationScript
-): `${keyof FormDestinations}.config.${keyof BackupConfigurationScript}` {
-    return `${formName}.config.${fieldName}`;
+): `destinations.${keyof FormDestinations["destinations"]}.config.${keyof BackupConfigurationScript}` {
+    return `${fieldBase}.config.${fieldName}`;
 }
 
 export default OverrideConfiguration;

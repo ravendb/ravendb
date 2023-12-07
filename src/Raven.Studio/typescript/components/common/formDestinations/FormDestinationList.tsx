@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from "react";
+﻿import React from "react";
 import { Label } from "reactstrap";
 import Local from "./Local";
 import AmazonS3 from "./AmazonS3";
@@ -6,45 +6,11 @@ import Azure from "./Azure";
 import GoogleCloud from "./GoogleCloud";
 import AmazonGlacier from "./AmazonGlacier";
 import Ftp from "./Ftp";
-import { FormDestinations } from "./formDestinationsUtils";
-import { useFormContext, useWatch } from "react-hook-form";
-import { FormDataWithCustomError } from "components/models/common";
-
-type FormData = FormDataWithCustomError<FormDestinations>;
+import { FormDestinations } from "./utils/formDestinationsTypes";
+import { useFormContext } from "react-hook-form";
 
 export default function FormDestinationList() {
-    const { control, formState, setError, clearErrors } = useFormContext<FormData>();
-    const { local, s3, azure, googleCloud, glacier, ftp } = useWatch({ control });
-
-    useEffect(() => {
-        const allIsEnabled = [
-            azure.isEnabled,
-            ftp.isEnabled,
-            glacier.isEnabled,
-            googleCloud.isEnabled,
-            local.isEnabled,
-            s3.isEnabled,
-        ];
-
-        console.log("kalczur allIsEnabled", allIsEnabled);
-        if (allIsEnabled.every((isEnabled) => !isEnabled)) {
-            console.log("kalczur set error call");
-            setError("customError", {
-                message: "Please select at least one destination",
-            });
-        } else {
-            clearErrors("customError");
-        }
-    }, [
-        azure.isEnabled,
-        ftp.isEnabled,
-        glacier.isEnabled,
-        googleCloud.isEnabled,
-        local.isEnabled,
-        s3.isEnabled,
-        clearErrors,
-        setError,
-    ]);
+    const { formState } = useFormContext<FormDestinations>();
 
     return (
         <>
@@ -57,8 +23,8 @@ export default function FormDestinationList() {
                 <AmazonGlacier />
                 <Ftp />
             </div>
-            {formState.errors?.customError && (
-                <div className="text-danger small">{formState.errors.customError.message}</div>
+            {formState.errors?.destinations?.message && (
+                <div className="text-danger small">{formState.errors.destinations.message}</div>
             )}
         </>
     );

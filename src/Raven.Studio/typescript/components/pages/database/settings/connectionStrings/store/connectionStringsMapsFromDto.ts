@@ -14,7 +14,7 @@ import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.
 import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
-import { mapDestinationsFromDto } from "components/common/formDestinations/formDestinationsUtils";
+import { mapDestinationsFromDto } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 type SqlConnectionStringDto = SqlConnectionString;
 
 function getConnectionStringUsedTasks(

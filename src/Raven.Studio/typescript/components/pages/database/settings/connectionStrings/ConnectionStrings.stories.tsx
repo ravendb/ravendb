@@ -5,6 +5,7 @@ import ConnectionStrings from "./ConnectionStrings";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
+import { SharedStubs } from "test/stubs/SharedStubs";
 
 export default {
     title: "Pages/Database/Settings",
@@ -14,8 +15,6 @@ export default {
         databaseAccess: databaseAccessArgType,
     },
 } satisfies Meta<typeof ConnectionStrings>;
-
-const db = DatabasesStubs.nonShardedClusterDatabase();
 
 interface DefaultConnectionStringsProps {
     isEmpty: boolean;
@@ -43,14 +42,10 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
             ).ConnectionStringName = Object.keys(DatabasesStubs.connectionStrings().RavenConnectionStrings)[0];
         });
 
+        mockTestResults(props.isTestSuccess);
+
         databasesService.withConnectionStrings(
             props.isEmpty ? DatabasesStubs.emptyConnectionStrings() : DatabasesStubs.connectionStrings()
-        );
-
-        databasesService.withNodeConnectionTestResult(
-            props.isTestSuccess
-                ? DatabasesStubs.nodeConnectionTestSuccessResult()
-                : DatabasesStubs.nodeConnectionTestErrorResult()
         );
 
         accessManager.with_securityClearance("ValidUser");
@@ -81,3 +76,25 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
         hasQueueEtl: true,
     },
 };
+
+const db = DatabasesStubs.nonShardedClusterDatabase();
+
+function mockTestResults(isSuccess: boolean) {
+    const { databasesService, manageServerService } = mockServices;
+
+    if (isSuccess) {
+        databasesService.withTestClusterNodeConnection();
+        databasesService.withTestSqlConnectionString();
+        databasesService.withTestKafkaServerConnection();
+        databasesService.withTestRabbitMqServerConnection();
+        databasesService.withTestElasticSearchNodeConnection();
+        manageServerService.withTestPeriodicBackupCredentials();
+    } else {
+        databasesService.withTestClusterNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
+        databasesService.withTestSqlConnectionString(SharedStubs.nodeConnectionTestErrorResult());
+        databasesService.withTestKafkaServerConnection(SharedStubs.nodeConnectionTestErrorResult());
+        databasesService.withTestRabbitMqServerConnection(SharedStubs.nodeConnectionTestErrorResult());
+        databasesService.withTestElasticSearchNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
+        manageServerService.withTestPeriodicBackupCredentials(SharedStubs.nodeConnectionTestErrorResult());
+    }
+}

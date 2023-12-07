@@ -4,7 +4,7 @@ import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.Olap
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 type SqlConnectionStringDto = SqlConnectionString;
-import { FormDestinations } from "components/common/formDestinations/formDestinationsUtils";
+import { FormDestinations } from "components/common/formDestinations/utils/formDestinationsTypes";
 
 export interface ConnectionStringUsedTask {
     id: number;

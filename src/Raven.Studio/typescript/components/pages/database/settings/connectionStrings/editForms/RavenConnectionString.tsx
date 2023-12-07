@@ -11,7 +11,7 @@ import * as yup from "yup";
 import { useAsyncCallback } from "react-async-hook";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
-import ConnectionStringError from "./shared/ConnectionStringError";
+import ConnectionTestError from "../../../../../common/connectionTests/ConnectionTestError";
 import { yupObjectSchema } from "components/utils/yupUtils";
 
 type FormData = ConnectionFormData<RavenConnection>;
@@ -124,7 +124,7 @@ export default function RavenConnectionString({
             {asyncTest.result?.Success && <Alert color="success">Successfully connected</Alert>}
             {asyncTest.result?.Error && (
                 <>
-                    <ConnectionStringError message={asyncTest.result.Error} />
+                    <ConnectionTestError message={asyncTest.result.Error} />
                     <AboutError isHTTPSuccess={asyncTest.result.HTTPSuccess} />
                 </>
             )}

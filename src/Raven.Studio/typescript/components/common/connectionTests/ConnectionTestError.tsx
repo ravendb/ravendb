@@ -4,11 +4,11 @@ import { AccordionItemWrapper } from "components/common/AboutView";
 import Code from "components/common/Code";
 import { UncontrolledAccordion } from "reactstrap";
 
-interface ConnectionStringErrorProps {
+interface ConnectionTestErrorProps {
     message: string;
 }
 
-export default function ConnectionStringError({ message }: ConnectionStringErrorProps) {
+export default function ConnectionTestError({ message }: ConnectionTestErrorProps) {
     if (!message) {
         return null;
     }

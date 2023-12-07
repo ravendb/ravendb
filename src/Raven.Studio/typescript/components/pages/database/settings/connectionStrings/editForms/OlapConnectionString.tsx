@@ -37,29 +37,20 @@ export default function OlapConnectionString({
         resolver: yupSchemaResolver,
     });
 
-    const { control, handleSubmit, formState } = form;
+    const { control, handleSubmit } = form;
     const formValues = useWatch({ control });
-
     const { forCurrentDatabase } = useAppUrls();
 
-    const mySubmit = async (e: any) => {
-        e.preventDefault();
-        // TODO typing
-        if ((formState.errors as any).customError) {
-            return;
-        }
-
-        handleSubmit(() => {
-            onSave({
-                ...formValues,
-                type: "Olap",
-            } as OlapConnection);
-        })(e);
+    const handleSave = async () => {
+        onSave({
+            ...formValues,
+            type: "Olap",
+        } as OlapConnection);
     };
 
     return (
         <FormProvider {...form}>
-            <Form id="connection-string-form" onSubmit={mySubmit} className="vstack gap-2">
+            <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
                 <DevTool control={control} />
                 <div>
                     <Label className="mb-0 md-label">Name</Label>
@@ -82,7 +73,7 @@ export default function OlapConnectionString({
     );
 }
 
-const schema = yupObjectSchema<Pick<FormData, "name">>({
+const schema = yupObjectSchema<Omit<FormData, "destinations">>({
     name: yup.string().nullable().required(),
 }).concat(destinationsSchema);
 
@@ -92,12 +83,14 @@ function getDefaultValues(initialConnection: OlapConnection, isForNewConnection:
     if (isForNewConnection) {
         return {
             name: null,
-            local: defaultLocalFormData,
-            s3: defaultS3FormData,
-            azure: defaultAzureFormData,
-            googleCloud: defaultGoogleCloudFormData,
-            glacier: defaultGlacierFormData,
-            ftp: defaultFtpFormData,
+            destinations: {
+                local: defaultLocalFormData,
+                s3: defaultS3FormData,
+                azure: defaultAzureFormData,
+                googleCloud: defaultGoogleCloudFormData,
+                glacier: defaultGlacierFormData,
+                ftp: defaultFtpFormData,
+            },
         };
     }
 

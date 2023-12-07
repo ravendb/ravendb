@@ -23,7 +23,7 @@ import messagePublisher from "common/messagePublisher";
 import replicationCertificateModel from "models/database/tasks/replicationCertificateModel";
 import forge = require("node-forge");
 import { mapElasticSearchAuthenticationToDto } from "../store/connectionStringsMapsToDto";
-import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
+import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAppUrls } from "components/hooks/useAppUrls";
 
@@ -220,7 +220,7 @@ export default function ElasticSearchConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editElasticSearchEtl}
             />
-            <ConnectionStringTestResult testResult={asyncTest.result} />
+            <ConnectionTestResult testResult={asyncTest.result} />
         </Form>
     );
 }
