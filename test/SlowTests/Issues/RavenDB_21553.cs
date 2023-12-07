@@ -22,11 +22,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.ClientApi, Skip = "fix me")]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Topology_Change_Shouldnt_Trigger_SpeedTest()
         {
-            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
-
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
+            
             using (var leaderStore = GetDocumentStore(new Options
             {
                 ReplicationFactor = 3,
