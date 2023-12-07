@@ -1,25 +1,43 @@
 ﻿import React from "react";
-import { Button, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
-import { FormDestinations } from "./formDestinationsUtils";
+import { FormDestinations } from "./utils/formDestinationsTypes";
 import OverrideConfiguration from "./OverrideConfiguration";
+import { useServices } from "components/hooks/useServices";
+import { useAsyncCallback } from "react-async-hook";
+import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
+import ButtonWithSpinner from "../ButtonWithSpinner";
+import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 
 export default function Ftp() {
-    const { control } = useFormContext<FormDestinations>();
-    const { ftp: formValues } = useWatch({ control });
+    const { control, trigger } = useFormContext<FormDestinations>();
+    const {
+        destinations: { ftp: formValues },
+    } = useWatch({ control });
+
+    const { manageServerService } = useServices();
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger(fieldBase);
+        if (!isValid) {
+            return;
+        }
+
+        return manageServerService.testPeriodicBackupCredentials("FTP", mapFtpToDto(formValues));
+    });
 
     return (
         <Card className="well">
             <CardBody>
-                <FormSwitch name="ftp.isEnabled" control={control}>
+                <FormSwitch name={getName("isEnabled")} control={control}>
                     FTP
                 </FormSwitch>
                 <Collapse isOpen={formValues.isEnabled} className="mt-2">
                     <FormSwitch
-                        name="ftp.isOverrideConfig"
+                        name={getName("isOverrideConfig")}
                         control={control}
                         className="ms-3 mb-2 w-100"
                         color="secondary"
@@ -27,7 +45,7 @@ export default function Ftp() {
                         Override configuration via external script
                     </FormSwitch>
                     {formValues.isOverrideConfig ? (
-                        <OverrideConfiguration formName="ftp" />
+                        <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
                         <>
                             <div>
@@ -49,7 +67,7 @@ export default function Ftp() {
                                     </PopoverBody>
                                 </UncontrolledPopover>
                                 <FormInput
-                                    name="ftp.url"
+                                    name={getName("url")}
                                     control={control}
                                     placeholder="Enter a host"
                                     type="text"
@@ -59,7 +77,7 @@ export default function Ftp() {
                             <div>
                                 <Label className="mb-0 md-label">Username</Label>
                                 <FormInput
-                                    name="ftp.userName"
+                                    name={getName("userName")}
                                     control={control}
                                     placeholder="Enter a username"
                                     type="text"
@@ -69,7 +87,7 @@ export default function Ftp() {
                             <div>
                                 <Label className="mb-0 md-label">Password</Label>
                                 <FormInput
-                                    name="ftp.password"
+                                    name={getName("password")}
                                     control={control}
                                     placeholder="Enter a password"
                                     type="password"
@@ -77,10 +95,18 @@ export default function Ftp() {
                             </div>
                             <div className="d-flex mt-3">
                                 <FlexGrow />
-                                <Button color="info">
+                                <ButtonWithSpinner
+                                    type="button"
+                                    color="info"
+                                    onClick={asyncTest.execute}
+                                    isSpinning={asyncTest.loading}
+                                >
                                     <Icon icon="rocket" />
                                     Test credentials
-                                </Button>
+                                </ButtonWithSpinner>
+                            </div>
+                            <div className="mt-2">
+                                <ConnectionTestResult testResult={asyncTest.result} />
                             </div>
                         </>
                     )}
@@ -88,4 +114,12 @@ export default function Ftp() {
             </CardBody>
         </Card>
     );
+}
+
+const fieldBase = "destinations.ftp";
+
+type FormFieldNames = keyof FormDestinations["destinations"]["ftp"];
+
+function getName(fieldName: FormFieldNames): `${typeof fieldBase}.${FormFieldNames}` {
+    return `${fieldBase}.${fieldName}`;
 }

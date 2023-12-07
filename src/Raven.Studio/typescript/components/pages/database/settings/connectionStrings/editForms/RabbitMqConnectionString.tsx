@@ -9,7 +9,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
+import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { yupObjectSchema } from "components/utils/yupUtils";
 
@@ -88,7 +88,7 @@ export default function RabbitMqConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editRabbitMqEtl}
             />
-            <ConnectionStringTestResult testResult={asyncTest.result} />
+            <ConnectionTestResult testResult={asyncTest.result} />
         </Form>
     );
 }

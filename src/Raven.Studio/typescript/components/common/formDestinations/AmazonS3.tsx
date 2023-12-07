@@ -3,39 +3,58 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { exhaustiveStringTuple } from "components/utils/common";
 import { SelectOption } from "components/common/select/Select";
-import { FormDestinations } from "./formDestinationsUtils";
-import { Card, CardBody, Collapse, UncontrolledPopover, PopoverBody, Label, Button } from "reactstrap";
+import { FormDestinations } from "./utils/formDestinationsTypes";
+import { Card, CardBody, Collapse, UncontrolledPopover, PopoverBody, Label } from "reactstrap";
 import { FlexGrow } from "../FlexGrow";
 import { FormSwitch, FormInput, FormSelect } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
+import { useServices } from "components/hooks/useServices";
+import { trigger } from "durandal/app";
+import { useAsyncCallback } from "react-async-hook";
+import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
+import ButtonWithSpinner from "../ButtonWithSpinner";
+import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 
 export default function AmazonS3() {
     const { control } = useFormContext<FormDestinations>();
-    const { s3: formValues } = useWatch({ control });
+    const {
+        destinations: { s3: formValues },
+    } = useWatch({ control });
+
+    const { manageServerService } = useServices();
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger(fieldBase);
+        if (!isValid) {
+            return;
+        }
+
+        return manageServerService.testPeriodicBackupCredentials("S3", mapFtpToDto(formValues));
+    });
 
     return (
         <Card className="well">
             <CardBody>
-                <FormSwitch name="s3.isEnabled" control={control}>
+                <FormSwitch name={getName("isEnabled")} control={control}>
                     Amazon S3
                 </FormSwitch>
                 <Collapse isOpen={formValues.isEnabled} className="mt-2">
                     <FormSwitch
                         control={control}
-                        name="s3.isOverrideConfig"
+                        name={getName("isOverrideConfig")}
                         className="ms-3 mb-2 w-100"
                         color="secondary"
                     >
                         Override configuration via external script
                     </FormSwitch>
                     {formValues.isOverrideConfig ? (
-                        <OverrideConfiguration formName="s3" />
+                        <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
                         <>
                             <div className="ms-3">
                                 <FormSwitch
                                     control={control}
-                                    name="s3.isUseCustomHost"
+                                    name={getName("isUseCustomHost")}
                                     className="mb-2 w-100"
                                     color="secondary"
                                 >
@@ -45,7 +64,7 @@ export default function AmazonS3() {
                                     <>
                                         <FormSwitch
                                             control={control}
-                                            name="s3.forcePathStyle"
+                                            name={getName("forcePathStyle")}
                                             className="ms-3 mb-2 w-100"
                                             color="secondary"
                                         >
@@ -80,7 +99,7 @@ export default function AmazonS3() {
                                     <Label className="mb-0 md-label">Custom server URL</Label>
                                     <FormInput
                                         control={control}
-                                        name="s3.customServerUrl"
+                                        name={getName("customServerUrl")}
                                         placeholder="Enter a custom server URL"
                                         type="text"
                                         className="mb-2"
@@ -106,7 +125,7 @@ export default function AmazonS3() {
                                 </UncontrolledPopover>
                                 <FormInput
                                     control={control}
-                                    name="s3.bucketName"
+                                    name={getName("bucketName")}
                                     placeholder="Enter a bucket name"
                                     type="text"
                                     className="mb-2"
@@ -118,7 +137,7 @@ export default function AmazonS3() {
                                 </Label>
                                 <FormInput
                                     control={control}
-                                    name="s3.remoteFolderName"
+                                    name={getName("remoteFolderName")}
                                     placeholder="Enter a remote folder name"
                                     type="text"
                                     className="mb-2"
@@ -135,13 +154,13 @@ export default function AmazonS3() {
                                     <FormInput
                                         type="text"
                                         control={control}
-                                        name="s3.awsRegionName"
+                                        name={getName("awsRegionName")}
                                         placeholder="Enter an AWS region"
                                         className="mb-2"
                                     />
                                 ) : (
                                     <FormSelect
-                                        name="s3.awsRegionName"
+                                        name={getName("awsRegionName")}
                                         control={control}
                                         placeholder="Select an AWS region"
                                         options={allRegionsOptions}
@@ -152,7 +171,7 @@ export default function AmazonS3() {
                             <div>
                                 <Label className="mb-0 md-label">Access key</Label>
                                 <FormInput
-                                    name="s3.awsAccessKey"
+                                    name={getName("awsAccessKey")}
                                     control={control}
                                     placeholder="Enter an access key"
                                     type="text"
@@ -162,7 +181,7 @@ export default function AmazonS3() {
                             <div>
                                 <Label className="mb-0 md-label">Secret key</Label>
                                 <FormInput
-                                    name="s3.awsSecretKey"
+                                    name={getName("awsSecretKey")}
                                     control={control}
                                     placeholder="Enter a secret key"
                                     type="text"
@@ -170,10 +189,18 @@ export default function AmazonS3() {
                             </div>
                             <div className="d-flex mt-3">
                                 <FlexGrow />
-                                <Button color="info">
+                                <ButtonWithSpinner
+                                    type="button"
+                                    color="info"
+                                    onClick={asyncTest.execute}
+                                    isSpinning={asyncTest.loading}
+                                >
                                     <Icon icon="rocket" />
                                     Test credentials
-                                </Button>
+                                </ButtonWithSpinner>
+                            </div>
+                            <div className="mt-2">
+                                <ConnectionTestResult testResult={asyncTest.result} />
                             </div>
                         </>
                     )}
@@ -189,3 +216,11 @@ const allRegionsOptions: SelectOption[] = allRegions.map((type) => ({
     value: type,
     label: type,
 }));
+
+const fieldBase = "destinations.s3";
+
+type FormFieldNames = keyof FormDestinations["destinations"]["s3"];
+
+function getName(fieldName: FormFieldNames): `${typeof fieldBase}.${FormFieldNames}` {
+    return `${fieldBase}.${fieldName}`;
+}

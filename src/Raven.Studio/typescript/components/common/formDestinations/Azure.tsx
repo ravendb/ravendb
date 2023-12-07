@@ -1,25 +1,44 @@
 ﻿import React from "react";
-import { Button, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
-import { FormDestinations } from "./formDestinationsUtils";
+import { FormDestinations } from "./utils/formDestinationsTypes";
+import { useServices } from "components/hooks/useServices";
+import { trigger } from "durandal/app";
+import { useAsyncCallback } from "react-async-hook";
+import { mapAzureToDto } from "./utils/formDestinationsMapsToDto";
+import ButtonWithSpinner from "../ButtonWithSpinner";
+import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 
 export default function Azure() {
     const { control } = useFormContext<FormDestinations>();
-    const { azure: formValues } = useWatch({ control });
+    const {
+        destinations: { azure: formValues },
+    } = useWatch({ control });
+
+    const { manageServerService } = useServices();
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger(fieldBase);
+        if (!isValid) {
+            return;
+        }
+
+        return manageServerService.testPeriodicBackupCredentials("Azure", mapAzureToDto(formValues));
+    });
 
     return (
         <Card className="well">
             <CardBody>
-                <FormSwitch name="azure.isEnabled" control={control}>
+                <FormSwitch name={getName("isEnabled")} control={control}>
                     Azure
                 </FormSwitch>
                 <Collapse isOpen={formValues.isEnabled} className="mt-2">
                     <FormSwitch
-                        name="azure.isOverrideConfig"
+                        name={getName("isOverrideConfig")}
                         control={control}
                         className="ms-3 mb-2 w-100"
                         color="secondary"
@@ -27,7 +46,7 @@ export default function Azure() {
                         Override configuration via external script
                     </FormSwitch>
                     {formValues.isOverrideConfig ? (
-                        <OverrideConfiguration formName="azure" />
+                        <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
                         <>
                             <div>
@@ -47,7 +66,7 @@ export default function Azure() {
                                     </PopoverBody>
                                 </UncontrolledPopover>
                                 <FormInput
-                                    name="azure.storageContainer"
+                                    name={getName("storageContainer")}
                                     control={control}
                                     placeholder="Enter a storage container"
                                     type="text"
@@ -59,7 +78,7 @@ export default function Azure() {
                                     Remote folder name <small className="text-muted fw-light">(optional)</small>
                                 </Label>
                                 <FormInput
-                                    name="azure.remoteFolderName"
+                                    name={getName("remoteFolderName")}
                                     control={control}
                                     placeholder="Enter a remote folder name"
                                     type="text"
@@ -69,7 +88,7 @@ export default function Azure() {
                             <div>
                                 <Label className="mb-0 md-label">Account name</Label>
                                 <FormInput
-                                    name="azure.accountName"
+                                    name={getName("accountName")}
                                     control={control}
                                     placeholder="Enter an account name"
                                     type="text"
@@ -79,7 +98,7 @@ export default function Azure() {
                             <div>
                                 <Label className="mb-0 md-label">Account key</Label>
                                 <FormInput
-                                    name="azure.accountKey"
+                                    name={getName("accountKey")}
                                     control={control}
                                     placeholder="Enter an account key"
                                     type="text"
@@ -87,10 +106,18 @@ export default function Azure() {
                             </div>
                             <div className="d-flex mt-3">
                                 <FlexGrow />
-                                <Button color="info">
+                                <ButtonWithSpinner
+                                    type="button"
+                                    color="info"
+                                    onClick={asyncTest.execute}
+                                    isSpinning={asyncTest.loading}
+                                >
                                     <Icon icon="rocket" />
                                     Test credentials
-                                </Button>
+                                </ButtonWithSpinner>
+                            </div>
+                            <div className="mt-2">
+                                <ConnectionTestResult testResult={asyncTest.result} />
                             </div>
                         </>
                     )}
@@ -98,4 +125,12 @@ export default function Azure() {
             </CardBody>
         </Card>
     );
+}
+
+const fieldBase = "destinations.azure";
+
+type FormFieldNames = keyof FormDestinations["destinations"]["azure"];
+
+function getName(fieldName: FormFieldNames): `${typeof fieldBase}.${FormFieldNames}` {
+    return `${fieldBase}.${fieldName}`;
 }

@@ -1,4 +1,4 @@
-import { mapDestinationsToDto } from "components/common/formDestinations/formDestinationsUtils";
+import { mapDestinationsToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
 import {
     Connection,
     ConnectionStringDto,
@@ -35,7 +35,7 @@ export function mapOlapConnectionStringToDto(connection: OlapConnection): Connec
     return {
         Type: "Olap",
         Name: connection.name,
-        ...mapDestinationsToDto(connection),
+        ...mapDestinationsToDto(connection.destinations),
     };
 }
 

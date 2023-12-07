@@ -11,7 +11,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAsyncCallback } from "react-async-hook";
-import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
+import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 
@@ -113,7 +113,7 @@ export default function SqlConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editSqlEtl}
             />
-            <ConnectionStringTestResult testResult={asyncTest.result} />
+            <ConnectionTestResult testResult={asyncTest.result} />
         </Form>
     );
 }

@@ -1,12 +1,12 @@
 import React from "react";
 import { Alert } from "reactstrap";
-import ConnectionStringError from "./ConnectionStringError";
+import ConnectionStringError from "./ConnectionTestError";
 
-interface ConnectionStringTestResultProps {
+interface ConnectionTestResultProps {
     testResult: Raven.Server.Web.System.NodeConnectionTestResult;
 }
 
-export default function ConnectionStringTestResult({ testResult }: ConnectionStringTestResultProps) {
+export default function ConnectionTestResult({ testResult }: ConnectionTestResultProps) {
     if (!testResult) {
         return null;
     }

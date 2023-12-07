@@ -4,6 +4,7 @@ import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.Cli
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
+import { SharedStubs } from "test/stubs/SharedStubs";
 
 export default class MockManageServerService extends AutoMockService<ManageServerService> {
     constructor() {
@@ -52,5 +53,13 @@ export default class MockManageServerService extends AutoMockService<ManageServe
 
     withThrowingGetServerWideCustomSorters() {
         this.mocks.getServerWideCustomSorters.mockRejectedValue(new Error());
+    }
+
+    withTestPeriodicBackupCredentials(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
+        return this.mockResolvedValue(
+            this.mocks.testPeriodicBackupCredentials,
+            dto,
+            SharedStubs.nodeConnectionTestSuccessResult()
+        );
     }
 }

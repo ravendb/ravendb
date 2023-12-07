@@ -10,8 +10,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
-import ConnectionStringTestResult from "./shared/ConnectionStringTestResult";
-import ConnectionStringFormFooter from "./shared/ConnectionStringFormFooter";
+import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 type FormData = ConnectionFormData<KafkaConnection>;
@@ -131,7 +130,7 @@ export default function KafkaConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editKafkaEtl}
             />
-            <ConnectionStringTestResult testResult={asyncTest.result} />
+            <ConnectionTestResult testResult={asyncTest.result} />
         </Form>
     );
 }
