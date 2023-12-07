@@ -86,8 +86,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             param = new Npgsql.NpgsqlParameter();
                             break;
                         case SqlProvider.MySqlClient:
-                            param = new MySql.Data.MySqlClient.MySqlParameter();
-                            break;
                         case SqlProvider.MySqlConnectorFactory:
                             param = new MySqlConnector.MySqlParameter();
                             break;

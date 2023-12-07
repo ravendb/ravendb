@@ -76,18 +76,6 @@ namespace SlowTests.Server.Documents.Migration
             switch (provider)
             {
                 case MigrationProvider.MySQL_MySql_Data:
-                {
-                    using (var connection = new MySql.Data.MySqlClient.MySqlConnection(connectionString))
-                    {
-                        connection.Open();
-                        using (var cmd = new MySql.Data.MySqlClient.MySqlCommand(query, connection))
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-
-                    break;
-                }
                 case MigrationProvider.MySQL_MySqlConnector:
                 {
                     using (var connection = new MySqlConnector.MySqlConnection(connectionString))
@@ -257,10 +245,7 @@ namespace SlowTests.Server.Documents.Migration
         private static DbConnection GetMySqlConnection(MigrationProvider provider, string connectionString)
         {
             Debug.Assert(provider is MigrationProvider.MySQL_MySql_Data or MigrationProvider.MySQL_MySqlConnector);
-
-            return provider == MigrationProvider.MySQL_MySql_Data
-                ? new MySql.Data.MySqlClient.MySqlConnection(connectionString)
-                : new MySqlConnector.MySqlConnection(connectionString);
+            return new MySqlConnector.MySqlConnection(connectionString);
         }
 
         private static DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, MigrationProvider provider, bool includeData = true)

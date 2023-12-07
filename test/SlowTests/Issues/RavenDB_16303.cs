@@ -193,7 +193,6 @@ loadToTestGuidEtls(item);"
                 case MigrationProvider.MsSQL:
                     return @"System.Data.SqlClient";
                 case MigrationProvider.MySQL_MySql_Data:
-                    return @"MySql.Data.MySqlClient";
                 case MigrationProvider.MySQL_MySqlConnector:
                     return @"MySqlConnector.MySqlConnectorFactory";
                 case MigrationProvider.NpgSQL:
@@ -611,10 +610,7 @@ loadToTestGuidEtls(item);"
         private static DbConnection GetMySqlConnection(MigrationProvider provider, string connectionString)
         {
             Debug.Assert(provider is MigrationProvider.MySQL_MySql_Data or MigrationProvider.MySQL_MySqlConnector);
-
-            return provider == MigrationProvider.MySQL_MySql_Data
-                ? new MySql.Data.MySqlClient.MySqlConnection(connectionString)
-                : new MySqlConnector.MySqlConnection(connectionString);
+            return new MySqlConnector.MySqlConnection(connectionString);
         }
     }
 }
