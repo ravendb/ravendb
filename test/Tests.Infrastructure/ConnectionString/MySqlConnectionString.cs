@@ -1,4 +1,4 @@
-﻿using MySqlConnector; // todo: check if it's ok to replace that import
+﻿using MySqlConnector;
 
 namespace Tests.Infrastructure.ConnectionString
 {
