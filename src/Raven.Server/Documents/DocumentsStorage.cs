@@ -1080,7 +1080,7 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public IEnumerable<LazyStringValue> GetAllIds(DocumentsOperationContext context)
+        public IEnumerable<string> GetAllIds(DocumentsOperationContext context)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
