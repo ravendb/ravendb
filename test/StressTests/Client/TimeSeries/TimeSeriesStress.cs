@@ -293,7 +293,7 @@ update
 #if DEBUG
                 TimeSpan time = TimeSpan.FromMinutes(8);
 #else
-                time = TimeSpan.FromMinutes(5);
+                TimeSpan time = TimeSpan.FromMinutes(5);
 #endif
                 await appendOperation.WaitForCompletionAsync(time);
                 var deleteFrom = toAppend[timeSeriesPointsAmount * 1 / 3].Timestamp;
