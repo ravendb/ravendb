@@ -62,8 +62,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Http.UseResponseCompression", ConfigurationEntryScope.ServerWideOnly)]
         public bool UseResponseCompression { get; set; }
 
-        [Description("Whether Raven's HTTP server should allow response compression to happen when HTTPS is enabled. Please see http://breachattack.com/ before enabling this")]
-        [DefaultValue(false)]
+        [Description("Whether Raven's HTTP server should allow response compression to happen when HTTPS is enabled.")]
+        [DefaultValue(true)]
         [ConfigurationEntry("Http.AllowResponseCompressionOverHttps", ConfigurationEntryScope.ServerWideOnly)]
         public bool AllowResponseCompressionOverHttps { get; set; }
 
