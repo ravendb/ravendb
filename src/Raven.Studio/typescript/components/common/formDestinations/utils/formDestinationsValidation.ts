@@ -13,6 +13,9 @@ import {
 } from "./formDestinationsTypes";
 import * as yup from "yup";
 
+// TODO kalczur - for all isEnabled and !isOverrideConfig
+// TODO kalczur - check validation
+
 const configSchema = yupObjectSchema<BackupConfigurationScript>({
     arguments: yup
         .string()
@@ -31,6 +34,8 @@ const configSchema = yupObjectSchema<BackupConfigurationScript>({
     timeoutInMs: yup
         .number()
         .nullable()
+        .positive()
+        .integer()
         .when("isOverrideConfig", {
             is: true,
             then: (schema) => schema.required(),

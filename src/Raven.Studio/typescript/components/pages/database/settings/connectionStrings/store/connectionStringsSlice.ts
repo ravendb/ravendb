@@ -109,6 +109,7 @@ export const connectionStringsSlice = createSlice({
 
                 state.loadStatus = "success";
 
+                // TODO only admin
                 if (urlParameters.name && urlParameters.type) {
                     const foundConnection = state.connections?.[urlParameters.type]?.find(
                         (x) => x?.name === urlParameters.name

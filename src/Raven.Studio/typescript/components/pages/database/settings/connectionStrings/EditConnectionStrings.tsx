@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Select, { SelectOption } from "components/common/select/Select";
-import { Connection } from "./connectionStringsTypes";
+import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
 import RavenConnectionString from "./editForms/RavenConnectionString";
 import database from "models/resources/database";
 import { useDispatch } from "react-redux";
@@ -73,7 +73,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                     <Label className="mb-0 md-label">Type</Label>
                     <Select
                         options={connectionStringsOptions}
-                        value={connectionStringsOptions.find((x) => x.value === initialConnection.type)}
+                        value={connectionStringsOptions.find((x) => x.value === connectionStringType)}
                         onChange={(x) => setConnectionStringType(x.value)}
                         placeholder="Select a connection string type"
                         isSearchable={false}
@@ -128,8 +128,7 @@ const connectionStringsOptions: SelectOption<StudioEtlType>[] = exhaustiveString
     label: getTypeLabel(type),
 }));
 
-// TODO return type
-function getEditConnectionStringComponent(type: StudioEtlType): any {
+function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConnectionStringFormProps) => JSX.Element {
     switch (type) {
         case "Raven":
             return RavenConnectionString;

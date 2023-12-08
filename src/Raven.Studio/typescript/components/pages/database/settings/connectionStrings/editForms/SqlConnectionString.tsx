@@ -1,4 +1,4 @@
-﻿import { Form, Label, UncontrolledTooltip } from "reactstrap";
+﻿import { Form, Label } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -14,6 +14,7 @@ import { useAsyncCallback } from "react-async-hook";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
+import { yupObjectSchema } from "components/utils/yupUtils";
 
 type FormData = ConnectionFormData<SqlConnection>;
 
@@ -27,7 +28,7 @@ export default function SqlConnectionString({
     isForNewConnection,
     onSave,
 }: SqlConnectionStringProps) {
-    const { control, handleSubmit, formState } = useForm<FormData>({
+    const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
@@ -38,11 +39,14 @@ export default function SqlConnectionString({
     const { databasesService } = useServices();
     const [syntaxHelpElement, setSyntaxHelpElement] = useState<HTMLElement>();
 
-    const asyncTest = useAsyncCallback(() => {
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger(["connectionString", "factoryName"]);
+        if (!isValid) {
+            return;
+        }
+
         return databasesService.testSqlConnectionString(db, formValues.connectionString, formValues.factoryName);
     });
-
-    const isTestButtonDisabled = !formValues.connectionString || !formValues.factoryName;
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
         onSave({
@@ -52,7 +56,7 @@ export default function SqlConnectionString({
     };
 
     return (
-        <Form onSubmit={handleSubmit(handleSave)}>
+        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
             <div>
                 <Label className="mb-0 md-label">Name</Label>
                 <FormInput
@@ -92,22 +96,15 @@ export default function SqlConnectionString({
                     placeholder={getConnectionStringPlaceholder(formValues.factoryName)}
                     rows={3}
                 />
-                <div id={testButtonId} className="mt-2" style={{ width: "fit-content" }}>
-                    <ButtonWithSpinner
-                        color="primary"
-                        icon="rocket"
-                        onClick={asyncTest.execute}
-                        disabled={isTestButtonDisabled}
-                        isSpinning={asyncTest.loading}
-                    >
-                        Test Connection
-                    </ButtonWithSpinner>
-                </div>
-                {isTestButtonDisabled && (
-                    <UncontrolledTooltip target={testButtonId}>
-                        Select factory and enter connection string.
-                    </UncontrolledTooltip>
-                )}
+                <ButtonWithSpinner
+                    className="mt-2"
+                    color="primary"
+                    icon="rocket"
+                    onClick={asyncTest.execute}
+                    isSpinning={asyncTest.loading}
+                >
+                    Test Connection
+                </ButtonWithSpinner>
             </div>
             <ConnectionStringUsedByTasks
                 tasks={initialConnection.usedByTasks}
@@ -117,8 +114,6 @@ export default function SqlConnectionString({
         </Form>
     );
 }
-
-const testButtonId = "test-button";
 
 const sqlFactoryOptions: SelectOption<SqlConnectionStringFactoryName>[] = [
     { value: "System.Data.SqlClient", label: "Microsoft SQL Server" },
@@ -203,13 +198,11 @@ function getConnectionStringPlaceholder(factoryName: SqlConnectionStringFactoryN
     return optionLabel ? `Enter the complete connection string for the ${optionLabel}` : "Enter connection string";
 }
 
-const schema = yup
-    .object({
-        Name: yup.string().nullable().required(),
-        ConnectionString: yup.string().nullable().required(),
-        FactoryName: yup.string<SqlConnectionStringFactoryName>().nullable().required(),
-    })
-    .required();
+const schema = yupObjectSchema<FormData>({
+    name: yup.string().nullable().required(),
+    connectionString: yup.string().nullable().required(),
+    factoryName: yup.string<SqlConnectionStringFactoryName>().nullable().required(),
+});
 
 const yupSchemaResolver = yupResolver(schema);
 

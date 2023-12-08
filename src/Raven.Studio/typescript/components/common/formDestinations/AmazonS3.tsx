@@ -9,14 +9,13 @@ import { FlexGrow } from "../FlexGrow";
 import { FormSwitch, FormInput, FormSelect } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
-import { trigger } from "durandal/app";
 import { useAsyncCallback } from "react-async-hook";
 import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 
 export default function AmazonS3() {
-    const { control } = useFormContext<FormDestinations>();
+    const { control, trigger } = useFormContext<FormDestinations>();
     const {
         destinations: { s3: formValues },
     } = useWatch({ control });
