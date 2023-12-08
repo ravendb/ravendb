@@ -80,7 +80,7 @@ namespace Voron.Util
             Inner.Shrink(newSize); 
         }
 
-        public void Initialize(int count = 16)
+        public void Initialize(int count = 1)
         {
             Inner.Initialize(_ctx, count);
         }

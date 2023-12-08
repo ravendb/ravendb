@@ -814,7 +814,7 @@ namespace Corax.Indexing
 
             using (stats.For(CommitOperation.Deletions))
                 ProcessDeletes();
-            
+
             Tree entriesToTermsTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
             Tree entriesToSpatialTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToSpatialSlice);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
@@ -824,10 +824,27 @@ namespace Corax.Indexing
 
             if (_boostedDocs != null)
                 AppendDocumentsBoost();
-            
-            for (int fieldId = 0; fieldId < _fieldsMapping.Count; ++fieldId)
+
+            // Instead of going through fields by their IDs number, let's go by the amount of textual fields in ascending order.
+            // In the case of static indexes, all entries should have (except for some dynamic fields) pretty much exactly the same number of fields inside.
+            // So, if a field has fewer textual values (which is a good point because ALL fields have to have this value) than another, that means the PostingList inside it is bigger (except for situations with dynamic fields).
+            // We're hoping to start with the biggest posting lists possible at the very beginning to allocate and release huge chunks of memory and reuse them for fields with smaller posting lists.
+            var fieldCount = _knownFieldsTerms.Length + (_dynamicFieldsTerms?.Count ?? 0);
+            var sortedFieldsBuffer = ArrayPool<IndexedField>.Shared.Rent(fieldCount);
+            Span<int> uniquePostingList = _knownFieldsTerms.Length > 256 ? new int[fieldCount] : stackalloc int[fieldCount];
+            var fieldIt = 0;
+            foreach (var field in _knownFieldsTerms.AsSpan())
+                (sortedFieldsBuffer[fieldIt], uniquePostingList[fieldIt++]) = (field, field.Textual.Count);
+            if (_dynamicFieldsTerms != null)
+            { 
+                foreach (var field in _dynamicFieldsTerms.Values) 
+                    (sortedFieldsBuffer[fieldIt], uniquePostingList[fieldIt++]) = (field, field.Textual.Count);
+            }
+
+            var sortedFields = sortedFieldsBuffer.AsSpan(0, fieldIt);
+            uniquePostingList.Sort(sortedFields);
+            foreach (var indexedField in sortedFields)
             {
-                var indexedField = _knownFieldsTerms[fieldId];
                 using var staticFieldScope = stats.For(indexedField.NameForStatistics);
 
                 if (indexedField.Textual.Count == 0)
@@ -854,42 +871,12 @@ namespace Corax.Indexing
                 }
             }
 
-            if (_dynamicFieldsTerms != null)
-            {
-                foreach (var (_, indexedField) in _dynamicFieldsTerms)
-                {
-                    if(indexedField.Textual.Count ==0)
-                        continue;
-                    
-                    using var dynamicFieldScope = stats.For(indexedField.NameForStatistics);
-
-                    using (dynamicFieldScope.For(CommitOperation.TextualValues))
-                    {
-                        using var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
-                        inserter.InsertTextualField();
-                    }
-                    using (dynamicFieldScope.For(CommitOperation.IntegerValues))
-                        InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
-                    
-                    using (dynamicFieldScope.For(CommitOperation.FloatingValues))
-                        InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
-                    
-                    using (dynamicFieldScope.For(CommitOperation.SpatialValues))
-                        InsertSpatialField(entriesToSpatialTree,  indexedField);
-                    
-                    if (indexedField.HasMultipleTermsPerField)
-                    {
-                        RecordFieldHasMultipleTerms(indexedField);
-                    }
-                }
-            }
-
             using(stats.For(CommitOperation.StoredValues))
                 WriteIndexEntries();
 
             _pForEncoder.Dispose();
             _pForEncoder = null;
-            
+
             // Check if we have suggestions to deal with. 
             if (_hasSuggestions)
             {
@@ -918,7 +905,10 @@ namespace Corax.Indexing
                     }
                 }
             }
-            
+
+            ArrayPool<IndexedField>.Shared.Return(sortedFieldsBuffer, true);
+            // ReSharper disable once RedundantAssignment
+            sortedFieldsBuffer = null;
 
             if (_ownsTransaction)
             {
@@ -1009,7 +999,10 @@ namespace Corax.Indexing
             }
         }
 
-        
+        /// <summary>
+        /// TextualFieldBuffers are used to prepare field terms in sorted order without allocating native memory and do not changing the orders of IndexedField properties since we're linking them via positions in buffers.
+        /// 
+        /// </summary>
         private class TextualFieldBuffers : IDisposable
         {
             private readonly IndexWriter _parent;
@@ -1200,6 +1193,7 @@ namespace Corax.Indexing
                                 }
                                 break;
                             }
+                            entries.Dispose(_writer._entriesAllocator);
                         }
 
                         keys = keys[idx..];
@@ -1848,7 +1842,7 @@ namespace Corax.Indexing
                 return;
             }
 
-            entries.GetEncodedAdditions(_entriesAllocator, out var additions);
+            entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out var additions, out _);
             if (TryEncodingToBuffer(additions, entries.Additions.Count, tmpBuf, out var encoded) == false)
             {
                 // too big, convert to a set
