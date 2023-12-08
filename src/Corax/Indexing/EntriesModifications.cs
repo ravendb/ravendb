@@ -130,31 +130,27 @@ internal unsafe struct EntriesModifications
     public EntriesModifications([NotNull] ByteStringContext context, int size)
     {
         TermSize = size;
+        //do not initialize native list by default since some of them never will be allocated.
         Additions = new();
-        Additions.Initialize(context);
         Removals = new();
-        Removals.Initialize(context);
         Updates = new();
-        Updates.Initialize(context);
     }
 
     public void Addition([NotNull] ByteStringContext context, long entryId, int termsPerEntryIndex, short freq)
     {
         if (Additions.HasCapacityFor(1) == false)
             Additions.Grow(context, 1);
-
-        AddToList(ref Additions, entryId, termsPerEntryIndex, freq);
+        AddToList(context, ref Additions, entryId, termsPerEntryIndex, freq);
     }
 
     public void Removal([NotNull] ByteStringContext context, long entryId, int termsPerEntryIndex, short freq)
     {
         if (Removals.HasCapacityFor(1) == false)
             Removals.Grow(context, 1);
-
-        AddToList(ref Removals, entryId, termsPerEntryIndex, freq);
+        AddToList(context, ref Removals, entryId, termsPerEntryIndex, freq);
     }
 
-    private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, int termsPerEntryIndex, short freq)
+    private void AddToList([NotNull] ByteStringContext context, ref NativeList<TermInEntryModification> list, long entryId, int termsPerEntryIndex, short freq)
     {
         AssertPreparationIsNotFinished();
         NeedToUpdate = true;
@@ -202,47 +198,42 @@ internal unsafe struct EntriesModifications
         var oldUpdates = Updates.Count;
         int additionPos = 0, removalPos = 0;
 
-        int add = 0, rem = 0;
-        for (; add < Additions.Count && rem < Removals.Count; ++add)
+        int additionIndex = 0, removalIndex = 0;
+        for (; additionIndex < Additions.Count && removalIndex < Removals.Count; ++additionIndex)
         {
-            ref var currentAdd = ref Additions[add];
-            ref var currentRemoval = ref Removals[rem];
+            ref var currentAdd = ref Additions[additionIndex];
+            ref var currentRemoval = ref Removals[removalIndex];
 
             //We've to delete exactly same item in additions and removals and delete those.
             //This is made for Set structure.
             if (currentAdd.Equals(currentRemoval))
             {
-                if (Updates.TryAdd(currentAdd) == false)
-                {
-                    Updates.Grow(context, 1);
-                    Updates.AddUnsafe(currentAdd);
-                }
-
-                rem++;
+                Updates.Add(context, currentAdd);
+                removalIndex++;
                 continue;
             }
-
+            
             // if it is equal, then we have same entry, different freq, so need to remove & add
             // the remove is the old one in this case
             if (currentAdd.EntryId >= currentRemoval.EntryId)
             {
                 Removals[removalPos++] = currentRemoval;
-                rem++;
-                add--; // so the loop increment will stay the same
+                removalIndex++;
+                additionIndex--; // so the loop increment will stay the same
                 continue;
             }
 
             Additions[additionPos++] = currentAdd;
         }
 
-        for (; add < Additions.Count; add++)
+        for (; additionIndex < Additions.Count; additionIndex++)
         {
-            Additions[additionPos++] = Additions[add];
+            Additions[additionPos++] = Additions[additionIndex];
         }
 
-        for (; rem < Removals.Count; rem++)
+        for (; removalIndex < Removals.Count; removalIndex++)
         {
-            Removals[removalPos++] = Removals[rem];
+            Removals[removalPos++] = Removals[removalIndex];
         }
 
         Additions.Shrink(additionPos);
@@ -253,9 +244,7 @@ internal unsafe struct EntriesModifications
 
         ValidateNoDuplicateEntries();
     }
-
-    public void GetEncodedAdditions([NotNull] ByteStringContext context, out long* additions) => GetEncodedAdditionsAndRemovals(context, out additions, out _);
-
+    
     public void GetEncodedAdditionsAndRemovals([NotNull] ByteStringContext context, out long* additions, out long* removals)
     {
 #if DEBUG

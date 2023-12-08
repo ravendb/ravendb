@@ -107,15 +107,15 @@ public unsafe struct NativeList<T>
         Count = newSize;
     }
 
-    public void Initialize(ByteStringContext ctx, int count = 16)
+    public void Initialize(ByteStringContext ctx, int count = 1)
     {
-        var capacity = Math.Max(16, Bits.PowerOf2(count));
+        var capacity = count == 1 ? 1 : Math.Max(1, Bits.PowerOf2(count));
         ctx.Allocate(capacity * sizeof(T), out _storage);
     }
     
     public void Grow(ByteStringContext ctx, int addition)
     {
-        var capacity = Math.Max(16, Bits.PowerOf2(Capacity + addition));
+        var capacity = Math.Max(1, Bits.PowerOf2(Capacity + addition));
         ctx.Allocate(capacity * sizeof(T), out var mem);
 
         if (_storage.HasValue)
@@ -192,7 +192,7 @@ public unsafe struct NativeList<T>
     {
         Count = 0;
     }
-
+    
 
     public Enumerator GetEnumerator() => new(RawItems, Count);
 
@@ -242,5 +242,7 @@ public unsafe struct NativeList<T>
         }
     }
 
-
+#if CORAX_MEMORY_WATCHER
+    public (long BytesUsed, long BytesAllocated) Allocations => (Count * sizeof(T), Capacity * sizeof(T));
+#endif
 }
