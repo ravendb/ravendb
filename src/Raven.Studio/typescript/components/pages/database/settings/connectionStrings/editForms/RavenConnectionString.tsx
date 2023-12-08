@@ -26,7 +26,7 @@ export default function RavenConnectionString({
     isForNewConnection,
     onSave,
 }: RavenConnectionStringProps) {
-    const { control, handleSubmit, formState, watch } = useForm<FormData>({
+    const { control, handleSubmit, formState, watch, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
@@ -40,18 +40,15 @@ export default function RavenConnectionString({
     const { forCurrentDatabase } = useAppUrls();
     const { databasesService } = useServices();
 
-    const asyncTest = useAsyncCallback((idx: number) => {
-        const url = watch("topologyDiscoveryUrls")[idx].url;
+    const asyncTest = useAsyncCallback(async (idx: number) => {
+        const isValid = await trigger(`topologyDiscoveryUrls.${idx}`);
+        if (!isValid) {
+            return;
+        }
+
+        const url = watch(`topologyDiscoveryUrls.${idx}.url`);
         return databasesService.testClusterNodeConnection(url, db.name, false);
     });
-
-    const isTestDisabled = (idx: number) => {
-        return (
-            asyncTest.loading ||
-            !watch("topologyDiscoveryUrls")[idx] ||
-            !!formState.errors?.topologyDiscoveryUrls?.[idx]
-        );
-    };
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
         onSave({
@@ -101,7 +98,7 @@ export default function RavenConnectionString({
                             <ButtonWithSpinner
                                 color="primary"
                                 onClick={() => asyncTest.execute(idx)}
-                                disabled={isTestDisabled(idx)}
+                                disabled={asyncTest.loading}
                                 isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
                                 icon={{
                                     icon: "rocket",
@@ -112,7 +109,7 @@ export default function RavenConnectionString({
                         </div>
                     ))}
                 </div>
-                <Button color="info" className="mt-1" onClick={() => urlFieldArray.append({ url: "" })}>
+                <Button color="info" className="mt-1" onClick={() => urlFieldArray.append({ url: null })}>
                     <Icon icon="plus" />
                     Add URL
                 </Button>

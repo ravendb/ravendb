@@ -7,14 +7,13 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { useServices } from "components/hooks/useServices";
-import { trigger } from "durandal/app";
 import { useAsyncCallback } from "react-async-hook";
 import { mapAzureToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 
 export default function Azure() {
-    const { control } = useFormContext<FormDestinations>();
+    const { control, trigger } = useFormContext<FormDestinations>();
     const {
         destinations: { azure: formValues },
     } = useWatch({ control });

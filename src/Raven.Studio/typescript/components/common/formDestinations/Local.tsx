@@ -5,6 +5,8 @@ import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 
+// TODO kalczur - autocomplete folder path
+
 export default function Local() {
     const { control } = useFormContext<FormDestinations>();
     const {

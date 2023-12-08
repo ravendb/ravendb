@@ -16,7 +16,6 @@ import {
     defaultLocalFormData,
     defaultS3FormData,
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
-import { DevTool } from "@hookform/devtools";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 
@@ -51,7 +50,6 @@ export default function OlapConnectionString({
     return (
         <FormProvider {...form}>
             <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
-                <DevTool control={control} />
                 <div>
                     <Label className="mb-0 md-label">Name</Label>
                     <FormInput

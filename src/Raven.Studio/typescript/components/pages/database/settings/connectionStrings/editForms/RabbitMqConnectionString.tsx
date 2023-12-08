@@ -1,4 +1,4 @@
-﻿import { Form, Label, UncontrolledTooltip } from "reactstrap";
+﻿import { Form, Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -25,7 +25,7 @@ export default function RabbitMqConnectionString({
     isForNewConnection,
     onSave,
 }: RabbitMqConnectionStringProps) {
-    const { control, handleSubmit } = useForm<FormData>({
+    const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
@@ -35,11 +35,14 @@ export default function RabbitMqConnectionString({
     const { forCurrentDatabase } = useAppUrls();
     const { databasesService } = useServices();
 
-    const asyncTest = useAsyncCallback(() => {
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger("connectionString");
+        if (!isValid) {
+            return;
+        }
+
         return databasesService.testRabbitMqServerConnection(db, formValues.connectionString);
     });
-
-    const isTestButtonDisabled = !formValues.connectionString;
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
         onSave({
@@ -69,20 +72,16 @@ export default function RabbitMqConnectionString({
                     rows={3}
                     placeholder="Enter a connection string for RabbitMQ"
                 />
-                <div id={testButtonId} className="mt-2" style={{ width: "fit-content" }}>
-                    <ButtonWithSpinner
-                        color="primary"
-                        icon="rocket"
-                        onClick={asyncTest.execute}
-                        disabled={isTestButtonDisabled}
-                        isSpinning={asyncTest.loading}
-                    >
-                        Test Connection
-                    </ButtonWithSpinner>
-                </div>
-                {isTestButtonDisabled && (
-                    <UncontrolledTooltip target={testButtonId}>Enter connection string.</UncontrolledTooltip>
-                )}
+            </div>
+            <div>
+                <ButtonWithSpinner
+                    color="primary"
+                    icon="rocket"
+                    onClick={asyncTest.execute}
+                    isSpinning={asyncTest.loading}
+                >
+                    Test Connection
+                </ButtonWithSpinner>
             </div>
             <ConnectionStringUsedByTasks
                 tasks={initialConnection.usedByTasks}
@@ -92,8 +91,6 @@ export default function RabbitMqConnectionString({
         </Form>
     );
 }
-
-const testButtonId = "test-button";
 
 const schema = yupObjectSchema<FormData>({
     name: yup.string().nullable().required(),

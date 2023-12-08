@@ -22,6 +22,7 @@ export interface ConnectionStringsUrlParameters {
 // todo fix InputGroup after rebase
 // todo test for all destinations
 // todo remove legacy code
+// filter connection types in selector based on licenses
 
 export default function ConnectionStrings(props: NonShardedViewProps & ConnectionStringsUrlParameters) {
     const { db, name: nameFromUrl, type: typeFromUrl } = props;
@@ -56,7 +57,7 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
                 <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
                 {isDatabaseAdmin && (
                     <>
-                        <div id={addNewButtonId}>
+                        <div id={addNewButtonId} style={{ width: "fit-content" }}>
                             <Button
                                 color="primary"
                                 onClick={() => dispatch(connectionStringsActions.openAddNewConnectionModal())}

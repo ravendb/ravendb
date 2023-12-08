@@ -26,6 +26,7 @@ import { mapElasticSearchAuthenticationToDto } from "../store/connectionStringsM
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import ElasticSearchCertificate from "./ElasticSearchCertificate";
 
 type FormData = ConnectionFormData<ElasticSearchConnection>;
 
@@ -39,7 +40,7 @@ export default function ElasticSearchConnectionString({
     isForNewConnection,
     onSave,
 }: ElasticSearchStringProps) {
-    const { control, formState, handleSubmit, setValue } = useForm<FormData>({
+    const { control, formState, handleSubmit, setValue, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
@@ -55,7 +56,12 @@ export default function ElasticSearchConnectionString({
     const { forCurrentDatabase } = useAppUrls();
     const { databasesService } = useServices();
 
-    const asyncTest = useAsyncCallback((idx: number) => {
+    const asyncTest = useAsyncCallback(async (idx: number) => {
+        const isValid = await trigger(`nodes.${idx}`);
+        if (!isValid) {
+            return;
+        }
+
         const url = formValues.nodes[idx].url;
         return databasesService.testElasticSearchNodeConnection(
             db,
@@ -63,10 +69,6 @@ export default function ElasticSearchConnectionString({
             mapElasticSearchAuthenticationToDto(formValues)
         );
     });
-
-    const isTestDisabled = (idx: number) => {
-        return asyncTest.loading || !formValues.nodes[idx] || !!formState.errors?.nodes?.[idx];
-    };
 
     const onCertificateUploaded = (data: string) => {
         try {
@@ -118,34 +120,39 @@ export default function ElasticSearchConnectionString({
                 />
             </div>
             <div>
-                <Label className="mb-0 md-label">Nodes URLs</Label>
-                {formState.errors?.nodes?.message && (
-                    <div className="text-danger small">{formState.errors.nodes.message}</div>
-                )}
-                {urlFieldArray.fields.map((urlField, idx) => (
-                    <div key={urlField.id} className="d-flex mb-1 gap-1">
-                        <FormInput
-                            type="text"
-                            control={control}
-                            name={`nodes.${idx}.url`}
-                            placeholder="http(s)://hostName"
-                        />
-                        <Button color="danger" onClick={() => urlFieldArray.remove(idx)}>
-                            <Icon icon="trash" margin="m-0" title="Delete" />
-                        </Button>
-                        <ButtonWithSpinner
-                            color="primary"
-                            onClick={() => asyncTest.execute(idx)}
-                            disabled={isTestDisabled(idx)}
-                            isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
-                            icon={{
-                                icon: "rocket",
-                                title: "Test connection",
-                                margin: "m-0",
-                            }}
-                        />
-                    </div>
-                ))}
+                <div>
+                    <Label className="mb-0 md-label">Nodes URLs</Label>
+                    {formState.errors?.nodes?.message && (
+                        <div className="text-danger small">{formState.errors.nodes.message}</div>
+                    )}
+                    {urlFieldArray.fields.map((urlField, idx) => (
+                        <div key={urlField.id} className="d-flex mb-1 gap-1">
+                            <FormInput
+                                type="text"
+                                control={control}
+                                name={`nodes.${idx}.url`}
+                                placeholder="http(s)://hostName"
+                            />
+                            <Button color="danger" onClick={() => urlFieldArray.remove(idx)}>
+                                <Icon icon="trash" margin="m-0" title="Delete" />
+                            </Button>
+                            <ButtonWithSpinner
+                                color="primary"
+                                onClick={() => asyncTest.execute(idx)}
+                                isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
+                                icon={{
+                                    icon: "rocket",
+                                    title: "Test connection",
+                                    margin: "m-0",
+                                }}
+                            />
+                        </div>
+                    ))}
+                </div>
+                <Button color="info" className="mt-1" onClick={() => urlFieldArray.append({ url: null })}>
+                    <Icon icon="plus" />
+                    Add URL
+                </Button>
             </div>
             <div>
                 <Label className="mb-0 md-label">Authentication</Label>
@@ -212,7 +219,7 @@ export default function ElasticSearchConnectionString({
                         </div>
                     )}
                     {formValues.certificatesBase64.map((cert) => (
-                        <div key={cert}>{cert}</div>
+                        <ElasticSearchCertificate key={cert} base64={cert}></ElasticSearchCertificate>
                     ))}
                 </div>
             )}
