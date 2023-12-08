@@ -13,6 +13,7 @@ using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Patch;
 using SlowTests.Client.TimeSeries.Replication;
@@ -239,6 +240,8 @@ namespace StressTests.Client.TimeSeries
         [Fact]
         public async Task PatchTimestamp_IntegrationTest()
         {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
             string[] tags = { "tag/1", "tag/2", "tag/3", "tag/4", null };
             const string timeseries = "Heartrate";
             const int timeSeriesPointsAmount = 128;
@@ -285,8 +288,13 @@ update
     }
 }"
                     }));
-                await appendOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
+#if DEBUG
+                TimeSpan time = TimeSpan.FromMinutes(8);
+#else
+                time = TimeSpan.FromMinutes(5);
+#endif
+                await appendOperation.WaitForCompletionAsync(time);
                 var deleteFrom = toAppend[timeSeriesPointsAmount * 1 / 3].Timestamp;
                 var deleteTo = toAppend[timeSeriesPointsAmount * 3 / 4].Timestamp;
                 var deleteOperation = store
