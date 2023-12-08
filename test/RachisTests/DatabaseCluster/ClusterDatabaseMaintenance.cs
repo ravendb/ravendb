@@ -1321,9 +1321,9 @@ namespace RachisTests.DatabaseCluster
             var newUrl = "http://127.0.0.1:0";
             string nodeTag;
 
-            var (_, leader) = await CreateRaftCluster(groupSize, shouldRunInMemory: false, leaderIndex: 0, customSettings: new Dictionary<string, string>
+            var (nodes, leader) = await CreateRaftCluster(groupSize, shouldRunInMemory: false, leaderIndex: 0, customSettings: new Dictionary<string, string>
             {
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "4"
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "3"
             });
 
             using (var leaderStore = new DocumentStore
@@ -1339,44 +1339,53 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(groupSize, dbToplogy.Members.Count);
 
                 // kill and change the url
-                var result = DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+                var result = DisposeServerAndWaitForFinishOfDisposal(nodes[1]);
                 nodeTag = result.NodeTag;
+
+                var rehabs = await WaitForValueAsync(async () =>
+                {
+                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                    return dbToplogy.Rehabs.Count;
+                }, 1);
+
+                Assert.True(1 == rehabs, $"topology (after dropping server): {dbToplogy}");
 
                 var customSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = newUrl,
                     [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = UnsecuredAccessAddressRange.PublicNetwork.ToString()
                 };
-                Servers[1] = GetNewServer(new ServerCreationOptions
+                nodes[1] = GetNewServer(new ServerCreationOptions
                 {
                     CustomSettings = customSettings,
                     RunInMemory = false,
                     DeletePrevious = false,
                     DataDirectory = result.DataDirectory
                 });
-                newUrl = Servers[1].WebUrl;
+                Servers.Add(nodes[1]);
+                newUrl = nodes[1].WebUrl;
                 // ensure that at this point we still can't talk to node
                 // wait for the observer to update the status
-                var rehabs = await WaitForValueAsync(async () =>
+                rehabs = await WaitForValueAsync(async () =>
                 {
                     dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                     return dbToplogy.Rehabs.Count;
-                }, 1, interval: 500);
+                }, 1);
 
                 Assert.True(1 == rehabs, $"topology: {dbToplogy}");
                 Assert.Equal(groupSize - 1, dbToplogy.Members.Count);
             }
 
             await WaitForLeader(fromSeconds);
-            leader = Servers.Single(s => s.Disposed == false && s.ServerStore.IsLeader());
+            leader = nodes.Single(s => s.Disposed == false && s.ServerStore.IsLeader());
 
             // remove and rejoin to change the url
 
             await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(nodeTag));
-            Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitWithoutExceptionAsync(fromSeconds));
+            Assert.True(await nodes[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitWithoutExceptionAsync(fromSeconds));
 
-            Assert.True(await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.GetNodeHttpServerUrl(), nodeTag).WaitWithoutExceptionAsync(fromSeconds));
-            Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(fromSeconds));
+            Assert.True(await leader.ServerStore.AddNodeToClusterAsync(nodes[1].ServerStore.GetNodeHttpServerUrl(), nodeTag).WaitWithoutExceptionAsync(fromSeconds));
+            Assert.True(await nodes[1].ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(fromSeconds));
 
             Assert.Equal(3, WaitForValue(() => leader.ServerStore.GetClusterTopology().Members.Count, 3));
 

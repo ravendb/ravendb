@@ -42,6 +42,7 @@ namespace Raven.Server.Config.Categories
             Initialized = true;
         }
 
+        [ConfigurationCategory(ConfigurationCategoryType.Monitoring)]
         public sealed class SnmpConfiguration : ConfigurationCategory
         {
             [Description("Indicates if SNMP is enabled or not. Default: false")]
