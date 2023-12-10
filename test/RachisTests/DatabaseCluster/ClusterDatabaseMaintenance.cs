@@ -1039,33 +1039,27 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task Promote_immedtialty_should_work()
         {
-            var databaseName = GetDatabaseName();
-            var (_, leader) = await CreateRaftCluster(3);
+            var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
 
-            using (var leaderStore = new DocumentStore
+            using (var leaderStore = GetDocumentStore(new Options()
+                   {
+                       ReplicationFactor = 2,
+                       Server = leader
+                   }))
             {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName,
-            })
-            {
-                leaderStore.Initialize();
-
-                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
-                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
-
-                Assert.Equal(2, dbToplogy.AllNodes.Count());
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(leaderStore.Database))).Topology;
+                Assert.Equal(2, dbToplogy.Members.Count);
                 Assert.Equal(0, dbToplogy.Promotables.Count);
-
-                var nodeNotInDbGroup = Servers.Single(s => dbGroupNodes.Contains(s) == false)?.ServerStore.NodeTag;
-                leaderStore.Maintenance.Server.Send(new AddDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
-                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                
+                var nodeNotInDbGroup = Servers.Single(s => dbToplogy.Members.Contains(s.ServerStore.NodeTag) == false)?.ServerStore.NodeTag;
+                leaderStore.Maintenance.Server.Send(new AddDatabaseNodeOperation(leaderStore.Database, nodeNotInDbGroup));
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(leaderStore.Database))).Topology;
                 Assert.Equal(3, dbToplogy.AllNodes.Count());
                 Assert.Equal(1, dbToplogy.Promotables.Count);
                 Assert.Equal(nodeNotInDbGroup, dbToplogy.Promotables[0]);
 
-                await leaderStore.Maintenance.Server.SendAsync(new PromoteDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
-                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                await leaderStore.Maintenance.Server.SendAsync(new PromoteDatabaseNodeOperation(leaderStore.Database, nodeNotInDbGroup));
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(leaderStore.Database))).Topology;
 
                 Assert.Equal(3, dbToplogy.AllNodes.Count());
                 Assert.Equal(0, dbToplogy.Promotables.Count);
@@ -1076,50 +1070,40 @@ namespace RachisTests.DatabaseCluster
         [RavenFact(RavenTestCategory.Cluster)]
         public async Task PromoteRehabNode()
         {
-            var databaseName = GetDatabaseName();
-            var (nodes , leader) = await CreateRaftCluster(3);
+            var (nodes , leader) = await CreateRaftCluster(3, watcherCluster: true);
 
-            using (var leaderStore = new DocumentStore
+            using (var leaderStore = GetDocumentStore(new Options()
                    {
-                       Urls = new[] { leader.WebUrl },
-                       Database = databaseName,
-                   })
+                       ReplicationFactor = 3,
+                       Server = leader
+                   }))
             {
-                leaderStore.Initialize();
-
-                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
-                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
-
-                Assert.Equal(3, dbToplogy.Members.Count);
-                Assert.Equal(0, dbToplogy.Promotables.Count);
-
                 var nodeToRehab = nodes.First(x => x.ServerStore.NodeTag != leader.ServerStore.NodeTag);
                 var removed = await DisposeServerAndWaitForFinishOfDisposalAsync(nodeToRehab);
 
                 await WaitAndAssertForValueAsync(async () =>
                 {
-                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
-                    return dbToplogy.Rehabs.Count;
+                    var top = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(leaderStore.Database))).Topology;
+                    return top.Rehabs.Count;
                 }, 1);
 
-                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(leaderStore.Database))).Topology;
                 Assert.Equal(3, dbToplogy.AllNodes.Count());
                 Assert.Equal(1, dbToplogy.Rehabs.Count);
                 Assert.Equal(removed.NodeTag, dbToplogy.Rehabs[0]);
 
-                await leaderStore.Maintenance.Server.SendAsync(new PromoteDatabaseNodeOperation(databaseName, removed.NodeTag));
+                await leaderStore.Maintenance.Server.SendAsync(new PromoteDatabaseNodeOperation(leaderStore.Database, removed.NodeTag));
 
                 await WaitAndAssertForValueAsync(async () =>
                 {
-                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(leaderStore.Database))).Topology;
                     return dbToplogy.Rehabs.Count;
                 }, 0);
 
                 //make sure the node goes back to rehab after grace time is over
                 await WaitAndAssertForValueAsync(async () =>
                 {
-                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(leaderStore.Database))).Topology;
                     return dbToplogy.Rehabs.Count;
                 }, 1);
             }
