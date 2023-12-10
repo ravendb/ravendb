@@ -615,7 +615,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize - 1, val);
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
                 Assert.Equal(1, val);
-                WaitForUserToContinueTheTest(result.Url);
+                
                 Servers[1] = GetNewServer(
                     new ServerCreationOptions
                     {
@@ -1069,6 +1069,59 @@ namespace RachisTests.DatabaseCluster
 
                 Assert.Equal(3, dbToplogy.AllNodes.Count());
                 Assert.Equal(0, dbToplogy.Promotables.Count);
+                Assert.Equal(0, dbToplogy.Rehabs.Count);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task PromoteRehabNode()
+        {
+            var databaseName = GetDatabaseName();
+            var (nodes , leader) = await CreateRaftCluster(3);
+
+            using (var leaderStore = new DocumentStore
+                   {
+                       Urls = new[] { leader.WebUrl },
+                       Database = databaseName,
+                   })
+            {
+                leaderStore.Initialize();
+
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+
+                Assert.Equal(3, dbToplogy.Members.Count);
+                Assert.Equal(0, dbToplogy.Promotables.Count);
+
+                var nodeToRehab = nodes.First(x => x.ServerStore.NodeTag != leader.ServerStore.NodeTag);
+                var removed = await DisposeServerAndWaitForFinishOfDisposalAsync(nodeToRehab);
+
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                    return dbToplogy.Rehabs.Count;
+                }, 1);
+
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(3, dbToplogy.AllNodes.Count());
+                Assert.Equal(1, dbToplogy.Rehabs.Count);
+                Assert.Equal(removed.NodeTag, dbToplogy.Rehabs[0]);
+
+                await leaderStore.Maintenance.Server.SendAsync(new PromoteDatabaseNodeOperation(databaseName, removed.NodeTag));
+
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                    return dbToplogy.Rehabs.Count;
+                }, 0);
+
+                //make sure the node goes back to rehab after grace time is over
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                    return dbToplogy.Rehabs.Count;
+                }, 1);
             }
         }
 
