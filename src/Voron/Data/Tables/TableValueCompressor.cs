@@ -345,14 +345,18 @@ namespace Voron.Data.Tables
                     }
                     catch (Exception e)
                     {
-                        var aggregateException = innerEx != null
-                            ? new AggregateException(e, innerEx)
-                            : new AggregateException(e);
+                        AggregateException aggregateException = default;
+
+                        if (innerEx != null)
+                            aggregateException = new AggregateException(e, innerEx);
 
                         if (Logger.IsOperationsEnabled)
-                            Logger.Operations(msg: $"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.", aggregateException);
+                            Logger.Operations(msg: $"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.", aggregateException ?? e);
 
-                        throw aggregateException;
+                        if (aggregateException != null)
+                            throw aggregateException;
+
+                        throw;
                     }
                 }
 
