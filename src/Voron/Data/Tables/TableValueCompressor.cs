@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
@@ -293,6 +294,7 @@ namespace Voron.Data.Tables
                 var macBuffer = stackalloc byte[macSize];
                 var subKey = stackalloc byte[subKeyLen];
 
+                // For reliability's sake, we keep two copies of the compression dictionaries
                 for (int i = 0; i < 2; i++)
                 {
                     string filename = $"Dictionary{(i == 0 ? "A" : "B")}";
@@ -300,6 +302,7 @@ namespace Voron.Data.Tables
                         .Combine(path: $"{filename}{CompressionRecoveryExtension}")
                         .FullPath;
 
+                    Exception innerEx = default;
                     try
                     {
                         try
@@ -310,7 +313,13 @@ namespace Voron.Data.Tables
                                 int lastWritten = 0;
 
                                 if (zip.Entries.Count > 0)
+                                    // Entries were added to the file from storage, which is in chronological order,
+                                    // ensuring that the last entry is the most recent.
                                     lastWritten = int.Parse(Path.GetFileNameWithoutExtension(zip.Entries[^1].Name));
+
+                                Debug.Assert(lastWritten >= dictionaries.State.NumberOfEntries,
+                                    message: "The number of last written entry in recovery file must be equal to or greater than the total number of entries in the state. " +
+                                             "Any deviation from this is a bug.");
 
                                 if (lastWritten == dictionaries.State.NumberOfEntries)
                                     continue;
@@ -320,6 +329,8 @@ namespace Voron.Data.Tables
                         }
                         catch (Exception ex)
                         {
+                            innerEx = ex;
+
                             if (Logger.IsInfoEnabled)
                                 Logger.Info(msg: $"An unexpected error occurred while attempting to read the archive '{path}'. " +
                                                  $"The file will be recreated from scratch.", ex);
@@ -334,10 +345,14 @@ namespace Voron.Data.Tables
                     }
                     catch (Exception e)
                     {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info(msg: $"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.", e);
+                        var aggregateException = innerEx != null
+                            ? new AggregateException(e, innerEx)
+                            : new AggregateException(e);
 
-                        throw;
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(msg: $"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.", aggregateException);
+
+                        throw aggregateException;
                     }
                 }
 
@@ -345,7 +360,10 @@ namespace Voron.Data.Tables
 
                 void AppendNewDictionaryEntries(int lastWritten, ZipArchive zip)
                 {
+                    // 1. Compression dictionary numbering starts from 1.
+                    // 2. When appending new dictionaries to existing ones, start with the NEXT number following the existing ones.
                     int rev = Bits.SwapBytes(lastWritten + 1);
+
                     using ByteStringContext.ExternalScope _ = Slice.External(tx.Allocator, (byte*)&rev, sizeof(int), out var key);
                     using var it = dictionaries.Iterate(true);
 
