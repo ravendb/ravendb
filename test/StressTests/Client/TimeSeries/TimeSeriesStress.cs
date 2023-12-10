@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -22,6 +23,7 @@ using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace StressTests.Client.TimeSeries
 {
@@ -85,9 +87,7 @@ namespace StressTests.Client.TimeSeries
                 var check = true;
                 while (check)
                 {
-                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention),
-                        $"too long has passed {sp.Elapsed}, retention is {retention} {Environment.NewLine}" +
-                        $"debug: {string.Join(',', debug.Select(kvp => $"{kvp.Key}: ({kvp.Value.Count},{kvp.Value.Start},{kvp.Value.End})"))}");
+                    await AssertTimeElapsed(store, sp, retention, debug);
 
                     await Task.Delay(100);
                     check = false;
@@ -127,6 +127,24 @@ namespace StressTests.Client.TimeSeries
                     var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     await TimeSeriesReplicationTests.AssertNoLeftOvers(database);
                 }
+            }
+
+            async Task AssertTimeElapsed(DocumentStore store, Stopwatch sp, TimeValue retention, Dictionary<string, (long Count, DateTime Start, DateTime End)> debug)
+            {
+                try
+                {
+                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention),
+                        $"too long has passed {sp.Elapsed}, retention is {retention} {Environment.NewLine}" +
+                        $"debug: {string.Join(',', debug.Select(kvp => $"{kvp.Key}: ({kvp.Value.Count},{kvp.Value.Start},{kvp.Value.End})"))}");
+                }
+                catch (TrueException e)
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var errorMessage = e.Message +
+                                       $"{Environment.NewLine}Database topology: Members: [{string.Join(", ", record.Topology.Members)}], Rehabs: [{string.Join(", ", record.Topology.Rehabs)}]";
+                    throw new TrueException(errorMessage, false);
+                }
+         
             }
         }
 
