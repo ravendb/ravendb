@@ -49,6 +49,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.Monitoring;
@@ -3343,6 +3344,82 @@ namespace Raven.Server.ServerWide
             }
 
             return (command.Result.RaftCommandIndex, command.Result.Data);
+        }
+
+        protected internal async Task WaitForExecutionOnSpecificNodeAsync(JsonOperationContext context, string node, long index)
+        {
+            await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+
+            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(GetClusterTopology().GetUrlFromTag(node), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
+                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: oct.Token);
+        }
+
+        public async Task WaitForExecutionOnRelevantNodesAsync(JsonOperationContext context, List<string> members, long index)
+        {
+            await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+
+            if (members == null || members.Count == 0)
+                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute on.");
+
+            using (var requestExecutor = ClusterRequestExecutor.Create(GetClusterTopology().Members.Values.ToArray(), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
+            {
+                List<Exception> exceptions = null;
+
+                var waitingTasks =
+                    members.Select(member => WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(requestExecutor, member, index, context, oct.Token));
+
+                foreach (var exception in await Task.WhenAll(waitingTasks))
+                {
+                    if (exception == null)
+                        continue;
+
+                    exceptions ??= new List<Exception>();
+                    exceptions.Add(exception.ExtractSingleInnerException());
+                }
+
+                HandleExceptions(exceptions);
+            }
+
+            return;
+
+            void HandleExceptions(IReadOnlyCollection<Exception> exceptions)
+            {
+                if (exceptions == null || exceptions.Count == 0)
+                    return;
+
+                var allExceptionsAreTimeouts  = exceptions.All(exception => exception is OperationCanceledException);
+                var aggregateException = new RaftIndexWaitAggregateException(index, exceptions);
+
+                if (allExceptionsAreTimeouts)
+                    throw new TimeoutException($"The raft command (number '{index}') took too long to run on the intended nodes.", aggregateException);
+
+                throw aggregateException;
+            }
+        }
+
+        private async Task<Exception> WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(RequestExecutor executor, string nodeTag, long index, JsonOperationContext context, CancellationToken token)
+        {
+            try
+            {
+                var cmd = new WaitForRaftIndexCommand(index, nodeTag);
+                await executor.ExecuteAsync(cmd, context, token: token);
+                return null;
+            }
+            catch (RavenException re) when (re.InnerException is HttpRequestException)
+            {
+                // we want to throw for self-checks
+                if (nodeTag == NodeTag)
+                    return re;
+
+                // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
+                return null;
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
         }
 
         internal ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)

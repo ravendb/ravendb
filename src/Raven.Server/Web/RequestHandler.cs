@@ -4,7 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -17,16 +16,12 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Extensions;
@@ -235,98 +230,6 @@ namespace Raven.Server.Web
         public void AddStringToHttpContext(string str, TrafficWatchChangeType type)
         {
             HttpContext.Items["TrafficWatch"] = (str, type);
-        }
-
-        protected async Task WaitForExecutionOnSpecificNode(JsonOperationContext context, ClusterTopology clusterTopology, string node, long index)
-        {
-            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-
-            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
-            {
-                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: AbortRequestToken);
-            }
-        }
-
-        protected internal async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
-        {
-            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-            if (members.Count == 0)
-                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
-
-            using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
-            using (var requestExecutor = ClusterRequestExecutor.Create(clusterTopology.Members.Values.ToArray(), ServerStore.Server.Certificate.Certificate,
-                       DocumentConventions.DefaultForServer))
-            {
-                var waitingTasks = new List<Task<Exception>>();
-                List<Exception> exceptions = null;
-
-                foreach (var member in members)
-                {
-                    var url = clusterTopology.GetUrlFromTag(member);
-                    waitingTasks.Add(ExecuteTask(requestExecutor, member, cts.Token));
-                }
-
-                while (waitingTasks.Count > 0)
-                {
-                    var task = await Task.WhenAny(waitingTasks);
-                    waitingTasks.Remove(task);
-
-                    if (task.Result == null)
-                        continue;
-
-                    var exception = task.Result.ExtractSingleInnerException();
-
-                    if (exceptions == null)
-                        exceptions = new List<Exception>();
-
-                    exceptions.Add(exception);
-                }
-
-                if (exceptions != null)
-                {
-                    var allTimeouts = true;
-                    foreach (var exception in exceptions)
-                    {
-                        if (exception is OperationCanceledException)
-                            continue;
-
-                        allTimeouts = false;
-                    }
-
-                    var aggregateException = new AggregateException(exceptions);
-
-                    if (allTimeouts)
-                        throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.",
-                            aggregateException);
-
-                    throw new InvalidDataException(
-                        $"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.",
-                        aggregateException);
-                }
-            }
-
-            async Task<Exception> ExecuteTask(RequestExecutor executor, string nodeTag, CancellationToken token)
-            {
-                try
-                {
-                    var cmd = new WaitForRaftIndexCommand(index, nodeTag);
-                    await executor.ExecuteAsync(cmd, context, token: token);
-                    return null;
-                }
-                catch (RavenException re) when (re.InnerException is HttpRequestException)
-                {
-                    // we want to throw for self-checks
-                    if (nodeTag == ServerStore.NodeTag)
-                        return re;
-
-                    // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
-                    return null;
-                }
-                catch (Exception e)
-                {
-                    return e;
-                }
-            }
         }
 
         private Stream _responseStream;

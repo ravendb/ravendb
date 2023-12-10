@@ -86,7 +86,7 @@ namespace Raven.Server.Web.System
                 };
 
                 var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
-                await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                await ServerStore.WaitForExecutionOnSpecificNodeAsync(context, node, newIndex);
                 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -190,7 +190,7 @@ namespace Raven.Server.Web.System
                 };
 
                 var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
-                await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                await ServerStore.WaitForExecutionOnSpecificNodeAsync(context, node, newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -334,7 +334,7 @@ namespace Raven.Server.Web.System
                 var update = new CreateNewShardCommand(database, newChosenShardNumber, newShardTopology, SystemTime.UtcNow, raftRequestId);
 
                 var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
-                await WaitForExecutionOnRelevantNodes(context, database, clusterTopology, newShardTopology.Members, newIndex);
+                await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, newShardTopology.Members, newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
