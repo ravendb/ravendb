@@ -318,7 +318,7 @@ namespace Voron.Data.Tables
                                 AppendNewDictionaryEntries(lastWritten, zip);
                             }
                         }
-                        catch (Exception ex) when (ex is InvalidDataException or IOException or FileNotFoundException)
+                        catch (Exception ex)
                         {
                             if (Logger.IsInfoEnabled)
                                 Logger.Info(msg: $"An unexpected error occurred while attempting to read the archive '{path}'. " +
