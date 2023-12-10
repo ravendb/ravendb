@@ -36,6 +36,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -158,7 +159,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                    await ServerStore.WaitForExecutionOnSpecificNodeAsync(context, node, newIndex);
                 }
                 catch (DatabaseLoadFailureException e)
                 {
@@ -417,7 +418,15 @@ namespace Raven.Server.Web.System
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
             var members = (List<string>)result;
-            await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, members, newIndex);
+            try
+            {
+                await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, newIndex);
+            }
+            catch (RaftIndexWaitAggregateException e)
+            {
+                throw new InvalidDataException(
+                    $"The database '{name}' was created but is not accessible, because one or more of the nodes on which this database was supposed to reside on, threw an exception.", e);
+            }
 
             var nodeUrlsAddedTo = new List<string>();
             foreach (var member in members)
@@ -810,7 +819,14 @@ namespace Raven.Server.Web.System
 
             if (fromNodes)
             {
-                await WaitForExecutionOnRelevantNodes(context, "server", ServerStore.GetClusterTopology(), parameters.FromNodes.ToList(), actualDeletionIndex);
+                try
+                {
+                    await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, parameters.FromNodes.ToList(), actualDeletionIndex);
+                }
+                catch (RaftIndexWaitAggregateException e)
+                {
+                    throw new InvalidDataException($"Deletion of databases {string.Join(", ", parameters.DatabaseNames)} was performed, but it could not be propagated due to errors on one or more target nodes.", e);
+                }
             }
 
             return actualDeletionIndex;
