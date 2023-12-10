@@ -98,9 +98,16 @@ namespace Raven.Server.Web.Studio
                 return;
             }
 
-            await ServerStore.LicenseManager.LeaseLicense(GetRaftRequestIdFromQuery(), throwOnError: true);
-
-            NoContentStatus();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var updated = await ServerStore.LicenseManager.LeaseLicense(GetRaftRequestIdFromQuery(), throwOnError: true);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Updated"] = updated,
+                    ["Message"] = updated ? "License was updated Successfully" : "The license wasn't modified"
+                });
+            }
         }
 
         [RavenAction("/license/support", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

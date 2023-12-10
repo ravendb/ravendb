@@ -744,20 +744,20 @@ namespace Raven.Server.Commercial
             return JsonConvert.DeserializeObject<LicenseRenewalResult>(responseString);
         }
 
-        public async Task LeaseLicense(string raftRequestId, bool throwOnError)
+        public async Task<bool> LeaseLicense(string raftRequestId, bool throwOnError)
         {
             if (await _leaseLicenseSemaphore.WaitAsync(0) == false)
-                return;
+                return false;
 
             try
             {
                 var loadedLicense = _serverStore.LoadLicense();
                 if (loadedLicense == null)
-                    return;
+                    return false;
 
                 var updatedLicense = await GetUpdatedLicenseForActivation(loadedLicense);
                 if (updatedLicense == null)
-                    return;
+                    return false;
 
                 var licenseStatus = GetLicenseStatus(updatedLicense);
 
@@ -794,6 +794,8 @@ namespace Raven.Server.Commercial
             {
                 _leaseLicenseSemaphore.Release();
             }
+
+            return true;
         }
 
         private void ValidateLicenseStatus()
