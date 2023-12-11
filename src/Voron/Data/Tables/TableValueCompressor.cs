@@ -251,7 +251,7 @@ namespace Voron.Data.Tables
 
                             if (Logger.IsInfoEnabled == false)
                                 return;
-                            
+
                             Logger.Info(
                                 removed
                                     ? $"Compression dictionary '{newId}' was removed during rollback in '{table.Name}' table."
@@ -302,61 +302,50 @@ namespace Voron.Data.Tables
                         .Combine(path: $"{filename}{CompressionRecoveryExtension}")
                         .FullPath;
 
-                    Exception innerEx = default;
                     try
                     {
+                        using (var finalFileStream = File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
+                        using (var zip = new ZipArchive(finalFileStream, ZipArchiveMode.Update))
+                        {
+                            int lastWritten = 0;
+
+                            if (zip.Entries.Count > 0)
+                                // Entries were added to the file from storage, which is in chronological order,
+                                // ensuring that the last entry is the most recent.
+                                lastWritten = int.Parse(Path.GetFileNameWithoutExtension(zip.Entries[^1].Name));
+
+                            Debug.Assert(lastWritten >= dictionaries.State.NumberOfEntries,
+                                message: "The number of last written entry in recovery file must be equal to or greater than the total number of entries in the state. " +
+                                         "Any deviation from this is a bug.");
+
+                            if (lastWritten == dictionaries.State.NumberOfEntries)
+                                continue;
+
+                            AppendNewDictionaryEntries(lastWritten, zip);
+                        }
+                    }
+                    catch (Exception innerEx)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(msg: $"An unexpected error occurred while attempting to read the archive '{path}'. " +
+                                                   $"The file will be recreated from scratch.", innerEx);
                         try
                         {
-                            using (var finalFileStream = File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
-                            using (var zip = new ZipArchive(finalFileStream, ZipArchiveMode.Update))
-                            {
-                                int lastWritten = 0;
-
-                                if (zip.Entries.Count > 0)
-                                    // Entries were added to the file from storage, which is in chronological order,
-                                    // ensuring that the last entry is the most recent.
-                                    lastWritten = int.Parse(Path.GetFileNameWithoutExtension(zip.Entries[^1].Name));
-
-                                Debug.Assert(lastWritten >= dictionaries.State.NumberOfEntries,
-                                    message: "The number of last written entry in recovery file must be equal to or greater than the total number of entries in the state. " +
-                                             "Any deviation from this is a bug.");
-
-                                if (lastWritten == dictionaries.State.NumberOfEntries)
-                                    continue;
-
-                                AppendNewDictionaryEntries(lastWritten, zip);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            innerEx = ex;
-
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations(msg: $"An unexpected error occurred while attempting to read the archive '{path}'. " +
-                                                 $"The file will be recreated from scratch.", ex);
-
                             File.Delete(path);
                             using (var finalFileStream = File.Open(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read))
                             using (var zip = new ZipArchive(finalFileStream, ZipArchiveMode.Update))
-                            {
                                 AppendNewDictionaryEntries(lastWritten: 0, zip);
-                            }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        AggregateException aggregateException = default;
+                        catch (Exception e)
+                        {
+                            var aggregateException = new AggregateException(e, innerEx);
 
-                        if (innerEx != null)
-                            aggregateException = new AggregateException(e, innerEx);
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.",
+                                    aggregateException);
 
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations(msg: $"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.", aggregateException ?? e);
-
-                        if (aggregateException != null)
                             throw aggregateException;
-
-                        throw;
+                        }
                     }
                 }
 
