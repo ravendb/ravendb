@@ -85,6 +85,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         BlockingTombstones,
         ServerLimits,
 
-        ConflictRevisionsExceeded
+        ConflictRevisionsExceeded,
+        
+        SqlConnectionString_DeprecatedFactoryReplaced,
     }
 }

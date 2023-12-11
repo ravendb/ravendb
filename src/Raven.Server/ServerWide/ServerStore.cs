@@ -2244,7 +2244,12 @@ namespace Raven.Server.ServerWide
                     // RavenDB-21784 - Replace obsolete MySql provider name
                     var deserializedSqlConnectionString = JsonDeserializationCluster.SqlConnectionString(connectionString);
                     if (deserializedSqlConnectionString.FactoryName == "MySql.Data.MySqlClient")
+                    {
                         deserializedSqlConnectionString.FactoryName = "MySqlConnector.MySqlConnectorFactory";
+                        var alert = AlertRaised.Create(databaseName, "Deprecated MySql factory auto-updated", "MySql.Data.MySqlClient factory has been defaulted to MySqlConnector.MySqlConnectorFactory",
+                            AlertType.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
+                        NotificationCenter.Add(alert);
+                    }
                     
                     command = new PutSqlConnectionStringCommand(deserializedSqlConnectionString, databaseName, raftRequestId);
                     break;
