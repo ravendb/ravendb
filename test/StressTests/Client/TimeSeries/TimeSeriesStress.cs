@@ -238,15 +238,26 @@ namespace StressTests.Client.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task PatchTimestamp_IntegrationTest()
+        [MultiplatformFact(RavenArchitecture.AllX64)]
+        public async Task PatchTimestamp_IntegrationTest_x64()
+        {
+            await PatchTimestamp_IntegrationTest(8_192);
+        }
+
+        [MultiplatformFact(RavenArchitecture.AllX86)]
+        public async Task PatchTimestamp_IntegrationTest_x86()
+        {
+            await PatchTimestamp_IntegrationTest(4_096);
+        }
+
+     
+        public async Task PatchTimestamp_IntegrationTest(int docAmount)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
 
             string[] tags = { "tag/1", "tag/2", "tag/3", "tag/4", null };
             const string timeseries = "Heartrate";
             const int timeSeriesPointsAmount = 128;
-            const int docAmount = 8_192;
 
             using (var store = GetDocumentStore())
             {
