@@ -331,8 +331,8 @@ namespace Voron.Data.Tables
                         {
                             innerEx = ex;
 
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info(msg: $"An unexpected error occurred while attempting to read the archive '{path}'. " +
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations(msg: $"An unexpected error occurred while attempting to read the archive '{path}'. " +
                                                  $"The file will be recreated from scratch.", ex);
 
                             File.Delete(path);
