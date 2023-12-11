@@ -23,6 +23,12 @@ namespace Raven.Server.Web.Studio
             using (var sourceSqlDatabaseBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "source-database-info"))
             {
                 var sourceSqlDatabase = JsonDeserializationServer.SourceSqlDatabase(sourceSqlDatabaseBlittable);
+                
+                // RavenDB-21784 - Replace obsolete MySql provider name
+#pragma warning disable CS0618 // Type or member is obsolete
+                if (sourceSqlDatabase.Provider == MigrationProvider.MySQL_MySql_Data)
+#pragma warning restore CS0618 // Type or member is obsolete
+                    sourceSqlDatabase.Provider = MigrationProvider.MySQL_MySqlConnector;
 
                 var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString, sourceSqlDatabase.Schemas);
                 var schema = dbDriver.FindSchema();
