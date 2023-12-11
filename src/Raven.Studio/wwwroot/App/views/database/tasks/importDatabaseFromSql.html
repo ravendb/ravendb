@@ -24,6 +24,11 @@
                                         </li>
                                     </ul>
                                     <span class="help-block" data-bind="validationMessage: databaseType"></span>
+                                    <div class="has-warning" data-bind="visible: databaseType() === 'MySQL_MySql_Data'">
+                                        <div class="help-block">
+                                            <i class="icon-warning"></i> <span> This connector is deprecated</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div data-bind="visible: databaseType() === 'MsSQL', with: sqlServer">

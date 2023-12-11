@@ -7,7 +7,7 @@ import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class sqlMigration {
 
-    static possibleProviders: Raven.Server.SqlMigration.MigrationProvider[] = ["MsSQL", "MySQL_MySql_Data", "MySQL_MySqlConnector", "NpgSQL", "Oracle"];
+    static possibleProviders: Raven.Server.SqlMigration.MigrationProvider[] = ["MsSQL", "MySQL_MySqlConnector", "NpgSQL", "Oracle", "MySQL_MySql_Data"];
     
     databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
     binaryToAttachment = ko.observable<boolean>(true);
@@ -163,7 +163,7 @@ class sqlMigration {
             case "MsSQL":
                 return "Microsoft SQL Server (System.Data.SqlClient)";
             case "MySQL_MySql_Data":
-                return "MySQL Server (MySql.Data.MySqlClient)";
+                return "DEPRECATED: MySQL Server (MySql.Data.MySqlClient)";
             case "MySQL_MySqlConnector":
                 return "MySQL Server (MySqlConnector.MySqlConnectorFactory)";
             case "NpgSQL":
