@@ -2241,7 +2241,12 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case ConnectionStringType.Sql:
-                    command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
+                    // RavenDB-21784 - Replace obsolete MySql provider name
+                    var deserializedSqlConnectionString = JsonDeserializationCluster.SqlConnectionString(connectionString);
+                    if (deserializedSqlConnectionString.FactoryName == "MySql.Data.MySqlClient")
+                        deserializedSqlConnectionString.FactoryName = "MySqlConnector.MySqlConnectorFactory";
+                    
+                    command = new PutSqlConnectionStringCommand(deserializedSqlConnectionString, databaseName, raftRequestId);
                     break;
                 case ConnectionStringType.Olap:
                     command = new PutOlapConnectionStringCommand(JsonDeserializationCluster.OlapConnectionString(connectionString), databaseName, raftRequestId);
