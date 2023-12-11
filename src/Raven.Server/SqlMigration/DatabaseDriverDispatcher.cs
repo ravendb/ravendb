@@ -14,7 +14,9 @@ namespace Raven.Server.SqlMigration
             {
                 case MigrationProvider.MsSQL:
                     return new MsSqlDatabaseMigrator(connectionString);
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                     return new MySqlDatabaseMigrator(connectionString, "MySqlConnector.MySqlConnectorFactory");
                 case MigrationProvider.NpgSQL:

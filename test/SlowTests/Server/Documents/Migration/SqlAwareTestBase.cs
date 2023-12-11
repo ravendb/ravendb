@@ -75,7 +75,9 @@ namespace SlowTests.Server.Documents.Migration
         {
             switch (provider)
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                 {
                     using (var connection = new MySqlConnector.MySqlConnection(connectionString))
@@ -131,7 +133,9 @@ namespace SlowTests.Server.Documents.Migration
         {
             switch (provider)
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                     return WithMySqlDatabase(out connectionString, out schemaName, dataSet, provider, includeData);
                 case MigrationProvider.MsSQL:
@@ -244,7 +248,9 @@ namespace SlowTests.Server.Documents.Migration
 
         private static DbConnection GetMySqlConnection(MigrationProvider provider, string connectionString)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             Debug.Assert(provider is MigrationProvider.MySQL_MySql_Data or MigrationProvider.MySQL_MySqlConnector);
+#pragma warning restore CS0618 // Type or member is obsolete
             return new MySqlConnector.MySqlConnection(connectionString);
         }
 
