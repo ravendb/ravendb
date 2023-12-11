@@ -613,7 +613,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public async Task WhoAmI()
         {
             var clientCert = GetCurrentCertificate();

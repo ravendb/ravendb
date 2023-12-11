@@ -230,6 +230,17 @@ namespace Raven.Server.Web.System
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
             return Task.CompletedTask;
         }
+        
+        [RavenAction("/2fa/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetTwoFactorFile()
+        {
+            var serverRelativeFileName = RouteMatch.Url.Substring(
+                RouteMatch.MatchLength,
+                RouteMatch.Url.Length - RouteMatch.MatchLength
+            );
+          
+            return GetStudioFileInternal(serverRelativeFileName);
+        }
 
         [RavenAction("/wizard/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupIndexFile()
