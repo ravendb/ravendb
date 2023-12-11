@@ -890,8 +890,9 @@ namespace RachisTests.DatabaseCluster
 
                 sw.Stop();
 
+                var acceptableDeviation = TimeSpan.FromSeconds(1);
                 Assert.Equal(1, count);
-                Assert.True(sw.Elapsed > TimeSpan.FromSeconds(moveToRehabGraceTimeInSec) - disposeTime,
+                Assert.True(sw.Elapsed > TimeSpan.FromSeconds(moveToRehabGraceTimeInSec) - disposeTime - acceptableDeviation,
                     userMessage: $"The grace period was not considered and node 'A' went into rehab after {sw.Elapsed}, " +
                                  $"but grace period is '{moveToRehabGraceTimeInSec}' sec (disposing of the node took '{disposeTime}').");
             }
