@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow
@@ -641,14 +642,7 @@ namespace Sparrow
         /// <returns></returns>
         public static bool IsNullOrEmpty(StringSegment value)
         {
-            var res = false;
-
-            if (!value.HasValue || value.Length == 0)
-            {
-                res = true;
-            }
-
-            return res;
+            return !value.HasValue || value.Length == 0;
         }
 
         /// <summary>
@@ -660,6 +654,9 @@ namespace Sparrow
             return Value ?? string.Empty;
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         // Methods that do no return (i.e. throw) are not inlined
         // https://github.com/dotnet/coreclr/pull/6103
         private static void ThrowInvalidArguments(string buffer, int offset, int length)
@@ -688,6 +685,9 @@ namespace Sparrow
             }
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private void ThrowInvalidArguments(int offset, int length)
         {
             throw GetInvalidArgumentsException(HasValue);
@@ -715,11 +715,17 @@ namespace Sparrow
 
         private static class ThrowHelper
         {
+#if NET6_0_OR_GREATER
+            [DoesNotReturn]
+#endif
             internal static void ThrowArgumentNullException(ExceptionArgument argument)
             {
                 throw new ArgumentNullException(GetArgumentName(argument));
             }
 
+#if NET6_0_OR_GREATER
+            [DoesNotReturn]
+#endif
             internal static void ThrowArgumentOutOfRangeException(ExceptionArgument argument, int value)
             {
                 throw new ArgumentOutOfRangeException(GetArgumentName(argument), value, "Unexpected value: " + value);
