@@ -453,11 +453,22 @@ namespace Sparrow.Json
             var posInStr = 0;
             while (posInStr < size)
             {
-                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize);
-                FlushInternal();
-                Memory.Copy(_buffer, buffer + posInStr, amountToCopy);
+                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize - _pos);
+                if (amountToCopy == 0)
+                    goto End; // There is no space available to copy anything, let's just skip and move to flush. 
+
+                Memory.Copy(_buffer + _pos, buffer + posInStr, amountToCopy);
                 posInStr += amountToCopy;
-                _pos = amountToCopy;
+                _pos += amountToCopy;
+
+                // We are not gonna waste a buffer flush if we still have space for other things.
+                // Therefore, we will check if we are done (which is fast) and just break out if
+                // that's the case.
+                if (posInStr == size)
+                    break;
+
+                End:
+                FlushInternal();
             }
         }
 
