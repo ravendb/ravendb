@@ -115,6 +115,7 @@ export default function SqlConnectionString({
     );
 }
 
+// TODO warning for MySql.Data.MySqlClient (deprecated)
 const sqlFactoryOptions: SelectOption<SqlConnectionStringFactoryName>[] = [
     { value: "System.Data.SqlClient", label: "Microsoft SQL Server" },
     { value: "MySql.Data.MySqlClient", label: "MySQL Server" },

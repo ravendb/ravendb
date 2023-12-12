@@ -39,14 +39,14 @@ export default function AmazonGlacier() {
                 </FormSwitch>
                 <Collapse isOpen={formValues.isEnabled} className="mt-2">
                     <FormSwitch
-                        name={getName("isOverrideConfig")}
+                        name={`${fieldBase}.config.isOverrideConfig`}
                         control={control}
                         className="ms-3 mb-2 w-100"
                         color="secondary"
                     >
                         Override configuration via external script
                     </FormSwitch>
-                    {formValues.isOverrideConfig ? (
+                    {formValues.config.isOverrideConfig ? (
                         <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
                         <>

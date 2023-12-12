@@ -1,18 +1,16 @@
 ﻿import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
-import { exhaustiveStringTuple } from "components/utils/common";
-import { SelectOption } from "components/common/select/Select";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { Card, CardBody, Collapse, UncontrolledPopover, PopoverBody, Label } from "reactstrap";
-import { FlexGrow } from "../FlexGrow";
-import { FormSwitch, FormInput, FormSelect } from "../Form";
+import { FormSwitch, FormInput, FormSelectCreatable } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
+import { availableS3Regions } from "./utils/amazonUtils";
 
 export default function AmazonS3() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -37,24 +35,24 @@ export default function AmazonS3() {
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Amazon S3
                 </FormSwitch>
-                <Collapse isOpen={formValues.isEnabled} className="mt-2">
+                <Collapse isOpen={formValues.isEnabled} className="mt-2 vstack gap-2">
                     <FormSwitch
                         control={control}
-                        name={getName("isOverrideConfig")}
+                        name={`${fieldBase}.config.isOverrideConfig`}
                         className="ms-3 mb-2 w-100"
                         color="secondary"
                     >
                         Override configuration via external script
                     </FormSwitch>
-                    {formValues.isOverrideConfig ? (
+                    {formValues.config.isOverrideConfig ? (
                         <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
                         <>
-                            <div className="ms-3">
+                            <div className="vstack gap-2">
                                 <FormSwitch
                                     control={control}
                                     name={getName("isUseCustomHost")}
-                                    className="mb-2 w-100"
+                                    className="w-100"
                                     color="secondary"
                                 >
                                     Use a custom S3 host
@@ -64,7 +62,7 @@ export default function AmazonS3() {
                                         <FormSwitch
                                             control={control}
                                             name={getName("forcePathStyle")}
-                                            className="ms-3 mb-2 w-100"
+                                            className="w-100"
                                             color="secondary"
                                         >
                                             Force path style{" "}
@@ -101,7 +99,6 @@ export default function AmazonS3() {
                                         name={getName("customServerUrl")}
                                         placeholder="Enter a custom server URL"
                                         type="text"
-                                        className="mb-2"
                                     />
                                 </div>
                             )}
@@ -127,7 +124,6 @@ export default function AmazonS3() {
                                     name={getName("bucketName")}
                                     placeholder="Enter a bucket name"
                                     type="text"
-                                    className="mb-2"
                                 />
                             </div>
                             <div>
@@ -139,7 +135,6 @@ export default function AmazonS3() {
                                     name={getName("remoteFolderName")}
                                     placeholder="Enter a remote folder name"
                                     type="text"
-                                    className="mb-2"
                                 />
                             </div>
                             <div>
@@ -155,15 +150,13 @@ export default function AmazonS3() {
                                         control={control}
                                         name={getName("awsRegionName")}
                                         placeholder="Enter an AWS region"
-                                        className="mb-2"
                                     />
                                 ) : (
-                                    <FormSelect
+                                    <FormSelectCreatable
                                         name={getName("awsRegionName")}
                                         control={control}
                                         placeholder="Select an AWS region"
-                                        options={allRegionsOptions}
-                                        className="mb-2"
+                                        options={availableS3Regions}
                                     />
                                 )}
                             </div>
@@ -174,7 +167,6 @@ export default function AmazonS3() {
                                     control={control}
                                     placeholder="Enter an access key"
                                     type="text"
-                                    className="mb-2"
                                 />
                             </div>
                             <div>
@@ -186,8 +178,7 @@ export default function AmazonS3() {
                                     type="text"
                                 />
                             </div>
-                            <div className="d-flex mt-3">
-                                <FlexGrow />
+                            <div className="d-flex justify-content-end">
                                 <ButtonWithSpinner
                                     type="button"
                                     color="info"
@@ -198,9 +189,7 @@ export default function AmazonS3() {
                                     Test credentials
                                 </ButtonWithSpinner>
                             </div>
-                            <div className="mt-2">
-                                <ConnectionTestResult testResult={asyncTest.result} />
-                            </div>
+                            <ConnectionTestResult testResult={asyncTest.result} />
                         </>
                     )}
                 </Collapse>
@@ -208,13 +197,6 @@ export default function AmazonS3() {
         </Card>
     );
 }
-
-const allRegions = exhaustiveStringTuple()("Africa", "Europe", "America", "Asia");
-
-const allRegionsOptions: SelectOption[] = allRegions.map((type) => ({
-    value: type,
-    label: type,
-}));
 
 const fieldBase = "destinations.s3";
 

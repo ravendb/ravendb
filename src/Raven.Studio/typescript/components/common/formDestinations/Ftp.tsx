@@ -12,6 +12,8 @@ import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 
+// TODO styling input file
+
 export default function Ftp() {
     const { control, trigger } = useFormContext<FormDestinations>();
     const {
@@ -29,6 +31,8 @@ export default function Ftp() {
         return manageServerService.testPeriodicBackupCredentials("FTP", mapFtpToDto(formValues));
     });
 
+    const isCertificateVisible = formValues.url?.startsWith("ftps://");
+
     return (
         <Card className="well">
             <CardBody>
@@ -37,14 +41,14 @@ export default function Ftp() {
                 </FormSwitch>
                 <Collapse isOpen={formValues.isEnabled} className="mt-2">
                     <FormSwitch
-                        name={getName("isOverrideConfig")}
+                        name={`${fieldBase}.config.isOverrideConfig`}
                         control={control}
                         className="ms-3 mb-2 w-100"
                         color="secondary"
                     >
                         Override configuration via external script
                     </FormSwitch>
-                    {formValues.isOverrideConfig ? (
+                    {formValues.config.isOverrideConfig ? (
                         <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
                         <>
@@ -93,6 +97,12 @@ export default function Ftp() {
                                     type="password"
                                 />
                             </div>
+                            {isCertificateVisible && (
+                                <div>
+                                    <Label className="mb-0 md-label">Certificate</Label>
+                                    <FormInput type="file" name={getName("certificateAsBase64")} control={control} />
+                                </div>
+                            )}
                             <div className="d-flex mt-3">
                                 <FlexGrow />
                                 <ButtonWithSpinner
