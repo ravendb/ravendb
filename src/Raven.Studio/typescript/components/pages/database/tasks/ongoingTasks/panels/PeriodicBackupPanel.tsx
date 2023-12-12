@@ -29,10 +29,11 @@ import notificationCenter from "common/notifications/notificationCenter";
 import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
-import { Badge, Collapse, Input } from "reactstrap";
+import { Badge, Collapse, Input, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
+import useId from "hooks/useId";
 
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
@@ -243,9 +244,12 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
+    const isServerWide = data.shared.serverWide;
     const editUrl = forCurrentDatabase.editPeriodicBackupTask(sourceView, data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
+
+    const statusDropdownId = useId("statusDropdown");
 
     return (
         <RichPanel>
@@ -265,11 +269,17 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                 <RichPanelActions>
                     <OngoingTaskResponsibleNode task={data} />
                     <BackupEncryption encrypted={data.shared.encrypted} />
+                    {isServerWide && (
+                        <UncontrolledTooltip target={statusDropdownId}>
+                            Status can be managed on the Server-Wide Tasks page
+                        </UncontrolledTooltip>
+                    )}
                     <OngoingTaskStatus
                         task={data}
                         canEdit={canEdit}
                         onTaskOperation={onTaskOperation}
                         isTogglingState={isTogglingState(data.shared.taskId)}
+                        id={statusDropdownId}
                     />
 
                     <OngoingTaskActions
