@@ -493,7 +493,7 @@ $btn-font-weight: $font-weight-normal !default;
 $btn-box-shadow: 0px 1px 0px 0px rgba($well-bg, 0.5) !default;
 $btn-focus-width: $input-btn-focus-width !default;
 $btn-focus-box-shadow: $input-btn-focus-box-shadow !default;
-$btn-disabled-opacity: 0.65 !default;
+$btn-disabled-opacity: 0.4 !default;
 $btn-active-box-shadow: inset 0 3px 5px rgba($black, 0.125) !default;
 
 $btn-link-color: var(--#{$prefix}link-color) !default;
