@@ -331,8 +331,8 @@
                 </button>
             </div>
             <div class="footer-item" data-bind="visible: twoFactorSessionExpiration">
-                <a class="btn btn-warning btn-sm" title="Log out" data-bind="click: logout">
-                    Log out
+                <a class="btn btn-2fa btn-sm lh-1" title="End current 2FA session" data-bind="click: logout">
+                    <i class="icon-logout"></i> <span class="me-0">End session</span>
                 </a>
             </div>
             <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
