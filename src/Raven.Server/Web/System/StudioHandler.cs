@@ -285,6 +285,14 @@ namespace Raven.Server.Web.System
         [RavenAction("/studio/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetStudioIndexFile()
         {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            if (feature?.Status == RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided)
+            {
+                HttpContext.Response.Headers["Location"] = "/2fa/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+                return Task.CompletedTask;
+            }
+            
             if (ServerStore.LicenseManager.IsEulaAccepted == false)
             {
                 HttpContext.Response.Headers["Location"] = "/eula/index.html";
