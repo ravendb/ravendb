@@ -746,8 +746,8 @@ export const defaultFilterCriteria: IndexFilterCriteria = {
     autoRefresh: true,
     showOnlyIndexesWithIndexingErrors: false,
     searchText: "",
-    sortBy: "lastIndexingTime",
-    sortDirection: "desc",
+    sortBy: "name",
+    sortDirection: "asc",
     groupBy: "Collection",
 };
 
