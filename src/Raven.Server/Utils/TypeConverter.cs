@@ -489,59 +489,29 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static readonly Type[] DynamicRules = new[]
-        {
-            typeof(string), typeof(LazyCompressedStringValue), 
-            typeof(LazyStringValue), typeof(BlittableJsonReaderObject),
-            typeof(BlittableJsonReaderArray)
-        };
-
-        private enum DynamicRuleTypeLocation : int
-        {
-            String = 0,
-            LazyCompressedStringValue = 1,
-            LazyStringValue = 2,
-            BlittableJsonReaderObject = 3,
-            BlittableJsonReaderArray = 4,
-        }
-
         public static dynamic ToDynamicType(object value)
         {
             if (value == null)
                 return DynamicNullObject.ExplicitNull;
 
-            Type objectType = value.GetType();
-            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.String])
+            switch (value)
             {
-                var valueAsString = (string)value;
-
-                if (TryConvertStringValue(valueAsString, out object result))
-                    return result;
-
-                return valueAsString;
-            }
-
-            LazyStringValue lazyString = null;
-            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.LazyCompressedStringValue])
-                lazyString = ((LazyCompressedStringValue)value).ToLazyStringValue();
-            else if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.LazyStringValue])
-                lazyString = (LazyStringValue) value;
-            if (lazyString != null)
-                return ConvertLazyStringValue(lazyString);
-
-            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.BlittableJsonReaderObject])
-            {
-                var jsonObject = (BlittableJsonReaderObject)value;
-                if (jsonObject.TryGetWithoutThrowingOnError(ValuesPropertyName, out BlittableJsonReaderArray ja1))
+                case string valueAsString:
+                    return TryConvertStringValue(valueAsString, out object result) ? result : valueAsString;
+                case LazyCompressedStringValue compressedStringValue:
+                    return ConvertLazyStringValue(compressedStringValue.ToLazyStringValue());
+                case LazyStringValue lazyStringValue:
+                    return ConvertLazyStringValue(lazyStringValue);
+                case BlittableJsonReaderObject blittableJsonReaderObject 
+                    when blittableJsonReaderObject.TryGetWithoutThrowingOnError(ValuesPropertyName, out BlittableJsonReaderArray ja1):
                     return new DynamicArray(ja1);
-
-                return new DynamicBlittableJson(jsonObject);
+                case BlittableJsonReaderObject blittableJsonReaderObject:
+                    return new DynamicBlittableJson(blittableJsonReaderObject);
+                case BlittableJsonReaderArray blittableJsonReaderArray:
+                    return new DynamicArray(blittableJsonReaderArray);
+                default:
+                    return value;
             }
-
-            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.BlittableJsonReaderArray])
-                return new DynamicArray((BlittableJsonReaderArray)value);
-
-            return value;
         }
 
         private static readonly HashSet<string> _timeSpanPropertiesNames = typeof(TimeSpan).GetProperties().Select(i => i.Name).ToHashSet();
@@ -634,28 +604,24 @@ namespace Raven.Server.Utils
             if (value == null)
                 return null;
 
-            Type objectType = value.GetType();
-            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.String] && TryConvertStringValue((string)value, supportTimeOnlyDateOnly, out object result))
-                return result;
-
-            LazyStringValue lazyString = null;
-            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.LazyCompressedStringValue])
-                lazyString = ((LazyCompressedStringValue)value).ToLazyStringValue();
-            else if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.LazyStringValue])
-                lazyString = (LazyStringValue)value;
-
-            if (lazyString != null)
-                return ConvertLazyStringValue(lazyString, propertyName, supportTimeOnlyDateOnly);
-
-            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.BlittableJsonReaderObject])
-                return TryConvertBlittableJsonReaderObject((BlittableJsonReaderObject) value);
-
-            return value;
+            switch (value)
+            {
+                case string valueAsString:
+                    return TryConvertStringValue(valueAsString, supportTimeOnlyDateOnly, out object result) ? result : valueAsString;
+                case LazyCompressedStringValue compressedStringValue:
+                    return ConvertLazyStringValue(compressedStringValue.ToLazyStringValue(), propertyName, supportTimeOnlyDateOnly);
+                case LazyStringValue lazyStringValue:
+                    return ConvertLazyStringValue(lazyStringValue, propertyName, supportTimeOnlyDateOnly);
+                case BlittableJsonReaderObject blittableJsonReaderObject:
+                    return TryConvertBlittableJsonReaderObject(blittableJsonReaderObject);
+                default:
+                    return value;
+            }
         }
 
         public static T Convert<T>(object value, bool cast)
         {
-            if (value == null || value is DynamicNullObject)
+            if (value is null or DynamicNullObject)
                 return default;
 
             if (cast)
