@@ -7,6 +7,7 @@ import { produce } from "immer";
 import { databaseLocationComparator } from "components/utils/common";
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import { WritableDraft } from "immer/dist/types/types-external";
+import genUtils = require("common/generalUtils");
 
 interface ActionStatsLoaded {
     location: databaseLocationSpecifier;
@@ -98,8 +99,6 @@ interface IndexesStatsState {
     resetInProgress: string[];
 }
 
-const minCreatedTimestamp = "0001-01-01T00:00:00.0000000";
-
 function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
     return {
         name: stats.Name,
@@ -113,7 +112,7 @@ function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
         patternForReferencesToReduceOutputCollection: stats.ReduceOutputReferencePattern,
         collectionNameForReferenceDocuments: stats.PatternReferencesCollectionName,
         searchEngine: stats.SearchEngineType,
-        createdTimestamp: stats.CreatedTimestamp === minCreatedTimestamp ? null : new Date(stats.CreatedTimestamp),
+        createdTimestamp: genUtils.isServerMinDate(stats.CreatedTimestamp) ? null : new Date(stats.CreatedTimestamp),
     };
 }
 
