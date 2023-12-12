@@ -189,10 +189,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
     const reduceOutputId = useId("reduce-output-id");
 
-    const formattedCreatedTimestamp = genUtils.formatDurationByDate(moment(index.createdTimestamp)) + " ago";
-    const formattedLastIndexingTime = getFormattedMaxNodeTime(index, "lastIndexingTime");
-    const formattedLastQueryingTime = getFormattedMaxNodeTime(index, "lastQueryingTime");
-
     return (
         <>
             <RichPanel className={classNames({ "index-sidebyside": hasReplacement || isReplacement })} innerRef={ref}>
@@ -209,24 +205,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                     {index.name}
                                 </a>
                             </RichPanelName>
-                            <div className="small hstack gap-4">
-                                <div>
-                                    <span className="text-muted">Created:</span>{" "}
-                                    <strong>{formattedCreatedTimestamp}</strong>
-                                </div>
-                                {formattedLastIndexingTime && (
-                                    <div>
-                                        <span className="text-muted">Indexed:</span>{" "}
-                                        <strong>{formattedLastIndexingTime}</strong>
-                                    </div>
-                                )}
-                                {formattedLastQueryingTime && (
-                                    <div>
-                                        <span className="text-muted">Queried:</span>{" "}
-                                        <strong>{formattedLastQueryingTime}</strong>
-                                    </div>
-                                )}
-                            </div>
                         </div>
                     </RichPanelInfo>
                     <RichPanelActions>
@@ -502,20 +480,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
             </RichPanel>
         </>
     );
-}
-
-function getFormattedMaxNodeTime<T extends IndexSharedInfo>(
-    index: T,
-    value: Extract<keyof T["nodesInfo"][number]["details"], "lastIndexingTime" | "lastQueryingTime">
-) {
-    const allDates = index.nodesInfo.map((x) => x.details?.[value]);
-    const maxDate = _.max(allDates);
-
-    if (!maxDate) {
-        return null;
-    }
-
-    return genUtils.formatDurationByDate(moment(maxDate)) + " ago";
 }
 
 function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {
