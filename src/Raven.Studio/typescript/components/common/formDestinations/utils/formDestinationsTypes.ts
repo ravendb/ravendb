@@ -1,4 +1,5 @@
 export interface BackupConfigurationScript {
+    isOverrideConfig?: boolean;
     arguments?: string;
     exec?: string;
     timeoutInMs?: number;
@@ -6,7 +7,6 @@ export interface BackupConfigurationScript {
 
 export interface FormDestinationDataBase {
     isEnabled?: boolean;
-    isOverrideConfig?: boolean;
     config?: BackupConfigurationScript;
 }
 

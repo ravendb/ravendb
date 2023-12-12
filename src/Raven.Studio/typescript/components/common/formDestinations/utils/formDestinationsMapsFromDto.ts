@@ -12,6 +12,7 @@ import {
 } from "./formDestinationsTypes";
 
 const defaultConfig: BackupConfigurationScript = {
+    isOverrideConfig: false,
     exec: null,
     arguments: null,
     timeoutInMs: null,
@@ -19,17 +20,16 @@ const defaultConfig: BackupConfigurationScript = {
 
 const defaultFormBase: FormDestinationDataBase = {
     isEnabled: false,
-    isOverrideConfig: false,
     config: defaultConfig,
 };
 
 function mapFormBaseFromDto(dto: Raven.Client.Documents.Operations.Backups.BackupSettings): FormDestinationDataBase {
     return {
         isEnabled: !dto.Disabled,
-        isOverrideConfig: dto.GetBackupConfigurationScript != null,
         config:
             dto.GetBackupConfigurationScript != null
                 ? {
+                      isOverrideConfig: true,
                       exec: dto.GetBackupConfigurationScript.Exec,
                       arguments: dto.GetBackupConfigurationScript.Arguments,
                       timeoutInMs: dto.GetBackupConfigurationScript.TimeoutInMs,
@@ -108,7 +108,7 @@ function mapAzureFromDto(dto: Raven.Client.Documents.Operations.Backups.AzureSet
 
 export const defaultGoogleCloudFormData: GoogleCloudDestination = {
     ...defaultFormBase,
-    bucketName: "",
+    bucketName: null,
     remoteFolderName: null,
     googleCredentialsJson: null,
 };

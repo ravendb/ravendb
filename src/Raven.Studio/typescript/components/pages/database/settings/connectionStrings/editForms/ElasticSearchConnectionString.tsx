@@ -83,7 +83,6 @@ export default function ElasticSearchConnectionString({
 
                 certificatesArray.forEach((publicKey) => {
                     const certificateModel = new replicationCertificateModel(publicKey, certAsBase64);
-
                     // TODO map to cert object like in 5.4
                     setValue("certificatesBase64", [...formValues.certificatesBase64, certificateModel.publicKey()]);
                 });
@@ -94,7 +93,7 @@ export default function ElasticSearchConnectionString({
             // *** Handle crt/cer ***
             try {
                 const certificateModel = new replicationCertificateModel(data);
-                setValue("certificatesBase64", [...formValues.certificatesBase64, certificateModel.publicKey()]);
+                setValue("certificatesBase64", [...formValues.certificatesBase64, certificateModel.thumbprint()]);
             } catch ($ex2) {
                 messagePublisher.reportError("Unable to upload certificate", $ex2);
             }
@@ -212,14 +211,16 @@ export default function ElasticSearchConnectionString({
                                     className="d-none"
                                     id="elasticCertificateFilePicker"
                                     onChange={(e) =>
-                                        fileImporter.readAsBinaryString(e.target, (x) => onCertificateUploaded(x))
+                                        fileImporter.readAsBinaryString(e.currentTarget, (x) =>
+                                            onCertificateUploaded(x)
+                                        )
                                     }
                                 />
                             </Label>
                         </div>
                     )}
                     {formValues.certificatesBase64.map((cert) => (
-                        <ElasticSearchCertificate key={cert} base64={cert}></ElasticSearchCertificate>
+                        <ElasticSearchCertificate key={cert} certBase64={cert} />
                     ))}
                 </div>
             )}

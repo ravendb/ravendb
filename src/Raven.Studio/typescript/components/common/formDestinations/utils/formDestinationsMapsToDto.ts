@@ -15,7 +15,7 @@ export function mapBackupSettingsToDto(
 ): Raven.Client.Documents.Operations.Backups.BackupSettings {
     return {
         Disabled: false,
-        GetBackupConfigurationScript: destination.isOverrideConfig
+        GetBackupConfigurationScript: destination.config.isOverrideConfig
             ? {
                   Exec: destination.config.exec,
                   Arguments: destination.config.arguments,
@@ -42,10 +42,10 @@ export function mapS3ToDto(destination: S3Destination): Raven.Client.Documents.O
     }
 
     const customServerUrl =
-        !destination.isOverrideConfig && destination.isUseCustomHost ? destination.customServerUrl : undefined;
+        !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.customServerUrl : undefined;
 
     const forcePathStyle =
-        !destination.isOverrideConfig && destination.isUseCustomHost ? destination.forcePathStyle : undefined;
+        !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.forcePathStyle : undefined;
 
     return {
         ...mapBackupSettingsToDto(destination),

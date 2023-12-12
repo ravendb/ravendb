@@ -22,14 +22,14 @@ export default function Local() {
                 <Collapse isOpen={formValues?.isEnabled} className="mt-2">
                     <FormSwitch
                         control={control}
-                        name={getName("isOverrideConfig")}
+                        name={`${fieldBase}.config.isOverrideConfig`}
                         className="ms-3 mb-2"
                         color="secondary"
                     >
                         Override configuration via external script
                     </FormSwitch>
 
-                    {formValues?.isOverrideConfig ? (
+                    {formValues.config.isOverrideConfig ? (
                         <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
                         <div>
