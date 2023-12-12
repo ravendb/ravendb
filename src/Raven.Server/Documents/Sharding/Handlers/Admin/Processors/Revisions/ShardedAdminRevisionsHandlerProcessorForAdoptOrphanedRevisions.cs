@@ -14,12 +14,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
-    internal sealed class ShardedAdminRevisionsHandlerProcessorForAdoptOrphanedRevisions : ShardedAdminRevisionsHandlerProcessorForRevisionsOperation<AdoptOrphanedRevisionsOperation.Parameters>
+    internal sealed class ShardedAdminRevisionsHandlerProcessorForAdoptOrphanedRevisions : ShardedAdminRevisionsHandlerProcessorForRevisionsOperation<AdoptOrphanedRevisionsOperation.Parameters, AdoptOrphanedRevisionsResult>
     {
         public ShardedAdminRevisionsHandlerProcessorForAdoptOrphanedRevisions([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, OperationType.AdoptOrphanedRevisions)
         {
-            Description = $"Adopt orphaned revisions in database '{RequestHandler.DatabaseName}'.";
         }
+
+        public override string Description => $"Adopt orphaned revisions in database '{RequestHandler.DatabaseName}'.";
 
         protected override AdoptOrphanedRevisionsOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
         {

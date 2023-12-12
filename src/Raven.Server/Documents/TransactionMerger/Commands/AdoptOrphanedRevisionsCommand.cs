@@ -57,16 +57,5 @@ internal class AdoptOrphanedRevisionsCommand : RevisionsScanningOperationCommand
         }
     }
 
-    public class AdoptOrphanedRevisionsResult : OperationResult
-    {
-        public long AdoptedCount { get; set; }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(AdoptedCount)] = AdoptedCount;
-            return json;
-        }
-    }
 }
 

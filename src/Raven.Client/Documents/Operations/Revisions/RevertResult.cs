@@ -121,6 +121,51 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
     }
 
+    public sealed class AdoptOrphanedRevisionsResult : OperationResult
+    {
+        public int AdoptedCount { get; set; }
+
+        public override bool CanMerge => true;
+
+        public override void MergeWith(IOperationResult result)
+        {
+            if (result is not AdoptOrphanedRevisionsResult r)
+                return;
+
+            AdoptedCount += r.AdoptedCount;
+
+            base.MergeWith(result);
+        }
+
+        public override void MergeWith(IOperationProgress progress)
+        {
+            if (progress is not AdoptOrphanedRevisionsResult r)
+                return;
+
+            AdoptedCount += r.AdoptedCount;
+
+            base.MergeWith(progress);
+        }
+
+        public override IOperationProgress Clone()
+        {
+            return new AdoptOrphanedRevisionsResult()
+            {
+                AdoptedCount = AdoptedCount,
+                ScannedDocuments = ScannedDocuments,
+                ScannedRevisions = ScannedRevisions,
+                Warnings = Warnings
+            };
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(AdoptedCount)] = AdoptedCount;
+            return json;
+        }
+    }
+
     public sealed class RevertResult : OperationResult
     {
         public int RevertedDocuments { get; set; }

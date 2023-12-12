@@ -6,7 +6,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Commands;
-using Raven.Server.Documents.Sharding;
 using Sparrow.Json;
 
 namespace FastTests.Utils
@@ -127,26 +126,7 @@ namespace FastTests.Utils
             var result = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
 
             var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-
             await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, serverStore.Engine.OperationTimeout);
-        }
-
-        public static async Task SetupRevisionsOnShardedDatabaseAsync(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, RevisionsConfiguration configuration, IAsyncEnumerable<ShardedDocumentDatabase> shards)
-        {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store));
-            if (serverStore == null)
-                throw new ArgumentNullException(nameof(serverStore));
-            if (configuration == null)
-                throw new ArgumentNullException(nameof(configuration));
-
-            var result = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
-            var index = result.RaftCommandIndex;
-
-            await foreach (var shard in shards)
-            {
-                await shard.RachisLogIndexNotifications.WaitForIndexNotification(index.Value, serverStore.Engine.OperationTimeout);
-            }
         }
 
         private static async Task<long> SetupRevisionsInternal(Raven.Server.ServerWide.ServerStore serverStore, string database, RevisionsConfiguration configuration)

@@ -10,7 +10,7 @@ using Raven.Server.ServerWide.Context;
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 {
     internal abstract class AdminRevisionsHandlerProcessorForRevisionsOperation<TOperationParameters> : AbstractAdminRevisionsHandlerProcessorForRevisionsOperation<DatabaseRequestHandler, DocumentsOperationContext, TOperationParameters>
-        where TOperationParameters : ReveisionsOperationParameters
+        where TOperationParameters : IRevisionsOperationParameters
     {
 
         public AdminRevisionsHandlerProcessorForRevisionsOperation([NotNull] DatabaseRequestHandler requestHandler, OperationType operationType)
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
         protected abstract Task<IOperationResult> ExecuteOperation(Action<IOperationProgress> onProgress, TOperationParameters parameters, OperationCancelToken token);
 
-        protected override void ScheduleEnforceConfigurationOperation(long operationId, TOperationParameters parameters, // todo: change to some AbstractAdminRevisionsHandlerProcessorForRevisionsOperation
+        protected override void ScheduleEnforceConfigurationOperation(long operationId, TOperationParameters parameters, 
             OperationCancelToken token)
         {
             var t = RequestHandler.Database.Operations.AddLocalOperation(

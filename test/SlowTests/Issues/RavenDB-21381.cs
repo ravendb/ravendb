@@ -42,16 +42,7 @@ namespace SlowTests.Issues
                 }
             };
 
-            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
-            {
-                var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
-                await RevisionsHelper.SetupRevisionsOnShardedDatabaseAsync(store, Server.ServerStore, configuration: configuration, shards);
-            }
-            else
-            {
-                await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
-            }
-
+            await RevisionsHelper.SetupRevisionsAsync(store, store.Database, configuration);
 
             var user1 = new SamplesTestBase.User { Id = "Users/1-A", Name = "Shahar" };
             var user2 = new SamplesTestBase.User { Id = "Users/2-B", Name = "Shahar" };

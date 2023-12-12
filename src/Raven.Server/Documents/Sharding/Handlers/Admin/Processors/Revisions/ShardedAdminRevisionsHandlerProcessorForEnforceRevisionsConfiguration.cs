@@ -14,12 +14,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
-    internal sealed class ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration : ShardedAdminRevisionsHandlerProcessorForRevisionsOperation<EnforceRevisionsConfigurationOperation.Parameters>
+    internal sealed class ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration : ShardedAdminRevisionsHandlerProcessorForRevisionsOperation<EnforceRevisionsConfigurationOperation.Parameters, EnforceConfigurationResult>
     {
         public ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, OperationType.EnforceRevisionConfiguration)
         {
-            Description = $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.";
         }
+
+        public override string Description => $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.";
 
         protected override EnforceRevisionsConfigurationOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
         {

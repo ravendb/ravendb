@@ -17,8 +17,9 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
     {
         public AdminRevisionsHandlerProcessorForAdoptOrphanedRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, OperationType.AdoptOrphanedRevisions)
         {
-            Description = $"Adopt orphaned revisions in database '{RequestHandler.DatabaseName}'.";
         }
+
+        public override string Description => $"Adopt orphaned revisions in database '{RequestHandler.DatabaseName}'.";
 
         protected override AdoptOrphanedRevisionsOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
         {
