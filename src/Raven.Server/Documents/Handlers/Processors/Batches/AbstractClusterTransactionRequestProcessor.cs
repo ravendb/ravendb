@@ -15,9 +15,11 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches;
 
@@ -43,72 +45,115 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         var waitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
         var waitForIndexThrow = RequestHandler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
         var specifiedIndexesQueryString = RequestHandler.HttpContext.Request.Query["waitForSpecificIndex"];
-        
-        var disableAtomicDocumentWrites = RequestHandler.GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ?? GetClusterConfiguration().DisableAtomicDocumentWrites;
+
+        var disableAtomicDocumentWrites = RequestHandler.GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
+                                          GetClusterConfiguration().DisableAtomicDocumentWrites;
         CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
 
-        ClusterTransactionCommand.ValidateCommands(parsedCommands, disableAtomicDocumentWrites);
+        ValidateCommands(parsedCommands, disableAtomicDocumentWrites);
 
-        using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(out var taskId))
-        {
-            var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites, RequestHandler.ServerStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion)
+        var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
+
+        var options =
+            new ClusterTransactionOptions(taskId: raftRequestId, disableAtomicDocumentWrites,
+                RequestHandler.ServerStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion)
             {
                 WaitForIndexesTimeout = waitForIndexesTimeout,
                 WaitForIndexThrow = waitForIndexThrow,
                 SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToArray() : null
             };
 
-            var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
-            ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
+        ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
 
-            var clusterTransactionCommandResult = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-            if (clusterTransactionCommandResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
-            {
-                RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                throw new ClusterTransactionConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
-                {
-                    ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
-                };
-            }
-            await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, clusterTransactionCommandResult.Index);
+        var (index, result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+        DynamicJsonArray array = null;
 
-            DynamicJsonArray result;
-            if (clusterTransactionCommand.DatabaseCommands.Count > 0)
-            {
-                using var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout);
-                var databaseResult = await RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.WaitForResults(taskId, cts.Token);
-
-                if (databaseResult.IndexTask != null)
-                {
-                    await databaseResult.IndexTask;
-                }
-
-                result = databaseResult.Array;
-            }
-            else
-            {
-                result = new DynamicJsonArray();
-            }
-
-            if (clusterTransactionCommand.ClusterCommands.Count > 0)
-            {
-                foreach (var clusterCommand in clusterTransactionCommand.ClusterCommands)
-                {
-                    result.Add(new DynamicJsonValue
-                    {
-                        [nameof(ICommandData.Type)] = clusterCommand.Type,
-                        [nameof(ICompareExchangeValue.Key)] = clusterCommand.Id,
-                        [nameof(ICompareExchangeValue.Index)] = clusterTransactionCommandResult.Index
-                    });
-                }
-            }
-
-            return (clusterTransactionCommandResult.Index, result);
+        using (CreateClusterTransactionTask(id: options.TaskId, index, out var onDatabaseCompletionTask))
+        {
+            array = await GetClusterTransactionDatabaseCommandsResults(result, raftRequestId, clusterTransactionCommand.DatabaseCommandsCount, onDatabaseCompletionTask);
         }
+
+        foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
+        {
+            array.Add(new DynamicJsonValue
+            {
+                [nameof(ICommandData.Type)] = clusterCommands.Type,
+                [nameof(ICompareExchangeValue.Key)] = clusterCommands.Id,
+                [nameof(ICompareExchangeValue.Index)] = index
+            });
+        }
+
+        return (index, array);
+    }
+
+    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, string raftRequestId, long databaseCommandsCount, Task<ClusterTransactionResult> onDatabaseCompletionTask)
+    {
+        if (result is List<ClusterTransactionErrorInfo> errors)
+            ThrowClusterTransactionConcurrencyException(errors);
+
+        if (databaseCommandsCount == 0)
+            return new DynamicJsonArray();
+
+        RequestHandler.ServerStore.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
+        ClusterTransactionResult dbResult = null;
+        using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
+        {
+            dbResult = await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
+        }
+
+        if (dbResult != null)
+        {
+            if (dbResult.Errors != null)
+                ThrowClusterTransactionConcurrencyException(dbResult.Errors);
+
+            if (dbResult.GeneratedResult != null)
+            {
+                return dbResult.GeneratedResult;
+            }
+        }
+
+        /* Failover was occurred,
+           and because the ClusterTransactionCommand is already completed in the DocumentDatabase in this time,
+           the task with the result is no longer exists ,so the 'onDatabaseCompletionTask' is completed task which is holding null
+           (that's why the count has no value). */
+
+        if (result is ClusterTransactionResult clusterTxResult)
+        {
+            // We'll try to take the count from the result of the cluster transaction command that we get from the leader.
+            return clusterTxResult.GeneratedResult;
+        }
+
+        // leader isn't updated (thats why the result is empty),
+        // so we'll try to take the result from the local history log.
+        using (RequestHandler.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+        using (ctx.OpenReadTransaction())
+        {
+            if (RequestHandler.ServerStore.Engine.LogHistory.TryGetResultByGuid<ClusterTransactionResult>(ctx, raftRequestId, out var clusterTxLocalResult))
+            {
+                return clusterTxLocalResult.GeneratedResult;
+            }
+        }
+
+        // the command was already deleted from the log
+        throw new InvalidOperationException(
+            "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
+    }
+
+    public abstract IDisposable CreateClusterTransactionTask(string id, long index, out Task<ClusterTransactionResult> task);
+
+    public abstract Task<ClusterTransactionResult> WaitForDatabaseCompletion(Task<ClusterTransactionResult> onDatabaseCompletionTask, CancellationToken token);
+
+    private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionErrorInfo> errors)
+    {
+        RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+        throw new ClusterTransactionConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
+        {
+            ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
+        };
     }
 
     protected abstract ClusterTransactionCommand CreateClusterTransactionCommand(ArraySegment<BatchRequestParser.CommandData> parsedCommands,
-        ClusterTransactionCommand.ClusterTransactionOptions options, string raftRequestId);
+        ClusterTransactionOptions options, string raftRequestId);
 
     private void CheckBackwardCompatibility(ref bool disableAtomicDocumentWrites)
     {

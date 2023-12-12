@@ -73,6 +73,8 @@ using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
+using MySqlX.XDevAPI.Common;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -458,6 +460,13 @@ namespace Raven.Server.Documents
                         _logger);
                     try
                     {
+                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
+                            Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
+                        }
+
                         _hasClusterTransaction.Set();
                         ExecuteClusterTransaction();
                     }
@@ -526,6 +535,9 @@ namespace Raven.Server.Documents
         protected long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+
+        public long LastCompletedClusterTransactionIndex;
+
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -754,21 +766,49 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-                Task indexTask = null;
+                var taskResult = new ClusterTransactionResult
+                {
+                    GeneratedResult = mergedCommands.Replies[index],
+                };
                 if (options.WaitForIndexesTimeout != null)
                 {
-                    indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
+                    var indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
                         options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                             mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+
+                    var removeTask = ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(command.Options.TaskId);
+
+                    /*
+                        the remove task that we are creating here is relevant only for a failover with wait for index:
+                        We need the task only when we do a failover during cluster transaction (batch handler) with 'wait for index'.
+                        Only then we will want the task that created here, because we'll want to 'wait for index' in the new node after the failover.
+                    */
+
+                    indexTask.ContinueWith(t =>
+                    {
+                        try
+                        {
+                            t.GetAwaiter().GetResult(); // Task t is already completed here
+                            RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                            ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId, taskResult);
+                        }
+                        catch (Exception e)
+                        {
+                            RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                            ServerStore.Cluster.ClusterTransactionWaiter.SetException(options.TaskId, e);
+                        }
+
+                        removeTask.Dispose();
+                    });
+                }
+                else
+                {
+                    RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                    ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId, taskResult);
                 }
 
-                var result = new ClusterTransactionCompletionResult
-                {
-                    Array = mergedCommands.Replies[index],
-                    IndexTask = indexTask,
-                };
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, result);
+                ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
+
                 _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                 _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
             }
@@ -791,7 +831,7 @@ namespace Raven.Server.Documents
                 var options = command.Options;
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
-                ServerStore.Cluster.ClusterTransactionWaiter.TrySetException(options.TaskId, exception);
+                ServerStore.Cluster.ClusterTransactionWaiter.SetException(options.TaskId, exception);
             }
             catch (Exception e)
             {

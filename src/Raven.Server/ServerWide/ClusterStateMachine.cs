@@ -338,12 +338,8 @@ namespace Raven.Server.ServerWide
                 switch (type)
                 {
                     case nameof(ClusterTransactionCommand):
-                        var errors = ExecuteClusterTransaction(context, cmd, index);
-                        if (errors != null)
-                        {
-                            result = errors;
-                            leader?.SetStateOf(index, errors);
-                        }
+                        result = ExecuteClusterTransaction(context, cmd, index);
+                        leader?.SetStateOf(index, result);
                         break;
 
                     case nameof(CleanUpClusterStateCommand):
@@ -993,7 +989,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<ClusterTransactionCommand.ClusterTransactionErrorInfo> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private ClusterTransactionResult ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
@@ -1015,13 +1011,17 @@ namespace Raven.Server.ServerWide
                 }
 
                 var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-                var error = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems);
-                if (error == null)
+
+                var clusterTransactionResult = new ClusterTransactionResult
+                {
+                    Errors = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems)
+                };
+                if (clusterTransactionResult.Errors == null)
                 {
                     DatabasesLandlord.ClusterDatabaseChangeType notify;
                     if (clusterTransaction.HasDocumentsInTransaction)
                     {
-                        clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
+                        clusterTransactionResult.GeneratedResult = clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
                         notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
                     }
                     else
@@ -1031,11 +1031,11 @@ namespace Raven.Server.ServerWide
 
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
-                    return null;
+                    return clusterTransactionResult;
                 }
 
                 OnTransactionDispose(context, index);
-                return error;
+                return clusterTransactionResult;
             }
             catch (Exception e)
             {
