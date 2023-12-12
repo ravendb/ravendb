@@ -7,6 +7,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ public class RavenDB_21780 : ClusterTestBase
     }
 
     [RavenTheory(RavenTestCategory.Revisions)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task EnforceRevisionsConfigurationOnShardedDB(Options options)
     {
         var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
@@ -30,7 +31,7 @@ public class RavenDB_21780 : ClusterTestBase
         using var store = GetDocumentStore(options);
 
         var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 100 } };
-        await SetupRevisionsConfiguration(options.DatabaseMode, store, configuration);
+        await SetupRevisionsConfiguration(options.DatabaseMode, store, leader, configuration);
 
         var user = new SamplesTestBase.User() { Id = "Users/1", Name = "Shahar" };
 
@@ -49,11 +50,11 @@ public class RavenDB_21780 : ClusterTestBase
 
 
         configuration.Default.MinimumRevisionsToKeep = 2;
-        await SetupRevisionsConfiguration(options.DatabaseMode, store, configuration);
+        await SetupRevisionsConfiguration(options.DatabaseMode, store, leader, configuration);
 
 
         // enforce
-        var parameters = new EnforceRevisionsConfigurationOperation.Parameters { Collections = new[] { "Users" } };
+        var parameters = new EnforceRevisionsConfigurationOperation.Parameters { Collections = new[] { "Users", "foo" } };
         var result = await store.Operations.SendAsync(new EnforceRevisionsConfigurationOperation(parameters));
         await result.WaitForCompletionAsync();
 
@@ -65,16 +66,16 @@ public class RavenDB_21780 : ClusterTestBase
         }
     }
 
-    private async Task SetupRevisionsConfiguration(RavenDatabaseMode databaseMode, DocumentStore store, RevisionsConfiguration configuration)
+    private async Task SetupRevisionsConfiguration(RavenDatabaseMode databaseMode, DocumentStore store, RavenServer server, RevisionsConfiguration configuration)
     {
         if (databaseMode == RavenDatabaseMode.Sharded)
         {
             var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
-            await RevisionsHelper.SetupRevisionsOnShardedDatabaseAsync(store, Server.ServerStore, configuration: configuration, shards);
+            await RevisionsHelper.SetupRevisionsOnShardedDatabaseAsync(store, server.ServerStore, configuration: configuration, shards);
         }
         else
         {
-            await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
+            await RevisionsHelper.SetupRevisionsAsync(store, server.ServerStore, configuration: configuration);
         }
     }
 }
