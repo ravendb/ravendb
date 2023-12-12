@@ -15,7 +15,7 @@ public sealed class AdoptOrphanedRevisionsOperation : IOperation<OperationIdResu
 {
     private readonly Parameters _parameters;
 
-    public sealed class Parameters : ReveisionsOperationParameters
+    public sealed class Parameters : IRevisionsOperationParameters
     {
         public string[] Collections { get; set; } = null;
     }

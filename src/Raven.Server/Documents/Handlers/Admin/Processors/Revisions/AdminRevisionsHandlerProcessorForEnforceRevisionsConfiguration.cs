@@ -16,8 +16,10 @@ internal sealed class AdminRevisionsHandlerProcessorForEnforceRevisionsConfigura
 {
     public AdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, OperationType.EnforceRevisionConfiguration)
     {
-        Description = $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.";
     }
+
+    public override string Description => $"Enforce revision configuration in database '{RequestHandler.DatabaseName}'.";
+
 
     protected override EnforceRevisionsConfigurationOperation.Parameters GetOperationParameters(BlittableJsonReaderObject json)
     {

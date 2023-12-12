@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Operations.Revisions;
-internal interface ReveisionsOperationParameters
+internal interface IRevisionsOperationParameters
 {
 }
 

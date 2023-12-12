@@ -1713,7 +1713,7 @@ namespace Raven.Server.Documents.Revisions
             HashSet<string> collections,
             OperationCancelToken token)
         {
-            var result = new AdoptOrphanedRevisionsCommand.AdoptOrphanedRevisionsResult();
+            var result = new AdoptOrphanedRevisionsResult();
             await PerformRevisionsOperationAsync(onProgress, result,
                 (ids, res, tk) => new AdoptOrphanedRevisionsCommand(this, ids, result, tk),
                 collections: collections, token);
@@ -1724,7 +1724,7 @@ namespace Raven.Server.Documents.Revisions
         public async Task<IOperationResult> AdoptOrphanedAsync(Action<IOperationProgress> onProgress,
             OperationCancelToken token)
         {
-            var result = new AdoptOrphanedRevisionsCommand.AdoptOrphanedRevisionsResult();
+            var result = new AdoptOrphanedRevisionsResult();
             await PerformRevisionsOperationAsync(onProgress, result,
                 (ids, res, tk) => new AdoptOrphanedRevisionsCommand(this, ids, result, tk),
                 collections: null, token);

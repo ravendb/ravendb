@@ -13,8 +13,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
-    internal abstract class ShardedAdminRevisionsHandlerProcessorForRevisionsOperation<TOperationParameters> : AbstractAdminRevisionsHandlerProcessorForRevisionsOperation<ShardedDatabaseRequestHandler, TransactionOperationContext, TOperationParameters>
-        where TOperationParameters : ReveisionsOperationParameters
+    internal abstract class ShardedAdminRevisionsHandlerProcessorForRevisionsOperation<TOperationParameters, TOperationResult> : AbstractAdminRevisionsHandlerProcessorForRevisionsOperation<ShardedDatabaseRequestHandler, TransactionOperationContext, TOperationParameters>
+        where TOperationParameters : IRevisionsOperationParameters
+        where TOperationResult : OperationResult, new()
     {
 
         public ShardedAdminRevisionsHandlerProcessorForRevisionsOperation([NotNull] ShardedDatabaseRequestHandler requestHandler, OperationType operationType)
@@ -29,20 +30,20 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 
         protected abstract RavenCommand<OperationIdResult> GetCommand(JsonOperationContext context, int shardNumber, TOperationParameters parameters);
 
-        protected override void ScheduleEnforceConfigurationOperation(long operationId, TOperationParameters parameters,  // todo: change to some AbstractAdminRevisionsHandlerProcessorForRevisionsOperation
+        protected override void ScheduleEnforceConfigurationOperation(long operationId, TOperationParameters parameters,
             OperationCancelToken token)
         {
-            var task = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, EnforceConfigurationResult, EnforceConfigurationResult>(
+            var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult, TOperationResult, TOperationResult>(
                 operationId,
-                _operationType,//OperationType.EnforceRevisionConfiguration,
-                Description,//$"Enforce revision configuration in database '{RequestHandler.Database.Name}'.",
+                _operationType,
+                Description,
                 detailedDescription: null,
-                (context , shardNumber) => GetCommand(context, shardNumber, parameters), //(_, shardNumber) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(parameters, DocumentConventions.DefaultForServer),
+                (context , shardNumber) => GetCommand(context, shardNumber, parameters),
                 token: token);
 
-            _ = task.ContinueWith(_ =>
+            _ = t.ContinueWith(_ =>
             {
-                task.Dispose();
+                token.Dispose();
             });
         }
     }
