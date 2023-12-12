@@ -2,29 +2,53 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Sparrow.Json.Parsing;
+using static Raven.Server.Rachis.ClusterTransactionWaiter;
 
 namespace Raven.Server.Rachis
 {
-    public sealed class ClusterTransactionWaiter : AsyncWaiter<ClusterTransactionCompletionResult>
+    public sealed class ClusterTransactionWaiter : AsyncWaiter<ClusterTransactionResult>
     {
 
-    }
-
-    public sealed class ClusterTransactionCompletionResult
-    {
-        public Task IndexTask;
-        public DynamicJsonArray Array;
+        public RemoveTask CreateTaskForDatabase(string id, long index, DocumentDatabase database, out Task<ClusterTransactionResult> task)
+        {
+            var t = new TaskCompletionSource<ClusterTransactionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var current = _results.GetOrAdd(id, t);
+        
+            if (current == t)
+            {
+                var lastCompleted = Interlocked.Read(ref database.LastCompletedClusterTransactionIndex);
+                if (lastCompleted >= index)
+                {
+                    current.TrySetResult(null);
+                }
+            }
+        
+            task = current.Task;
+            return new RemoveTask(this, id);
+        }
     }
 
     public class AsyncWaiter<T>
     {
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
+        protected readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
 
         public RemoveTask CreateTask(out string id)
         {
             id = Guid.NewGuid().ToString();
-            _results.TryAdd(id, new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously));
+            return CreateTask(id, out _);
+        }
+
+        public RemoveTask CreateTask(string id)
+        {
+            return CreateTask(id, out _);
+        }
+
+        public RemoveTask CreateTask(string id, out Task<T> task)
+        {
+            task = _results.GetOrAdd(id, new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
             return new RemoveTask(this, id);
         }
 
@@ -34,19 +58,19 @@ namespace Raven.Server.Rachis
             return val;
         }
 
-        public void TrySetResult(string id, T result)
+        public void SetResult(string id, T result)
         {
             if (_results.TryGetValue(id, out var task))
             {
-                task.TrySetResult(result);
+                task.SetResult(result);
             }
         }
 
-        public void TrySetException(string id, Exception e)
+        public void SetException(string id, Exception e)
         {
             if (_results.TryGetValue(id, out var task))
             {
-                task.TrySetException(e);
+                task.SetException(e);
             }
         }
 
@@ -63,9 +87,11 @@ namespace Raven.Server.Rachis
 
             public void Dispose()
             {
-                _parent._results.TryRemove(_id, out var task);
-                // cancel it, if someone still awaits
-                task.TrySetCanceled();
+                if (_parent._results.TryRemove(_id, out var task))
+                {
+                    // cancel it, if someone still awaits
+                    task.TrySetCanceled();
+                }
             }
         }
 

@@ -36,6 +36,8 @@ public sealed class ClusterTransactionMergedCommand : TransactionMergedCommand
         Replies.Clear();
         Options.Clear();
 
+        long lastIndexInBatch = 0L;
+
         foreach (var command in _batch)
         {
             Replies.Add(command.Index, new DynamicJsonArray());
@@ -175,7 +177,14 @@ public sealed class ClusterTransactionMergedCommand : TransactionMergedCommand
 
             global = global.UpdateOrder(ChangeVectorParser.RaftTag, Database.DatabaseGroupId, count, context);
             context.LastDatabaseChangeVector = global;
+
+            lastIndexInBatch = long.Max(lastIndexInBatch, command.Index);
         }
+
+        // set last cluster transaction index (persistent)
+        var lastClusterTxIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(context.Transaction.InnerTransaction);
+        if (lastIndexInBatch > lastClusterTxIndex)
+            Database.DocumentsStorage.SetLastCompletedClusterTransactionIndex(context, lastIndexInBatch);
 
         return Reply.Count;
     }

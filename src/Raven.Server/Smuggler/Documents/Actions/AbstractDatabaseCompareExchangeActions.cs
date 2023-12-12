@@ -133,7 +133,7 @@ namespace Raven.Server.Smuggler.Documents.Actions
                 var parsedCommands = _clusterTransactionCommands.GetArraySegment();
 
                 var raftRequestId = RaftIdGenerator.NewId();
-                var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false,
+                var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId: raftRequestId, disableAtomicDocumentWrites: false,
                     _serverStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion);
 
                 var clusterTransactionCommand = CreateClusterTransactionCommand(_databaseName, _identityPartsSeparator, parsedCommands, options, raftRequestId);
