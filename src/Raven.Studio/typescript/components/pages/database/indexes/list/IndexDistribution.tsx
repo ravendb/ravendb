@@ -108,6 +108,10 @@ export function IndexDistribution(props: IndexDistributionProps) {
 
     const sharded = IndexUtils.isSharded(index);
 
+    const formattedCreatedTimestamp = index.createdTimestamp
+        ? genUtils.formatDurationByDate(moment(index.createdTimestamp)) + " ago"
+        : null;
+
     const items = (
         <>
             {[...index.nodesInfo]
@@ -130,39 +134,46 @@ export function IndexDistribution(props: IndexDistributionProps) {
     );
 
     return (
-        <LocationDistribution>
-            <DistributionLegend>
-                <div className="top"></div>
-                {sharded && (
-                    <div className="node">
-                        <Icon icon="node" /> Node
+        <div>
+            <LocationDistribution>
+                <DistributionLegend>
+                    <div className="top"></div>
+                    {sharded && (
+                        <div className="node">
+                            <Icon icon="node" /> Node
+                        </div>
+                    )}
+                    <div>
+                        <Icon icon="list" /> Entries
                     </div>
-                )}
-                <div>
-                    <Icon icon="list" /> Entries
+                    <div>
+                        <Icon icon="warning" /> Errors
+                    </div>
+                    <div>
+                        <Icon icon="index-history" /> Indexed
+                    </div>
+                    <div>
+                        <Icon icon="queries" /> Queried
+                    </div>
+                    <div>
+                        <Icon icon="changes" /> State
+                    </div>
+                </DistributionLegend>
+                <DistributionSummary>
+                    <div className="top">Total</div>
+                    {sharded && <div> </div>}
+                    <div>{estimatedEntries}</div>
+                    <div>{totalErrors}</div>
+                    <div></div>
+                </DistributionSummary>
+                {items}
+            </LocationDistribution>
+            {formattedCreatedTimestamp && (
+                <div className="small">
+                    <span className="text-muted">Created:</span> <strong>{formattedCreatedTimestamp}</strong>
                 </div>
-                <div>
-                    <Icon icon="warning" /> Errors
-                </div>
-                <div>
-                    <Icon icon="index-history" /> Indexed
-                </div>
-                <div>
-                    <Icon icon="queries" /> Queried
-                </div>
-                <div>
-                    <Icon icon="changes" /> State
-                </div>
-            </DistributionLegend>
-            <DistributionSummary>
-                <div className="top">Total</div>
-                {sharded && <div> </div>}
-                <div>{estimatedEntries}</div>
-                <div>{totalErrors}</div>
-                <div></div>
-            </DistributionSummary>
-            {items}
-        </LocationDistribution>
+            )}
+        </div>
     );
 }
 

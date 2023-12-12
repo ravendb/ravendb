@@ -98,6 +98,8 @@ interface IndexesStatsState {
     resetInProgress: string[];
 }
 
+const minCreatedTimestamp = "0001-01-01T00:00:00.0000000";
+
 function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
     return {
         name: stats.Name,
@@ -111,7 +113,7 @@ function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
         patternForReferencesToReduceOutputCollection: stats.ReduceOutputReferencePattern,
         collectionNameForReferenceDocuments: stats.PatternReferencesCollectionName,
         searchEngine: stats.SearchEngineType,
-        createdTimestamp: stats.CreatedTimestamp ? new Date(stats.CreatedTimestamp) : null,
+        createdTimestamp: stats.CreatedTimestamp === minCreatedTimestamp ? null : new Date(stats.CreatedTimestamp),
     };
 }
 
