@@ -1,15 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
+using FastTests.Utils;
+using Raven.Client;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -276,6 +280,74 @@ public class RavenDB_19529 : ReplicationTestBase
             using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
             {
                 Assert.False(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
+                Assert.True(isLargeValue);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
+    public async Task MergedTransaction_PutArchivedDoc_Then_PutAnotherToLargeSection_CompressionSetInTheMiddle()
+    {
+        const string specificSizeAndContentDocumentId = "users/1-A";
+        const string documentToArchiveId = "users/2-A";
+
+        using (var storeSrc = GetDocumentStore())
+        using (var storeDst = GetDocumentStore())
+        {
+            var config = new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 1 };
+            await DataArchivalHelper.SetupDataArchival(storeSrc, Server.ServerStore, config);
+            await DataArchivalHelper.SetupDataArchival(storeDst, Server.ServerStore, config);
+
+            using (var sessionSrc = storeSrc.OpenSession())
+            {
+                sessionSrc.Store(new User { Name = SpecificContentWithSpecificSize }, specificSizeAndContentDocumentId);
+                sessionSrc.SaveChanges();
+            }
+
+            var taskId = SetupReplicationAsync(storeSrc, storeDst).Result.First().TaskId;
+            Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
+
+            await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));
+
+            using (var sessionSrc = storeSrc.OpenAsyncSession())
+            {
+                await sessionSrc.StoreAsync(new User { Name = SpecificContentWithSpecificSize }, specificSizeAndContentDocumentId);
+
+                var docToArchive = new User { Name = "Document To Archive" };
+                await sessionSrc.StoreAsync(docToArchive, documentToArchiveId);
+
+                await sessionSrc.SaveChangesAsync();
+
+                var archiveDateTime = SystemTime.UtcNow;
+                var metadata = sessionSrc.Advanced.GetMetadataFor(docToArchive);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = archiveDateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await sessionSrc.SaveChangesAsync();
+            }
+
+            var databaseSrc = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeSrc.Database);
+            await databaseSrc.DataArchivist.ArchiveDocs();
+
+            using (var sessionSrc = storeSrc.OpenSession())
+            {
+                // ...and then a PUT command
+                var specificSizeAndContentUser = sessionSrc.Load<User>(specificSizeAndContentDocumentId);
+                specificSizeAndContentUser.Name += CharToAppend;
+
+                sessionSrc.SaveChanges();
+            }
+
+            await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: false));
+
+            Assert.True(WaitForDocument<User>(storeDst, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
+                $"The document '{specificSizeAndContentDocumentId}' wasn't updated as expected");
+
+            var databaseDst = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeDst.Database);
+
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(databaseDst))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            {
+                Assert.False(databaseDst.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
                 Assert.True(isLargeValue);
             }
         }
