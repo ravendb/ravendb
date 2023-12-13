@@ -60,7 +60,7 @@ namespace Raven.Server.Rachis
         }
     }
 
-    public sealed class RachisConcurrencyException : RachisException
+    public class RachisConcurrencyException : RachisException
     {
         public RachisConcurrencyException()
         {
@@ -78,6 +78,26 @@ namespace Raven.Server.Rachis
         public static void Throw(string msg)
         {
             throw new RachisConcurrencyException(msg);
+        }
+    }
+
+    public sealed class ParentStateChangedConcurrencyException : RachisConcurrencyException
+    {
+        public ParentStateChangedConcurrencyException()
+        {
+        }
+
+        public ParentStateChangedConcurrencyException(string message) : base(message)
+        {
+        }
+
+        public ParentStateChangedConcurrencyException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        public new static void Throw(string msg)
+        {
+            throw new ParentStateChangedConcurrencyException(msg);
         }
     }
 

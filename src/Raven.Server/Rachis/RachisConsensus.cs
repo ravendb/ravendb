@@ -1057,8 +1057,9 @@ namespace Raven.Server.Rachis
             using (disposable)
             {
                 if (_disposables.Count == 0 || ReferenceEquals(_disposables[0], parentState) == false)
-                    throw new RachisConcurrencyException(
+                    throw new ParentStateChangedConcurrencyException(
                         "Could not remove the disposable because by the time we did it the parent state has changed");
+
                 _disposables.Remove(disposable);
             }
         }

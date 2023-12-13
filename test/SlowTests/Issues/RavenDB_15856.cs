@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Voron;
 using Voron;
+using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public unsafe void CanCleanupAndGetTempPagesConcurrentlyFromDecompressionBuffers()
+        public async Task CanCleanupAndGetTempPagesConcurrentlyFromDecompressionBuffers()
         {
             var run = true;
             var task = Task.Factory.StartNew(() =>
@@ -45,14 +46,7 @@ namespace SlowTests.Issues
 
                         for (var i = 0; i < 50; i++)
                         {
-                            using (var page1 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out var temp))
-                            using (var page2 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
-                            using (var page3 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
-                            using (var page4 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
-                            using (var page5 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
-                            using (var page6 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
-                            {
-                            }
+                            DoWork(llt);
                         }
                     }
                 }
@@ -62,11 +56,25 @@ namespace SlowTests.Issues
                 run = false;
                 try
                 {
-                    task.Wait();
+                    await task;
                 }
                 catch (Exception)
                 {
                     // ignore
+                }
+            }
+
+            return;
+
+            unsafe void DoWork(LowLevelTransaction llt)
+            {
+                using (var page1 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out var temp))
+                using (var page2 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
+                using (var page3 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
+                using (var page4 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
+                using (var page5 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
+                using (var page6 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp))
+                {
                 }
             }
         }
