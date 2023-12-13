@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Test_paralel_operations_with_multiple_EmbeddableDocumentStores()
+        public async Task Test_paralel_operations_with_multiple_EmbeddableDocumentStores()
         {
             Action storeAndRead = () =>
             {
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
             var tasks = Enumerable.Range(1, 10).Select(_ => Task.Run(storeAndRead)).ToArray();
 
-            Task.WaitAll(tasks);
+            await Task.WhenAll(tasks);
         }
     }
 }

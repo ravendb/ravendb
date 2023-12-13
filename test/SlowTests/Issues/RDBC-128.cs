@@ -196,7 +196,7 @@ update {
         }
 
         [Fact]
-        public void IndexingOfLoadDocumentWhileChanged_UnderLowMemory()
+        public async Task IndexingOfLoadDocumentWhileChanged_UnderLowMemory()
         {
             using (var store = GetDocumentStore())
             {
@@ -225,7 +225,7 @@ update {
                     Invoices_Search invoicesSearch = new Invoices_Search();
                     invoicesSearch.Execute(store);
 
-                    GetDatabase(store.Database).Result.IndexStore.GetIndex(invoicesSearch.IndexName).SimulateLowMemory();
+                    (await GetDatabase(store.Database)).IndexStore.GetIndex(invoicesSearch.IndexName).SimulateLowMemory();
 
                     for (int i = 0; i < 5_000; i++)
                     {

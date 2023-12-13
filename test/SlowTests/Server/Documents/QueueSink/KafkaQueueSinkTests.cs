@@ -293,12 +293,12 @@ namespace SlowTests.Server.Documents.QueueSink
                             new KafkaConnectionSettings() { BootstrapServers = "http://localhost:1234" }
                     }); //wrong bootstrap servers
 
-                var exception = await AssertWaitForNotNullAsync(() =>
+                var exception = await AssertWaitForNotNullAsync(async () =>
                 {
-                    var database = GetDatabase(store.Database).Result;
+                    var database = await GetDatabase(store.Database);
                     var consumerCreationError = database.NotificationCenter.QueueSinkNotifications.GetAlert<ExceptionDetails>("Kafka Sink", $"test/test", AlertType.QueueSink_ConsumerCreationError);
                     
-                    return Task.FromResult(consumerCreationError.Exception);
+                    return consumerCreationError.Exception;
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
                 
                 Assert.StartsWith("Confluent.Kafka.KafkaException: Local: Invalid argument or configuration", exception);
