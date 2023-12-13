@@ -699,6 +699,14 @@ namespace Raven.Server.ServerWide.Commands
                     size = result.Count - size;
                     SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, command, size);
                 }
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                {
+                    if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
+                        return;
+
+                    clusterTransactionWaiter.SetResult(Options.TaskId, new ClusterTransactionResult { GeneratedResult = result });
+                };
             }
             else
             {
@@ -716,13 +724,7 @@ namespace Raven.Server.ServerWide.Commands
                 SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, clusterTransactionCommand, DatabaseCommandsCount);
             }
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-            {
-                if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
-                    return;
 
-                clusterTransactionWaiter.SetResult(Options.TaskId, new ClusterTransactionResult { GeneratedResult = result });
-            };
 
             return result;
         }
