@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Web.Authentication;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ public class RavenDB_19951 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Security)]
     public async Task CanSetupTOTPWithoutLimits()
     {
         TestCertificatesHolder certificates = WithStore(out DocumentStore store);
@@ -59,7 +60,7 @@ public class RavenDB_19951 : RavenTestBase
         return certificates;
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Security)]
     public async Task CanSetupTOTPWithLimits()
     {
         TestCertificatesHolder certificates = WithStore(out DocumentStore store);
@@ -91,7 +92,7 @@ public class RavenDB_19951 : RavenTestBase
     }
     
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Security)]
     public async Task CannotAccessServerAfterLogout()
     {
         TestCertificatesHolder certificates = WithStore(out DocumentStore store);
@@ -130,7 +131,7 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Security)]
     public async Task NewOtpOverridesOld()
     {
         TestCertificatesHolder certificates = WithStore(out DocumentStore store);
@@ -163,7 +164,7 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Security)]
     public async Task Disable2FAWorksProperly()
     {
         TestCertificatesHolder certificates = WithStore(out DocumentStore store);
@@ -181,7 +182,7 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Security)]
     public async Task DoNotOutputAuthenticationKeyInCertificatesResponse()
     {
         TestCertificatesHolder certificates = WithStore(out DocumentStore store);
@@ -213,7 +214,7 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Security)]
     public async Task CantAccessWhenCodeIsInvalid()
     {
         TestCertificatesHolder certificates = WithStore(out DocumentStore store);
@@ -238,7 +239,7 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Security)]
     public async Task EditCertificateDoesntOverrideTwoFactorConfig()
     {
         TestCertificatesHolder certificates = WithStore(out DocumentStore store);
