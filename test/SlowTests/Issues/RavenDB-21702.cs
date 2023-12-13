@@ -15,7 +15,7 @@ public class RavenDB_21702 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    public void Test()
+    public void TestHighlightingOnMultipleFieldsAndNullValues()
     {
         using (var store = GetDocumentStore())
         {
