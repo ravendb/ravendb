@@ -60,6 +60,8 @@ import databasesManager from "common/shell/databasesManager";
 import { globalDispatch } from "components/storeCompat";
 import { accessManagerActions } from "components/common/shell/accessManagerSlice";
 import UpgradeModal from "./shell/UpgradeModal";
+import getStudioBootstrapCommand from "commands/resources/getStudioBootstrapCommand";
+import serverSettings from "common/settings/serverSettings";
 
 class shell extends viewModelBase {
 
@@ -228,6 +230,7 @@ class shell extends viewModelBase {
         const licenseTask = license.fetchLicenseStatus();
         const topologyTask = this.clusterManager.init();
         const clientCertificateTask = clientCertificateModel.fetchClientCertificate();
+        const studioBootstrapTask = new getStudioBootstrapCommand().execute();
         
         licenseTask.done((result) => {
             if (result.Type !== "None") {
@@ -240,16 +243,19 @@ class shell extends viewModelBase {
                 this.initAnalytics();
             });
         
-        $.when<any>(licenseTask, topologyTask, clientCertificateTask)
+        $.when<any>(licenseTask, topologyTask, clientCertificateTask, studioBootstrapTask)
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .done(([license]: [LicenseStatus], 
                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                    [topology]: [Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged],
-                   [certificate]: [Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition]) => {
+                   [certificate]: [Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition], 
+                   [studioConfig]: [Raven.Server.Web.Studio.StudioTasksHandler.StudioBootstrapConfiguration]) => {
             
                 changesContext.default
                     .connectServerWideNotificationCenter();
 
+                serverSettings.default.onConfigLoaded(studioConfig);
+                
                 // load global settings
                 studioSettings.default.globalSettings()
                     .done((settings: globalSettings) => this.onGlobalConfiguration(settings));
@@ -337,23 +343,24 @@ class shell extends viewModelBase {
         super.attached();
 
         if (this.clientCertificate() && this.clientCertificate().Name) {
-            const dbAccessArray = certificateModel.resolveDatabasesAccess(this.clientCertificate());
+            const tooltipProvider = () => {
+                const dbAccessArray = certificateModel.resolveDatabasesAccess(this.clientCertificate());
 
-            const allowedDatabasesText = dbAccessArray.length ?
-                dbAccessArray.map(x => `<div>
+                const allowedDatabasesText = dbAccessArray.length ?
+                    dbAccessArray.map(x => `<div>
                                             <strong>${genUtils.escapeHtml(x.dbName)}</strong>
                                             <span class="${this.accessManager.getAccessColor(x.accessLevel)} margin-left">
                                                          ${accessManager.default.getAccessLevelText(x.accessLevel)}
                                             </span>
                                         </div>`).join("")
-                : "No access granted";
-            
-            const notAfter = this.clientCertificate().NotAfter;
-            const notAfterUtc = moment(notAfter).utc();
-            
-            const expirationDate = notAfter ? `${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span>` : "n/a";
-            
-            const authenticationInfo = `<dl class="dl-horizontal margin-none client-certificate-info">
+                    : "No access granted";
+
+                const notAfter = this.clientCertificate().NotAfter;
+                const notAfterUtc = moment(notAfter).utc();
+
+                const expirationDate = notAfter ? `${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span>` : "n/a";
+
+                return `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
                             <dt>Expiration Date</dt>
@@ -365,10 +372,11 @@ class shell extends viewModelBase {
                             <dt><span>Access to databases:</span></dt>
                             <dd><span>${allowedDatabasesText}</span></dd>
                           </dl>`;
+            }
             
             popoverUtils.longWithHover($(".js-client-cert"),
                 {
-                    content: authenticationInfo,
+                    content: tooltipProvider,
                     placement: 'top',
                     sanitize: false
                 } as PopoverOptions);
