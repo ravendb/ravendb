@@ -25,43 +25,52 @@ namespace SlowTests.Issues
                 await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, src.Database);
                 var configuration = new RavenEtlConfiguration
                 {
-                    ConnectionStringName = "test", Name = "aaa", Transforms = {new Transformation {Name = "S1", Collections = {"Users"}}}
+                    ConnectionStringName = "test",
+                    Name = "aaa",
+                    Transforms = { new Transformation { Name = "S1", Collections = { "Users" } } }
                 };
 
-                Etl.AddEtl(src, configuration, new RavenConnectionString {Name = "test", TopologyDiscoveryUrls = dst.Urls, Database = dst.Database,});
+                Etl.AddEtl(src, configuration, new RavenConnectionString { Name = "test", TopologyDiscoveryUrls = dst.Urls, Database = dst.Database, });
 
                 var etlDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 3);
                 var loadDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 2);
+                var deleteDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 3);
 
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User(), "users/1");
                     session.SaveChanges();
                 }
-                
+
                 using (var session = src.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
                     user.Name = "Gracjan";
                     session.SaveChanges();
                 }
-                
-                Assert.True(loadDone.Wait(TimeSpan.FromSeconds(30)));
-                
+
+                if (loadDone.Wait(TimeSpan.FromSeconds(30)) == false)
+                {
+                    Etl.TryGetLoadError(src.Database, configuration, out var loadError);
+                    Etl.TryGetTransformationError(src.Database, configuration, out var transformationError);
+
+                    Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
+                }
+
                 using (var session = dst.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
                     Assert.NotNull(user);
                 }
-                
+
                 using (var session = src.OpenSession())
                 {
                     session.Delete("users/1");
                     session.SaveChanges();
                 }
-                
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
-                
+
+                Assert.True(deleteDone.Wait(TimeSpan.FromSeconds(30)));
+
                 using (var session = dst.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
