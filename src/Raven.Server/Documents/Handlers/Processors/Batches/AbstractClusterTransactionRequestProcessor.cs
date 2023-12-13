@@ -103,9 +103,9 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         if (dbResult != null)
         {
-            if (dbResult.Errors != null)
+            if (dbResult.Errors != null && dbResult.Errors.Count > 0)
                 ThrowClusterTransactionConcurrencyException(dbResult.Errors);
-
+        
             if (dbResult.GeneratedResult != null)
             {
                 return dbResult.GeneratedResult;

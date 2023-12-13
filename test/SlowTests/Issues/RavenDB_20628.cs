@@ -30,7 +30,7 @@ namespace SlowTests.Issues
             options.ReplicationFactor = nodes.Count;
             using var store = GetDocumentStore(options);
 
-            // await ApplyFailoverAfterCommitAsync(nodes);
+            await ApplyFailoverAfterCommitAsync(nodes);
 
             var user1 = new User() { Id = "Users/1-A", Name = "Alice" };
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
