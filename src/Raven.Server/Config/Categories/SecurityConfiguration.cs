@@ -202,13 +202,13 @@ namespace Raven.Server.Config.Categories
         [Description("Default (in minutes) two-factor session duration")]
         [DefaultValue(120)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Security.TwoFactor.DefaultSessionDuration", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.TwoFactor.DefaultSessionDurationInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting DefaultTwoFactorSessionDuration { get; set; }
         
         [Description("Maximum (in minutes) two-factor session duration")]
         [DefaultValue(1440)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Security.TwoFactor.MaxSessionDuration", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.TwoFactor.MaxSessionDurationInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MaxTwoFactorSessionDuration { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
