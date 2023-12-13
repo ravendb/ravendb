@@ -1896,7 +1896,7 @@ namespace Raven.Server.Documents.Revisions
             {
                 foreach (var collection in collections)
                 {
-                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: true);
+                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
                     var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
                     var revisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
                     if (revisions == null) // there is no revisions for that collection
