@@ -35,15 +35,15 @@ class certificateModel {
     static twoFactorEditModes: valueAndLabelItem<TwoFactorAction, string>[] = [
         {
             value: "set",
-            label: "Update existing configuration"
+            label: "Update existing authentication key"
         },
         {
             value: "delete",
-            label: "Delete existing configuration"
+            label: "Delete existing authentication key"
         },
         {
             value: "leave",
-            label: "Leave existing configuration"
+            label: "Leave existing authentication key"
         }
     ]
     
