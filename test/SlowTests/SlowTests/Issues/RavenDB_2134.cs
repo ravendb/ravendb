@@ -24,7 +24,7 @@ namespace SlowTests.SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenMultiplatformTheory(RavenTestCategory.Querying, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task ShouldWork(Options options)
         {

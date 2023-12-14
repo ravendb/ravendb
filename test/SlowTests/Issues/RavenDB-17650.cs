@@ -76,7 +76,7 @@ namespace SlowTests.Issues
             Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Should_Retry_When_AllTopologyNodesDownException_Was_Thrown(Options options)
         {

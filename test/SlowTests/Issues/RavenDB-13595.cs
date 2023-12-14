@@ -12,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenMultiplatformTheory(RavenTestCategory.Replication, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ShouldCloneTheConflictedHiLoDocumentOnReplication(Options options)
         {

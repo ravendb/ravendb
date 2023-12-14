@@ -65,7 +65,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes | RavenTestCategory.ClientApi, RavenArchitecture.X64)]
         public async Task WaitForIndexesAfterSaveChangesCanExitWhenThrowOnTimeoutIsFalse_Cluster()
         {
             var databaseName = GetDatabaseName();

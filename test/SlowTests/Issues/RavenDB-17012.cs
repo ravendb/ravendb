@@ -24,9 +24,20 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.BulkInsert)]
         [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_SkipOverwriteIfUnchanged(Options options, int docsCount)
+        {
+            await Can_SkipOverwriteIfUnchanged_Internal(options, docsCount);
+        }
+
+        [RavenMultiplatformTheory(RavenTestCategory.BulkInsert, RavenArchitecture.X64)]
         [RavenData(500, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(5_000, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task Can_SkipOverwriteIfUnchanged(Options options, int docsCount)
+        public async Task Can_SkipOverwriteIfUnchanged_X64(Options options, int docsCount)
+        {
+            await Can_SkipOverwriteIfUnchanged_Internal(options, docsCount);
+        }
+
+        private async Task Can_SkipOverwriteIfUnchanged_Internal(Options options, int docsCount)
         {
             using (IDocumentStore store = GetDocumentStore(options))
             {
@@ -72,9 +83,20 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.BulkInsert)]
         [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_SkipOverwriteIfUnchanged_SomeDocuments(Options options, int docsCount)
+        {
+            await Can_SkipOverwriteIfUnchanged_SomeDocuments_Internal(options, docsCount);
+        }
+
+        [RavenMultiplatformTheory(RavenTestCategory.BulkInsert, RavenArchitecture.X64)]
         [RavenData(500, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(5_000, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task Can_SkipOverwriteIfUnchanged_SomeDocuments(Options options, int docsCount)
+        public async Task Can_SkipOverwriteIfUnchanged_SomeDocuments_X64(Options options, int docsCount)
+        {
+            await Can_SkipOverwriteIfUnchanged_SomeDocuments_Internal(options, docsCount);
+        }
+
+        private async Task Can_SkipOverwriteIfUnchanged_SomeDocuments_Internal(Options options, int docsCount)
         {
             using (IDocumentStore store = GetDocumentStore(options))
             {
