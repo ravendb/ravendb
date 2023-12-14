@@ -32,13 +32,13 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const isForNewConnection = !initialConnection.name;
 
     const dispatch = useDispatch();
-    const { databasesService } = useServices();
+    const { tasksService } = useServices();
     const [connectionStringType, setConnectionStringType] = useState<StudioEtlType>(initialConnection?.type);
     const { features: licenseFeatures } = useConnectionStringsLicense();
 
     const EditConnectionStringComponent = getEditConnectionStringComponent(connectionStringType);
 
-    const asyncSave = useAsyncCallback((dto: any) => databasesService.saveConnectionString(db, dto));
+    const asyncSave = useAsyncCallback((dto: any) => tasksService.saveConnectionString(db, dto));
 
     const save = async (newConnection: Connection) => {
         return tryHandleSubmit(async () => {
