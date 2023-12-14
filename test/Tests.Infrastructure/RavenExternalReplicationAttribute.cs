@@ -5,7 +5,7 @@ using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
 
-public class RavenExternalReplicationAttribute : DataAttribute
+public class RavenExternalReplicationAttribute : RavenDataAttributeBase
 {
     private readonly RavenDatabaseMode _source;
     private readonly RavenDatabaseMode _destination;
@@ -24,7 +24,7 @@ public class RavenExternalReplicationAttribute : DataAttribute
         RavenDatabaseMode source,
         RavenDatabaseMode destination,
         params object[] data
-    ) : this ( source, destination )
+    ) : this(source, destination)
     {
         _data = data;
     }
@@ -32,15 +32,21 @@ public class RavenExternalReplicationAttribute : DataAttribute
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
         foreach (var (_, dstOptions) in RavenDataAttribute.GetOptions(_destination))
-        foreach (var (__, srcOptions) in RavenDataAttribute.GetOptions(_source))
         {
-            if (_data == null || _data.Length == 0)
+            foreach (var (__, srcOptions) in RavenDataAttribute.GetOptions(_source))
             {
-                yield return new object[] { srcOptions, dstOptions };
-                continue;
-            }
+                using (SkipIfNeeded(dstOptions))
+                using (SkipIfNeeded(srcOptions))
+                {
+                    if (_data == null || _data.Length == 0)
+                    {
+                        yield return new object[] { srcOptions, dstOptions };
+                        continue;
+                    }
 
-            yield return new object[] { srcOptions, dstOptions }.Concat(_data).ToArray();
+                    yield return new object[] { srcOptions, dstOptions }.Concat(_data).ToArray();
+                }
+            }
         }
     }
 }

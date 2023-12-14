@@ -817,9 +817,12 @@ namespace FastTests
                 RunInMemory = options.RunInMemory;
                 Server = options.Server;
                 DatabaseMode = options.DatabaseMode;
-                _descriptionBuilder = new StringBuilder(options._descriptionBuilder.ToString());
+                _descriptionBuilder = new StringBuilder(options._descriptionBuilder?.ToString());
                 _frozen = options._frozen;
+                Skip = options.Skip;
             }
+
+            public string Skip;
 
             public static Options ForSearchEngine(RavenSearchEngineMode mode, bool includeScoresAndDistances = false)
             {
