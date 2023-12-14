@@ -29,7 +29,7 @@ namespace SlowTests.Tests.Faceted
             public decimal Price { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleMaxFacet_LowLevel(Options options)
         {
@@ -53,7 +53,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleCountFacet_HighLevel(Options options)
         {
@@ -77,7 +77,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleMaxFacet_HighLevel(Options options)
         {
@@ -101,7 +101,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleMinFacet_HighLevel(Options options)
         {
@@ -124,7 +124,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleSumFacet_HighLevel(Options options)
         {
@@ -148,7 +148,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleAverageFacet_HighLevel(Options options)
         {
@@ -171,7 +171,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleAverageFacetAsync_HighLevel(Options options)
         {
@@ -194,7 +194,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetAggregationQueryString(Options options)
         {
@@ -211,7 +211,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenMultiplatformTheory(RavenTestCategory.Facets, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetAggregationQueryString_Async(Options options)
         {

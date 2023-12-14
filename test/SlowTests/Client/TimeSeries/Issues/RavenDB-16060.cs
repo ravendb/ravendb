@@ -21,7 +21,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void CanIncludeTypedTimeSeries()
         {
             using (var store = GetDocumentStore())

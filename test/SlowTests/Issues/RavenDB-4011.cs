@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
             public int CaseId;
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.X64)]
         public async Task get_index_names()
         {
             using (IDocumentStore store = GetDocumentStore())

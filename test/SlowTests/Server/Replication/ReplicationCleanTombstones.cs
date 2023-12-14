@@ -35,7 +35,7 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenMultiplatformTheory(RavenTestCategory.Replication, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CleanTombstones(Options options)
         {

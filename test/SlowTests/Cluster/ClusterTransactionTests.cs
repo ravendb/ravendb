@@ -56,7 +56,7 @@ namespace SlowTests.Cluster
             return base.GetNewServer(options, caller);
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ThrowOnTooLargeClusterTransactionRequest(Options options)
         {
@@ -107,7 +107,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanCreateClusterTransactionRequest(Options options)
         {
@@ -171,7 +171,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(1, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(3, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
@@ -246,7 +246,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(1, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
@@ -652,7 +652,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CreateUniqueUser(Options options)
         {
@@ -974,7 +974,7 @@ namespace SlowTests.Cluster
         /// - Wait for the raft index on the SUT to catch-up and verify that we still have one document with one revision.
         /// </summary>
         /// <returns></returns>
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Revisions)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Revisions, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterTransactionRequestWithRevisions(Options options)
         {
@@ -1263,7 +1263,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Replication)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Replication, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterTransactionConflict(Options options)
         {

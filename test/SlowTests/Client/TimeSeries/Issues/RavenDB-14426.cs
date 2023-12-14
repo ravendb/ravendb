@@ -76,7 +76,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenMultiplatformTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task MergeReInsertedTimeSeriesEntryOnConflict(Options options)
         {
