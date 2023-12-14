@@ -1386,6 +1386,66 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ClientShouldFailoverWhenTalkingToLoneDisconnectedNode()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex:0, shouldRunInMemory: false, watcherCluster: true);
+
+            using (var store = GetDocumentStore(new Options()
+            {
+                Server = nodes[1],
+                ReplicationFactor = 3
+            }))
+            {
+                store.Initialize();
+                var re = store.GetRequestExecutor(store.Database);
+
+                await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+                var selectorNodes = re._nodeSelector.Topology.Nodes;
+                Assert.Equal(3, selectorNodes.Count);
+                Assert.True(selectorNodes.All(x => x.ServerRole == ServerNode.Role.Member));
+
+                // disconnect nodes [1] from leader and [2]
+                var down1 = await DisposeServerAndWaitForFinishOfDisposalAsync(nodes[1]);
+
+                nodes[1] = GetNewServer(new ServerCreationOptions
+                {
+                    CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = down1.Url },
+                    RunInMemory = false,
+                    DeletePrevious = false,
+                    DataDirectory = down1.DataDirectory
+                });
+                nodes[1].ServerStore.Engine.ForTestingPurposesOnly().NodeTagsToDisconnect.Add(nodes[0].ServerStore.NodeTag);
+                nodes[1].ServerStore.Engine.ForTestingPurposesOnly().NodeTagsToDisconnect.Add(nodes[2].ServerStore.NodeTag);
+                Servers.Add(nodes[1]);
+
+                //make sure leader and follower [2] disconnected
+                var db = await Databases.GetDocumentDatabaseInstanceFor(nodes[0], store);
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    var record = db.ReadDatabaseRecord();
+                    return Task.FromResult(record.Topology.Members.Count);
+                }, 2);
+
+                //executor still thinks we have 3 members
+                selectorNodes = re._nodeSelector.Topology.Nodes;
+                Assert.Equal(3, selectorNodes.Count);
+                Assert.True(selectorNodes.All(x => x.ServerRole == ServerNode.Role.Member));
+
+                //artificially call the timer func
+                re.UpdateTopologyCallback(null);
+
+                //we expect a failover and an updated request executor
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    selectorNodes = re._nodeSelector.Topology.Nodes;
+                    return Task.FromResult(selectorNodes.Count(x => x.ServerRole == ServerNode.Role.Member) == 2 &&
+                                           selectorNodes.Count(x => x.ServerRole == ServerNode.Role.Rehab) == 1);
+                }, true);
+            }
+        }
+
         [Fact]
         public async Task ChangeUrlOfMultiNodeCluster()
         {

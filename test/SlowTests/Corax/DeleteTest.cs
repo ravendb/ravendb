@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
 using Corax.Indexing;
-using Corax.Querying;
 using Corax.Mappings;
 using Corax.Utils;
 using FastTests.Voron;

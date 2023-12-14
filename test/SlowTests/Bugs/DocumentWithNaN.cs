@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Conventions;
 using Raven.Server.Extensions;
 using Xunit;
 using Xunit.Abstractions;

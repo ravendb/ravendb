@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Tests.Infrastructure;
-using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
 

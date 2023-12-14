@@ -2,10 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +19,35 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void AutoMapReduceIndexOnlyWithMainDocumentParameterWillPassAllDebugAsserts()
+        {
+            using var store = GetDocumentStore();
+            using var session = store.OpenSession();
+            session.Store(new User(){Names = new []{"a", "b"}});
+            session.Store(new User(){Names = new []{"a", "a"}});
+            session.SaveChanges();
+
+            var query = session.Query<User>()
+                .Customize(x => x.WaitForNonStaleResults()).GroupByArrayValues(x => x.Names)
+                .Select(x => new {Name = x.Key, Count = x.Count()});
+
+            var rql = query.ToString();
+            Assert.Equal("from 'Users' group by Names[] select key() as 'Name', count()", rql);
+
+            var results = query.ToList();
+            Assert.Equal(2, results.Count);
+            Assert.Equal(3, results.First(x => x.Name == "a").Count);
+            Assert.Equal(1, results.First(x => x.Name == "b").Count);
+        }
+
+        private class User
+        {
+            public string Id { get; set; }
+            public string[] Names { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task SurpassedAutoMapWillBeDeletedOrMerged()
         {
             using (var store = GetDocumentStore())
@@ -134,7 +164,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task SurpassedAutoMapReduceWillBeDeletedOrMerged()
         {
             using (var store = GetDocumentStore())
@@ -149,7 +179,7 @@ namespace SlowTests.Issues
                     },
                     new[]
                     {
-                        AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions
+                        AutoIndexField.Create("Name[]", new AutoIndexDefinition.AutoIndexFieldOptions
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
@@ -163,7 +193,7 @@ namespace SlowTests.Issues
                     },
                     new[]
                     {
-                        AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions
+                        AutoIndexField.Create("Name[]", new AutoIndexDefinition.AutoIndexFieldOptions
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
@@ -178,7 +208,7 @@ namespace SlowTests.Issues
                     },
                     new[]
                     {
-                        AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions
+                        AutoIndexField.Create("Name[]", new AutoIndexDefinition.AutoIndexFieldOptions
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
