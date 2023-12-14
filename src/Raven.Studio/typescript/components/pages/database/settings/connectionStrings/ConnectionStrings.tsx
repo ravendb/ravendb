@@ -19,11 +19,7 @@ export interface ConnectionStringsUrlParameters {
     type?: StudioEtlType;
 }
 
-// todo fix InputGroup after rebase
-// todo test for all destinations
 // todo remove legacy code
-// todo filter connection types in selector based on licenses
-// todo license badges
 
 export default function ConnectionStrings(props: NonShardedViewProps & ConnectionStringsUrlParameters) {
     const { db, name: nameFromUrl, type: typeFromUrl } = props;
@@ -76,7 +72,7 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
                         )}
                     </>
                 )}
-                <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"}>
+                <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
                     {isEmpty ? (
                         <EmptySet className="mw-100">No connection strings</EmptySet>
                     ) : (
