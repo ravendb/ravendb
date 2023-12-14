@@ -1,7 +1,21 @@
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 
-export default function useConnectionStringsLicense() {
+export interface ConnectionStringsLicenseFeatures {
+    hasRavenEtl: boolean;
+    hasSqlEtl: boolean;
+    hasOlapEtl: boolean;
+    hasElasticSearchEtl: boolean;
+    hasQueueEtl: boolean;
+}
+
+interface ConnectionStringsLicense {
+    features: ConnectionStringsLicenseFeatures;
+    hasNone: boolean;
+    hasAll: boolean;
+}
+
+export default function useConnectionStringsLicense(): ConnectionStringsLicense {
     const hasRavenEtl = useAppSelector(licenseSelectors.statusValue("HasRavenEtl"));
     const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
     const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));

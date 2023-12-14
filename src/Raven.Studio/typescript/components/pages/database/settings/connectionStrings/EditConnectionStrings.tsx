@@ -18,6 +18,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { mapConnectionStringToDto } from "./store/connectionStringsMapsToDto";
+import useConnectionStringsLicense, { ConnectionStringsLicenseFeatures } from "./useConnectionStringsLicense";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 export interface EditConnectionStringsProps {
     db: database;
@@ -32,6 +34,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const dispatch = useDispatch();
     const { databasesService } = useServices();
     const [connectionStringType, setConnectionStringType] = useState<StudioEtlType>(initialConnection?.type);
+    const { features: licenseFeatures } = useConnectionStringsLicense();
 
     const EditConnectionStringComponent = getEditConnectionStringComponent(connectionStringType);
 
@@ -56,6 +59,8 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
         });
     };
 
+    const availableConnectionStringsOptions = getAvailableConnectionStringsOptions(licenseFeatures);
+
     return (
         <Modal
             size="lg"
@@ -72,7 +77,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                 <InputGroup className="gap-1 flex-wrap flex-column">
                     <Label className="mb-0 md-label">Type</Label>
                     <Select
-                        options={connectionStringsOptions}
+                        options={availableConnectionStringsOptions}
                         value={connectionStringsOptions.find((x) => x.value === connectionStringType)}
                         onChange={(x) => setConnectionStringType(x.value)}
                         placeholder="Select a connection string type"
@@ -127,6 +132,29 @@ const connectionStringsOptions: SelectOption<StudioEtlType>[] = exhaustiveString
     value: type,
     label: getTypeLabel(type),
 }));
+
+function getAvailableConnectionStringsOptions(
+    features: ConnectionStringsLicenseFeatures
+): SelectOption<StudioEtlType>[] {
+    return connectionStringsOptions.filter((item) => {
+        const type = item.value;
+        switch (type) {
+            case "Raven":
+                return features.hasRavenEtl;
+            case "Sql":
+                return features.hasSqlEtl;
+            case "Olap":
+                return features.hasOlapEtl;
+            case "ElasticSearch":
+                return features.hasElasticSearchEtl;
+            case "Kafka":
+            case "RabbitMQ":
+                return features.hasQueueEtl;
+            default:
+                return assertUnreachable(type);
+        }
+    });
+}
 
 function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConnectionStringFormProps) => JSX.Element {
     switch (type) {
