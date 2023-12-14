@@ -227,14 +227,14 @@ namespace FastTests
             {
                 var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, taskId));
 
-                BackupResult result = default;
+                IOperationResult result = default;
                 var actual = await WaitForValueAsync(async () =>
                 {
                     var state = await store.Maintenance.SendAsync(new GetOperationStateOperation(op.Result.OperationId, op.Result.ResponsibleNode));
                     if (state == null)
                         return OperationStatus.Canceled;
 
-                    result = (BackupResult)state.Result;
+                    result = state.Result;
                     return state.Status;
                 }, opStatus, timeout: timeout ?? _reasonableTimeout);
 
@@ -317,7 +317,7 @@ namespace FastTests
                 return configuration;
             }
 
-            internal static string PrintBackupStatusAndResult(PeriodicBackupStatus status, BackupResult result)
+            internal static string PrintBackupStatusAndResult(PeriodicBackupStatus status, IOperationResult result)
             {
                 var sb = new StringBuilder();
                 if (status == null)
@@ -480,7 +480,7 @@ namespace FastTests
             }
 
             private static async Task CheckBackupOperationStatus(OperationStatus expected, OperationStatus actual, IDocumentStore store, long taskId, long opId,
-                PeriodicBackupRunner periodicBackupRunner, BackupResult backupResult)
+                PeriodicBackupRunner periodicBackupRunner, IOperationResult backupResult)
             {
                 if (expected == OperationStatus.Completed && actual == OperationStatus.Faulted)
                 {
