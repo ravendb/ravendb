@@ -30,7 +30,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
 
     const confirm = useConfirm();
     const dispatch = useDispatch();
-    const { databasesService } = useServices();
+    const { tasksService } = useServices();
 
     const deleteButtonId = useId("delete");
     const isDeleteDisabled = connection.usedByTasks?.length > 0;
@@ -39,7 +39,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const asyncDelete = useAsyncCallback(async () => {
-        await databasesService.deleteConnectionString(db, getDtoEtlType(connection.type), connection.name);
+        await tasksService.deleteConnectionString(db, getDtoEtlType(connection.type), connection.name);
         dispatch(connectionStringsActions.deleteConnection(connection));
     });
 
