@@ -38,7 +38,7 @@ export default function RavenConnectionString({
     });
 
     const { forCurrentDatabase } = useAppUrls();
-    const { databasesService } = useServices();
+    const { tasksService } = useServices();
 
     const asyncTest = useAsyncCallback(async (idx: number) => {
         const isValid = await trigger(`topologyDiscoveryUrls.${idx}`);
@@ -47,7 +47,7 @@ export default function RavenConnectionString({
         }
 
         const url = watch(`topologyDiscoveryUrls.${idx}.url`);
-        return databasesService.testClusterNodeConnection(url, db.name, false);
+        return tasksService.testClusterNodeConnection(url, db.name, false);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

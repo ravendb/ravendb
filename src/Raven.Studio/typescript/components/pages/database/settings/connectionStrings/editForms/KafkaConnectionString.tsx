@@ -40,7 +40,7 @@ export default function KafkaConnectionString({
 
     const formValues = useWatch({ control });
     const { forCurrentDatabase } = useAppUrls();
-    const { databasesService } = useServices();
+    const { tasksService } = useServices();
     const isSecureServer = useAccessManager().isSecuredServer();
 
     useEffect(() => {
@@ -58,7 +58,7 @@ export default function KafkaConnectionString({
             return;
         }
 
-        return databasesService.testKafkaServerConnection(
+        return tasksService.testKafkaServerConnection(
             db,
             formValues.bootstrapServers,
             false,

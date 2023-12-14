@@ -53,7 +53,7 @@ export default function ElasticSearchConnectionString({
     const formValues = useWatch({ control });
 
     const { forCurrentDatabase } = useAppUrls();
-    const { databasesService } = useServices();
+    const { tasksService } = useServices();
 
     const asyncTest = useAsyncCallback(async (idx: number) => {
         const isValid = await trigger(`nodes.${idx}`);
@@ -62,11 +62,7 @@ export default function ElasticSearchConnectionString({
         }
 
         const url = formValues.nodes[idx].url;
-        return databasesService.testElasticSearchNodeConnection(
-            db,
-            url,
-            mapElasticSearchAuthenticationToDto(formValues)
-        );
+        return tasksService.testElasticSearchNodeConnection(db, url, mapElasticSearchAuthenticationToDto(formValues));
     });
 
     const onCertificateUploaded = (data: string) => {

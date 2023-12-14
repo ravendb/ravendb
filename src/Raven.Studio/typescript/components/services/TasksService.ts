@@ -17,6 +17,15 @@ import getCollectionsStatsCommand from "commands/database/documents/getCollectio
 import collectionsStats from "models/database/documents/collectionsStats";
 import getDatabaseForStudioCommand from "commands/resources/getDatabaseForStudioCommand";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
+import testClusterNodeConnectionCommand from "commands/database/cluster/testClusterNodeConnectionCommand";
+import testElasticSearchNodeConnectionCommand from "commands/database/cluster/testElasticSearchNodeConnectionCommand";
+import testKafkaServerConnectionCommand from "commands/database/cluster/testKafkaServerConnectionCommand";
+import testRabbitMqServerConnectionCommand from "commands/database/cluster/testRabbitMqServerConnectionCommand";
+import testSqlConnectionStringCommand from "commands/database/cluster/testSqlConnectionStringCommand";
+import deleteConnectionStringCommand from "commands/database/settings/deleteConnectionStringCommand";
+import getConnectionStringsCommand from "commands/database/settings/getConnectionStringsCommand";
+import saveConnectionStringCommand from "commands/database/settings/saveConnectionStringCommand";
+import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 
 export default class TasksService {
     async getOngoingTasks(db: database, location: databaseLocationSpecifier) {
@@ -83,5 +92,57 @@ export default class TasksService {
 
     async fetchCollectionsStats(db: database): Promise<collectionsStats> {
         return new getCollectionsStatsCommand(db).execute();
+    }
+
+    async getConnectionStrings(db: database) {
+        return new getConnectionStringsCommand(db).execute();
+    }
+
+    async saveConnectionString(db: database, connectionString: ConnectionStringDto) {
+        return new saveConnectionStringCommand(db, connectionString).execute();
+    }
+
+    async deleteConnectionString(
+        db: database,
+        type: Raven.Client.Documents.Operations.ETL.EtlType,
+        connectionStringName: string
+    ) {
+        return new deleteConnectionStringCommand(db, type, connectionStringName).execute();
+    }
+
+    async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {
+        return new testClusterNodeConnectionCommand(serverUrl, databaseName, bidirectional).execute();
+    }
+
+    async testSqlConnectionString(db: database, connectionString: string, factoryName: string) {
+        return new testSqlConnectionStringCommand(db, connectionString, factoryName).execute();
+    }
+
+    async testRabbitMqServerConnection(db: database, connectionString: string) {
+        return new testRabbitMqServerConnectionCommand(db, connectionString).execute();
+    }
+
+    async testKafkaServerConnection(
+        db: database,
+        bootstrapServers: string,
+        useServerCertificate: boolean,
+        connectionOptionsDto: {
+            [optionKey: string]: string;
+        }
+    ) {
+        return new testKafkaServerConnectionCommand(
+            db,
+            bootstrapServers,
+            useServerCertificate,
+            connectionOptionsDto
+        ).execute();
+    }
+
+    async testElasticSearchNodeConnection(
+        db: database,
+        serverUrl: string,
+        authenticationDto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication
+    ) {
+        return new testElasticSearchNodeConnectionCommand(db, serverUrl, authenticationDto).execute();
     }
 }

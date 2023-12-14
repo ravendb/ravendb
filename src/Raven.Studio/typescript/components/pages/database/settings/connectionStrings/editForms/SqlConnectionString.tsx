@@ -36,7 +36,7 @@ export default function SqlConnectionString({
 
     const formValues = useWatch({ control });
     const { forCurrentDatabase } = useAppUrls();
-    const { databasesService } = useServices();
+    const { tasksService } = useServices();
     const [syntaxHelpElement, setSyntaxHelpElement] = useState<HTMLElement>();
 
     const asyncTest = useAsyncCallback(async () => {
@@ -45,7 +45,7 @@ export default function SqlConnectionString({
             return;
         }
 
-        return databasesService.testSqlConnectionString(db, formValues.connectionString, formValues.factoryName);
+        return tasksService.testSqlConnectionString(db, formValues.connectionString, formValues.factoryName);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
