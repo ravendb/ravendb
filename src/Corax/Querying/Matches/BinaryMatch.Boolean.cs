@@ -104,8 +104,9 @@ namespace Corax.Querying.Matches
                     children: new List<QueryInspectionNode> { match._inner.Inspect(), match._outer.Inspect() },
                     parameters: new Dictionary<string, string>()
                     {
-                        { nameof(match.IsBoosting), match.IsBoosting.ToString() },
-                        { nameof(match.Count), $"{match.Count} [{match.Confidence}]" }
+                        { Constants.QueryInspectionNode.IsBoosting, match.IsBoosting.ToString() },
+                        { Constants.QueryInspectionNode.Count, match.Count.ToString()},
+                        { Constants.QueryInspectionNode.CountConfidence, match.Confidence.ToString()}
                     });
             }
 
@@ -303,8 +304,9 @@ namespace Corax.Querying.Matches
                     children: new List<QueryInspectionNode> { match._inner.Inspect(), match._outer.Inspect() },
                     parameters: new Dictionary<string, string>()
                     {
-                        { nameof(match.IsBoosting), match.IsBoosting.ToString() },
-                        { nameof(match.Count), $"{match.Count} [{match.Confidence}]" }
+                        { Constants.QueryInspectionNode.IsBoosting, match.IsBoosting.ToString() },
+                        { Constants.QueryInspectionNode.Count, match.Count.ToString()},
+                        { Constants.QueryInspectionNode.CountConfidence, match.Confidence.ToString()}
                     });
             }
 

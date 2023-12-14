@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Querying.Matches.Meta;
@@ -225,12 +226,38 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
+        var parameters = new Dictionary<string, string>()
+        {
+            {Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString()},
+            {Constants.QueryInspectionNode.Count, Count.ToString()},
+            {Constants.QueryInspectionNode.CountConfidence, Confidence.ToString()},
+        };
+
+        for (int cmpId = 0; cmpId < _orderMetadata.Length; ++cmpId)
+        {
+            ref var order = ref _orderMetadata[cmpId];
+            var prefix = Constants.QueryInspectionNode.Comparer + cmpId.ToString() + "_";
+
+            parameters.Add(prefix+Constants.QueryInspectionNode.FieldName, order.Field.FieldName.ToString());
+            parameters.Add(prefix+Constants.QueryInspectionNode.Ascending, order.Ascending.ToString());
+            parameters.Add(prefix+Constants.QueryInspectionNode.FieldType, order.FieldType.ToString());
+            
+            switch (order.FieldType)
+            {
+                case MatchCompareFieldType.Spatial:
+                    parameters.Add(Constants.QueryInspectionNode.Point, order.Point.ToString());
+                    parameters.Add(Constants.QueryInspectionNode.Round, order.Round.ToString(CultureInfo.InvariantCulture));
+                    parameters.Add(Constants.QueryInspectionNode.Units, order.Units.ToString());
+                    break;
+                case MatchCompareFieldType.Random:
+                    parameters.Add(Constants.QueryInspectionNode.RandomSeed, order.RandomSeed.ToString());
+                    break;
+            }
+        }
+        
         return new QueryInspectionNode($"{nameof(SortingMultiMatch)} [{_orderMetadata}]",
             children: new List<QueryInspectionNode> { _inner.Inspect()},
-            parameters: new Dictionary<string, string>()
-            {
-                { nameof(IsBoosting), IsBoosting.ToString() },
-            });
+            parameters: parameters);
     }
 
     string DebugView => Inspect().ToString();

@@ -124,7 +124,7 @@ namespace Corax.Querying.Matches.TermProviders
             return new QueryInspectionNode($"{nameof(ExistsTermProvider<TLookupIterator>)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _field.ToString() }
+                                { Constants.QueryInspectionNode.FieldName, _field.ToString() }
                             });
         }
     }

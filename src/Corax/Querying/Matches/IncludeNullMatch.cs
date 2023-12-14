@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
@@ -99,6 +100,8 @@ where TInner : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return _inner.Inspect();
+        return new QueryInspectionNode(nameof(IncludeNullMatch<TInner>),
+            children: new List<QueryInspectionNode>(){_inner.Inspect()},
+            parameters: new Dictionary<string, string>());
     }
 }
