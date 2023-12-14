@@ -1,8 +1,8 @@
-﻿import { Form, Label } from "reactstrap";
+﻿import { Alert, Form, Label } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { SelectOption } from "components/common/select/Select";
+import { OptionWithWarning, SelectOptionWithWarning } from "components/common/select/Select";
 import { ConnectionFormData, EditConnectionStringFormProps, SqlConnection } from "../connectionStringsTypes";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -75,7 +75,14 @@ export default function SqlConnectionString({
                     options={sqlFactoryOptions}
                     placeholder="Select factory name"
                     isSearchable={false}
+                    components={{ Option: OptionWithWarning }}
                 />
+                {formValues.factoryName === "MySql.Data.MySqlClient" && (
+                    <Alert color="warning mt-1">
+                        <Icon icon="warning" color="warning" />
+                        This connector is deprecated
+                    </Alert>
+                )}
                 {formValues.factoryName && (
                     <>
                         <small ref={setSyntaxHelpElement} className="text-primary">
@@ -115,13 +122,12 @@ export default function SqlConnectionString({
     );
 }
 
-// TODO warning for MySql.Data.MySqlClient (deprecated)
-const sqlFactoryOptions: SelectOption<SqlConnectionStringFactoryName>[] = [
-    { value: "System.Data.SqlClient", label: "Microsoft SQL Server" },
-    { value: "MySql.Data.MySqlClient", label: "MySQL Server" },
-    { value: "MySqlConnector.MySqlConnectorFactory", label: "MySQL Server" },
-    { value: "Npgsql", label: "PostgreSQL" },
-    { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database" },
+const sqlFactoryOptions: SelectOptionWithWarning<SqlConnectionStringFactoryName>[] = [
+    { value: "System.Data.SqlClient", label: "Microsoft SQL Server (System.Data.SqlClient)" },
+    { value: "MySql.Data.MySqlClient", label: "DEPRECATED: MySQL Server (MySql.Data.MySqlClient)", isWarning: true },
+    { value: "MySqlConnector.MySqlConnectorFactory", label: "MySQL Server (MySqlConnector.MySqlConnectorFactory)" },
+    { value: "Npgsql", label: "PostgreSQL (Npgsql)" },
+    { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database (Oracle.ManagedDataAccess.Client)" },
 ];
 
 function getSyntaxHelp(factory: SqlConnectionStringFactoryName) {
