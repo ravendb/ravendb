@@ -13,6 +13,7 @@ import {
     mapRavenConnectionsFromDto,
     mapSqlConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
@@ -107,10 +108,7 @@ export const connectionStringsSlice = createSlice({
                     ongoingTasks
                 );
 
-                state.loadStatus = "success";
-
-                // TODO only admin
-                if (urlParameters.name && urlParameters.type) {
+                if (payload.isDatabaseAdmin && urlParameters.name && urlParameters.type) {
                     const foundConnection = state.connections?.[urlParameters.type]?.find(
                         (x) => x?.name === urlParameters.name
                     );
@@ -130,6 +128,7 @@ export const connectionStringsSlice = createSlice({
 interface FetchDataResult {
     ongoingTasksDto: Raven.Server.Web.System.OngoingTasksResult;
     connectionStringsDto: GetConnectionStringsResult;
+    isDatabaseAdmin: boolean;
 }
 
 const fetchData = createAsyncThunk<
@@ -147,9 +146,12 @@ const fetchData = createAsyncThunk<
     );
     const connectionStringsDto = await services.databasesService.getConnectionStrings(db);
 
+    const isDatabaseAdmin = accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)(state) === "DatabaseAdmin";
+
     return {
         ongoingTasksDto,
         connectionStringsDto,
+        isDatabaseAdmin,
     };
 });
 
