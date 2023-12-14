@@ -33,7 +33,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
     name: "Connection Strings",
     render: (props: DefaultConnectionStringsProps) => {
         const { accessManager, license } = mockStore;
-        const { databasesService, tasksService } = mockServices;
+        const { tasksService } = mockServices;
 
         accessManager.with_secureServer(props.isSecuredServer);
 
@@ -47,7 +47,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
 
         mockTestResults(props.isTestSuccess);
 
-        databasesService.withConnectionStrings(
+        tasksService.withConnectionStrings(
             props.isEmpty ? DatabasesStubs.emptyConnectionStrings() : DatabasesStubs.connectionStrings()
         );
 
@@ -84,21 +84,21 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
 const db = DatabasesStubs.nonShardedClusterDatabase();
 
 function mockTestResults(isSuccess: boolean) {
-    const { databasesService, manageServerService } = mockServices;
+    const { tasksService, manageServerService } = mockServices;
 
     if (isSuccess) {
-        databasesService.withTestClusterNodeConnection();
-        databasesService.withTestSqlConnectionString();
-        databasesService.withTestKafkaServerConnection();
-        databasesService.withTestRabbitMqServerConnection();
-        databasesService.withTestElasticSearchNodeConnection();
+        tasksService.withTestClusterNodeConnection();
+        tasksService.withTestSqlConnectionString();
+        tasksService.withTestKafkaServerConnection();
+        tasksService.withTestRabbitMqServerConnection();
+        tasksService.withTestElasticSearchNodeConnection();
         manageServerService.withTestPeriodicBackupCredentials();
     } else {
-        databasesService.withTestClusterNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
-        databasesService.withTestSqlConnectionString(SharedStubs.nodeConnectionTestErrorResult());
-        databasesService.withTestKafkaServerConnection(SharedStubs.nodeConnectionTestErrorResult());
-        databasesService.withTestRabbitMqServerConnection(SharedStubs.nodeConnectionTestErrorResult());
-        databasesService.withTestElasticSearchNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
+        tasksService.withTestClusterNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
+        tasksService.withTestSqlConnectionString(SharedStubs.nodeConnectionTestErrorResult());
+        tasksService.withTestKafkaServerConnection(SharedStubs.nodeConnectionTestErrorResult());
+        tasksService.withTestRabbitMqServerConnection(SharedStubs.nodeConnectionTestErrorResult());
+        tasksService.withTestElasticSearchNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
         manageServerService.withTestPeriodicBackupCredentials(SharedStubs.nodeConnectionTestErrorResult());
     }
 }

@@ -33,7 +33,7 @@ export default function RabbitMqConnectionString({
 
     const formValues = useWatch({ control });
     const { forCurrentDatabase } = useAppUrls();
-    const { databasesService } = useServices();
+    const { tasksService } = useServices();
 
     const asyncTest = useAsyncCallback(async () => {
         const isValid = await trigger("connectionString");
@@ -41,7 +41,7 @@ export default function RabbitMqConnectionString({
             return;
         }
 
-        return databasesService.testRabbitMqServerConnection(db, formValues.connectionString);
+        return tasksService.testRabbitMqServerConnection(db, formValues.connectionString);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

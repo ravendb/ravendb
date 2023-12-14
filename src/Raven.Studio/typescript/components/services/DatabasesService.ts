@@ -48,11 +48,6 @@ import getCustomAnalyzersCommand = require("commands/database/settings/getCustom
 import getDocumentsCompressionConfigurationCommand = require("commands/database/documents/getDocumentsCompressionConfigurationCommand");
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
 import promoteDatabaseNodeCommand = require("commands/database/debug/promoteDatabaseNodeCommand");
-import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
-import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
-import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
-import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
 import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");

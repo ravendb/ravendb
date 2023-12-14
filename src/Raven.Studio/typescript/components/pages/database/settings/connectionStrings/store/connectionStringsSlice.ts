@@ -108,6 +108,8 @@ export const connectionStringsSlice = createSlice({
                     ongoingTasks
                 );
 
+                state.loadStatus = "success";
+
                 if (payload.isDatabaseAdmin && urlParameters.name && urlParameters.type) {
                     const foundConnection = state.connections?.[urlParameters.type]?.find(
                         (x) => x?.name === urlParameters.name
@@ -144,7 +146,7 @@ const fetchData = createAsyncThunk<
         db,
         db.getFirstLocation(state.cluster.localNodeTag)
     );
-    const connectionStringsDto = await services.databasesService.getConnectionStrings(db);
+    const connectionStringsDto = await services.tasksService.getConnectionStrings(db);
 
     const isDatabaseAdmin = accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)(state) === "DatabaseAdmin";
 
