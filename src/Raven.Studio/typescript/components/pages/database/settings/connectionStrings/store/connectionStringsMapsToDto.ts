@@ -88,7 +88,7 @@ export function mapKafkaConnectionStringToDto(connection: KafkaConnection): Conn
         KafkaConnectionSettings: {
             BootstrapServers: connection.bootstrapServers,
             ConnectionOptions: Object.fromEntries(connection.connectionOptions.map((x) => [x.key, x.value])),
-            UseRavenCertificate: connection.useRavenCertificate,
+            UseRavenCertificate: connection.isUseRavenCertificate,
         },
     };
 }
