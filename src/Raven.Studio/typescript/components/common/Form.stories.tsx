@@ -29,15 +29,18 @@ export default {
 } satisfies Meta;
 
 export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
-    const { control, trigger } = useForm<FormData>({
+    const defaultValues = isDefaultValid ? validValues : invalidValues;
+
+    const { control, trigger, reset } = useForm<FormData>({
         mode: "all",
-        defaultValues: isDefaultValid ? validValues : invalidValues,
+        defaultValues,
         resolver: formResolver,
     });
 
     useEffect(() => {
+        reset(defaultValues);
         trigger();
-    }, [trigger]);
+    }, [isDefaultValid, reset, defaultValues, trigger]);
 
     return (
         <div className="vstack gap-2 w-50">
