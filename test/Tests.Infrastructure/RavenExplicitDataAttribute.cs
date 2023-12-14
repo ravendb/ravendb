@@ -5,7 +5,7 @@ using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
 
-public class RavenExplicitDataAttribute : DataAttribute
+public class RavenExplicitDataAttribute : RavenDataAttributeBase
 {
     public RavenSearchEngineMode SearchEngineMode { get; set; }
 
@@ -28,23 +28,21 @@ public class RavenExplicitDataAttribute : DataAttribute
         {
             foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
             {
-                var length = 1;
-                if (Data is { Length: > 0 })
-                    length += Data.Length;
-
-                var array = new object[length];
-
-                array[0] = new RavenTestParameters
+                using (SkipIfNeeded(o))
                 {
-                    SearchEngine = searchMode,
-                    DatabaseMode = databaseMode,
-                    Options = o
-                };
+                    var length = 1;
+                    if (Data is { Length: > 0 })
+                        length += Data.Length;
 
-                for (var i = 1; i < array.Length; i++)
-                    array[i] = Data[i - 1];
+                    var array = new object[length];
 
-                yield return array;
+                    array[0] = new RavenTestParameters { SearchEngine = searchMode, DatabaseMode = databaseMode, Options = o };
+
+                    for (var i = 1; i < array.Length; i++)
+                        array[i] = Data[i - 1];
+
+                    yield return array;
+                }
             }
         }
     }

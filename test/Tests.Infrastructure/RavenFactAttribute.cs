@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Runtime.InteropServices;
+using Xunit;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
@@ -7,9 +8,10 @@ namespace Tests.Infrastructure;
 public class RavenFactAttribute : FactAttribute, ITraitAttribute
 {
     private string _skip;
-
+    private readonly RavenTestCategory _category;
     public RavenFactAttribute(RavenTestCategory category)
     {
+        _category = category;
     }
 
     public bool LicenseRequired { get; set; }
@@ -21,6 +23,13 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
             var skip = _skip;
             if (skip != null)
                 return skip;
+            if (RuntimeInformation.ProcessArchitecture == Architecture.X86)
+            {
+                if (_category.HasFlag(RavenTestCategory.Corax))
+                    return RavenTheoryAttribute.CoraxSkipMessage;
+                if (_category.HasFlag(RavenTestCategory.Sharding))
+                    return RavenTheoryAttribute.ShardingSkipMessage;
+            }
 
             if (LicenseRequiredFactAttribute.ShouldSkip(LicenseRequired))
                 return LicenseRequiredFactAttribute.SkipMessage;
