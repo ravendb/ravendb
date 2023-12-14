@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Raven.Server.ServerWide.Commands;
+﻿using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
 
 namespace Raven.Server.ServerWide;
 public class ClusterTransactionResult : IDynamicJsonValueConvertible
 {
     public DynamicJsonArray GeneratedResult { get; set; }
-    public List<ClusterTransactionCommand.ClusterTransactionErrorInfo> Errors { get; set; }
+    public List<ClusterTransactionErrorInfo> Errors { get; set; }
 
     public DynamicJsonValue ToJson()
     {

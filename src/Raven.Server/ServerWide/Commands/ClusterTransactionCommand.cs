@@ -951,7 +951,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (remoteResult is BlittableJsonReaderObject bjro)
             {
-                return JsonDeserializationCluster.ClusterTransactionResult(bjro);
+                return GetResults(bjro);
             }
 
             if (remoteResult is BlittableJsonReaderArray bjra)
@@ -960,6 +960,54 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             return base.FromRemote(remoteResult);
+        }
+
+        internal static ClusterTransactionResult GetResults(BlittableJsonReaderObject bjro)
+        {
+            var results = new ClusterTransactionResult();
+            if (bjro.TryGet(nameof(ClusterTransactionResult.Errors), out BlittableJsonReaderArray bjra) && bjra != null)
+            {
+                results.Errors = GetErrors(bjra);
+            }
+
+            if (bjro.TryGet(nameof(ClusterTransactionResult.GeneratedResult), out BlittableJsonReaderArray bjra1))
+                results.GeneratedResult = GetGeneratedResults(bjra1);
+
+            return results;
+        }
+
+        private static DynamicJsonArray GetGeneratedResults(BlittableJsonReaderArray bjro)
+        {
+            var array = new DynamicJsonArray();
+
+            foreach (BlittableJsonReaderObject item in bjro)
+            {
+                array.Add(ToDynamicJsonValue(item));
+            }
+
+            return array;
+        }
+
+        private static DynamicJsonValue ToDynamicJsonValue(BlittableJsonReaderObject bjro)
+        {
+            var djv = new DynamicJsonValue();
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+            for (int i = 0; i < bjro.Count; i++)
+            {
+                bjro.GetPropertyByIndex(i, ref prop);
+                if (prop.Value is LazyStringValue lsv)
+                {
+                    djv[prop.Name] = lsv.ToString();
+                }
+                else
+                {
+                    var json = prop.Value as IDynamicJson;
+                    djv[prop.Name] = json == null ? (object)prop.Value : json.ToJson();
+                }
+            }
+
+            return djv;
         }
 
         private static List<ClusterTransactionErrorInfo> GetErrors(BlittableJsonReaderArray array)

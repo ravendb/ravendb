@@ -510,7 +510,7 @@ namespace Raven.Server.Rachis
                         // Should never happen! (we are getting here after the command is completed int the db, so it ha been applied and should have results).
                         throw new InvalidOperationException($"'Results' field is inaccessible in '{cmd}' for type {typeof(T).FullName}");
 
-                    result = (T)(object)JsonDeserializationCluster.ClusterTransactionResult(resultAsBlt);
+                    result = (T)(object)ClusterTransactionCommand.GetResults(resultAsBlt);
                 }
                 else
                 {

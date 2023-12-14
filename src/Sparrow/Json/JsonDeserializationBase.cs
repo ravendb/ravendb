@@ -354,12 +354,6 @@ namespace Sparrow.Json
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
             }
 
-            if (propertyType == typeof(DynamicJsonArray))
-            {
-                var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDynamicJsonArray), BindingFlags.NonPublic | BindingFlags.Static);
-                return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
-            }
-
             // extract proper value from blittable if we have relevant type
             if (propertyType == typeof(object) || propertyType.IsPrimitive)
             {
@@ -875,34 +869,6 @@ namespace Sparrow.Json
             }
 
             return converter(obj);
-        }
-
-        private static DynamicJsonArray ToDynamicJsonArray(BlittableJsonReaderObject json, string name)
-        {
-            var array = ToArray<DynamicJsonValue>(json, name, ToDynamicJsonValue);
-            return new DynamicJsonArray(array);
-        }
-
-        private static DynamicJsonValue ToDynamicJsonValue(BlittableJsonReaderObject bjro)
-        {
-            var djv = new DynamicJsonValue();
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-            for (int i = 0; i < bjro.Count; i++)
-            {
-                bjro.GetPropertyByIndex(i, ref prop);
-                if (prop.Value is LazyStringValue lsv)
-                {
-                    djv[prop.Name] = lsv.ToString();
-                }
-                else
-                {
-                    var json = prop.Value as IDynamicJson;
-                    djv[prop.Name] = json == null ? (object)prop.Value : json.ToJson();
-                }
-            }
-
-            return djv;
         }
 
         private static HashSet<T> ToHashSet<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
