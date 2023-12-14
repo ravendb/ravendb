@@ -236,12 +236,14 @@ namespace Raven.Server.Documents
                     else
                     {
                         var putStream = true;
+                        var attachmentExists = false;
 
                         // We already asserted that the document is not in conflict, so we might have just one partial key, not more.
                         using (GetAttachmentPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
                         {
                             if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
                             {
+                                attachmentExists = true;
                                 if (expectedChangeVector != null)
                                 {
                                     var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
@@ -282,7 +284,7 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        if (string.IsNullOrEmpty(expectedChangeVector) == false)
+                        if (attachmentExists == false && string.IsNullOrEmpty(expectedChangeVector) == false)
                         {
                             ThrowConcurrentExceptionOnMissingAttachment(documentId, name, expectedChangeVector);
                         }
