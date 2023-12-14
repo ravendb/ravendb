@@ -159,12 +159,15 @@ namespace Corax.Querying.Matches.TermProviders
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"TermNumericRangeProvider<{typeof(TLookupIterator).Name}, {typeof(TLow).Name}, {typeof(THigh).Name}, {typeof(TVal).Name}>",
+            return new QueryInspectionNode(nameof(TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal>),
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _field.ToString() },
-                                { "Low", _low.ToString()},
-                                { "High", _high.ToString()}
+                                { Constants.QueryInspectionNode.FieldName, _field.ToString() },
+                                { Constants.QueryInspectionNode.LowValue, _low.ToString()},
+                                { Constants.QueryInspectionNode.HighValue, _high.ToString()},
+                                { Constants.QueryInspectionNode.LowOption, typeof(TLow).Name},
+                                { Constants.QueryInspectionNode.HighOption, typeof(THigh).Name},
+                                { Constants.QueryInspectionNode.IteratorDirection, Constants.QueryInspectionNode.IterationDirectionName(_iterator)}
                             });
         }
 

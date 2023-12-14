@@ -63,8 +63,8 @@ namespace Corax.Querying.Matches.TermProviders
             return new QueryInspectionNode($"{nameof(InTermProvider<TTermsType>)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _field.ToString() },
-                                { "Terms", string.Join(",", _terms)}
+                                { Constants.QueryInspectionNode.FieldName, _field.ToString() },
+                                { Constants.QueryInspectionNode.Term, string.Join(",", _terms)}
                             });
         }
 

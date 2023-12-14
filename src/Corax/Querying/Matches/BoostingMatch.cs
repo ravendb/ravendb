@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
@@ -63,7 +64,10 @@ namespace Corax.Querying.Matches
                 children: new List<QueryInspectionNode> { _inner.Inspect() },
                 parameters: new Dictionary<string, string>()
                 {
-                    { nameof(BoostFactor), $"[{BoostFactor}]" }
+                    { Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString() },
+                    { Constants.QueryInspectionNode.Count, Count.ToString()},
+                    { Constants.QueryInspectionNode.CountConfidence, Confidence.ToString() },
+                    { Constants.QueryInspectionNode.BoostFactor, BoostFactor.ToString(CultureInfo.InvariantCulture) }
                 });
         }
     }

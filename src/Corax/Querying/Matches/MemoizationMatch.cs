@@ -77,8 +77,9 @@ namespace Corax.Querying.Matches
                 children: new List<QueryInspectionNode> { _inner.Inspect() },
                 parameters: new Dictionary<string, string>()
                 {
-                    { nameof(IsBoosting), IsBoosting.ToString() },
-                    { nameof(Count), $"{Count} [{Confidence}]" }
+                    { Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString() },
+                    { Constants.QueryInspectionNode.Count, Count.ToString()},
+                    { Constants.QueryInspectionNode.CountConfidence, Confidence.ToString() },
                 });
         }
     }

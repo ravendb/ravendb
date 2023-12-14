@@ -59,8 +59,9 @@ namespace Corax.Querying.Matches
             return new QueryInspectionNode(nameof(AllEntriesMatch),
                 parameters: new Dictionary<string, string>()
                 {
-                    { nameof(IsBoosting), IsBoosting.ToString() },
-                    { nameof(Count), $"{Count} [{Confidence}]" }
+                    { Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString() },
+                    { Constants.QueryInspectionNode.Count, Count.ToString()},
+                    { Constants.QueryInspectionNode.CountConfidence, Confidence.ToString()},
                 });
         }
 
