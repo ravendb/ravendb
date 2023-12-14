@@ -2,6 +2,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Highlighting;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -36,23 +37,29 @@ public class RavenDB_21702 : RavenTestBase
                 luceneIndex.Execute(store);
                 
                 Indexes.WaitForIndexing(store);
+                
+                var tagsToUse = new HighlightingOptions
+                {
+                    PreTags = new[] { "*" },
+                    PostTags = new[] { "*" }
+                };
 
-                var coraxResult = session.Query<Dto>(coraxIndex.IndexName)
+                var coraxResults = session.Query<Dto>(coraxIndex.IndexName)
                     .Where(x => x.City == null)
                     .Search(x => x.Name, "Cool")
                     .Search(x => x.Description, "Some")
-                    .Highlight(x => x.Name, 18, 3, out var coraxNameHighlightings)
-                    .Highlight(x => x.City, 18, 3, out var coraxCityHighlightings)
-                    .Highlight(x => x.Description, 18, 3, out var coraxDescriptionHighlightings)
+                    .Highlight(x => x.Name, 18, 3, tagsToUse, out var coraxNameHighlightings)
+                    .Highlight(x => x.City, 18, 3, tagsToUse, out var coraxCityHighlightings)
+                    .Highlight(x => x.Description, 18, 3, tagsToUse, out var coraxDescriptionHighlightings)
                     .ToList();
 
-                var luceneResult = session.Query<Dto>(luceneIndex.IndexName)
+                var luceneResults = session.Query<Dto>(luceneIndex.IndexName)
                     .Where(x => x.City == null)
                     .Search(x => x.Name, "Cool")
                     .Search(x => x.Description, "Some")
-                    .Highlight(x => x.Name, 18, 3, out var luceneNameHighlightings)
-                    .Highlight(x => x.City, 18, 3, out var luceneCityHighlightings)
-                    .Highlight(x => x.Description, 18, 3, out var luceneDescriptionHighlightings)
+                    .Highlight(x => x.Name, 18, 3, tagsToUse, out var luceneNameHighlightings)
+                    .Highlight(x => x.City, 18, 3, tagsToUse, out var luceneCityHighlightings)
+                    .Highlight(x => x.Description, 18, 3, tagsToUse, out var luceneDescriptionHighlightings)
                     .ToList();
                 
                 Assert.Equal(coraxNameHighlightings.ResultIndents.Count(), 1);
@@ -62,12 +69,38 @@ public class RavenDB_21702 : RavenTestBase
                 Assert.Equal(luceneNameHighlightings.ResultIndents.Count(), 1);
                 Assert.Equal(luceneCityHighlightings.ResultIndents.Count(), 0);
                 Assert.Equal(luceneDescriptionHighlightings.ResultIndents.Count(), 2);
+                
+                Assert.Equal(coraxResults.Select(x => x.Id), luceneResults.Select(x => x.Id));
+                
+                for (var i = 0; i < coraxResults.Count; i++)
+                {
+                    var result = coraxResults[i];
+                    
+                    var coraxNameFragments = coraxNameHighlightings.GetFragments(result.Id);
+                    var luceneNameFragments = luceneNameHighlightings.GetFragments(result.Id);
+                    
+                    Assert.All(coraxNameFragments, coraxNameFragment => Assert.True(coraxNameFragment.StartsWith("*Cool* and super")));
+                    Assert.All(luceneNameFragments, luceneNameFragment => Assert.True(luceneNameFragment.StartsWith("*Cool* and super")));
+                    
+                    var coraxCityFragments = coraxCityHighlightings.GetFragments(result.Id);
+                    var luceneCityFragments = luceneCityHighlightings.GetFragments(result.Id);
+                    
+                    Assert.Empty(coraxCityFragments);
+                    Assert.Empty(luceneCityFragments);
+
+                    var coraxDescriptionFragments = coraxDescriptionHighlightings.GetFragments(result.Id);
+                    var luceneDescriptionFragments = luceneDescriptionHighlightings.GetFragments(result.Id);
+                    
+                    Assert.All(coraxDescriptionFragments, coraxDescriptionFragment => Assert.True(coraxDescriptionFragment.StartsWith("*Some* dummy text")));
+                    Assert.All(luceneDescriptionFragments, luceneDescriptionFragment => Assert.True(luceneDescriptionFragment.StartsWith("*Some* dummy text")));
+                }
             }
         }
     }
 
     private class Dto
     {
+        public string Id { get; set; }
         public string Name { get; set; }
         public string City { get; set; }
         public string Description { get; set; }
