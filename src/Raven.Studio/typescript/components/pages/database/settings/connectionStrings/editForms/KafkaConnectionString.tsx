@@ -1,6 +1,6 @@
 ﻿import { Button, Form, Label, UncontrolledTooltip } from "reactstrap";
-import { FormInput } from "components/common/Form";
-import React from "react";
+import { FormInput, FormSwitch } from "components/common/Form";
+import React, { useEffect } from "react";
 import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, KafkaConnection } from "../connectionStringsTypes";
@@ -13,14 +13,13 @@ import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupObjectSchema } from "components/utils/yupUtils";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
-type FormData = Omit<ConnectionFormData<KafkaConnection>, "useRavenCertificate">;
+type FormData = ConnectionFormData<KafkaConnection>;
 
 interface KafkaConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: KafkaConnection;
 }
-
-// TODO kalczur - useRavenCertificate is for isSecureServer
 
 export default function KafkaConnectionString({
     db,
@@ -28,7 +27,7 @@ export default function KafkaConnectionString({
     isForNewConnection,
     onSave,
 }: KafkaConnectionStringProps) {
-    const { control, handleSubmit, trigger } = useForm<FormData>({
+    const { control, handleSubmit, trigger, setValue } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
@@ -42,6 +41,16 @@ export default function KafkaConnectionString({
     const formValues = useWatch({ control });
     const { forCurrentDatabase } = useAppUrls();
     const { databasesService } = useServices();
+    const isSecureServer = useAccessManager().isSecuredServer();
+
+    useEffect(() => {
+        if (
+            formValues.isUseRavenCertificate &&
+            !formValues.connectionOptions.map((x) => x.key).includes(sslCaLocation)
+        ) {
+            setValue("connectionOptions", [{ key: sslCaLocation, value: null }, ...formValues.connectionOptions]);
+        }
+    }, [formValues.connectionOptions, formValues.isUseRavenCertificate, setValue]);
 
     const asyncTest = useAsyncCallback(async () => {
         const isValid = await trigger(["bootstrapServers", "connectionOptions"]);
@@ -61,7 +70,6 @@ export default function KafkaConnectionString({
         onSave({
             ...formData,
             type: "Kafka",
-            useRavenCertificate: initialConnection.useRavenCertificate,
         } satisfies KafkaConnection);
     };
 
@@ -85,6 +93,14 @@ export default function KafkaConnectionString({
                     placeholder="Enter comma-separated Bootstrap Servers"
                 />
             </div>
+            {isSecureServer && (
+                <div>
+                    <FormSwitch control={control} name="isUseRavenCertificate">
+                        Use RavenDB Certificate <Icon icon="info" color="info" id="use-cert-info" />
+                    </FormSwitch>
+                    <UseCertificateInfoTooltip />
+                </div>
+            )}
             <div>
                 <div>
                     <Label className="mb-0 md-label">
@@ -99,7 +115,7 @@ export default function KafkaConnectionString({
                                 placeholder="Enter an option key"
                             />
                             <FormInput
-                                type="text"
+                                type={isMultiLineKey(option.key) ? "textarea" : "text"}
                                 control={control}
                                 name={`connectionOptions.${idx}.value`}
                                 placeholder="Enter an option value"
@@ -154,14 +170,23 @@ const schema = yupObjectSchema<FormData>({
         .nullable()
         .required()
         .test("bootstrap-connections", "Format should be: 'hostA:portNumber,hostB:portNumber,...'", (value) => {
+            if (!value) {
+                return true;
+            }
+
             const values = value.split(",");
             return values.every((x) => x.match(/^[a-zA-Z0-9\-_.]+:\d+$/));
         })
         .test("no-protocol", "A bootstrap server cannot start with http/https", (value) => {
+            if (!value) {
+                return true;
+            }
+
             const values = value.split(",");
             return values.every((x) => !x.startsWith("http"));
         }),
     connectionOptions: yup.array().of(connectionOptionSchema),
+    isUseRavenCertificate: yup.boolean(),
 });
 
 const yupSchemaResolver = yupResolver(schema);
@@ -176,4 +201,40 @@ function getDefaultValues(initialConnection: KafkaConnection, isForNewConnection
     }
 
     return _.omit(initialConnection, "type", "usedByTasks");
+}
+
+const sslCaLocation = "ssl.ca.location";
+const multiLineKeys: string[] = [
+    "ssl.keystore.key",
+    "ssl.keystore.certificate.chain",
+    "ssl.truststore.certificates",
+    "ssl.key.pem",
+    "ssl.certificate.pem",
+    "ssl.ca.pem",
+];
+
+function isMultiLineKey(key: string) {
+    return multiLineKeys.includes(key);
+}
+
+function UseCertificateInfoTooltip() {
+    return (
+        <UncontrolledTooltip placement="right" target="use-cert-info">
+            <div>
+                The following <strong>configuration options</strong> will be set for you when using RavenDB server
+                certificate:
+            </div>
+            <ul>
+                <li>
+                    <code>security.protocol = SSL</code>
+                </li>
+                <li>
+                    <code>ssl.key.pem = &lt;RavenDB Server Private Key&gt;</code>
+                </li>
+                <li>
+                    <code>ssl.certificate.pem = &lt;RavenDB Server Public Key&gt;</code>
+                </li>
+            </ul>
+        </UncontrolledTooltip>
+    );
 }

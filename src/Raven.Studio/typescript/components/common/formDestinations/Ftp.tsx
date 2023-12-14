@@ -1,5 +1,14 @@
-﻿import React from "react";
-import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+﻿import React, { ChangeEvent } from "react";
+import {
+    Card,
+    CardBody,
+    Collapse,
+    InputGroup,
+    InputGroupText,
+    Label,
+    PopoverBody,
+    UncontrolledPopover,
+} from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -11,11 +20,10 @@ import { useAsyncCallback } from "react-async-hook";
 import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
-
-// TODO styling input file
+import fileImporter from "common/fileImporter";
 
 export default function Ftp() {
-    const { control, trigger } = useFormContext<FormDestinations>();
+    const { control, trigger, setValue } = useFormContext<FormDestinations>();
     const {
         destinations: { ftp: formValues },
     } = useWatch({ control });
@@ -31,7 +39,19 @@ export default function Ftp() {
         return manageServerService.testPeriodicBackupCredentials("FTP", mapFtpToDto(formValues));
     });
 
-    const isCertificateVisible = formValues.url?.startsWith("ftps://");
+    const isCertificateFieldVisible = formValues.url?.startsWith("ftps://");
+
+    const selectFile = (event: ChangeEvent<HTMLInputElement>) => {
+        fileImporter.readAsArrayBuffer(event.currentTarget, (data) => {
+            let binary = "";
+            const bytes = new Uint8Array(data);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const result = window.btoa(binary);
+            setValue(getName("certificateAsBase64"), result);
+        });
+    };
 
     return (
         <Card className="well">
@@ -97,10 +117,21 @@ export default function Ftp() {
                                     type="password"
                                 />
                             </div>
-                            {isCertificateVisible && (
-                                <div>
+                            {isCertificateFieldVisible && (
+                                <div className="mt-2">
                                     <Label className="mb-0 md-label">Certificate</Label>
-                                    <FormInput type="file" name={getName("certificateAsBase64")} control={control} />
+                                    <input id="filePicker" type="file" onChange={selectFile} className="d-none" />
+                                    <InputGroup>
+                                        <span className="static-name form-control">
+                                            {formValues.certificateAsBase64 ? "<certificate>" : "Select file..."}
+                                        </span>
+                                        <InputGroupText>
+                                            <label htmlFor="filePicker" className="cursor-pointer">
+                                                <Icon icon="document" />
+                                                <span>Browse</span>
+                                            </label>
+                                        </InputGroupText>
+                                    </InputGroup>
                                 </div>
                             )}
                             <div className="d-flex mt-3">

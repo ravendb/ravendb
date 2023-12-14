@@ -58,8 +58,8 @@ export interface ElasticSearchConnection extends ConnectionBase {
 export interface KafkaConnection extends ConnectionBase {
     type: Extract<StudioEtlType, "Kafka">;
     bootstrapServers?: string;
-    connectionOptions?: { key: string; value: string }[];
-    useRavenCertificate?: boolean;
+    connectionOptions?: { key?: string; value?: string }[];
+    isUseRavenCertificate?: boolean;
 }
 
 export interface RabbitMqConnection extends ConnectionBase {

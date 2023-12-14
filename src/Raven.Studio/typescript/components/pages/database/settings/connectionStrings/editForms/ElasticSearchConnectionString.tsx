@@ -20,7 +20,6 @@ import { useAsyncCallback } from "react-async-hook";
 import fileImporter from "common/fileImporter";
 import certificateUtils from "common/certificateUtils";
 import messagePublisher from "common/messagePublisher";
-import replicationCertificateModel from "models/database/tasks/replicationCertificateModel";
 import forge = require("node-forge");
 import { mapElasticSearchAuthenticationToDto } from "../store/connectionStringsMapsToDto";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
@@ -71,6 +70,8 @@ export default function ElasticSearchConnectionString({
     });
 
     const onCertificateUploaded = (data: string) => {
+        const currentCertificates = formValues.certificatesBase64 ?? [];
+
         try {
             // First detect the data format, pfx (binary) or crt/cer (text)
             // The line bellow will throw if data is not pfx
@@ -79,21 +80,18 @@ export default function ElasticSearchConnectionString({
             // *** Handle pfx ***
             try {
                 const certAsBase64 = forge.util.encode64(data);
-                const certificatesArray = certificateUtils.extractCertificatesFromPkcs12(certAsBase64, undefined);
+                const extractBase64s = certificateUtils
+                    .extractCertificatesFromPkcs12(certAsBase64, undefined)
+                    .map((x) => certificateUtils.extractBase64(x));
 
-                certificatesArray.forEach((publicKey) => {
-                    const certificateModel = new replicationCertificateModel(publicKey, certAsBase64);
-                    // TODO map to cert object like in 5.4
-                    setValue("certificatesBase64", [...formValues.certificatesBase64, certificateModel.publicKey()]);
-                });
+                setValue("certificatesBase64", [...currentCertificates, ...extractBase64s]);
             } catch ($ex1) {
                 messagePublisher.reportError("Unable to upload certificate", $ex1);
             }
         } catch {
             // *** Handle crt/cer ***
             try {
-                const certificateModel = new replicationCertificateModel(data);
-                setValue("certificatesBase64", [...formValues.certificatesBase64, certificateModel.thumbprint()]);
+                setValue("certificatesBase64", [...currentCertificates, certificateUtils.extractBase64(data)]);
             } catch ($ex2) {
                 messagePublisher.reportError("Unable to upload certificate", $ex2);
             }
@@ -106,6 +104,15 @@ export default function ElasticSearchConnectionString({
             ...formData,
         } satisfies ElasticSearchConnection);
     };
+
+    const deleteCertificate = (cert: string) => {
+        setValue(
+            "certificatesBase64",
+            formValues.certificatesBase64.filter((x) => x !== cert)
+        );
+    };
+
+    const isUploadCertificateVisible = !formValues.certificatesBase64 || formValues.certificatesBase64.length === 0;
 
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
@@ -201,7 +208,7 @@ export default function ElasticSearchConnectionString({
             {formValues.authMethodUsed === "Certificate" && (
                 <div>
                     <Label className="mb-0 md-label w-100">Certificate file</Label>
-                    {formValues.certificatesBase64.length === 0 && (
+                    {isUploadCertificateVisible && (
                         <div>
                             <Label className="btn btn-primary">
                                 <Icon icon="upload" />
@@ -219,8 +226,12 @@ export default function ElasticSearchConnectionString({
                             </Label>
                         </div>
                     )}
-                    {formValues.certificatesBase64.map((cert) => (
-                        <ElasticSearchCertificate key={cert} certBase64={cert} />
+                    {formValues.certificatesBase64?.map((cert) => (
+                        <ElasticSearchCertificate
+                            key={cert}
+                            certBase64={cert}
+                            onDelete={() => deleteCertificate(cert)}
+                        />
                     ))}
                 </div>
             )}
@@ -284,10 +295,11 @@ const schema = yupObjectSchema<FormData>({
         }),
     certificatesBase64: yup
         .array()
+        .nullable()
         .of(yup.string())
         .when("authMethodUsed", {
             is: "Certificate",
-            then: (schema) => schema.required(),
+            then: (schema) => schema.min(1),
         }),
     nodes: yup
         .array()

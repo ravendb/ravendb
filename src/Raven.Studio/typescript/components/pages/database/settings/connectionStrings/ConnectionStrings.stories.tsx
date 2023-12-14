@@ -19,6 +19,7 @@ export default {
 interface DefaultConnectionStringsProps {
     isEmpty: boolean;
     isTestSuccess: boolean;
+    isSecuredServer: boolean;
     licenseType: Raven.Server.Commercial.LicenseType;
     databaseAccess: databaseAccessLevel;
     hasRavenEtl: boolean;
@@ -33,6 +34,8 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
     render: (props: DefaultConnectionStringsProps) => {
         const { accessManager, license } = mockStore;
         const { databasesService, tasksService } = mockServices;
+
+        accessManager.with_secureServer(props.isSecuredServer);
 
         tasksService.withGetTasks((x) => {
             (
@@ -67,6 +70,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
     args: {
         isEmpty: false,
         isTestSuccess: true,
+        isSecuredServer: true,
         licenseType: "Enterprise",
         databaseAccess: "DatabaseAdmin",
         hasRavenEtl: true,
