@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardBody, Col, Form, InputGroup } from "reactstrap";
+import { Card, CardBody, Col, Form } from "reactstrap";
 import "./GatherDebugInfo.scss";
 import { useForm, useWatch } from "react-hook-form";
 import {
