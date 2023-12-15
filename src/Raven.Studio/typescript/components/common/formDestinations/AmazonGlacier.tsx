@@ -1,11 +1,9 @@
 ﻿import React from "react";
 import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
-import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
+import { FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { Icon } from "components/common/Icon";
-import { exhaustiveStringTuple } from "components/utils/common";
-import { SelectOption } from "components/common/select/Select";
 import { FlexGrow } from "components/common/FlexGrow";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { useServices } from "components/hooks/useServices";
@@ -13,6 +11,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
+import { availableGlacierRegions } from "./utils/amazonRegions";
 
 export default function AmazonGlacier() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -89,18 +88,18 @@ export default function AmazonGlacier() {
                             </div>
                             <div>
                                 <Label className="mb-0 md-label">Region</Label>
-                                <FormSelect
+                                <FormSelectCreatable
                                     name={getName("awsRegionName")}
                                     control={control}
                                     placeholder="Select an AWS region"
-                                    options={allRegionsOptions}
+                                    options={availableGlacierRegions}
                                     className="mb-2"
                                 />
                             </div>
                             <div>
                                 <Label className="mb-0 md-label">Access key</Label>
                                 <FormInput
-                                    name={getName("awsSecretKey")}
+                                    name={getName("awsAccessKey")}
                                     control={control}
                                     placeholder="Enter an access key"
                                     type="text"
@@ -138,13 +137,6 @@ export default function AmazonGlacier() {
         </Card>
     );
 }
-
-const allRegions = exhaustiveStringTuple()("Africa", "Europe", "America", "Asia");
-
-const allRegionsOptions: SelectOption[] = allRegions.map((type) => ({
-    value: type,
-    label: type,
-}));
 
 const fieldBase = "destinations.glacier";
 
