@@ -23,7 +23,7 @@ import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import fileImporter from "common/fileImporter";
 
 export default function Ftp() {
-    const { control, trigger, setValue } = useFormContext<FormDestinations>();
+    const { control, trigger, setValue, formState } = useFormContext<FormDestinations>();
     const {
         destinations: { ftp: formValues },
     } = useWatch({ control });
@@ -132,6 +132,11 @@ export default function Ftp() {
                                             </label>
                                         </InputGroupText>
                                     </InputGroup>
+                                    {formState.errors.destinations?.ftp?.certificateAsBase64 && (
+                                        <div className="text-danger small">
+                                            {formState.errors.destinations.ftp.certificateAsBase64.message}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             <div className="d-flex mt-3">

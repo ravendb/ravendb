@@ -229,6 +229,9 @@ export default function ElasticSearchConnectionString({
                             onDelete={() => deleteCertificate(cert)}
                         />
                     ))}
+                    {formState.errors?.certificatesBase64 && (
+                        <div className="text-danger small">{formState.errors.certificatesBase64.message}</div>
+                    )}
                 </div>
             )}
             <ConnectionStringUsedByTasks
