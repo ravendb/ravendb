@@ -68,8 +68,9 @@ const amazonSchema = yupObjectSchema<AmazonDestination>({
     awsRegionName: yup
         .string()
         .nullable()
-        .when(["isEnabled", "isUseCustomHost"], {
-            is: (isEnabled: boolean, isUseCustomHost: boolean) => isEnabled && !isUseCustomHost,
+        .when(["isEnabled", "isUseCustomHost", "config"], {
+            is: (isEnabled: boolean, isUseCustomHost: boolean, config: BackupConfigurationScript) =>
+                isEnabled && !isUseCustomHost && !config.isOverrideConfig,
             then: (schema) =>
                 schema
                     .required()
