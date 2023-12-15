@@ -116,10 +116,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             var adminLogsFileName = $"admin.logs.download.{Guid.NewGuid():N}";
             var adminLogsFilePath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(adminLogsFileName);
 
-            var fromUtc = GetDateTimeQueryString("from", required: false);
-            var toUtc = GetDateTimeQueryString("to", required: false);
+            var startUtc = GetDateTimeQueryString("from", required: false);
+            var endUtc = GetDateTimeQueryString("to", required: false);
 
-            using (var stream = SafeFileStream.Create(adminLogsFilePath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
+            if (startUtc >= endUtc)
+                throw new ArgumentException($"End Date '{endUtc:yyyy-MM-ddTHH:mm:ss.fffffff} UTC' must be greater than Start Date '{startUtc:yyyy-MM-ddTHH:mm:ss.fffffff} UTC'");
+
+            await using (var stream = SafeFileStream.Create(adminLogsFilePath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
                        FileOptions.DeleteOnClose | FileOptions.SequentialScan))
             {
                 using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, true))
@@ -131,17 +134,25 @@ namespace Raven.Server.Documents.Handlers.Admin
                             fileName.EndsWith(LoggingSource.LogInfo.FullCompressExtension, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
 
-                        var hasLogDateTime = LoggingSource.LogInfo.TryGetDateUtc(filePath, out var logDateTimeUtc);
-                        if (hasLogDateTime && fromUtc.HasValue && logDateTimeUtc < fromUtc)
+                        // Skip this file if either the last write time or the creation time could not be determined
+                        if (LoggingSource.LogInfo.TryGetLastWriteTimeUtc(filePath, out var logLastWriteTimeUtc) == false ||
+                            LoggingSource.LogInfo.TryGetCreationTimeUtc(filePath, out var logCreationTimeUtc) == false)
+                            continue;
+
+                        bool isWithinDateRange =
+                            // Check if the file was created before the end date.
+                            (endUtc.HasValue == false || logCreationTimeUtc < endUtc.Value) &&
+                            // Check if the file was last modified after the start date.
+                            (startUtc.HasValue == false || logLastWriteTimeUtc > startUtc.Value);
+
+                        // Skip this file if it does not fall within the specified date range
+                        if (isWithinDateRange == false)
                             continue;
 
                         try
                         {
                             var entry = archive.CreateEntry(fileName);
-                            if (hasLogDateTime)
-                                entry.LastWriteTime = logDateTimeUtc;
-
-                            using (var fs = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            await using (var fs = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
                                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
@@ -155,9 +166,28 @@ namespace Raven.Server.Documents.Handlers.Admin
                         {
                             await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, fileName);
                         }
+                    }
+                }
 
-                        if (hasLogDateTime && toUtc.HasValue && logDateTimeUtc >= toUtc)
-                            break;
+                // Add an informational file to the archive if no log files match the specified date range,
+                // ensuring the user receives a non-empty archive with an explanation.
+                using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, true))
+                {
+                    // Check if any file was added to the zip
+                    if (archive.Entries.Count == 0)
+                    {
+                        const string infoFileName = "No logs matched the date range.txt";
+
+                        // Create a dummy entry in the zip file
+                        var infoEntry = archive.CreateEntry(infoFileName);
+                        await using var entryStream = infoEntry.Open();
+                        await using var streamWriter = new StreamWriter(entryStream);
+
+                        var formattedStartUtc = startUtc.HasValue ? startUtc.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffffff 'UTC'") : "not specified";
+                        var formattedEndUtc = endUtc.HasValue ? endUtc.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffffff 'UTC'") : "not specified";
+
+                        await streamWriter.WriteAsync(
+                            $"No log files were found that matched the specified date range from '{formattedStartUtc}' to '{formattedEndUtc}'.");
                     }
                 }
 
