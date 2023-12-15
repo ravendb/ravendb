@@ -25,13 +25,13 @@ export default function ElasticSearchCertificate({ certBase64, onDelete }: Elast
 
     return (
         <Card className="well">
-            <CardHeader>
+            <CardHeader className="d-flex p-1 justify-content-between align-items-center">
                 <div>
                     <Icon icon="certificate" />
                     {certInfo.thumbprint}
                 </div>
-                <Button onClick={onDelete}>
-                    <Icon icon="trash" />
+                <Button onClick={onDelete} color="danger">
+                    <Icon icon="trash" margin="m-0" />
                 </Button>
             </CardHeader>
             <CardBody className="d-flex p-1 justify-content-around">
