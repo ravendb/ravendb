@@ -13,6 +13,7 @@ import { EmptySet } from "components/common/EmptySet";
 import ConnectionStringsPanels from "./ConnectionStringsPanels";
 import { exhaustiveStringTuple } from "components/utils/common";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
+import { LoadError } from "components/common/LoadError";
 
 export interface ConnectionStringsUrlParameters {
     name?: string;
@@ -43,6 +44,15 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
     }, [db, dispatch, nameFromUrl, typeFromUrl]);
 
     const { loadStatus, connections, isEmpty, initialEditConnection } = useAppSelector(connectionStringSelectors.state);
+
+    if (loadStatus === "failure") {
+        return (
+            <LoadError
+                error="Unable to load connection strings"
+                refresh={() => dispatch(connectionStringsActions.fetchData(db))}
+            />
+        );
+    }
 
     return (
         <Row className="content-margin gy-sm">
