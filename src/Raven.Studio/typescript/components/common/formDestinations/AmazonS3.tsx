@@ -10,7 +10,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
-import { availableS3Regions } from "./utils/amazonUtils";
+import { availableS3Regions } from "./utils/amazonRegions";
 
 export default function AmazonS3() {
     const { control, trigger } = useFormContext<FormDestinations>();

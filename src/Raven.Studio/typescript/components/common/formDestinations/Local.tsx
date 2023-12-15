@@ -69,9 +69,12 @@ export default function Local() {
                                 tabSelectsValue
                                 blurInputOnSelect={false}
                             />
+                            <PathInfo
+                                asyncGetBackupLocation={asyncGetBackupLocation}
+                                hasValue={!!formValues.folderPath}
+                            />
                         </div>
                     )}
-                    <PathInfo asyncGetBackupLocation={asyncGetBackupLocation} hasValue={!!formValues.folderPath} />
                 </Collapse>
             </CardBody>
         </Card>

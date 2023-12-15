@@ -13,9 +13,6 @@ import {
 } from "./formDestinationsTypes";
 import * as yup from "yup";
 
-// TODO kalczur - for all isEnabled and !isOverrideConfig
-// TODO kalczur - check validation
-
 const configSchema = yupObjectSchema<BackupConfigurationScript>({
     isOverrideConfig: yup.boolean(),
     arguments: yup
@@ -51,7 +48,7 @@ const destinationBaseSchema = yupObjectSchema<FormDestinationDataBase>({
 type WithoutBase<T extends FormDestinationDataBase> = Omit<T, "isEnabled" | "isOverrideConfig" | "config">;
 type WithoutAmazonAndBase<T extends S3Destination | GlacierDestination> = Omit<
     WithoutBase<T>,
-    "awsAccessKey" | "awsRegionName" | "awsSecretKey" | "remoteFolderName"
+    "awsAccessKey" | "awsRegionName" | "awsSecretKey" | "remoteFolderName" | "awsSessionToken"
 >;
 
 const yupRequiredStringForEnabled = yup
@@ -84,6 +81,7 @@ const amazonSchema = yupObjectSchema<AmazonDestination>({
         }),
     awsAccessKey: yupRequiredStringForEnabled,
     awsSecretKey: yupRequiredStringForEnabled,
+    awsSessionToken: yup.string().nullable(),
 });
 
 const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({
@@ -134,6 +132,7 @@ const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
     remoteFolderName: yup.string().nullable(),
     accountName: yupRequiredStringForEnabled,
     accountKey: yupRequiredStringForEnabled,
+    sasToken: yup.string().nullable(),
 }).concat(destinationBaseSchema);
 
 const googleCloudSchema = yupObjectSchema<WithoutBase<GoogleCloudDestination>>({
