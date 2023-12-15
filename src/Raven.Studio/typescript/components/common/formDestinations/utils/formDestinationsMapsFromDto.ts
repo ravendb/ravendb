@@ -9,6 +9,7 @@ import {
     FtpDestination,
     DestinationsDto,
     FormDestinations,
+    AmazonDestination,
 } from "./formDestinationsTypes";
 
 const defaultConfig: BackupConfigurationScript = {
@@ -54,16 +55,35 @@ function mapLocalFromDto(dto: Raven.Client.Documents.Operations.Backups.LocalSet
     };
 }
 
+export const defaultAmazonFormData: AmazonDestination = {
+    awsRegionName: null,
+    awsAccessKey: null,
+    awsSecretKey: null,
+    awsSessionToken: null,
+    remoteFolderName: null,
+};
+
+function mapAmazonFromDto(
+    dto:
+        | Raven.Client.Documents.Operations.Backups.S3Settings
+        | Raven.Client.Documents.Operations.Backups.GlacierSettings
+): AmazonDestination {
+    return {
+        awsRegionName: dto.AwsRegionName,
+        awsAccessKey: dto.AwsAccessKey,
+        awsSecretKey: dto.AwsSecretKey,
+        awsSessionToken: dto.AwsSessionToken,
+        remoteFolderName: dto.RemoteFolderName,
+    };
+}
+
 export const defaultS3FormData: S3Destination = {
     ...defaultFormBase,
+    ...defaultAmazonFormData,
     isUseCustomHost: false,
     customServerUrl: null,
     forcePathStyle: false,
     bucketName: null,
-    remoteFolderName: null,
-    awsRegionName: null,
-    awsAccessKey: null,
-    awsSecretKey: null,
 };
 
 function mapS3FromDto(dto: Raven.Client.Documents.Operations.Backups.S3Settings): S3Destination {
@@ -73,14 +93,11 @@ function mapS3FromDto(dto: Raven.Client.Documents.Operations.Backups.S3Settings)
 
     return {
         ...mapFormBaseFromDto(dto),
+        ...mapAmazonFromDto(dto),
         isUseCustomHost: dto.CustomServerUrl != null,
         customServerUrl: dto.CustomServerUrl,
         forcePathStyle: dto.ForcePathStyle,
         bucketName: dto.BucketName,
-        remoteFolderName: dto.RemoteFolderName,
-        awsRegionName: dto.AwsRegionName,
-        awsAccessKey: dto.AwsAccessKey,
-        awsSecretKey: dto.AwsAccessKey,
     };
 }
 
@@ -90,6 +107,7 @@ export const defaultAzureFormData: AzureDestination = {
     remoteFolderName: null,
     accountName: null,
     accountKey: null,
+    sasToken: null,
 };
 
 function mapAzureFromDto(dto: Raven.Client.Documents.Operations.Backups.AzureSettings): AzureDestination {
@@ -103,6 +121,7 @@ function mapAzureFromDto(dto: Raven.Client.Documents.Operations.Backups.AzureSet
         remoteFolderName: dto.RemoteFolderName,
         accountName: dto.AccountName,
         accountKey: dto.AccountKey,
+        sasToken: dto.SasToken,
     };
 }
 
@@ -130,11 +149,8 @@ function mapGoogleCloudFromDto(
 
 export const defaultGlacierFormData: GlacierDestination = {
     ...defaultFormBase,
+    ...defaultAmazonFormData,
     vaultName: null,
-    remoteFolderName: null,
-    awsRegionName: null,
-    awsAccessKey: null,
-    awsSecretKey: null,
 };
 
 function mapGlacierCloudFromDto(dto: Raven.Client.Documents.Operations.Backups.GlacierSettings): GlacierDestination {
@@ -144,11 +160,8 @@ function mapGlacierCloudFromDto(dto: Raven.Client.Documents.Operations.Backups.G
 
     return {
         ...mapFormBaseFromDto(dto),
+        ...mapAmazonFromDto(dto),
         vaultName: dto.VaultName,
-        remoteFolderName: dto.RemoteFolderName,
-        awsRegionName: dto.AwsRegionName,
-        awsAccessKey: dto.AwsAccessKey,
-        awsSecretKey: dto.AwsAccessKey,
     };
 }
 

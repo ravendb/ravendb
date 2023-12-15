@@ -36,6 +36,16 @@ export function mapLocalToDto(destination: LocalDestination): Raven.Client.Docum
     };
 }
 
+function mapAmazonToDto(destination: S3Destination | GlacierDestination) {
+    return {
+        AwsRegionName: destination.awsRegionName,
+        AwsAccessKey: destination.awsAccessKey,
+        AwsSecretKey: destination.awsSecretKey,
+        AwsSessionToken: destination.awsSessionToken,
+        RemoteFolderName: destination.remoteFolderName,
+    };
+}
+
 export function mapS3ToDto(destination: S3Destination): Raven.Client.Documents.Operations.Backups.S3Settings {
     if (!destination.isEnabled) {
         return undefined;
@@ -49,14 +59,10 @@ export function mapS3ToDto(destination: S3Destination): Raven.Client.Documents.O
 
     return {
         ...mapBackupSettingsToDto(destination),
+        ...mapAmazonToDto(destination),
         CustomServerUrl: customServerUrl,
         ForcePathStyle: forcePathStyle,
         BucketName: destination.bucketName,
-        RemoteFolderName: destination.remoteFolderName,
-        AwsRegionName: destination.awsRegionName,
-        AwsAccessKey: destination.awsAccessKey,
-        AwsSecretKey: destination.awsSecretKey,
-        AwsSessionToken: undefined, // TODO
     };
 }
 
@@ -71,7 +77,7 @@ export function mapAzureToDto(destination: AzureDestination): Raven.Client.Docum
         RemoteFolderName: destination.remoteFolderName,
         AccountName: destination.accountName,
         AccountKey: destination.accountKey,
-        SasToken: "", // TODO
+        SasToken: destination.sasToken,
     };
 }
 
@@ -99,12 +105,8 @@ export function mapGlacierToDto(
 
     return {
         ...mapBackupSettingsToDto(destination),
+        ...mapAmazonToDto(destination),
         VaultName: destination.vaultName,
-        RemoteFolderName: destination.remoteFolderName,
-        AwsRegionName: destination.awsRegionName,
-        AwsAccessKey: destination.awsAccessKey,
-        AwsSecretKey: destination.awsSecretKey,
-        AwsSessionToken: undefined, // TODO
     };
 }
 

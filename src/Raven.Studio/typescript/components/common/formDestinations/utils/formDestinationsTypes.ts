@@ -18,6 +18,7 @@ export interface AmazonDestination {
     awsAccessKey?: string;
     awsRegionName?: string;
     awsSecretKey?: string;
+    awsSessionToken?: string;
     remoteFolderName?: string;
 }
 
@@ -33,6 +34,7 @@ export interface AzureDestination extends FormDestinationDataBase {
     accountName?: string;
     remoteFolderName?: string;
     storageContainer?: string;
+    sasToken?: string;
 }
 
 export interface GoogleCloudDestination extends FormDestinationDataBase {
