@@ -1,6 +1,5 @@
 ﻿using FastTests;
 using Orders;
-using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
 

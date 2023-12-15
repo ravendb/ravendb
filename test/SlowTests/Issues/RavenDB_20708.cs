@@ -1,6 +1,5 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.NotificationCenter.Notifications;

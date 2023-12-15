@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Corax;
 using Corax.Analyzers;
-using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow;

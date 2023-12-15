@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 groupByFieldsPaths.Add(groupByFieldPath);
             }
 
-            Debug.Assert(groupByFieldsPaths.Count > 0);
+            Debug.Assert(groupByFieldsPaths.Count > 0, $"{nameof(AutoMapReduceIndex)}' must have at least one field with '[]'.");
 
             foreach ((_, IndexFieldBase field) in Definition.MapFields)
             {

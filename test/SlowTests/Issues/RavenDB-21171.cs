@@ -1,6 +1,4 @@
-using System.Linq;
 using FastTests;
-using NuGet.ContentModel;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;

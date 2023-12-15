@@ -455,6 +455,7 @@ namespace Raven.Client.ServerWide
             DemotionReasons.Remove(delDbFromNode);
             PromotablesStatus.Remove(delDbFromNode);
             PredefinedMentors.Remove(delDbFromNode);
+            PriorityOrder.Remove(delDbFromNode);
         }
 
         public string WhoseTaskIsIt(

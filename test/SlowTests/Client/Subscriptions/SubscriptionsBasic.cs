@@ -26,7 +26,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;

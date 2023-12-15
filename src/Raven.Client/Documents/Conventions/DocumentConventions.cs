@@ -522,9 +522,6 @@ namespace Raven.Client.Documents.Conventions
             if (converter == null)
                 return member?.Name;
 
-            //do not use convention for types in system namespaces
-            var old = member.DeclaringType?.Namespace?.StartsWith("System") == true ||
-                      member.DeclaringType?.Namespace?.StartsWith("Microsoft") == true;
             if (ShouldApplyPropertyNameConverter(member) == false)
                 return member.Name;
 
