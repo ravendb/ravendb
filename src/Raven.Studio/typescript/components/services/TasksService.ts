@@ -26,6 +26,8 @@ import deleteConnectionStringCommand from "commands/database/settings/deleteConn
 import getConnectionStringsCommand from "commands/database/settings/getConnectionStringsCommand";
 import saveConnectionStringCommand from "commands/database/settings/saveConnectionStringCommand";
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
+import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
 
 export default class TasksService {
     async getOngoingTasks(db: database, location: databaseLocationSpecifier) {
@@ -144,5 +146,13 @@ export default class TasksService {
         authenticationDto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication
     ) {
         return new testElasticSearchNodeConnectionCommand(db, serverUrl, authenticationDto).execute();
+    }
+
+    async getLocalFolderPathOptions(path: string, db: database) {
+        return getFolderPathOptionsCommand.forServerLocal(path, true, null, db).execute();
+    }
+
+    async getBackupLocation(path: string, db: database) {
+        return new getBackupLocationCommand(path, db).execute();
     }
 }

@@ -92,4 +92,12 @@ export default class MockTasksService extends AutoMockService<TasksService> {
             SharedStubs.nodeConnectionTestSuccessResult()
         );
     }
+
+    withBackupLocation(dto?: Raven.Server.Web.Studio.DataDirectoryResult) {
+        return this.mockResolvedValue(this.mocks.getBackupLocation, dto, TasksStubs.backupLocation());
+    }
+
+    withLocalFolderPathOptions(dto?: Raven.Server.Web.Studio.FolderPathOptions) {
+        return this.mockResolvedValue(this.mocks.getLocalFolderPathOptions, dto, TasksStubs.localFolderPathOptions());
+    }
 }

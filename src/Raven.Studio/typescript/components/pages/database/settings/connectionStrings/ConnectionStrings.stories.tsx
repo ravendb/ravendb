@@ -37,6 +37,8 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
 
         accessManager.with_secureServer(props.isSecuredServer);
 
+        tasksService.withLocalFolderPathOptions();
+        tasksService.withBackupLocation();
         tasksService.withGetTasks((x) => {
             (
                 x.OngoingTasks.find(
