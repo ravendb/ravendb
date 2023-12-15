@@ -19,8 +19,6 @@ export interface ConnectionStringsUrlParameters {
     type?: StudioEtlType;
 }
 
-// todo remove legacy code
-
 export default function ConnectionStrings(props: NonShardedViewProps & ConnectionStringsUrlParameters) {
     const { db, name: nameFromUrl, type: typeFromUrl } = props;
 
