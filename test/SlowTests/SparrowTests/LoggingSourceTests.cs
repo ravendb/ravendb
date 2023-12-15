@@ -11,9 +11,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Server.Config;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Logging;
+using Tests.Infrastructure;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,6 +26,7 @@ namespace SlowTests.SparrowTests
 {
     public class LoggingSourceTests : RavenTestBase
     {
+
         public LoggingSourceTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -145,7 +150,7 @@ namespace SlowTests.SparrowTests
             var yesterday = DateTime.Now - TimeSpan.FromDays(1);
             var yesterdayLog = Path.Combine(path, $"{LoggingSource.LogInfo.DateToLogFormat(yesterday)}.010.{extension}");
             await File.Create(yesterdayLog).DisposeAsync();
-            File.SetLastWriteTime(yesterdayLog, yesterday);
+            File.SetCreationTime(yesterdayLog, yesterday);
 
             var loggingSource = new LoggingSource(
                 LogMode.Information,
@@ -162,7 +167,7 @@ namespace SlowTests.SparrowTests
             {
                 var afterEndFiles = Directory.GetFiles(path);
                 todayLog = afterEndFiles.FirstOrDefault(f =>
-                    LoggingSource.LogInfo.TryGetDateLocal(f, out var date) && date.Date.Equals(DateTime.Today));
+                    LoggingSource.LogInfo.TryGetCreationTimeLocal(f, out var date) && date.Date.Equals(DateTime.Today));
                 return todayLog != null;
             }, true, 10_000, 1_000);
 
@@ -210,7 +215,7 @@ namespace SlowTests.SparrowTests
                 var strings = Directory.GetFiles(path);
                 return strings.Any(f =>
                 {
-                    if (LoggingSource.LogInfo.TryGetDateLocal(f, out var d) == false || d.Date.Equals(DateTime.Today) == false)
+                    if (LoggingSource.LogInfo.TryGetLastWriteTimeLocal(f, out var d) == false || d.Date.Equals(DateTime.Today) == false)
                         return false;
 
                     return LoggingSource.LogInfo.TryGetNumber(f, out var n) && n == 11;
@@ -703,7 +708,7 @@ namespace SlowTests.SparrowTests
             return Assert.DoesNotContain;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Logging)]
         public async Task Register_WhenLogModeIsNone_ShouldNotWriteToLogFile()
         {
             var name = GetTestName();
@@ -745,6 +750,551 @@ namespace SlowTests.SparrowTests
             var logContent = await File.ReadAllTextAsync(logFile);
             Assert.DoesNotContain(uniqForOperation, logContent);
             Assert.DoesNotContain(uniqForInformation, logContent);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Include_Files_Created_And_Modified_Within_Date_Range(Options options, bool useUtc)
+        {
+            // Define request date range
+            var startDate = new DateTime(2023, 03, 01);
+            var endDate = new DateTime(2023, 03, 31);
+
+            // List of test files with expected outcomes
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 01), 
+                    LastWriteTime = new DateTime(2023, 03, 06), 
+                    ShouldBeIncluded = true
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 07), 
+                    LastWriteTime = new DateTime(2023, 03, 29), 
+                    ShouldBeIncluded = true
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 30), 
+                    LastWriteTime = new DateTime(2023, 03, 31), 
+                    ShouldBeIncluded = true
+                },
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate, endDate, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Not_Include_Files_Created_Before_And_Modified_After_Date_Range(Options options, bool useUtc)
+        {
+            // Define request date range
+            var startDate = new DateTime(2023, 03, 01);
+            var endDate = new DateTime(2023, 03, 31);
+
+            // List of test files with expected outcomes
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 02, 01),
+                    LastWriteTime = new DateTime(2023, 02, 27),
+                    ShouldBeIncluded = false
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 02, 28),
+                    LastWriteTime = new DateTime(2023, 03, 01),
+                    ShouldBeIncluded = false
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 31),
+                    LastWriteTime = new DateTime(2023, 04, 01),
+                    ShouldBeIncluded = false
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 04, 02),
+                    LastWriteTime = new DateTime(2023, 04, 07),
+                    ShouldBeIncluded = false
+                }
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate, endDate, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Include_Files_Created_Within_And_Modified_After_Date_Range(Options options, bool useUtc)
+        {
+            // Define request date range
+            var startDate = new DateTime(2023, 03, 01);
+            var endDate = new DateTime(2023, 03, 31);
+
+            // List of test files with expected outcomes
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 29),
+                    LastWriteTime = new DateTime(2023, 04, 01),
+                    ShouldBeIncluded = true
+                },
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate, endDate, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Include_Files_Created_Before_And_Modified_Within_Date_Range(Options options, bool useUtc)
+        {
+            // Define request date range
+            var startDate = new DateTime(2023, 03, 01);
+            var endDate = new DateTime(2023, 03, 31);
+
+            // List of test files with expected outcomes
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 02, 15),
+                    LastWriteTime = new DateTime(2023, 03, 15),
+                    ShouldBeIncluded = true
+                },
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate, endDate, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Include_Files_Created_Before_And_Modified_After_Date_Range(Options options, bool useUtc)
+        {
+            // Define request date range
+            var startDate = new DateTime(2023, 03, 01);
+            var endDate = new DateTime(2023, 03, 31);
+
+            // List of test files with expected outcomes
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 02, 27),
+                    LastWriteTime = new DateTime(2023, 04, 05),
+                    ShouldBeIncluded = true
+                }
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate, endDate, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Include_Files_With_Creation_And_Modification_Dates_Matching_Exact_Date_Range(Options options, bool useUtc)
+        {
+            // Define request date range
+            var startDate = new DateTime(2023, 03, 01);
+            var endDate = new DateTime(2023, 03, 31);
+
+            // List of test files with expected outcomes
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 01),
+                    LastWriteTime = new DateTime(2023, 03, 31),
+                    ShouldBeIncluded = true
+                },
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate, endDate, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Include_Files_When_No_Start_Date_Is_Specified(Options options, bool useUtc)
+        {
+            // No start date specified, only end date
+            var endDate = new DateTime(2023, 03, 31);
+
+            // List of test files with their expected inclusion based on the end date
+            var testFiles = new List<TestFile>
+            {
+                // Files modified before the end date should be included
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 20),
+                    LastWriteTime = new DateTime(2023, 03, 29),
+                    ShouldBeIncluded = true
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 30),
+                    LastWriteTime = new DateTime(2023, 03, 31),
+                    ShouldBeIncluded = true
+                },
+                // Files modified on or after the end date should not be included
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 31),
+                    LastWriteTime = new DateTime(2023, 04, 01),
+                    ShouldBeIncluded = false
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 04, 01),
+                    LastWriteTime = new DateTime(2023, 04, 16),
+                    ShouldBeIncluded = false
+                },
+            };
+
+            await VerifyLogDownloadByDateRange(startDate: null, endDate, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Include_Files_When_No_End_Date_Is_Specified(Options options, bool useUtc)
+        {
+            // Only start date specified, no end date
+            var startDate = new DateTime(2023, 03, 01);
+
+            // List of test files with their expected inclusion based on the start date
+            var testFiles = new List<TestFile>
+            {
+                // Files modified before the start date should not be included
+                new()
+                {
+                    CreationTime = new DateTime(2023, 02, 21),
+                    LastWriteTime = new DateTime(2023, 02, 27),
+                    ShouldBeIncluded = false
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 02, 28),
+                    LastWriteTime = new DateTime(2023, 03, 01),
+                    ShouldBeIncluded = false
+                },
+                // Files modified after the start date should be included
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 01),
+                    LastWriteTime = new DateTime(2023, 03, 02),
+                    ShouldBeIncluded = true
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 03),
+                    LastWriteTime = new DateTime(2023, 03, 15),
+                    ShouldBeIncluded = true
+                },
+            };
+
+            await VerifyLogDownloadByDateRange(startDate, endDate: null, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Include_All_Files_When_No_Dates_Are_Specified(Options options, bool useUtc)
+        {
+            // No start and end dates specified
+
+            // List of test files, all of which should be included as there are no date constraints
+            var testFiles = new List<TestFile>
+            {
+                // All files should be included regardless of their dates
+                new()
+                {
+                    CreationTime = new DateTime(2020, 03, 01),
+                    LastWriteTime = new DateTime(2021, 03, 31),
+                    ShouldBeIncluded = true
+                },
+                new()
+                {
+                    CreationTime = new DateTime(2022, 04, 01),
+                    LastWriteTime = new DateTime(2023, 04, 17),
+                    ShouldBeIncluded = true
+                }
+            };
+
+            await VerifyLogDownloadByDateRange(startDate: null, endDate: null, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_Should_Throw_Exception_When_EndDate_Is_Before_StartDate(Options options, bool useUtc)
+        {
+            // Define request date range
+            var startDate = new DateTime(2023, 03, 31);
+            var endDate = new DateTime(2023, 03, 01);
+
+            // List of test files with expected outcomes
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 02, 27),
+                    LastWriteTime = new DateTime(2023, 04, 05),
+                    ShouldBeIncluded = true
+                }
+            };
+
+            // Run the test with the specified files and date range
+            var exception = await Record.ExceptionAsync(() => VerifyLogDownloadByDateRange(startDate, endDate, testFiles, useUtc));
+            Assert.IsType<RavenException>(exception);
+            Assert.IsType<ArgumentException>(exception.InnerException);
+
+            var expectedMessage =
+                $"End Date '{endDate.ToUniversalTime():yyyy-MM-ddTHH:mm:ss.fffffff} UTC' " +
+                $"must be greater than Start Date '{startDate.ToUniversalTime():yyyy-MM-ddTHH:mm:ss.fffffff} UTC'";
+
+            Assert.True(exception.InnerException.Message.Contains(expectedMessage),
+                userMessage:$"exception.InnerException.Message: {exception.InnerException.Message}{Environment.NewLine}" +
+                            $"but expectedMessage: {expectedMessage}");
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_No_Logs_Should_Be_Selected_When_Neither_Start_Nor_End_Date_Matches(Options options, bool useUtc)
+        {
+            // Define request date range
+            var startDate = new DateTime(2023, 03, 01);
+            var endDate = new DateTime(2023, 03, 31);
+
+            // List of test files with expected outcomes (none should be included)
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 02, 27),
+                    LastWriteTime = new DateTime(2023, 02, 28),
+                    ShouldBeIncluded = false
+                }
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate, endDate, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_No_Logs_Should_Be_Selected_When_Only_Start_Date_Is_Specified(Options options, bool useUtc)
+        {
+            // Define request date range with only start date
+            var startDate = new DateTime(2023, 03, 31);
+
+            // List of test files with expected outcomes (none should be included)
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 02),
+                    LastWriteTime = new DateTime(2023, 03, 03),
+                    ShouldBeIncluded = false
+                }
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate, endDate: null, testFiles, useUtc);
+        }
+
+        [RavenTheory(RavenTestCategory.Logging)]
+        [RavenData(Data = new object[] { true })]
+        [RavenData(Data = new object[] { false })]
+        public async Task Downloading_Logs_No_Logs_Should_Be_Selected_When_Only_End_Date_Is_Specified(Options options, bool useUtc)
+        {
+            // Define request date range with only end date
+            var endDate = new DateTime(2023, 03, 01);
+
+            // List of test files with expected outcomes (none should be included)
+            var testFiles = new List<TestFile>
+            {
+                new()
+                {
+                    CreationTime = new DateTime(2023, 03, 05),
+                    LastWriteTime = new DateTime(2023, 03, 25),
+                    ShouldBeIncluded = false
+                }
+            };
+
+            // Run the test with the specified files and date range
+            await VerifyLogDownloadByDateRange(startDate: null, endDate, testFiles, useUtc);
+        }
+
+        private async Task VerifyLogDownloadByDateRange(DateTime? startDate, DateTime? endDate, List<TestFile> testFiles, bool useUtc, [CallerMemberName] string caller = null)
+        {
+            var path = RavenTestHelper.NewDataPath(caller, 0, forceCreateDir: true);
+            try
+            {
+                using var server = GetNewServer(new ServerCreationOptions
+                {
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        { RavenConfiguration.GetKey(x => x.Logs.Path), path },
+                        { RavenConfiguration.GetKey(x => x.Logs.UseUtcTime), useUtc.ToString() },
+                    }
+                });
+
+                // Create test files as specified in the testFiles list
+                foreach (var testFile in testFiles)
+                {
+                    Assert.NotNull(testFile);
+                    Assert.True(string.IsNullOrWhiteSpace(testFile.FileName));
+
+                    testFile.FileName = $"{testFile.CreationTime:yyyy-MM-dd}.000.log";
+                    CreateTestFile(path, testFile, useUtc);
+                }
+
+                // Initialize the document store and execute the download logs command
+                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var commands = store.Commands())
+                {
+                    var command = new DownloadLogsCommand(startDate, endDate);
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
+
+                    // Ensure that the command returns some result
+                    Assert.True(command.Result.Length > 0);
+                    var zipBytes = command.Result;
+
+                    // Read the result as a zip archive
+                    using (var msZip = new MemoryStream(zipBytes))
+                    using (var archive = new ZipArchive(msZip, ZipArchiveMode.Read, false))
+                    {
+                        var entries = archive.Entries.Select(entry => entry.Name).ToList();
+
+                        // Check each file in testFiles to see if it's correctly included or excluded
+                        foreach (var file in testFiles)
+                        {
+                            if (file.ShouldBeIncluded)
+                                Assert.True(entries.Contains(file.FileName), $"Archive does not contain {file.FileName}{Environment.NewLine}{BuildDebugInfo()}");
+                            else
+                                Assert.False(entries.Contains(file.FileName), $"Archive contain {file.FileName} but it shouldn't{Environment.NewLine}{BuildDebugInfo()}");
+
+                            continue;
+
+                            string BuildDebugInfo()
+                            {
+                                var sb = new StringBuilder();
+                                sb.AppendLine("Debug info:");
+
+                                sb.Append("Request from '");
+                                sb.Append(startDate.HasValue ? startDate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffff 'UTC'") : "not specified");
+                                sb.Append("' to '");
+                                sb.Append(endDate.HasValue ? endDate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffff 'UTC'") : "not specified");
+                                sb.AppendLine("'");
+                                sb.AppendLine();
+
+                                sb.AppendLine("Files in folder: ");
+                                sb.Append("Path: ");
+                                sb.AppendLine(path);
+
+                                string[] files = Directory.GetFiles(path);
+                                for (int index = 0; index < files.Length; index++)
+                                {
+                                    string pathToFile = files[index];
+                                    string fileName = Path.GetFileName(pathToFile);
+                                    sb.AppendLine(
+                                        $" {index + 1}) " +
+                                        $"FileName: {fileName}, " +
+                                        $"CreationTime: {LoggingSource.LogInfo.GetLogFileCreationTime(pathToFile, DateTimeKind.Utc)} 'UTC', " +
+                                        $"LastWriteTime: {File.GetLastWriteTimeUtc(pathToFile)} 'UTC', ");
+                                }
+                                sb.AppendLine();
+
+                                sb.AppendLine("Test files:");
+                                for (int index = 0; index < testFiles.Count; index++)
+                                {
+                                    var testFile = testFiles[index];
+                                    sb.AppendLine(
+                                        $" {index + 1}) " +
+                                        $"FileName: {testFile.FileName}, " +
+                                        $"CreationTime: {testFile.CreationTime.ToUniversalTime()} 'UTC', " +
+                                        $"LastWriteTime: {testFile.LastWriteTime.ToUniversalTime()} 'UTC', " +
+                                        $"ShouldBeIncluded: {testFile.ShouldBeIncluded}");
+                                }
+                                sb.AppendLine();
+
+                                sb.AppendLine("Archive files:");
+                                for (int index = 0; index < archive.Entries.Count; index++)
+                                {
+                                    ZipArchiveEntry entry = archive.Entries[index];
+                                    sb.AppendLine(
+                                        $" {index + 1}) " +
+                                        $"FullName: {entry.FullName}, " +
+                                        $"LastWriteTime: {entry.LastWriteTime.ToUniversalTime()} 'UTC'");
+                                }
+
+                                return sb.ToString();
+                            }
+                        }
+
+                        if (testFiles.Any(x => x.ShouldBeIncluded))
+                            return;
+
+                        Assert.Single(archive.Entries);
+                        Assert.True(archive.Entries[0].Name == "No logs matched the date range.txt");
+
+                        // Assert that the file content is as expected
+                        await using (var entryStream = archive.Entries[0].Open())
+                        using (var streamReader = new StreamReader(entryStream))
+                        {
+                            string content = await streamReader.ReadToEndAsync();
+                            var formattedStartUtc = startDate.HasValue ? startDate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffff 'UTC'") : "not specified";
+                            var formattedEndUtc = endDate.HasValue ? endDate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffff 'UTC'") : "not specified";
+
+                            Assert.Equal($"No log files were found that matched the specified date range from '{formattedStartUtc}' to '{formattedEndUtc}'.", content);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }
+
+        private static void CreateTestFile(string path, TestFile testFile, bool useUtc)
+        {
+            string filePath = Path.Combine(path, testFile.FileName);
+            var logEntryTime = useUtc
+                ? testFile.CreationTime.ToUniversalTime()
+                : testFile.CreationTime;
+
+            File.WriteAllText(filePath, contents: $"""
+                                                   Time, Thread, Level, Source, Logger, Message, Exception
+                                                   {logEntryTime.GetDefaultRavenFormat()}, 1, Operations, Server, Raven.Server.Program
+                                                   """);
+
+            File.SetLastWriteTime(filePath, testFile.LastWriteTime);
+        }
+
+        private class TestFile
+        {
+            protected internal string FileName;
+            protected internal DateTime CreationTime;
+            protected internal DateTime LastWriteTime;
+            protected internal bool ShouldBeIncluded;
         }
 
         private class MyDummyWebSocket : WebSocket
