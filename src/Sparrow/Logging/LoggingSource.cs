@@ -371,36 +371,62 @@ namespace Sparrow.Logging
                 }
             }
 
-            public static bool TryGetDateUtc(string fileName, out DateTime dateTimeUtc)
-            {
-                if (TryGetDateLocal(fileName, out var dateTimeLocal))
-                {
-                    dateTimeUtc = dateTimeLocal.ToUniversalTime();
-                    return true;
-                }
+            public static bool TryGetLastWriteTimeUtc(string fileName, out DateTime dateTimeUtc) =>
+                TryGetFileTimeInternal(fileName, File.GetLastWriteTimeUtc, out dateTimeUtc);
 
-                dateTimeUtc = default;
-                return false;
-            }
+            public static bool TryGetLastWriteTimeLocal(string fileName, out DateTime dateTimeLocal) =>
+                TryGetFileTimeInternal(fileName, File.GetLastWriteTime, out dateTimeLocal);
 
-            public static bool TryGetDateLocal(string fileName, out DateTime dateTimeLocal)
+            public static bool TryGetCreationTimeUtc(string fileName, out DateTime dateTimeUtc) =>
+                TryGetFileTimeInternal(fileName, fn => GetLogFileCreationTime(fn, DateTimeKind.Utc), out dateTimeUtc);
+
+            public static bool TryGetCreationTimeLocal(string fileName, out DateTime dateTimeLocal) =>
+                TryGetFileTimeInternal(fileName, fn => GetLogFileCreationTime(fn, DateTimeKind.Local), out dateTimeLocal);
+
+            private static bool TryGetFileTimeInternal(string fileName, Func<string, DateTime> fileTimeGetter, out DateTime dateTime)
             {
+                dateTime = default;
                 try
                 {
-                    if (File.Exists(fileName))
-                    {
-                        dateTimeLocal = File.GetLastWriteTime(fileName);
-                        return true;
-                    }
+                    if (File.Exists(fileName) == false)
+                        return false;
+
+                    dateTime = fileTimeGetter(fileName);
+                    return true;
                 }
                 catch
                 {
                     // ignored
                 }
 
-                dateTimeLocal = default;
                 return false;
             }
+
+            protected internal static DateTime GetLogFileCreationTime(string fileName, DateTimeKind timeKind)
+            {
+                using var sr = new StreamReader(fileName);
+                sr.ReadLine();
+
+                var line = sr.ReadLine();
+                if (line == null)
+                    throw new InvalidOperationException("Log file is empty or does not contain a second line.");
+
+                var commaIndex = line.IndexOf(',');
+                if (commaIndex <= 0)
+                    throw new InvalidOperationException("Second line of log file does not contain a valid timestamp.");
+
+                var timestamp = line.Substring(0, commaIndex).Trim();
+                if (DateTime.TryParse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateTime) == false)
+                    throw new InvalidOperationException("Unable to parse timestamp from the log file.");
+
+                return timeKind switch
+                {
+                    DateTimeKind.Utc => UseUtcTime ? dateTime : dateTime.ToUniversalTime(),
+                    DateTimeKind.Local => UseUtcTime ? dateTime.ToLocalTime() : dateTime,
+                    _ => throw new ArgumentOutOfRangeException(nameof(timeKind), timeKind, null)
+                };
+            }
+
             public static bool TryGetNumber(string fileName, out int n)
             {
                 n = -1;
@@ -446,7 +472,7 @@ namespace Sparrow.Logging
         {
             for (int i = files.Length - 1; i >= 0; i--)
             {
-                if(LogInfo.TryGetDateLocal(files[i], out var fileDate) == false || fileDate.Date.Equals(_today) == false)
+                if(LogInfo.TryGetCreationTimeLocal(files[i], out var fileDate) == false || fileDate.Date.Equals(_today) == false)
                     continue;
                 
                 if (LogInfo.TryGetNumber(files[i], out var n))
@@ -463,7 +489,7 @@ namespace Sparrow.Logging
 
             foreach (var logFile in logFiles)
             {
-                if (LogInfo.TryGetDateLocal(logFile, out var logDateTime) == false
+                if (LogInfo.TryGetLastWriteTimeLocal(logFile, out var logDateTime) == false
                     || DateTime.Now - logDateTime <= RetentionTime)
                     continue;
 
