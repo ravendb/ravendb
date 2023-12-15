@@ -1,17 +1,41 @@
 ﻿import React from "react";
-import { Card, CardBody, Collapse, Label } from "reactstrap";
-import { FormInput, FormSwitch } from "components/common/Form";
+import { Alert, Card, CardBody, Collapse, Label, Spinner } from "reactstrap";
+import { FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { FormDestinations } from "./utils/formDestinationsTypes";
-
-// TODO kalczur - autocomplete folder path
+import { useServices } from "components/hooks/useServices";
+import { UseAsyncReturn, useAsync } from "react-async-hook";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import { InputNotHidden, SelectOption } from "../select/Select";
+import { InputActionMeta } from "react-select";
 
 export default function Local() {
-    const { control } = useFormContext<FormDestinations>();
+    const { control, setValue } = useFormContext<FormDestinations>();
     const {
         destinations: { local: formValues },
     } = useWatch({ control });
+
+    const { tasksService } = useServices();
+
+    const asyncGetLocalFolderPathOptions = useAsync(
+        () => tasksService.getLocalFolderPathOptions(formValues.folderPath, activeDatabaseTracker.default.database()),
+        [formValues.folderPath]
+    );
+    const asyncGetBackupLocation = useAsync(() => {
+        if (!formValues.folderPath) {
+            return;
+        }
+        return tasksService.getBackupLocation(formValues.folderPath, activeDatabaseTracker.default.database());
+    }, [formValues.folderPath]);
+
+    const onPathChange = (value: string, action: InputActionMeta) => {
+        if (action?.action !== "input-blur" && action?.action !== "menu-close") {
+            setValue(getName("folderPath"), value);
+        }
+    };
+
+    const pathOptions = getAvailableFolderOptions(asyncGetLocalFolderPathOptions.result?.List);
 
     return (
         <Card className="well">
@@ -34,18 +58,83 @@ export default function Local() {
                     ) : (
                         <div>
                             <Label className="mb-0 md-label">Folder path</Label>
-                            <FormInput
-                                type="text"
+                            <FormSelectCreatable
                                 control={control}
                                 name={getName("folderPath")}
-                                placeholder="Select a destination path"
+                                placeholder="Full directory path"
+                                options={pathOptions}
+                                inputValue={formValues.folderPath ?? ""}
+                                onInputChange={onPathChange}
+                                components={{ Input: InputNotHidden }}
+                                tabSelectsValue
+                                blurInputOnSelect={false}
                             />
                         </div>
                     )}
+                    <PathInfo asyncGetBackupLocation={asyncGetBackupLocation} hasValue={!!formValues.folderPath} />
                 </Collapse>
             </CardBody>
         </Card>
     );
+}
+
+function PathInfo({
+    asyncGetBackupLocation,
+    hasValue,
+}: {
+    asyncGetBackupLocation: UseAsyncReturn<Raven.Server.Web.Studio.DataDirectoryResult, string[]>;
+    hasValue: boolean;
+}) {
+    if (!hasValue || asyncGetBackupLocation.status === "not-requested" || asyncGetBackupLocation.status === "error") {
+        return null;
+    }
+
+    if (asyncGetBackupLocation.status === "loading") {
+        return (
+            <Alert color="info" className="mt-2">
+                <Spinner />
+            </Alert>
+        );
+    }
+
+    if (asyncGetBackupLocation.status === "success" && asyncGetBackupLocation.result?.List?.length > 0) {
+        return (
+            <Alert color="info" className="mt-2">
+                {asyncGetBackupLocation.result.List.map((location) => (
+                    <li key={location.FullPath}>
+                        <small>
+                            <span>
+                                Node tag: <strong>{location.NodeTag}</strong>
+                            </span>
+                            <br />
+                            <span>
+                                Path: <strong>{location.FullPath}</strong>
+                            </span>
+                            <br />
+                            {location.Error ? (
+                                <strong>{location.Error}</strong>
+                            ) : (
+                                <>
+                                    {location.FreeSpaceHumane ? (
+                                        <span>
+                                            Free space: <strong>{location.FreeSpaceHumane}</strong>{" "}
+                                            {location.TotalSpaceHumane && (
+                                                <span>
+                                                    (Total: <strong>{location.TotalSpaceHumane}</strong>)
+                                                </span>
+                                            )}
+                                        </span>
+                                    ) : (
+                                        <strong>(Path is unreachable)</strong>
+                                    )}
+                                </>
+                            )}
+                        </small>
+                    </li>
+                ))}
+            </Alert>
+        );
+    }
 }
 
 const fieldBase = "destinations.local";
@@ -54,4 +143,12 @@ type FormFieldNames = keyof FormDestinations["destinations"]["local"];
 
 function getName(fieldName: FormFieldNames): `${typeof fieldBase}.${FormFieldNames}` {
     return `${fieldBase}.${fieldName}`;
+}
+
+function getAvailableFolderOptions(backupLocation: string[]): SelectOption[] {
+    if (!backupLocation) {
+        return [];
+    }
+
+    return backupLocation.map((x) => ({ value: x, label: x }));
 }

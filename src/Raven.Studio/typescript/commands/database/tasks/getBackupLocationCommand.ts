@@ -4,8 +4,13 @@ import database = require("models/resources/database");
 
 class getBackupLocationCommand extends commandBase {
 
-    constructor(private inputPath: string, private database: database) {
+    private readonly inputPath: string;
+    private readonly database: database;
+
+    constructor( inputPath: string,  database: database) {
         super();
+        this.inputPath = inputPath;
+        this.database = database;
     }
 
     execute(): JQueryPromise<Raven.Server.Web.Studio.DataDirectoryResult> {

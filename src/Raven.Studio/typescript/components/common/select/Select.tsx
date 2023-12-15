@@ -1,5 +1,12 @@
 import React, { ComponentProps } from "react";
-import ReactSelect, { GroupBase, OptionProps, SingleValueProps, components, MultiValueProps } from "react-select";
+import ReactSelect, {
+    GroupBase,
+    OptionProps,
+    SingleValueProps,
+    components,
+    MultiValueProps,
+    InputProps,
+} from "react-select";
 import { Icon } from "../Icon";
 import "./Select.scss";
 import IconName from "typings/server/icons";
@@ -95,4 +102,9 @@ export function MultiValueLabelWithIcon({ children, ...props }: MultiValueProps<
             {children}
         </components.MultiValueLabel>
     );
+}
+
+// https://github.com/JedWatson/react-select/issues/3068
+export function InputNotHidden({ ...props }: InputProps) {
+    return <components.Input {...props} isHidden={false} />;
 }
