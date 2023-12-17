@@ -239,7 +239,7 @@
             <div class="help-block">
                 <i class="icon-warning"></i>
                 <span>
-                    Using <code>offset</code> or <code>limit</code> in RQL for fanout indexes may produce unpredictable paging.
+                    Using <code>LIMIT</code> or <code>OFFSET</code> in RQL with <code>DISTINCT</code> or Fanout indexes may produce unpredictable paging.
                     <a href="#" target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LT8GZF/' + $root.clientVersion() }">See details.</a>
                 </span>
             </div>
