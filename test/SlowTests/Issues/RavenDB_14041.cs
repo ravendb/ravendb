@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Commands.Batches;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -13,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.ClientApi)]
         public void CanUpdateAttachmentUsingPutAttachmentCommandDataWithExpectedChangeVector()
         {
             using (var store = GetDocumentStore())
