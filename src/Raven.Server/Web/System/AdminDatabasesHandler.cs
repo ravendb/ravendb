@@ -709,9 +709,12 @@ namespace Raven.Server.Web.System
                 }
 
                 var databasesToDelete = new Dictionary<string, DeleteDatabaseDetails>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, string> clusterNodesUrls;
 
                 using (context.OpenReadTransaction())
                 {
+                    clusterNodesUrls = ServerStore.GetClusterTopology(context).AllNodes;
+
                     var fromNodes = parameters.FromNodes != null && parameters.FromNodes.Length > 0;
 
                     foreach (var databaseName in parameters.DatabaseNames)
@@ -765,7 +768,6 @@ namespace Raven.Server.Web.System
                                 }
 
                                 pendingDeletes.Add(node);
-                                topology.RemoveFromTopology(node);
                                 tags.Add(node);
                             }
 
@@ -799,7 +801,7 @@ namespace Raven.Server.Web.System
 
                 var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? Server.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
-                var lastRemoveIndex = await WaitForRemovingNodesFromDatabases(databasesToDelete, lastDeletionIndex, timeToWaitForConfirmation);
+                var lastRemoveIndex = await WaitForRemovingNodesFromDatabases(databasesToDelete, lastDeletionIndex, clusterNodesUrls, timeToWaitForConfirmation);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -818,6 +820,7 @@ namespace Raven.Server.Web.System
         private async Task<long> WaitForRemovingNodesFromDatabases(
             Dictionary<string, DeleteDatabaseDetails> databasesToDelete,
             long lastDeletionIndex,
+            Dictionary<string, string> nodesUrls,
             TimeSpan timeout)
         {
             if (databasesToDelete.Count == 0)
@@ -835,19 +838,19 @@ namespace Raven.Server.Web.System
                 {
                     foreach (var (dbName, details) in databasesToDelete)
                     {
-                        var deleteCmdIndex = details.RaftIndex;
+                        var deleteIndex = details.RaftIndex;
+                        var databaseNodes = details.Topology.AllNodes.ToHashSet();
 
                         foreach (var removedNodeTag in details.NodesToRemove) // nodeTags
                         {
-                            var removeNodeFromDbCmdRaftIndex = 0L;
+                            var removeIndex = 0L;
                             var sw = Stopwatch.StartNew();
                             while (true)
                             {
-
                                 using (context.OpenReadTransaction())
                                 {
-                                    if (ServerStore.Engine.LogHistory.TryGetLastRemoveNodeFromDatabaseCommand(context, dbName, removedNodeTag, deleteCmdIndex,
-                                            out removeNodeFromDbCmdRaftIndex))
+                                    if (ServerStore.Engine.LogHistory.TryGetLastRemoveNodeFromDatabaseCommand(context, dbName, removedNodeTag, deleteIndex,
+                                            out removeIndex))
                                         break;
                                 }
 
@@ -863,25 +866,30 @@ namespace Raven.Server.Web.System
                                 await Task.Delay(TimeSpan.FromMilliseconds(300));
                             }
 
-                            lastRemoveIndex = long.Max(lastRemoveIndex, removeNodeFromDbCmdRaftIndex);
+                            lastRemoveIndex = long.Max(lastRemoveIndex, removeIndex);
+
+                            // RemoveNodeFromDatabase command is being created in the database (on the node DatabaseLandlord) after the db has been deleted from it.
+                            try
+                            {
+                                using (var cts = new CancellationTokenSource(timeout))
+                                {
+                                    await WaitForDatabaseNotificationOnCluster(dbName, removeIndex, nodesUrls, databaseNodes, reqExecutors, cts.Token);
+                                }
+
+                            }
+                            catch (OperationCanceledException) // from token
+                            {
+                                throw new RavenTimeoutException($"Waited {timeout} for the 'RemoveNodeFromDatabase' command (with index {lastRemoveIndex}) to bee committed.")
+                                {
+                                    FailImmediately = true
+                                };
+                            }
+
                         }
                     }
 
                 }
 
-                // RemoveNodeFromDatabase command is being created in the database (on the node DatabaseLandlord) after the db has been deleted from it.
-                try
-                {
-                    using (var cts = new CancellationTokenSource(timeout))
-                        await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastRemoveIndex, cts.Token);
-                }
-                catch (OperationCanceledException) // from token
-                {
-                    throw new RavenTimeoutException($"Waited {timeout} for the 'RemoveNodeFromDatabase' command (with index {lastRemoveIndex}) to bee committed.")
-                    {
-                        FailImmediately = true
-                    };
-                }
             }
             finally
             {

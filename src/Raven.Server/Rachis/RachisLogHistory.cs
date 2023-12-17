@@ -567,16 +567,14 @@ namespace Raven.Server.Rachis
             return true;
         }
 
-        public bool TryGetLastRemoveNodeFromDatabaseCommand(ClusterOperationContext context, 
+        public bool TryGetLastRemoveNodeFromDatabaseCommand(ClusterOperationContext context,
             string database, string removedNodeTag, long deleteIndex, out long index)
         {
             index = 0L;
 
-            // using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            // using (context.OpenReadTransaction())
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            using (Slice.From(context.Allocator, $"RemoveNodeFromDatabase/{database}/{removedNodeTag}/", out var guidPrfixSlice))
             {
-                var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
-                using var _ = Slice.From(context.Allocator, $"RemoveNodeFromDatabase/{database}/{removedNodeTag}/", out var guidPrfixSlice);
 
                 foreach (var (_, entryHolder) in table.SeekByPrimaryKeyPrefix(guidPrfixSlice, Slices.Empty, 0))
                 {
@@ -584,7 +582,9 @@ namespace Raven.Server.Rachis
                     var guidFromCmd = ReadGuid(entryHolder);
 
                     if (TryGetDeleteIndexFromDatabaseRemoveCommand(guidFromCmd, out var deleteIndexFromCmd) &&
-                        deleteIndex <= deleteIndexFromCmd && (deleteIndexFromCmd < index || index == 0)) // try to get the remove command with deleteIndexFromCmd which is the closest to 'deleteIndex' from above
+                        deleteIndex <= deleteIndexFromCmd &&
+                        (deleteIndexFromCmd < index ||
+                         index == 0)) // try to get the remove command with deleteIndexFromCmd which is the closest to 'deleteIndex' from above
                     {
                         index = cmdIndex;
                         if (index == deleteIndex)
