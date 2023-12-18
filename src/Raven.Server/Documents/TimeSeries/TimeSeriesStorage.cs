@@ -331,7 +331,8 @@ namespace Raven.Server.Documents.TimeSeries
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
 
-            if (InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector) == null)
+            remoteChangeVector = InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector);
+            if (remoteChangeVector == null)
                 return null;
 
             var collection = deletionRangeRequest.Collection;
