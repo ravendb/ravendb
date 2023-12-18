@@ -48,6 +48,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -3617,6 +3618,7 @@ namespace Raven.Server.ServerWide
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
             internal Action RestoreDatabaseAfterSavingDatabaseRecord;
+            internal Action<DocumentQueryResult> AdjustResult;
         }
         
         public readonly MemoryCache QueryClauseCache;

@@ -169,6 +169,8 @@ namespace Raven.Server.Documents.Handlers
             long totalDocumentsSizeInBytes;
             await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
+                ServerStore.ForTestingPurposes?.AdjustResult?.Invoke(result);
+
                 result.Timings = indexQuery.Timings?.ToTimings();
                 (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentQueryResultAsync(queryContext.Documents, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery), token.Token);
             }

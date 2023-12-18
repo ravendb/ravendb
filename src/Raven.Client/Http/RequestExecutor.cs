@@ -964,7 +964,8 @@ namespace Raven.Client.Http
 
                     if (response.IsSuccessStatusCode == false)
                     {
-                        if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionInfo, shouldRetry, token).ConfigureAwait(false) == false)
+                        if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionInfo, shouldRetry, token)
+                                .ConfigureAwait(false) == false)
                         {
                             if (response.Headers.TryGetValues("Database-Missing", out var databaseMissing))
                             {
@@ -978,9 +979,23 @@ namespace Raven.Client.Http
 
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
+                    
+                    try
+                    {
+                        responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Error occurred while attempting to process the response from server {url}", e);
+
+                        // there was a problem while reading the response from the server, try to fail over
+                        if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response: null, e, sessionInfo, shouldRetry, requestContext: null, token)
+                                .ConfigureAwait(false) == false)
+                            ThrowFailedToContactAllNodes(command, request);
+                    }
 
                     OnSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
-                    responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
                 }
                 finally
                 {
