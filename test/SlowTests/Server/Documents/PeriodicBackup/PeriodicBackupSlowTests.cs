@@ -3799,8 +3799,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 mre.WaitOne(_reasonableWaitTime);
                 mre.Reset();
+                List<SubscriptionState> subscriptionsConfig;
+                await WaitForValueAsync(async () =>
+                {
+                    subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
+                    return subscriptionsConfig[0].ChangeVectorForNextBatchStartingPoint;
+                }, lastCv);
 
-                var subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
+                subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(1, subscriptionsConfig.Count);
                 Assert.Equal(lastCv, subscriptionsConfig[0].ChangeVectorForNextBatchStartingPoint);
                 var snapshotCv = lastCv;
