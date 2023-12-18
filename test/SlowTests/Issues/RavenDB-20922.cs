@@ -372,7 +372,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes)]
         public async Task DisableAutoMapIndexClusterWideAndEnableLocally()
         {
-            var (_, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
 
@@ -388,6 +388,17 @@ namespace SlowTests.Issues
                 await CheckIndexStateInTheCluster(database, index[0].Name, IndexState.Normal);
 
                 await DisableIndexClusterWide(store, index[0].Name);
+
+                foreach (var server in nodes)
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        return documentDatabase.IndexStore.GetIndex(index[0].Name).State;
+                    }, IndexState.Disabled);
+                    var autoIndex = documentDatabase.IndexStore.GetIndex(index[0].Name);
+                    Assert.Equal(IndexState.Disabled, autoIndex.State);
+                }
 
                 documentDatabase = await Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 var index0 = documentDatabase.IndexStore.GetIndex(index[0].Name);
