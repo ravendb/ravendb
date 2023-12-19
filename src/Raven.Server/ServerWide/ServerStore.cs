@@ -621,7 +621,12 @@ namespace Raven.Server.ServerWide
                 _fileLocker = new FileLocker(Path.Combine(path.FullPath, "system.lock"));
                 _fileLocker.TryAcquireWriteLock(Logger);
 
-                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, CatastrophicFailureNotification);
+                string tempPath = null;
+
+                if (Configuration.Storage.TempPath != null)
+                    tempPath = Configuration.Storage.TempPath.Combine("System").FullPath;
+
+                options = StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, IoChanges, CatastrophicFailureNotification);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
