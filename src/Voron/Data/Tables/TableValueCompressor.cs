@@ -314,8 +314,8 @@ namespace Voron.Data.Tables
                                 // ensuring that the last entry is the most recent.
                                 lastWritten = int.Parse(Path.GetFileNameWithoutExtension(zip.Entries[^1].Name));
 
-                            Debug.Assert(lastWritten >= dictionaries.State.NumberOfEntries,
-                                message: "The number of last written entry in recovery file must be equal to or greater than the total number of entries in the state. " +
+                            Debug.Assert(lastWritten <= dictionaries.State.NumberOfEntries,
+                                message: "The number of last written entry in recovery file must be equal to or less than the total number of entries in the state. " +
                                          "Any deviation from this is a bug.");
 
                             if (lastWritten == dictionaries.State.NumberOfEntries)
