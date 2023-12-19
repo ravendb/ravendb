@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Server.Config;
 using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -60,11 +61,34 @@ namespace Raven.Server.Documents.Handlers.Admin
                     configuration.RetentionTime,
                     configuration.RetentionSize?.GetValue(SizeUnit.Bytes),
                     configuration.Compress);
+
+                if (GetBoolValueQueryString("persist", false) == true)
+                {
+                    try
+                    {
+                        var jsonFileModifier = new JsonConfigFileModifier(ServerStore.Configuration.ConfigPath);
+                        jsonFileModifier.Execute(context, j =>
+                        {
+                            ModifierConfigFileHelper.SetOrRemoveIfDefault(j, LoggingSource.Instance.LogMode, x => x.Logs.Mode);
+                            long? retentionSize = LoggingSource.Instance.RetentionSize == long.MaxValue
+                                ? null : new Size(LoggingSource.Instance.RetentionSize, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+                            ModifierConfigFileHelper.SetOrRemoveIfDefault(j, retentionSize, x => x.Logs.RetentionSize);
+                            ModifierConfigFileHelper.SetOrRemoveIfDefault(j, (int)LoggingSource.Instance.RetentionTime.TotalHours, x => x.Logs.RetentionTime);
+                            ModifierConfigFileHelper.SetOrRemoveIfDefault(j, LoggingSource.Instance.Compressing, x => x.Logs.Compress);
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        throw new PersistConfigurationException("The log configuration was modified but couldn't be persistent. The configuration will be reverted on server restart.", e);
+                    }
+                }
             }
 
             NoContentStatus();
         }
 
+        
+        
         [RavenAction("/admin/logs/watch", "GET", AuthorizationStatus.Operator)]
         public async Task RegisterForLogs()
         {
@@ -213,6 +237,31 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var provider = Server.GetService<MicrosoftLoggingProvider>();
                 await provider.Configuration.ReadConfigurationAsync(RequestBodyStream(), context, reset);
                 provider.ApplyConfiguration();
+                
+                if (GetBoolValueQueryString("persist", required: false) == true)
+                {
+                    try
+                    {
+                        var microsoftConfigModifier = new JsonConfigFileModifier(ServerStore.Configuration.Logs.MicrosoftLogsConfigurationPath.FullPath, true);
+                        microsoftConfigModifier.Execute(context, j =>
+                        {
+                            foreach (var (category, logLevel) in Server.GetService<MicrosoftLoggingProvider>().Configuration)
+                            {
+                                j[category] = logLevel;
+                            }
+                        });
+
+                        var settingJsonConfigModifier = new JsonConfigFileModifier(ServerStore.Configuration.ConfigPath);
+                        settingJsonConfigModifier.Execute(context, j =>
+                        {
+                            j[RavenConfiguration.GetKey(x => x.Logs.DisableMicrosoftLogs)] = false;
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        throw new PersistConfigurationException("The microsoft configuration was modified but couldn't be persistent. The configuration will be reverted on server restart.", e);
+                    }
+                }
             }
 
             NoContentStatus();
