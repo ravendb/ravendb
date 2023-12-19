@@ -352,7 +352,14 @@ namespace Raven.Server.ServerWide
                             {
                                 var topology = GetClusterTopology();
                                 var leader = _engine.LeaderTag;
-                                if (leader == null || leader == _engine.Tag)
+
+                                if (leader == null)
+                                {
+                                    delay = ReconnectionBackoff(delay);
+                                    break;
+                                }
+
+                                if (leader == _engine.Tag)
                                     break;
 
                                 var leaderUrl = topology.GetUrlFromTag(leader);
