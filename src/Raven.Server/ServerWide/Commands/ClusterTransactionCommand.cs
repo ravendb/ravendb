@@ -579,37 +579,13 @@ namespace Raven.Server.ServerWide.Commands
                 string id,
                 int shardNumber)
             {
-                if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
-                    throw new InvalidOperationException($"Got command with no type defined: {command}");
-
-                var result = new DynamicJsonValue { [nameof(ICommandData.Type)] = type, [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow, };
-
-                switch (type)
-                {
-                    case nameof(CommandType.PUT):
-                        if (command.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
-                            && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
-                            && metadata.TryGet(Constants.Documents.Metadata.Flags, out DocumentFlags flags))
-                        {
-                            result[Constants.Documents.Metadata.Flags] = flags | DocumentFlags.FromClusterTransaction;
-                        }
-
-                        result[Constants.Documents.Metadata.Id] = id;
-                        break;
-                    case nameof(CommandType.DELETE):
-                        result[Constants.Documents.Metadata.IdProperty] = id;
-                        break;
-                    default:
-                        throw new InvalidOperationException(
-                            $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.PUT} but got {type}");
-                }
-
-                var databaseId = _record.Sharding.Shards[shardNumber].DatabaseTopologyIdBase64;
-                var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(databaseId, ++_initialCount, _options.DisableAtomicDocumentWrites == false, _index,
+                return ClusterTransactionCommand.GetCommandResult(command,
+                    id,
+                    ref _initialCount,
+                    _options.DisableAtomicDocumentWrites,
+                    _index,
+                    _record.Sharding.Shards[shardNumber].DatabaseTopologyIdBase64,
                     _record.GetClusterTransactionId());
-
-                result[Constants.Documents.Metadata.ChangeVector] = changeVector;
-                return result;
             }
 
             private struct SingleCommandForShard
@@ -620,14 +596,14 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        private DynamicJsonValue GetCommandResult(
+        private static DynamicJsonValue GetCommandResult(
             BlittableJsonReaderObject command,
             string id,
             ref long initialCount,
             bool? disableAtomicDocumentWrites,
             long index,
-            string databaseTopologyIdBase64, // record.databaseTopologyIdBase64
-            string clusterTransactionId) // record.GetClusterTransactionId()
+            string databaseTopologyIdBase64,
+            string clusterTransactionId)
         {
             if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
                 throw new InvalidOperationException($"Got command with no type defined: {command}");
