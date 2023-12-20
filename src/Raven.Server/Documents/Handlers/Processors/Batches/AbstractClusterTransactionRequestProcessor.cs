@@ -70,7 +70,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         using (CreateClusterTransactionTask(id: options.TaskId, index, out var onDatabaseCompletionTask))
         {
-            array = await GetClusterTransactionDatabaseCommandsResults(result, raftRequestId, clusterTransactionCommand.DatabaseCommandsCount, onDatabaseCompletionTask);
+            array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, onDatabaseCompletionTask);
         }
 
         foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
@@ -86,8 +86,9 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         return (index, array);
     }
 
-    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, string raftRequestId, long databaseCommandsCount, Task<ClusterTransactionResult> onDatabaseCompletionTask)
+    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, long databaseCommandsCount, Task onDatabaseCompletionTask)
     {
+        // old leader returned errors
         if (result is List<ClusterTransactionErrorInfo> errors)
             ThrowClusterTransactionConcurrencyException(errors);
 
@@ -95,53 +96,28 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             return new DynamicJsonArray();
 
         RequestHandler.ServerStore.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
-        ClusterTransactionResult dbResult = null;
+
         using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
         {
-            dbResult = await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
+            await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
         }
-
-        if (dbResult != null)
-        {
-            if (dbResult.Errors != null && dbResult.Errors.Count > 0)
-                ThrowClusterTransactionConcurrencyException(dbResult.Errors);
-        
-            if (dbResult.GeneratedResult != null)
-            {
-                return dbResult.GeneratedResult;
-            }
-        }
-
-        /* Failover was occurred,
-           and because the ClusterTransactionCommand is already completed in the DocumentDatabase in this time,
-           the task with the result is no longer exists ,so the 'onDatabaseCompletionTask' is completed task which is holding null
-           (that's why the count has no value). */
 
         if (result is ClusterTransactionResult clusterTxResult)
         {
             // We'll try to take the count from the result of the cluster transaction command that we get from the leader.
+            if (clusterTxResult.Errors != null && clusterTxResult.Errors.Count > 0)
+                ThrowClusterTransactionConcurrencyException(clusterTxResult.Errors);
+
             return clusterTxResult.GeneratedResult;
         }
 
-        // leader isn't updated (thats why the result is empty),
-        // so we'll try to take the result from the local history log.
-        using (RequestHandler.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-        using (ctx.OpenReadTransaction())
-        {
-            if (RequestHandler.ServerStore.Engine.LogHistory.TryGetResultByGuid<ClusterTransactionResult>(ctx, raftRequestId, out var clusterTxLocalResult))
-            {
-                return clusterTxLocalResult.GeneratedResult;
-            }
-        }
-
-        // the command was already deleted from the log
         throw new InvalidOperationException(
             "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
     }
 
-    public abstract IDisposable CreateClusterTransactionTask(string id, long index, out Task<ClusterTransactionResult> task);
+    public abstract IDisposable CreateClusterTransactionTask(string id, long index, out Task task);
 
-    public abstract Task<ClusterTransactionResult> WaitForDatabaseCompletion(Task<ClusterTransactionResult> onDatabaseCompletionTask, CancellationToken token);
+    public abstract Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, CancellationToken token);
 
     private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionErrorInfo> errors)
     {

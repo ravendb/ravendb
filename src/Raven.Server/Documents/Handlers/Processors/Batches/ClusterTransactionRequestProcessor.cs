@@ -26,12 +26,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
         protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(MergedBatchCommand command) => command.ParsedCommands;
 
         protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.Database.Configuration.Cluster;
-        public override IDisposable CreateClusterTransactionTask(string id, long index, out Task<ClusterTransactionResult> task)
+        public override IDisposable CreateClusterTransactionTask(string id, long index, out Task task)
         {
             return RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTaskForDatabase(id, index, RequestHandler.Database, out task);
         }
 
-        public override Task<ClusterTransactionResult> WaitForDatabaseCompletion(Task<ClusterTransactionResult> onDatabaseCompletionTask, CancellationToken token)
+        public override Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, CancellationToken token)
         {
             return onDatabaseCompletionTask.WithCancellation(token);
         }
