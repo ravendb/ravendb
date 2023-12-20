@@ -2,7 +2,7 @@ import React, { ComponentProps, ReactNode, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
-import { Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
+import { Button, Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon } from "./RadioToggle";
 import AceEditor, { AceEditorProps } from "./AceEditor";
@@ -12,6 +12,7 @@ import SelectCreatable from "./select/SelectCreatable";
 import { GetOptionValue, GroupBase, OnChangeValue, OptionsOrGroups } from "react-select";
 import Select, { SelectValue } from "./select/Select";
 import DatePicker from "./DatePicker";
+import { Icon } from "components/common/Icon";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -27,6 +28,7 @@ interface AddonProps {
 type FormInputProps = Omit<InputProps, "addon"> &
     AddonProps & {
         type: InputType;
+        passwordPreview?: boolean;
     };
 
 export interface FormCheckboxesOption<T extends string | number = string> {
@@ -85,18 +87,22 @@ export function FormCheckboxes<TFieldValues extends FieldValues, TName extends F
     };
 
     return (
-        <div className={classNames("flex-vertical", className)}>
-            {options.map((option) => (
-                <Checkbox
-                    key={option.value}
-                    className={checkboxClassName}
-                    selected={selectedValues.includes(option.value)}
-                    toggleSelection={(x) => toggleSelection(x.currentTarget.checked, option.value)}
-                >
-                    {option.label}
-                </Checkbox>
-            ))}
-            {invalid && <div className="text-danger small">{error.message}</div>}
+        <div className="position-relative flex-grow-1">
+            <div className={classNames("d-flex flex-grow-1 flex-vertical", className)}>
+                {options.map((option) => (
+                    <Checkbox
+                        key={option.value}
+                        className={checkboxClassName}
+                        selected={selectedValues.includes(option.value)}
+                        toggleSelection={(x) => toggleSelection(x.currentTarget.checked, option.value)}
+                    >
+                        {option.label}
+                    </Checkbox>
+                ))}
+                {invalid && (
+                    <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
+                )}
+            </div>
         </div>
     );
 }
@@ -163,15 +169,21 @@ export function FormSelect<
     const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
 
     return (
-        <div className="vstack flex-grow">
-            <Select
-                value={selectedOptions}
-                onChange={(options: OnChangeValue<Option, IsMulti>) => {
-                    onChange(Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options));
-                }}
-                {...rest}
-            />
-            {invalid && <div className="text-danger small">{error.message}</div>}
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
+                <Select
+                    value={selectedOptions}
+                    onChange={(options: OnChangeValue<Option, IsMulti>) => {
+                        onChange(
+                            Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
+                        );
+                    }}
+                    {...rest}
+                />
+            </div>
+            {invalid && (
+                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
+            )}
         </div>
     );
 }
@@ -219,16 +231,22 @@ export function FormSelectCreatable<
     };
 
     return (
-        <div>
-            <SelectCreatable
-                value={selectedOptions}
-                onChange={(options: OnChangeValue<Option, IsMulti>) => {
-                    onChange(Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options));
-                }}
-                onCreateOption={onCreateOption}
-                {...rest}
-            />
-            {invalid && <div className="text-danger small">{error.message}</div>}
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
+                <SelectCreatable
+                    value={selectedOptions}
+                    onChange={(options: OnChangeValue<Option, IsMulti>) => {
+                        onChange(
+                            Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
+                        );
+                    }}
+                    onCreateOption={onCreateOption}
+                    {...rest}
+                />
+            </div>
+            {invalid && (
+                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
+            )}
         </div>
     );
 }
@@ -250,9 +268,13 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
     });
 
     return (
-        <div>
-            <RadioToggleWithIcon name={name} selectedValue={value} setSelectedValue={onChange} {...rest} />
-            {invalid && <div className="text-danger small">{error.message}</div>}
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
+                <RadioToggleWithIcon name={name} selectedValue={value} setSelectedValue={onChange} {...rest} />
+            </div>
+            {invalid && (
+                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
+            )}
         </div>
     );
 }
@@ -295,10 +317,12 @@ export function FormDurationPicker<
     });
 
     return (
-        <>
-            <DurationPicker totalSeconds={value} onChange={onChange} {...rest} />
-            {error && <div className="d-flex text-danger small w-100">{error.message}</div>}
-        </>
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
+                <DurationPicker totalSeconds={value} onChange={onChange} {...rest} />
+            </div>
+            {error && <div className="position-absolute badge bg-danger rounded-pill">{error.message}</div>}
+        </div>
     );
 }
 
@@ -320,15 +344,17 @@ export function FormDatePicker<
     });
 
     return (
-        <>
-            <div className="d-flex flex-grow">
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
                 <InputGroup>
                     <DatePicker {...rest} selected={value} onChange={onChange} invalid={invalid} />
                     {addon && <InputGroupText>{addon}</InputGroupText>}
                 </InputGroup>
             </div>
-            {error && <div className="d-flex text-danger small w-100">{error.message}</div>}
-        </>
+            {error && (
+                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
+            )}
+        </div>
     );
 }
 
@@ -336,7 +362,8 @@ function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "addon"> & AddonProps) {
-    const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, ...rest } = props;
+    const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, passwordPreview, ...rest } =
+        props;
 
     const {
         field: { onChange, onBlur, value },
@@ -357,27 +384,50 @@ function FormInputGeneral<
         }
     };
 
+    const [showPassword, setShowPassword] = useState(false);
+
+    const actualInputType = showPassword ? "text" : type;
+
     return (
-        <>
-            <div className="d-flex flex-grow">
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
                 <InputGroup>
                     <Input
                         name={name}
-                        type={type}
+                        type={actualInputType}
                         onBlur={onBlur}
                         onChange={(x) => handleValueChange(x.currentTarget.value)}
                         value={value == null ? "" : value}
                         invalid={invalid}
+                        className={classNames(
+                            "position-relative d-flex flex-grow-1",
+                            passwordPreview ? "preview-password" : null
+                        )}
                         {...rest}
                     >
                         {children}
                     </Input>
                     {addon && <InputGroupText>{addon}</InputGroupText>}
+                    {passwordPreview && (
+                        <Button
+                            color="link-muted"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className={classNames("btn-preview position-absolute end-0 h-100", invalid && "me-3")}
+                        >
+                            {showPassword ? (
+                                <Icon icon="preview-off" title="Hide password" margin="m-0" />
+                            ) : (
+                                <Icon icon="preview" title="Show password" margin="m-0" />
+                            )}
+                        </Button>
+                    )}
                 </InputGroup>
             </div>
 
-            {error && <div className="d-flex text-danger small w-100">{error.message}</div>}
-        </>
+            {error && (
+                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
+            )}
+        </div>
     );
 }
 
@@ -413,16 +463,18 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
     }
 
     return (
-        <>
-            <ToggleComponent
-                selected={!!value}
-                toggleSelection={onChange}
-                invalid={invalid}
-                onBlur={onBlur}
-                color="primary"
-                {...rest}
-            />
-            {invalid && <div className="text-danger small">{error.message}</div>}
-        </>
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
+                <ToggleComponent
+                    selected={!!value}
+                    toggleSelection={onChange}
+                    invalid={invalid}
+                    onBlur={onBlur}
+                    color="primary"
+                    {...rest}
+                />
+            </div>
+            {invalid && <div className="position-absolute badge bg-danger rounded-pill">{error.message}</div>}
+        </div>
     );
 }

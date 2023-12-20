@@ -490,7 +490,7 @@ $btn-font-size-xs: $input-btn-font-size-xs !default;
 $btn-border-width: $input-btn-border-width !default;
 
 $btn-font-weight: $font-weight-normal !default;
-$btn-box-shadow: 0px 1px 0px 0px rgba($well-bg, 0.5) !default;
+$btn-box-shadow: none !default;
 $btn-focus-width: $input-btn-focus-width !default;
 $btn-focus-box-shadow: $input-btn-focus-box-shadow !default;
 $btn-disabled-opacity: 0.4 !default;

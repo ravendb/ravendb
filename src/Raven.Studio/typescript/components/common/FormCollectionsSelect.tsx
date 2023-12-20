@@ -77,13 +77,15 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
     return (
         <div className="vstack gap-2">
             {!isReadOnly && (
-                <FormRadioToggleWithIcon
-                    control={control}
-                    name={isAllCollectionsFormName}
-                    leftItem={leftRadioToggleItem}
-                    rightItem={rightRadioToggleItem}
-                    className="d-flex justify-content-center"
-                />
+                <div className="w-fit-content mx-auto">
+                    <FormRadioToggleWithIcon
+                        control={control}
+                        name={isAllCollectionsFormName}
+                        leftItem={leftRadioToggleItem}
+                        rightItem={rightRadioToggleItem}
+                        className="d-flex justify-content-center"
+                    />
+                </div>
             )}
             <Collapse isOpen={!isAllCollections}>
                 {!isReadOnly && (
