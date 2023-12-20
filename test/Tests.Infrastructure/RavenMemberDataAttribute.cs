@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using FastTests;
 using Raven.Client.Util;
 using Xunit;
 
@@ -38,7 +37,7 @@ public class RavenMemberDataAttribute : MemberDataAttributeBase
             {
                 foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
                 {
-                    using (SkipIfNeeded(o))
+                    using (SkipIfNeeded(databaseMode))
                     {
                         var length = item.Length + 1;
                         if (Data is { Length: > 0 })
@@ -62,22 +61,14 @@ public class RavenMemberDataAttribute : MemberDataAttributeBase
             }
     }
 
-    protected IDisposable SkipIfNeeded(RavenTestBase.Options options)
+    private IDisposable SkipIfNeeded(RavenDatabaseMode databaseMode)
     {
-        if (string.IsNullOrEmpty(Skip) == false)
+        if (RavenDataAttributeBase.CanContinue(databaseMode, Skip))
         {
-            // test skipped explicitly in attribute
             return null;
         }
 
-        if (string.IsNullOrEmpty(options.Skip))
-        {
-            // no skip in options
-            return null;
-        }
-
-        var s = Skip;
-        Skip = options.Skip;
-        return new DisposableAction(() => Skip = s);
+        Skip = RavenDataAttributeBase.ShardingSkipMessage;
+        return new DisposableAction(() => Skip = null);
     }
 }

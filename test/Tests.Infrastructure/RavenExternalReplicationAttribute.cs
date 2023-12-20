@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
 
@@ -31,12 +30,12 @@ public class RavenExternalReplicationAttribute : RavenDataAttributeBase
 
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
-        foreach (var (_, dstOptions) in RavenDataAttribute.GetOptions(_destination))
+        foreach (var (dstDatabaseMode, dstOptions) in RavenDataAttribute.GetOptions(_destination))
         {
-            foreach (var (__, srcOptions) in RavenDataAttribute.GetOptions(_source))
+            foreach (var (srcDatabaseMode, srcOptions) in RavenDataAttribute.GetOptions(_source))
             {
-                using (SkipIfNeeded(dstOptions))
-                using (SkipIfNeeded(srcOptions))
+                using (SkipIfNeeded(dstDatabaseMode))
+                using (SkipIfNeeded(srcDatabaseMode))
                 {
                     if (_data == null || _data.Length == 0)
                     {
