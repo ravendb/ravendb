@@ -97,20 +97,20 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         RequestHandler.ServerStore.ForTestingPurposes?.AfterCommitInClusterTransaction?.Invoke();
 
-        using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
-        {
-            await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
-        }
-
         if (result is ClusterTransactionResult clusterTxResult)
         {
-            // We'll try to take the count from the result of the cluster transaction command that we get from the leader.
             if (clusterTxResult.Errors != null && clusterTxResult.Errors.Count > 0)
                 ThrowClusterTransactionConcurrencyException(clusterTxResult.Errors);
+
+            using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
+            {
+                await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
+            }
 
             return clusterTxResult.GeneratedResult;
         }
 
+        // old leader returned null
         throw new InvalidOperationException(
             "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
     }
