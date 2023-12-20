@@ -72,7 +72,6 @@ using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
-using MySqlX.XDevAPI.Common;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents
@@ -785,16 +784,15 @@ namespace Raven.Server.Documents
 
                     indexTask.ContinueWith(t =>
                     {
-                        try
+                        if(t.IsFaulted)
                         {
-                            t.GetAwaiter().GetResult(); // Task t is already completed here
-                            RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                            ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId, taskResult);
+                            RachisLogIndexNotifications.NotifyListenersAbout(index, t.Exception);
+                            ServerStore.Cluster.ClusterTransactionWaiter.SetException(options.TaskId, t.Exception);
                         }
-                        catch (Exception e)
+                        else
                         {
-                            RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-                            ServerStore.Cluster.ClusterTransactionWaiter.SetException(options.TaskId, e);
+                            RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                            ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId);
                         }
 
                         removeTask.Dispose();
@@ -803,7 +801,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                    ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId, taskResult);
+                    ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId);
                 }
 
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
