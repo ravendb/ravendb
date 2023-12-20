@@ -989,7 +989,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private ClusterTransactionResult ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private object ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
@@ -1012,13 +1012,11 @@ namespace Raven.Server.ServerWide
 
                 var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
 
-                var clusterTransactionResult = new ClusterTransactionResult
-                {
-                    Errors = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems)
-                };
-                if (clusterTransactionResult.Errors == null)
+                var errors = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems);
+                if (errors == null)
                 {
                     DatabasesLandlord.ClusterDatabaseChangeType notify;
+                    var clusterTransactionResult = new ClusterTransactionResult();
                     if (clusterTransaction.HasDocumentsInTransaction)
                     {
                         clusterTransactionResult.GeneratedResult = clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
@@ -1035,7 +1033,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 OnTransactionDispose(context, index);
-                return clusterTransactionResult;
+                return errors;
             }
             catch (Exception e)
             {

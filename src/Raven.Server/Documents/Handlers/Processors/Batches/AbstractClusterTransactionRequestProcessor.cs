@@ -99,9 +99,6 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         if (result is ClusterTransactionResult clusterTxResult)
         {
-            if (clusterTxResult.Errors != null && clusterTxResult.Errors.Count > 0)
-                ThrowClusterTransactionConcurrencyException(clusterTxResult.Errors);
-
             using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
             {
                 await WaitForDatabaseCompletion(onDatabaseCompletionTask, cts.Token);
