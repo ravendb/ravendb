@@ -108,7 +108,7 @@ export default function EditRevision(props: EditRevisionProps) {
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info" centered>
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-                <ModalBody className="vstack gap-2">
+                <ModalBody className="vstack gap-3">
                     <h4>{getTitle(taskType, configType)}</h4>
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
