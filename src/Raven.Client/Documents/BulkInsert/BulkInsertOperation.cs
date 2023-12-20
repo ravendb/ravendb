@@ -251,14 +251,14 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task SendHeartBeatAsync()
         {
+            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
+                return;
+
+            if (_streamLock.Wait(0) == false)
+                return; // if locked we are already writing
+
             try
             {
-                if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
-                    return;
-
-                if (_streamLock.Wait(0) == false)
-                    return; // if locked we are already writing
-
                 await ExecuteBeforeStore().ConfigureAwait(false);
                 EndPreviousCommandIfNeeded();
                 _options.ForTestingPurposes?.OnSendHeartBeat_DoBulkStore?.Invoke();
