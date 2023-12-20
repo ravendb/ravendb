@@ -965,13 +965,8 @@ namespace Raven.Server.ServerWide.Commands
         internal static ClusterTransactionResult GetResults(BlittableJsonReaderObject bjro)
         {
             var results = new ClusterTransactionResult();
-            if (bjro.TryGet(nameof(ClusterTransactionResult.Errors), out BlittableJsonReaderArray bjra) && bjra != null)
-            {
-                results.Errors = GetErrors(bjra);
-            }
-
-            if (bjro.TryGet(nameof(ClusterTransactionResult.GeneratedResult), out BlittableJsonReaderArray bjra1))
-                results.GeneratedResult = GetGeneratedResults(bjra1);
+            if (bjro.TryGet(nameof(ClusterTransactionResult.GeneratedResult), out BlittableJsonReaderArray bjra))
+                results.GeneratedResult = GetGeneratedResults(bjra);
 
             return results;
         }
