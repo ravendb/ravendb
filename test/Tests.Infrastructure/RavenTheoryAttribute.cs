@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using Xunit;
+﻿using Xunit;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
@@ -8,9 +7,8 @@ namespace Tests.Infrastructure;
 public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
 {
     private string _skip;
-    internal const string CoraxSkipMessage = $"Corax tests are skipped on Architecture.X86";
-    internal const string ShardingSkipMessage = $"Sharding tests are skipped on Architecture.X86";
     private readonly RavenTestCategory _category;
+
     public RavenTheoryAttribute(RavenTestCategory category)
     {
         _category = category;
@@ -26,12 +24,10 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
             if (skip != null)
                 return skip;
 
-            if (RuntimeInformation.ProcessArchitecture == Architecture.X86)
+            if (RavenDataAttributeBase.Is32Bit)
             {
-                if (_category.HasFlag(RavenTestCategory.Corax))
-                    return RavenTheoryAttribute.CoraxSkipMessage;
                 if (_category.HasFlag(RavenTestCategory.Sharding))
-                    return RavenTheoryAttribute.ShardingSkipMessage;
+                    return RavenDataAttributeBase.ShardingSkipMessage;
             }
 
             if (LicenseRequiredFactAttribute.ShouldSkip(LicenseRequired))

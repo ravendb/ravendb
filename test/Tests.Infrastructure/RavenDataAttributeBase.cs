@@ -1,5 +1,5 @@
 ﻿using System;
-using FastTests;
+using System.Runtime.InteropServices;
 using Raven.Client.Util;
 using Xunit.Sdk;
 
@@ -7,22 +7,32 @@ namespace Tests.Infrastructure;
 
 public abstract class RavenDataAttributeBase : DataAttribute
 {
-    protected IDisposable SkipIfNeeded(RavenTestBase.Options options)
+    internal static readonly bool Is32Bit = RuntimeInformation.ProcessArchitecture == Architecture.X86;
+    internal const string ShardingSkipMessage = "RavenDB-19879: Skip Sharded database tests on x86 architecture.";
+
+    protected IDisposable SkipIfNeeded(RavenDatabaseMode databaseMode)
     {
-        if (string.IsNullOrEmpty(Skip) == false)
+        if (CanContinue(databaseMode, Skip))
+            return null;
+
+        Skip = ShardingSkipMessage;
+        return new DisposableAction(() => Skip = null);
+    }
+
+    public static bool CanContinue(RavenDatabaseMode databaseMode, string skip)
+    {
+        if (Is32Bit == false)
+            return true;
+
+        if (databaseMode.HasFlag(RavenDatabaseMode.Sharded) == false)
+            return true;
+
+        if (string.IsNullOrEmpty(skip) == false)
         {
             // test skipped explicitly in attribute
-            return null;
+            return true;
         }
 
-        if (string.IsNullOrEmpty(options.Skip))
-        {
-            // no skip in options
-            return null;
-        }
-
-        var s = Skip;
-        Skip = options.Skip;
-        return new DisposableAction(() => Skip = s);
+        return false;
     }
 }

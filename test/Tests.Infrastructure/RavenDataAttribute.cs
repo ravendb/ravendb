@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using FastTests;
 using Raven.Server.Config;
 
@@ -31,8 +30,6 @@ public class RavenDataAttribute : RavenDataAttributeBase
 
     public object[] Data { get; set; } = null;
 
-    public static readonly bool Is32Bit = RuntimeInformation.ProcessArchitecture == Architecture.X86;
-
     public RavenDataAttribute()
     {
     }
@@ -46,9 +43,9 @@ public class RavenDataAttribute : RavenDataAttributeBase
     {
         foreach (var (databaseMode, options) in GetOptions(DatabaseMode))
         {
-            foreach (var (searchMode, o) in FillOptions(options, SearchEngineMode))
+            foreach (var (_, o) in FillOptions(options, SearchEngineMode))
             {
-                using (SkipIfNeeded(o))
+                using (SkipIfNeeded(databaseMode))
                 {
                     var length = 1;
                     if (Data is { Length: > 0 })
@@ -72,15 +69,7 @@ public class RavenDataAttribute : RavenDataAttributeBase
             yield return (RavenDatabaseMode.Single, RavenTestBase.Options.ForMode(RavenDatabaseMode.Single));
 
         if (mode.HasFlag(RavenDatabaseMode.Sharded))
-        {
-            var ops = RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded);
-            if (Is32Bit)
-            {
-                ops.Skip = "RavenDB-19879: Skip Sharded database tests on x86 architecture.";
-            }
-
-            yield return (RavenDatabaseMode.Sharded, ops);
-        }
+            yield return (RavenDatabaseMode.Sharded, RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
     }
 
     internal static IEnumerable<(RavenSearchEngineMode SearchEngineMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
@@ -88,11 +77,6 @@ public class RavenDataAttribute : RavenDataAttributeBase
         if (mode.HasFlag(RavenSearchEngineMode.Corax))
         {
             var coraxOptions = options.Clone();
-            if (Is32Bit && string.IsNullOrEmpty(coraxOptions.Skip))
-            {
-                coraxOptions.Skip = "RavenDB-19879: Skip Corax search engine tests on x86 architecture.";
-            }
-
             coraxOptions.SearchEngineMode = RavenSearchEngineMode.Corax;
             coraxOptions.ModifyDatabaseRecord += record =>
             {

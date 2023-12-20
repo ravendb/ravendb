@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
 using FastTests;
-using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
 
@@ -28,7 +27,7 @@ public class RavenExplicitDataAttribute : RavenDataAttributeBase
         {
             foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
             {
-                using (SkipIfNeeded(o))
+                using (SkipIfNeeded(databaseMode))
                 {
                     var length = 1;
                     if (Data is { Length: > 0 })

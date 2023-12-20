@@ -12,6 +12,7 @@ using Xunit;
 using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
+using Tests.Infrastructure;
 
 namespace SlowTests.Corax;
 
@@ -21,7 +22,7 @@ public class IndexSearcherTest : StorageTest
     {
     }
 
-    [Fact]
+    [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.X64)]
     public void SetTerm()
     {
         var entries = new IndexEntry[100000];

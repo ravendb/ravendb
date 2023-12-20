@@ -25,10 +25,8 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
                 return skip;
             if (RuntimeInformation.ProcessArchitecture == Architecture.X86)
             {
-                if (_category.HasFlag(RavenTestCategory.Corax))
-                    return RavenTheoryAttribute.CoraxSkipMessage;
                 if (_category.HasFlag(RavenTestCategory.Sharding))
-                    return RavenTheoryAttribute.ShardingSkipMessage;
+                    return RavenDataAttributeBase.ShardingSkipMessage;
             }
 
             if (LicenseRequiredFactAttribute.ShouldSkip(LicenseRequired))
