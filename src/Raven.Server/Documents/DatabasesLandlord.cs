@@ -266,9 +266,6 @@ namespace Raven.Server.Documents
                 task = TryGetOrCreateResourceStore(databaseName, ignoreBeenDeleted: true, caller: type);
             }
 
-            if (task.IsCanceled || task.IsFaulted)
-                return;
-
             var database = await task;
 
             switch (changeType)
