@@ -36,7 +36,7 @@ public class LoggingConfigurationTests : RavenTestBase
         var settingJsonModifier = new JsonConfigFileModifier(settingJsonPath);
         using (var context = JsonOperationContext.ShortTermSingleUse())
         {
-            settingJsonModifier.Execute(context, j =>
+            await settingJsonModifier.Execute(context, j =>
             {
                 j[RavenConfiguration.GetKey(x => x.Logs.Mode)] = LogMode.Information;
             });
@@ -61,7 +61,7 @@ public class LoggingConfigurationTests : RavenTestBase
        
         using (var context = JsonOperationContext.ShortTermSingleUse())
         {
-            settingJsonModifier.Execute(context, j =>
+            await settingJsonModifier.Execute(context, j =>
             {
                 j[RavenConfiguration.GetKey(x => x.Logs.Mode)] = LogMode.Information;
             });
@@ -88,7 +88,7 @@ public class LoggingConfigurationTests : RavenTestBase
         var settingJsonModifier = new JsonConfigFileModifier(settingJsonPath);
         using (var context = JsonOperationContext.ShortTermSingleUse())
         {
-            settingJsonModifier.Execute(context, j =>
+            await settingJsonModifier.Execute(context, j =>
             {
                 j[RavenConfiguration.GetKey(x => x.Logs.Mode)] = LogMode.Information;
                 j[RavenConfiguration.GetKey(x => x.Logs.RetentionTime)] = 200;
@@ -127,7 +127,7 @@ public class LoggingConfigurationTests : RavenTestBase
         };
         using (var context = JsonOperationContext.ShortTermSingleUse())
         {
-            settingJsonModifier.Execute(context, j =>
+            await settingJsonModifier.Execute(context, j =>
             {
                 j[RavenConfiguration.GetKey(x => x.Logs.Mode)] = LogMode.Information;
                 j[RavenConfiguration.GetKey(x => x.Logs.RetentionTime)] = 200;
