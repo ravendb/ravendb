@@ -13,6 +13,7 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
 using QueueSinkConfiguration = Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration;
@@ -126,6 +127,39 @@ namespace SlowTests.Server.Documents.QueueSink
             public string LastName { get; set; }
 
             public string FullName { get; set; }
+        }
+
+        protected QueueSinkConfiguration SetupRabbitMqQueueSink(DocumentStore store, string script, List<string> queues,
+            string configurationName = null, string transformationName = null)
+        {
+            var connectionStringName = $"RabbitMQ to {store.Database}";
+
+            QueueSinkScript queueSinkScript = new QueueSinkScript
+            {
+                Name = transformationName ?? $"Queue Sink : {connectionStringName}",
+                Queues = new List<string>(queues),
+                Script = script,
+            };
+            var config = new QueueSinkConfiguration
+            {
+                Name = configurationName ?? connectionStringName,
+                ConnectionStringName = connectionStringName,
+                Scripts = { queueSinkScript },
+                BrokerType = QueueBrokerType.RabbitMq
+            };
+
+            AddQueueSink(store, config,
+                new QueueConnectionString
+                {
+                    Name = connectionStringName,
+                    BrokerType = QueueBrokerType.RabbitMq,
+                    RabbitMqConnectionSettings = new RabbitMqConnectionSettings
+                    {
+                        ConnectionString = RabbitMqConnectionString.Instance.VerifiedConnectionString.Value
+                    }
+                });
+
+            return config;
         }
     }
 }
