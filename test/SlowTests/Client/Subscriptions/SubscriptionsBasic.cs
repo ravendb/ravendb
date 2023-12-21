@@ -36,6 +36,7 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.Issues.RavenDB_8450;
 using DisposableAction = Voron.Util.DisposableAction;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -1549,6 +1550,39 @@ namespace SlowTests.Client.Subscriptions
             await AssertWaitForExceptionAsync<KeyNotFoundException>(async () => await Task.Run(() => db.SubscriptionStorage.GetSubscriptionStateById(state.SubscriptionId)), interval: 1000);
         }
 
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "RavenDB-20024")]
+        public void CanGetSubscriptionsResultsWithEscapeHandling(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Arava"
+                    }, "people/1");
+                    session.Store(new Dog(DateTime.Now)
+                    {
+                        Name = 322,
+                        Owner = "people/1"
+                    });
+                     session.SaveChanges();
+                }
+
+                var result = store.Operations.Send(new SubscriptionTryoutOperation(new SubscriptionTryout
+                {
+                    Query = "from Dogs include Owner"
+                }));
+
+                dynamic obj = JObject.Parse(result);
+                Assert.NotNull(obj.Includes);
+                Assert.NotNull(obj.Includes["people/1"]);
+                Assert.Equal("Arava", obj.Includes["people/1"].Name.ToString());
+            }
+        }
+
         private class IdleDatabaseStatistics
         {
             public string MaxIdleTime { get; set; }
@@ -1591,6 +1625,8 @@ namespace SlowTests.Client.Subscriptions
             public int Name { get; set; }
 
             public DateTime Zz { get; set; }
+
+            public string Owner { get; set; }
 
             public Dog(DateTime zz)
             {
