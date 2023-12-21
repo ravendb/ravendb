@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Raven.Client.Exceptions;
@@ -26,13 +27,13 @@ public class JsonConfigFileModifier
         _reset = reset;
     }
 
-    public void Execute(JsonOperationContext context, Action<DynamicJsonValue> modifyAction)
+    public async Task Execute(JsonOperationContext context, Action<DynamicJsonValue> modifyAction)
     {
         using var json = ReadBlittableFromFile(context);
         json.Modifications = new DynamicJsonValue(json);
         modifyAction(json.Modifications);
         var modifiedJsonObj = context.ReadObject(json, "modified-settings-json");
-        PersistConfiguration(modifiedJsonObj);
+        await PersistConfiguration(modifiedJsonObj);
     }
 
     private BlittableJsonReaderObject ReadBlittableFromFile(JsonOperationContext context)
@@ -84,22 +85,22 @@ public class JsonConfigFileModifier
         }
     }
 
-    private void PersistConfiguration(BlittableJsonReaderObject json)
+    private async Task PersistConfiguration(BlittableJsonReaderObject json)
     {
         using var tempFile = new TempFile(_path);
-        
-        using (var file = OpenFile(tempFile.Path, FileMode.Create, FileAccess.ReadWrite))
-        using (var streamWriter = new StreamWriter(file))
-        using (var writer = new JsonTextWriter(streamWriter))
-        using (var reader = new BlittableJsonReader())
+
+        await using (var file = OpenFile(tempFile.Path, FileMode.Create, FileAccess.ReadWrite))
+        await using (var streamWriter = new StreamWriter(file))
+        await using (var writer = new JsonTextWriter(streamWriter))
+        await using (var reader = new BlittableJsonReader())
         {
             writer.Formatting = Formatting.Indented;
             reader.Initialize(json);
 
-            writer.WriteToken(reader);
+            await writer.WriteTokenAsync(reader);
                 
-            writer.Flush();
-            streamWriter.Flush();
+            await writer.FlushAsync();
+            await streamWriter.FlushAsync();
             file.Flush(true);
         }
         
