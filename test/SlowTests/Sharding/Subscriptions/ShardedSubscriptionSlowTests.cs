@@ -329,9 +329,9 @@ namespace SlowTests.Sharding.Subscriptions
                     break;
                 case SubscriptionChangeVectorUpdateConcurrencyException:
                     // sometimes we may hit cv concurrency exception because of the update
-                    Assert.StartsWith(
-                        $"Can't acknowledge subscription with name '{state.SubscriptionName}'",
-                        OnSubscriptionConnectionRetryException.Message);
+                    Assert.True(
+                        OnSubscriptionConnectionRetryException.Message.StartsWith($"Can't acknowledge subscription with name '{state.SubscriptionName}'")
+                        || OnSubscriptionConnectionRetryException.Message.StartsWith($"The subscription '{state.SubscriptionName}' was modified on shard"));
                     break;
             }
         }

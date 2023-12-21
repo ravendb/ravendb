@@ -950,8 +950,8 @@ namespace Raven.Client.Documents.Subscriptions
                     // if we failed to talk to a node, we'll forget about it and let the topology to
                     // redirect us to the current node
                     return (true, null);
-                case SubscriptionChangeVectorUpdateConcurrencyException _:
-                    return HandleSubscriptionChangeVectorUpdateConcurrencyException();
+                case SubscriptionChangeVectorUpdateConcurrencyException subscriptionChangeVectorUpdateConcurrencyException:
+                    return HandleSubscriptionChangeVectorUpdateConcurrencyException(subscriptionChangeVectorUpdateConcurrencyException);
 
                 case SubscriptionClosedException sce:
                     return HandleSubscriptionClosedException(sce);
@@ -993,7 +993,7 @@ namespace Raven.Client.Documents.Subscriptions
             return (false, _redirectNode);
         }
 
-        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionChangeVectorUpdateConcurrencyException()
+        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionChangeVectorUpdateConcurrencyException(SubscriptionChangeVectorUpdateConcurrencyException subscriptionChangeVectorUpdateConcurrencyException)
         {
             return (true, _redirectNode);
         }

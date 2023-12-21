@@ -180,7 +180,8 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         {
             try
             {
-                w.Value.Dispose();
+                // this code can be called from sharded worker itself (AbstractSubscriptionWorker._subscriptionTask)
+                w.Value.Dispose(waitForSubscriptionTask: false);
             }
             catch
             {

@@ -159,9 +159,11 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             return (true, _redirectNode);
         }
 
-        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionChangeVectorUpdateConcurrencyException()
+        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionChangeVectorUpdateConcurrencyException(SubscriptionChangeVectorUpdateConcurrencyException subscriptionChangeVectorUpdateConcurrencyException)
         {
             // the orchestrator will reconnect (and restart the sharded workers) since the subscription was changed
+            _state.DropSubscription(subscriptionChangeVectorUpdateConcurrencyException);
+
             return (false, null);
         }
 
