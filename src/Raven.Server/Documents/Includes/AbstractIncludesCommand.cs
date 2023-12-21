@@ -28,7 +28,7 @@ public abstract class AbstractIncludesCommand
         _includeCountersCommand = includeCountersCommand;
     }
 
-    protected abstract ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context,
+    public abstract ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context,
         CancellationToken token);
 
     public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope, CancellationToken token)
