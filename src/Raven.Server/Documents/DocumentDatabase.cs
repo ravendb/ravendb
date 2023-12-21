@@ -786,8 +786,9 @@ namespace Raven.Server.Documents
                     {
                         if(t.IsFaulted)
                         {
-                            RachisLogIndexNotifications.NotifyListenersAbout(index, t.Exception);
-                            ServerStore.Cluster.ClusterTransactionWaiter.SetException(options.TaskId, t.Exception);
+                            Exception e = t.Exception.InnerException;
+                            RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                            ServerStore.Cluster.ClusterTransactionWaiter.SetException(options.TaskId, e);
                         }
                         else
                         {
