@@ -947,13 +947,16 @@ namespace Raven.Server.ServerWide.Commands
             return results;
         }
 
-        private static DynamicJsonArray GetGeneratedResults(BlittableJsonReaderArray bjro)
+        private static DynamicJsonArray GetGeneratedResults(BlittableJsonReaderArray bjra)
         {
             var array = new DynamicJsonArray();
 
-            foreach (BlittableJsonReaderObject item in bjro)
+            if (bjra != null)
             {
-                array.Add(ToDynamicJsonValue(item));
+                foreach (BlittableJsonReaderObject item in bjra)
+                {
+                    array.Add(ToDynamicJsonValue(item));
+                }
             }
 
             return array;
