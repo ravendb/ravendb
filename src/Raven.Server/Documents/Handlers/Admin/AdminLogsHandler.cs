@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     try
                     {
                         var jsonFileModifier = new JsonConfigFileModifier(ServerStore.Configuration.ConfigPath);
-                        jsonFileModifier.Execute(context, j =>
+                        await jsonFileModifier.Execute(context, j =>
                         {
                             ModifierConfigFileHelper.SetOrRemoveIfDefault(j, LoggingSource.Instance.LogMode, x => x.Logs.Mode);
                             long? retentionSize = LoggingSource.Instance.RetentionSize == long.MaxValue
@@ -87,8 +87,6 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus();
         }
 
-        
-        
         [RavenAction("/admin/logs/watch", "GET", AuthorizationStatus.Operator)]
         public async Task RegisterForLogs()
         {
@@ -243,7 +241,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     try
                     {
                         var microsoftConfigModifier = new JsonConfigFileModifier(ServerStore.Configuration.Logs.MicrosoftLogsConfigurationPath.FullPath, true);
-                        microsoftConfigModifier.Execute(context, j =>
+                        await microsoftConfigModifier.Execute(context, j =>
                         {
                             foreach (var (category, logLevel) in Server.GetService<MicrosoftLoggingProvider>().Configuration)
                             {
@@ -252,7 +250,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         });
 
                         var settingJsonConfigModifier = new JsonConfigFileModifier(ServerStore.Configuration.ConfigPath);
-                        settingJsonConfigModifier.Execute(context, j =>
+                        await settingJsonConfigModifier.Execute(context, j =>
                         {
                             j[RavenConfiguration.GetKey(x => x.Logs.DisableMicrosoftLogs)] = false;
                         });
