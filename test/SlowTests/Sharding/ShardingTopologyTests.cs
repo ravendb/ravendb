@@ -419,10 +419,10 @@ namespace SlowTests.Sharding
             using (var store = GetDocumentStore(options))
             {
                 var record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
-                var dbTopology = record.Sharding.Orchestrator.Topology;
+                var orchestratorTopology = record.Sharding.Orchestrator.Topology;
                 Assert.Equal(2, record.Sharding.Orchestrator.Topology.ReplicationFactor);
-                Assert.Equal(2, dbTopology.Members.Count);
-                Assert.Equal(0, dbTopology.Promotables.Count);
+                Assert.Equal(2, orchestratorTopology.Members.Count);
+                Assert.Equal(0, orchestratorTopology.Promotables.Count);
 
                 var allNodes = new[] { "A", "B", "C" };
 
@@ -431,27 +431,34 @@ namespace SlowTests.Sharding
 
                 //remove the node from orchestrator topology
                 var modifyResult = store.Maintenance.Server.Send(new RemoveNodeFromOrchestratorTopologyOperation(store.Database, nodeInOrchestratorTopology));
-                record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
-                dbTopology = record.Sharding.Orchestrator.Topology;
-                Assert.Equal(nodeAmount - 1, dbTopology.Members.Count);
-                Assert.Equal(1, record.Sharding.Orchestrator.Topology.ReplicationFactor);
-                Assert.Equal(0, dbTopology.Promotables.Count);
-                Assert.Equal(0, dbTopology.Rehabs.Count);
+                await WaitForAssertionAsync(async () =>
+                {
+                    record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                    orchestratorTopology = record.Sharding.Orchestrator.Topology;
+                    Assert.Equal(nodeAmount - 1, orchestratorTopology.Members.Count);
+                    Assert.Equal(1, record.Sharding.Orchestrator.Topology.ReplicationFactor);
+                    Assert.Equal(0, orchestratorTopology.Promotables.Count);
+                    Assert.Equal(0, orchestratorTopology.Rehabs.Count);
+                });
 
-                Assert.Equal(dbTopology.Members.Count, modifyResult.OrchestratorTopology.Members.Count);
-                Assert.Equal(dbTopology.Rehabs.Count, modifyResult.OrchestratorTopology.Rehabs.Count);
+                Assert.Equal(orchestratorTopology.Members.Count, modifyResult.OrchestratorTopology.Members.Count);
+                Assert.Equal(orchestratorTopology.Rehabs.Count, modifyResult.OrchestratorTopology.Rehabs.Count);
 
                 //add node to orchestrator topology
                 modifyResult = store.Maintenance.Server.Send(new AddNodeToOrchestratorTopologyOperation(store.Database, nodeInOrchestratorTopology));
-                record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
-                dbTopology = record.Sharding.Orchestrator.Topology;
-                Assert.Equal(2, record.Sharding.Orchestrator.Topology.ReplicationFactor);
-                Assert.Equal(nodeAmount - 1, dbTopology.Members.Count);
-                Assert.Equal(1, dbTopology.Promotables.Count);
-                Assert.Equal(nodeInOrchestratorTopology, dbTopology.Promotables[0]);
 
-                Assert.Equal(dbTopology.Members.Count, modifyResult.OrchestratorTopology.Members.Count);
-                Assert.Equal(dbTopology.Rehabs.Count, modifyResult.OrchestratorTopology.Rehabs.Count);
+                await WaitForAssertionAsync(async () =>
+                {
+                    record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                    orchestratorTopology = record.Sharding.Orchestrator.Topology;
+                    Assert.True(2 == record.Sharding.Orchestrator.Topology.ReplicationFactor, $"orchestrator topology: {orchestratorTopology}");
+                    Assert.Equal(nodeAmount - 1, orchestratorTopology.Members.Count);
+                    Assert.Equal(1, orchestratorTopology.Promotables.Count);
+                    Assert.Equal(nodeInOrchestratorTopology, orchestratorTopology.Promotables[0]);
+                });
+                
+                Assert.Equal(orchestratorTopology.Members.Count, modifyResult.OrchestratorTopology.Members.Count);
+                Assert.Equal(orchestratorTopology.Rehabs.Count, modifyResult.OrchestratorTopology.Rehabs.Count);
             }
         }
 
