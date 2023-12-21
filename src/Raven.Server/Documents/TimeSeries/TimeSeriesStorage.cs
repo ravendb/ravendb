@@ -1000,11 +1000,10 @@ namespace Raven.Server.Documents.TimeSeries
                     return ChangeVectorUtils.MergeVectors(ReadOnlyChangeVector, _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag));
                 }
 
-                string mergedChangeVector = ChangeVectorUtils.MergeVectors(ReadOnlyChangeVector, ChangeVectorFromReplication);
                 return ChangeVectorUtils.GetConflictStatus(ChangeVectorFromReplication, ReadOnlyChangeVector) switch
                 {
-                    ConflictStatus.Update => mergedChangeVector,
-                    ConflictStatus.Conflict => ChangeVectorUtils.MergeVectors(ReadOnlyChangeVector, _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag)),
+                    ConflictStatus.Update => ChangeVectorFromReplication,
+                    ConflictStatus.Conflict => ChangeVectorUtils.MergeVectors(ChangeVectorFromReplication, _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag)),
                     ConflictStatus.AlreadyMerged => ReadOnlyChangeVector,
                     _ => throw new ArgumentOutOfRangeException()
                 };
