@@ -14,7 +14,7 @@ export default function FormDestinationList() {
 
     return (
         <>
-            <Label className="mt-3 mb-0 md-label">Destinations</Label>
+            <Label>Destinations</Label>
             <div className="vstack gap-1">
                 <Local />
                 <AmazonS3 />

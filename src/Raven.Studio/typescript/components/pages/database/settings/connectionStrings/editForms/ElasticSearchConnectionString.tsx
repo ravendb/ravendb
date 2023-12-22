@@ -1,4 +1,4 @@
-﻿import { Button, Form, Label } from "reactstrap";
+﻿import { Badge, Button, Form, Label } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -111,53 +111,81 @@ export default function ElasticSearchConnectionString({
     const isUploadCertificateVisible = !formValues.certificatesBase64 || formValues.certificatesBase64.length === 0;
 
     return (
-        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
-            <div>
-                <Label className="mb-0 md-label">Name</Label>
+        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
+            <div className="mb-2">
+                <Label>Name</Label>
                 <FormInput
                     control={control}
                     name="name"
                     type="text"
                     placeholder="Enter a name for the connection string"
+                    autoComplete="off"
                 />
             </div>
-            <div>
-                <div>
-                    <Label className="mb-0 md-label">Nodes URLs</Label>
+            <div className="mb-2">
+                <Label>Nodes URLs</Label>
+                <div className="vstack gap-3">
                     {formState.errors?.nodes?.message && (
                         <div className="text-danger small">{formState.errors.nodes.message}</div>
                     )}
                     {urlFieldArray.fields.map((urlField, idx) => (
-                        <div key={urlField.id} className="d-flex mb-1 gap-1">
-                            <FormInput
-                                type="text"
-                                control={control}
-                                name={`nodes.${idx}.url`}
-                                placeholder="http(s)://hostName"
-                            />
-                            <Button color="danger" onClick={() => urlFieldArray.remove(idx)}>
-                                <Icon icon="trash" margin="m-0" title="Delete" />
-                            </Button>
-                            <ButtonWithSpinner
-                                color="primary"
-                                onClick={() => asyncTest.execute(idx)}
-                                isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
-                                icon={{
-                                    icon: "rocket",
-                                    title: "Test connection",
-                                    margin: "m-0",
-                                }}
-                            />
+                        <div>
+                            <div key={urlField.id} className="vstack mb-2 gap-1">
+                                <Label className="mb-0 d-flex align-items-center gap-1">
+                                    <span className="small-label mb-0">URL #{idx + 1}</span>
+                                    {asyncTest.result?.Success ? (
+                                        <Badge color="success" pill>
+                                            <Icon icon="check" />
+                                            Successfully connected
+                                        </Badge>
+                                    ) : asyncTest.result?.Error ? (
+                                        <Badge color="danger" pill>
+                                            <Icon icon="warning" />
+                                            Failed connection
+                                        </Badge>
+                                    ) : null}
+                                </Label>
+                                <div className="d-flex gap-1 mb-2">
+                                    <FormInput
+                                        type="text"
+                                        control={control}
+                                        name={`nodes.${idx}.url`}
+                                        placeholder="http(s)://hostName"
+                                        autoComplete="off"
+                                    />
+                                    {urlFieldArray.fields.length > 1 && (
+                                        <Button color="danger" onClick={() => urlFieldArray.remove(idx)}>
+                                            <Icon icon="trash" margin="m-0" title="Delete URL" />
+                                        </Button>
+                                    )}
+                                    <ButtonWithSpinner
+                                        color="secondary"
+                                        onClick={() => asyncTest.execute(idx)}
+                                        isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
+                                        icon={{
+                                            icon: "rocket",
+                                            title: "Test connection",
+                                        }}
+                                    >
+                                        Test connection
+                                    </ButtonWithSpinner>
+                                </div>
+                            </div>
+                            {asyncTest.result?.Error && (
+                                <div className="mt-3">
+                                    <ConnectionTestResult testResult={asyncTest.result} />
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
-                <Button color="info" className="mt-1" onClick={() => urlFieldArray.append({ url: null })}>
+                <Button color="info" className="mt-4" onClick={() => urlFieldArray.append({ url: null })}>
                     <Icon icon="plus" />
                     Add URL
                 </Button>
             </div>
-            <div>
-                <Label className="mb-0 md-label">Authentication</Label>
+            <div className="mb-2">
+                <Label>Authentication</Label>
                 <FormSelect
                     name="authMethodUsed"
                     control={control}
@@ -167,43 +195,68 @@ export default function ElasticSearchConnectionString({
                 />
             </div>
             {formValues.authMethodUsed === "Basic" && (
-                <>
-                    <div>
-                        <Label className="mb-0 md-label">Username</Label>
-                        <FormInput control={control} name="username" type="text" placeholder="Enter a username" />
+                <div className="vstack gap-3">
+                    <div className="mb-2">
+                        <Label>Username</Label>
+                        <FormInput
+                            control={control}
+                            name="username"
+                            type="text"
+                            placeholder="Enter a username"
+                            autoComplete="off"
+                        />
                     </div>
-                    <div>
-                        <Label className="mb-0 md-label">Password</Label>
-                        <FormInput control={control} name="password" type="password" placeholder="Enter a password" />
+                    <div className="mb-2">
+                        <Label>Password</Label>
+                        <FormInput
+                            control={control}
+                            name="password"
+                            type="password"
+                            placeholder="Enter a password"
+                            autoComplete="off"
+                        />
                     </div>
-                </>
+                </div>
             )}
             {formValues.authMethodUsed === "API Key" && (
-                <>
-                    <div>
-                        <Label className="mb-0 md-label">API Key ID</Label>
-                        <FormInput control={control} name="apiKeyId" type="text" placeholder="Enter an API Key ID" />
+                <div className="vstack gap-3">
+                    <div className="mb-2">
+                        <Label>API Key ID</Label>
+                        <FormInput
+                            control={control}
+                            name="apiKeyId"
+                            type="text"
+                            placeholder="Enter an API Key ID"
+                            autoComplete="off"
+                        />
                     </div>
-                    <div>
-                        <Label className="mb-0 md-label">API Key</Label>
-                        <FormInput control={control} name="apiKey" type="text" placeholder="Enter an API Key" />
+                    <div className="mb-2">
+                        <Label>API Key</Label>
+                        <FormInput
+                            control={control}
+                            name="apiKey"
+                            type="text"
+                            placeholder="Enter an API Key"
+                            autoComplete="off"
+                        />
                     </div>
-                </>
+                </div>
             )}
             {formValues.authMethodUsed === "Encoded API Key" && (
-                <div>
-                    <Label className="mb-0 md-label">Encoded API Key</Label>
+                <div className="mb-2">
+                    <Label>Encoded API Key</Label>
                     <FormInput
                         control={control}
                         name="encodedApiKey"
                         type="text"
                         placeholder="Enter an encoded API Key"
+                        autoComplete="off"
                     />
                 </div>
             )}
             {formValues.authMethodUsed === "Certificate" && (
-                <div>
-                    <Label className="mb-0 md-label w-100">Certificate file</Label>
+                <div className="mb-2">
+                    <Label>Certificate file</Label>
                     {isUploadCertificateVisible && (
                         <div>
                             <Label className="btn btn-primary">
@@ -238,7 +291,6 @@ export default function ElasticSearchConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editElasticSearchEtl}
             />
-            <ConnectionTestResult testResult={asyncTest.result} />
         </Form>
     );
 }

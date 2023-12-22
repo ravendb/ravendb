@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { Badge, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -35,11 +35,11 @@ export default function Azure() {
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Azure
                 </FormSwitch>
-                <Collapse isOpen={formValues.isEnabled} className="mt-2">
+                <Collapse isOpen={formValues.isEnabled} className="vstack gap-2 mt-2">
                     <FormSwitch
                         name={`${fieldBase}.config.isOverrideConfig`}
                         control={control}
-                        className="ms-3 mb-2 w-100"
+                        className="ms-3 w-100"
                         color="secondary"
                     >
                         Override configuration via external script
@@ -47,10 +47,22 @@ export default function Azure() {
                     {formValues.config.isOverrideConfig ? (
                         <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
-                        <>
-                            <div>
-                                <Label className="mb-0 md-label">
-                                    Storage container <Icon icon="info" color="info" id="storageContainerTooltip" />
+                        <div className="vstack gap-3 mt-2">
+                            <div className="mb-2">
+                                <Label className="d-flex gap-1 align-items-center">
+                                    Storage container{" "}
+                                    <Icon icon="info" color="info" id="storageContainerTooltip" margin="m-0" />
+                                    {asyncTest.result?.Success ? (
+                                        <Badge color="success" pill>
+                                            <Icon icon="check" />
+                                            Successfully connected
+                                        </Badge>
+                                    ) : asyncTest.result?.Error ? (
+                                        <Badge color="danger" pill>
+                                            <Icon icon="warning" />
+                                            Failed connection
+                                        </Badge>
+                                    ) : null}
                                 </Label>
                                 <UncontrolledPopover
                                     target="storageContainerTooltip"
@@ -69,11 +81,11 @@ export default function Azure() {
                                     control={control}
                                     placeholder="Enter a storage container"
                                     type="text"
-                                    className="mb-2"
+                                    autoComplete="off"
                                 />
                             </div>
-                            <div>
-                                <Label className="mb-0 md-label">
+                            <div className="mb-2">
+                                <Label>
                                     Remote folder name <small className="text-muted fw-light">(optional)</small>
                                 </Label>
                                 <FormInput
@@ -81,33 +93,34 @@ export default function Azure() {
                                     control={control}
                                     placeholder="Enter a remote folder name"
                                     type="text"
-                                    className="mb-2"
+                                    autoComplete="off"
                                 />
                             </div>
-                            <div>
-                                <Label className="mb-0 md-label">Account name</Label>
+                            <div className="mb-2">
+                                <Label>Account name</Label>
                                 <FormInput
                                     name={getName("accountName")}
                                     control={control}
                                     placeholder="Enter an account name"
                                     type="text"
-                                    className="mb-2"
+                                    autoComplete="off"
                                 />
                             </div>
-                            <div>
-                                <Label className="mb-0 md-label">Account key</Label>
+                            <div className="mb-2">
+                                <Label>Account key</Label>
                                 <FormInput
                                     name={getName("accountKey")}
                                     control={control}
                                     placeholder="Enter an account key"
                                     type="text"
+                                    autoComplete="off"
                                 />
                             </div>
-                            <div className="d-flex mt-3">
+                            <div className="d-flex">
                                 <FlexGrow />
                                 <ButtonWithSpinner
                                     type="button"
-                                    color="info"
+                                    color="secondary"
                                     onClick={asyncTest.execute}
                                     isSpinning={asyncTest.loading}
                                 >
@@ -115,10 +128,12 @@ export default function Azure() {
                                     Test credentials
                                 </ButtonWithSpinner>
                             </div>
-                            <div className="mt-2">
-                                <ConnectionTestResult testResult={asyncTest.result} />
-                            </div>
-                        </>
+                            {asyncTest.result?.Error && (
+                                <div className="mt-3">
+                                    <ConnectionTestResult testResult={asyncTest.result} />
+                                </div>
+                            )}
+                        </div>
                     )}
                 </Collapse>
             </CardBody>

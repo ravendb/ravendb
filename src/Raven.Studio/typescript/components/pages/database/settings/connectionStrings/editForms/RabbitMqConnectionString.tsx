@@ -1,4 +1,4 @@
-﻿import { Form, Label } from "reactstrap";
+﻿import { Badge, Form, Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -12,6 +12,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { yupObjectSchema } from "components/utils/yupUtils";
+import { FlexGrow } from "components/common/FlexGrow";
+import { Icon } from "components/common/Icon";
 
 type FormData = ConnectionFormData<RabbitMqConnection>;
 
@@ -52,42 +54,58 @@ export default function RabbitMqConnectionString({
     };
 
     return (
-        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
-            <div>
-                <Label className="mb-0 md-label">Name</Label>
+        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
+            <div className="mb-2">
+                <Label>Name</Label>
                 <FormInput
                     control={control}
                     name="name"
                     type="text"
                     placeholder="Enter a name for the connection string"
                     disabled={!isForNewConnection}
+                    autoComplete="off"
                 />
             </div>
-            <div>
-                <Label className="mb-0 md-label">Connection string</Label>
+            <div className="mb-2">
+                <Label className="d-flex align-items-center gap-1">
+                    Connection string{" "}
+                    {asyncTest.result?.Success ? (
+                        <Badge color="success" pill>
+                            <Icon icon="check" />
+                            Successfully connected
+                        </Badge>
+                    ) : asyncTest.result?.Error ? (
+                        <Badge color="danger" pill>
+                            <Icon icon="warning" />
+                            Failed connection
+                        </Badge>
+                    ) : null}
+                </Label>
                 <FormInput
                     control={control}
                     name="connectionString"
                     type="textarea"
                     rows={3}
                     placeholder="Enter a connection string for RabbitMQ"
+                    autoComplete="off"
                 />
-            </div>
-            <div>
-                <ButtonWithSpinner
-                    color="primary"
-                    icon="rocket"
-                    onClick={asyncTest.execute}
-                    isSpinning={asyncTest.loading}
-                >
-                    Test Connection
-                </ButtonWithSpinner>
+                <div className="d-flex mt-4">
+                    <FlexGrow />
+                    <ButtonWithSpinner
+                        color="secondary"
+                        icon="rocket"
+                        onClick={asyncTest.execute}
+                        isSpinning={asyncTest.loading}
+                    >
+                        Test connection
+                    </ButtonWithSpinner>
+                </div>
             </div>
             <ConnectionStringUsedByTasks
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editRabbitMqEtl}
             />
-            <ConnectionTestResult testResult={asyncTest.result} />
+            {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );
 }
