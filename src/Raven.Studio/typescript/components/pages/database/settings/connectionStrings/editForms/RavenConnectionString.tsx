@@ -1,4 +1,4 @@
-﻿import { Alert, Button, Form, Label } from "reactstrap";
+﻿import { Alert, Badge, Button, Form, Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
@@ -58,73 +58,98 @@ export default function RavenConnectionString({
     };
 
     return (
-        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
-            <div>
-                <Label className="mb-0 md-label">Name</Label>
+        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
+            <div className="mb-2">
+                <Label>Name</Label>
                 <FormInput
                     control={control}
                     name="name"
                     type="text"
                     placeholder="Enter a name for the connection string"
                     disabled={!isForNewConnection}
+                    autoComplete="off"
                 />
             </div>
-            <div>
-                <Label className="mb-0 md-label">Database</Label>
+            <div className="mb-2">
+                <Label>Database</Label>
                 <FormInput
                     control={control}
                     name="database"
                     type="text"
                     placeholder="Enter database for the connection string"
+                    autoComplete="off"
                 />
             </div>
-            <div>
-                <div>
-                    <Label className="mb-0 md-label">Discovery URLs</Label>
+            <div className="mb-2">
+                <Label>Discovery URLs</Label>
+                <div className="vstack gap-3">
                     {formState.errors?.topologyDiscoveryUrls?.message && (
                         <div className="text-danger small">{formState.errors.topologyDiscoveryUrls.message}</div>
                     )}
                     {urlFieldArray.fields.map((urlField, idx) => (
-                        <div key={urlField.id} className="d-flex mb-1 gap-1">
-                            <FormInput
-                                type="text"
-                                control={control}
-                                name={`topologyDiscoveryUrls.${idx}.url`}
-                                placeholder="http(s)://hostName"
-                            />
-                            <Button color="danger" onClick={() => urlFieldArray.remove(idx)}>
-                                <Icon icon="trash" margin="m-0" title="Delete" />
-                            </Button>
-                            <ButtonWithSpinner
-                                color="primary"
-                                onClick={() => asyncTest.execute(idx)}
-                                disabled={asyncTest.loading}
-                                isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
-                                icon={{
-                                    icon: "rocket",
-                                    title: "Test connection",
-                                    margin: "m-0",
-                                }}
-                            />
+                        <div>
+                            <div key={urlField.id} className="vstack mb-2 gap-1">
+                                <Label className="mb-0 d-flex align-items-center gap-1">
+                                    <span className="small-label mb-0">URL #{idx + 1}</span>
+                                    {asyncTest.result?.Success ? (
+                                        <Badge color="success" pill>
+                                            <Icon icon="check" />
+                                            Successfully connected
+                                        </Badge>
+                                    ) : asyncTest.result?.Error ? (
+                                        <Badge color="danger" pill>
+                                            <Icon icon="warning" />
+                                            Failed connection
+                                        </Badge>
+                                    ) : null}
+                                </Label>
+                                <div className="d-flex gap-1 mb-2">
+                                    <FormInput
+                                        type="text"
+                                        control={control}
+                                        name={`topologyDiscoveryUrls.${idx}.url`}
+                                        placeholder="http(s)://hostName"
+                                        autoComplete="off"
+                                    />
+                                    {urlFieldArray.fields.length > 1 && (
+                                        <Button
+                                            color="danger"
+                                            title="Delete URL"
+                                            onClick={() => urlFieldArray.remove(idx)}
+                                        >
+                                            <Icon icon="trash" margin="m-0" />
+                                        </Button>
+                                    )}
+                                    <ButtonWithSpinner
+                                        color="secondary"
+                                        onClick={() => asyncTest.execute(idx)}
+                                        disabled={asyncTest.loading}
+                                        isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
+                                        title="Test connection"
+                                        icon="rocket"
+                                    >
+                                        Test connection
+                                    </ButtonWithSpinner>
+                                </div>
+                                {asyncTest.result?.Error && (
+                                    <div className="vstack gap-1 mt-3">
+                                        <ConnectionTestError message={asyncTest.result.Error} />
+                                        <AboutError isHTTPSuccess={asyncTest.result.HTTPSuccess} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
-                <Button color="info" className="mt-1" onClick={() => urlFieldArray.append({ url: null })}>
+                <Button color="info" className="mt-3" onClick={() => urlFieldArray.append({ url: null })}>
                     <Icon icon="plus" />
-                    Add URL
+                    Add next discovery URL
                 </Button>
             </div>
             <ConnectionStringUsedByTasks
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editRavenEtl}
             />
-            {asyncTest.result?.Success && <Alert color="success">Successfully connected</Alert>}
-            {asyncTest.result?.Error && (
-                <>
-                    <ConnectionTestError message={asyncTest.result.Error} />
-                    <AboutError isHTTPSuccess={asyncTest.result.HTTPSuccess} />
-                </>
-            )}
         </Form>
     );
 }
@@ -132,21 +157,24 @@ export default function RavenConnectionString({
 function AboutError({ isHTTPSuccess }: { isHTTPSuccess: boolean }) {
     return (
         <Alert color="info">
-            <h4>About this error</h4>
-            <div>
+            <Badge color="info" pill className="mb-2">
+                <Icon icon="info" />
+                About this error
+            </Badge>
+            <p>
                 Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management
                 and client-server rest request, the second is used for inter-server and advanced client-server
                 communications.
-            </div>
-            <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>
+            </p>
+            <p>The connection tests the TCP endpoint only after a successful HTTP connection.</p>
 
             {isHTTPSuccess ? (
-                <div>
+                <p>
                     It appears that the current server was able to connect to the desired server through HTTP, but
                     failed connecting to it using TCP.
-                </div>
+                </p>
             ) : (
-                <div>It appears that the current server could not connect to the desired node through HTTP.</div>
+                <p>It appears that the current server could not connect to the desired node through HTTP.</p>
             )}
 
             <div>

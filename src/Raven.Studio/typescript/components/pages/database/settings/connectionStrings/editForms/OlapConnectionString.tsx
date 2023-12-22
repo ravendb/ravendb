@@ -49,15 +49,16 @@ export default function OlapConnectionString({
 
     return (
         <FormProvider {...form}>
-            <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
-                <div>
-                    <Label className="mb-0 md-label">Name</Label>
+            <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)}>
+                <div className="mb-4">
+                    <Label>Name</Label>
                     <FormInput
                         control={control}
                         name="name"
                         type="text"
                         placeholder="Enter a name for the connection string"
                         disabled={!isForNewConnection}
+                        autoComplete="off"
                     />
                 </div>
                 <FormDestinationList />

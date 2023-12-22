@@ -1,4 +1,4 @@
-﻿import { Alert, Form, Label } from "reactstrap";
+﻿import { Alert, Badge, Form, Label } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -15,6 +15,7 @@ import ConnectionTestResult from "../../../../../common/connectionTests/Connecti
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { yupObjectSchema } from "components/utils/yupUtils";
+import { FlexGrow } from "components/common/FlexGrow";
 
 type FormData = ConnectionFormData<SqlConnection>;
 
@@ -56,19 +57,32 @@ export default function SqlConnectionString({
     };
 
     return (
-        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-2">
-            <div>
-                <Label className="mb-0 md-label">Name</Label>
+        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
+            <div className="mb-2">
+                <Label>Name</Label>
                 <FormInput
                     control={control}
                     name="name"
                     type="text"
                     placeholder="Enter a name for the connection string"
                     disabled={!isForNewConnection}
+                    autoComplete="off"
                 />
             </div>
-            <div>
-                <Label className="mb-0 md-label">Factory</Label>
+            <div className="mb-2">
+                <div className="d-flex flex-grow align-items-baseline justify-content-between">
+                    <Label>Factory</Label>
+                    {formValues.factoryName && (
+                        <>
+                            <small ref={setSyntaxHelpElement} className="text-primary">
+                                Syntax <Icon icon="help" margin="m-0" />
+                            </small>
+                            <PopoverWithHover target={syntaxHelpElement}>
+                                <div className="p-2">{getSyntaxHelp(formValues.factoryName)}</div>
+                            </PopoverWithHover>
+                        </>
+                    )}
+                </div>
                 <FormSelect
                     control={control}
                     name="factoryName"
@@ -83,41 +97,47 @@ export default function SqlConnectionString({
                         This connector is deprecated
                     </Alert>
                 )}
-                {formValues.factoryName && (
-                    <>
-                        <small ref={setSyntaxHelpElement} className="text-primary">
-                            Syntax <Icon icon="help" />
-                        </small>
-                        <PopoverWithHover target={syntaxHelpElement}>
-                            <div className="p-2">{getSyntaxHelp(formValues.factoryName)}</div>
-                        </PopoverWithHover>
-                    </>
-                )}
             </div>
-            <div>
-                <Label className="mb-0 md-label">Connection string</Label>
+            <div className="mb-2">
+                <Label className="d-flex align-items-center gap-1">
+                    Connection string{" "}
+                    {asyncTest.result?.Success ? (
+                        <Badge color="success" pill>
+                            <Icon icon="check" />
+                            Successfully connected
+                        </Badge>
+                    ) : asyncTest.result?.Error ? (
+                        <Badge color="danger" pill>
+                            <Icon icon="warning" />
+                            Failed connection
+                        </Badge>
+                    ) : null}
+                </Label>
                 <FormInput
                     control={control}
                     name="connectionString"
                     type="textarea"
                     placeholder={getConnectionStringPlaceholder(formValues.factoryName)}
                     rows={3}
+                    autoComplete="off"
                 />
-                <ButtonWithSpinner
-                    className="mt-2"
-                    color="primary"
-                    icon="rocket"
-                    onClick={asyncTest.execute}
-                    isSpinning={asyncTest.loading}
-                >
-                    Test Connection
-                </ButtonWithSpinner>
+                <div className="d-flex mt-4">
+                    <FlexGrow />
+                    <ButtonWithSpinner
+                        color="secondary"
+                        icon="rocket"
+                        onClick={asyncTest.execute}
+                        isSpinning={asyncTest.loading}
+                    >
+                        Test connection
+                    </ButtonWithSpinner>
+                </div>
             </div>
             <ConnectionStringUsedByTasks
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editSqlEtl}
             />
-            <ConnectionTestResult testResult={asyncTest.result} />
+            {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );
 }
@@ -137,13 +157,13 @@ function getSyntaxHelp(factory: SqlConnectionStringFactoryName) {
                 <span>
                     Example: <code>Data Source=10.0.0.107;Database=SourceDB;User ID=sa;Password=secret;</code>
                     <br />
-                    <small>
+                    <span>
                         More examples can be found in{" "}
                         <a href="https://ravendb.net/l/38S9OQ" target="_blank">
-                            <Icon icon="link" margin="m-0" />
                             full syntax reference
+                            <Icon icon="link" margin="ms-1" />
                         </a>
-                    </small>
+                    </span>
                 </span>
             );
         case "MySql.Data.MySqlClient":
@@ -152,13 +172,13 @@ function getSyntaxHelp(factory: SqlConnectionStringFactoryName) {
                 <span>
                     Example: <code>server=10.0.0.103;port=3306;userid=root;password=secret;</code>
                     <br />
-                    <small>
+                    <span>
                         More examples can be found in{" "}
                         <a href="https://ravendb.net/l/BSS8YH" target="_blank">
-                            <Icon icon="link" margin="m-0" />
                             full syntax reference
+                            <Icon icon="link" margin="ms-1" />
                         </a>
-                    </small>
+                    </span>
                 </span>
             );
         case "Npgsql":
@@ -166,13 +186,13 @@ function getSyntaxHelp(factory: SqlConnectionStringFactoryName) {
                 <span>
                     Example: <code>Host=10.0.0.105;Port=5432;Username=postgres;Password=secret</code>
                     <br />
-                    <small>
+                    <span>
                         More examples can be found in{" "}
                         <a href="https://ravendb.net/l/FWEBWD" target="_blank">
-                            <Icon icon="link" margin="m-0" />
                             full syntax reference
+                            <Icon icon="link" margin="ms-1" />
                         </a>
-                    </small>
+                    </span>
                 </span>
             );
         case "Oracle.ManagedDataAccess.Client":
@@ -185,13 +205,13 @@ function getSyntaxHelp(factory: SqlConnectionStringFactoryName) {
                         Id=SYS;DBA Privilege=SYSDBA;password=secret;
                     </code>
                     <br />
-                    <small>
+                    <span>
                         More examples can be found in{" "}
                         <a href="https://ravendb.net/l/TG851N" target="_blank">
-                            <Icon icon="link" margin="m-0" />
                             full syntax reference
+                            <Icon icon="link" margin="ms-1" />
                         </a>
-                    </small>
+                    </span>
                 </span>
             );
         default:

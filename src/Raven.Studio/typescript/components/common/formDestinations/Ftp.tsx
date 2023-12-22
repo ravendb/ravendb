@@ -1,5 +1,6 @@
 ﻿import React, { ChangeEvent } from "react";
 import {
+    Badge,
     Card,
     CardBody,
     Collapse,
@@ -54,16 +55,16 @@ export default function Ftp() {
     };
 
     return (
-        <Card className="well">
+        <Card className="well mb-2">
             <CardBody>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     FTP
                 </FormSwitch>
-                <Collapse isOpen={formValues.isEnabled} className="mt-2">
+                <Collapse isOpen={formValues.isEnabled} className="vstack gap-2 mt-2">
                     <FormSwitch
                         name={`${fieldBase}.config.isOverrideConfig`}
                         control={control}
-                        className="ms-3 mb-2 w-100"
+                        className="ms-3 w-100"
                         color="secondary"
                     >
                         Override configuration via external script
@@ -71,11 +72,22 @@ export default function Ftp() {
                     {formValues.config.isOverrideConfig ? (
                         <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
-                        <>
-                            <div>
-                                <Label className="mb-0 md-label">
+                        <div className="vstack gap-3 mt-2">
+                            <div className="mb-2">
+                                <Label className="d-flex align-items-center gap-1">
                                     Host
-                                    <Icon icon="info" color="info" id="hostTooltip" />
+                                    <Icon icon="info" color="info" id="hostTooltip" margin="m-0" />
+                                    {asyncTest.result?.Success ? (
+                                        <Badge color="success" pill>
+                                            <Icon icon="check" />
+                                            Successfully connected
+                                        </Badge>
+                                    ) : asyncTest.result?.Error ? (
+                                        <Badge color="danger" pill>
+                                            <Icon icon="warning" />
+                                            Failed connection
+                                        </Badge>
+                                    ) : null}
                                 </Label>
                                 <UncontrolledPopover
                                     target="hostTooltip"
@@ -95,34 +107,36 @@ export default function Ftp() {
                                     control={control}
                                     placeholder="Enter a host"
                                     type="text"
-                                    className="mb-2"
+                                    autoComplete="off"
                                 />
                             </div>
-                            <div>
-                                <Label className="mb-0 md-label">Username</Label>
+                            <div className="mb-2">
+                                <Label>Username</Label>
                                 <FormInput
                                     name={getName("userName")}
                                     control={control}
                                     placeholder="Enter a username"
                                     type="text"
-                                    className="mb-2"
+                                    autoComplete="off"
                                 />
                             </div>
-                            <div>
-                                <Label className="mb-0 md-label">Password</Label>
+                            <div className="mb-2">
+                                <Label>Password</Label>
                                 <FormInput
                                     name={getName("password")}
                                     control={control}
                                     placeholder="Enter a password"
                                     type="password"
+                                    autoComplete="off"
+                                    passwordPreview
                                 />
                             </div>
                             {isCertificateFieldVisible && (
-                                <div className="mt-2">
-                                    <Label className="mb-0 md-label">Certificate</Label>
+                                <div className="mb-2">
+                                    <Label>Certificate</Label>
                                     <input id="filePicker" type="file" onChange={selectFile} className="d-none" />
                                     <InputGroup>
-                                        <span className="static-name form-control">
+                                        <span className="static-name form-control d-flex align-items-center">
                                             {formValues.certificateAsBase64 ? "<certificate>" : "Select file..."}
                                         </span>
                                         <InputGroupText>
@@ -133,17 +147,17 @@ export default function Ftp() {
                                         </InputGroupText>
                                     </InputGroup>
                                     {formState.errors.destinations?.ftp?.certificateAsBase64 && (
-                                        <div className="text-danger small">
+                                        <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">
                                             {formState.errors.destinations.ftp.certificateAsBase64.message}
                                         </div>
                                     )}
                                 </div>
                             )}
-                            <div className="d-flex mt-3">
+                            <div className="d-flex justify-content-end">
                                 <FlexGrow />
                                 <ButtonWithSpinner
                                     type="button"
-                                    color="info"
+                                    color="secondary"
                                     onClick={asyncTest.execute}
                                     isSpinning={asyncTest.loading}
                                 >
@@ -151,10 +165,12 @@ export default function Ftp() {
                                     Test credentials
                                 </ButtonWithSpinner>
                             </div>
-                            <div className="mt-2">
-                                <ConnectionTestResult testResult={asyncTest.result} />
-                            </div>
-                        </>
+                            {asyncTest.result?.Error && (
+                                <div className="mt-3">
+                                    <ConnectionTestResult testResult={asyncTest.result} />
+                                </div>
+                            )}
+                        </div>
                     )}
                 </Collapse>
             </CardBody>

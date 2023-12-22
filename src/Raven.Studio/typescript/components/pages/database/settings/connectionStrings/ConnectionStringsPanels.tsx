@@ -9,6 +9,7 @@ import ConnectionStringsPanel from "./ConnectionStringsPanel";
 import { Connection } from "./connectionStringsTypes";
 import { connectionStringsActions } from "./store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
+import IconName from "../../../../../../typings/server/icons";
 
 interface ConnectionStringsPanelsProps {
     connections: Connection[];
@@ -26,7 +27,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType, 
     }
 
     return (
-        <div className="mb-3">
+        <div className="mb-4">
             <HrHeader
                 right={
                     isDatabaseAdmin && (
@@ -45,6 +46,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType, 
                     )
                 }
             >
+                <Icon icon={getIcon(connectionsType)} />
                 {getTypeLabel(connectionsType)}
             </HrHeader>
             {connections.map((connection) => (
@@ -62,5 +64,24 @@ export function getTypeLabel(type: StudioEtlType): string {
             return "SQL";
         default:
             return type;
+    }
+}
+
+export function getIcon(type: StudioEtlType): IconName {
+    switch (type) {
+        case "Raven":
+            return "raven";
+        case "Sql":
+            return "table";
+        case "Olap":
+            return "olap";
+        case "ElasticSearch":
+            return "elasticsearch";
+        case "Kafka":
+            return "kafka";
+        case "RabbitMQ":
+            return "rabbitmq";
+        default:
+            return null;
     }
 }

@@ -14,40 +14,41 @@ const OverrideConfiguration = ({ fieldBase }: OverrideConfigurationProps) => {
     const { control } = useFormContext<FormDestinations>();
 
     return (
-        <>
-            <div>
-                <Label className="mb-0 md-label">Exec</Label>
+        <div className="vstack gap-3 mt-2">
+            <div className="mb-2">
+                <Label>Exec</Label>
                 <FormInput
                     name={getName(fieldBase, "exec")}
                     control={control}
                     placeholder="Path to executable"
-                    className="mb-2"
                     type="text"
+                    autoComplete="off"
                 />
             </div>
-            <div>
-                <Label className="mb-0 md-label">Arguments</Label>
+            <div className="mb-2">
+                <Label>Arguments</Label>
                 <FormInput
                     type="text"
                     name={getName(fieldBase, "arguments")}
                     control={control}
                     placeholder="Command line arguments passed to exec"
-                    className="mb-2"
+                    autoComplete="off"
                 />
             </div>
             <div>
-                <Label className="mb-0 md-label">Timeout</Label>
+                <Label>Timeout</Label>
                 <InputGroup>
                     <FormInput
                         name={getName(fieldBase, "timeoutInMs")}
                         control={control}
                         placeholder="10000 (default)"
                         type="number"
+                        autoComplete="off"
                     />
                     <InputGroupText>ms</InputGroupText>
                 </InputGroup>
             </div>
-        </>
+        </div>
     );
 };
 

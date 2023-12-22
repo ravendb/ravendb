@@ -69,22 +69,24 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
             contentClassName="modal-border bulge-info"
             zIndex="var(--zindex-modal)"
         >
-            <ModalBody className="pb-0 vstack gap-2">
+            <ModalBody className="pb-0 vstack gap-3">
                 <div className="text-center">
                     <Icon icon="manage-connection-strings" color="info" className="fs-1" margin="m-0" />
                 </div>
                 <div className="text-center lead">{isForNewConnection ? "Create a new" : "Edit"} connection string</div>
-                <InputGroup className="gap-1 flex-wrap flex-column">
-                    <Label className="mb-0 md-label">Type</Label>
-                    <Select
-                        options={availableConnectionStringsOptions}
-                        value={connectionStringsOptions.find((x) => x.value === connectionStringType)}
-                        onChange={(x) => setConnectionStringType(x.value)}
-                        placeholder="Select a connection string type"
-                        isSearchable={false}
-                        isDisabled={!isForNewConnection}
-                    />
-                </InputGroup>
+                <div className="mb-2">
+                    <Label>Type</Label>
+                    <InputGroup className="gap-1 flex-wrap flex-column">
+                        <Select
+                            options={availableConnectionStringsOptions}
+                            value={connectionStringsOptions.find((x) => x.value === connectionStringType)}
+                            onChange={(x) => setConnectionStringType(x.value)}
+                            placeholder="Select a connection string type"
+                            isSearchable={false}
+                            isDisabled={!isForNewConnection}
+                        />
+                    </InputGroup>
+                </div>
                 {EditConnectionStringComponent && (
                     <EditConnectionStringComponent
                         initialConnection={initialConnection}
@@ -111,6 +113,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         color="success"
                         title="Save credentials"
                         icon="save"
+                        className="rounded-pill"
                         isSpinning={asyncSave.loading}
                     >
                         Save connection string

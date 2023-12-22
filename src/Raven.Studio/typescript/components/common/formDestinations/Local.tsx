@@ -56,8 +56,8 @@ export default function Local() {
                     {formValues.config.isOverrideConfig ? (
                         <OverrideConfiguration fieldBase={fieldBase} />
                     ) : (
-                        <div>
-                            <Label className="mb-0 md-label">Folder path</Label>
+                        <div className="mt-2">
+                            <Label>Folder path</Label>
                             <FormSelectCreatable
                                 control={control}
                                 name={getName("folderPath")}
@@ -104,7 +104,7 @@ function PathInfo({
         return (
             <Alert color="info" className="mt-2">
                 {asyncGetBackupLocation.result.List.map((location) => (
-                    <li key={location.FullPath}>
+                    <div key={location.FullPath}>
                         <small>
                             <span>
                                 Node tag: <strong>{location.NodeTag}</strong>
@@ -123,7 +123,9 @@ function PathInfo({
                                             Free space: <strong>{location.FreeSpaceHumane}</strong>{" "}
                                             {location.TotalSpaceHumane && (
                                                 <span>
-                                                    (Total: <strong>{location.TotalSpaceHumane}</strong>)
+                                                    {"(Total: "}
+                                                    <strong>{location.TotalSpaceHumane}</strong>
+                                                    {")"}
                                                 </span>
                                             )}
                                         </span>
@@ -133,7 +135,7 @@ function PathInfo({
                                 </>
                             )}
                         </small>
-                    </li>
+                    </div>
                 ))}
             </Alert>
         );
