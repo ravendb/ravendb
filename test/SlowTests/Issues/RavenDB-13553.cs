@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -45,6 +44,8 @@ namespace SlowTests.Issues
                 operation = new UpdatePeriodicBackupOperation(config);
                 await store.Maintenance.SendAsync(operation);
 
+                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, result.TaskId);
+
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
 
@@ -64,9 +65,10 @@ namespace SlowTests.Issues
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var status = documentDatabase.PeriodicBackupRunner.GetBackupStatus(config.TaskId);
-                var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record, record.PeriodicBackups.First(), status, Server.ServerStore.NodeTag);
+                var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record.PeriodicBackups.First(), status, out var responsibleNode);
                 
                 Assert.True(nextBackupDetails.IsFull);
+                Assert.Equal("A", responsibleNode);
             }
         }
     }

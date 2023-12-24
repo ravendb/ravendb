@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server;
@@ -83,6 +78,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 var taskId = backups1.First().TaskId;
                 var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 Assert.NotNull(responsibleDatabase);
+                Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, taskId);
+
                 var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                 Assert.Equal(server.ServerStore.NodeTag, tag);
 
