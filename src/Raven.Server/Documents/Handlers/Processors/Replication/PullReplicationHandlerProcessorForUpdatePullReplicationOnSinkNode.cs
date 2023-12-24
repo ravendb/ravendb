@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             using (context.OpenReadTransaction())
             {
                 var topology = RequestHandler.ServerStore.Cluster.ReadDatabaseTopology(context, databaseName);
-                responseJson[nameof(OngoingTask.ResponsibleNode)] = RequestHandler.ServerStore.WhoseTaskIsIt(topology, pullReplication, null);
+                responseJson[nameof(OngoingTask.ResponsibleNode)] = OngoingTasksUtils.WhoseTaskIsIt(ServerStore, topology, pullReplication, taskStatus: null, RequestHandler.Database.NotificationCenter);
             }
         }
     }

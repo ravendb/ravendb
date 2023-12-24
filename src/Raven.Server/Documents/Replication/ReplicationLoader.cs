@@ -940,7 +940,7 @@ namespace Raven.Server.Documents.Replication
                 return false;
 
             var taskStatus = GetExternalReplicationState(_server, Database.Name, task.TaskId);
-            var whoseTaskIsIt = Server.WhoseTaskIsIt(topology, task, taskStatus);
+            var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(Server, topology, task, taskStatus, Database.NotificationCenter);
             return whoseTaskIsIt == _server.NodeTag;
         }
 

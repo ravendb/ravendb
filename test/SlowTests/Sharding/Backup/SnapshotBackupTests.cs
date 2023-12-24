@@ -27,7 +27,7 @@ public class SnapshotBackupTests : RavenTestBase
                     {
                         FolderPath = NewDataPath()
                     }
-                }, store);
+                }, store, nodes: null);
             });
         }
     }

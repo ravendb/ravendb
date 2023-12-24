@@ -19,6 +19,7 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.OngoingTasks;
@@ -78,7 +79,7 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
 
         var processState = EtlLoader.GetProcessState(config.Transforms, _database, config.Name);
 
-        tag = _server.WhoseTaskIsIt(record.Topology, config, processState);
+        tag = OngoingTasksUtils.WhoseTaskIsIt(_server, record.Topology, config, processState, _database.NotificationCenter);
 
         if (tag == _server.NodeTag)
         {
@@ -110,7 +111,7 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
 
         var processState = QueueSinkLoader.GetProcessState(config.Scripts, _database, config.Name);
 
-        tag = _server.WhoseTaskIsIt(record.Topology, config, processState);
+        tag = OngoingTasksUtils.WhoseTaskIsIt(_server, record.Topology, config, processState, _database.NotificationCenter);
 
         if (tag == _server.NodeTag)
         {
@@ -142,7 +143,7 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
         replication.ConnectionString = connection;
 
         var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, _database.Name, replication.TaskId);
-        responsibleNodeTag = _server.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
+        responsibleNodeTag = OngoingTasksUtils.WhoseTaskIsIt(_server, databaseTopology, replication, taskStatus, _database.NotificationCenter);
 
         (string Url, OngoingTaskConnectionStatus Status) result = (null, OngoingTaskConnectionStatus.None);
 
@@ -180,12 +181,11 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
         return result;
     }
 
-    protected override PeriodicBackupStatus GetBackupStatus(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
+    protected override PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
         out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
     {
         var backupStatus = _database.PeriodicBackupRunner.GetBackupStatus(taskId);
-        responsibleNodeTag = _server.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
-        nextBackup = _database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
+        nextBackup = _database.PeriodicBackupRunner.GetNextBackupDetails(backupConfiguration, backupStatus, out responsibleNodeTag);
         onGoingBackup = _database.PeriodicBackupRunner.OnGoingBackup(taskId);
         isEncrypted = BackupTask.IsBackupEncrypted(_database, backupConfiguration);
 

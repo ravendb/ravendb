@@ -141,7 +141,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 * * * *", mentorNode: secondNode.ServerStore.NodeTag);
-                var backupTaskId = await Backup.CreateAndRunBackupInClusterAsync(config, store, isFullBackup: true);
+                var backupTaskId = await Backup.CreateAndRunBackupInClusterAsync(config, store, nodes, isFullBackup: true);
 
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, firstNodeTag));
                 await WaitAndAssertForValueAsync(async () =>

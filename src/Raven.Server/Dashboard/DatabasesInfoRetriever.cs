@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -106,7 +105,7 @@ namespace Raven.Server.Dashboard
             trafficWatchInfo.TrafficWatch.RequestsPerSecond = (int)Math.Ceiling(serverStore.Server.Metrics.Requests.RequestsPerSec.GetRate(rate));
             trafficWatchInfo.TrafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
 
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 // 1. Fetch databases info
@@ -201,7 +200,7 @@ namespace Raven.Server.Dashboard
         }
 
         private static void AddInfoForDatabase(ServerStore serverStore, bool collectOngoingTasks, AggregatedWatchInfo trafficWatchInfo,
-             TransactionOperationContext context, RawDatabaseRecord rawRecord, CancellationToken token)
+             ClusterOperationContext context, RawDatabaseRecord rawRecord, CancellationToken token)
         {
             var databasesInfo = trafficWatchInfo.DatabasesInfo;
             var drivesUsage = trafficWatchInfo.DrivesUsage;
@@ -311,7 +310,7 @@ namespace Raven.Server.Dashboard
             }
         }
 
-        private static DatabaseOngoingTasksInfoItem GetOngoingTasksInfoItem(DocumentDatabase database, ServerStore serverStore, TransactionOperationContext context, out long ongoingTasksCount)
+        private static DatabaseOngoingTasksInfoItem GetOngoingTasksInfoItem(DocumentDatabase database, ServerStore serverStore, ClusterOperationContext context, out long ongoingTasksCount)
         {
             var dbRecord = database.ReadDatabaseRecord();
 
@@ -351,10 +350,7 @@ namespace Raven.Server.Dashboard
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.RabbitMq);
             
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
-            long periodicBackupCountOnNode = GetTaskCountOnNode<PeriodicBackupConfiguration>(database, dbRecord, serverStore,
-                database.PeriodicBackupRunner.PeriodicBackups.Select(x => x.Configuration),
-                task => database.PeriodicBackupRunner.GetBackupStatus(task.TaskId),
-                task => task.Name.StartsWith("Server Wide") == false);
+            long periodicBackupCountOnNode = BackupUtils.GetTasksCountOnNode(serverStore, database.Name, context);
 
             var subscriptionCount = database.SubscriptionStorage.GetAllSubscriptionsCount();
             long subscriptionCountOnNode = GetSubscriptionCountOnNode(database, dbRecord, serverStore, context);
@@ -402,7 +398,7 @@ namespace Raven.Server.Dashboard
                     continue;
 
                 var state = getTaskStatus((T)task);
-                var taskTag = BackupUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, task, state, database.NotificationCenter);
+                var taskTag = OngoingTasksUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, task, state, database.NotificationCenter);
                 if (serverStore.NodeTag == taskTag)
                 {
                     taskCountOnNode++;
@@ -411,13 +407,13 @@ namespace Raven.Server.Dashboard
             return taskCountOnNode;
         }
 
-        private static long GetSubscriptionCountOnNode(DocumentDatabase database, DatabaseRecord dbRecord, ServerStore serverStore, TransactionOperationContext context)
+        private static long GetSubscriptionCountOnNode(DocumentDatabase database, DatabaseRecord dbRecord, ServerStore serverStore, ClusterOperationContext context)
         {
             long taskCountOnNode = 0;
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database.Name)))
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var taskTag = BackupUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, subscriptionState, subscriptionState, database.NotificationCenter);
+                var taskTag = OngoingTasksUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, subscriptionState, subscriptionState, database.NotificationCenter);
                 if (serverStore.NodeTag == taskTag)
                 {
                     taskCountOnNode++;
@@ -497,7 +493,7 @@ namespace Raven.Server.Dashboard
 
         private static void SetOfflineDatabaseInfo(
             ServerStore serverStore,
-            TransactionOperationContext context,
+            ClusterOperationContext context,
             string databaseName,
             DatabasesInfo existingDatabasesInfo,
             DrivesUsage existingDrivesUsage,

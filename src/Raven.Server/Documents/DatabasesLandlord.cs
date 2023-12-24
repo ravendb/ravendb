@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -28,7 +27,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Threading;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Util.Settings;
@@ -1365,7 +1363,7 @@ namespace Raven.Server.Documents
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
                             PeriodicBackupStatus backupStatus;
 
-                            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             using (context.OpenReadTransaction())
                                 backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, databaseName, nextIdleDatabaseActivity.TaskId);
 

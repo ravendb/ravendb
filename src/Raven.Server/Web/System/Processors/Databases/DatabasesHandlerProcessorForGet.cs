@@ -51,7 +51,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             var name = GetName();
@@ -89,7 +89,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
         }
     }
 
-    internal static void FillNodesTopology(ref NodesTopology nodesTopology, DatabaseTopology topology, RawDatabaseRecord databaseRecord, TransactionOperationContext context, ServerStore serverStore, HttpContext httpContext)
+    internal static void FillNodesTopology(ref NodesTopology nodesTopology, DatabaseTopology topology, RawDatabaseRecord databaseRecord, ClusterOperationContext context, ServerStore serverStore, HttpContext httpContext)
     {
         if (topology == null)
             return;
@@ -143,7 +143,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
     }
 
     private void WriteDatabaseInfo(string databaseName, RawDatabaseRecord rawDatabaseRecord,
-        TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
+        ClusterOperationContext context, AbstractBlittableJsonTextWriter writer)
     {
         NodesTopology nodesTopology = new();
 

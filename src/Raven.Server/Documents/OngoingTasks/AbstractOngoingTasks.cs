@@ -48,7 +48,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield break;
 
         foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
-            yield return CreateBackupTaskInfo(clusterTopology, databaseRecord, backupConfiguration);
+            yield return CreateBackupTaskInfo(clusterTopology, backupConfiguration);
     }
 
     private IEnumerable<OngoingTaskRavenEtl> GetRavenEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
@@ -195,7 +195,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                 if (backupConfiguration == null)
                     return null;
 
-                return CreateBackupTaskInfo(clusterTopology, databaseRecord, backupConfiguration);
+                return CreateBackupTaskInfo(clusterTopology, backupConfiguration);
 
             case OngoingTaskType.SqlEtl:
 
@@ -282,7 +282,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
     protected abstract (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings, out string responsibleNodeTag, out RavenConnectionString connection)
         where T : ExternalReplicationBase;
 
-    protected abstract PeriodicBackupStatus GetBackupStatus(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag, out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted);
+    protected abstract PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag, out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted);
 
     private OngoingTaskReplication CreateExternalReplicationTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, ExternalReplication watcher)
     {
@@ -316,9 +316,9 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         return OngoingTaskSubscription.From(subscriptionState, connectionStatus, clusterTopology, responsibleNodeTag);
     }
 
-    private OngoingTaskBackup CreateBackupTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration)
+    private OngoingTaskBackup CreateBackupTaskInfo(ClusterTopology clusterTopology, PeriodicBackupConfiguration backupConfiguration)
     {
-        var backupStatus = GetBackupStatus(backupConfiguration.TaskId, databaseRecord, backupConfiguration, out var responsibleNodeTag, out var nextBackup,
+        var backupStatus = GetBackupStatus(backupConfiguration.TaskId, backupConfiguration, out var responsibleNodeTag, out var nextBackup,
             out var onGoingBackup, out var isEncrypted);
         var backupDestinations = backupConfiguration.GetFullBackupDestinations();
 
