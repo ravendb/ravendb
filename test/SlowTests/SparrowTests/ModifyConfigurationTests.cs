@@ -6,7 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.Extensions.Logging;
+using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Embedded;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
@@ -21,9 +23,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.SparrowTests;
 
-public class LoggingConfigurationTests : RavenTestBase
+public class ModifyConfigurationTests : RavenTestBase
 {
-    public LoggingConfigurationTests(ITestOutputHelper output) : base(output)
+    public ModifyConfigurationTests(ITestOutputHelper output) : base(output)
     {
     }
 
@@ -33,13 +35,11 @@ public class LoggingConfigurationTests : RavenTestBase
     {
         var settingJsonPath = NewDataPath();
         
-        var settingJsonModifier = new JsonConfigFileModifier(settingJsonPath);
         using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
-            await settingJsonModifier.Execute(context, j =>
-            {
-                j[RavenConfiguration.GetKey(x => x.Logs.Mode)] = LogMode.Information;
-            });
+            settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
+            await settingJsonModifier.Execute();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -57,14 +57,11 @@ public class LoggingConfigurationTests : RavenTestBase
 }";
         await File.WriteAllTextAsync(settingJsonPath, content);
         
-        var settingJsonModifier = new JsonConfigFileModifier(settingJsonPath);
-       
         using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
-            await settingJsonModifier.Execute(context, j =>
-            {
-                j[RavenConfiguration.GetKey(x => x.Logs.Mode)] = LogMode.Information;
-            });
+            settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
+            await settingJsonModifier.Execute();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -85,16 +82,14 @@ public class LoggingConfigurationTests : RavenTestBase
 }";
         await File.WriteAllTextAsync(settingJsonPath, content);
 
-        var settingJsonModifier = new JsonConfigFileModifier(settingJsonPath);
         using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
-            await settingJsonModifier.Execute(context, j =>
-            {
-                j[RavenConfiguration.GetKey(x => x.Logs.Mode)] = LogMode.Information;
-                j[RavenConfiguration.GetKey(x => x.Logs.RetentionTime)] = 200;
-                j[RavenConfiguration.GetKey(x => x.Logs.RetentionSize)] = 600;
-                j[RavenConfiguration.GetKey(x => x.Logs.Compress)] = true;
-            });
+            settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
+            settingJsonModifier.SetOrRemoveIfDefault(200, x => x.Logs.RetentionTime);
+            settingJsonModifier.SetOrRemoveIfDefault(600, x => x.Logs.RetentionSize);
+            settingJsonModifier.SetOrRemoveIfDefault(true, x => x.Logs.Compress);
+            await settingJsonModifier.Execute();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -121,19 +116,14 @@ public class LoggingConfigurationTests : RavenTestBase
        """;
         await File.WriteAllTextAsync(settingJsonPath, content);
         
-        var settingJsonModifier = new JsonConfigFileModifier(settingJsonPath)
-        {
- 
-        };
         using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
-            await settingJsonModifier.Execute(context, j =>
-            {
-                j[RavenConfiguration.GetKey(x => x.Logs.Mode)] = LogMode.Information;
-                j[RavenConfiguration.GetKey(x => x.Logs.RetentionTime)] = 200;
-                j[RavenConfiguration.GetKey(x => x.Logs.RetentionSize)] = 600;
-                j[RavenConfiguration.GetKey(x => x.Logs.Compress)] = true;
-            });
+            settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
+            settingJsonModifier.SetOrRemoveIfDefault(200, x => x.Logs.RetentionTime);
+            settingJsonModifier.SetOrRemoveIfDefault(600, x => x.Logs.RetentionSize);
+            settingJsonModifier.SetOrRemoveIfDefault(true, x => x.Logs.Compress);
+            await settingJsonModifier.Execute();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
