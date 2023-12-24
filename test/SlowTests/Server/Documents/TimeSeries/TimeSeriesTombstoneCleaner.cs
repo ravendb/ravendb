@@ -3,10 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Replication;
+using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -332,7 +338,10 @@ namespace SlowTests.Server.Documents.TimeSeries
                     var markerId = $"marker/{Guid.NewGuid()}$user/322";
                     session.Store(new User { Name = "Karmel" }, markerId);
                     session.SaveChanges();
-                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, dbName, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, dbName, markerId,
+                            (u) => u.Id == markerId, 
+                            Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(30)),
+                        userMessage: await GetReplicationDebugInfo(cluster.Nodes, dbName));
                 }
 
                 Assert.True(await WaitForChangeVectorInClusterForModeAsync(cluster.Nodes, dbName, options.DatabaseMode), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
@@ -495,6 +504,29 @@ namespace SlowTests.Server.Documents.TimeSeries
                     await EnsureReplicatingAsync(store1, store2);
                 }
             }
+        }
+
+        private async Task<string> GetReplicationDebugInfo(List<RavenServer> nodes, string database)
+        {
+            var stores = GetDocumentStores(nodes, database, disableTopologyUpdates: true, certificate: null);
+            var sb = new StringBuilder();
+
+            for (int i = 0; i < stores.Count; i++)
+            {
+                var nodeTag = nodes[i].ServerStore.NodeTag;
+                using (var re = stores[i].GetRequestExecutor(database))
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var cmd = new GetReplicationPerformanceStatisticsOperation().GetCommand(DocumentConventions.Default, context);
+                    await re.ExecuteAsync(cmd, context);
+
+                    sb.AppendLine($"ReplicationPerformanceStatistics for node {nodeTag}:")
+                        .AppendLine(JsonConvert.SerializeObject(cmd.Result))
+                        .AppendLine("-----------------------------------------");
+                }
+            }
+
+            return sb.ToString();
         }
 
         private class MyTsIndex : AbstractTimeSeriesIndexCreationTask<User>
