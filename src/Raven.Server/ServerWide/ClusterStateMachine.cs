@@ -490,6 +490,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
                     case nameof(RemoveEtlProcessStateCommand):
                     case nameof(DelayBackupCommand):
+                    case nameof(UpdateResponsibleNodeForTaskCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, out _);
                         break;
 

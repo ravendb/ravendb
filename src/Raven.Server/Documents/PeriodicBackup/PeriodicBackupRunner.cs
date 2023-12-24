@@ -21,6 +21,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -74,13 +75,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             IOExtensions.CreateDirectory(_tempBackupPath.FullPath);
         }
 
-        public NextBackup GetNextBackupDetails(
-            DatabaseRecord databaseRecord,
-            PeriodicBackupConfiguration configuration,
-            PeriodicBackupStatus backupStatus,
-            string responsibleNodeTag)
+        public NextBackup GetNextBackupDetails(PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus, out string responsibleNodeTag)
         {
-            var taskStatus = GetTaskStatus(databaseRecord.Topology, configuration, disableLog: true);
+            var taskStatus = GetTaskStatus(configuration, out responsibleNodeTag, disableLog: true);
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, responsibleNodeTag, skipErrorLog: true);
         }
 
@@ -214,9 +211,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new InvalidOperationException($"All backup destinations are disabled for backup task id: {taskId}");
             }
 
-            var topology = _serverStore.LoadDatabaseTopology(_database.Name);
-            var backupStatus = GetBackupStatus(taskId);
-            return BackupUtils.WhoseTaskIsIt(_serverStore, topology, periodicBackup.Configuration, backupStatus, _database.NotificationCenter, keepTaskOnOriginalMemberNode: true);
+            return GetResponsibleNodeTag(_serverStore, _database.Name, periodicBackup.Configuration.TaskId);
         }
 
         public long StartBackupTask(long taskId, bool isFullBackup)
@@ -576,7 +571,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 topology = rawRecord.Topology;
             }
 
-            var taskStatus = GetTaskStatus(topology, periodicBackup.Configuration);
+            var taskStatus = GetTaskStatus(periodicBackup.Configuration, out _);
             if (_forTestingPurposes != null)
             {
                 if (_forTestingPurposes.SimulateClusterDownStatus)
@@ -642,6 +637,20 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        public static string GetResponsibleNodeTag(ServerStore serverStore, string databaseName, long taskId)
+        {
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var blittable = BackupUtils.GetResponsibleNodeInfoFromCluster(serverStore, context, databaseName, taskId);
+                if (blittable == null)
+                    return null;
+
+                blittable.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out string responsibleNodeTag);
+                return responsibleNodeTag;
+            }
+        }
+
         private long GetMinLastEtag()
         {
             var min = long.MaxValue;
@@ -693,7 +702,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var newBackupTaskId = periodicBackupConfiguration.TaskId;
                 allBackupTaskIds.Add(newBackupTaskId);
 
-                var taskState = GetTaskStatus(databaseRecord.Topology, periodicBackupConfiguration);
+                var taskState = GetTaskStatus(periodicBackupConfiguration, out _);
                 if (_forTestingPurposes != null)
                 {
                     if (_forTestingPurposes.SimulateActiveByOtherNodeStatus_UpdateConfigurations)
@@ -826,10 +835,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             ClusterDown
         }
 
-        private TaskStatus GetTaskStatus(DatabaseTopology topology, PeriodicBackupConfiguration configuration, bool disableLog = false)
+        private TaskStatus GetTaskStatus(PeriodicBackupConfiguration configuration, out string responsibleNodeTag, bool disableLog = false)
         {
             if (configuration.Disabled)
+            {
+                responsibleNodeTag = null;
                 return TaskStatus.Disabled;
+            }
 
             if (configuration.HasBackup() == false)
             {
@@ -844,20 +856,23 @@ namespace Raven.Server.Documents.PeriodicBackup
                         NotificationSeverity.Info));
                 }
 
+                responsibleNodeTag = null;
                 return TaskStatus.Disabled;
             }
 
-            var backupStatus = GetBackupStatus(configuration.TaskId);
-            var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, topology, configuration, backupStatus, _database.NotificationCenter, keepTaskOnOriginalMemberNode: true);
-            if (whoseTaskIsIt == null)
-                return TaskStatus.ClusterDown;
+            responsibleNodeTag = GetResponsibleNodeTag(_serverStore, _database.Name, configuration.TaskId);
+            if (responsibleNodeTag == null)
+            {
+                // the responsible node wasn't set by the cluster observer yet
+                return TaskStatus.Disabled;
+            }
 
-            if (whoseTaskIsIt == _serverStore.NodeTag)
+            if (responsibleNodeTag == _serverStore.NodeTag)
                 return TaskStatus.ActiveByCurrentNode;
 
             if (disableLog == false && _logger.IsInfoEnabled)
                 _logger.Info($"Backup job is skipped at {SystemTime.UtcNow}, because it is managed " +
-                             $"by '{whoseTaskIsIt}' node and not the current node ({_serverStore.NodeTag})");
+                             $"by '{responsibleNodeTag}' node and not the current node ({_serverStore.NodeTag})");
 
             return TaskStatus.ActiveByOtherNode;
         }
@@ -1054,21 +1069,23 @@ namespace Raven.Server.Documents.PeriodicBackup
             return dict;
         }
 
-        public void HandleDatabaseValueChanged(string type, object changeState)
+        public void HandleDatabaseValueChanged(string type, DatabaseRecord record, object changeState)
         {
-            if (type != nameof(DelayBackupCommand))
-                return;
-
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            switch (type)
             {
-                var state = (DelayBackupCommand.DelayBackupCommandState)changeState;
-                if (_periodicBackups.TryGetValue(state.TaskId, out var periodicBackup) == false)
-                    throw new InvalidOperationException($"Backup task id: {state.TaskId} doesn't exist");
+                case nameof(UpdateResponsibleNodeForTaskCommand):
+                    UpdateConfigurations(record);
+                    break;
 
-                periodicBackup.BackupStatus ??= new PeriodicBackupStatus();
-                periodicBackup.BackupStatus.DelayUntil = state.DelayUntil;
-                periodicBackup.BackupStatus.OriginalBackupTime = state.OriginalBackupTime;
+                case nameof(DelayBackupCommand):
+                    var state = (DelayBackupCommand.DelayBackupCommandState)changeState;
+                    if (_periodicBackups.TryGetValue(state.TaskId, out var periodicBackup) == false)
+                        throw new InvalidOperationException($"Backup task id: {state.TaskId} doesn't exist");
+
+                    periodicBackup.BackupStatus ??= new PeriodicBackupStatus();
+                    periodicBackup.BackupStatus.DelayUntil = state.DelayUntil;
+                    periodicBackup.BackupStatus.OriginalBackupTime = state.OriginalBackupTime;
+                    break;
             }
         }
 
