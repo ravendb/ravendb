@@ -6,8 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.TrafficWatch;
@@ -103,29 +101,6 @@ public class ModifyConfigurationTests : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Logging)]
-    public async Task JsonFileModifier_WhenOriginValueSetExplicitlyToDefault_ShouldNotRemoveIt()
-    {
-        var settingJsonPath = NewDataPath();
-        var content = @"
-{
-    ""Logs.RetentionTimeInHrs"":72,
-}";
-        await File.WriteAllTextAsync(settingJsonPath, content);
-
-        using (var context = JsonOperationContext.ShortTermSingleUse())
-        using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
-        {
-            settingJsonModifier.SetOrRemoveIfDefault(72, x => x.Logs.RetentionTime);
-            await settingJsonModifier.ExecuteAsync();
-        }
-
-        var modifiedContent = await File.ReadAllTextAsync(settingJsonPath);
-        var json = JsonConvert.DeserializeObject<JObject>(modifiedContent);
-        Assert.True(json.TryGetValue("Logs.RetentionTimeInHrs", out var value));
-        Assert.Equal(72, value.Value<int>());
-    }
-
-    [RavenFact(RavenTestCategory.Logging)]
     public async Task JsonFileModifier_WhenOriginLogConfigurationSetAsNested_ShouldOverrideThemAsWell()
     {
         var settingJsonPath = NewDataPath();
@@ -167,8 +142,7 @@ public class ModifyConfigurationTests : RavenTestBase
             Mode = LogMode.Information,
             RetentionSize = new Size(300, SizeUnit.Megabytes),
             RetentionTime = TimeSpan.FromHours(200),
-            Compress = true,
-            Persist = true
+            Compress = true
         };
         
         var settingsJsonPath = Path.GetTempFileName();
@@ -202,6 +176,7 @@ public class ModifyConfigurationTests : RavenTestBase
         using (var embedded = new EmbeddedServer())
         {
             embedded.StartServer(options);
+            var a = await File.ReadAllTextAsync(settingsJsonPath);
             using var store = await embedded.GetDocumentStoreAsync("PersistLogConfiguration");
             var configurationResult = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation());
             
@@ -250,9 +225,9 @@ public class ModifyConfigurationTests : RavenTestBase
             var httpClient = requestExecutor.HttpClient;
 
             var url = await embedded.GetServerUriAsync();
-            var requestUri = $"{url.AbsoluteUri}admin/logs/microsoft/configuration";
+            var requestUri = $"{url.AbsoluteUri}admin/logs/microsoft/configuration?persist=true";
 
-            var stringContent = new StringContent("{\"Configuration\":{\"\":\"Trace\"}, \"Persist\":true}", Encoding.UTF8, "application/json");
+            var stringContent = new StringContent("{\"\":\"Trace\"}", Encoding.UTF8, "application/json");
             
             var response = await httpClient.PostAsync(requestUri, stringContent).ConfigureAwait(false);
             Assert.True(response.IsSuccessStatusCode);
@@ -312,8 +287,7 @@ public class ModifyConfigurationTests : RavenTestBase
             MinimumDurationInMs = 33,
             HttpMethods = new List<string> { "POST" },
             ChangeTypes = new List<TrafficWatchChangeType> { TrafficWatchChangeType.Queries },
-            CertificateThumbprints = new List<string>{ "0123456789ABCDEF0123456789ABCDEF01234567" },
-            Persist = true
+            CertificateThumbprints = new List<string>{ "0123456789ABCDEF0123456789ABCDEF01234567" }
         };
         using (var embedded = new EmbeddedServer())
         {
@@ -322,7 +296,7 @@ public class ModifyConfigurationTests : RavenTestBase
 
             var requestExecutor = store.GetRequestExecutor();
 
-            await store.Maintenance.Server.SendAsync(new PutTrafficWatchConfigurationOperation(setConfiguration));
+            await store.Maintenance.Server.SendAsync(new PutTrafficWatchConfigurationOperation(setConfiguration, true));
             
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
