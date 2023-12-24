@@ -182,7 +182,8 @@ namespace Raven.Server.ServerWide
             [nameof(RemoveQueueSinkProcessStateCommand)] = 60_000,
             [nameof(UpdateQueueSinkProcessStateCommand)] = 60_000,
             
-            [nameof(EditDataArchivalCommand)] = 60_000
+            [nameof(EditDataArchivalCommand)] = 60_000,
+            [nameof(UpdateResponsibleNodeForTasksCommand)] = UpdateResponsibleNodeForTasksCommand.CommandVersion,
         };
 
         public bool CanPutCommand(string command)

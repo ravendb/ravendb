@@ -34,7 +34,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             var name = GetName();
@@ -123,7 +123,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
         }
     }
 
-    private void WriteStudioDatabaseState(string databaseName, RawDatabaseRecord record, TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
+    private void WriteStudioDatabaseState(string databaseName, RawDatabaseRecord record, ClusterOperationContext context, AbstractBlittableJsonTextWriter writer)
     {
         try
         {

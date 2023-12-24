@@ -445,15 +445,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backup = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
+                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, backup.TaskId);
+
                 var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(store));
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var now = DateTime.UtcNow;
-                var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record, record.PeriodicBackups.First(), new PeriodicBackupStatus
+                var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record.PeriodicBackups.First(), new PeriodicBackupStatus
                 {
                     LastFullBackupInternal = now.AddDays(-360)
-                }, Server.ServerStore.NodeTag);
+                }, out var responsibleNode);
 
+                Assert.NotNull(nextBackupDetails);
                 Assert.Equal(backup.TaskId, nextBackupDetails.TaskId);
+                Assert.Equal("A", responsibleNode);
                 Assert.Equal(TimeSpan.Zero, nextBackupDetails.TimeSpan);
                 Assert.Equal(true, nextBackupDetails.IsFull);
                 Assert.True(nextBackupDetails.DateTime >= now);
@@ -1619,6 +1623,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(periodicBackupTaskId, TimeSpan.FromSeconds(15));
 
+                Backup.WaitForResponsibleNodeUpdateInCluster(store, cluster.Nodes, periodicBackupTaskId);
                 await Backup.RunBackupInClusterAsync(store, result.TaskId, isFullBackup: true);
                 await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInClusterAsync(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
@@ -2385,8 +2390,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
-                var backupTaskId = await Backup.CreateAndRunBackupInClusterAsync(config, store);
-                var responsibleNode = await Backup.GetBackupResponsibleNode(cluster.Leader, backupTaskId, databaseName, keepTaskOnOriginalMemberNode: true);
+                var backupTaskId = await Backup.CreateAndRunBackupInClusterAsync(config, store, cluster.Nodes);
+                var responsibleNode = Backup.GetBackupResponsibleNode(cluster.Leader, backupTaskId, databaseName, keepTaskOnOriginalMemberNode: true);
 
                 store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: responsibleNode, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
                 await WaitForDatabaseToBeDeleted(store, TimeSpan.FromSeconds(30));
@@ -2394,8 +2399,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var server = cluster.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == responsibleNode == false);
                 server.ServerStore.LicenseManager.LicenseStatus.Attributes[LicenseAttribute.HighlyAvailableTasks] = false;
 
-                var newResponsibleNode = await Backup.GetBackupResponsibleNode(server, backupTaskId, databaseName, keepTaskOnOriginalMemberNode: true);
+                Backup.WaitForResponsibleNodeUpdate(server.ServerStore, databaseName, backupTaskId, responsibleNode);
 
+                var newResponsibleNode = Backup.GetBackupResponsibleNode(server, backupTaskId, databaseName, keepTaskOnOriginalMemberNode: true);
                 Assert.Equal(server.ServerStore.NodeTag, newResponsibleNode);
                 Assert.NotEqual(responsibleNode, newResponsibleNode);
             }

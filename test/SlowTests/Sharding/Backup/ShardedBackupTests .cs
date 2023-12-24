@@ -339,6 +339,7 @@ namespace SlowTests.Sharding.Backup
 
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var backupTaskId = result.TaskId;
+                Sharding.Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, backupTaskId);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -526,6 +527,8 @@ namespace SlowTests.Sharding.Backup
 
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var backupTaskId = result.TaskId;
+
+                Sharding.Backup.WaitForResponsibleNodeUpdateInCluster(store, cluster.Nodes, backupTaskId);
 
                 using (var session = store.OpenAsyncSession())
                 {

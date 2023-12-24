@@ -39,7 +39,7 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
         return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
     }
 
-    protected static BackupInfo GetBackupInfo(string databaseName, RawDatabaseRecord record, DocumentDatabase database, ServerStore serverStore, TransactionOperationContext context)
+    protected static BackupInfo GetBackupInfo(string databaseName, RawDatabaseRecord record, DocumentDatabase database, ServerStore serverStore, ClusterOperationContext context)
     {
         if (database == null)
         {
@@ -96,7 +96,7 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
         return record.StudioConfiguration.Environment;
     }
 
-    protected async IAsyncEnumerable<RawDatabaseRecord> GetAllowedDatabaseRecordsAsync(string name, TransactionOperationContext context, int start, int pageSize)
+    protected async IAsyncEnumerable<RawDatabaseRecord> GetAllowedDatabaseRecordsAsync(string name, ClusterOperationContext context, int start, int pageSize)
     {
         IEnumerable<RawDatabaseRecord> items;
         if (name != null)

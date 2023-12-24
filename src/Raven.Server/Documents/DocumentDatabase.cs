@@ -1649,7 +1649,7 @@ namespace Raven.Server.Documents
                     DatabaseShutdown.ThrowIfCancellationRequested();
                     SubscriptionStorage?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseValueChanged(record);
-                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, changeState);
+                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, record, changeState);
 
                     LastValueChangeIndex = index;
                 }

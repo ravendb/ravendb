@@ -6,6 +6,7 @@ using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
                 throw new InvalidOperationException($"The database record '{RequestHandler.DatabaseName}' doesn't contain topology.");
 
             var taskStatus = ReplicationLoader.GetExternalReplicationState(RequestHandler.ServerStore, RequestHandler.DatabaseName, watcher.TaskId);
-            responseJson[nameof(OngoingTask.ResponsibleNode)] = RequestHandler.ServerStore.WhoseTaskIsIt(topology, watcher, taskStatus);
+            responseJson[nameof(OngoingTask.ResponsibleNode)] = OngoingTasksUtils.WhoseTaskIsIt(ServerStore, topology, watcher, taskStatus, ServerStore.NotificationCenter);
         }
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)

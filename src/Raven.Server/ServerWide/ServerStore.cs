@@ -47,7 +47,6 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -65,7 +64,6 @@ using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.QueueSink;
-using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Storage;
@@ -1361,12 +1359,10 @@ namespace Raven.Server.ServerWide
             }
 
             PeriodicBackupConfiguration backupConfig;
-            DatabaseTopology topology;
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, db))
             {
-                topology = rawRecord.Topology;
                 backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
 
                 if (backupConfig == null)
@@ -1378,10 +1374,10 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            var tag = topology.WhoseTaskIsIt(Engine.CurrentState, backupConfig, null);
+            var tag = BackupUtils.GetResponsibleNodeTag(Server.ServerStore, db, backupConfig.TaskId);
             if (Engine.Tag != tag)
             {
-                if (Logger.IsOperationsEnabled)
+                if (Logger.IsOperationsEnabled && tag != null)
                     Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
                 return;
             }
@@ -3851,79 +3847,6 @@ namespace Raven.Server.ServerWide
             var tempPath = _env.Options.DataPager.Options.TempPath.Combine(name);
 
             return new StreamsTempFile(tempPath.FullPath, isEncrypted ?? _env.Options.Encryption.IsEnabled);
-        }
-
-        public string WhoseTaskIsIt(
-      DatabaseTopology databaseTopology,
-      IDatabaseTask configuration,
-      IDatabaseTaskStatus taskStatus,
-      bool keepTaskOnOriginalMemberNode = false)
-        {
-            var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
-                Engine.CurrentState, configuration,
-                getLastResponsibleNode:
-                () =>
-                {
-                    var lastResponsibleNode = taskStatus?.NodeTag;
-                    if (lastResponsibleNode == null)
-                    {
-                        // first time this task is assigned
-                        return null;
-                    }
-
-                    if (databaseTopology.AllNodes.Contains(lastResponsibleNode) == false)
-                    {
-                        // the topology doesn't include the last responsible node anymore
-                        // we'll choose a different one
-                        return null;
-                    }
-
-                    if (taskStatus is PeriodicBackupStatus)
-                    {
-                        if (databaseTopology.Rehabs.Contains(lastResponsibleNode) &&
-                            databaseTopology.PromotablesStatus.TryGetValue(lastResponsibleNode, out var status) &&
-                            (status == DatabasePromotionStatus.OutOfCpuCredits ||
-                             status == DatabasePromotionStatus.EarlyOutOfMemory ||
-                             status == DatabasePromotionStatus.HighDirtyMemory))
-                        {
-                            // avoid moving backup tasks when the machine is out of CPU credit
-                            return lastResponsibleNode;
-                        }
-                    }
-
-                    if (LicenseManager.HasHighlyAvailableTasks() == false)
-                    {
-                        // can't redistribute, keep it on the original node
-                        RaiseAlertIfNecessary(databaseTopology, configuration, lastResponsibleNode);
-                        return lastResponsibleNode;
-                    }
-
-                    if (keepTaskOnOriginalMemberNode &&
-                        databaseTopology.Members.Contains(lastResponsibleNode))
-                    {
-                        // keep the task on the original node
-                        return lastResponsibleNode;
-                    }
-
-                    return null;
-                });
-
-            if (whoseTaskIsIt == null && taskStatus is PeriodicBackupStatus)
-                return taskStatus.NodeTag; // we don't want to stop backup process
-
-            return whoseTaskIsIt;
-        }
-
-        private void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode)
-        {
-            // raise alert if redistribution is necessary
-            if (databaseTopology.Count > 1 &&
-                NodeTag != lastResponsibleNode &&
-                databaseTopology.Members.Contains(lastResponsibleNode) == false)
-            {
-                var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
-                NotificationCenter.Add(alert);
-            }
         }
 
         internal TestingStuff ForTestingPurposes;
