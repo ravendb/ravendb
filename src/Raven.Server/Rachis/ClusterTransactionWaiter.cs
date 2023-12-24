@@ -55,20 +55,24 @@ namespace Raven.Server.Rachis
             return val;
         }
 
-        public void SetResult(string id)
+        public bool TrySetResult(string id)
         {
             if (_results.TryGetValue(id, out var task))
             {
-                task.TrySetResult();
+                return task.TrySetResult();
             }
+
+            return false;
         }
 
-        public void SetException(string id, Exception e)
+        public bool TrySetException(string id, Exception e)
         {
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetException(e);
+                return task.TrySetException(e);
             }
+
+            return false;
         }
 
         public readonly struct RemoveTask : IDisposable

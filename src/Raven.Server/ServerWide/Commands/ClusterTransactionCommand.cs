@@ -681,7 +681,7 @@ namespace Raven.Server.ServerWide.Commands
                     if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
                         return;
 
-                    clusterTransactionWaiter.SetResult(Options.TaskId);
+                    clusterTransactionWaiter.TrySetResult(Options.TaskId);
                 };
             }
             else

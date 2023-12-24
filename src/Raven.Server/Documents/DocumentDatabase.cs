@@ -439,6 +439,13 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
+                using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
+                    Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
+                }
+
                 ThreadPool.QueueUserWorkItem(_ =>
                 {
                     try
@@ -459,13 +466,6 @@ namespace Raven.Server.Documents
                         _logger);
                     try
                     {
-                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
-                            Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
-                        }
-
                         _hasClusterTransaction.Set();
                         ExecuteClusterTransaction();
                     }
@@ -765,10 +765,6 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-                var taskResult = new ClusterTransactionResult
-                {
-                    GeneratedResult = mergedCommands.Replies[index],
-                };
                 if (options.WaitForIndexesTimeout != null)
                 {
                     var indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
@@ -787,14 +783,12 @@ namespace Raven.Server.Documents
                     {
                         if(t.IsFaulted)
                         {
-                            Exception e = t.Exception.InnerException;
-                            RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-                            ServerStore.Cluster.ClusterTransactionWaiter.SetException(options.TaskId, e);
+                            Exception e = t.Exception is AggregateException ae ? ae.InnerException : t.Exception;
+                            ServerStore.Cluster.ClusterTransactionWaiter.TrySetException(options.TaskId, e);
                         }
                         else
                         {
-                            RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                            ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId);
+                            ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId);
                         }
 
                         removeTask.Dispose();
@@ -802,10 +796,10 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                    ServerStore.Cluster.ClusterTransactionWaiter.SetResult(options.TaskId);
+                    ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId);
                 }
 
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
 
                 _nextClusterCommand = command.PreviousCount + command.Commands.Length;
@@ -830,7 +824,7 @@ namespace Raven.Server.Documents
                 var options = command.Options;
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
-                ServerStore.Cluster.ClusterTransactionWaiter.SetException(options.TaskId, exception);
+                ServerStore.Cluster.ClusterTransactionWaiter.TrySetException(options.TaskId, exception);
             }
             catch (Exception e)
             {
