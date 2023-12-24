@@ -25,6 +25,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Utils;
@@ -148,6 +149,12 @@ internal static class BackupUtils
 
         var periodicBackupStatusJson = JsonDeserializationClient.PeriodicBackupStatus(statusBlittable);
         return periodicBackupStatusJson;
+    }
+
+    internal static BlittableJsonReaderObject GetResponsibleNodeInfoFromCluster(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
+    {
+        var responsibleNodeBlittable = serverStore.Cluster.Read(context, ResponsibleNodeInfo.GenerateItemName(databaseName, taskId));
+        return responsibleNodeBlittable;
     }
 
     internal static PeriodicBackupStatus ComparePeriodicBackupStatus(long taskId, PeriodicBackupStatus backupStatus, PeriodicBackupStatus inMemoryBackupStatus)
@@ -588,7 +595,7 @@ internal static class BackupUtils
         return whoseTaskIsIt;
     }
 
-    private static void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode,
+    public static void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode,
         ServerStore serverStore, NotificationCenter.NotificationCenter notificationCenter)
     {
         // raise alert if redistribution is necessary

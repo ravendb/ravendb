@@ -569,19 +569,14 @@ namespace Raven.Server.Web.System
 
             foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
             {
-                yield return GetOngoingTaskBackup(backupConfiguration.TaskId, databaseRecord, backupConfiguration, clusterTopology);
+                yield return GetOngoingTaskBackup(backupConfiguration.TaskId, backupConfiguration, clusterTopology);
             }
         }
 
-        private OngoingTaskBackup GetOngoingTaskBackup(
-            long taskId,
-            DatabaseRecord databaseRecord,
-            PeriodicBackupConfiguration backupConfiguration,
-            ClusterTopology clusterTopology)
+        private OngoingTaskBackup GetOngoingTaskBackup(long taskId, PeriodicBackupConfiguration backupConfiguration, ClusterTopology clusterTopology)
         {
             var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(taskId);
-            var responsibleNodeTag = BackupUtils.WhoseTaskIsIt(ServerStore, databaseRecord.Topology, backupConfiguration, backupStatus, Database.NotificationCenter, keepTaskOnOriginalMemberNode: true);
-            var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
+            var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(backupConfiguration, backupStatus, out var responsibleNodeTag);
             var onGoingBackup = Database.PeriodicBackupRunner.OnGoingBackup(taskId);
             var backupDestinations = backupConfiguration.GetFullBackupDestinations();
 
@@ -1166,7 +1161,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            var backupTaskInfo = GetOngoingTaskBackup(key, record, backupConfiguration, clusterTopology);
+                            var backupTaskInfo = GetOngoingTaskBackup(key, backupConfiguration, clusterTopology);
 
                             await WriteResult(context, backupTaskInfo);
                             break;

@@ -21,6 +21,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -189,6 +190,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return;
 
             var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
+            var responsibleNodeCommands = new List<UpdateResponsibleNodeForTaskCommand>();
             var cleanUnusedAutoIndexesCommands = new List<(UpdateDatabaseCommand Update, string Reason)>();
             var cleanCompareExchangeTombstonesCommands = new List<CleanCompareExchangeTombstonesCommand>();
 
@@ -321,6 +323,20 @@ namespace Raven.Server.ServerWide.Maintenance
                                     throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
                             }
                         }
+
+                        foreach (var configuration in rawRecord.PeriodicBackups)
+                        {
+                            var responsibleNodeInfo = GetResponsibleNodeInfo(database, configuration, state.DatabaseTopology, context);
+                            if (responsibleNodeInfo == null)
+                                continue;
+
+                            var command = new UpdateResponsibleNodeForTaskCommand(database, RaftIdGenerator.NewId())
+                            {
+                                ResponsibleNodeInfo = responsibleNodeInfo
+                            };
+
+                            responsibleNodeCommands.Add(command);
+                        }
                     }
                 }
             }
@@ -381,6 +397,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
+            foreach (var command in responsibleNodeCommands)
+            {
+                await UpdateResponsibleNodeForTask(command);
+            }
+            
             if (deletions != null)
             {
                 foreach (var command in deletions)
@@ -412,6 +433,137 @@ namespace Raven.Server.ServerWide.Maintenance
                     await _engine.PutAsync(cmd);
                 }
             }
+        }
+
+        private ResponsibleNodeInfo GetResponsibleNodeInfo(
+            string databaseName,
+            PeriodicBackupConfiguration configuration,
+            DatabaseTopology topology,
+            TransactionOperationContext context)
+        {
+            var backupStatus = BackupUtils.GetBackupStatusFromCluster(_server, context, databaseName, configuration.TaskId);
+            var responsibleNodeBlittable = BackupUtils.GetResponsibleNodeInfoFromCluster(_server, context, databaseName, configuration.TaskId);
+            string currentResponsibleNode = null;
+            responsibleNodeBlittable?.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out currentResponsibleNode);
+
+            var newResponsibleNode = topology.WhoseTaskIsIt(_server.Engine.CurrentState, configuration,
+                getLastResponsibleNode: () =>
+                {
+                    var lastResponsibleNode = currentResponsibleNode ?? backupStatus?.NodeTag;
+                    if (lastResponsibleNode == null)
+                    {
+                        // first time this task is assigned
+                        return null;
+                    }
+
+                    if (topology.AllNodes.Contains(lastResponsibleNode) == false)
+                    {
+                        // the topology doesn't include the last responsible node anymore
+                        // we'll choose a different one
+                        return null;
+                    }
+
+                    if (topology.Rehabs.Contains(lastResponsibleNode) &&
+                        topology.PromotablesStatus.TryGetValue(lastResponsibleNode, out var status) &&
+                        (status == DatabasePromotionStatus.OutOfCpuCredits ||
+                         status == DatabasePromotionStatus.EarlyOutOfMemory ||
+                         status == DatabasePromotionStatus.HighDirtyMemory))
+                    {
+                        // avoid moving backup tasks when the machine is out of CPU credits or out of memory
+                        return lastResponsibleNode;
+                    }
+
+                    if (topology.Members.Contains(lastResponsibleNode))
+                    {
+                        // keep the task on the original node
+                        return lastResponsibleNode;
+                    }
+
+                    if (_server.LicenseManager.HasHighlyAvailableTasks() == false)
+                    {
+                        // can't redistribute, keep it on the original node
+                        BackupUtils.RaiseAlertIfNecessary(topology, configuration, lastResponsibleNode, _server, _server.NotificationCenter);
+                        return lastResponsibleNode;
+                    }
+
+                    return null;
+                });
+
+            if (newResponsibleNode == null)
+            {
+                // don't have a responsible node at all. can happen for a new task that didn't ever perform a backup.
+                return null;
+            }
+
+            
+            if (responsibleNodeBlittable == null)
+            {
+                // TODO: add to the decision log
+                // no responsible node for backup currently exists
+                return new ResponsibleNodeInfo
+                {
+                    TaskId = configuration.TaskId,
+                    ResponsibleNode = newResponsibleNode
+                };
+            }
+
+            responsibleNodeBlittable.TryGet(nameof(ResponsibleNodeInfo.NotSuitableForTaskSince), out DateTime? notSuitableForTaskSince);
+
+            if (currentResponsibleNode == newResponsibleNode)
+            {
+                // it's the same responsible node
+
+                if (notSuitableForTaskSince != null)
+                {
+                    // TODO: add to the decision log
+                    // we need to remove the NotSuitableForTaskSince since the node is suitable for backup
+                    return new ResponsibleNodeInfo
+                    {
+                        TaskId = configuration.TaskId,
+                        ResponsibleNode = currentResponsibleNode,
+                        NotSuitableForTaskSince = null
+                    };
+                }
+
+                return null;
+            }
+
+            if (topology.AllNodes.Contains(currentResponsibleNode) == false)
+            {
+                // the node was removed from the topology, choosing another node without a grace period
+                // TODO: add to the decision log
+                return new ResponsibleNodeInfo
+                {
+                    TaskId = configuration.TaskId,
+                    ResponsibleNode = newResponsibleNode
+                };
+            }
+
+            if (notSuitableForTaskSince == null)
+            {
+                // it's the first time that we identify that the node isn't suitable for backup
+                // TODO: add to the decision log
+                return new ResponsibleNodeInfo
+                {
+                    TaskId = configuration.TaskId,
+                    ResponsibleNode = currentResponsibleNode,
+                    NotSuitableForTaskSince = DateTime.UtcNow
+                };
+            }
+
+            //TODO: add a configuration
+            if (DateTime.UtcNow - notSuitableForTaskSince.Value < TimeSpan.FromMinutes(30))
+            {
+                // grace period before moving the task to another node
+                return null;
+            }
+
+            // TODO: add to the decision log
+            return new ResponsibleNodeInfo
+            {
+                TaskId = configuration.TaskId,
+                ResponsibleNode = newResponsibleNode
+            };
         }
 
         private static string GetCommandId(Dictionary<string, long> dic)
@@ -1691,6 +1843,16 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             return _engine.PutAsync(cmd);
+        }
+
+        private Task<(long Index, object Result)> UpdateResponsibleNodeForTask(UpdateResponsibleNodeForTaskCommand command)
+        {
+            if (_engine.LeaderTag != _server.NodeTag)
+            {
+                throw new NotLeadingException("This node is no longer the leader, so we abort updating the responsible node for task");
+            }
+
+            return _engine.PutAsync(command);
         }
 
         private Task<(long Index, object Result)> Delete(DeleteDatabaseCommand cmd)
