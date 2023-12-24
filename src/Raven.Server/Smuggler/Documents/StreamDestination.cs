@@ -1033,7 +1033,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public async ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType)
+            public async ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -1053,7 +1053,7 @@ namespace Raven.Server.Smuggler.Documents
                 await Writer.MaybeFlushAsync();
             }
 
-            public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition)
+            public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition, AuthorizationStatus authorizationStatus)
             {
                 if (First == false)
                     Writer.WriteComma();
