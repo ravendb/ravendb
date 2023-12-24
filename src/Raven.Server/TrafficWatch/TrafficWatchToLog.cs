@@ -129,14 +129,14 @@ internal class TrafficWatchToLog : IDynamicJson
     public void UpdateConfiguration(TrafficWatchConfiguration configuration)
     {
         _trafficWatchMode = configuration.TrafficWatchMode;
-        _databases = configuration.Databases;
-        _statusCodes = configuration.StatusCodes;
+        _databases = configuration.Databases?.ToList();
+        _statusCodes = configuration.StatusCodes?.ToList();
         _minimumResponseSizeInBytes = configuration.MinimumResponseSize.GetValue(SizeUnit.Bytes);
         _minimumRequestSizeInBytes = configuration.MinimumRequestSize.GetValue(SizeUnit.Bytes);
         _minimumDurationInMs = configuration.MinimumDuration.GetValue(TimeUnit.Milliseconds);
-        _httpMethods = configuration.HttpMethods;
-        _changeTypes = configuration.ChangeTypes;
-        _certificateThumbprints = configuration.CertificateThumbprints;
+        _httpMethods = configuration.HttpMethods?.ToList();
+        _changeTypes = configuration.ChangeTypes?.ToList();
+        _certificateThumbprints = configuration.CertificateThumbprints?.ToList();
     }
 
     public void UpdateConfiguration(PutTrafficWatchConfigurationOperation.Parameters configuration)

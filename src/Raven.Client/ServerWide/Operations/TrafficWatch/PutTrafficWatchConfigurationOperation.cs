@@ -13,29 +13,38 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
     public class PutTrafficWatchConfigurationOperation : IServerOperation
     {
         private readonly Parameters _parameters;
+        private readonly bool _persist;
 
         public PutTrafficWatchConfigurationOperation(Parameters parameters)
+            :this(parameters, false)
+        {
+        }
+        
+        public PutTrafficWatchConfigurationOperation(Parameters parameters, bool persist)
         {
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+            _persist = persist;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new SetTrafficWatchConfigurationCommand(_parameters);
+            return new SetTrafficWatchConfigurationCommand(_parameters, _persist);
         }
 
         private class SetTrafficWatchConfigurationCommand : RavenCommand
         {
             private readonly Parameters _parameters;
+            private readonly bool _persist;
 
-            public SetTrafficWatchConfigurationCommand(Parameters parameters)
+            public SetTrafficWatchConfigurationCommand(Parameters parameters, bool persist)
             {
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+                _persist = persist;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/traffic-watch/configuration";
+                url = $"{node.Url}/admin/traffic-watch/configuration?persist={_persist}";
 
                 return new HttpRequestMessage(HttpMethod.Post, url)
                 {

@@ -269,4 +269,83 @@ public class ModifyConfigurationTests : RavenTestBase
             }
         }
     }
+    
+    
+     [RavenFact(RavenTestCategory.Logging)]
+    public async Task PersistTrafficWatchConfiguration()
+    {
+        var settingsJsonPath = Path.GetTempFileName();
+        var options = await CreateSettingsJsonFile(settingsJsonPath);
+        
+        var setConfiguration = new PutTrafficWatchConfigurationOperation.Parameters()
+        {
+            TrafficWatchMode = TrafficWatchMode.ToLogFile,
+            Databases = new List<string> { "test1" },
+            StatusCodes = new List<int> { 200 },
+            MinimumResponseSizeInBytes = new Size(11, SizeUnit.Bytes),
+            MinimumRequestSizeInBytes = new Size(22, SizeUnit.Bytes),
+            MinimumDurationInMs = 33,
+            HttpMethods = new List<string> { "POST" },
+            ChangeTypes = new List<TrafficWatchChangeType> { TrafficWatchChangeType.Queries },
+            CertificateThumbprints = new List<string>{ "0123456789ABCDEF0123456789ABCDEF01234567" }
+        };
+        using (var embedded = new EmbeddedServer())
+        {
+            embedded.StartServer(options);
+            using var store = await embedded.GetDocumentStoreAsync("PersistLogConfiguration");
+
+            var requestExecutor = store.GetRequestExecutor();
+
+            await store.Maintenance.Server.SendAsync(new PutTrafficWatchConfigurationOperation(setConfiguration, true));
+            
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using var settingsJson = ReadConfiguration(context, settingsJsonPath);
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.TrafficWatchMode), out TrafficWatchMode trafficWatchMode));
+                Assert.Equal(setConfiguration.TrafficWatchMode, trafficWatchMode);
+                
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.Databases), out string databases));
+                Assert.Equal(string.Join(';', setConfiguration.Databases), databases);
+
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.StatusCodes), out string statusCodes));
+                Assert.Equal(string.Join(';', setConfiguration.StatusCodes), statusCodes);
+                
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.MinimumResponseSize), out long minimumResponseSize));
+                Assert.Equal(setConfiguration.MinimumResponseSizeInBytes.GetValue(SizeUnit.Bytes), minimumResponseSize);
+
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.MinimumRequestSize), out long minimumRequestSize));
+                Assert.Equal(setConfiguration.MinimumRequestSizeInBytes.GetValue(SizeUnit.Bytes), minimumRequestSize);
+
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.MinimumDuration), out long minimumDuration));
+                Assert.Equal(setConfiguration.MinimumDurationInMs, minimumDuration);
+                
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.HttpMethods), out string httpMethods));
+                Assert.Equal(string.Join(';', setConfiguration.HttpMethods), httpMethods);
+
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.ChangeTypes), out string changeTypes));
+                Assert.Equal(string.Join(';', setConfiguration.ChangeTypes), changeTypes);
+
+                Assert.True(settingsJson.TryGet(RavenConfiguration.GetKey(x => x.TrafficWatch.CertificateThumbprints), out string certificateThumbprints));
+                Assert.Equivalent(string.Join(';',setConfiguration.CertificateThumbprints), certificateThumbprints);
+            }
+        }
+
+        using (var embedded = new EmbeddedServer())
+        {
+            embedded.StartServer(options);
+            using var store = await embedded.GetDocumentStoreAsync("PersistLogConfiguration");
+
+            var getConfiguration = await store.Maintenance.Server.SendAsync(new GetTrafficWatchConfigurationOperation());
+            
+            Assert.Equal(setConfiguration.TrafficWatchMode, getConfiguration.TrafficWatchMode);
+            Assert.Equivalent(setConfiguration.Databases, getConfiguration.Databases);
+            Assert.Equivalent(setConfiguration.StatusCodes, getConfiguration.StatusCodes);
+            Assert.Equal(setConfiguration.MinimumResponseSizeInBytes, getConfiguration.MinimumResponseSizeInBytes);
+            Assert.Equal(setConfiguration.MinimumRequestSizeInBytes, getConfiguration.MinimumRequestSizeInBytes);
+            Assert.Equal(setConfiguration.MinimumDurationInMs, getConfiguration.MinimumDurationInMs);
+            Assert.Equivalent(setConfiguration.HttpMethods, getConfiguration.HttpMethods);
+            Assert.Equivalent(setConfiguration.ChangeTypes, getConfiguration.ChangeTypes);
+            Assert.Equivalent(setConfiguration.CertificateThumbprints, getConfiguration.CertificateThumbprints);
+        }
+    }
 }
