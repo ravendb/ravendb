@@ -66,16 +66,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     try
                     {
-                        var jsonFileModifier = new JsonConfigFileModifier(ServerStore.Configuration.ConfigPath);
-                        await jsonFileModifier.Execute(context, j =>
-                        {
-                            ModifierConfigFileHelper.SetOrRemoveIfDefault(j, LoggingSource.Instance.LogMode, x => x.Logs.Mode);
-                            long? retentionSize = LoggingSource.Instance.RetentionSize == long.MaxValue
-                                ? null : new Size(LoggingSource.Instance.RetentionSize, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-                            ModifierConfigFileHelper.SetOrRemoveIfDefault(j, retentionSize, x => x.Logs.RetentionSize);
-                            ModifierConfigFileHelper.SetOrRemoveIfDefault(j, (int)LoggingSource.Instance.RetentionTime.TotalHours, x => x.Logs.RetentionTime);
-                            ModifierConfigFileHelper.SetOrRemoveIfDefault(j, LoggingSource.Instance.Compressing, x => x.Logs.Compress);
-                        });
+                        using var jsonFileModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
+                        jsonFileModifier.SetOrRemoveIfDefault(LoggingSource.Instance.LogMode, x => x.Logs.Mode);
+                        long? retentionSize = LoggingSource.Instance.RetentionSize == long.MaxValue
+                            ? null : new Size(LoggingSource.Instance.RetentionSize, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+                        jsonFileModifier.SetOrRemoveIfDefault(retentionSize, x => x.Logs.RetentionSize);
+                        jsonFileModifier.SetOrRemoveIfDefault((int)LoggingSource.Instance.RetentionTime.TotalHours, x => x.Logs.RetentionTime);
+                        jsonFileModifier.SetOrRemoveIfDefault(LoggingSource.Instance.Compressing, x => x.Logs.Compress);
+                        await jsonFileModifier.Execute();
                     }
                     catch (Exception e)
                     {
@@ -240,20 +238,16 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     try
                     {
-                        var microsoftConfigModifier = new JsonConfigFileModifier(ServerStore.Configuration.Logs.MicrosoftLogsConfigurationPath.FullPath, true);
-                        await microsoftConfigModifier.Execute(context, j =>
+                        using var microsoftConfigModifier = JsonConfigFileModifier.Create(context, ServerStore.Configuration.Logs.MicrosoftLogsConfigurationPath.FullPath, true);
+                        foreach (var (category, logLevel) in Server.GetService<MicrosoftLoggingProvider>().Configuration)
                         {
-                            foreach (var (category, logLevel) in Server.GetService<MicrosoftLoggingProvider>().Configuration)
-                            {
-                                j[category] = logLevel;
-                            }
-                        });
+                            microsoftConfigModifier.DynamicJsonValue[category] = logLevel;
+                        }
+                        await microsoftConfigModifier.Execute();
 
-                        var settingJsonConfigModifier = new JsonConfigFileModifier(ServerStore.Configuration.ConfigPath);
-                        await settingJsonConfigModifier.Execute(context, j =>
-                        {
-                            j[RavenConfiguration.GetKey(x => x.Logs.DisableMicrosoftLogs)] = false;
-                        });
+                        using var settingJsonConfigModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
+                        settingJsonConfigModifier.SetOrRemoveIfDefault(false, x => x.Logs.DisableMicrosoftLogs);
+                        await settingJsonConfigModifier.Execute();
                     }
                     catch (Exception e)
                     {
