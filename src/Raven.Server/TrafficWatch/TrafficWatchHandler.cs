@@ -115,7 +115,7 @@ namespace Raven.Server.TrafficWatch
                     catch (Exception e)
                     {
                         throw new PersistConfigurationException(
-                            "The log configuration was modified but couldn't be persistent. The configuration will be reverted on server restart.", e);
+                            "The traffic watch logs configuration was modified but couldn't be persistent. The configuration will be reverted on server restart.", e);
                     }
                 }
 

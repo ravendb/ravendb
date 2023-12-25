@@ -22,23 +22,23 @@ public class JsonConfigFileModifier : IDisposable
 {
     private readonly JsonOperationContext _context;
     private readonly string _path;
-    private readonly bool _reset;
+    private readonly bool _overwriteWholeFile;
     private BlittableJsonReaderObject _json;
 
     public DynamicJsonValue DynamicJsonValue => _json.Modifications;
 
-    public static JsonConfigFileModifier Create(JsonOperationContext context, string path, bool reset = false)
+    public static JsonConfigFileModifier Create(JsonOperationContext context, string path, bool overwriteWholeFile = false)
     {
-        var obj = new JsonConfigFileModifier(context, path, reset);
+        var obj = new JsonConfigFileModifier(context, path, overwriteWholeFile);
         obj.Initial();
         return obj;
     }
 
-    protected JsonConfigFileModifier(JsonOperationContext context, string path, bool reset = false)
+    protected JsonConfigFileModifier(JsonOperationContext context, string path, bool overwriteWholeFile = false)
     {
         _context = context;
         _path = path;
-        _reset = reset;
+        _overwriteWholeFile = overwriteWholeFile;
     }
 
     protected void Initial()
@@ -58,14 +58,14 @@ public class JsonConfigFileModifier : IDisposable
     private BlittableJsonReaderObject ReadBlittableFromFile(JsonOperationContext context)
     {
         var jsonConfig = new DynamicJsonValue();
-        if (_reset == false)
-            ReadConfigFile(jsonConfig);
+        if (_overwriteWholeFile == false)
+            FillJsonFromFile(jsonConfig);
 
         var fileName = Path.GetFileName(_path);
         return context.ReadObject(jsonConfig, fileName);
     }
 
-    private void ReadConfigFile(DynamicJsonValue jsonConfig)
+    private void FillJsonFromFile(DynamicJsonValue jsonConfig)
     {
         try
         {
@@ -77,11 +77,11 @@ public class JsonConfigFileModifier : IDisposable
             var dicConfig = new Dictionary<string, object>();
             foreach (var (key, value) in orderConfig)
             {
-                if(value == null)
+                if (value == null)
                     continue;
                 
                 var directKey = key.Replace(':', '.');
-                if(dicConfig.TryAdd(directKey, value) == false)
+                if (dicConfig.TryAdd(directKey, value) == false)
                     continue;
 
                 jsonConfig[directKey] = value;
@@ -179,8 +179,8 @@ public class JsonConfigFileModifier : IDisposable
 
 public class SettingsJsonModifier : JsonConfigFileModifier
 {
-    private SettingsJsonModifier(JsonOperationContext context, string path, bool reset = false) 
-        : base(context, path, reset)
+    private SettingsJsonModifier(JsonOperationContext context, string path, bool overwriteWholeFile = false) 
+        : base(context, path, overwriteWholeFile)
     {
     }
 
@@ -195,7 +195,6 @@ public class SettingsJsonModifier : JsonConfigFileModifier
     {
         RavenConfiguration.CreateForTesting("for-validattion", ResourceType.Server, path).Initialize();
     }
-
 
     public void SetOrRemoveIfDefault<T, T1>(T1 value, Expression<Func<RavenConfiguration, T>> getKey)
     {
