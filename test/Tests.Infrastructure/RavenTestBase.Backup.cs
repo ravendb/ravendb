@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents.PeriodicBackup;
@@ -86,6 +87,28 @@ namespace FastTests
 
                 await RunBackupAsync(server, result.TaskId, store, isFullBackup, opStatus, timeout);
                 return result.TaskId;
+            }
+
+            public async Task<long> UpdateConfigAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store)
+            {
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+                WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
+
+                return result.TaskId;
+            }
+            
+            public async Task<long> UpdateServerWideConfigAsync(RavenServer server, ServerWideBackupConfiguration config, DocumentStore store)
+            {
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(config));
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var backup = record.PeriodicBackups.First();
+                var backupTaskId = backup.TaskId;
+
+                WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backupTaskId);
+
+                return backupTaskId;
             }
 
             public void WaitForResponsibleNodeUpdate(ServerStore serverStore, string databaseName, long taskId, string differentThan = null)
