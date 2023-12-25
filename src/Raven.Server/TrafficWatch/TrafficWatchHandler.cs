@@ -8,9 +8,11 @@ using System;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Web;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -91,11 +93,34 @@ namespace Raven.Server.TrafficWatch
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "traffic-watch/configuration");
 
                 var configuration = JsonDeserializationServer.Parameters.PutTrafficWatchConfigurationParameters(json);
-                
-                TrafficWatchToLog.Instance.UpdateConfiguration(configuration);
-            }
 
-            NoContentStatus();
+                TrafficWatchToLog.Instance.UpdateConfiguration(configuration);
+
+                if (GetBoolValueQueryString("persist", false) == true)
+                {
+                    try
+                    {
+                        using var jsonFileModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.TrafficWatchMode, x => x.TrafficWatch.TrafficWatchMode);
+                        jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.Databases, x => x.TrafficWatch.Databases);
+                        jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.StatusCodes, x => x.TrafficWatch.StatusCodes);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.MinimumResponseSizeInBytes.GetValue(SizeUnit.Bytes), x => x.TrafficWatch.MinimumResponseSize);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.MinimumRequestSizeInBytes.GetValue(SizeUnit.Bytes), x => x.TrafficWatch.MinimumRequestSize);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.MinimumDurationInMs, x => x.TrafficWatch.MinimumDuration);
+                        jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.HttpMethods, x => x.TrafficWatch.HttpMethods);
+                        jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.ChangeTypes, x => x.TrafficWatch.ChangeTypes);
+                        jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.CertificateThumbprints, x => x.TrafficWatch.CertificateThumbprints);
+                        await jsonFileModifier.Execute();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new PersistConfigurationException(
+                            "The traffic watch logs configuration was modified but couldn't be persistent. The configuration will be reverted on server restart.", e);
+                    }
+                }
+
+                NoContentStatus();
+            }
         }
     }
 }

@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
                     catch (Exception e)
                     {
-                        throw new PersistConfigurationException("The log configuration was modified but couldn't be persistent. The configuration will be reverted on server restart.", e);
+                        throw new PersistConfigurationException("The log configuration was modified but couldn't be persisted. The configuration will be reverted on server restart.", e);
                     }
                 }
             }
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     try
                     {
-                        using var microsoftConfigModifier = JsonConfigFileModifier.Create(context, ServerStore.Configuration.Logs.MicrosoftLogsConfigurationPath.FullPath, true);
+                        using var microsoftConfigModifier = JsonConfigFileModifier.Create(context, ServerStore.Configuration.Logs.MicrosoftLogsConfigurationPath.FullPath, overwriteWholeFile: true);
                         foreach (var (category, logLevel) in Server.GetService<MicrosoftLoggingProvider>().Configuration)
                         {
                             microsoftConfigModifier.DynamicJsonValue[category] = logLevel;
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
                     catch (Exception e)
                     {
-                        throw new PersistConfigurationException("The microsoft configuration was modified but couldn't be persistent. The configuration will be reverted on server restart.", e);
+                        throw new PersistConfigurationException("The Microsoft configuration was modified but couldn't be persisted. The configuration will be reverted on server restart.", e);
                     }
                 }
             }
