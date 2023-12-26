@@ -23,9 +23,12 @@ public abstract class TransactionMergedCommand : DocumentMergedTransactionComman
 
     public bool IsClusterTransaction { get; set; }
 
+    public bool IncludeReply { get; set; }
+
     protected TransactionMergedCommand(DocumentDatabase database)
     {
         Database = database;
+        IncludeReply = true;
     }
 
     protected void AddPutResult(DocumentsStorage.PutOperationResults putResult)

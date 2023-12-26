@@ -111,6 +111,11 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (indexBatchOptions != null)
                     command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+                if (HttpContext.Request.Query.TryGetValue("noreply", out var noReply))
+                {
+                    command.IncludeReply = !bool.Parse(noReply);
+                }
+
                 var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions);
 
                 if (replicationBatchOptions != null)
