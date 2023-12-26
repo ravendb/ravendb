@@ -10,34 +10,39 @@ public sealed class MergedBatchCommandDto : IReplayableCommandDto<DocumentsOpera
 {
     public BatchRequestParser.CommandData[] ParsedCommands { get; set; }
     public List<MergedBatchCommand.AttachmentStream> AttachmentStreams;
+    private readonly bool _includeReply;
+
+    public MergedBatchCommandDto(bool includeReply)
+    {
+        _includeReply = includeReply;
+    }
 
     public MergedBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
     {
-        for (var i = 0; i < ParsedCommands.Length; i++)
+        foreach (var parsedCommand in ParsedCommands)
         {
-            if (ParsedCommands[i].Type != CommandType.PATCH)
-            {
+            if (parsedCommand.Type != CommandType.PATCH)
                 continue;
-            }
 
-            ParsedCommands[i].PatchCommand = new PatchDocumentCommand(
+            parsedCommand.PatchCommand = new PatchDocumentCommand(
                 context: context,
-                id: ParsedCommands[i].Id,
-                expectedChangeVector: ParsedCommands[i].ChangeVector,
+                id: parsedCommand.Id,
+                expectedChangeVector: parsedCommand.ChangeVector,
                 skipPatchIfChangeVectorMismatch: false,
-                patch: (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
-                patchIfMissing: (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
+                patch: (parsedCommand.Patch, parsedCommand.PatchArgs),
+                patchIfMissing: (parsedCommand.PatchIfMissing, parsedCommand.PatchIfMissingArgs),
                 identityPartsSeparator: database.IdentityPartsSeparator,
-                createIfMissing: ParsedCommands[i].CreateIfMissing,
+                createIfMissing: parsedCommand.CreateIfMissing,
                 isTest: false,
                 debugMode: false,
                 collectResultsNeeded: true,
-                returnDocument: ParsedCommands[i].ReturnDocument
+                returnDocument: parsedCommand.ReturnDocument
             );
         }
 
         var newCmd = new MergedBatchCommand(database)
         {
+            IncludeReply = _includeReply,
             ParsedCommands = ParsedCommands,
             AttachmentStreams = AttachmentStreams
         };
