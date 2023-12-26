@@ -30,6 +30,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
     public MergedBatchCommand(DocumentDatabase database) : base(database)
     {
+
     }
 
     public override string ToString()
@@ -143,9 +144,9 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     cmd.JsonPatchCommand.ExecuteDirectly(context);
 
                     var lastChangeVectorJsonPatch = cmd.JsonPatchCommand.HandleReply(Reply, ModifiedCollections, Database);
-
                     if (lastChangeVectorJsonPatch != null)
                         LastChangeVector = lastChangeVectorJsonPatch;
+
                     break;
 
                 case CommandType.DELETE:
@@ -193,6 +194,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         _documentsToUpdateAfterAttachmentChange[docId] = apReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
 
                     apReplies.Add((apReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
+
                     Reply.Add(apReply);
                     break;
 
@@ -216,6 +218,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         _documentsToUpdateAfterAttachmentChange[cmd.Id] = adReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
 
                     adReplies.Add((adReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
+
                     Reply.Add(adReply);
                     break;
 
@@ -290,6 +293,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         _documentsToUpdateAfterAttachmentChange[cmd.DestinationId] = acReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
 
                     acReplies.Add((acReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
+
                     Reply.Add(acReply);
                     break;
 
@@ -302,6 +306,9 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     LastChangeVector = tsCmd.LastChangeVector;
 
+                    if (tsCmd.DocCollection != null)
+                        ModifiedCollections?.Add(tsCmd.DocCollection);
+
                     Reply.Add(new DynamicJsonValue
                     {
                         [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
@@ -310,9 +317,6 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         //TODO: handle this
                         //[nameof(Constants.Fields.CommandData.DocumentChangeVector)] = tsCmd.LastDocumentChangeVector
                     });
-
-                    if (tsCmd.DocCollection != null)
-                        ModifiedCollections?.Add(tsCmd.DocCollection);
 
                     break;
 
@@ -332,14 +336,14 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     LastChangeVector = cv;
 
+                    ModifiedCollections?.Add(destinationDocCollection);
+
                     Reply.Add(new DynamicJsonValue
                     {
                         [nameof(BatchRequestParser.CommandData.Id)] = cmd.DestinationId,
                         [nameof(BatchRequestParser.CommandData.ChangeVector)] = cv,
                         [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeriesCopy),
                     });
-
-                    ModifiedCollections?.Add(destinationDocCollection);
 
                     break;
 
@@ -355,6 +359,14 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     LastChangeVector = counterBatchCmd.LastChangeVector;
 
+                    if (counterBatchCmd.DocumentCollections != null)
+                    {
+                        foreach (var collection in counterBatchCmd.DocumentCollections)
+                        {
+                            ModifiedCollections?.Add(collection);
+                        }
+                    }
+
                     Reply.Add(new DynamicJsonValue
                     {
                         [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
@@ -363,14 +375,6 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         [nameof(CountersDetail)] = counterBatchCmd.CountersDetail.ToJson(),
                         [nameof(Constants.Fields.CommandData.DocumentChangeVector)] = counterBatchCmd.LastDocumentChangeVector
                     });
-
-                    if (counterBatchCmd.DocumentCollections != null)
-                    {
-                        foreach (var collection in counterBatchCmd.DocumentCollections)
-                        {
-                            ModifiedCollections?.Add(collection);
-                        }
-                    }
 
                     break;
 
@@ -415,8 +419,11 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                                                                                  nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
                                                                                  context.GetChangeVector(existingDoc.ChangeVector),
                                                                                  existingDoc.LastModified.Ticks);
+
                     if (revisionCreated)
                     {
+                        LastChangeVector = existingDoc.ChangeVector;
+
                         // Reply with new revision data
                         forceRevisionReply = new DynamicJsonValue
                         {
@@ -427,8 +434,6 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                             [Constants.Documents.Metadata.LastModified] = existingDoc.LastModified,
                             [Constants.Documents.Metadata.Flags] = existingDoc.Flags
                         };
-
-                        LastChangeVector = existingDoc.ChangeVector;
                     }
                     else
                     {
@@ -442,7 +447,6 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     Reply.Add(forceRevisionReply);
                     break;
-
             }
         }
 
@@ -465,12 +469,20 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     tpl.Reply[tpl.FieldName] = changeVector;
             }
         }
+
+        // We are requested to do not return result.
+        if (IncludeReply == false)
+        {
+            Reply.Clear();
+            return 0;
+        }
+
         return Reply.Count;
     }
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
     {
-        return new MergedBatchCommandDto
+        return new MergedBatchCommandDto(true)
         {
             ParsedCommands = ParsedCommands.ToArray(),
             AttachmentStreams = AttachmentStreams
