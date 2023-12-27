@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -49,7 +47,7 @@ public class RavenDB_21575 : RavenTestBase
             {
                 await session.StoreAsync(company, "companies/1");
                 var metadata = session.Advanced.GetMetadataFor(company);
-                metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(DefaultFormat.DateTimeFormatsToWrite);
+                metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                 await session.SaveChangesAsync();
             }
 
@@ -57,7 +55,7 @@ public class RavenDB_21575 : RavenTestBase
             {
                 await session.StoreAsync(company, "companies/1");
                 var metadata = session.Advanced.GetMetadataFor(company);
-                metadata[Constants.Documents.Metadata.Expires] = expiry.AddMinutes(1).ToString(DefaultFormat.DateTimeFormatsToWrite);
+                metadata[Constants.Documents.Metadata.Expires] = expiry.AddMinutes(1).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                 await session.SaveChangesAsync();
             }
 

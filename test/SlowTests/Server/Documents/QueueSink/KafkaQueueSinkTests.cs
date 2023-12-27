@@ -293,12 +293,12 @@ namespace SlowTests.Server.Documents.QueueSink
                             new KafkaConnectionSettings() { BootstrapServers = "http://localhost:1234" }
                     }); //wrong bootstrap servers
 
-                var exception = await AssertWaitForNotNullAsync(() =>
+                var exception = await AssertWaitForNotNullAsync(async () =>
                 {
-                    var database = GetDatabase(store.Database).Result;
+                    var database = await GetDatabase(store.Database);
                     var consumerCreationError = database.NotificationCenter.QueueSinkNotifications.GetAlert<ExceptionDetails>("Kafka Sink", $"test/test", AlertType.QueueSink_ConsumerCreationError);
                     
-                    return Task.FromResult(consumerCreationError.Exception);
+                    return consumerCreationError.Exception;
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
                 
                 Assert.StartsWith("Confluent.Kafka.KafkaException: Local: Invalid argument or configuration", exception);
@@ -327,7 +327,7 @@ put(this.Id, user)
 
 output('test: ' + this.Id)
 ", "\"FullName\":\"Joe Doe\"")]
-        public void CanTestScript(string script, string expectedJson)
+        public async Task CanTestScript(string script, string expectedJson)
         {
             using (var store = GetDocumentStore())
             {
@@ -341,7 +341,7 @@ output('test: ' + this.Id)
                     }));
                 Assert.NotNull(result1.RaftCommandIndex);
 
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(
                            out DocumentsOperationContext context))

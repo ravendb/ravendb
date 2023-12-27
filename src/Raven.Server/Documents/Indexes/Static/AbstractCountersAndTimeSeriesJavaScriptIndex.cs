@@ -62,10 +62,11 @@ function map() {{
 
             for (int i = 0; i < mappingFunctions.Count; i++)
             {
-                if (mappingFunctions[i].StartsWith(mapPrefix, StringComparison.OrdinalIgnoreCase) == false)
+                var trimmedMappingFunction = mappingFunctions[i].Trim();
+                if (trimmedMappingFunction.StartsWith(mapPrefix, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
-                mappingFunctions[i] = mappingFunctions[i].Substring(mapPrefix.Length);
+                mappingFunctions[i] = trimmedMappingFunction.Substring(mapPrefix.Length);
             }
         }
 

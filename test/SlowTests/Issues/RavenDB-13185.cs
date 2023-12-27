@@ -4,8 +4,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Raven.Server.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -150,7 +152,7 @@ namespace SlowTests.Issues
                 {
                     Method = method,
                     RequestUri = new Uri(uri)
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
 
                 if (origin != null)
                 {

@@ -324,7 +324,7 @@ export function BackupsPage(props: NonShardedViewProps) {
                     </HrHeader>
 
                     {isAdminAccessOrAbove(db) && (
-                        <div className="mb-1 flex-shrink-0">
+                        <div className="mb-3 flex-shrink-0">
                             <Button color="primary" title="Backup the database now" onClick={createManualBackup}>
                                 <Icon icon="backup" /> Create a Backup
                             </Button>
@@ -357,7 +357,7 @@ export function BackupsPage(props: NonShardedViewProps) {
                         </span>
                     </HrHeader>
                     {canReadWriteDatabase(db) && (
-                        <div className="mb-1">
+                        <div className="mb-3">
                             <Button
                                 color="primary"
                                 onClick={createNewPeriodicBackupTask}

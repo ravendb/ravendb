@@ -127,7 +127,8 @@ public sealed class ChangeVector
     }
 
     public static ConflictStatus GetConflictStatusForDocument(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote?.Version, local?.Version);
-    public static ConflictStatus GetConflictStatusForDocument(IChangeVectorOperationContext context, string remote, string local) => 
+    
+    public static ConflictStatus GetConflictStatus(IChangeVectorOperationContext context, string remote, string local) => 
         GetConflictStatusInternal(context.GetChangeVector(remote)?.Version, context.GetChangeVector(local)?.Version);
 
     private ChangeVector UpdateInternal(string nodeTag, string dbId, long etag, ChangeVector changeVector, IChangeVectorOperationContext context)
@@ -164,36 +165,26 @@ public sealed class ChangeVector
             return context.GetChangeVector(result);
         }
 
-        var orderMerge = ChangeVectorUtils.MergeVectors(cv1.Order._changeVector, cv2.Order._changeVector);
-        var versionMerge = ChangeVectorUtils.MergeVectors(cv1.Version._changeVector, cv2.Version._changeVector);
-        return context.GetChangeVector(versionMerge, orderMerge);
-    }
-
-    public static ChangeVector MergeChangeVectors(ChangeVector cv1, ChangeVector cv2, IChangeVectorOperationContext context)
-    {
-        if (cv1.IsNullOrEmpty)
-            return cv2;
-
-        if (cv2.IsNullOrEmpty)
-            return cv1;
-
-        if (cv1.IsSingle && cv2.IsSingle || cv1.IsSingle == false && cv2.IsSingle == false)
-            return Merge(cv1, cv2, context);
+        if (cv1.IsSingle == false && cv2.IsSingle == false)
+        {
+            var orderMerge = ChangeVectorUtils.MergeVectors(cv1.Order._changeVector, cv2.Order._changeVector);
+            var versionMerge = ChangeVectorUtils.MergeVectors(cv1.Version._changeVector, cv2.Version._changeVector);
+            return context.GetChangeVector(versionMerge, orderMerge);
+        }
 
         // we are keeping the existing order without merging it with the version of the single change vector
         var mergedOrder = cv2.IsSingle ? cv1.Order : cv2.Order;
-        var mergedVersion = Merge(cv1.Version, cv2.Version, context);
+        var mergedVersion = ChangeVectorUtils.MergeVectors(cv1.Version._changeVector, cv2.Version._changeVector);
         return context.GetChangeVector(mergedVersion, mergedOrder);
     }
 
-
-    public static void MergeWithDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
+    public static ChangeVector MergeWithDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector)
     {
+        var databaseChangeVector = context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
         if (changeVector == null)
-            return;
+            return databaseChangeVector;
 
-        var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-        context.LastDatabaseChangeVector = databaseChangeVector.MergeOrderWith(changeVector, context);
+        return changeVector.MergeOrderWith(context.LastDatabaseChangeVector, context);
     }
 
     public static void MergeWithDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
@@ -213,11 +204,14 @@ public sealed class ChangeVector
         if (changeVector == null)
             return databaseChangeVector;
 
-        if (changeVector.IsSingle)
-            return changeVector.MergeOrderWith(databaseChangeVector, context);
+        if (changeVector.IsSingle == false)
+        {
+            var version = MergeWithDatabaseChangeVector(context, changeVector.Version);
+            var order = changeVector.Order.MergeOrderWith(databaseChangeVector, context);
+            return new ChangeVector(version, order);
+        }
 
-        var mergedChangeVector = changeVector.MergeWith(databaseChangeVector, context);
-        return context.GetChangeVector(mergedChangeVector.Version, databaseChangeVector);
+        return MergeWithDatabaseChangeVector(context, changeVector);
     }
 
     public static ChangeVector MergeWithNewDatabaseChangeVector(DocumentsOperationContext context, string changeVector)

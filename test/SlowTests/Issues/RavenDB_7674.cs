@@ -3,6 +3,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Group_by_entire_document_LastModified_formatting_issue()
+        public async Task Group_by_entire_document_LastModified_formatting_issue()
         {
             using (var store = GetDocumentStore())
             {
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
                 // in order to reproduce the date needs to have at least one zero at the end
                 var parsed = DateTime.Parse("2017-06-26T19:51:26.3000000").ToUniversalTime();
 
-                var db = GetDatabase(store.Database).Result;
+                var db = await GetDatabase(store.Database);
 
                 db.Time.UtcDateTime = () => parsed;
 

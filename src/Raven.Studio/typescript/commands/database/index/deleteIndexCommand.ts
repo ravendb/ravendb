@@ -3,9 +3,8 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class deleteIndexCommand extends commandBase {
-    private indexName: string;
-
-    private db: database;
+    private readonly indexName: string;
+    private readonly db: database;
 
     constructor(indexName: string, db: database) {
         super();

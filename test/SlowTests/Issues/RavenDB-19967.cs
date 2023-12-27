@@ -83,7 +83,7 @@ namespace SlowTests.Issues
                     {
                         var docId = $"users/{i}";
                         session.Store(new User { Name = $"Yonatan{i}" }, docId);
-                }
+                    }
                     session.SaveChanges();
                 }
 
@@ -99,7 +99,7 @@ namespace SlowTests.Issues
                     {
                         var docId = $"users/{i}";
                         session.Delete(docId);
-                }
+                    }
                     session.SaveChanges();
                 }
 
@@ -126,7 +126,7 @@ namespace SlowTests.Issues
             {
                 var srcDocumentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 var destDocumentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store2);
-                
+
                 // Documents creation
                 var documentCreationTasks = new Task[DocumentsCount];
                 using (var session = store1.OpenSession())
@@ -136,7 +136,7 @@ namespace SlowTests.Issues
                         var docId = $"users/{i}";
                         session.Store(new User { Name = $"Yonatan{i}" }, docId);
                         documentCreationTasks[i - 1] = Task.Run(() => WaitForDocument(store2, docId, Timeout));
-                }
+                    }
                     session.SaveChanges();
                 }
 
@@ -161,7 +161,7 @@ namespace SlowTests.Issues
                     {
                         var docId = $"users/{i}";
                         session.Delete(docId);
-                }
+                    }
                     session.SaveChanges();
                 }
 
@@ -190,8 +190,8 @@ namespace SlowTests.Issues
             using (var hub = GetDocumentStore())
             using (var sink = GetDocumentStore())
             {
-                var hubCreationTaskId = hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(taskName)).Result.TaskId;
-                var sinkCreationTaskId = PullReplicationTests.SetupPullReplicationAsync(taskName, sink, hub).Result.First().TaskId;
+                var hubCreationTaskId = (await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(taskName))).TaskId;
+                var sinkCreationTaskId = (await PullReplicationTests.SetupPullReplicationAsync(taskName, sink, hub)).First().TaskId;
 
                 // Documents creation
                 var documentCreationTasks = new Task[DocumentsCount];
@@ -202,7 +202,7 @@ namespace SlowTests.Issues
                         var docId = $"users/{i}";
                         session.Store(new User { Name = $"Lev{i}" }, docId);
                         documentCreationTasks[i - 1] = Task.Run(() => WaitForDocument(sink, docId, Timeout));
-                }
+                    }
                     session.SaveChanges();
                 }
 
@@ -299,12 +299,12 @@ namespace SlowTests.Issues
         [InlineData(EtlType.ElasticSearch)]
         [InlineData(EtlType.Queue)]
         public async Task TombstoneCleaningAfterEtlLoaderDisabled(EtlType etlType)
-                {
+        {
             using (var store = GetDocumentStore())
-                    {
+            {
                 // Documents creation
                 using (var session = store.OpenSession())
-                        {
+                {
                     for (int i = 1; i <= DocumentsCount; i++)
                     {
                         var docId = $"users/{i}";
@@ -315,9 +315,9 @@ namespace SlowTests.Issues
 
                 var transforms = new Transformation
                 {
-                            Name = "loadAll",
-                            Collections = {"Users"},
-                            Script = "loadToUsers(this)"
+                    Name = "loadAll",
+                    Collections = { "Users" },
+                    Script = "loadToUsers(this)"
                 };
 
                 long taskId;
@@ -343,14 +343,14 @@ namespace SlowTests.Issues
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.OlapEtl;
                         break;
                     case EtlType.ElasticSearch:
-                        var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier, Nodes = new[] { "http://127.0.0.1:8080"} };
+                        var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier, Nodes = new[] { "http://127.0.0.1:8080" } };
                         var elasticConfiguration = new ElasticSearchEtlConfiguration { Name = _customTaskName, ConnectionStringName = elasticConnectionString.Name, Transforms = { transforms } };
                         taskId = await AddEtlAndDisableIt(store, elasticConnectionString, elasticConfiguration, OngoingTaskType.ElasticSearchEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.ElasticSearchEtl;
                         break;
                     case EtlType.Queue:
                         var queueConnectionString = new QueueConnectionString { Name = store.Identifier, BrokerType = QueueBrokerType.RabbitMq, RabbitMqConnectionSettings = new RabbitMqConnectionSettings { ConnectionString = "test" } };
-                        var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms }, BrokerType = QueueBrokerType.RabbitMq};
+                        var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms }, BrokerType = QueueBrokerType.RabbitMq };
                         taskId = await AddEtlAndDisableIt(store, queueConnectionString, queueConfiguration, OngoingTaskType.QueueEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.QueueEtl;
                         break;
@@ -365,7 +365,7 @@ namespace SlowTests.Issues
                     {
                         var docId = $"users/{i}";
                         session.Delete(docId);
-                }
+                    }
                     session.SaveChanges();
                 }
 
@@ -380,7 +380,7 @@ namespace SlowTests.Issues
                 Assert.Equal(_customTaskName, notificationDetails.First().Source);
                 Assert.Equal(taskId, notificationDetails.First().BlockerTaskId);
                 Assert.Equal(blockerType, notificationDetails.First().BlockerType);
-                Assert.True(notificationDetails.First().SizeOfTombstonesInBytes > 0, 
+                Assert.True(notificationDetails.First().SizeOfTombstonesInBytes > 0,
                     $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstonesInBytes}");
 
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
@@ -395,7 +395,7 @@ namespace SlowTests.Issues
                 await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(addResult.TaskId, type, disable: true));
 
                 return addResult.TaskId;
-        }
+            }
         }
 
         [Fact]
@@ -407,19 +407,19 @@ namespace SlowTests.Issues
             {
                 // Documents creation
                 using (var session = store.OpenSession())
-                { 
+                {
                     for (int i = 1; i <= DocumentsCount; i++)
                     {
                         var docId = $"users/{i}";
                         session.Store(new User { Name = $"Yonatan{i}" }, docId);
-                }
+                    }
                     session.SaveChanges();
                 }
 
                 var config = Backup.CreateBackupConfiguration(
-                    backupPath: backupPath, 
-                    backupType: BackupType.Backup, 
-                    incrementalBackupFrequency: "0 0 1 1 *", 
+                    backupPath: backupPath,
+                    backupType: BackupType.Backup,
+                    incrementalBackupFrequency: "0 0 1 1 *",
                     name: _customTaskName);
 
                 config.TaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, isFullBackup: true);
@@ -435,7 +435,7 @@ namespace SlowTests.Issues
                     {
                         var docId = $"users/{i}";
                         session.Delete(docId);
-                }
+                    }
                     session.SaveChanges();
                 }
 
@@ -537,10 +537,10 @@ namespace SlowTests.Issues
             public UserByName()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name
-                    };
+                               select new
+                               {
+                                   user.Name
+                               };
             }
         }
 
@@ -549,10 +549,10 @@ namespace SlowTests.Issues
             public ErroredIndex()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        Count = 3 / user.Count
-                    };
+                               select new
+                               {
+                                   Count = 3 / user.Count
+                               };
             }
         }
     }

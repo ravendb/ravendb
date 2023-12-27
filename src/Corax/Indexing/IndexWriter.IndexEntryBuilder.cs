@@ -319,10 +319,10 @@ public partial class IndexWriter
                 @long: termId
             );
 
-            if (entryTerms.TryPush(recordedTerm) == false)
+            if (entryTerms.TryAdd(recordedTerm) == false)
             {
                 entryTerms.Grow(_parent._entriesAllocator, 1);
-                entryTerms.PushUnsafe(recordedTerm);
+                entryTerms.AddUnsafe(recordedTerm);
             }
         }
 
@@ -348,10 +348,10 @@ public partial class IndexWriter
                 @long: field.FieldRootPage
             );
 
-            if (entryTerms.TryPush(recordedTerm) == false)
+            if (entryTerms.TryAdd(recordedTerm) == false)
             {
                 entryTerms.Grow(_parent._entriesAllocator, 1);
-                entryTerms.PushUnsafe(recordedTerm);
+                entryTerms.AddUnsafe(recordedTerm);
             }
         }
 

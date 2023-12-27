@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
+        protected abstract Config.Categories.BackupConfiguration GetBackupConfiguration();
+
         protected override async ValueTask<PeriodicBackupConfiguration> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
         {
             var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), GetType().Name);
@@ -33,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             var authConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
-            BackupConfigurationHelper.AssertPeriodicBackup(configuration, RequestHandler.ServerStore, authConnection);
+            BackupConfigurationHelper.AssertPeriodicBackup(configuration, GetBackupConfiguration(), RequestHandler.ServerStore, authConnection);
         }
 
         protected override void OnBeforeResponseWrite(TransactionOperationContext _, DynamicJsonValue responseJson, PeriodicBackupConfiguration configuration, long index)
@@ -43,7 +45,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             _taskId = configuration.TaskId;
             if (_taskId == 0)
                 _taskId = index;
-            
+
             responseJson[taskIdName] = _taskId;
         }
 

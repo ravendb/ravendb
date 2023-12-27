@@ -11,6 +11,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -68,15 +69,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureFact, Trait("Category", "Smuggler")]
-        public void can_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: false);
+        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public void can_backup_and_restore(BackupUploadMode backupUploadMode) => can_backup_and_restore_internal(backupUploadMode, oneTimeBackup: false);
 
-        [AzureFact, Trait("Category", "Smuggler")]
-        public void can_onetime_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: true);
+        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public void can_onetime_backup_and_restore(BackupUploadMode backupUploadMode) => can_backup_and_restore_internal(backupUploadMode, oneTimeBackup: true);
 
-        private void can_backup_and_restore_internal(bool oneTimeBackup)
+        private void can_backup_and_restore_internal(BackupUploadMode backupUploadMode, bool oneTimeBackup)
         {
-            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new Azure.AzureClientHolder(AzureRetryTheoryAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -92,7 +97,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     BackupResult backupResult = null;
                     if (oneTimeBackup == false)
                     {
-                        var config = Backup.CreateBackupConfiguration(azureSettings: holder.Settings);
+                        var config = Backup.CreateBackupConfiguration(azureSettings: holder.Settings, backupUploadMode: backupUploadMode);
                         backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                         backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
                         Assert.NotNull(backupResult);
@@ -169,10 +174,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureFact, Trait("Category", "Smuggler")]
-        public async Task can_create_azure_snapshot_and_restore_using_restore_point()
+        [AzureRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public async Task can_create_azure_snapshot_and_restore_using_restore_point(BackupUploadMode backupUploadMode)
         {
-            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -183,13 +190,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         session.SaveChanges();
                     }
 
-                    var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, azureSettings: holder.Settings);
+                    var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, azureSettings: holder.Settings, backupUploadMode: backupUploadMode);
                     var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                     var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(holder.Settings), Encoding.UTF8, "application/json");
-                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure ", data);
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=Azure")
+                    {
+                        Content = data
+                    }.WithConventions(store.Conventions));
+
                     string result = response.Content.ReadAsStringAsync().Result;
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
                     Assert.Equal(1, restorePoints.List.Count);

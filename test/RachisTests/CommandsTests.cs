@@ -99,7 +99,7 @@ namespace RachisTests
                 var task = leader.PutAsync(new TestCommand { Name = "test", Value = commandCount });
                 Assert.True(await task.WaitWithoutExceptionAsync((int)leader.ElectionTimeout.TotalMilliseconds * 10));
                 await task;
-                Assert.True(false, "We should have gotten an error");
+                Assert.Fail("We should have gotten an error");
             }
             // expecting either one of those
             catch (TimeoutException)

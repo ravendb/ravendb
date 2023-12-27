@@ -1324,7 +1324,7 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task OlapEtl_S3_Destination()
         {
             const string salesTableName = "Sales";
@@ -2235,7 +2235,7 @@ loadToAddresses(this.Address);
 
         private static S3Settings GetS3Settings([CallerMemberName] string caller = null)
         {
-            var s3Settings = AmazonS3FactAttribute.S3Settings;
+            var s3Settings = AmazonS3RetryFactAttribute.S3Settings;
             if (s3Settings == null)
                 return null;
 

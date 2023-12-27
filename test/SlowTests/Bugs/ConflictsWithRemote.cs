@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
-    public class ConflictsWithRemote: RavenTestBase
+    public class ConflictsWithRemote : RavenTestBase
     {
         public ConflictsWithRemote(ITestOutputHelper output) : base(output)
         {
@@ -22,7 +22,7 @@ namespace SlowTests.Bugs
         }
 
         [Fact]
-        public void MultiThreadedInsert()
+        public async Task MultiThreadedInsert()
         {
             const int threadCount = 4;
             var tasks = new List<Task>();
@@ -37,12 +37,12 @@ namespace SlowTests.Bugs
                     tasks.Add(taskHandle);
                 }
 
-                Task.WaitAll(tasks.ToArray());
+                await Task.WhenAll(tasks.ToArray());
             }
         }
 
         [Fact]
-        public void InnefficientMultiThreadedInsert()
+        public async Task InnefficientMultiThreadedInsert()
         {
             DoNotReuseServer();
             const int threadCount = 4;
@@ -54,8 +54,8 @@ namespace SlowTests.Bugs
                 tasks.Add(taskHandle);
             }
 
-            Task.WaitAll(tasks.ToArray());
-            
+            await Task.WhenAll(tasks.ToArray());
+
         }
 
         private void DoInsert(IDocumentStore store, int deviceId)

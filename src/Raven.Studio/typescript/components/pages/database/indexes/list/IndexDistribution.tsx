@@ -16,6 +16,8 @@ import { Button } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import IndexDistributionStatusChecker from "./IndexDistributionStatusChecker";
+import moment = require("moment");
+import genUtils = require("common/generalUtils");
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -31,6 +33,10 @@ interface ItemWithTooltipProps {
     openFaulty: (location: databaseLocationSpecifier) => void;
     nodeInfo: IndexNodeInfo;
     sharded: boolean;
+}
+
+function getFormattedTime(date: Date): string {
+    return date ? genUtils.formatDurationByDate(moment(date)) + " ago" : "-";
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
@@ -61,6 +67,8 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                 </div>
                 <div className="entries">{entriesCount.toLocaleString()}</div>
                 <div className="errors">{nodeInfo.details?.errorCount.toLocaleString() ?? ""}</div>
+                <div className="text-center">{getFormattedTime(nodeInfo.details?.lastIndexingTime)}</div>
+                <div className="text-center">{getFormattedTime(nodeInfo.details?.lastQueryingTime)}</div>
 
                 <IndexProgress nodeInfo={nodeInfo} />
 
@@ -100,6 +108,10 @@ export function IndexDistribution(props: IndexDistributionProps) {
 
     const sharded = IndexUtils.isSharded(index);
 
+    const formattedCreatedTimestamp = index.createdTimestamp
+        ? genUtils.formatDurationByDate(moment(index.createdTimestamp)) + " ago"
+        : null;
+
     const items = (
         <>
             {[...index.nodesInfo]
@@ -122,33 +134,46 @@ export function IndexDistribution(props: IndexDistributionProps) {
     );
 
     return (
-        <LocationDistribution>
-            <DistributionLegend>
-                <div className="top"></div>
-                {sharded && (
-                    <div className="node">
-                        <Icon icon="node" /> Node
+        <div>
+            <LocationDistribution>
+                <DistributionLegend>
+                    <div className="top"></div>
+                    {sharded && (
+                        <div className="node">
+                            <Icon icon="node" /> Node
+                        </div>
+                    )}
+                    <div>
+                        <Icon icon="list" /> Entries
                     </div>
-                )}
-                <div>
-                    <Icon icon="list" /> Entries
+                    <div>
+                        <Icon icon="warning" /> Errors
+                    </div>
+                    <div>
+                        <Icon icon="index-history" /> Indexed
+                    </div>
+                    <div>
+                        <Icon icon="queries" /> Queried
+                    </div>
+                    <div>
+                        <Icon icon="changes" /> State
+                    </div>
+                </DistributionLegend>
+                <DistributionSummary>
+                    <div className="top">Total</div>
+                    {sharded && <div> </div>}
+                    <div>{estimatedEntries}</div>
+                    <div>{totalErrors}</div>
+                    <div></div>
+                </DistributionSummary>
+                {items}
+            </LocationDistribution>
+            {formattedCreatedTimestamp && (
+                <div className="small">
+                    <span className="text-muted">Created:</span> <strong>{formattedCreatedTimestamp}</strong>
                 </div>
-                <div>
-                    <Icon icon="warning" /> Errors
-                </div>
-                <div>
-                    <Icon icon="changes" /> State
-                </div>
-            </DistributionLegend>
-            <DistributionSummary>
-                <div className="top">Total</div>
-                {sharded && <div> </div>}
-                <div>{estimatedEntries}</div>
-                <div>{totalErrors}</div>
-                <div></div>
-            </DistributionSummary>
-            {items}
-        </LocationDistribution>
+            )}
+        </div>
     );
 }
 

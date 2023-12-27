@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using SlowTests.Core.Utils.Entities;
@@ -26,7 +27,7 @@ public class RDBC_622 : RavenTestBase
     public async Task JsonlStreamReturnsCorrectData()
     {
         using var store = await PrepareDataForTest();
-        using var client = new HttpClient();
+        using var client = new HttpClient().WithConventions(store.Conventions);
         string jsonResult;
         await using (var stream = await client.GetStreamAsync(UrlGenerator(store, "json")))
         {

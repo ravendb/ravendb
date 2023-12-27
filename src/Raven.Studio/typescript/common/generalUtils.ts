@@ -768,6 +768,14 @@ class genUtils {
         }
         return "SomeSelected";
     }
+
+    static isServerMinDate(date: string): boolean {
+        if (!date) {
+            return false;
+        }
+        
+        return date.startsWith("0001-01-01");
+    }
 } 
 
 export = genUtils;

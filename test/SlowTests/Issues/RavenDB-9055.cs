@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void AggressivelyCacheWorksWhenTopologyUpdatesIsDisable()
+        public async Task AggressivelyCacheWorksWhenTopologyUpdatesIsDisable()
         {
             using (var documentStore = GetDocumentStore())
             {
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
                 {
                     var forAllDocuments = documentStore.Changes().ForAllDocuments();
                     forAllDocuments.Subscribe(change => mre.Set());
-                    Assert.True(forAllDocuments.EnsureSubscribedNow().Wait(TimeSpan.FromMinutes(1)));
+                    await forAllDocuments.EnsureSubscribedNow().WaitAsync(TimeSpan.FromMinutes(1));
 
                     var user = session.Load<User>("users/1");
                     user.Name = "Shalom";

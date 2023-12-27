@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Form, Col, Button, Card, Row, Spinner, InputGroup, InputGroupText } from "reactstrap";
+import { Form, Col, Button, Card, Row, Spinner, InputGroup, UncontrolledPopover } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import {
@@ -14,7 +14,6 @@ import ClientConfigurationUtils from "components/common/clientConfiguration/Clie
 import useClientConfigurationFormController from "components/common/clientConfiguration/useClientConfigurationFormController";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
-import { PopoverWithHover } from "components/common/PopoverWithHover";
 import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
@@ -88,10 +87,10 @@ export default function ClientGlobalConfiguration() {
                     <Col>
                         <AboutViewHeading
                             icon="database-client-configuration"
-                            title="Client Configuration"
+                            title="Server-Wide Client Configuration"
                             licenseBadgeText={hasClientConfiguration ? null : "Professional +"}
                         />
-                        <div id="saveClientConfiguration" className="w-fit-content">
+                        <div id="saveClientConfiguration" className="w-fit-content mb-3">
                             <Button
                                 type="submit"
                                 color="primary"
@@ -105,129 +104,140 @@ export default function ClientGlobalConfiguration() {
                             <FeatureNotAvailableInYourLicensePopover target="saveClientConfiguration" />
                         )}
                         <div className={hasClientConfiguration ? "" : "item-disabled pe-none"}>
-                            <Card className="flex-column p-3 my-3">
-                                <div className="d-flex flex-grow-1">
-                                    <div className="md-label">
-                                        Identity parts separator{" "}
-                                        <i ref={popovers.setIdentityPartsSeparator} className="icon-info text-info" />
-                                    </div>
-                                    <PopoverWithHover target={popovers.identityPartsSeparator} placement="right">
-                                        <div className="flex-horizontal p-3">
-                                            <div>
+                            <Card className="flex-column p-4">
+                                <div>
+                                    <div className="d-flex flex-grow-1">
+                                        <div className="md-label">
+                                            Identity parts separator{" "}
+                                            <Icon id="SetIdentityPartsSeparator" icon="info" color="info" />
+                                        </div>
+                                        <UncontrolledPopover
+                                            target="SetIdentityPartsSeparator"
+                                            trigger="hover"
+                                            container="PopoverContainer"
+                                            placement="right"
+                                        >
+                                            <div className="p-3">
                                                 Set the default separator for automatically generated document identity
                                                 IDs.
                                                 <br />
                                                 Use any character except <code>&apos;|&apos;</code> (pipe).
                                             </div>
-                                        </div>
-                                    </PopoverWithHover>
-                                </div>
-                                <Row>
-                                    <Col>
-                                        <InputGroup>
-                                            <InputGroupText>
-                                                <FormCheckbox control={control} name="identityPartsSeparatorEnabled" />
-                                            </InputGroupText>
-                                            <FormInput
-                                                type="text"
-                                                control={control}
-                                                name="identityPartsSeparatorValue"
-                                                placeholder="'/' (default)"
-                                                disabled={!formValues.identityPartsSeparatorEnabled}
-                                                className="d-flex"
-                                            />
-                                        </InputGroup>
-                                    </Col>
-                                </Row>
-                            </Card>
-
-                            <Card className="flex-column mt-1 mb-3 p-3">
-                                <div className="d-flex flex-grow-1">
-                                    <div className="md-label">
-                                        Maximum number of requests per session{" "}
-                                        <i
-                                            ref={popovers.setMaximumRequestsPerSession}
-                                            className="icon-info text-info"
-                                        />
+                                        </UncontrolledPopover>
                                     </div>
-                                    <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="right">
-                                        <div className="flex-horizontal p-3">
-                                            <div>
+                                    <Row>
+                                        <Col>
+                                            <InputGroup>
+                                                <div className="toggle-field-checkbox">
+                                                    <FormCheckbox
+                                                        control={control}
+                                                        name="identityPartsSeparatorEnabled"
+                                                    />
+                                                </div>
+                                                <FormInput
+                                                    type="text"
+                                                    control={control}
+                                                    name="identityPartsSeparatorValue"
+                                                    placeholder="'/' (default)"
+                                                    disabled={!formValues.identityPartsSeparatorEnabled}
+                                                    className="d-flex"
+                                                />
+                                            </InputGroup>
+                                        </Col>
+                                    </Row>
+                                </div>
+                                <div className="mt-4">
+                                    <div className="d-flex flex-grow-1">
+                                        <div className="md-label">
+                                            Maximum number of requests per session{" "}
+                                            <Icon id="SetMaximumRequestsPerSession" icon="info" color="info" />
+                                        </div>
+                                        <UncontrolledPopover
+                                            target="SetMaximumRequestsPerSession"
+                                            trigger="hover"
+                                            container="PopoverContainer"
+                                            placement="right"
+                                        >
+                                            <div className="p-3">
                                                 Set this number to restrict the number of requests (<code>Reads</code> &{" "}
                                                 <code>Writes</code>) per session in the client API.
                                             </div>
-                                        </div>
-                                    </PopoverWithHover>
+                                        </UncontrolledPopover>
+                                    </div>
+                                    <Row>
+                                        <Col>
+                                            <InputGroup>
+                                                <div className="toggle-field-checkbox">
+                                                    <FormCheckbox
+                                                        control={control}
+                                                        name="maximumNumberOfRequestsEnabled"
+                                                    />
+                                                </div>
+                                                <FormInput
+                                                    type="number"
+                                                    control={control}
+                                                    name="maximumNumberOfRequestsValue"
+                                                    placeholder="30 (default)"
+                                                    disabled={!formValues.maximumNumberOfRequestsEnabled}
+                                                />
+                                            </InputGroup>
+                                        </Col>
+                                    </Row>
                                 </div>
-                                <Row>
-                                    <Col>
-                                        <InputGroup>
-                                            <InputGroupText>
-                                                <FormCheckbox control={control} name="maximumNumberOfRequestsEnabled" />
-                                            </InputGroupText>
-                                            <FormInput
-                                                type="number"
-                                                control={control}
-                                                name="maximumNumberOfRequestsValue"
-                                                placeholder="30 (default)"
-                                                disabled={!formValues.maximumNumberOfRequestsEnabled}
-                                            />
-                                        </InputGroup>
-                                    </Col>
-                                </Row>
                             </Card>
                             <div className="d-flex justify-content-between mt-4 position-relative">
-                                <h4>Load Balancing Client Requests</h4>
+                                <h5>Load Balancing Client Requests</h5>
                                 <small title="Navigate to the documentation" className="position-absolute end-0">
                                     <a href={loadBalancingDocsLink} target="_blank">
                                         <Icon icon="link" /> Load balancing tutorial
                                     </a>
                                 </small>
                             </div>
-                            <Card className="flex-column mt-1 p-3">
+                            <Card className="flex-column p-4">
                                 <div className="d-flex flex-grow-1">
                                     <div className="md-label">
-                                        Load Balance Behavior{" "}
-                                        <i ref={popovers.setSessionContext} className="icon-info text-info" />
-                                        <PopoverWithHover target={popovers.sessionContext} placement="right">
-                                            <div className="flex-horizontal p-3">
-                                                <div>
+                                        Load Balance Behavior <Icon id="SetSessionContext" icon="info" color="info" />
+                                        <UncontrolledPopover
+                                            target="SetSessionContext"
+                                            trigger="hover"
+                                            container="PopoverContainer"
+                                            placement="right"
+                                        >
+                                            <div className="p-3">
+                                                <span className="d-inline-block mb-1">
                                                     Set the Load balance method for <strong>Read</strong> &{" "}
-                                                    <strong>Write</strong> requests
-                                                    <br />
-                                                    <ul>
-                                                        <li>
-                                                            <code>None</code>
-                                                            <br />
-                                                            <strong>Read</strong> requests - the node the client will
-                                                            target will be based on Read balance behavior configuration.
-                                                            <br />
-                                                            <strong>Write</strong> requests - will be sent to the
-                                                            preferred node.
-                                                        </li>
+                                                    <strong>Write</strong> requests.
+                                                </span>
+                                                <ul>
+                                                    <li className="mb-1">
+                                                        <code>None</code>
                                                         <br />
-                                                        <li>
-                                                            <code>Use session context</code>
-                                                            <br />
-                                                            Sessions that are assigned the same context will have all
-                                                            their <strong>Read & Write</strong> requests routed to the
-                                                            same node.
-                                                            <br />
-                                                            The session context is hashed from a context string (given
-                                                            by the client) and an optional seed.
-                                                        </li>
-                                                    </ul>
-                                                </div>
+                                                        <strong>Read</strong> requests - the node the client will target
+                                                        will be based on Read balance behavior configuration.
+                                                        <br />
+                                                        <strong>Write</strong> requests - will be sent to the preferred
+                                                        node.
+                                                    </li>
+                                                    <li className="mb-1">
+                                                        <code>Use session context</code>
+                                                        <br />
+                                                        Sessions that are assigned the same context will have all their{" "}
+                                                        <strong>Read & Write</strong> requests routed to the same node.
+                                                        <br />
+                                                        The session context is hashed from a context string (given by
+                                                        the client) and an optional seed.
+                                                    </li>
+                                                </ul>
                                             </div>
-                                        </PopoverWithHover>
+                                        </UncontrolledPopover>
                                     </div>
                                 </div>
-                                <Row className="mb-3">
+                                <Row>
                                     <Col>
                                         <InputGroup>
-                                            <InputGroupText>
+                                            <div className="toggle-field-checkbox">
                                                 <FormCheckbox control={control} name="loadBalancerEnabled" />
-                                            </InputGroupText>
+                                            </div>
                                             <FormSelect
                                                 control={control}
                                                 name="loadBalancerValue"
@@ -240,33 +250,31 @@ export default function ClientGlobalConfiguration() {
                                 </Row>
                                 {formValues.loadBalancerValue === "UseSessionContext" && (
                                     <>
-                                        <Row className="mb-3">
-                                            <Col className="d-flex gap-3">
+                                        <div className="md-label mt-4">
+                                            Seed
+                                            <Icon id="SetLoadBalanceSeedBehavior" icon="info" color="info" />
+                                            <UncontrolledPopover
+                                                target="SetLoadBalanceSeedBehavior"
+                                                trigger="hover"
+                                                container="PopoverContainer"
+                                                placement="right"
+                                            >
+                                                <div className="p-3">
+                                                    An optional seed number.
+                                                    <br />
+                                                    Used when hashing the session context.
+                                                </div>
+                                            </UncontrolledPopover>
+                                        </div>
+                                        <Row>
+                                            <Col className="hstack gap-3">
                                                 <FormSwitch
                                                     control={control}
                                                     name="loadBalancerSeedEnabled"
                                                     color="primary"
                                                     label="Seed"
                                                     className="small"
-                                                >
-                                                    Seed
-                                                    <i
-                                                        ref={popovers.setLoadBalanceSeedBehavior}
-                                                        className="icon-info text-info margin-left-xxs"
-                                                    />
-                                                    <PopoverWithHover
-                                                        target={popovers.loadBalanceSeedBehavior}
-                                                        placement="right"
-                                                    >
-                                                        <div className="flex-horizontal p-3">
-                                                            <div>
-                                                                An optional seed number.
-                                                                <br />
-                                                                Used when hashing the session context.
-                                                            </div>
-                                                        </div>
-                                                    </PopoverWithHover>
-                                                </FormSwitch>
+                                                />
                                                 <InputGroup>
                                                     <FormInput
                                                         type="number"
@@ -281,27 +289,32 @@ export default function ClientGlobalConfiguration() {
                                     </>
                                 )}
                                 <div className="d-flex flex-grow-1">
-                                    <div className="md-label">
+                                    <div className="md-label mt-4">
                                         Read Balance Behavior{" "}
-                                        <i ref={popovers.setReadBalanceBehavior} className="icon-info text-info" />
-                                        <PopoverWithHover target={popovers.readBalanceBehavior} placement="right">
-                                            <div className="flex-horizontal p-3">
+                                        <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
+                                        <UncontrolledPopover
+                                            target="SetReadBalanceBehavior"
+                                            trigger="hover"
+                                            container="PopoverContainer"
+                                            placement="right"
+                                        >
+                                            <div className="p-3">
                                                 <div>
                                                     Set the Read balance method the client will use when accessing a
-                                                    node with <strong>Read</strong> requests.
+                                                    node with <code>Read</code> requests.
                                                     <br />
-                                                    <strong>Write</strong> requests are sent to the preferred node.
+                                                    <code>Write</code> requests are sent to the preferred node.
                                                 </div>
                                             </div>
-                                        </PopoverWithHover>
+                                        </UncontrolledPopover>
                                     </div>
                                 </div>
                                 <Row>
                                     <Col>
                                         <InputGroup>
-                                            <InputGroupText>
+                                            <div className="toggle-field-checkbox">
                                                 <FormCheckbox control={control} name="readBalanceBehaviorEnabled" />
-                                            </InputGroupText>
+                                            </div>
                                             <FormSelect
                                                 control={control}
                                                 name="readBalanceBehaviorValue"
@@ -368,6 +381,7 @@ export default function ClientGlobalConfiguration() {
                     </Col>
                 </Row>
             </div>
+            <div id="PopoverContainer"></div>
         </Form>
     );
 }

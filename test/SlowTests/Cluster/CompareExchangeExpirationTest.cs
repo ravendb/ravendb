@@ -395,7 +395,7 @@ namespace SlowTests.Cluster
                     using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
                         var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
-                        result.Metadata[Constants.Documents.Metadata.Expires] = expiry;
+                        result.Metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
                         await session.SaveChangesAsync();
                         compareExchangeIndexes[key] = result.Index;
@@ -406,7 +406,7 @@ namespace SlowTests.Cluster
                 expiry = DateTime.Now.AddMinutes(4);
                 foreach (var kvp in compareExchanges)
                 {
-                    var metadata = new MetadataAsDictionary { [Constants.Documents.Metadata.Expires] = expiry };
+                    var metadata = new MetadataAsDictionary { [Constants.Documents.Metadata.Expires] = expiry.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite) };
                     await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(kvp.Key, kvp.Value, compareExchangeIndexes[kvp.Key], metadata));
                 }
                 await AssertCompareExchanges(compareExchanges, store, expiry);
@@ -544,7 +544,7 @@ namespace SlowTests.Cluster
                     var expirationDate = res.Metadata.GetString(Constants.Documents.Metadata.Expires);
                     Assert.NotNull(expirationDate);
                     var dateTime = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                    Assert.Equal(expiry.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), expirationDate);
+                    Assert.Equal(expiry.Value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), expirationDate);
                 }
             }
         }
@@ -562,7 +562,7 @@ namespace SlowTests.Cluster
                     var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
                     if (expiry != null)
                     {
-                        result.Metadata[Constants.Documents.Metadata.Expires] = expiry;
+                        result.Metadata[Constants.Documents.Metadata.Expires] = expiry?.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                     }
                     await session.SaveChangesAsync();
                 }

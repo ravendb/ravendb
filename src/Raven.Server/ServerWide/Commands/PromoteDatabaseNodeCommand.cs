@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public PromoteDatabaseNodeCommand()
         {
-            
+
         }
 
         public PromoteDatabaseNodeCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
@@ -36,12 +36,14 @@ namespace Raven.Server.ServerWide.Commands
                 topology = record.Sharding.Shards[ShardNumber.Value];
             }
 
-            if (topology.Promotables.Contains(NodeTag) == false)
+            if (topology.Promotables.Contains(NodeTag) == false &&
+                topology.Rehabs.Contains(NodeTag) == false)
                 return;
 
             topology.PromotablesStatus.Remove(NodeTag);
             topology.DemotionReasons.Remove(NodeTag);
             topology.Promotables.Remove(NodeTag);
+            topology.Rehabs.Remove(NodeTag);
             topology.Members.Add(NodeTag);
         }
 

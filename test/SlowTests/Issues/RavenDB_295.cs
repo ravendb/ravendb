@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

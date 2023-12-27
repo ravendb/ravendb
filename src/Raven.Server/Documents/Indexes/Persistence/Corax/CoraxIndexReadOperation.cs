@@ -167,6 +167,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 nls = new string[] { t2.Item1.TrimEnd('*').TrimStart('*'), t2.Item2.TrimEnd('*').TrimStart('*') };
                                 break;
                             case string[] as1:
+                                nls = new string[as1.Length];
+                                for (int i = 0; i < as1.Length; i++)
+                                    nls[i] = as1[i].TrimEnd('*').TrimStart('*');
+                                break;
+                            case null:
                                 continue;
                             default:
                                 throw new NotSupportedException($"The type '{term.Value.Values.GetType().FullName}' is not supported.");
@@ -317,7 +322,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 maxFragments -= ProcessHighlightings(current, fieldDescription, fieldValue, fragments, maxFragments);
                             }
                         }
-                        else continue;
+                        else 
+                            continue;
 
                         if (string.IsNullOrWhiteSpace(fieldDescription.GroupKey) == false)
                         {

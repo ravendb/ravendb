@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -16,11 +17,11 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Should_set_first_batch_timeout_of_newly_created_auto_index()
+        public async Task Should_set_first_batch_timeout_of_newly_created_auto_index()
         {
             using (var store = GetDocumentStore())
             {
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 database.IndexStore.StopIndexing();
 
@@ -57,11 +58,11 @@ namespace SlowTests.Issues
         }
         
         [Fact]
-        public void Should_set_first_batch_timeout_of_newly_created_static_index()
+        public async Task Should_set_first_batch_timeout_of_newly_created_static_index()
         {
             using (var store = GetDocumentStore())
             {
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 var usersByname = "users/byname";
 

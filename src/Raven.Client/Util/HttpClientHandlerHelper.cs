@@ -27,15 +27,22 @@ internal static class HttpClientHandlerHelper
         if (handler == null)
             throw new ArgumentNullException(nameof(handler));
 
-        if (pooledConnectionLifetime == null && pooledConnectionIdleTimeout == null)
-            return;
-
 #if NETCOREAPP3_1_OR_GREATER
         if (GetUnderlyingHandler == null)
             return;
 
         if (GetUnderlyingHandler.GetValue(handler) is not SocketsHttpHandler underlyingHandler)
+        {
+            if (pooledConnectionLifetime == null && pooledConnectionIdleTimeout == null)
+                return;
+
             throw new InvalidOperationException("Underlying handler for HttpClientHandler is not SocketsHttpHandler");
+        }
+
+        underlyingHandler.EnableMultipleHttp2Connections = true;
+
+        if (pooledConnectionLifetime == null && pooledConnectionIdleTimeout == null)
+            return;
 
         if (pooledConnectionLifetime.HasValue)
             underlyingHandler.PooledConnectionLifetime = pooledConnectionLifetime.Value;
@@ -43,6 +50,9 @@ internal static class HttpClientHandlerHelper
         if (pooledConnectionIdleTimeout.HasValue)
             underlyingHandler.PooledConnectionIdleTimeout = pooledConnectionIdleTimeout.Value;
 #else
+        if (pooledConnectionLifetime == null && pooledConnectionIdleTimeout == null)
+            return;
+
         throw new InvalidOperationException("Cannot set 'PooledConnectionLifetime' and 'PooledConnectionIdleTimeout' in this framework. Should not happen!");
 #endif
     }

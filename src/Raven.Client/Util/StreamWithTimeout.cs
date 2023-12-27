@@ -7,10 +7,10 @@ namespace Raven.Client.Util
 {
     internal sealed class StreamWithTimeout : Stream, IAsyncDisposable
     {
-        internal static TimeSpan DefaultWriteTimeout { get; } = TimeSpan.FromSeconds(120);
-        private static readonly TimeSpan DefaultReadTimeout = TimeSpan.FromSeconds(120);
+        private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
+        internal static TimeSpan DefaultReadTimeout { get; } = TimeSpan.FromSeconds(120);
 
-        private readonly Stream _stream;
+        internal readonly Stream _stream;
         private int _writeTimeout;
         private int _readTimeout;
         private bool _canBaseStreamTimeoutOnWrite;
@@ -225,8 +225,10 @@ namespace Raven.Client.Util
         protected override void Dispose(bool disposing)
         {
             GC.SuppressFinalize(this);
-            base.Dispose(disposing);
+
             _stream.Dispose();
+            base.Dispose(disposing);
+
             _readCts?.Dispose();
             _writeCts?.Dispose();
         }
@@ -243,8 +245,8 @@ namespace Raven.Client.Util
 #else
             GC.SuppressFinalize(this);
 
-            await base.DisposeAsync().ConfigureAwait(false);
             await _stream.DisposeAsync().ConfigureAwait(false);
+            await base.DisposeAsync().ConfigureAwait(false);
 
             _readCts?.Dispose();
             _writeCts?.Dispose();

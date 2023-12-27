@@ -23,7 +23,7 @@ namespace StressTests.Voron
         }
 
         [Fact]
-        public void ParallelWritesInBatchesAndReadsByUsingTreeIterator()
+        public async Task ParallelWritesInBatchesAndReadsByUsingTreeIterator()
         {
             const int numberOfWriteThreads = 10;
             const int numberOfReadThreads = 10;
@@ -106,7 +106,7 @@ namespace StressTests.Voron
 
             try
             {
-                Task.WaitAll(new[] { writeParallelTask, readParallelTask });
+                await Task.WhenAll(new[] { writeParallelTask, readParallelTask });
             }
             catch (Exception ex)
             {

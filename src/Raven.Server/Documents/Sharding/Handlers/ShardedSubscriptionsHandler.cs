@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     if (node == null || node == ServerStore.NodeTag)
                         continue;
 
-                    await WaitForExecutionOnSpecificNode(context, ServerStore.GetClusterTopology(context), node, index);
+                    await ServerStore.WaitForExecutionOnSpecificNodeAsync(context, node, index);
                 }
             }
         }

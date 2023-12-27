@@ -22,6 +22,7 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Restore.Sharding;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -163,7 +164,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanBackupAndRestoreShardedDatabase_FromS3Backup()
         {
             var s3Settings = GetS3Settings();
@@ -230,7 +231,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanBackupAndRestoreShardedDatabase_FromAzureBackup()
         {
             var azureSettings = GetAzureSettings();
@@ -294,7 +295,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanBackupAndRestoreShardedDatabase_FromGoogleCloudBackup()
         {
             var googleCloudSettings = GetGoogleCloudSettings();
@@ -511,7 +512,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task EncryptedBackupAndRestoreShardedDatabase_UsingDatabaseKey()
         {
             var s3Settings = GetS3Settings();
@@ -633,7 +634,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task EncryptedBackupAndRestoreShardedDatabaseInCluster_UsingDatabaseKey()
         {
             var s3Settings = GetS3Settings();
@@ -1177,7 +1178,10 @@ namespace SlowTests.Sharding.Backup
                 {
                     FolderPath = backupPath
                 }), Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Local", data);
+                var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=Local")
+                {
+                    Content = data
+                }.WithConventions(store.Conventions));
                 string result = await response.Content.ReadAsStringAsync();
 
                 var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -1231,7 +1235,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromS3Backup()
         {
             var s3Settings = GetS3Settings();
@@ -1304,7 +1308,10 @@ namespace SlowTests.Sharding.Backup
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(s3Settings), Encoding.UTF8, "application/json");
-                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=S3", data);
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=S3")
+                    {
+                        Content = data
+                    }.WithConventions(store.Conventions));
                     string result = await response.Content.ReadAsStringAsync();
 
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -1361,7 +1368,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromAzureBackup()
         {
             var azureSettings = GetAzureSettings();
@@ -1434,7 +1441,10 @@ namespace SlowTests.Sharding.Backup
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(azureSettings), Encoding.UTF8, "application/json");
-                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure", data);
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=Azure")
+                    {
+                        Content = data
+                    }.WithConventions(store.Conventions));
                     string result = await response.Content.ReadAsStringAsync();
 
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -1491,7 +1501,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [GoogleCloudFact]
+        [GoogleCloudRetryFact]
         public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromGoogleCloudBackup()
         {
             var googleCloudSettings = GetGoogleCloudSettings();
@@ -1572,7 +1582,11 @@ namespace SlowTests.Sharding.Backup
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(googleCloudSettings), Encoding.UTF8, "application/json");
-                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=GoogleCloud", data);
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{store.Urls.First()}/admin/restore/points?type=GoogleCloud")
+                    {
+                        Content = data
+                    }.WithConventions(store.Conventions));
+
                     string result = await response.Content.ReadAsStringAsync();
 
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -1640,7 +1654,7 @@ namespace SlowTests.Sharding.Backup
 
         private S3Settings GetS3Settings([CallerMemberName] string caller = null)
         {
-            var s3Settings = AmazonS3FactAttribute.S3Settings;
+            var s3Settings = AmazonS3RetryFactAttribute.S3Settings;
             if (s3Settings == null)
                 return null;
 
@@ -1659,7 +1673,7 @@ namespace SlowTests.Sharding.Backup
 
         private AzureSettings GetAzureSettings([CallerMemberName] string caller = null)
         {
-            var settings = AzureFactAttribute.AzureSettings;
+            var settings = AzureRetryFactAttribute.AzureSettings;
             if (settings == null)
                 return null;
 
@@ -1678,7 +1692,7 @@ namespace SlowTests.Sharding.Backup
 
         private GoogleCloudSettings GetGoogleCloudSettings([CallerMemberName] string caller = null)
         {
-            var googleCloudSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
+            var googleCloudSettings = GoogleCloudRetryFactAttribute.GoogleCloudSettings;
             if (googleCloudSettings == null)
                 return null;
 

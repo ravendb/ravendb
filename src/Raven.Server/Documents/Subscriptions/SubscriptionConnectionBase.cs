@@ -62,6 +62,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
         public readonly string ClientUri;
+        public long LastModifiedIndex => SubscriptionState.RaftCommandIndex;
 
         public string WorkerId => _options.WorkerId ??= Guid.NewGuid().ToString();
         public SubscriptionState SubscriptionState { get; set; }
@@ -509,6 +510,9 @@ namespace Raven.Server.Documents.Subscriptions
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(ServerStore.NodeTag))
                     throw new DatabaseDoesNotExistException(
                         $"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
+                
+                if (record.IsDisabled)
+                    throw new DatabaseDisabledException($"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is disabled.");
 
                 if (whoseTaskIsIt != ServerStore.NodeTag)
                 {
@@ -916,6 +920,15 @@ namespace Raven.Server.Documents.Subscriptions
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                 [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
             };
+        }
+
+        internal async Task SendHeartBeatIfNeededAsync(Stopwatch sp, string reason)
+        {
+            if (sp.ElapsedMilliseconds >= ISubscriptionConnection.WaitForChangedDocumentsTimeoutInMs)
+            {
+                await SendHeartBeatAsync(reason);
+                sp.Restart();
+            }
         }
 
         public async Task SendHeartBeatAsync(string reason)

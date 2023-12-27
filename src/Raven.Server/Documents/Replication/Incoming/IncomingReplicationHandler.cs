@@ -416,8 +416,15 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 pendingAttachmentsTombstoneUpdates ??= new();
                                 pendingAttachmentsTombstoneUpdates.Add((documentId, incomingChangeVector, attachmentTombstone.LastModifiedTicks));
 
+                                newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local2) switch
+                                {
+                                    ConflictStatus.Conflict => ChangeVector.Merge(incomingChangeVector, local2, context),
+                                    ConflictStatus.Update => attachmentTombstone.ChangeVector,
+                                    _ => throw new ArgumentOutOfRangeException()
+                                };
+
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    incomingChangeVector,
+                                    newChangeVector,
                                     attachmentTombstone.LastModifiedTicks);
                                 break;
 
@@ -667,7 +674,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 foreach (var documentConflict in conflicts)
                                 {
                                     if (documentConflict.Flags.Contain(DocumentFlags.HasAttachments) == false ||
-                                        ChangeVectorUtils.GetConflictStatus(cv, documentConflict.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                        ChangeVector.GetConflictStatus(context, cv, documentConflict.ChangeVector) == ConflictStatus.AlreadyMerged)
                                         continue;
 
                                     // recreate attachments reference
@@ -677,7 +684,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 continue;
                             }
 
-                            if (ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged || 
+                            if (ChangeVector.GetConflictStatus(context, cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged || 
                                 doc.Flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved))
                             {
                                 // have to load the full document

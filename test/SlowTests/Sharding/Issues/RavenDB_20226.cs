@@ -57,11 +57,11 @@ public class RavenDB_20226 : RavenTestBase
                 Assert.Equal(2, indexEntries.Length);
 
                 var indexEntry = (BlittableJsonReaderObject)indexEntries[0];
-                Assert.Equal("israel", indexEntry["Country"]);
+                Assert.Equal("israel", indexEntry["Country"]?.ToString());
                 Assert.Equal("45.0", indexEntry["Volume"].ToString());
 
                 indexEntry = (BlittableJsonReaderObject)indexEntries[1];
-                Assert.Equal("poland", indexEntry["Country"]);
+                Assert.Equal("poland", indexEntry["Country"]?.ToString());
                 Assert.Equal("225.0", indexEntry["Volume"].ToString());
             }
         }

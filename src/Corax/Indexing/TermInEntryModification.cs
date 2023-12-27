@@ -11,6 +11,13 @@ internal struct TermInEntryModification : IEquatable<TermInEntryModification>, I
 
     public override string ToString() => EntryId + ", " + Frequency;
 
+    public TermInEntryModification(long entryId, int termPerEntryIndex, short frequency)
+    {
+        EntryId = entryId;
+        TermsPerEntryIndex = termPerEntryIndex;
+        Frequency = frequency;
+    }
+
     public bool Equals(TermInEntryModification other)
     {
         return EntryId == other.EntryId && EntryIdEncodings.FrequencyQuantization(Frequency) == EntryIdEncodings.FrequencyQuantization(other.Frequency);

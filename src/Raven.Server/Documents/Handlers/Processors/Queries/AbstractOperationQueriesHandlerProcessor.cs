@@ -65,7 +65,8 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
             AllowStale = RequestHandler.GetBoolValueQueryString("allowStale", required: false) ?? false,
             MaxOpsPerSecond = RequestHandler.GetIntValueQueryString("maxOpsPerSec", required: false),
             StaleTimeout = RequestHandler.GetTimeSpanQueryString("staleTimeout", required: false),
-            RetrieveDetails = RequestHandler.GetBoolValueQueryString("details", required: false) ?? false
+            RetrieveDetails = RequestHandler.GetBoolValueQueryString("details", required: false) ?? false,
+            IgnoreMaxStepsForScript = RequestHandler.GetBoolValueQueryString("ignoreMaxStepsForScript", required: false) ?? false
         };
     }
 

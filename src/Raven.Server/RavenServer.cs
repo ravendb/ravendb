@@ -247,9 +247,20 @@ namespace Raven.Server
                             services.Configure<ResponseCompressionOptions>(options =>
                             {
                                 options.EnableForHttps = Configuration.Http.AllowResponseCompressionOverHttps;
+
+                                options.Providers.Add(typeof(ZstdCompressionProvider));
+#if FEATURE_BROTLI_SUPPORT
+                                options.Providers.Add(typeof(BrotliCompressionProvider));
+#endif
                                 options.Providers.Add(typeof(GzipCompressionProvider));
                                 options.Providers.Add(typeof(DeflateCompressionProvider));
                             });
+
+                            services.Configure<ZstdCompressionProviderOptions>(options => { options.Level = Configuration.Http.ZstdResponseCompressionLevel; });
+
+#if FEATURE_BROTLI_SUPPORT
+                            services.Configure<BrotliCompressionProviderOptions>(options => { options.Level = Configuration.Http.BrotliResponseCompressionLevel; });
+#endif
 
                             services.Configure<GzipCompressionProviderOptions>(options => { options.Level = Configuration.Http.GzipResponseCompressionLevel; });
 
@@ -1313,7 +1324,7 @@ namespace Raven.Server
                 throw new InvalidOperationException($"Failed to validate user's license '{userLicense}' as part of Let's Encrypt certificate refresh", e);
             }
 
-            var userDomainsResult = JsonConvert.DeserializeObject<UserDomainsResult>(await response.Content.ReadAsStringAsync());
+            var userDomainsResult = JsonConvert.DeserializeObject<UserDomainsResult>(await response.Content.ReadAsStringWithZstdSupportAsync());
 
             string usedRootDomain = null;
             foreach (var rd in userDomainsResult.RootDomains)
@@ -1506,14 +1517,10 @@ namespace Raven.Server
                 if (AuthorizedDatabases.TryGetValue(ShardHelper.ToDatabaseName(database), out mode) == false)
                     return false;
 
-                // Technically speaking, since this is per connection, this is single threaded. But I'm
-                // worried about race conditions here if we move to HTTP 2.0 at some point. At that point,
-                // we'll probably want to handle this concurrently, and the cost of adding it in this manner
-                // is pretty small for most cases anyway
-                _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>(_caseSensitiveAuthorizedDatabases)
-                {
-                    {database, mode}
-                };
+                var authorizedDatabases = new Dictionary<string, DatabaseAccess>(_caseSensitiveAuthorizedDatabases);
+                authorizedDatabases.TryAdd(database, mode);
+
+                _caseSensitiveAuthorizedDatabases = authorizedDatabases;
 
                 return CheckAccess(mode, requireAdmin, requireWrite);
 
@@ -2774,6 +2781,7 @@ namespace Raven.Server
                     ea.Execute(() => CloseTcpListeners(_tcpListenerStatus.Listeners));
                 }
                 ea.Execute(() => PostgresServer?.Dispose());
+                ea.Execute(() => SnmpWatcher?.Dispose());
 
                 ea.Execute(() => ServerStore?.Dispose());
                 ea.Execute(() =>

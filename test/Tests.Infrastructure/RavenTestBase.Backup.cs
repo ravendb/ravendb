@@ -16,10 +16,11 @@ using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Sparrow.Json;
 using Xunit;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace FastTests
 {
@@ -53,14 +54,17 @@ namespace FastTests
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
                 var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
-                var value = await WaitForValueAsync(async () =>
+
+                BackupResult result = default;
+                var actual = await WaitForValueAsync(async () =>
                 {
-                    var status = (await store.Maintenance.SendAsync(new GetOperationStateOperation(op))).Status;
-                    return status;
+                    var state = await store.Maintenance.SendAsync(new GetOperationStateOperation(op));
+                    result = state.Result as BackupResult;
+                    return state.Status;
                 }, opStatus, timeout: timeout ?? _reasonableTimeout);
 
-                await CheckBackupOperationStatus(opStatus, value, store, taskId, op, periodicBackupRunner);
-                Assert.Equal(opStatus, value);
+                await CheckBackupOperationStatus(opStatus, actual, store, taskId, op, periodicBackupRunner, result);
+                Assert.Equal(opStatus, actual);
                 return op;
             }
 
@@ -223,17 +227,19 @@ namespace FastTests
             {
                 var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, taskId));
 
-                var value = await WaitForValueAsync(async () =>
+                IOperationResult result = default;
+                var actual = await WaitForValueAsync(async () =>
                 {
-                    var x = await store.Maintenance.SendAsync(new GetOperationStateOperation(op.Result.OperationId, op.Result.ResponsibleNode));
-                    if (x == null)
+                    var state = await store.Maintenance.SendAsync(new GetOperationStateOperation(op.Result.OperationId, op.Result.ResponsibleNode));
+                    if (state == null)
                         return OperationStatus.Canceled;
 
-                    OperationStatus status = x.Status;
-                    return status;
+                    result = state.Result;
+                    return state.Status;
                 }, opStatus, timeout: timeout ?? _reasonableTimeout);
-                await CheckBackupOperationStatus(opStatus, value, store, taskId, op.Result.OperationId, periodicBackupRunner: null);
-                Assert.Equal(opStatus, value);
+
+                await CheckBackupOperationStatus(opStatus, actual, store, taskId, op.Result.OperationId, periodicBackupRunner: null, result);
+                Assert.Equal(opStatus, actual);
             }
 
             public IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null, string nodeTag = null)
@@ -311,7 +317,7 @@ namespace FastTests
                 return configuration;
             }
 
-            internal static string PrintBackupStatus(PeriodicBackupStatus status)
+            internal static string PrintBackupStatusAndResult(PeriodicBackupStatus status, IOperationResult result)
             {
                 var sb = new StringBuilder();
                 if (status == null)
@@ -323,7 +329,7 @@ namespace FastTests
                 sb.AppendLine($"{nameof(PeriodicBackupStatus.LastDatabaseChangeVector)}: '{status.LastDatabaseChangeVector}'");
                 sb.AppendLine($"{nameof(PeriodicBackupStatus.LastEtag)}: {status.LastEtag}'");
                 sb.AppendLine($"{nameof(PeriodicBackupStatus.LastOperationId)}: '{status.LastOperationId}'");
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.LastRaftIndex)}: '{status.LastRaftIndex}'");
+                sb.AppendLine($"{nameof(PeriodicBackupStatus.LastRaftIndex)}: '{status.LastRaftIndex.LastEtag}'");
                 sb.AppendLine($"{nameof(PeriodicBackupStatus.LastFullBackupInternal)}: '{status.LastFullBackupInternal}'");
                 sb.AppendLine($"{nameof(PeriodicBackupStatus.LastIncrementalBackupInternal)}: '{status.LastIncrementalBackupInternal}'");
                 sb.AppendLine($"{nameof(PeriodicBackupStatus.LastFullBackup)}: '{status.LastFullBackup}'");
@@ -454,21 +460,27 @@ namespace FastTests
                     }
                 }
 
+                sb.AppendLine();
+                sb.AppendLine("BackupResult properties:");
+                if (result != null)
+                {
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var djv = result.ToJson();
+                        var json = context.ReadObject(djv, "smuggler/result");
+                        sb.AppendLine(json.ToString());
+                    }
+                }
+                else
+                {
+                    sb.AppendLine("No backup result.");
+                }
+
                 return sb.ToString();
             }
 
-            internal static string PrintBackupResultMessagesStatus(BackupResult result)
-            {
-                if (result == null)
-                {
-                    return "No backup result.";
-                }
-
-                return string.Join(Environment.NewLine, result.Messages);
-            }
-
             private static async Task CheckBackupOperationStatus(OperationStatus expected, OperationStatus actual, IDocumentStore store, long taskId, long opId,
-                PeriodicBackupRunner periodicBackupRunner)
+                PeriodicBackupRunner periodicBackupRunner, IOperationResult backupResult)
             {
                 if (expected == OperationStatus.Completed && actual == OperationStatus.Faulted)
                 {
@@ -478,11 +490,12 @@ namespace FastTests
 
                     TryGetBackupStatusFromPeriodicBackupAndPrint(expected, actual, opId, periodicBackupRunner, status, result: null);
 
-                    Assert.True(false,
-                        $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Backup status from storage for current operation id: '{opId}':{Environment.NewLine}" +
-                        PrintBackupStatus(status));
+                    Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}" +
+                                $"Backup status from storage for current operation id: '{opId}':{Environment.NewLine}" +
+                                PrintBackupStatusAndResult(status, backupResult));
                 }
-                else if (expected == OperationStatus.Completed && actual == OperationStatus.InProgress)
+
+                if (expected == OperationStatus.Completed && actual == OperationStatus.InProgress)
                 {
                     // backup didn't complete in time, try to print running backup status, and backup result
                     var pb = periodicBackupRunner?.PeriodicBackups.FirstOrDefault(x => x.RunningBackupStatus != null && x.BackupStatus.TaskId == taskId);
@@ -490,40 +503,36 @@ namespace FastTests
                     {
                         // print previous backup status saved in memory
                         var operation = new GetPeriodicBackupStatusOperation(taskId);
-                        var status = (await store.Maintenance.SendAsync(operation)).Status;
-                        Assert.True(false,
-                            $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch running backup status for current task id: '{taskId}', previous backup status:{Environment.NewLine}" +
-                            PrintBackupStatus(status));
+                        var result = await store.Maintenance.SendAsync(operation);
+                        Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}" +
+                                    $"Could not fetch running backup status for current task id: '{taskId}', previous backup status:{Environment.NewLine}" +
+                                    PrintBackupStatusAndResult(result.Status, backupResult));
                     }
-                    else
-                    {
-                        Assert.True(false,
-                            $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Running backup status for current task id: '{taskId}':{Environment.NewLine}" +
-                            PrintBackupStatus(pb.RunningBackupStatus));
-                    }
+
+                    Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}" +
+                                $"Running backup status for current task id: '{taskId}':{Environment.NewLine}" +
+                                PrintBackupStatusAndResult(pb.RunningBackupStatus, backupResult));
                 }
             }
 
-            private static void TryGetBackupStatusFromPeriodicBackupAndPrint(OperationStatus expected, OperationStatus actual, long opId, PeriodicBackupRunner periodicBackupRunner, PeriodicBackupStatus status, BackupResult result)
+            private static void TryGetBackupStatusFromPeriodicBackupAndPrint(OperationStatus expected, OperationStatus actual, long opId,
+                PeriodicBackupRunner periodicBackupRunner, PeriodicBackupStatus status, BackupResult result)
             {
-                if (status?.LastOperationId != opId)
+                if (status?.LastOperationId == opId)
+                    return;
+
+                // failed to save backup status, lets fetch it from memory
+                var pb = periodicBackupRunner?.PeriodicBackups.FirstOrDefault(x => x.BackupStatus != null && x.BackupStatus.LastOperationId == opId);
+                if (pb == null)
                 {
-                    // failed to save backup status, lets fetch it from memory
-                    var pb = periodicBackupRunner?.PeriodicBackups.FirstOrDefault(x => x.BackupStatus != null && x.BackupStatus.LastOperationId == opId);
-                    if (pb == null)
-                    {
-                        Assert.True(false,
-                            $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch backup status for current operation id: '{opId}', previous backup status:{Environment.NewLine}" +
-                            PrintBackupStatus(status) + Environment.NewLine + "BackupResult Messages:" + Environment.NewLine + PrintBackupResultMessagesStatus(result));
-                    }
-                    else
-                    {
-                        Assert.True(false,
-                            $"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}Could not fetch backup status from storage for current operation id: '{opId}', current in memory backup status:{Environment.NewLine}" +
-                            PrintBackupStatus(pb.BackupStatus) + Environment.NewLine + "BackupResult Messages:" + Environment.NewLine +
-                            PrintBackupResultMessagesStatus(result));
-                    }
+                    Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}" +
+                                $"Could not fetch backup status for current operation id: '{opId}', previous backup status:{Environment.NewLine}" +
+                                PrintBackupStatusAndResult(status, result));
                 }
+
+                Assert.Fail($"Backup status expected: '{expected}', actual '{actual}',{Environment.NewLine}" +
+                            $"Could not fetch backup status from storage for current operation id: '{opId}', current in memory backup status:{Environment.NewLine}" +
+                            PrintBackupStatusAndResult(pb.BackupStatus, result));
             }
 
             public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)

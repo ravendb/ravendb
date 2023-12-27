@@ -88,19 +88,6 @@ namespace Corax.Querying.Matches
             _bufferScope = _ctx.Allocate(bufferSize * sizeof(long), out _bufferHolder);
 
             var bufferState = Buffer;
-
-            // Some inners can _tell_ us that they are already returning data in sorted order
-            var skipSorting = _inner.AttemptToSkipSorting();
-            if (_sortMode == SortMode.Default)
-            {
-                _sortMode = skipSorting switch
-                {
-                    SkipSortingResult.ResultsNativelySorted => SortMode.Skip,// if the inner already sorted, we don't need
-                    SkipSortingResult.WillSkipSorting => SortMode.Required, // if the inner skipped sorting, we have to
-                    SkipSortingResult.SortingIsRequired => SortMode.Required,
-                    _ => throw new ArgumentOutOfRangeException(skipSorting.ToString())
-                };
-            }
             
             int count = 0;
             while (true)
@@ -125,6 +112,7 @@ namespace Corax.Querying.Matches
             End:
             // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
             // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
+            SetSortingMode();
             if (_sortMode == SortMode.Required)
             {
                 // We need to sort and remove duplicates.
@@ -132,6 +120,21 @@ namespace Corax.Querying.Matches
             }
 
             _bufferEndIdx = count;
+
+            void SetSortingMode()
+            {
+                var skipSorting = _inner.AttemptToSkipSorting();
+                if (_sortMode == SortMode.Default)
+                {
+                    _sortMode = skipSorting switch
+                    {
+                        SkipSortingResult.ResultsNativelySorted => SortMode.Skip, // if the inner already sorted, we don't need
+                        SkipSortingResult.WillSkipSorting => SortMode.Required, // if the inner skipped sorting, we have to
+                        SkipSortingResult.SortingIsRequired => SortMode.Required,
+                        _ => throw new ArgumentOutOfRangeException(skipSorting.ToString())
+                    };
+                }
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

@@ -448,9 +448,7 @@ namespace Raven.Server.Documents
 
             var changeVectorList = new List<ChangeVector>
             {
-                documentChangeVector,
-                context.GetChangeVector(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context)),
-                context.GetChangeVector(ChangeVectorUtils.NewChangeVector(_documentDatabase, newEtag, context)),
+                documentChangeVector
             };
 
             foreach (var conflictChangeVector in result.ChangeVectors)
@@ -459,7 +457,9 @@ namespace Raven.Server.Documents
             }
 
             var merged = ChangeVector.Merge(changeVectorList, context);
-
+            merged = ChangeVector.MergeWithDatabaseChangeVector(context, merged);
+            merged = merged.MergeOrderWith(ChangeVectorUtils.NewChangeVector(_documentDatabase, newEtag, context), context);
+          
             return (merged, result.NonPersistentFlags);
         }
 
@@ -507,7 +507,8 @@ namespace Raven.Server.Documents
                     _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
 
                     //make sure that the relevant collection tree exists
-                    var table = tx.OpenTable(_documentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+
+                    var table = tx.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
                     table.Delete(existingDoc.StorageId);
                 }
                 else if (existing.Tombstone != null)

@@ -12,17 +12,23 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
+using Raven.Server.Config;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
 using Tests.Infrastructure;
+using Voron;
+using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
@@ -89,7 +95,7 @@ namespace SlowTests.Smuggler
                 using (var store2 = GetDocumentStore())
                 {
                     await store1.Maintenance.SendAsync(
-                        new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true, collections: new string[]{"Foo","foo", "bar"})));
+                        new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true, collections: new string[] { "Foo", "foo", "bar" })));
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -349,11 +355,11 @@ namespace SlowTests.Smuggler
                     {
                         await SetupExpiration(exportStore);
                         var person1 = new Person { Name = "Name1" };
-                        await session.StoreAsync(person1).ConfigureAwait(false);
+                        await session.StoreAsync(person1);
                         var metadata = session.Advanced.GetMetadataFor(person1);
                         metadata[Constants.Documents.Metadata.Expires] = database.Time.GetUtcNow().AddSeconds(10).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
-                        await session.SaveChangesAsync().ConfigureAwait(false);
+                        await session.SaveChangesAsync();
                     }
 
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(11);
@@ -371,7 +377,7 @@ namespace SlowTests.Smuggler
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                     using (var session = importStore.OpenAsyncSession())
                     {
-                        var person = await session.LoadAsync<Person>("people/1").ConfigureAwait(false);
+                        var person = await session.LoadAsync<Person>("people/1");
                         Assert.Null(person);
                     }
                 }
@@ -1703,7 +1709,7 @@ namespace SlowTests.Smuggler
             const int numberOfUsers = 7;
             const int numberOfOrders = 3;
             DateTime baseTimeline = DateTime.Today.ToUniversalTime();
-            
+
             var file = GetTempFileName();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
@@ -1725,7 +1731,7 @@ namespace SlowTests.Smuggler
                         {
                             // Documents
                             await session.StoreAsync(new User { Name = $"Name{i}" }, $"users/{i}");
-                            
+
                             // Counters
                             var docCounters = session.CountersFor($"users/{i}");
                             docCounters.Increment($"TestCounter{i}", i * i);
@@ -1765,7 +1771,7 @@ namespace SlowTests.Smuggler
                             }
                         }
                     }
-                    
+
                     var statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments);
 
@@ -1812,7 +1818,7 @@ namespace SlowTests.Smuggler
                         }
                     }
                     await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store1, isFullBackup: false);
-                    
+
                     // Check database statistics before export
                     statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments);
@@ -2057,6 +2063,139 @@ namespace SlowTests.Smuggler
                 var revision = await session.Advanced.Revisions.GetForAsync<User>(user.Id);
                 Assert.NotNull(revision);
                 Assert.NotEmpty(revision);
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportIfCompressionDictionaryMissed()
+        {
+            const int documentsWithoutRevisions = 1024;
+            const int documentsWithRevisions = 512;
+            const int expectedNumberOfCorruptedRevisions = 7;
+            const int expectedNumberOfDocuments = documentsWithoutRevisions + documentsWithRevisions + expectedNumberOfCorruptedRevisions;
+
+            var file = GetTempFileName();
+
+            try
+            {
+                using (var server = GetNewServer(new ServerCreationOptions
+                {
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString()
+                    }
+                }))
+                using (var sourceStore = GetDocumentStore(new Options { Server = server }))
+                using (var destStore = GetDocumentStore(new Options { Server = server }))
+                {
+                    var database = await GetDatabase(server, sourceStore.Database);
+
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        await using (var session = sourceStore.BulkInsert())
+                        {
+                            for (int i = 0; i < documentsWithoutRevisions; i++)
+                            {
+                                var user = new User { Name = $"User{i}" };
+                                await session.StoreAsync(user, $"users/{i}");
+                            }
+                        }
+
+                        // Let's create a revision configuration for all subsequent documents
+                        var revisionConfiguration = new RevisionsConfiguration
+                        {
+                            Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 },
+                            Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                            {
+                                ["Users"] = new() { Disabled = false, MinimumRevisionsToKeep = 10 }
+                            }
+                        };
+                        await RevisionsHelper.SetupRevisionsAsync(sourceStore, database.Name, revisionConfiguration);
+
+                        // Now, let's add the documents under the conditions of the configured revisions
+                        await using (var session = sourceStore.BulkInsert())
+                        {
+                            for (int i = documentsWithoutRevisions; i < documentsWithoutRevisions + documentsWithRevisions + expectedNumberOfCorruptedRevisions; i++)
+                            {
+                                var user = new User { Name = $"User{i}" };
+                                await session.StoreAsync(user, $"users/{i}");
+                            }
+                        }
+
+                        // We need to ensure everything is working as expected and that the Compression Dictionaries are created
+                        List<ZstdLib.CompressionDictionary> inStorageDictionaries;
+                        using (var tx = context.Environment.ReadTransaction())
+                            inStorageDictionaries = context.Environment.CompressionDictionariesHolder.GetInStorageDictionaries(tx).ToList();
+                        Assert.Equal(2, inStorageDictionaries.Count);
+
+                        // We want to intentionally corrupt the data by deleting all Compression Dictionaries, both on Storage... 
+                        using (var tx = context.Environment.WriteTransaction())
+                        {
+                            var tree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
+                            using (var iterator = tree.Iterate(true))
+                            {
+                                iterator.Seek(Slices.BeforeAllKeys);
+
+                                do
+                                {
+                                    var id = iterator.CurrentKey;
+                                    tree.Delete(id);
+                                } while (iterator.MoveNext());
+                            }
+
+                            tx.Commit();
+                        }
+
+                        // ... and in memory
+                        using (var tx = context.Environment.ReadTransaction())
+                        {
+                            inStorageDictionaries = context.Environment.CompressionDictionariesHolder.GetInStorageDictionaries(tx).ToList();
+                            Assert.True(inStorageDictionaries.Count == 0);
+                        }
+
+                        context.Environment.CompressionDictionariesHolder.ForTestingPurposesOnly().ClearCompressionDictionaries();
+                    }
+
+                    // The export attempt should finish successfully; all error data should be consolidated in the result
+                    var operation = await sourceStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { SkipCorruptedData = true }, file);
+                    var result = await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(15)) as SmugglerResult;
+                    var sourceStats = sourceStore.Maintenance.Send(new GetStatisticsOperation());
+
+                    // Documents assert
+                    Assert.True(result?.Documents.ReadCount == documentsWithoutRevisions,
+                        $"Documents.ReadCount of smuggler export result is {result?.Documents.ReadCount} documents, but should be {documentsWithoutRevisions}");
+
+                    Assert.True(result.Documents.ErroredCount == documentsWithRevisions + expectedNumberOfCorruptedRevisions,
+                        $"Documents.ErroredCount of smuggler export result is {result.Documents.ErroredCount} documents, but should be {documentsWithRevisions + expectedNumberOfCorruptedRevisions}");
+
+                    Assert.True(sourceStats.CountOfDocuments == expectedNumberOfDocuments,
+                        $"The source database contains {sourceStats.CountOfDocuments} documents, but should be {expectedNumberOfDocuments}");
+
+                    // Revisions assert
+                    Assert.True(result.RevisionDocuments.ReadCount == documentsWithRevisions,
+                        $"RevisionDocuments.ReadCount of smuggler export result is {result?.Documents.ReadCount} revisions, but should be {documentsWithRevisions}");
+
+                    Assert.True(result.RevisionDocuments.ErroredCount == expectedNumberOfCorruptedRevisions,
+                        $"RevisionDocuments.ErroredCount of smuggler export result is {result.Documents.ErroredCount} revisions, but should be {expectedNumberOfCorruptedRevisions}");
+
+                    Assert.True(sourceStats.CountOfRevisionDocuments == documentsWithRevisions + expectedNumberOfCorruptedRevisions,
+                        $"The source database contains {sourceStats.CountOfRevisionDocuments} documents, but should be {documentsWithRevisions + expectedNumberOfCorruptedRevisions}");
+
+                    // The export file should be operational and allow the import of all uncorrupted data
+                    operation = await destStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var destStats = destStore.Maintenance.Send(new GetStatisticsOperation());
+                    Assert.True(destStats.CountOfDocuments == sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments,
+                        $"The destination database contains {destStats.CountOfDocuments} documents, but expected {sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments}");
+
+                    Assert.True(destStats.CountOfRevisionDocuments == result.Documents.ReadCount + result.RevisionDocuments.ReadCount * 2,
+                        $"The destination database contains {destStats.CountOfRevisionDocuments} revisions, but expected {result.Documents.ReadCount + result.RevisionDocuments.ReadCount * 2}");
+                }
+            }
+            finally
+            {
+                File.Delete(file);
             }
         }
 

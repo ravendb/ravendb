@@ -293,7 +293,7 @@ namespace Tests.Infrastructure
                     if (rachis.IsDisposed)
                         return;
 
-                    Assert.True(false, $"Unexpected TCP listener exception{Environment.NewLine}{e}");
+                    Assert.Fail($"Unexpected TCP listener exception{Environment.NewLine}{e}");
                     throw;
                 }
 

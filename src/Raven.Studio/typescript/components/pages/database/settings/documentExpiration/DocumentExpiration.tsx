@@ -157,7 +157,7 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
                                                                   .asSeconds()})`
                                                             : "Default (60)"
                                                     }
-                                                    addonText="seconds"
+                                                    addon="seconds"
                                                 />
                                                 {isLimitWarningVisible && (
                                                     <Alert color="warning" className="mt-3">

@@ -5,7 +5,7 @@ import document = require("models/database/documents/document");
 
 class getRevisionsBinEntryCommand extends commandBase {
 
-    constructor(private database: database, private changeVector: string, private take: number, private continuationToken?: string) {
+    constructor(private database: database, private skip: number, private take: number, private continuationToken?: string) {
         super();
     }
     
@@ -35,7 +35,7 @@ class getRevisionsBinEntryCommand extends commandBase {
         }
 
         return {
-            changeVector: this.changeVector,
+            skip: this.skip,
             pageSize: this.take
         };
     }

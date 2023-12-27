@@ -122,7 +122,7 @@ namespace SlowTests.Issues
             var deleteResult = await store.Maintenance.Server.SendAsync(
                 new DeleteDatabasesOperation(store.Database, hardDelete: false, fromNode: notInDbGroupServer.ServerStore.NodeTag,
                     timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deleteResult.RaftCommandIndex + 1, TimeSpan.FromSeconds(30));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deleteResult.RaftCommandIndex, TimeSpan.FromSeconds(30));
 
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             Assert.Equal(2, record.Topology.Count);

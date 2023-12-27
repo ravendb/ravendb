@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { Form, Col, Button, Row, Spinner, Input, InputGroupText, InputGroup, UncontrolledPopover } from "reactstrap";
+import { Form, Col, Button, Row, Spinner, Input, InputGroup, UncontrolledPopover, Card } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
@@ -19,7 +19,6 @@ import useClientConfigurationFormController from "components/common/clientConfig
 import { tryHandleSubmit } from "components/utils/common";
 import classNames from "classnames";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
-import { RichPanel } from "components/common/RichPanel";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
@@ -148,7 +147,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <div className={hasClientConfiguration ? "" : "item-disabled pe-none"}>
                             {globalConfig && (
                                 <div className="mt-4 mb-3">
-                                    <div className="hstack justify-content-center">
+                                    <div className="w-fit-content mx-auto">
                                         <FormRadioToggleWithIcon
                                             name="overrideConfig"
                                             control={control}
@@ -162,7 +161,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             <Row>
                                 {globalConfig && (
                                     <Col>
-                                        <h4 className="my-3">
+                                        <h4 className="mb-3">
                                             <Icon icon="server" />
                                             Server Configuration
                                             {canNavigateToServerSettings() && (
@@ -176,7 +175,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                 </a>
                                             )}
                                         </h4>
-                                        <RichPanel className={canEditDatabaseConfig && "item-disabled"}>
+                                        <Card className={canEditDatabaseConfig && "item-disabled"}>
                                             <div className="p-4">
                                                 <div className="md-label">
                                                     Identity parts separator{" "}
@@ -228,15 +227,15 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                     }
                                                 />
                                             </div>
-                                        </RichPanel>
+                                        </Card>
                                     </Col>
                                 )}
                                 <Col>
-                                    <h4 className="my-3">
+                                    <h4 className="mb-3">
                                         <Icon icon="database" />
                                         Database Configuration
                                     </h4>
-                                    <RichPanel className={!canEditDatabaseConfig && "item-disabled"}>
+                                    <Card className={!canEditDatabaseConfig && "item-disabled"}>
                                         <div className="p-4">
                                             <div className="md-label">
                                                 Identity parts separator{" "}
@@ -256,14 +255,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                 </div>
                                             </UncontrolledPopover>
                                             <InputGroup>
-                                                <InputGroupText>
+                                                <div className="toggle-field-checkbox">
                                                     <FormCheckbox
                                                         control={control}
                                                         name="identityPartsSeparatorEnabled"
                                                         disabled={!canEditDatabaseConfig}
                                                         color="primary"
                                                     />
-                                                </InputGroupText>
+                                                </div>
                                                 <FormInput
                                                     type="text"
                                                     control={control}
@@ -293,14 +292,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                 </div>
                                             </UncontrolledPopover>
                                             <InputGroup>
-                                                <InputGroupText>
+                                                <div className="toggle-field-checkbox">
                                                     <FormCheckbox
                                                         control={control}
                                                         name="maximumNumberOfRequestsEnabled"
                                                         disabled={!canEditDatabaseConfig}
                                                         color="primary"
                                                     />
-                                                </InputGroupText>
+                                                </div>
                                                 <FormInput
                                                     type="number"
                                                     control={control}
@@ -313,13 +312,13 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                 />
                                             </InputGroup>
                                         </div>
-                                    </RichPanel>
+                                    </Card>
                                 </Col>
                             </Row>
 
                             <div
                                 className={classNames(
-                                    "d-flex mt-4 position-relative",
+                                    "d-flex mt-3 position-relative",
                                     { "justify-content-center": globalConfig },
                                     { "justify-content-between": !globalConfig }
                                 )}
@@ -335,9 +334,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             <Row>
                                 {globalConfig && (
                                     <Col>
-                                        <RichPanel
-                                            className={classNames("p-4", { "item-disabled": canEditDatabaseConfig })}
-                                        >
+                                        <Card className={classNames("p-4", { "item-disabled": canEditDatabaseConfig })}>
                                             <div className="md-label">
                                                 Load Balance Behavior{" "}
                                                 <Icon id="SetSessionContext" icon="info" color="info" />
@@ -436,13 +433,11 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                 placeholder="None"
                                                 disabled
                                             />
-                                        </RichPanel>
+                                        </Card>
                                     </Col>
                                 )}
                                 <Col>
-                                    <RichPanel
-                                        className={classNames("p-4", { "item-disabled": !canEditDatabaseConfig })}
-                                    >
+                                    <Card className={classNames("p-4", { "item-disabled": !canEditDatabaseConfig })}>
                                         <div className="md-label">
                                             Load Balance Behavior{" "}
                                             <Icon id="SetSessionContext" icon="info" color="info" />
@@ -481,14 +476,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             </div>
                                         </UncontrolledPopover>
                                         <InputGroup>
-                                            <InputGroupText>
+                                            <div className="toggle-field-checkbox">
                                                 <FormCheckbox
                                                     control={control}
                                                     name="loadBalancerEnabled"
                                                     disabled={!canEditDatabaseConfig}
                                                     color="primary"
                                                 />
-                                            </InputGroupText>
+                                            </div>
                                             <FormSelect
                                                 control={control}
                                                 name="loadBalancerValue"
@@ -565,14 +560,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             </UncontrolledPopover>
                                         </div>
                                         <InputGroup>
-                                            <InputGroupText>
+                                            <div className="toggle-field-checkbox">
                                                 <FormCheckbox
                                                     control={control}
                                                     name="readBalanceBehaviorEnabled"
                                                     disabled={!canEditDatabaseConfig}
                                                     color="primary"
                                                 />
-                                            </InputGroupText>
+                                            </div>
                                             <FormSelect
                                                 control={control}
                                                 name="readBalanceBehaviorValue"
@@ -583,7 +578,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                 isSearchable={false}
                                             />
                                         </InputGroup>
-                                    </RichPanel>
+                                    </Card>
                                 </Col>
                             </Row>
                         </div>

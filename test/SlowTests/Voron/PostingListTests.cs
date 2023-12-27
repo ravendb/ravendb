@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
@@ -102,8 +103,8 @@ public class PostingListTests : StorageTest
             Assert.Equal(_data, AllValues(tree));
         }
     }
-    
-    [Fact]
+
+    [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.X64)]
     public void CanAddPredictableOffsets_Large()
     {
         using (var wtx = Env.WriteTransaction())

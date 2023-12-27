@@ -109,7 +109,7 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
-        public void GetCounterValue()
+        public async Task GetCounterValue()
         {
             using (var store = GetDocumentStore())
             {
@@ -159,7 +159,7 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                Task.WaitAll(a, b); // run them in parallel and see that they are good
+                await Task.WhenAll(a, b); // run them in parallel and see that they are good
 
                 var val = store.Operations
                     .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))

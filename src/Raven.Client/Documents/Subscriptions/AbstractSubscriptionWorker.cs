@@ -404,6 +404,8 @@ namespace Raven.Client.Documents.Subscriptions
                     DatabaseDoesNotExistException.ThrowWithMessage(_dbName, connectionStatus.Message);
                 else if (connectionStatus.Exception.Contains(nameof(NotSupportedInShardingException)))
                     throw new NotSupportedInShardingException(connectionStatus.Message);
+                else if (connectionStatus.Exception.Contains(nameof(DatabaseDisabledException)))
+                    throw new DatabaseDisabledException(connectionStatus.Message);
             }
 
             if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus)
@@ -583,6 +585,8 @@ namespace Raven.Client.Documents.Subscriptions
                 }
             }
         }
+
+        protected virtual TimeSpan GetTimeToWaitBeforeConnectionRetry() => _options.TimeToWaitBeforeConnectionRetry;
 
         protected virtual void HandleSubscriberError(Exception ex)
         {
@@ -836,7 +840,7 @@ namespace Raven.Client.Documents.Subscriptions
                         (bool shouldTryToReconnect, _redirectNode) = CheckIfShouldReconnectWorker(ex, AssertLastConnectionFailure, OnUnexpectedSubscriptionError);
                         if (shouldTryToReconnect)
                         {
-                            await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry, _processingCts.Token).ConfigureAwait(false);
+                            await TimeoutManager.WaitFor(GetTimeToWaitBeforeConnectionRetry(), _processingCts.Token).ConfigureAwait(false);
 
                             if (_redirectNode == null)
                             {
@@ -909,11 +913,11 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     if (CheckIfShouldReconnectWorker(exception, assertLastConnectionFailure, onUnexpectedSubscriptionError).ShouldTryToReconnect)
                     {
-                        return (true, null);
+                        return (true, _redirectNode);
                     }
                 }
 
-                return (false, null);
+                return HandleAggregateException();
             }
 
             switch (ex)
@@ -940,11 +944,14 @@ namespace Raven.Client.Documents.Subscriptions
                 case DatabaseDisabledException:
                 case AllTopologyNodesDownException:
                     AssertLastConnectionFailure();
-                    return (true, null);
+                    return (true, _redirectNode);
 
                 case NodeIsPassiveException _:
-                case SubscriptionChangeVectorUpdateConcurrencyException _:
+                    // if we failed to talk to a node, we'll forget about it and let the topology to
+                    // redirect us to the current node
                     return (true, null);
+                case SubscriptionChangeVectorUpdateConcurrencyException _:
+                    return HandleSubscriptionChangeVectorUpdateConcurrencyException();
 
                 case SubscriptionClosedException sce:
                     return HandleSubscriptionClosedException(sce);
@@ -959,30 +966,45 @@ namespace Raven.Client.Documents.Subscriptions
                 case AuthorizationException _:
                 case SubscriberErrorException _:
                 case NotSupportedInShardingException _:
-                    _processingCts.Cancel();
-                    return (false, null);
+                    return HandleShouldNotTryToReconnect();
+
                 case RavenException re:
                     if (re.InnerException is HttpRequestException or TimeoutException)
                     {
                         goto default;
                     }
 
-                    _processingCts.Cancel();
-                    return (false, null);
+                    return HandleShouldNotTryToReconnect();
                 default:
                     onUnexpectedSubscriptionError?.Invoke(ex);
                     assertLastConnectionFailure?.Invoke();
-                    return (true, null);
+                    return (true, _redirectNode);
             }
+        }
+
+        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleShouldNotTryToReconnect()
+        {
+            _processingCts.Cancel();
+            return (false, _redirectNode);
+        }
+
+        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleAggregateException()
+        {
+            return (false, _redirectNode);
+        }
+
+        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionChangeVectorUpdateConcurrencyException()
+        {
+            return (true, _redirectNode);
         }
 
         protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionClosedException(SubscriptionClosedException sce)
         {
             if (sce.CanReconnect)
-                return (true, null);
+                return (true, _redirectNode);
 
             _processingCts?.Cancel();
-            return (false, null);
+            return (false, _redirectNode);
         }
 
         protected void CloseTcpClient()

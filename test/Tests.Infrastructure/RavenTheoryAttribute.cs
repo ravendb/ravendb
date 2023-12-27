@@ -7,9 +7,11 @@ namespace Tests.Infrastructure;
 public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
 {
     private string _skip;
+    private readonly RavenTestCategory _category;
 
     public RavenTheoryAttribute(RavenTestCategory category)
     {
+        _category = category;
     }
 
     public bool LicenseRequired { get; set; }
@@ -21,6 +23,12 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
             var skip = _skip;
             if (skip != null)
                 return skip;
+
+            if (RavenDataAttributeBase.Is32Bit)
+            {
+                if (_category.HasFlag(RavenTestCategory.Sharding))
+                    return RavenDataAttributeBase.ShardingSkipMessage;
+            }
 
             if (LicenseRequiredFactAttribute.ShouldSkip(LicenseRequired))
                 return LicenseRequiredFactAttribute.SkipMessage;

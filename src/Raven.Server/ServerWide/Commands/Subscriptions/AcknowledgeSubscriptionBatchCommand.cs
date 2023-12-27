@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
@@ -34,6 +35,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public List<DocumentRecord> DocumentsToResend; // documents that were updated while this batch was processing 
 
         public string ShardName;
+        public long LastModifiedIndex;
 
         // for serialization
         private AcknowledgeSubscriptionBatchCommand() { }
@@ -55,7 +57,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+            var subscription = JsonDeserializationClient.SubscriptionState(existingValue);
             AssertSubscriptionState(record, subscription, subscriptionName);
 
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
@@ -66,7 +68,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (IsLegacyCommand())
             {
                 if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
-                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
 
                 subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
             }
@@ -77,6 +79,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
             else
             {
+                // we need to check if subscription was changed since we increment the orchestrator change vector
+                if (LastModifiedIndex != subscription.RaftCommandIndex)
+                {
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to changes in subscription task, current {nameof(LastModifiedIndex)} value is '{LastModifiedIndex}' but persisted value is '{subscription.RaftCommandIndex}'.{Environment.NewLine}Probably there was an admin intervention that changed the subscription change vector or query value.");
+                }
+
                 var changeVector = context.GetChangeVector(ChangeVector);
                 subscription.ShardingState.NodeTagPerShard[ShardName] = NodeTag;
                 subscription.ChangeVectorForNextBatchStartingPoint =
@@ -191,6 +199,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
             json[nameof(BatchId)] = BatchId;
             json[nameof(ShardName)] = ShardName;
+            json[nameof(LastModifiedIndex)] = LastModifiedIndex;
             if (DocumentsToResend != null)
                 json[nameof(DocumentsToResend)] = new DynamicJsonArray(DocumentsToResend);
         }

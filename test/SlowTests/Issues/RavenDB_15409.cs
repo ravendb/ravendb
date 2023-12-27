@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                     }
 
                     massageBuilder.Append(await socket.CloseAndGetLogsAsync());
-                    Assert.False(true, massageBuilder.ToString());
+                    Assert.Fail(massageBuilder.ToString());
                 }
             }
             Assert.Single(expected);

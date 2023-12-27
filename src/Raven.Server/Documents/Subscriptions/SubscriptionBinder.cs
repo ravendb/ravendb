@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding;
@@ -99,7 +98,7 @@ public sealed class SubscriptionBinder<TState, TConnection, TIncludeCommand> : I
                     using (stats.PendingConnectionScope)
                     {
                         await _connection.InitAsync();
-                        _subscriptionConnectionsState.Initialize(_connection);
+                        await _subscriptionConnectionsState.InitializeAsync(_connection);
                         (disposeOnDisconnect, registerConnectionDurationInTicks) = await _subscriptionConnectionsState.SubscribeAsync(_connection);
                     }
 
@@ -132,7 +131,9 @@ public sealed class SubscriptionBinder<TState, TConnection, TIncludeCommand> : I
         _connection.Stats.CreateActiveConnectionScope();
 
         // update the state if above data changed
-        _subscriptionConnectionsState.Initialize(_connection, afterSubscribe: true);
+        await _subscriptionConnectionsState.InitializeAsync(_connection, afterSubscribe: true);
+
+        _connection.CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
         await _connection.SendNoopAckAsync();
         await _connection.SendAcceptMessageAsync();

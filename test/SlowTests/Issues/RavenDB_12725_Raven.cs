@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanLoadDatabaseAndIgnoreMissingJournals()
+        public async Task CanLoadDatabaseAndIgnoreMissingJournals()
         {
             UseNewLocalServer(new Dictionary<string, string>
             {
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
                 Path = path
             }))
             {
-                db = GetDatabase(store.Database).Result;
+                db = await GetDatabase(store.Database);
                 store.Maintenance.Send(new CreateSampleDataOperation());
             }
 

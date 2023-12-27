@@ -66,11 +66,14 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = store.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User>("Test")
+                        .Statistics(out var stats)
                         .SuggestUsing(x => x.ByField(y => y.Name, "Oren").WithOptions(new SuggestionOptions
                         {
                             PageSize = 10
                         }))
                         .Execute();
+
+                    Assert.Equal(1, stats.TotalResults);
 
                     Assert.Equal(0, suggestionQueryResult["Name"].Suggestions.Count);
                 }

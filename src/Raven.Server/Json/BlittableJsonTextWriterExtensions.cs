@@ -112,7 +112,7 @@ namespace Raven.Server.Json
                 w.WritePropertyName(nameof(taskStats.EtlType));
                 w.WriteString(taskStats.EtlType.ToString());
                 w.WriteComma();
-                
+
                 w.WritePropertyName(nameof(taskStats.EtlSubType));
                 w.WriteString(taskStats.EtlSubType?.ToString());
                 w.WriteComma();
@@ -153,7 +153,7 @@ namespace Raven.Server.Json
                 w.WritePropertyName(nameof(taskStats.BrokerType));
                 w.WriteString(taskStats.BrokerType.ToString());
                 w.WriteComma();
-                
+
 
                 w.WriteArray(c, nameof(taskStats.Stats), taskStats.Stats, (wp, cp, scriptStats) =>
                 {
@@ -429,7 +429,7 @@ namespace Raven.Server.Json
 
             writer.WriteArray(nameof(result.Suggestions), result.Suggestions);
 
-            if (result is ShardedSuggestionResult {SuggestionsWithPopularity: {Values.Count: > 0} suggestionsPopularity})
+            if (result is ShardedSuggestionResult { SuggestionsWithPopularity: { Values.Count: > 0 } suggestionsPopularity })
             {
                 writer.WriteComma();
 
@@ -437,7 +437,7 @@ namespace Raven.Server.Json
                 writer.WriteStartObject();
 
                 writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.SuggestionsPopularityFields);
-                
+
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(suggestionsPopularity.Values));
 
@@ -466,7 +466,7 @@ namespace Raven.Server.Json
                 }
 
                 writer.WriteEndArray();
-                
+
                 writer.WriteEndObject();
                 writer.WriteEndObject();
 
@@ -611,7 +611,7 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
-            
+
             if (result.CappedMaxResults != null)
             {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
@@ -1177,7 +1177,7 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(statistics.CountOfRevisionDocuments));
             writer.WriteInteger(statistics.CountOfRevisionDocuments);
             writer.WriteComma();
-            
+
             writer.WritePropertyName(nameof(statistics.CountOfTombstones));
             writer.WriteInteger(statistics.CountOfTombstones);
             writer.WriteComma();
@@ -1246,7 +1246,7 @@ namespace Raven.Server.Json
                     w.WriteNull();
 
                 w.WriteComma();
-                
+
                 WriteBasicIndexInformationInternal(w, index as TIndexInformation);
 
                 w.WriteEndObject();
@@ -1333,7 +1333,7 @@ namespace Raven.Server.Json
             else
                 writer.WriteNull();
             writer.WriteComma();
-            
+
             writer.WritePropertyName(nameof(indexDefinition.ArchivedDataProcessingBehavior));
             if (indexDefinition.ArchivedDataProcessingBehavior.HasValue)
                 writer.WriteString(indexDefinition.ArchivedDataProcessingBehavior?.ToString());
@@ -1940,9 +1940,9 @@ namespace Raven.Server.Json
                 using (o)
                 {
                     writer.WriteObject(o);
-                    
+
                     var writtenBytes = await writer.MaybeFlushAsync(token);
-                    
+
                     if (o.HasParent)
                     {
                         // If blittable has a parent then its size is the parent's size
@@ -2225,7 +2225,7 @@ namespace Raven.Server.Json
 
             if (document is ShardedQueryResultDocument shardedQueryResult)
             {
-                if (shardedQueryResult.OrderByFields is {Count: > 0})
+                if (shardedQueryResult.OrderByFields is { Count: > 0 })
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.OrderByFields);

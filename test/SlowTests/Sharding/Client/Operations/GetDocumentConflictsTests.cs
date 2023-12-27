@@ -137,7 +137,7 @@ namespace SlowTests.Sharding.Client.Operations
 
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    var ids = new LazyStringValue[10];
+                    var ids = new string[10];
                     int i = 0;
                     using (context.OpenReadTransaction())
                     {
@@ -145,7 +145,7 @@ namespace SlowTests.Sharding.Client.Operations
                         if (docCount == 0)
                             continue;
 
-                        foreach (var docId in db.DocumentsStorage.GetAllIds(context))
+                        foreach (string docId in db.DocumentsStorage.GetAllIds(context))
                         {
                             ids[i++] = docId;
                             if(i > 9)
@@ -156,7 +156,7 @@ namespace SlowTests.Sharding.Client.Operations
                     using (context.OpenWriteTransaction())
                     {
                         i = 0;
-                        foreach (var id in ids)
+                        foreach (string id in ids)
                         {
                             var doc = context.ReadObject(new DynamicJsonValue(), id);
                             db.DocumentsStorage.ConflictsStorage.AddConflict(context, id, now.AddMinutes(rand.Next(100, 10000)).Ticks, doc, $"A:{i}-A1B2C3D4E5F6G7H8I9", "users",

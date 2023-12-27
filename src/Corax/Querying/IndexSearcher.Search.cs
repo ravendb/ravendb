@@ -11,6 +11,7 @@ using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Voron;
 using Voron.Data.PostingLists;
+using Voron.Util;
 
 namespace Corax.Querying;
 
@@ -29,6 +30,7 @@ public partial class IndexSearcher
         IQueryMatch searchQuery = null;
 
         List<Slice> termMatches = null;
+        var terms = new ContextBoundNativeList<Slice>(Allocator);
         foreach (var word in values)
         {
             foreach (var token in GetTokens(word))
@@ -50,13 +52,14 @@ public partial class IndexSearcher
                 if (termType is Constants.Search.SearchMatchOptions.TermMatch)
                 {
                     termMatches ??= new();
-                    var terms = new NativeUnmanagedList<Slice>(Allocator, 8);
+
+                    terms.Clear(); // Clear the terms list.
                     EncodeAndApplyAnalyzerForMultipleTerms(field, termReadyToAnalyze, ref terms);
-                    var termsSpan = terms.Items;
-                    foreach (var term in termsSpan)
+                    foreach (var term in terms.GetEnumerator())
                     {
                         if (term.Size == 0)
                             continue; //skip empty results
+
                         termMatches.Add(term);
                     }
                     continue;

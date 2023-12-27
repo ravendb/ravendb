@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions.Security;
 using Raven.Server.Documents;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -79,7 +80,7 @@ namespace Raven.Server.Smuggler.Migration
             var response = await RunWithAuthRetryInternal(async () =>
             {
                 var url = $"{serverUrl}/{(isRavenFs ? "fs" : "databases")}";
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
                 var responseMessage = await httpClient.SendAsync(request, cancelToken);
                 return responseMessage;
             }, apiKey, serverUrl, enableBasicAuthenticationOverUnsecuredHttp, skipServerCertificateValidation, httpClient, isLegacyOAuthToken);

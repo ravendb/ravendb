@@ -51,7 +51,7 @@ namespace StressTests.Rachis
             {
                 for (int i = start; i < start + 10; i++)
                 {
-                    await session.StoreAsync(new User() {Name = "John" + i, Count = 3}, "Users/" + i);
+                    await session.StoreAsync(new User() { Name = "John" + i, Count = 3 }, "Users/" + i);
                 }
                 await session.SaveChangesAsync().ConfigureAwait(false);
             }
@@ -108,7 +108,7 @@ namespace StressTests.Rachis
                         }
                     });
 
-                    var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions {Query = "from Users where Count > 0"});
+                    var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions { Query = "from Users where Count > 0" });
 
                     var strategy = SubscriptionOpeningStrategy.Concurrent;
                     var w1 = CreateWorker(store, subscriptionName, strategy, cts.Token);
@@ -131,7 +131,7 @@ namespace StressTests.Rachis
                         using (var session = store.OpenAsyncSession())
                         {
                             var result = await session.Query<User>().Where(u => u.Count > 0).ToListAsync(token: cts.Token);
-                            Assert.True(false, string.Join(Environment.NewLine, result.Select(r => $"{r.Id} has {r.Count}")));
+                            Assert.Fail(string.Join(Environment.NewLine, result.Select(r => $"{r.Id} has {r.Count}")));
                         }
                     }
                 }
@@ -161,7 +161,7 @@ namespace StressTests.Rachis
                         {
                             if (Interlocked.Increment(ref _batchCount) % 11 == 0)
                                 throw new InvalidOperationException("Random sub failure before");
-                          
+
                             using (var session = batch.OpenAsyncSession())
                             {
                                 foreach (var item in batch.Items)
@@ -407,12 +407,12 @@ namespace StressTests.Rachis
             catch (Exception ex)
             {
                 threw = true;
-                throw new ThrowsException(typeof(T), ex);
+                throw ThrowsException.ForIncorrectExceptionType(typeof(T), ex);
             }
             finally
             {
                 if (threw == false)
-                    throw new ThrowsException(typeof(T));
+                    throw ThrowsException.ForNoException(typeof(T));
             }
         }
     }

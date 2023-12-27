@@ -17,7 +17,7 @@ namespace Raven.Server.NotificationCenter
         private readonly string _source;
         private readonly bool _doPerformanceHintIfTooLong;
         private readonly Stopwatch _sw;
-        
+
         public RequestTimeTracker(HttpContext context, Logger logger, AbstractDatabaseNotificationCenter notificationCenter, RavenConfiguration configuration, string source, bool doPerformanceHintIfTooLong = true)
         {
             _context = context;
@@ -26,18 +26,18 @@ namespace Raven.Server.NotificationCenter
             _configuration = configuration;
             _source = source;
             _doPerformanceHintIfTooLong = doPerformanceHintIfTooLong;
-            
+
             _sw = Stopwatch.StartNew();
 
             _context.Response.OnStarting(state =>
             {
                 _sw.Stop();
                 var httpContext = (HttpContext)state;
-                httpContext.Response.Headers.Add(Constants.Headers.RequestTime, _sw.ElapsedMilliseconds.ToString());
+                httpContext.Response.Headers[Constants.Headers.RequestTime] = _sw.ElapsedMilliseconds.ToString();
                 return Task.CompletedTask;
             }, _context);
         }
-        
+
         public string Query { get; set; }
 
         public void Dispose()
@@ -47,7 +47,7 @@ namespace Raven.Server.NotificationCenter
 
             if (_doPerformanceHintIfTooLong == false)
                 return;
-            
+
             try
             {
                 _notificationCenter.RequestLatency

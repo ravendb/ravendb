@@ -26,6 +26,7 @@ import enableAdminLogsMicrosoftCommand = require("commands/maintenance/enableAdm
 import disableAdminLogsMicrosoftCommand = require("commands/maintenance/disableAdminLogsMicrosoftCommand");
 import saveAdminLogsMicrosoftConfigurationCommand = require("commands/maintenance/saveAdminLogsMicrosoftConfigurationCommand");
 import configureMicrosoftLogsDialog = require("./configureMicrosoftLogsDialog");
+import messagePublisher from "common/messagePublisher";
 
 class heightCalculator {
     
@@ -631,10 +632,13 @@ class adminLogs extends viewModelBase {
         this.downloadLogsValidationGroup.errors.showAllMessages(false);
     }
 
-    onDownloadLogs() {
+    onDownloadLogs(_: any, event: JQueryEventObject) {
         if (!this.isValid(this.downloadLogsValidationGroup)) {
+            event.stopImmediatePropagation();
             return;
         }
+        
+        messagePublisher.reportSuccess("Your download will start shortly...");
 
         const $form = $("#downloadLogsForm");
         const url = endpoints.global.adminLogs.adminLogsDownload;
@@ -645,6 +649,8 @@ class adminLogs extends viewModelBase {
         $("[name=to]", $form).val(this.endDateToUse());
 
         $form.submit();
+        
+        return true;
     }
     
     updateMouseStatus(pressed: boolean) {

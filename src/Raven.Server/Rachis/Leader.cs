@@ -665,9 +665,12 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
+            using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
+
             var rachisMergedCommand = new RachisMergedCommand(leader: this, engine: _engine)
             {
                 Command = command,
+                BlittableResultWriter = blittableResultWriter
             };
 
             await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed (until 'rachisMergedCommand.TaskResult' wont be null).
@@ -675,43 +678,14 @@ namespace Raven.Server.Rachis
             var t = rachisMergedCommand.TaskResult;
             if (await t.WaitWithTimeout(timeout) == false)
             {
-                GetConvertResult(command)?.AboutToTimeout();
                 throw new TimeoutException($"Waited for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
             }
 
-            return await t;
+            var result = await t;
+            return blittableResultWriter == null ? result : (result.Index, blittableResultWriter.Result);
         }
 
-        internal static ConvertResultAction GetConvertResult(CommandBase cmd)
-        {
-            ConvertResultAction action;
-            switch (cmd)
-            {
-                case AddOrUpdateCompareExchangeBatchCommand batchCmpExchangeCommand:
-                    action = batchCmpExchangeCommand.ConvertResultAction;
-                    if (action != null)
-                        return action;
-
-                    action = new ConvertResultAction(batchCmpExchangeCommand.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
-                    Interlocked.CompareExchange(ref batchCmpExchangeCommand.ConvertResultAction, action, null);
-                    return batchCmpExchangeCommand.ConvertResultAction;
-
-                case CompareExchangeCommandBase cmpExchange:
-
-                    action = cmpExchange.ConvertResultAction;
-                    if (action != null)
-                        return action;
-
-                    action = new ConvertResultAction(cmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
-                    Interlocked.CompareExchange(ref cmpExchange.ConvertResultAction, action, null);
-                    return cmpExchange.ConvertResultAction;
-
-                default:
-                    return null;
-            }
-        }
-
-        public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
+        public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new ConcurrentQueue<(string, AlertRaised)>();
 
         public void NotifyAboutException(string node, string title, string message, Exception e)
         {
@@ -933,18 +907,17 @@ namespace Raven.Server.Rachis
 
         public void SetStateOf(long index, object result)
         {
-            if (_entries.TryGetValue(index, out CommandState state))
+            if (_entries.TryGetValue(index, out CommandState state) == false) 
+                return;
+
+            if (state.WriteResultAction != null)
             {
-                if (state.ConvertResult == null)
-                {
-                    ValidateUsableReturnType(result);
-                    state.Result = result;
-                }
-                else
-                {
-                    state.Result = state.ConvertResult.Apply(result);
-                }
+                state.WriteResultAction?.Invoke(result);
+                return;
             }
+
+            ValidateUsableReturnType(result);
+            state.Result = result;
         }
 
         [Conditional("DEBUG")]
@@ -966,7 +939,7 @@ namespace Raven.Server.Rachis
         {
             public long CommandIndex;
             public object Result;
-            public ConvertResultAction ConvertResult;
+            public Action<object> WriteResultAction;
             public TaskCompletionSource<(long, object)> TaskCompletionSource;
             public Action<TaskCompletionSource<(long, object)>> OnNotify;
         }

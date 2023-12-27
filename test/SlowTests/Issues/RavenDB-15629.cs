@@ -76,10 +76,10 @@ public class RavenDB_15629 : RavenTestBase
                 var res = cmd.Result;
                 var result = ((BlittableJsonReaderObject)res)["Results"] as BlittableJsonReaderArray;
                 Assert.NotNull(result);
-                Assert.Equal("HeartBeat", result[0]);
-                Assert.Equal("Date", result[1]);
-                Assert.Equal("User", result[2]);
-                Assert.Equal("Count", result[3]);
+                Assert.Equal("HeartBeat", result[0]?.ToString());
+                Assert.Equal("Date", result[1]?.ToString());
+                Assert.Equal("User", result[2]?.ToString());
+                Assert.Equal("Count", result[3]?.ToString());
             }
         }
     }

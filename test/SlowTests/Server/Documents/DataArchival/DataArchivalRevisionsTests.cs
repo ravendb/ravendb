@@ -8,7 +8,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Util;
-using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;

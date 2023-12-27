@@ -80,9 +80,23 @@ namespace Voron.Platform.Win32
                                                         Win32NativeFileCreationDisposition.OpenAlways, fileAttributes, IntPtr.Zero);
             if (_handle.IsInvalid)
             {
+                string message = $"Failed to open file storage of {nameof(WindowsMemoryMapPager)} for {file}";
+
                 int lastWin32ErrorCode = Marshal.GetLastWin32Error();
-                throw new IOException("Failed to open file storage of WinMemoryMapPager for " + file,
-                    new Win32Exception(lastWin32ErrorCode));
+
+                if (lastWin32ErrorCode is (int)Win32NativeFileErrors.ERROR_SHARING_VIOLATION or (int)Win32NativeFileErrors.ERROR_LOCK_VIOLATION)
+                {
+                    try
+                    {
+                        message += $". {WhoIsLocking.ThisFile(file.FullPath)}";
+                    }
+                    catch
+                    {
+                         // ignored
+                    }
+                }
+
+                throw new IOException(message, new Win32Exception(lastWin32ErrorCode));
             }
 
             try

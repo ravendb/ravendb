@@ -8,6 +8,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,10 +37,10 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.X64)]
         public void ShouldCorrectlyIndexGroups()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore())  
             {
                 new PeopleByName().Execute(store);
 

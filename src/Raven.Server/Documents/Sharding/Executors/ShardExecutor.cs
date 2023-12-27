@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Sharding.Executors
     {
         private readonly DatabaseRecord _databaseRecord;
         private readonly string _databaseName;
-        private Dictionary<int, RequestExecutor> _requestExecutors;
+        private Dictionary<int, Lazy<RequestExecutor>> _requestExecutors;
         private readonly int[] _fullRange;
 
         public readonly DocumentConventions Conventions;
@@ -70,12 +70,17 @@ namespace Raven.Server.Documents.Sharding.Executors
             }
         }
 
-        public override RequestExecutor GetRequestExecutorAt(int shardNumber)
+        public Lazy<RequestExecutor> GetRequestExecutorAtLazily(int shardNumber)
         {
             if (_databaseRecord.Sharding.Shards.ContainsKey(shardNumber) == false)
                 throw new InvalidOperationException($"Cannot get request executor for shard because the shard number {shardNumber} doesn't exist.");
 
             return _requestExecutors[shardNumber];
+        }
+
+        public override RequestExecutor GetRequestExecutorAt(int shardNumber)
+        {
+            return GetRequestExecutorAtLazily(shardNumber).Value;
         }
 
         protected override Memory<int> GetAllPositions() => new Memory<int>(_fullRange);
@@ -94,9 +99,9 @@ namespace Raven.Server.Documents.Sharding.Executors
             }
         }
 
-        private Dictionary<int, RequestExecutor> CreateExecutors()
+        private Dictionary<int, Lazy<RequestExecutor>> CreateExecutors()
         {
-            var requestExecutors = new Dictionary<int, RequestExecutor>(_databaseRecord.Sharding.Shards.Count);
+            var requestExecutors = new Dictionary<int, Lazy<RequestExecutor>>(_databaseRecord.Sharding.Shards.Count);
             
             ClusterTopology clusterTopology;
             
@@ -114,11 +119,11 @@ namespace Raven.Server.Documents.Sharding.Executors
 
                 var urls = topology.AllNodes.Select(tag => ServerStore.PublishedServerUrls.SelectUrl(tag, clusterTopology)).ToArray();
 
-                requestExecutors[shardNumber] = RequestExecutor.CreateForShard(
+                requestExecutors[shardNumber] = new Lazy<RequestExecutor>(() => RequestExecutor.CreateForShard(
                     urls,
                     ShardHelper.ToShardName(_databaseName, shardNumber),
                     ServerStore.Server.Certificate.Certificate,
-                    Conventions);
+                    Conventions));
             }
 
             return requestExecutors;

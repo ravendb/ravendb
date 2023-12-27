@@ -3301,21 +3301,7 @@ namespace Raven.Server.Documents.Indexes
         {
             QueryInternalPreparation(query);
 
-            if (resultToFill.SupportsInclude == false
-                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
-                throw new NotSupportedException("Includes are not supported by this type of query.");
-
-            if (resultToFill.SupportsHighlighting == false && query.Metadata.HasHighlightings)
-                throw new NotSupportedException("Highlighting is not supported by this type of query.");
-
-            if (query.Metadata.HasHighlightings && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
-                throw new NotSupportedException("Highlighting is not supported by this type of query.");
-
-            if (resultToFill.SupportsExplanations == false && query.Metadata.HasExplanations)
-                throw new NotSupportedException("Explanations are not supported by this type of query.");
-
-            if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
-                throw new NotSupportedException("Explanations are not supported by this type of query.");
+            QueryRunner.AssertValidQuery(query, resultToFill);
 
             using (var marker = MarkQueryAsRunning(query))
             {
@@ -3568,21 +3554,7 @@ namespace Raven.Server.Documents.Indexes
         {
             QueryInternalPreparation(query);
 
-            if (resultToFill.SupportsInclude == false
-                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
-                throw new NotSupportedException("Includes are not supported by this type of query.");
-
-            if (resultToFill.SupportsHighlighting == false && query.Metadata.HasHighlightings)
-                throw new NotSupportedException("Highlighting is not supported by this type of query.");
-
-            if (query.Metadata.HasHighlightings && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
-                throw new NotSupportedException("Highlighting is not supported by this type of query.");
-
-            if (resultToFill.SupportsExplanations == false && query.Metadata.HasExplanations)
-                throw new NotSupportedException("Explanations are not supported by this type of query.");
-
-            if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
-                throw new NotSupportedException("Explanations are not supported by this type of query.");
+            QueryRunner.AssertValidQuery(query, resultToFill);
 
             using (var marker = MarkQueryAsRunning(query))
             {
@@ -4996,8 +4968,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void Optimize(IndexOptimizeResult result, CancellationToken token)
         {
-            if (IndexPersistence is CoraxIndexPersistence)
-                throw new NotImplementedInCoraxException($"{nameof(Optimize)} is not implemented yet.");
+            IndexPersistence.AssertCanOptimize();
 
             AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Optimize));
 
@@ -5395,11 +5366,7 @@ namespace Raven.Server.Documents.Indexes
 
         public int Dump(string path, Action<IOperationProgress> onProgress)
         {
-            if (IndexPersistence is CoraxIndexPersistence)
-            {
-                //todo maciej
-                return 0;
-            }
+            IndexPersistence.AssertCanDump();
 
             LuceneIndexPersistence indexPersistence = (LuceneIndexPersistence)IndexPersistence;
             if (Directory.Exists(path) == false)

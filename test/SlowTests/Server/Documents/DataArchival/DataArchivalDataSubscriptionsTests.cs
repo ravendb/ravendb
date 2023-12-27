@@ -21,7 +21,6 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.Subscriptions;
 using SlowTests.Client.Subscriptions;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;

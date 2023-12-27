@@ -34,7 +34,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         private const string CollectionName = "Orders";
         private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanUploadToS3()
         {
             var settings = GetS3Settings();
@@ -109,7 +109,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task SimpleTransformation()
         {
             var settings = GetS3Settings();
@@ -216,7 +216,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanLoadToMultipleTables()
         {
             const string salesTableName = "Sales";
@@ -414,7 +414,7 @@ loadToOrders(partitionBy(key), orderData);
         }
 
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanModifyPartitionColumnName()
         {
             var settings = GetS3Settings();
@@ -510,7 +510,7 @@ loadToOrders(partitionBy(['order_date', key]),
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task SimpleTransformation_NoPartition()
         {
             var settings = GetS3Settings();
@@ -619,7 +619,7 @@ loadToOrders(noPartition(),
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task SimpleTransformation_MultiplePartitions()
         {
             var settings = GetS3Settings();
@@ -755,7 +755,7 @@ loadToOrders(partitionBy(
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanPartitionByCustomDataFieldViaScript()
         {
             var settings = GetS3Settings();
@@ -831,7 +831,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanHandleSpecialCharsInEtlName()
         {
             var settings = GetS3Settings();
@@ -874,7 +874,7 @@ loadToOrders(noPartition(), {
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanHandleSpecialCharsInFolderPath()
         {
             var settings = GetS3Settings();
@@ -985,7 +985,7 @@ for (var i = 0; i < this.Lines.length; i++){
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanHandleSlashInPartitionValue()
         {
             var settings = GetS3Settings();
@@ -1041,7 +1041,7 @@ for (var i = 0; i < this.Lines.length; i++){
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task CanUpdateS3Settings()
         {
             var settings = GetS3Settings();
@@ -1218,7 +1218,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [AmazonS3Fact]
+        [AmazonS3RetryFact]
         public async Task ShouldTrimRedundantSlashInRemoteFolderName()
         {
             var settings = GetS3Settings();
@@ -1324,7 +1324,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
         private S3Settings GetS3Settings([CallerMemberName] string caller = null)
         {
-            var s3Settings = AmazonS3FactAttribute.S3Settings;
+            var s3Settings = AmazonS3RetryFactAttribute.S3Settings;
             if (s3Settings == null)
                 return null;
 

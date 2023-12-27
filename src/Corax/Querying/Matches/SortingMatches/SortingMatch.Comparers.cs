@@ -181,7 +181,7 @@ namespace Corax.Querying.Matches.SortingMatches;
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
             
@@ -334,7 +334,7 @@ namespace Corax.Querying.Matches.SortingMatches;
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
@@ -362,7 +362,7 @@ namespace Corax.Querying.Matches.SortingMatches;
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
@@ -413,7 +413,7 @@ namespace Corax.Querying.Matches.SortingMatches;
         {
             if (_lookup == null) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
             
@@ -465,7 +465,7 @@ namespace Corax.Querying.Matches.SortingMatches;
         {
             if (_reader.IsValid == false) // field does not exist, so arbitrary sort order, whatever query said goes
             {
-                match._results.Add(batchResults);
+                match._results.AddRange(batchResults);
                 return;
             }
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];

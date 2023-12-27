@@ -10,12 +10,11 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Background;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.PeriodicBackup;
@@ -182,7 +181,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            result.AddInfo($"Started processing {type}.");
+            result.StartProcessingForType(type);
             _onProgress.Invoke(result.Progress);
 
             SmugglerProgressBase.Counts counts;
@@ -279,7 +278,7 @@ namespace Raven.Server.Smuggler.Documents
             }
 
 
-            result.AddInfo($"Finished processing {type}. {counts}");
+            result.StopProcessingActualType(counts);
             _onProgress.Invoke(result.Progress);
         }
 

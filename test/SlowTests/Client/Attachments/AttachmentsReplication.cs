@@ -15,7 +15,6 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -1585,16 +1584,16 @@ namespace SlowTests.Client.Attachments
                 {
                     var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: toRemove,
                         timeToWaitForConfirmation: TimeSpan.FromSeconds(60)));
-                    await mainServer.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex + 1);
+                    await mainServer.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex);
                 }
                 else
                 {
                     var result0 = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, shardNumber: 0, hardDelete: true, fromNode: toRemove, timeToWaitForConfirmation: TimeSpan.FromSeconds(60)));
                     var result1 = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, shardNumber: 1, hardDelete: true, fromNode: toRemove, timeToWaitForConfirmation: TimeSpan.FromSeconds(60)));
                     var result2 = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, shardNumber: 2, hardDelete: true, fromNode: toRemove, timeToWaitForConfirmation: TimeSpan.FromSeconds(60)));
-                    await mainServer.ServerStore.Cluster.WaitForIndexNotification(result0.RaftCommandIndex + 1);
-                    await mainServer.ServerStore.Cluster.WaitForIndexNotification(result1.RaftCommandIndex + 1);
-                    await mainServer.ServerStore.Cluster.WaitForIndexNotification(result2.RaftCommandIndex + 1);
+                    await mainServer.ServerStore.Cluster.WaitForIndexNotification(result0.RaftCommandIndex);
+                    await mainServer.ServerStore.Cluster.WaitForIndexNotification(result1.RaftCommandIndex);
+                    await mainServer.ServerStore.Cluster.WaitForIndexNotification(result2.RaftCommandIndex);
                 }
 
                 using (var session = temp.OpenAsyncSession())
@@ -2959,6 +2958,9 @@ namespace SlowTests.Client.Attachments
                     //var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
                     //var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
                     //Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
+
+                    await EnsureNoReplicationLoopAsync(store1, mode: options.DatabaseMode);
+                    await EnsureNoReplicationLoopAsync(store2, mode: options.DatabaseMode);
                 }
             }
         }

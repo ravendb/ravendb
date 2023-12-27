@@ -5,6 +5,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
+using Sparrow.Utils;
 
 namespace Raven.Client.Json
 {
@@ -19,7 +21,7 @@ namespace Raven.Client.Json
             _conventions = conventions;
 
             if (_conventions.UseHttpCompression)
-                Headers.ContentEncoding.Add("gzip");
+                Headers.ContentEncoding.Add(_conventions.HttpCompressionAlgorithm.GetContentEncoding());
         }
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -30,13 +32,36 @@ namespace Raven.Client.Json
                 return;
             }
 
-#if NETSTANDARD2_0 || NETCOREAPP2_1
-            using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
-#else
-            await using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
-#endif
+            switch (_conventions.HttpCompressionAlgorithm)
             {
-                await _asyncTaskWriter(gzipStream).ConfigureAwait(false);
+                case HttpCompressionAlgorithm.Gzip:
+#if NETSTANDARD2_0 || NETCOREAPP2_1
+                    using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
+#else
+                    await using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
+#endif
+                    {
+                        await _asyncTaskWriter(gzipStream).ConfigureAwait(false);
+                    }
+                    break;
+#if FEATURE_BROTLI_SUPPORT
+                case HttpCompressionAlgorithm.Brotli:
+                    await using (var brotliStream = new BrotliStream(stream, CompressionLevel.Optimal, leaveOpen: true))
+                    {
+                        await _asyncTaskWriter(brotliStream).ConfigureAwait(false);
+                    }
+                    break;
+#endif
+#if FEATURE_ZSTD_SUPPORT
+                case HttpCompressionAlgorithm.Zstd:
+                    await using (var zstdStream = ZstdStream.Compress(stream, CompressionLevel.Fastest, leaveOpen: true))
+                    {
+                        await _asyncTaskWriter(zstdStream).ConfigureAwait(false);
+                    }
+                    break;
+#endif
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 

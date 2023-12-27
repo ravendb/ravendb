@@ -86,6 +86,13 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
     protected virtual ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
     {
         var clientWebSocket = new ClientWebSocket();
+#if NET7_0_OR_GREATER
+        if (requestExecutor.Conventions.HttpVersion != null)
+            clientWebSocket.Options.HttpVersion = requestExecutor.Conventions.HttpVersion;
+
+        if (requestExecutor.Conventions.HttpVersionPolicy != null)
+            clientWebSocket.Options.HttpVersionPolicy = requestExecutor.Conventions.HttpVersionPolicy.Value;
+#else
         if (requestExecutor.Certificate != null)
             clientWebSocket.Options.ClientCertificates.Add(requestExecutor.Certificate);
 
@@ -95,6 +102,8 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
             clientWebSocket.Options.RemoteCertificateValidationCallback += RequestExecutor.OnServerCertificateCustomValidationCallback;
         }
 #endif
+#endif
+
         return clientWebSocket;
     }
 
@@ -317,7 +326,16 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
                         .ToLower()
                         .ToWebSocketPath(), UriKind.Absolute);
 
-                    await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
+                    using (var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token))
+                    {
+                        timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
+#if NET7_0_OR_GREATER
+                        await _client.ConnectAsync(_url, RequestExecutor.HttpClient, timeoutCts.Token).ConfigureAwait(false);
+#else
+                        await _client.ConnectAsync(_url, timeoutCts.Token).ConfigureAwait(false);
+#endif
+                    }
+
                     wasConnected = true;
                     Interlocked.Exchange(ref _immediateConnection, 1);
 

@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldRespectSemaphoreLimit()
+        public async Task ShouldRespectSemaphoreLimit()
         {
             var allowed = 3;
 
@@ -73,15 +73,11 @@ namespace SlowTests.Issues
                 tasks.Add(task);
             }
 
-            var waitResult = Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(30));
-
-            Assert.True(waitResult);
+            await Task.WhenAll(tasks.ToArray());
 
             tasksRunning = false;
 
-            waitResult = verifyLimit.Wait(TimeSpan.FromSeconds(30));
-
-            Assert.True(waitResult);
+            await verifyLimit.WaitAsync(TimeSpan.FromSeconds(30));
 
             Assert.Equal(numberOfTasks * numberOfLocksPerTask, totalNumberOfLocksTaken);
         }

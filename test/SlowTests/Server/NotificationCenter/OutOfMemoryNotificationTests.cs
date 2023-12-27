@@ -48,7 +48,7 @@ namespace SlowTests.Server.NotificationCenter
         }
 
         [Fact]
-        public void Add_WhileAllHaveTheSameKey_ShouldRemindOnlyOne()
+        public async Task Add_WhileAllHaveTheSameKey_ShouldRemindOnlyOne()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -65,7 +65,7 @@ namespace SlowTests.Server.NotificationCenter
                     taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add(environment, new OutOfMemoryException())));
                     taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add(environment, new OutOfMemoryException())));
 
-                    Task.WaitAll(taskList.ToArray());
+                    await Task.WhenAll(taskList.ToArray());
                 }
 
                 using (database.NotificationCenter.GetStored(out var notifications))
@@ -78,7 +78,7 @@ namespace SlowTests.Server.NotificationCenter
         }
 
         [Fact]
-        public void Add_WhileNotificationsAreForDifferentEnvironments_ShouldRemindTwo()
+        public async Task Add_WhileNotificationsAreForDifferentEnvironments_ShouldRemindTwo()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -99,7 +99,7 @@ namespace SlowTests.Server.NotificationCenter
                         taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(secondEnvironment, new OutOfMemoryException())));
                     }
 
-                    Task.WaitAll(taskList.ToArray());
+                    await Task.WhenAll(taskList.ToArray());
                 }
 
                 using (database.NotificationCenter.GetStored(out var notifications))
@@ -115,7 +115,7 @@ namespace SlowTests.Server.NotificationCenter
         }
 
         [Fact]
-        public void Add_WhileNotificationsHaveDifferentExceptionTypeInSameEnvironment_ShouldRemindTwo()
+        public async Task Add_WhileNotificationsHaveDifferentExceptionTypeInSameEnvironment_ShouldRemindTwo()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -133,7 +133,7 @@ namespace SlowTests.Server.NotificationCenter
                         taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(environment, new InsufficientMemoryException())));
                     }
 
-                    Task.WaitAll(taskList.ToArray());
+                    await Task.WhenAll(taskList.ToArray());
                 }
 
                 using (database.NotificationCenter.GetStored(out var notifications))
@@ -168,7 +168,7 @@ namespace SlowTests.Server.NotificationCenter
 
                     taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(environment, new Exception("Second Message"))));
 
-                    Task.WaitAll(taskList.ToArray());
+                    await Task.WhenAll(taskList.ToArray());
                 }
 
                 using (database.NotificationCenter.GetStored(out var notifications))

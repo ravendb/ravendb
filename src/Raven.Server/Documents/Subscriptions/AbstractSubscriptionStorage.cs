@@ -137,7 +137,14 @@ public abstract class AbstractSubscriptionStorage
 
     public void ReleaseSubscriptionsSemaphore()
     {
-        _concurrentConnectionsSemiSemaphore.Release();
+        try
+        {
+            _concurrentConnectionsSemiSemaphore.Release();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Do nothing
+        }
     }
 }
 
@@ -289,9 +296,19 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
 
     public TState GetSubscriptionConnectionsState(ClusterOperationContext context, string subscriptionName)
     {
-        var subscriptionState = GetSubscriptionByName(context, subscriptionName);
+        var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_databaseName, subscriptionName));
+        if (subscriptionBlittable == null)
+            return null;
 
-        if (_subscriptions.TryGetValue(subscriptionState.SubscriptionId, out TState concurrentSubscription) == false)
+        if (subscriptionBlittable.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
+        {
+            if (_logger.IsOperationsEnabled)
+                _logger.Info($"Could not figure out the Subscription Task ID for subscription named: '{subscriptionName}'.");
+
+            return null;
+        }
+
+        if (_subscriptions.TryGetValue(id, out TState concurrentSubscription) == false)
             return null;
 
         return concurrentSubscription;

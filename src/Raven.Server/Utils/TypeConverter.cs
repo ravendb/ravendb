@@ -289,7 +289,15 @@ namespace Raven.Server.Utils
                     if (js.IsUndefined())
                         return DynamicNullObject.Null;
                     if (js.IsString())
-                        return js.AsString();
+                    {
+                        var jsString = js.AsString();
+
+                        if (TryConvertStringValue(jsString, out var jsDate))
+                            return jsDate;
+                        
+                        return jsString;
+                    }
+
                     if (js.IsBoolean())
                         return js.AsBoolean();
                     if (js.IsNumber())
@@ -536,8 +544,8 @@ namespace Raven.Server.Utils
             return value;
         }
 
-        private static readonly List<string> _timeSpanPropertiesNames = typeof(TimeSpan).GetProperties().Select(i => i.Name).ToList();
-        private static readonly List<string> _timeOnlyPropertiesNames = typeof(TimeOnly).GetProperties().Select(i => i.Name).ToList();
+        private static readonly HashSet<string> _timeSpanPropertiesNames = typeof(TimeSpan).GetProperties().Select(i => i.Name).ToHashSet();
+        private static readonly HashSet<string> _timeOnlyPropertiesNames = typeof(TimeOnly).GetProperties().Select(i => i.Name).ToHashSet();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe object ConvertLazyStringValue(LazyStringValue value, StringSegment member = default, bool supportTimeOnlyDateOnly = false)

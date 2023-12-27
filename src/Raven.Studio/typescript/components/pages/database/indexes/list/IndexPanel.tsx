@@ -1,8 +1,10 @@
 ﻿import React, { ForwardedRef, forwardRef, MouseEvent, useState } from "react";
 import classNames from "classnames";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
-import { IndexSharedInfo } from "components/models/indexes";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
+import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
+import { IndexSharedInfo } from "components/models/indexes";
 import { useAppUrls } from "hooks/useAppUrls";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { useEventsCollector } from "hooks/useEventsCollector";
@@ -10,9 +12,7 @@ import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessRea
 import database = require("models/resources/database");
 import app from "durandal/app";
 import { useAccessManager } from "hooks/useAccessManager";
-import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { IndexDistribution, JoinedIndexProgress } from "./IndexDistribution";
-import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import {
     RichPanel,
     RichPanelActions,
@@ -40,8 +40,10 @@ import assertUnreachable from "../../../../utils/assertUnreachable";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { Icon } from "components/common/Icon";
+import genUtils from "common/generalUtils";
+import moment = require("moment");
 
-interface IndexPanelProps {
+export interface IndexPanelProps {
     database: database;
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
@@ -197,12 +199,13 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 <Input type="checkbox" onChange={toggleSelection} checked={selected} />
                             )}
                         </RichPanelSelect>
-
-                        <RichPanelName>
-                            <a href={editUrl} title={index.name}>
-                                {index.name}
-                            </a>
-                        </RichPanelName>
+                        <div className="flex-grow">
+                            <RichPanelName>
+                                <a href={editUrl} title={index.name}>
+                                    {index.name}
+                                </a>
+                            </RichPanelName>
+                        </div>
                     </RichPanelInfo>
                     <RichPanelActions>
                         {!IndexUtils.hasAnyFaultyNode(index) && (

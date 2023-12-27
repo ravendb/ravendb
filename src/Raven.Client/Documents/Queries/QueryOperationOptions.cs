@@ -15,6 +15,11 @@ namespace Raven.Client.Documents.Queries
         public bool AllowStale { get; set; }
 
         /// <summary>
+        /// Ignore the maximum number of statements a script can execute as defined in the server configuration.
+        /// </summary>
+        public bool IgnoreMaxStepsForScript { get; set; }
+
+        /// <summary>
         /// If AllowStale is set to false and index is stale, then this is the maximum timeout to wait for index to become non-stale. If timeout is exceeded then exception is thrown.
         /// <para>Value:</para>
         /// <para><c>null</c> by default - throw immediately if index is stale</para>

@@ -63,7 +63,7 @@ namespace SlowTests.Client.Counters
                     tasks.Add(task);
                 }
 
-                Task.WaitAll(tasks.ToArray());
+                await Task.WhenAll(tasks.ToArray());
 
                 using (var session = stores[0].OpenSession())
                 {
@@ -80,11 +80,21 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Theory]
-        [InlineData(3)]
+        [RavenMultiplatformTheory(RavenTestCategory.Counters, RavenArchitecture.X64)]
         [InlineData(5)]
         [InlineData(7)]
         public async Task IncrementCounter(int clusterSize)
+        {
+            await IncrementCounterInternal(clusterSize);
+        }
+
+        [RavenFact(RavenTestCategory.Counters)]
+        public async Task IncrementCounterIn3NodesCluster()
+        {
+            await IncrementCounterInternal(3);
+        }
+
+        private async Task IncrementCounterInternal(int clusterSize)
         {
             var (_, leader) = await CreateRaftCluster(clusterSize);
             var dbName = GetDatabaseName();
@@ -134,7 +144,7 @@ namespace SlowTests.Client.Counters
                     tasks.Add(task);
                 }
 
-                Task.WaitAll(tasks.ToArray());
+                await Task.WhenAll(tasks.ToArray());
 
                 // wait for replication and verify that all 
                 // stores have the correct accumulated counter-value

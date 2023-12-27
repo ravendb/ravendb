@@ -1,10 +1,14 @@
 ﻿using System;
 using System.IO;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
 using Raven.Client.Util;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -24,6 +28,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         private readonly IMemoryContextPool _contextPool;
         private Task _localToRemote;
         private Task _remoteToLocal;
+        private HttpClient _httpClient;
 
         public ProxyWebSocketConnection(WebSocket localWebSocket, string nodeUrl, string websocketEndpoint, IMemoryContextPool contextPool, CancellationToken token)
         {
@@ -46,18 +51,20 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         public Task Establish(X509Certificate2 certificate)
         {
+            var handler = RequestExecutor.CreateHttpMessageHandler(certificate, setSslProtocols: true, DocumentConventions.DefaultForServer.UseHttpDecompression);
+
             if (certificate != null)
             {
                 var tcpConnection = ReplicationUtils.GetServerTcpInfo(_nodeUrl, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _cts.Token);
 
                 var expectedCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(tcpConnection.Certificate));
 
-                _remoteWebSocket.Options.ClientCertificates.Add(certificate);
-
-                _remoteWebSocket.Options.RemoteCertificateValidationCallback += (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert);
+                handler.ServerCertificateCustomValidationCallback = (_, actualCert, _, _) => expectedCert.Equals(actualCert);
             }
 
-            return _remoteWebSocket.ConnectAsync(_remoteWebSocketUri, _cts.Token);
+            _httpClient = new HttpClient(handler, disposeHandler: true).WithConventions(DocumentConventions.DefaultForServer);
+
+            return _remoteWebSocket.ConnectAsync(_remoteWebSocketUri, _httpClient, _cts.Token);
         }
 
         public async Task RelayData()
@@ -119,7 +126,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 }
             }
         }
-        
+
         private async Task ForwardRemoteToLocal()
         {
             using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -176,6 +183,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         {
             _cts.Dispose();
             _remoteWebSocket.Dispose();
+            _httpClient?.Dispose();
         }
     }
 }

@@ -73,6 +73,13 @@ namespace Raven.Client.Documents.Operations
                         .Append(_options.StaleTimeout.Value);
                 }
 
+                if (_options.IgnoreMaxStepsForScript)
+                {
+                    path
+                        .Append("&ignoreMaxStepsForScript=")
+                        .Append(_options.IgnoreMaxStepsForScript);
+                }
+
                 if (_operationId.HasValue)
                 {
                     path

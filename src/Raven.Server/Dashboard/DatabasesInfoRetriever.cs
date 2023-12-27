@@ -7,10 +7,10 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -100,8 +100,11 @@ namespace Raven.Server.Dashboard
         public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CanAccessDatabase isValidFor, bool collectOngoingTasks, CancellationToken token)
         {
             var trafficWatchInfo = new AggregatedWatchInfo();
-            trafficWatchInfo.TrafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
             var drivesUsage = trafficWatchInfo.DrivesUsage;
+
+            var rate = (int)RefreshRate.TotalSeconds;
+            trafficWatchInfo.TrafficWatch.RequestsPerSecond = (int)Math.Ceiling(serverStore.Server.Metrics.Requests.RequestsPerSec.GetRate(rate));
+            trafficWatchInfo.TrafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
 
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -116,7 +119,6 @@ namespace Raven.Server.Dashboard
 
                     if (rawDatabaseRecord.IsSharded)
                     {
-                        var rate = (int)RefreshRate.TotalSeconds;
                         if (serverStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(databaseName, out var databaseTask))
                         {
                             var database = databaseTask.Result;
@@ -206,6 +208,7 @@ namespace Raven.Server.Dashboard
             var indexingSpeed = trafficWatchInfo.IndexingSpeed;
             var trafficWatch = trafficWatchInfo.TrafficWatch;
             var databasesOngoingTasksInfo = trafficWatchInfo.DatabasesOngoingTasksInfo;
+            var rate = (int)RefreshRate.TotalSeconds;
 
             try
             {
@@ -216,8 +219,6 @@ namespace Raven.Server.Dashboard
                     SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, rawRecord.IsDisabled);
                     return;
                 }
-
-                var rate = (int)RefreshRate.TotalSeconds;
 
                 var indexingSpeedItem = new IndexingSpeedItem
                 {

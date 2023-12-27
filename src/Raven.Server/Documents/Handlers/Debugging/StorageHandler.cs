@@ -9,6 +9,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (var processor = new StorageHandlerProcessorForGetEnvironmentPages(this))
                 await processor.ExecuteAsync();
         }
-        
+
         [RavenAction("/databases/*/debug/storage/trees", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
         public async Task Trees()
         {
@@ -181,7 +182,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (var processor = new StorageHandlerProcessorForGetReport(this))
                 await processor.ExecuteAsync();
         }
-        
+
         [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
         public async Task AllEnvironmentsReport()
         {
@@ -256,6 +257,65 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var index = Database.IndexStore.GetIndex(environment.Name);
             return index.GenerateStorageReport(details);
+        }
+
+        [RavenAction("/databases/*/debug/storage/compression-dictionaries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
+        public async Task CompressionDictionary()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.Environment.ReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("DatabaseName");
+                writer.WriteString(Database.Name);
+                writer.WriteComma();
+
+                var inMemoryCompressionDictionaries = context.Environment.CompressionDictionariesHolder.CompressionDictionaries;
+                WriteCompressionDictionaries(writer, inMemoryCompressionDictionaries.Values.ToArray(), "InMemory");
+
+                writer.WriteComma();
+
+                var inStorageDictionaries = context.Environment.CompressionDictionariesHolder.GetInStorageDictionaries(tx);
+                WriteCompressionDictionaries(writer, inStorageDictionaries.ToArray(), "InStorage");
+
+                writer.WriteEndObject();
+            }
+        }
+
+        private static void WriteCompressionDictionaries(AsyncBlittableJsonTextWriterForDebug writer, ZstdLib.CompressionDictionary[] dictionaries, string sourceName)
+        {
+            writer.WritePropertyName(sourceName);
+
+            writer.WriteStartObject();
+            writer.WritePropertyName("NumberOfEntries");
+            writer.WriteInteger(dictionaries.Length);
+            writer.WriteComma();
+
+            writer.WritePropertyName("Entries");
+            writer.WriteStartArray();
+
+            bool firstInMemoryEntry = true;
+            foreach (var dict in dictionaries)
+            {
+                if (firstInMemoryEntry == false)
+                    writer.WriteComma();
+                firstInMemoryEntry = false;
+
+                writer.WriteStartObject();
+                writer.WritePropertyName("Id");
+                writer.WriteInteger(dict.Id);
+#if DEBUG
+                writer.WriteComma();
+                writer.WritePropertyName("DictionaryHash");
+                writer.WriteString(dict.DictionaryHash);
+#endif
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+            writer.WriteEndObject();
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
@@ -25,7 +26,6 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
-    
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
         _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
@@ -152,28 +152,10 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             var enumerator = new CoraxDocumentTrainEnumerator(indexContext, converter, _index, _index.Type, documentStorage, queryContext.Documents, _index.Collections, token, indexingStatsScope, _index.Configuration.DocumentsLimitForCompressionDictionaryCreation);
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
-            var defaultDictionaryId = PersistentDictionary.CreateDefault(llt);
-            var defaultDictionary = new PersistentDictionary(llt.GetPage(defaultDictionaryId));
 
-            var trainedDictionary = PersistentDictionary.Create(llt, enumerator);
+            if (PersistentDictionary.TryCreate(llt, enumerator, out var _) == false)
+                PersistentDictionary.CreateDefault(llt);
 
-            if (defaultDictionaryId != trainedDictionary.DictionaryId)
-            {
-                var previousDictionaryPage = llt.GetPage(defaultDictionary.DictionaryId);
-                if (previousDictionaryPage.IsOverflow == false)
-                {
-                    llt.FreePage(defaultDictionaryId);
-                }
-                else
-                {
-                    var overflowPageNumber = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(previousDictionaryPage.OverflowSize);
-                    for (long pageToRelease = defaultDictionaryId; pageToRelease < defaultDictionaryId + overflowPageNumber; ++pageToRelease)
-                    {
-                        llt.FreePage(pageToRelease);
-                    }
-                }
-            }
-            
             tx.Commit();
         }
     }
@@ -239,5 +221,15 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             _converter,
             _logger
         );
+    }
+
+    public override void AssertCanOptimize()
+    {
+        throw new NotSupportedInCoraxException("Optimize is not supported in Corax.");
+    }
+
+    public override void AssertCanDump()
+    {
+        throw new NotSupportedInCoraxException("Dump is not supported in Corax.");
     }
 }

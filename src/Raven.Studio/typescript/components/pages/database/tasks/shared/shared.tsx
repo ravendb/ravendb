@@ -115,7 +115,7 @@ export function OngoingTaskName(props: { task: OngoingTaskInfo; canEdit: boolean
                     {task.shared.taskName}
                 </a>
             ) : (
-                <span className="text-primary">{task.shared.taskName}</span>
+                <span className="text-muted">{task.shared.taskName}</span>
             )}
         </RichPanelName>
     );
@@ -126,12 +126,13 @@ interface OngoingTaskStatusProps {
     canEdit: boolean;
     onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
     isTogglingState: boolean;
+    id?: string;
 }
 
 export function OngoingTaskStatus(props: OngoingTaskStatusProps) {
-    const { task, canEdit, onTaskOperation, isTogglingState } = props;
+    const { task, canEdit, onTaskOperation, isTogglingState, id } = props;
     return (
-        <UncontrolledDropdown>
+        <UncontrolledDropdown id={id}>
             <DropdownToggle
                 caret
                 disabled={!canEdit || isTogglingState}

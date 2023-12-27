@@ -204,7 +204,7 @@ namespace StressTests.Rachis
                         .GetRunningSubscription(context, null, "Subscription" + k, false);
 
                     if (subscription != null)
-                        Assert.True(false, "no subscriptions should be alive at this point");
+                        Assert.Fail("no subscriptions should be alive at this point");
                 }
             }
         }

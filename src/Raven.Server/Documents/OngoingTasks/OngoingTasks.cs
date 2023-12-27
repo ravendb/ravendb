@@ -114,7 +114,7 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
 
         if (tag == _server.NodeTag)
         {
-            var process = _database.EtlLoader.Processes.FirstOrDefault(x => x.ConfigurationName == config.Name);
+            var process = _database.QueueSinkLoader.Processes.FirstOrDefault(x => x.Configuration.Name == config.Name);
 
             if (process != null)
                 connectionStatus = process.GetConnectionStatus();

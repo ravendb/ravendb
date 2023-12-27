@@ -309,7 +309,7 @@ $font-sizes: (
 $headings-margin-bottom: math.div($spacer, $gutter-ratio) !default;
 $headings-font-family: null !default;
 $headings-font-style: null !default;
-$headings-font-weight: 300 !default;
+$headings-font-weight: 400 !default;
 $headings-line-height: 1.2 !default;
 $headings-color: $text-emphasis-var !default;
 // scss-docs-end headings-variables
@@ -490,10 +490,10 @@ $btn-font-size-xs: $input-btn-font-size-xs !default;
 $btn-border-width: $input-btn-border-width !default;
 
 $btn-font-weight: $font-weight-normal !default;
-$btn-box-shadow: 0px 1px 0px 0px rgba($well-bg, 0.5) !default;
+$btn-box-shadow: none !default;
 $btn-focus-width: $input-btn-focus-width !default;
 $btn-focus-box-shadow: $input-btn-focus-box-shadow !default;
-$btn-disabled-opacity: 0.65 !default;
+$btn-disabled-opacity: 0.4 !default;
 $btn-active-box-shadow: inset 0 3px 5px rgba($black, 0.125) !default;
 
 $btn-link-color: var(--#{$prefix}link-color) !default;

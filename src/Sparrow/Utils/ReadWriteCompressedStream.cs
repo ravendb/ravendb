@@ -40,8 +40,8 @@ namespace Sparrow.Utils
             }
 
             _inner = innerInput ?? throw new ArgumentNullException(nameof(inner));
-            _input = ZstdStream.Decompress(inner);
-            _output = ZstdStream.Compress(inner);
+            _input = ZstdStream.Decompress(inner, leaveOpen: true);
+            _output = ZstdStream.Compress(inner, leaveOpen: true);
             _dispose = new DisposeOnce<SingleAttempt>(DisposeInternal);
         }
 

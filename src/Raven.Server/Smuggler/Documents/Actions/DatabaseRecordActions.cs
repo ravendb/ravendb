@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -7,6 +8,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -18,6 +20,7 @@ using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sorters;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Logging;
 
@@ -583,7 +586,23 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
                 maxIndex = index;
         }
 
-        await _server.Cluster.WaitForIndexNotification(maxIndex, _server.Engine.OperationTimeout);
+        using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        {
+            List<string> members;
+
+            using (context.OpenReadTransaction())
+                members = _server.Cluster.ReadDatabaseTopology(context, _name).Members;
+
+            try
+            {
+                await _server.WaitForExecutionOnRelevantNodesAsync(context, members, maxIndex);
+            }
+            catch (RaftIndexWaitAggregateException e)
+            {
+                throw new InvalidDataException("Respective tasks were dispatched, however, we couldn't achieve consistency across one or more target nodes due to errors.",
+                    e);
+            }
+        }
 
         tasks.Clear();
     }

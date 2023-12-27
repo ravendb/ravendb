@@ -2,7 +2,6 @@
 using System.IO;
 using System.Threading;
 using FastTests.Voron;
-using Raven.Client.Documents.Operations.Backups;
 using Sparrow.Backups;
 using Tests.Infrastructure;
 using Voron;

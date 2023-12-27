@@ -2,7 +2,6 @@
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -37,6 +36,8 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
 
         if (InitialChangeVectorPerShard == null || InitialChangeVectorPerShard.Count == 0 || InitialChangeVectorPerShard.All(x => string.IsNullOrEmpty(x.Value)))
         {
+            // we start from beginning, need to clean the resend list
+            RemoveSubscriptionStateFromStorage(context, subscriptionId);
             InitialChangeVectorPerShard = null;
             return;
         }
@@ -44,9 +45,10 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
         // start from LastDocument (the CVs were validated in handler) or CV set by admin
         if (CompareShardsChangeVectors(existingShardsCVs))
         {
+            // provided cvs are the same as existing
             return;
         }
-        
+
         // remove the old state from storage
         RemoveSubscriptionStateFromStorage(context, subscriptionId);
     }
@@ -76,7 +78,7 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
         // the CVs were validated in handler
     }
 
-    protected override DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId)
+    protected override DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId, long index)
     {
         return new SubscriptionState
         {
@@ -91,7 +93,8 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
             {
                 ChangeVectorForNextBatchStartingPointPerShard = InitialChangeVectorPerShard
             },
-            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
+            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior,
+            RaftCommandIndex = index
         }.ToJson();
     }
 

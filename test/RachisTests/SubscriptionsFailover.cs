@@ -54,7 +54,7 @@ namespace RachisTests
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
-            
+
             options.Server = leader;
             options.ReplicationFactor = 5;
 
@@ -166,7 +166,7 @@ namespace RachisTests
 
                 foreach (var ravenServer in Servers)
                 {
-                    await ravenServer.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + nodesAmount).WaitWithTimeout(TimeSpan.FromSeconds(60));
+                    await ravenServer.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex).WaitWithTimeout(TimeSpan.FromSeconds(60));
                 }
 
                 await Task.Delay(2000);
@@ -219,13 +219,13 @@ namespace RachisTests
             if (await reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime) == false)
             {
                 Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in batch {BatchCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");
-                Assert.True(false, $"{iteration}. Reached in batch {BatchCounter}/10");
+                Assert.Fail($"{iteration}. Reached in batch {BatchCounter}/10");
             }
 
             if (await reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime) == false)
             {
                 Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in ack {AckCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");
-                Assert.True(false, $"{iteration}. Reached in ack {AckCounter}/10");
+                Assert.Fail($"{iteration}. Reached in ack {AckCounter}/10");
             }
 
             Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in batch {BatchCounter}/10, Reached in ack {AckCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");
@@ -746,7 +746,7 @@ namespace RachisTests
                 {
                     var res = await store.Maintenance.ForNode(forNode).SendAsync(op);
                     string tag = res.ResponsibleNode.NodeTag;
-                   
+
                     if (toBecomeNull)
                     {
                         if (tag != null)
@@ -771,29 +771,6 @@ namespace RachisTests
             {
                 sp.Stop();
                 Assert.True(sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds);
-            }
-        }
-
-        protected static async Task ThrowsAsync<T>(Task task) where T : Exception
-        {
-            var threw = false;
-            try
-            {
-                await task.ConfigureAwait(false);
-            }
-            catch (T)
-            {
-                threw = true;
-            }
-            catch (Exception ex)
-            {
-                threw = true;
-                throw new ThrowsException(typeof(T), ex);
-            }
-            finally
-            {
-                if (threw == false)
-                    throw new ThrowsException(typeof(T));
             }
         }
     }

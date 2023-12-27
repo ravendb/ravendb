@@ -276,7 +276,7 @@ namespace RachisTests.DatabaseCluster
                         {
                             if (info.Reason.Contains("Cannot have replication with source and destination being the same database"))
                             {
-                                Assert.False(true, "Cannot have replication with source and destination being the same database");
+                                Assert.Fail("Cannot have replication with source and destination being the same database");
                             }
                         }
                     }
@@ -791,7 +791,7 @@ namespace RachisTests.DatabaseCluster
                     foreach (var node in topology.AllNodes)
                     {
                         var serverStore = Servers.Single(s => s.ServerStore.NodeTag == node).ServerStore;
-                        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        var database = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {

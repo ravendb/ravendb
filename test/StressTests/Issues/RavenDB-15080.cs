@@ -198,7 +198,7 @@ namespace StressTests.Issues
         }
 
         [Fact]
-        public void CounterOperationsShouldBeCaseInsensitiveToCounterName()
+        public async Task CounterOperationsShouldBeCaseInsensitiveToCounterName()
         {
             using (var store = GetDocumentStore())
             {
@@ -220,7 +220,7 @@ namespace StressTests.Issues
                     session.SaveChanges();
                 }
 
-                var db = Databases.GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -401,7 +401,7 @@ namespace StressTests.Issues
         }
 
         [Fact]
-        public void GetCountersForDocumentShouldReturnNamesInTheirOriginalCasing()
+        public async Task GetCountersForDocumentShouldReturnNamesInTheirOriginalCasing()
         {
             using (var store = GetDocumentStore())
             {
@@ -417,7 +417,7 @@ namespace StressTests.Issues
                     session.SaveChanges();
                 }
 
-                var db = Databases.GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {

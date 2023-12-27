@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
             using (var processor = new ReplicationHandlerProcessorForGetTombstones(this))
                 await processor.ExecuteAsync();
         }
-        
+
         [RavenAction("/databases/*/replication/conflicts", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetReplicationConflicts()
         {
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
             using (var processor = new ReplicationHandlerProcessorForGetConflictSolver(this))
                 await processor.ExecuteAsync();
         }
-        
+
         [RavenAction("/databases/*/debug/replication/all-items", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAllItems()
         {
@@ -119,10 +119,10 @@ namespace Raven.Server.Documents.Handlers
 
                 var items = ReplicationDocumentSenderBase.GetReplicationItems(Database, context, etag, stats, supportedFeatures)
                     .Take(pageSize);
-                
+
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = new DynamicJsonArray(items.Select(x=>x.ToDebugJson()))
+                    ["Results"] = new DynamicJsonArray(items.Select(x => x.ToDebugJson()))
                 });
             }
         }

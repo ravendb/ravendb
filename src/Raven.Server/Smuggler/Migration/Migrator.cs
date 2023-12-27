@@ -14,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Migration.ApiKey;
@@ -67,7 +68,7 @@ namespace Raven.Server.Smuggler.Migration
                     domain);
             }
 
-            _httpClient = new RavenHttpClient(httpClientHandler);
+            _httpClient = new RavenHttpClient(httpClientHandler).WithConventions(DocumentConventions.DefaultForServer);
         }
 
         public async Task UpdateBuildInfoIfNeeded()
@@ -90,7 +91,7 @@ namespace Raven.Server.Smuggler.Migration
         public async Task<BuildInfo> GetBuildInfo()
         {
             var url = $"{_serverUrl}/build/version";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
 
             var response = await _httpClient.SendAsync(request, _serverStore.ServerShutdown);
             if (response.IsSuccessStatusCode == false)

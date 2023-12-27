@@ -4,6 +4,7 @@ namespace Sparrow
 {
     public interface IReadOnlySpanEnumerator
     {
+        int Count { get; }
         void Reset();
         bool MoveNext(out ReadOnlySpan<byte> result);
     }

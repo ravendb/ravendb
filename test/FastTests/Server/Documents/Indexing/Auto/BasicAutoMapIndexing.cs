@@ -1472,7 +1472,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Thread.Sleep(16);
                 }
 
-                Assert.False(true, indexStoragePath + " exists");
+                Assert.Fail(indexStoragePath + " exists");
             }
         }
 

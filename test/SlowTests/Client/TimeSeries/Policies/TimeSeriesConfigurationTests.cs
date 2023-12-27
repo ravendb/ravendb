@@ -357,7 +357,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
+        [RavenMultiplatformTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanExecuteRollupInTheCluster(Options options)
         {
@@ -1341,7 +1341,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Replication)]
+        [RavenMultiplatformTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Replication, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task SkipRollupDeadSegmentAfterCleanup(Options options)
         {
@@ -1392,7 +1392,7 @@ namespace SlowTests.Client.TimeSeries.Policies
         }
 
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
+        [RavenMultiplatformTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task FullRetentionAndRollupInACluster(Options options)
         {
@@ -1471,7 +1471,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
+        [RavenMultiplatformTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task FullRetentionAndRollupInAClusterLargeTimeSpan(Options options)
         {
@@ -1900,7 +1900,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Replication)]
+        [RavenMultiplatformTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Replication, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task IgnoreFromRollupNotRelevantDeadSegment(Options options)
         {

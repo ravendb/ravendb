@@ -38,7 +38,7 @@ namespace SlowTests.Bugs
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void FunkyIndex(Options options)
+        public async Task FunkyIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -89,8 +89,8 @@ namespace SlowTests.Bugs
 
                 cts.Cancel();
 
-                Assert.True(car1.Wait(TimeSpan.FromMinutes(1)));
-                Assert.True(car2.Wait(TimeSpan.FromMinutes(1)));
+                await car1.WaitAsync(TimeSpan.FromMinutes(1));
+                await car2.WaitAsync(TimeSpan.FromMinutes(1));
 
                 QueryResult finalQueryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
 

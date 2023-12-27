@@ -6,7 +6,6 @@ import {
 } from "components/pages/resources/databases/store/databasesViewSlice";
 import databasesManager from "common/shell/databasesManager";
 import notificationCenter from "common/notifications/notificationCenter";
-import viewHelpers from "common/helpers/view/viewHelpers";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { UnsubscribeListener } from "@reduxjs/toolkit";
 import { addAppListener } from "components/storeUtils";
@@ -53,23 +52,11 @@ export const openNotificationCenterForDatabase =
         notificationCenter.instance.showNotifications.toggle();
     };
 
-export const confirmTogglePauseIndexing =
-    (db: DatabaseSharedInfo, pause: boolean): AppAsyncThunk<{ can: boolean; locations: databaseLocationSpecifier[] }> =>
-    async () => {
-        //TODO: context selector!
-        const msg = pause ? "pause indexing?" : "resume indexing?";
-        const result = await viewHelpers.confirmationMessage("Are you sure?", `Do you want to ` + msg);
-
-        return {
-            can: result.can,
-            locations: DatabaseUtils.getLocations(db),
-        };
-    };
-
 export const togglePauseIndexing =
-    (db: DatabaseSharedInfo, pause: boolean, locations: databaseLocationSpecifier[]): AppAsyncThunk =>
+    (db: DatabaseSharedInfo, pause: boolean): AppAsyncThunk =>
     async (dispatch, getState, getServices) => {
         const { indexesService } = getServices();
+        const locations = DatabaseUtils.getLocations(db);
 
         if (pause) {
             const tasks = locations.map(async (l) => {
@@ -114,12 +101,6 @@ export const reloadDatabaseDetails =
         );
         await Promise.all(tasks);
     };
-
-export const confirmSetLockMode = (): AppAsyncThunk<boolean> => async () => {
-    const result = await viewHelpers.confirmationMessage("Are you sure?", `Do you want to change lock mode?`);
-
-    return result.can;
-};
 
 export const reloadDatabasesDetails: AppAsyncThunk = async (dispatch: AppDispatch, getState) => {
     const state = getState();

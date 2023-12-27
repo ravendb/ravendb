@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
             return ExecuteOperation(collectionName, start, take, options, Context, onProgress,
                 key => new PatchDocumentCommand(Context, key, expectedChangeVector: null, skipPatchIfChangeVectorMismatch: false, patch: (patch, patchArgs),
                     patchIfMissing: (null, null), createIfMissing: null, identityPartsSeparator: Database.IdentityPartsSeparator, isTest: false, debugMode: false,
-                    collectResultsNeeded: false, returnDocument: false), token);
+                    collectResultsNeeded: false, returnDocument: false, ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript), token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, long start, long take, CollectionOperationOptions options, DocumentsOperationContext context,
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents
                                     continue;
 
                                 // start with and id queries aren't ordered by the etag
-                                if (isStartsWithOrIdQuery == false && document.Etag > lastEtag) 
+                                if (isStartsWithOrIdQuery == false && document.Etag > lastEtag)
                                 {
                                     // we don't want to go over the documents that we have patched
                                     end = true;
@@ -175,7 +175,9 @@ namespace Raven.Server.Documents
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, new FieldsToFetch(_operationQuery, null, IndexType.None),
                     collectionName, _operationQuery, null, context, null, null, null, new Reference<long>(), new Reference<int>(), new Reference<long>(), token)
                 {
-                    Fields = fields, StartAfterId = startAfterId, AlreadySeenIdsCount = alreadySeenIdsCount
+                    Fields = fields,
+                    StartAfterId = startAfterId,
+                    AlreadySeenIdsCount = alreadySeenIdsCount
                 };
             }
 

@@ -196,6 +196,21 @@ namespace Raven.Server.Web.Studio
             }
         }
 
+        [RavenAction("/studio-tasks/bootstrap", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Bootstrap()
+        {
+            // preload server configuration for studio
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(StudioBootstrapConfiguration.CertificateExpiringThresholdInDays));
+                writer.WriteInteger(Server.Configuration.Security.CertificateExpiringThreshold.GetValue(TimeUnit.Days));
+                writer.WriteEndObject();
+            }
+        }
+
         [RavenAction("/studio-tasks/format", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Format()
         {
@@ -266,6 +281,11 @@ namespace Raven.Server.Web.Studio
                 writer.WriteDateTime(nextOccurrence, false);
                 writer.WriteEndObject();
             }
+        }
+
+        public sealed class StudioBootstrapConfiguration
+        {
+            public int CertificateExpiringThresholdInDays { get; set; }
         }
 
         public sealed class NextCronExpressionOccurrence

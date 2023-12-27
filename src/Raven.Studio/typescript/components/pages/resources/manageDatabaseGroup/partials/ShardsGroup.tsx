@@ -12,7 +12,6 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
 import app from "durandal/app";
 import { DatabaseSharedInfo } from "components/models/databases";
-import viewHelpers from "common/helpers/view/viewHelpers";
 import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
 import classNames from "classnames";
 import {
@@ -32,6 +31,7 @@ import {
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { Icon } from "components/common/Icon";
+import useConfirm from "components/common/ConfirmDialog";
 
 export interface ShardsGroupProps {
     db: DatabaseSharedInfo;
@@ -54,6 +54,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
+    const confirm = useConfirm();
 
     const addNode = useCallback(() => {
         const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.encrypted);
@@ -70,28 +71,24 @@ export function ShardsGroup(props: ShardsGroupProps) {
     );
 
     const deleteNodeFromGroup = useCallback(
-        (nodeTag: string, hardDelete: boolean) => {
-            viewHelpers
-                .confirmationMessage(
-                    "Are you sure",
-                    "Do you want to delete shard '" +
-                        DatabaseUtils.shardNumber(db.name) +
-                        "' from node: " +
-                        nodeTag +
-                        "?",
-                    {
-                        buttons: ["Cancel", "Yes, delete"],
-                        html: true,
-                    }
-                )
-                .done((result) => {
-                    if (result.can) {
-                        // noinspection JSIgnoredPromiseFromCall
-                        databasesService.deleteDatabaseFromNode(db, [nodeTag], hardDelete);
-                    }
-                });
+        async (nodeTag: string, hardDelete: boolean) => {
+            const isConfirmed = await confirm({
+                icon: "trash",
+                title: (
+                    <span>
+                        Do you want to delete shard #<strong>{DatabaseUtils.shardNumber(db.name)}</strong> from node{" "}
+                        <strong>{nodeTag}</strong>?
+                    </span>
+                ),
+                confirmText: "Delete",
+                actionColor: "danger",
+            });
+
+            if (isConfirmed) {
+                await databasesService.deleteDatabaseFromNode(db, [nodeTag], hardDelete);
+            }
         },
-        [db, databasesService]
+        [confirm, db, databasesService]
     );
 
     const onSave = async () => {

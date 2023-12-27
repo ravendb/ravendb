@@ -1,12 +1,29 @@
 ﻿import messagePublisher = require("common/messagePublisher");
 
 class copyToClipboard {
-    static async copy(toCopy: string, successMessage?: string) {
+    static copy(toCopy: string, successMessage?: string, container: Element = document.body) {
+        const dummy = document.createElement("textarea");
+        // Add it to the document
+        container.appendChild(dummy);
         try {
-            await navigator.clipboard.writeText(toCopy);
-            messagePublisher.reportSuccess(successMessage);
+            dummy.value = toCopy;
+            // Select it
+            dummy.select();
+            // Copy its contents
+            const success = document.execCommand("copy");
+
+            if (success) {
+                if (successMessage) {
+                    messagePublisher.reportSuccess(successMessage);
+                }
+            } else {
+                messagePublisher.reportWarning("Unable to copy to clipboard");
+            }
         } catch (err) {
             messagePublisher.reportWarning("Unable to copy to clipboard", err);
+        } finally {
+            // Remove it as its not needed anymore
+            container.removeChild(dummy);
         }
     }
 }

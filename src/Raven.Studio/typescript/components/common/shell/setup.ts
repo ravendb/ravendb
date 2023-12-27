@@ -23,21 +23,6 @@ function updateDatabases() {
 
 const throttledUpdateDatabases = _.throttle(updateDatabases, 200);
 
-function updateReduxCollectionsTracker() {
-    globalDispatch(
-        collectionsTrackerActions.collectionsLoaded(
-            collectionsTracker.default.collections().map((x) => ({
-                name: x.name,
-                countPrefix: x.countPrefix(),
-                documentCount: x.documentCount(),
-                hasBounceClass: x.hasBounceClass(),
-                lastDocumentChangeVector: x.lastDocumentChangeVector(),
-                sizeClass: x.sizeClass(),
-            }))
-        )
-    );
-}
-
 export const throttledUpdateLicenseLimitsUsage = _.throttle(() => {
     services.licenseService
         .getClusterLimitsUsage()
@@ -87,8 +72,9 @@ function initRedux() {
         throttledUpdateLicenseLimitsUsage();
     });
 
-    collectionsTracker.default.registerOnGlobalChangeVectorUpdatedHandler(updateReduxCollectionsTracker);
-    collectionsTracker.default.onUpdateCallback = updateReduxCollectionsTracker;
+    collectionsTracker.default.collections.subscribe((collections) =>
+        globalDispatch(collectionsTrackerActions.collectionsLoaded(collections.map((x) => x.toCollectionState())))
+    );
 
     changesContext.default.connectServerWideNotificationCenter();
 }
@@ -119,6 +105,14 @@ function initYup() {
             positive: "Please enter positive number",
             min: ({ min }) => `Value must be greater than or equal ${min}`,
             max: ({ max }) => `Value must be less than or equal ${max}`,
+        },
+        date: {
+            min: ({ min }) => `Value must be ${min} or later`,
+            max: ({ max }) => `Value must be ${max} or earlier`,
+        },
+        array: {
+            min: ({ min }) => `The list should contain at least ${min} item${min > 1 ? "s" : ""}`,
+            max: ({ max }) => `The list should contain a maximum of ${max} item${max > 1 ? "s" : ""}`,
         },
     });
 }

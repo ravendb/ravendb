@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
@@ -121,7 +122,39 @@ namespace SlowTests.Sharding.ETL
                 }
 
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 60_000));
-                Assert.Throws<NodeIsPassiveException>(() =>
+
+                // add debug info to investigate RavenDB-20934
+                // can revert this back to Assert.Throws when the issue is resolved
+
+                Exception ex = null;
+                try
+                {
+                    using (var originalSrc = new DocumentStore
+                    {
+                        Urls = new[] { originalTaskNode.WebUrl }, 
+                        Database = srcDb, 
+                        Conventions = new DocumentConventions
+                        {
+                            DisableTopologyUpdates = true
+                        }
+                    }.Initialize())
+                    {
+                        using (var session = originalSrc.OpenSession())
+                        {
+                            session.Store(new User() { Name = "Joe Doe3" }, "users/3");
+
+                            session.SaveChanges();
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+
+                Assert.True(ex is NodeIsPassiveException, await AddDebugInfo(ex));
+
+                /*Assert.Throws<NodeIsPassiveException>(() =>
                 {
                     using (var originalSrc = new DocumentStore
                     {
@@ -143,7 +176,7 @@ namespace SlowTests.Sharding.ETL
                             session.SaveChanges();
                         }
                     }
-                });
+                });*/
             }
         }
 
@@ -438,7 +471,7 @@ namespace SlowTests.Sharding.ETL
 
                 Assert.True(WaitForDocument<User>(dest, id, u => u.Name == "Joe Doe", 30_000));
 
-                var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
+                var dbRecord = await src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database));
                 var shardedCtx = new ShardedDatabaseContext(srcNodes.Servers[0].ServerStore, dbRecord);
                 var shardNumber = 0;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -454,7 +487,7 @@ namespace SlowTests.Sharding.ETL
 
                 var originalTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == responsibleNodeNodeTag);
 
-                var originalResult = DisposeServerAndWaitForFinishOfDisposal(originalTaskNodeServer);
+                var originalResult = await DisposeServerAndWaitForFinishOfDisposalAsync(originalTaskNodeServer);
 
                 id = "users/5";
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -817,5 +850,16 @@ loadToOrders(partitionBy(key),
             files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
             Assert.True(files.Length > count);
         }
+
+        private async Task<string> AddDebugInfo(Exception ex)
+        {
+            var sb = new StringBuilder()
+                .AppendLine($"Failed. Expected NodeIsPassiveException but {(ex == null ? "none" : ex.GetType())} was thrown.")
+                .AppendLine("Cluster debug logs:");
+
+            await GetClusterDebugLogsAsync(sb);
+            return sb.ToString();
+        }
+
     }
 }

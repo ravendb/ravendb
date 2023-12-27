@@ -6,6 +6,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Server.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -40,7 +41,7 @@ public class RavenDB_20033 : RavenTestBase
             session.Store(new User {Id = $"User/{i}", Name = $"Gracjan{i}"});
         }
         session.SaveChanges();
-        using var client = new HttpClient();
+        using var client = new HttpClient().WithConventions(store.Conventions);
         string jsonResult;
         await using (var stream = await client.GetStreamAsync(LoadDocumentsUrlGenerator(store, 0, 10, "json")))
         {

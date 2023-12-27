@@ -10,11 +10,11 @@ import virtualGridController from "widgets/virtualGrid/virtualGridController";
 import SubscriptionInfo = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfo;
 import { Card } from "reactstrap";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import useConfirm from "components/hooks/useConfirm";
 import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import TombstonesAlert from "components/pages/database/settings/tombstones/TombstonesAlert";
+import useConfirm from "components/common/ConfirmDialog";
 
 export default function TombstonesState({ db, location }: ShardedViewProps) {
     const { databasesService } = useServices();
@@ -24,14 +24,6 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
 
     const [collectionsGrid, setCollectionsGrid] = useState<virtualGridController<TombstoneItem>>();
     const [subscriptionsGrid, setSubscriptionsGrid] = useState<virtualGridController<SubscriptionInfo>>();
-
-    const [ForceCleanupConfirm, confirmForceCleanup] = useConfirm({
-        title: "Do you want to force tombstones cleanup?",
-        message: <TombstonesAlert />,
-        icon: "force",
-        confirmText: "Force cleanup",
-        actionColor: "warning",
-    });
 
     useEffect(() => {
         if (!collectionsGrid || asyncGetTombstonesState.status !== "success") {
@@ -62,8 +54,18 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
         subscriptionsGrid.reset();
     };
 
+    const confirm = useConfirm();
+
     const forceCleanup = async () => {
-        if (await confirmForceCleanup()) {
+        const isConfirmed = await confirm({
+            title: "Do you want to force tombstones cleanup?",
+            message: <TombstonesAlert />,
+            icon: "force",
+            confirmText: "Force cleanup",
+            actionColor: "warning",
+        });
+
+        if (isConfirmed) {
             await asyncForceTombstonesCleanup.execute();
             await refresh();
         }
@@ -87,7 +89,6 @@ export default function TombstonesState({ db, location }: ShardedViewProps) {
                 </ButtonWithSpinner>
                 {asyncGetTombstonesState.status === "success" && (
                     <>
-                        <ForceCleanupConfirm />
                         <ButtonWithSpinner
                             onClick={forceCleanup}
                             color="warning"

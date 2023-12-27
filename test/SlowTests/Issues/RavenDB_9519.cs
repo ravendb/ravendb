@@ -13,6 +13,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Server.Extensions;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
                     cv = session.Advanced.GetChangeVectorFor(_testCompany);
                 }
 
-                var client = new HttpClient();
+                using var client = new HttpClient().WithConventions(store.Conventions);
                 var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query={query}&format=csv");
 
                 using (var commands = store.Commands())
@@ -101,7 +102,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var client = new HttpClient();
+                using var client = new HttpClient().WithConventions(storeSharded.Conventions);
                 stream = await client.GetStreamAsync($"{storeSharded.Urls[0]}/databases/{storeSharded.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
 
                 using (var store = GetDocumentStore())
@@ -141,7 +142,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var client = new HttpClient();
+                using var client = new HttpClient().WithConventions(store.Conventions);
                 var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
 
                 using (var commands = store.Commands())

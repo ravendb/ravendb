@@ -25,6 +25,7 @@ using Voron.Data.PostingLists;
 using Voron.Impl;
 using InvalidOperationException = System.InvalidOperationException;
 using static Voron.Data.CompactTrees.CompactTree;
+using Voron.Util;
 
 namespace Corax.Querying;
 
@@ -129,7 +130,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, item.Address, item.Length, _dictionaryId);
     }
     
-    internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref NativeUnmanagedList<Slice> terms)
+    internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
     {
         if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
         {
@@ -149,7 +150,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         ApplyAnalyzerMultiTerms(binding, termBuffer[..byteCount], ref terms);
     }
 
-    internal void ApplyAnalyzerMultiTerms(in FieldMetadata binding, ReadOnlySpan<byte> originalTerm, ref NativeUnmanagedList<Slice> terms)
+    internal void ApplyAnalyzerMultiTerms(in FieldMetadata binding, ReadOnlySpan<byte> originalTerm, ref ContextBoundNativeList<Slice> terms)
     {
         Analyzer analyzer = binding.Analyzer;
         if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
@@ -168,7 +169,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AnalyzeMultipleTerms(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, ref NativeUnmanagedList<Slice> terms)
+    private void AnalyzeMultipleTerms(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, ref ContextBoundNativeList<Slice> terms)
     {
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 

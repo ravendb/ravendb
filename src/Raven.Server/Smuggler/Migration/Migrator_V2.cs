@@ -5,7 +5,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -57,7 +59,7 @@ namespace Raven.Server.Smuggler.Migration
             var response = await RunWithAuthRetry(async () =>
             {
                 var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/streams/docs?etag={lastEtag}";
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
 
                 var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
@@ -172,7 +174,7 @@ namespace Raven.Server.Smuggler.Migration
             var response = await RunWithAuthRetry(async () =>
             {
                 var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/static?pageSize={AttachmentsPageSize}&etag={lastEtag}";
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
                 var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
@@ -202,7 +204,7 @@ namespace Raven.Server.Smuggler.Migration
             var response = await RunWithAuthRetry(async () =>
             {
                 var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/static/{Uri.EscapeDataString(attachmentKey)}";
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
                 var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
             });
@@ -229,7 +231,7 @@ namespace Raven.Server.Smuggler.Migration
             var response = await RunWithAuthRetry(async () =>
             {
                 var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/indexes";
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var request = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(DocumentConventions.DefaultForServer);
                 var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });

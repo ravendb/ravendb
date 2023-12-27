@@ -38,7 +38,6 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
-using Voron.Impl.Paging;
 using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
@@ -792,7 +791,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+            var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                 collectionName.GetTableName(CollectionTableType.Documents));
 
             if (table == null)
@@ -807,24 +806,38 @@ namespace Raven.Server.Documents
             }
         }
 
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
             if (_forTestingPurposes != null)
                 return _forTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff(DocsSchema);
         }
 
         internal sealed class TestingStuff
         {
+            private readonly TableSchema _docsSchema;
+
+            internal TestingStuff(TableSchema docsSchema)
+            {
+                _docsSchema = docsSchema;
+            }
+
             public ManualResetEventSlim DelayDocumentLoad;
+            public Action<string> OnBeforeOpenTableWhenPutDocumentWithSpecificId { get; set; }
+            public bool? IsDocumentCompressed(DocumentsOperationContext context, Slice lowerDocumentId, out bool? isLargeValue)
+            {
+                var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+                return table.ForTestingPurposesOnly().IsTableValueCompressed(lowerDocumentId, out isLargeValue);
+            }
         }
         
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction, onCorruptedDataHandler);
+
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, start))
             {
@@ -925,7 +938,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+            var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                 collectionName.GetTableName(CollectionTableType.Documents));
 
             if (table == null)
@@ -1003,22 +1016,26 @@ namespace Raven.Server.Documents
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
-            // return tombstone in any collection with the requested id
+            Tombstone mostRecent = null;
             foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0))
             {
                 if (IsTombstoneOfId(tombstoneKey, lowerId))
                 {
-                    return new DocumentOrTombstone
+                    var current = TableValueToTombstone(context, ref tvh.Reader);
+                    if (mostRecent == null || 
+                        GetConflictStatus(context, current.ChangeVector, mostRecent.ChangeVector, ChangeVectorMode.Version) == ConflictStatus.Update)
                     {
-                        Tombstone = TableValueToTombstone(context, ref tvh.Reader)
-                    };
+                        using (var _ = mostRecent)
+                        {
+                            mostRecent = current;
+                        }
+                    }
                 }
-                break;
             }
 
             return new DocumentOrTombstone
             {
-                Tombstone = null
+                Tombstone = mostRecent
             };
         }
 
@@ -1076,7 +1093,7 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public IEnumerable<LazyStringValue> GetAllIds(DocumentsOperationContext context)
+        public IEnumerable<string> GetAllIds(DocumentsOperationContext context)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -1340,9 +1357,8 @@ namespace Raven.Server.Documents
 
         private bool ReadLastDocument(Transaction transaction, CollectionName collectionName, CollectionTableType collectionType, ref Table.TableValueHolder result)
         {
-            var table = transaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(collectionType)
-            );
+            var table = transaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
+                collectionName.GetTableName(collectionType));
 
             // ReSharper disable once UseNullPropagation
             if (table == null)
@@ -1659,8 +1675,9 @@ namespace Raven.Server.Documents
                     ThrowConcurrencyException(id, expectedChangeVector, doc.ChangeVector);
 
                 collectionName = ExtractCollectionName(context, doc.Data);
-                var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+
                 var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);
+                var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 long etag;
                 using (Slice.From(context.Allocator, doc.LowerId, out Slice tombstoneId))
@@ -2123,7 +2140,7 @@ namespace Raven.Server.Documents
             //make sure that the relevant collection tree exists
             Table table = isTombstone ?
                 tx.OpenTable(TombstonesSchema, collectionName) :
-                tx.OpenTable(DocsSchema, collectionName);
+                tx.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionObject), collectionName);
 
             table.Delete(storageId);
         }
@@ -2172,10 +2189,11 @@ namespace Raven.Server.Documents
             }
             else
             {
-                table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+                table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                     collectionName.GetTableName(CollectionTableType.Documents));
                 indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
+
             if (table == null)
             {
                 totalCount = 0;
@@ -2209,7 +2227,8 @@ namespace Raven.Server.Documents
         {
             foreach (var kvp in _collectionsCache)
             {
-                var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
+                var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(kvp.Value),
+                    kvp.Value.GetTableName(CollectionTableType.Documents));
                 //This is the case where a read transaction reading a collection cached by a later write transaction we can safly ignore it.
                 if (collectionTable == null)
                 {
@@ -2284,7 +2303,7 @@ namespace Raven.Server.Documents
                 };
             }
 
-            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                 collectionName.GetTableName(CollectionTableType.Documents));
 
             if (collectionTable == null)
@@ -2530,10 +2549,7 @@ namespace Raven.Server.Documents
 
             if (fromReplication == false)
             {
-                context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
-                oldChangeVector = oldChangeVector == null
-                    ? context.LastDatabaseChangeVector
-                    : oldChangeVector.MergeWith(context.LastDatabaseChangeVector, context);
+                oldChangeVector = ChangeVector.MergeWithDatabaseChangeVector(context, oldChangeVector);
             }
 
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);

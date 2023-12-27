@@ -7,6 +7,7 @@ using Raven.Server.Utils;
 using SlowTests.Corax;
 using SlowTests.Sharding.Cluster;
 using Xunit;
+using FastTests.Voron.Util;
 
 namespace Tryouts;
 
@@ -17,7 +18,7 @@ public static class Program
         XunitLogging.RedirectStreams = false;
     }
 
-    public static async Task Main(string[] args)
+    public static void Main(string[] args)
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
@@ -27,12 +28,12 @@ public static class Program
 
             try
             {
-                TryRemoveDatabasesFolder();
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new ShardedClusterObserverTests(testOutputHelper))
+                using (var test = new PForEncoderTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.ClusterObserverWillSkipCommandIfChangingTheSameDatabaseRecordTwiceInOneIteration();
+                    //test.CanRoundTripSmallContainer("GreaterThan42B");
+                    test.CanRespectBufferBoundaryForPage2();
                 }
             }
             catch (Exception e)

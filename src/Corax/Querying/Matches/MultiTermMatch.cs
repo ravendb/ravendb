@@ -16,6 +16,7 @@ using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
+using Voron.Util;
 using Voron.Util.PFor;
 
 namespace Corax.Querying.Matches
@@ -127,7 +128,7 @@ namespace Corax.Querying.Matches
             private int _bufferIdx;
             private int _bufferCount;
             private int _smallPostingListIndex;
-            private NativeIntegersList _smallPostListIds;
+            private ContextBoundNativeList<long> _smallPostListIds;
             private ByteStringContext<ByteStringMemoryCache>.InternalScope _itBufferScope, _containerItemsScope;
             private readonly PageLocator _pageLocator;
 
@@ -138,7 +139,7 @@ namespace Corax.Querying.Matches
                 _allocator = searcher.Allocator;
                 _postListIt = default;
                 _smallListReader = default;
-                _smallPostListIds = new NativeIntegersList(_allocator, BufferSize);
+                _smallPostListIds = new ContextBoundNativeList<long>(_allocator, BufferSize);
                 _bufferCount = _bufferIdx = 0;
                 _itBufferScope = _allocator.Allocate(BufferSize * sizeof(long), out ByteString bs);
                 _itBuffer = (long*)bs.Ptr;
@@ -257,7 +258,7 @@ namespace Corax.Querying.Matches
                 _smallPostingListIndex = 0;
                 if (_smallPostListIds.Count == 0)
                     return;
-                Container.GetAll(_searcher._transaction.LowLevelTransaction, _smallPostListIds.Items, _containerItems, long.MinValue, _pageLocator);
+                Container.GetAll(_searcher._transaction.LowLevelTransaction, _smallPostListIds.ToSpan(), _containerItems, long.MinValue, _pageLocator);
             }
 
             private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -18,11 +19,11 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void FailureDuringIndexReplacementMustNotCauseProblemsWith()
+        public async Task FailureDuringIndexReplacementMustNotCauseProblemsWith()
         {
             using (var store = GetDocumentStore(new Options {Path = NewDataPath()}))
             {
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
@@ -98,7 +99,7 @@ namespace SlowTests.Issues
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(database.Name);
 
-                database = GetDatabase(store.Database).Result;
+                database = await GetDatabase(store.Database);
 
                 Indexes.WaitForIndexing(store); // old index could be opened as well, so we wait until replacement is done and switches the index
 

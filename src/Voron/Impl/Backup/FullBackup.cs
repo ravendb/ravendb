@@ -319,19 +319,21 @@ namespace Voron.Impl.Backup
                 using (var decompressionStream = GetDecompressionStream(zipEntry))
                 using (var output = SafeFileStream.Create(dst.Combine(entry.Name).FullPath, FileMode.CreateNew))
                 {
+                    // we don't know the uncompressed size of the file for the zstd stream (the uncompressed size is stored at the end of the file).
+                    var isZstd = decompressionStream is ZstdStream;
                     decompressionStream.CopyTo(output, readCount =>
                     {
                         totalRead += readCount;
                         if (swForProgress.ElapsedMilliseconds > 5000)
                         {
                             swForProgress.Restart();
-                            onProgress?.Invoke($"Restoring file: '{entry.Name}', {new Size(totalRead, SizeUnit.Bytes)}/{new Size(entry.Length, SizeUnit.Bytes)}");
+                            onProgress?.Invoke($"Restoring file: '{entry.Name}', {new Size(totalRead, SizeUnit.Bytes)}{(isZstd ? string.Empty : "/" + new Size(entry.Length, SizeUnit.Bytes))}");
                         }
                     }, cancellationToken);
                 }
 
                 onProgress?.Invoke($"Restored file: '{entry.Name}' to: '{dst}', " +
-                                   $"size: {new Size(entry.Length, SizeUnit.Bytes)}, " +
+                                   $"size: {new Size(totalRead, SizeUnit.Bytes)}, " +
                                    $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
             }
         }

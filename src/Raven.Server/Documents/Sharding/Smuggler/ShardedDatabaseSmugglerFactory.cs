@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Smuggler;
 using Raven.Server.Smuggler.Documents;
@@ -24,6 +27,11 @@ public sealed class ShardedDatabaseSmugglerFactory : AbstractDatabaseSmugglerFac
     public override DatabaseDestination CreateDestination(CancellationToken token = default)
     {
         return new ShardedDatabaseDestination(_database, token);
+    }
+
+    public override DatabaseDestination CreateDestinationForSnapshotRestore(Dictionary<string, SubscriptionState> subscriptions, CancellationToken token = default)
+    {
+        throw new NotSupportedInShardingException();
     }
 
     public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger)

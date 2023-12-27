@@ -44,7 +44,7 @@ namespace SlowTests.Issues
                 }
 
                 var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60));
-                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenAsyncSession())
                 {

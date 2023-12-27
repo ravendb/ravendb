@@ -50,7 +50,7 @@ namespace Raven.Server.ServerWide.Commands
                 {
                     if (record.IsSharded == false)
                     {
-                        RemoveDatabaseFromSingleNode(record, record.Topology, node, shardNumber: null, deletionInProgressStatus);
+                        RemoveDatabaseFromSingleNode(record, record.Topology, node, shardNumber: null, deletionInProgressStatus, etag);
                     }
                     else
                     {
@@ -65,10 +65,10 @@ namespace Raven.Server.ServerWide.Commands
                                     $"Database {DatabaseName} cannot be deleted because it is the last copy of shard {ShardNumber.Value} and it still contains buckets.");
                             }
 
-                            RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[ShardNumber.Value], node, shardNumber: ShardNumber, deletionInProgressStatus);
+                            RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[ShardNumber.Value], node, shardNumber: ShardNumber, deletionInProgressStatus, etag);
                             return;
                         }
-
+                        
                         throw new RachisApplyException($"Deleting entire sharded database {DatabaseName} from a specific node is not allowed.");
                     }
                 }
@@ -77,7 +77,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 if (record.IsSharded == false)
                 {
-                    RemoveDatabaseFromAllNodes(record, record.Topology, shardNumber: null, deletionInProgressStatus);
+                    RemoveDatabaseFromAllNodes(record, record.Topology, shardNumber: null, deletionInProgressStatus, etag);
                 }
                 else
                 {
@@ -87,13 +87,13 @@ namespace Raven.Server.ServerWide.Commands
 
                     foreach (var (shardNumber, topology) in record.Sharding.Shards)
                     {
-                        record.Sharding.Shards[shardNumber] = RemoveDatabaseFromAllNodes(record, topology, shardNumber, deletionInProgressStatus);
+                        record.Sharding.Shards[shardNumber] = RemoveDatabaseFromAllNodes(record, topology, shardNumber, deletionInProgressStatus, etag);
                     }
                 }
             }
         }
 
-        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus)
+        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus, long etag)
         {
             var allNodes = topology.AllNodes.Distinct();
 
@@ -102,11 +102,13 @@ namespace Raven.Server.ServerWide.Commands
                 if (ClusterNodes.Contains(node))
                     record.DeletionInProgress[DatabaseRecord.GetKeyForDeletionInProgress(node, shardNumber)] = deletionInProgressStatus;
             }
-
-            return new DatabaseTopology { Stamp = topology.Stamp, ReplicationFactor = 0 };
+            
+            var newTopology = new DatabaseTopology { ReplicationFactor = 0 };
+            SetLeaderStampForTopology(newTopology, etag);
+            return newTopology;
         }
 
-        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus)
+        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus, long etag)
         {
             if (topology.RelevantFor(node) == false)
             {
@@ -125,6 +127,8 @@ namespace Raven.Server.ServerWide.Commands
 
             if (ClusterNodes.Contains(node))
                 record.DeletionInProgress[DatabaseRecord.GetKeyForDeletionInProgress(node, shardNumber)] = deletionInProgressStatus;
+
+            SetLeaderStampForTopology(topology, etag);
         }
         public override void FillJson(DynamicJsonValue json)
         {

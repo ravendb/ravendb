@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using JetBrains.Annotations;
@@ -22,6 +24,9 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers.Processors
 
         public override async ValueTask ExecuteAsync()
         {
+            StringBuilder errorHandlerDetails = null;
+            StringBuilder logDetails = null;
+
             try
             {
                 string jsonConfig = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
@@ -31,8 +36,38 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers.Processors
 
                 QueueBrokerConnectionHelper.SetupKafkaClientConfig(adminConfig, settings, ServerStore.Server.Certificate);
 
-                using var adminClient = new AdminClientBuilder(adminConfig).Build();
-                adminClient.GetMetadata(TimeSpan.FromSeconds(10));
+                using var adminClient = new AdminClientBuilder(adminConfig)
+                    .SetErrorHandler((client, error) =>
+                    {
+                        errorHandlerDetails ??= new StringBuilder();
+                        errorHandlerDetails.AppendLine(error.ToString());
+                    })
+                    .SetLogHandler((client, message) =>
+                    {
+                        logDetails ??= new StringBuilder();
+                        logDetails.AppendLine($"{message.Facility} {message.Message}");
+                    })
+                    .Build();
+                var metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(10));
+
+                foreach (var brokerMetadata in metadata.Brokers)
+                {
+                    var host = brokerMetadata.Host;
+                    var port = brokerMetadata.Port;
+
+                    using (var client = new TcpClient())
+                    {
+                        try
+                        {
+                            await client.ConnectAsync(host, port);
+                            client.Close();
+                        }
+                        catch (SocketException ex)
+                        {
+                            throw new Exception($"Failed to connect to the broker {brokerMetadata.BrokerId}: {host}:{port}", ex);
+                        }
+                    }
+                }
 
                 DynamicJsonValue result = new()
                 {
@@ -49,13 +84,21 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers.Processors
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
+                    var error = ex.ToString();
+
+                    if (errorHandlerDetails is not null)
+                        error += $"{Environment.NewLine}ERROR DETAILS:{Environment.NewLine}{errorHandlerDetails}";
+
+                    if (logDetails is not null)
+                        error += $"{Environment.NewLine}LOGS:{Environment.NewLine}{logDetails}";
+
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
                         context.Write(writer,
                             new DynamicJsonValue
                             {
                                 [nameof(NodeConnectionTestResult.Success)] = false,
-                                [nameof(NodeConnectionTestResult.Error)] = ex.ToString()
+                                [nameof(NodeConnectionTestResult.Error)] = error
                             });
                     }
                 }

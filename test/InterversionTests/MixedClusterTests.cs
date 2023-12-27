@@ -20,6 +20,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Extensions;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Cluster;
@@ -1521,7 +1522,7 @@ namespace InterversionTests
         private static async Task AddNodeToCluster(DocumentStore store, string url)
         {
             var addNodeRequest = await store.GetRequestExecutor().HttpClient.SendAsync(
-                new HttpRequestMessage(HttpMethod.Put, $"{store.Urls[0]}/admin/cluster/node?url={url}"));
+                new HttpRequestMessage(HttpMethod.Put, $"{store.Urls[0]}/admin/cluster/node?url={url}").WithConventions(store.Conventions));
             Assert.True(addNodeRequest.IsSuccessStatusCode);
         }
 

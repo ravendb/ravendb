@@ -5,6 +5,7 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
@@ -13,6 +14,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         public ShardedOngoingTasksHandlerProcessorForUpdatePeriodicBackup([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
+
+        protected override BackupConfiguration GetBackupConfiguration() => RequestHandler.DatabaseContext.Configuration.Backup;
 
         protected override void OnBeforeUpdateConfiguration(ref PeriodicBackupConfiguration configuration, JsonOperationContext context)
         {

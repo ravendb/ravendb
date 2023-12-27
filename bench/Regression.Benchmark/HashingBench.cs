@@ -16,19 +16,6 @@ namespace Regression.Benchmark
         }
 
         [Benchmark]
-        public void Metro128_SmallString()
-        {
-            string value = "stringstringstringstringstringstringstring";
-
-            ExecuteBenchmark(() => 
-            {
-                Metro128Hash hash;
-                for (int i = 0; i < 1000; i++)
-                    hash = Hashing.Metro128.Calculate(value, Encoding.UTF8);
-            });
-        }
-
-        [Benchmark]
         public void XXHash64_SmallString()
         {
             string value = "stringstringstringstringstringstringstring";
@@ -51,17 +38,6 @@ namespace Regression.Benchmark
                 uint hash = 0;
                 for (int i = 0; i < 1000; i++)
                     hash += Hashing.XXHash32.Calculate(value, Encoding.UTF8);
-            });
-        }
-
-        [Benchmark]
-        public void Metro128_Block()
-        {
-            ExecuteBenchmark(() => 
-            {
-                Metro128Hash hash;
-                for (int i = 0; i < 1000; i++)
-                    hash = Hashing.Metro128.Calculate(block);
             });
         }
 

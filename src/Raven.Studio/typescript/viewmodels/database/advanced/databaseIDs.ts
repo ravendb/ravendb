@@ -139,7 +139,9 @@ class databaseIDs extends shardViewModelBase {
     }
 
     addInputToUnusedList() {
-        this.addWithBlink(this.inputDatabaseID());
+        const databaseId = this.inputDatabaseID().trim();
+        this.addWithBlink(databaseId);
+        this.inputDatabaseID("");
     }
 
     addToUnusedList(dbID: string) {
