@@ -173,6 +173,11 @@
                                 <div class="help-block" data-bind="validationMessage: model.transformScript"></div>
                             </div>
                         </div>
+                        <div class="toggle">
+                            <input id="skipCorruptedData" type="checkbox" data-bind="checked: model.skipCorruptedData" />
+                            <label for="skipCorruptedData" class="margin-right margin-right-sm">Skip Corrupted Data </label>
+                            <a id="skipCorruptedDataPopover" tabindex="0"><small><i class="icon-info text-info"></i></small></a>
+                        </div>
                         <div data-bind="with: model.databaseModel">
                             <div data-bind="compose: $root.smugglerDatabaseRecordView"></div>
                         </div>

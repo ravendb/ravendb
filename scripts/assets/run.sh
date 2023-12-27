@@ -21,15 +21,10 @@ fi
 
 if [[ "$ASSEMBLY_VERSION" != "$VERSION" ]]; then
     echo "$ASSEMBLY_VERSION" > "$VERSION_PATH"
-    ${BROWSER_OPEN} "http://ravendb.net/first-run?type=start&ver=$ASSEMBLY_VERSION";
+    ${BROWSER_OPEN} "https://ravendb.net/first-run?type=start&ver=$ASSEMBLY_VERSION";
 fi
 
 pushd $EXECUTABLE_DIR > /dev/null
 
 sleep 2 # avoid Firefox already open warning preventing from launching the Studio tab
-eval "./$EXECUTABLE --browser";
-EXITCODE=$?
-
-popd > /dev/null
-
-exit ${EXITCODE}
+exec ./$EXECUTABLE --browser

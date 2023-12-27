@@ -26,6 +26,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Extensions;
 using Sparrow.Server.Utils;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -812,7 +813,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (_server.DatabasesLandlord.ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
                     _server.DatabasesLandlord.ForTestingPurposes.PreventedRehabOfIdleDatabase = true;
-
+                
                 if (ShouldGiveMoreTimeBeforeMovingToRehab(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime))
                 {
                     if (ShouldGiveMoreTimeBeforeRotating(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime) == false)
@@ -1116,48 +1117,28 @@ namespace Raven.Server.ServerWide.Maintenance
             return true;
         }
 
-        private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
-        {
-            if (databaseUpTime.HasValue)
-            {
-                if (databaseUpTime.Value.TotalMilliseconds < _moveToRehabTimeMs)
-                {
-                    return true;
-                }
-            }
+        private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime) => 
+            ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _moveToRehabTimeMs);
 
-            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _moveToRehabTimeMs);
-        }
-
-        private bool ShouldGiveMoreTimeBeforeRotating(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
-        {
-            if (databaseUpTime.HasValue)
-            {
-                if (databaseUpTime.Value.TotalMilliseconds > _rotateGraceTimeMs)
-                {
-                    return false;
-                }
-            }
-
-            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _rotateGraceTimeMs);
-        }
+        private bool ShouldGiveMoreTimeBeforeRotating(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime) => 
+            ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _rotateGraceTimeMs);
 
         private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, long graceMs)
         {
-            var grace = DateTime.UtcNow.AddMilliseconds(-graceMs);
+            var now = DateTime.UtcNow;
+            var observerUptime = (now - StartTime).TotalMilliseconds;
 
-            if (lastSuccessfulUpdate == default) // the node hasn't send a single (good) report
+            if (graceMs > observerUptime)
+                return true;
+            
+            if (databaseUpTime.HasValue) // if this has value, it means that we have a connectivity
             {
-                if (grace < StartTime)
-                    return true;
+                return databaseUpTime.Value.TotalMilliseconds < graceMs;
             }
 
-            if (databaseUpTime.HasValue == false) // database isn't loaded
-            {
-                return grace < StartTime;
-            }
-
-            return grace < lastSuccessfulUpdate && graceMs > databaseUpTime.Value.TotalMilliseconds;
+            var lastUpdate = RavenDateTimeExtensions.Max(lastSuccessfulUpdate, StartTime);
+            var graceThreshold = lastUpdate.AddMilliseconds(graceMs);
+            return graceThreshold > now;
         }
 
         private int GetNumberOfRespondingNodes(DatabaseObservationState state)

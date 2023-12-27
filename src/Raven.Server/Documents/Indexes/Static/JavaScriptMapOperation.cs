@@ -10,6 +10,7 @@ using Jint.Native.Function;
 using Jint.Runtime;
 using Jint.Runtime.Environments;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 
@@ -53,6 +54,11 @@ namespace Raven.Server.Documents.Indexes.Static
                         try
                         {
                             jsItem = MapFunc.Call(JsValue.Null, _oneItemArray);
+                        }
+                        catch (StatementsCountOverflowException e)
+                        {
+                            throw new Raven.Client.Exceptions.Documents.Patching.JavaScriptException(
+                                $"The maximum number of statements executed has been reached. You can configure it by modifying the configuration option: '{RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)}'.", e);
                         }
                         catch (JavaScriptException jse)
                         {

@@ -679,6 +679,7 @@ namespace Raven.Server.Rachis
             public CommandBase Command;
             public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
             public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
+            public BlittableResultWriter BlittableResultWriter { get; init; }
         }
 
         private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
@@ -687,10 +688,12 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
+            using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null; 
             var rachisMergedCommand = new RachisMergedCommand
             {
                 Command = command,
-                Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously)
+                Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously),
+                BlittableResultWriter = blittableResultWriter
             };
             _commandsQueue.Enqueue(rachisMergedCommand);
 
@@ -710,10 +713,7 @@ namespace Raven.Server.Rachis
                         if (await waitAsync == false)
                         {
                             if (rachisMergedCommand.Consumed.Raise())
-                            {
-                                GetConvertResult(command)?.AboutToTimeout();
                                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-                            }
 
                             // if the command is already dequeued we must let it continue to keep its context valid.
                             await rachisMergedCommand.Tcs.Task;
@@ -732,12 +732,10 @@ namespace Raven.Server.Rachis
 
             var inner = await rachisMergedCommand.Tcs.Task;
             if (await inner.WaitWithTimeout(timeout) == false)
-            {
-                GetConvertResult(command)?.AboutToTimeout();
                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-            }
 
-            return await inner;
+            var result = await inner;
+            return blittableResultWriter == null ? result : (result.Index, blittableResultWriter.Result);
         }
 
         private void EmptyQueue()
@@ -773,10 +771,7 @@ namespace Raven.Server.Rachis
                             list.Add(cmd.Tcs);
                             _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
 
-                            var djv = cmd.Command.ToJson(context);
-                            var cmdJson = context.ReadObject(djv, "raft/command");
-
-                            if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out var index, out var result, out var exception))
+                            if (_engine.LogHistory.HasHistoryLog(context, cmd.Command.UniqueRequestId, out var index, out var result, out var exception))
                             {
                                 // if this command is already committed, we can skip it and notify the caller about it
                                 if (lastCommitted >= index)
@@ -789,7 +784,17 @@ namespace Raven.Server.Rachis
                                     {
                                         if (result != null)
                                         {
-                                            result = GetConvertResult(cmd.Command)?.Apply(result) ?? cmd.Command.FromRemote(result);
+                                            if (cmd.BlittableResultWriter != null)
+                                            {
+                                                cmd.BlittableResultWriter.CopyResult(result);
+                                                //The result are consumed by the `CopyResult` and the context of the result from `HasHistoryLog` is not valid outside
+                                                //so we `TrySetResult` to null to make sure no use of invalid context 
+                                                result = null;
+                                            }
+                                            else
+                                            {
+                                                result = cmd.Command.FromRemote(result);
+                                            }
                                         }
 
                                         cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
@@ -800,29 +805,33 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
+                                var djv = cmd.Command.ToJson(context);
+                                var cmdJson = context.ReadObject(djv, "raft/command");
                                 index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
                             }
 
-                            if (_entries.TryGetValue(index, out var state))
-                            {
-                                tasks.Add(state.TaskCompletionSource.Task);
-                            }
-                            else
+                            if (_entries.TryGetValue(index, out var state) == false)
                             {
                                 var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                                tasks.Add(tcs.Task);
-                                state = new
-                                    CommandState
+                                state = new CommandState
                                 // we need to add entry inside write tx lock to avoid
                                 // a situation when command will be applied (and state set)
                                 // before it is added to the entries list
                                 {
                                     CommandIndex = index,
                                     TaskCompletionSource = tcs,
-                                    ConvertResult = GetConvertResult(cmd.Command),
                                 };
                                 _entries[index] = state;
                             }
+
+                            if (cmd.BlittableResultWriter != null)
+                                //If we need to return a blittable as a result the context must be valid for each command that tries to read from it.
+                                //So we let the command provide the method to handle the write while the command is aware of its context validation status.
+                                //We can have multiple delegates if the same command was sent multiple times (multiple attempts)
+                                //https://issues.hibernatingrhinos.com/issue/RavenDB-20762
+                                state.WriteResultAction += cmd.BlittableResultWriter.CopyResult;
+
+                            tasks.Add(state.TaskCompletionSource.Task);
                         }
                         context.Transaction.Commit();
                     }
@@ -848,35 +857,6 @@ namespace Raven.Server.Rachis
 
                     _errorOccurred.TrySetException(e);
                 }
-            }
-        }
-
-        internal static ConvertResultAction GetConvertResult(CommandBase cmd)
-        {
-            ConvertResultAction action;
-            switch (cmd)
-            {
-                case AddOrUpdateCompareExchangeBatchCommand batchCmpExchangeCommand:
-                    action = batchCmpExchangeCommand.ConvertResultAction;
-                    if (action != null)
-                        return action;
-
-                    action = new ConvertResultAction(batchCmpExchangeCommand.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
-                    Interlocked.CompareExchange(ref batchCmpExchangeCommand.ConvertResultAction, action, null);
-                    return batchCmpExchangeCommand.ConvertResultAction;
-
-                case CompareExchangeCommandBase cmpExchange:
-
-                    action = cmpExchange.ConvertResultAction;
-                    if (action != null)
-                        return action;
-
-                    action = new ConvertResultAction(cmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
-                    Interlocked.CompareExchange(ref cmpExchange.ConvertResultAction, action, null);
-                    return cmpExchange.ConvertResultAction;
-
-                default:
-                    return null;
             }
         }
 
@@ -1182,18 +1162,17 @@ namespace Raven.Server.Rachis
 
         public void SetStateOf(long index, object result)
         {
-            if (_entries.TryGetValue(index, out CommandState state))
+            if (_entries.TryGetValue(index, out CommandState state) == false) 
+                return;
+
+            if (state.WriteResultAction != null)
             {
-                if (state.ConvertResult == null)
-                {
-                    ValidateUsableReturnType(result);
-                    state.Result = result;
-                }
-                else
-                {
-                    state.Result = state.ConvertResult.Apply(result);
-                }
+                state.WriteResultAction?.Invoke(result);
+                return;
             }
+            
+            ValidateUsableReturnType(result);
+            state.Result = result;
         }
 
         [Conditional("DEBUG")]
@@ -1215,41 +1194,9 @@ namespace Raven.Server.Rachis
         {
             public long CommandIndex;
             public object Result;
-            public ConvertResultAction ConvertResult;
+            public Action<object> WriteResultAction;
             public TaskCompletionSource<(long, object)> TaskCompletionSource;
             public Action<TaskCompletionSource<(long, object)>> OnNotify;
-        }
-
-        public class ConvertResultAction
-        {
-            private readonly JsonOperationContext _contextToWriteBlittableResult;
-            private readonly ConvertResultFromLeader _action;
-            private readonly SingleUseFlag _timeout = new SingleUseFlag();
-
-            public ConvertResultAction(JsonOperationContext contextToWriteBlittableResult, ConvertResultFromLeader action)
-            {
-                _contextToWriteBlittableResult = contextToWriteBlittableResult ?? throw new ArgumentNullException(nameof(contextToWriteBlittableResult));
-                _action = action ?? throw new ArgumentNullException(nameof(action));
-            }
-
-            public object Apply(object result)
-            {
-                lock (this)
-                {
-                    if (_timeout.IsRaised())
-                        return null;
-
-                    return _action(_contextToWriteBlittableResult, result);
-                }
-            }
-
-            public void AboutToTimeout()
-            {
-                lock (this)
-                {
-                    _timeout.Raise();
-                }
-            }
         }
     }
 }

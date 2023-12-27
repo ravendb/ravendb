@@ -183,6 +183,21 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(true)]
         [ConfigurationEntry("Security.Certificate.Validation.KeyUsages", ConfigurationEntryScope.ServerWideOnly)]
         public bool CertificateValidationKeyUsages { get; set; }
+        
+        [Description("Indicates if CSRF filter is enabled or not. Default: true")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Security.Csrf.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+        public bool EnableCsrfFilter { get; set; }
+        
+        [Description("List of Trusted Origins for CSRF filter")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Csrf.TrustedOrigins", ConfigurationEntryScope.ServerWideOnly)]
+        public string[] CsrfTrustedOrigins { get; set; }
+        
+        [Description("List of Request Headers to look for Origin, ex. X-Forwarded-Host")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Csrf.AdditionalOriginHeaders", ConfigurationEntryScope.ServerWideOnly)]
+        public string[] CsrfAdditionalOriginHeaders { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 

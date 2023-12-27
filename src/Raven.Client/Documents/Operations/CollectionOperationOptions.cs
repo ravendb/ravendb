@@ -6,6 +6,8 @@ namespace Raven.Client.Documents.Operations
     {
         private int? _maxOpsPerSecond;
 
+        internal bool IgnoreMaxStepsForScript { get; set; }
+
         /// <summary>
         /// Limits the amount of base operation per second allowed.
         /// </summary>

@@ -179,7 +179,7 @@ namespace RachisTests
 
                 foreach (var ravenServer in Servers)
                 {
-                    await ravenServer.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + nodesAmount).WaitWithTimeout(TimeSpan.FromSeconds(60));
+                    await ravenServer.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex).WaitWithTimeout(TimeSpan.FromSeconds(60));
                 }
 
                 await Task.Delay(2000);

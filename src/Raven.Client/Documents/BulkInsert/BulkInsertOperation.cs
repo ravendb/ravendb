@@ -185,7 +185,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly Timer _timer;
         private DateTime _lastWriteToStream;
         private readonly SemaphoreSlim _streamLock;
-        private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultWriteTimeout.TotalSeconds / 3);
+        private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultReadTimeout.TotalSeconds / 3);
 
         public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions options, CancellationToken token = default)
         {
@@ -251,7 +251,14 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     _streamExposerContent?.Dispose();
                     _resetContext.Dispose();
-                    _timer?.Dispose();
+                    try
+                    {
+                        _timer?.Dispose();
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             });
             CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
@@ -282,7 +289,7 @@ namespace Raven.Client.Documents.BulkInsert
             var timerState = new TimerState { Parent = new(this) };
 
             if (_options.ForTestingPurposes?.OverrideHeartbeatCheckInterval > 0)
-                _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval);
+                _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval / 3);
 
             _timer = new Timer(HandleHeartbeat,
                 timerState,
@@ -315,6 +322,7 @@ namespace Raven.Client.Documents.BulkInsert
 
             if (_streamLock.Wait(0) == false)
                 return; // if locked we are already writing
+
             try
             {
                 await ExecuteBeforeStore().ConfigureAwait(false);
@@ -335,6 +343,10 @@ namespace Raven.Client.Documents.BulkInsert
 
                 await FlushIfNeeded().ConfigureAwait(false);
                 await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                //Ignore the heartbeat if failed
             }
             finally
             {

@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
@@ -1647,7 +1648,21 @@ select out()
                     },
                 };
 
-                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await AssertWaitForValueAsync(async () =>
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Topology.Members.Count;
+                }, 1);
+
+                try
+                {
+                    await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                }
+                catch (Exception e)
+                {
+                    Assert.Contains("Cannot wait for execution when there are no nodes to execute ON.", e.Message);
+                }
+
                 await TimeSeries.WaitForPolicyRunnerAsync(database);
                 await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 12);
                 var raw = GetSum(store, now);

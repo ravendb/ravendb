@@ -358,7 +358,7 @@ namespace Raven.Server.Web.System
 
                     ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
                     BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
-                    BackupConfigurationHelper.AssertBackupConfiguration(configuration);
+                    BackupConfigurationHelper.AssertBackupConfiguration(configuration, Database.Configuration.Backup);
                     BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
                     SecurityClearanceValidator.AssertSecurityClearance(configuration, feature?.Status);
 

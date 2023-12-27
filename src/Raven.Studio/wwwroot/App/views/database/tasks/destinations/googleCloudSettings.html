@@ -15,7 +15,7 @@
 <div class="row margin-bottom" data-bind="validationElement: googleCredentialsJson">
     <label class="control-label col-xs-12 col-sm-6 col-lg-4">Google Credentials Json <i class="required"></i></label>
     <div class="col-xs-12 col-sm-6 col-lg-8">
-        <textarea rows="9" data-bind="textInput: googleCredentialsJson" class="form-control" placeholder=
+        <textarea rows="9" data-bind="textInput: googleCredentialsJson, visible: credentialsVisible" class="form-control" placeholder=
 'e.g.
 {
     "type": "service_account",
@@ -30,5 +30,12 @@
     "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
   }
         '></textarea>
+        <button class="btn btn-default margin-right-xs" data-bind="click: toggleCredentials, visible: !credentialsVisible()" title="View credentials">
+            <i class="icon-preview"></i> <span>Show credentials</span>
+        </button>
+        <button class="btn btn-info margin-right-xs" data-bind="click: toggleCredentials, visible: credentialsVisible" title="Hide credentials">
+            <i class="icon-preview-off"></i> <span>Hide credentials</span>
+        </button>
+        
     </div>
 </div>

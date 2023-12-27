@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="WriteAheadJournal.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -192,7 +192,7 @@ namespace Voron.Impl.Journal
             var deleteLastJournal = false;
             for (var journalNumber = journalToStartReadingFrom; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
-                addToInitLog?.Invoke($"Recovering journal {journalNumber} (upto last journal {logInfo.CurrentJournal})");
+                addToInitLog?.Invoke($"Recovering journal {journalNumber} (up to last journal {logInfo.CurrentJournal})");
                 var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
                 try
@@ -311,7 +311,7 @@ namespace Voron.Impl.Journal
                                 continue;
                             }
 
-                            _env.ValidatePageChecksum(modifiedPage, ptr);
+                            _env.ValidateInMemoryPageChecksum(modifiedPage, ptr);
 
                             overflowDetector.SetPageChecked(modifiedPage);
                         }

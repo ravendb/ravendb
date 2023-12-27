@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (Exception e)
                 {
-                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                    if (Database.IsShutdownRequested())
                         Database.ThrowDatabaseShutdown(e);
 
                     throw;

@@ -183,7 +183,10 @@ namespace Raven.Client.Documents.Indexes
         {
             if (ValidCSharpName(name))
             {
-                Out("." + name);
+                if (KeywordsInCSharp.Contains(name))
+                    Out(".@" + name);
+                else
+                    Out("." + name);
             }
             else
             {
@@ -1394,7 +1397,13 @@ namespace Raven.Client.Documents.Indexes
         /// <returns></returns>
         protected override MemberAssignment VisitMemberAssignment(MemberAssignment assignment)
         {
-            Out(assignment.Member.Name);
+            var memberName = assignment.Member.Name;
+            
+            if (KeywordsInCSharp.Contains(memberName))
+                Out("@" + memberName);
+            else
+                Out(memberName);
+            
             Out(" = ");
             var constantExpression = assignment.Expression as ConstantExpression;
             if (constantExpression != null && constantExpression.Value == null)

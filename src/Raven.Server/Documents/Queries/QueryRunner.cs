@@ -493,5 +493,23 @@ namespace Raven.Server.Documents.Queries
                     _queryRunner._currentlyRunningQueries.TryRemove(_queryInfo);
             }
         }
+
+        public static void AssertValidQuery<TQueryResult>(IndexQueryServerSide query, QueryResultServerSide<TQueryResult> result)
+        {
+            if (result.SupportsInclude == false && query.Metadata.Includes != null && query.Metadata.Includes.Length > 0)
+                throw new NotSupportedException("Includes are not supported by this type of query.");
+            
+            if (result.SupportsHighlighting == false && query.Metadata.HasHighlightings)
+                throw new NotSupportedException("Highlighting is not supported by this type of query.");
+            
+            if (query.Metadata.HasHighlightings && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
+                throw new NotSupportedException("Highlighting is not supported by this type of query.");
+
+            if (result.SupportsExplanations == false && query.Metadata.HasExplanations)
+                throw new NotSupportedException("Explanations are not supported by this type of query.");
+
+            if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
+                throw new NotSupportedException("Explanations are not supported by this type of query.");
+        }
     }
 }

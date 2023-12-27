@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Changes
 
         private readonly ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState> _counters = new ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState>();
         private int _immediateConnection;
-        
+
         private readonly TaskCompletionSource<ChangesSupportedFeatures> _supportedFeaturesTcs = new();
         internal Task<ChangesSupportedFeatures> GetSupportedFeaturesAsync() => _supportedFeaturesTcs.Task;
 
@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Changes
             {
                 if (t.Result.TopologyChange == false)
                     return;
-                
+
                 GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
                 await _requestExecutor
                     .UpdateTopologyAsync(
@@ -192,7 +192,7 @@ namespace Raven.Client.Documents.Changes
 
             return taskedObservable;
         }
-        
+
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
@@ -405,7 +405,7 @@ namespace Raven.Client.Documents.Changes
             }
             catch
             {
-               // we are disposing
+                // we are disposing
             }
 
             ConnectionStatusChanged -= OnConnectionStatusChanged;
@@ -546,7 +546,12 @@ namespace Raven.Client.Documents.Changes
                             .ToLower()
                             .ToWebSocketPath(), UriKind.Absolute);
 
-                        await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
+                        using (var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token))
+                        {
+                            timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
+                            await _client.ConnectAsync(_url, timeoutCts.Token).ConfigureAwait(false);
+                        }
+
                         wasConnected = true;
                         Interlocked.Exchange(ref _immediateConnection, 1);
 

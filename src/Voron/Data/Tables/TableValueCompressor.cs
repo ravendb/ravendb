@@ -3,9 +3,11 @@ using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Utils;
@@ -31,6 +33,8 @@ namespace Voron.Data.Tables
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _compressedScope;
         public ByteStringContext<ByteStringMemoryCache>.InternalScope RawScope;
         public bool CompressionTried;
+
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TableValueCompressor>("Compression");
 
         public TableValueCompressor(TableValueBuilder builder)
         {
@@ -215,9 +219,10 @@ namespace Voron.Data.Tables
                         using var compressionDictionary = new ZstdLib.CompressionDictionary(newId, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
 
                         if (ShouldReplaceDictionary(tx, compressionDictionary) == false)
-                        {
                             return;
-                        }
+
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Compression dictionary '{newId}' was replaced in '{table.Name}' table.");
 
                         table.CurrentCompressionDictionaryId = newId;
                         compressionDictionary.ExpectedCompressionRatio = GetCompressionRatio(CompressedBuffer.Length, RawBuffer.Length);
@@ -242,7 +247,15 @@ namespace Voron.Data.Tables
                             // keep it, we can compress data with a dictionary that we rolled back, and end up with data
                             // corruption!!!
                             // ****************************************
-                            llt.Environment.CompressionDictionariesHolder.Remove(newId);
+                            bool removed = llt.Environment.CompressionDictionariesHolder.Remove(newId);
+
+                            if (Logger.IsInfoEnabled == false)
+                                return;
+
+                            Logger.Info(
+                                removed
+                                    ? $"Compression dictionary '{newId}' was removed during rollback in '{table.Name}' table."
+                                    : $"Fail to remove compression dictionary '{newId}' during rollback in '{table.Name}' table.");
                         };
                     }
                 }
@@ -258,11 +271,9 @@ namespace Voron.Data.Tables
 
         private static void RecreateRecoveryDictionaries(IPagerLevelTransactionState obj)
         {
-            if (!(obj is LowLevelTransaction llt) || llt.Committed == false)
-                return; // we can't write on non committed transactions
-
-            if (obj.Environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)
-                return; // no need for in mem mode
+            if (obj is not LowLevelTransaction { Committed: true } ||
+                obj.Environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)
+                return;
 
             lock (obj.Environment.CompressionDictionariesHolder)
             {
@@ -276,84 +287,131 @@ namespace Voron.Data.Tables
                     return; // should never happen
                 }
 
-                int nonceSize = (int)Sodium.crypto_stream_xchacha20_noncebytes();
+                var nonceSize = (int)Sodium.crypto_stream_xchacha20_noncebytes();
                 var subKeyLen = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
-                int macSize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                var macSize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
                 var nonceBuffer = stackalloc byte[nonceSize];
                 var macBuffer = stackalloc byte[macSize];
                 var subKey = stackalloc byte[subKeyLen];
 
-                // for reliability's sake, we keep two copies of the compression
-                // dictionaries
+                // For reliability's sake, we keep two copies of the compression dictionaries
                 for (int i = 0; i < 2; i++)
                 {
-                    var newPath = obj.Environment.Options.BasePath
-                        .Combine(path: $"Dictionary{(i == 0 ? "A" : "B")}" + CompressionRecoveryExtension)
+                    string filename = $"Dictionary{(i == 0 ? "A" : "B")}";
+                    var path = obj.Environment.Options.BasePath
+                        .Combine(path: $"{filename}{CompressionRecoveryExtension}")
                         .FullPath;
 
-                    using var fs = File.Open(newPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
-                    using var zip = new ZipArchive(fs, ZipArchiveMode.Update);
-                    int lastWritten = 0;
-                    if (zip.Entries.Count > 0)
+                    try
                     {
-                        // we try, if not successful, we'll start from scratch
-                        int.TryParse(Path.GetFileNameWithoutExtension(zip.Entries[^1].Name), out lastWritten);
+                        using (var finalFileStream = File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
+                        using (var zip = new ZipArchive(finalFileStream, ZipArchiveMode.Update))
+                        {
+                            int lastWritten = 0;
+
+                            if (zip.Entries.Count > 0)
+                                // Entries were added to the file from storage, which is in chronological order,
+                                // ensuring that the last entry is the most recent.
+                                lastWritten = int.Parse(Path.GetFileNameWithoutExtension(zip.Entries[^1].Name));
+
+                            Debug.Assert(lastWritten <= dictionaries.State.NumberOfEntries,
+                                message: "The number of last written entry in recovery file must be equal to or less than the total number of entries in the state. " +
+                                         "Any deviation from this is a bug.");
+
+                            if (lastWritten == dictionaries.State.NumberOfEntries)
+                                continue;
+
+                            AppendNewDictionaryEntries(lastWritten, zip);
+                        }
                     }
+                    catch (Exception innerEx)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(msg: $"An unexpected error occurred while attempting to read the archive '{path}'. " +
+                                                   $"The file will be recreated from scratch.", innerEx);
+                        try
+                        {
+                            File.Delete(path);
+                            using (var finalFileStream = File.Open(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read))
+                            using (var zip = new ZipArchive(finalFileStream, ZipArchiveMode.Update))
+                                AppendNewDictionaryEntries(lastWritten: 0, zip);
+                        }
+                        catch (Exception e)
+                        {
+                            var aggregateException = new AggregateException(e, innerEx);
 
-                    if (lastWritten == dictionaries.State.NumberOfEntries)
-                        continue;
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.",
+                                    aggregateException);
 
-                    int rev = Bits.SwapBytes(lastWritten);
-                    using var _ = Slice.External(tx.Allocator, (byte*)&rev, sizeof(int), out var key);
+                            throw aggregateException;
+                        }
+                    }
+                }
+
+                return;
+
+                void AppendNewDictionaryEntries(int lastWritten, ZipArchive zip)
+                {
+                    // 1. Compression dictionary numbering starts from 1.
+                    // 2. When appending new dictionaries to existing ones, start with the NEXT number following the existing ones.
+                    int rev = Bits.SwapBytes(lastWritten + 1);
+
+                    using ByteStringContext.ExternalScope _ = Slice.External(tx.Allocator, (byte*)&rev, sizeof(int), out var key);
                     using var it = dictionaries.Iterate(true);
+
                     if (it.Seek(key) == false)
-                        continue;
+                        return;
 
                     do
                     {
                         var dicId = it.CurrentKey.CreateReader().ReadBigEndianInt32();
-                        var entry = zip.CreateEntry(dicId.ToString("D8") + ".dic",
-                            obj.Environment.Options.Encryption.IsEnabled ? CompressionLevel.NoCompression : CompressionLevel.Optimal
-                            );
+                        var entry = zip.CreateEntry($"{dicId:D8}.dic",
+                            obj.Environment.Options.Encryption.IsEnabled ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
+
                         using var stream = entry.Open();
+
                         Span<byte> data = it.CreateReaderForCurrent().AsSpan();
                         if (obj.Environment.Options.Encryption.IsEnabled)
-                        {
-                            Sodium.randombytes_buf(nonceBuffer, Sodium.crypto_stream_xchacha20_noncebytes());
-                            var nonceEntry = zip.CreateEntry(dicId.ToString("D8") + ".nonce", CompressionLevel.NoCompression);
-                            using var nonceStream = nonceEntry.Open();
-                            nonceStream.Write(new ReadOnlySpan<byte>(nonceBuffer, nonceSize));
+                            EncryptDictionary(dicId, data, zip);
 
-                            fixed (byte* pKey = obj.Environment.Options.Encryption.MasterKey)
-                            fixed (byte* d = data)
-                            fixed (byte* ctx = EncryptionContext)
-                            {
-                                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)subKeyLen, (ulong)dicId, ctx, pKey) != 0)
-                                    throw new InvalidOperationException("Unable to generate derived key");
-
-                                ulong macLen = 0;
-                                var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
-                                    d,
-                                    macBuffer,
-                                    &macLen,
-                                    d,
-                                    (ulong)data.Length,
-                                    null,
-                                    0,
-                                    null,
-                                    nonceBuffer,
-                                    subKey);
-                                if (rc != 0)
-                                    throw new InvalidOperationException("Failed to encrypt dictionary");
-
-                                var macEntry = zip.CreateEntry(dicId.ToString("D8") + ".mac", CompressionLevel.NoCompression);
-                                using var macStream = macEntry.Open();
-                                macStream.Write(new ReadOnlySpan<byte>(macBuffer, (int)macLen));
-                            }
-                        }
-
-                        stream.Write(data);
+                        stream.Write(data.ToArray(), 0, data.Length);
                     } while (it.MoveNext());
+                }
+
+                void EncryptDictionary(int dicId, Span<byte> data, ZipArchive zip)
+                {
+                    Sodium.randombytes_buf(nonceBuffer, (UIntPtr)nonceSize);
+                    var nonceEntry = zip.CreateEntry($"{dicId:D8}.nonce", CompressionLevel.NoCompression);
+                    using var nonceStream = nonceEntry.Open();
+                    nonceStream.Write(new ReadOnlySpan<byte>(nonceBuffer, nonceSize));
+
+                    fixed (byte* pKey = obj.Environment.Options.Encryption.MasterKey)
+                    fixed (byte* d = data)
+                    fixed (byte* ctx = EncryptionContext)
+                    {
+                        if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)subKeyLen, (ulong)dicId, ctx, pKey) != 0)
+                            throw new InvalidOperationException("Unable to generate derived key");
+
+                        ulong macLen = 0;
+                        var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+                            d,
+                            macBuffer,
+                            &macLen,
+                            d,
+                            (ulong)data.Length,
+                            null,
+                            0,
+                            null,
+                            nonceBuffer,
+                            subKey);
+                        if (rc != 0)
+                            throw new InvalidOperationException("Failed to encrypt dictionary");
+
+                        var macEntry = zip.CreateEntry($"{dicId:D8}.mac", CompressionLevel.NoCompression);
+                        using var macStream = macEntry.Open();
+                        macStream.Write(new ReadOnlySpan<byte>(macBuffer, (int)macLen));
+                    }
                 }
             }
         }

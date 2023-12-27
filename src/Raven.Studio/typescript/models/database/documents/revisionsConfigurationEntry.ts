@@ -244,7 +244,7 @@ class revisionsConfigurationEntry {
         return new revisionsConfigurationEntry("",
         {
             Disabled: false,
-            MinimumRevisionsToKeep: null,
+            MinimumRevisionsToKeep: 1000,
             MinimumRevisionAgeToKeep: null,
             MaximumRevisionsToDeleteUponDocumentUpdate: null,
             PurgeOnDelete: false

@@ -32,7 +32,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         private readonly string _azureTestsPrefix = $"olap/tests/{nameof(AzureTests)}-{Guid.NewGuid()}";
         private const string CollectionName = "Orders";
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanUploadToAzure()
         {
             var settings = GetAzureSettings();
@@ -108,7 +108,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task SimpleTransformation()
         {
             var settings = GetAzureSettings();
@@ -216,7 +216,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanLoadToMultipleTables()
         {
             const string salesTableName = "Sales";
@@ -400,7 +400,7 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanModifyPartitionColumnName()
         {
             var settings = GetAzureSettings();
@@ -496,7 +496,7 @@ loadToOrders(partitionBy(['order_date', key]),
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task SimpleTransformation_NoPartition()
         {
             var settings = GetAzureSettings();
@@ -606,7 +606,7 @@ loadToOrders(noPartition(),
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task SimpleTransformation_MultiplePartitions()
         {
             var settings = GetAzureSettings();
@@ -744,7 +744,7 @@ loadToOrders(partitionBy(
             }
         }
 
-        [AzureFact]
+        [AzureRetryFact]
         public async Task CanUseCustomPrefix()
         {
             var settings = GetAzureSettings();
@@ -857,7 +857,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
         private AzureSettings GetAzureSettings([CallerMemberName] string caller = null)
         {
-            var settings = AzureFactAttribute.AzureSettings;
+            var settings = AzureRetryFactAttribute.AzureSettings;
             if (settings == null)
                 return null;
 

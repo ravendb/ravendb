@@ -137,7 +137,7 @@ namespace Raven.Server.Web.System
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     ServerStore.ForTestingPurposes?.ModifyCompareExchangeTimeout?.Invoke(command);
-                    (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
+                    (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
 
                     var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
@@ -167,7 +167,7 @@ namespace Raven.Server.Web.System
                 var command = new RemoveCompareExchangeCommand(Database.Name, key, index, context, raftRequestId);
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
+                    (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
 
                     var result = (CompareExchangeCommandBase.CompareExchangeResult)response;

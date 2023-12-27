@@ -110,20 +110,39 @@ namespace SlowTests.Issues
         public async Task DisableAutoMapReduceIndexClusterWideAndEnableAutoMapReduceIndexClusterWide()
         {
             const int numberOfNodes = 3;
-            var (_, leader) = await CreateRaftCluster(numberOfNodes);
+            var (nodes, leader) = await CreateRaftCluster(numberOfNodes);
             using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = numberOfNodes });
             var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
             Raven.Server.Documents.Indexes.Index index = await CreateAutoMapReduceIndex(documentDatabase);
 
             await DisableIndexClusterWide(store, index.Name);
+            foreach (var server in nodes)
+            {
+                await WaitForValueAsync(async () =>
+                {
+                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    return documentDatabase.IndexStore.GetIndex(index.Name).Status;
+                }, IndexRunningStatus.Disabled);
+                var autoIndex = documentDatabase.IndexStore.GetIndex(index.Name);
+                Assert.Equal(IndexState.Disabled, autoIndex.State);
+                Assert.Equal(IndexRunningStatus.Disabled, autoIndex.Status);
+            }
 
             //Enable index cluster wide
             await EnableIndexClusterWide(store, index.Name);
 
-            var autoIndex = documentDatabase.IndexStore.GetIndex(index.Name);
-            Assert.Equal(IndexState.Normal, autoIndex.State);
-            Assert.Equal(IndexRunningStatus.Running, autoIndex.Status);
+            foreach (var server in nodes)
+            {
+                await WaitForValueAsync(async () =>
+                {
+                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    return documentDatabase.IndexStore.GetIndex(index.Name).Status;
+                }, IndexRunningStatus.Running);
+                var autoIndex = documentDatabase.IndexStore.GetIndex(index.Name);
+                Assert.Equal(IndexState.Normal, autoIndex.State);
+                Assert.Equal(IndexRunningStatus.Running, autoIndex.Status);
+            }
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
@@ -353,7 +372,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes)]
         public async Task DisableAutoMapIndexClusterWideAndEnableLocally()
         {
-            var (_, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
 
@@ -369,6 +388,17 @@ namespace SlowTests.Issues
                 await CheckIndexStateInTheCluster(database, index[0].Name, IndexState.Normal);
 
                 await DisableIndexClusterWide(store, index[0].Name);
+
+                foreach (var server in nodes)
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        return documentDatabase.IndexStore.GetIndex(index[0].Name).State;
+                    }, IndexState.Disabled);
+                    var autoIndex = documentDatabase.IndexStore.GetIndex(index[0].Name);
+                    Assert.Equal(IndexState.Disabled, autoIndex.State);
+                }
 
                 documentDatabase = await Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 var index0 = documentDatabase.IndexStore.GetIndex(index[0].Name);

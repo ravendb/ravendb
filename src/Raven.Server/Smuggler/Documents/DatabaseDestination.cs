@@ -27,6 +27,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -147,7 +148,7 @@ namespace Raven.Server.Smuggler.Documents
             return new CounterActions(_database, result);
         }
 
-        public ISubscriptionActions Subscriptions()
+        public virtual ISubscriptionActions Subscriptions()
         {
             return new SubscriptionActions(_database);
         }
@@ -550,7 +551,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     _command = new MergedBatchPutCommand(_database, _buildType, _log,
-                        _missingDocumentsForRevisions, _documentIdsOfMissingAttachments) { IsRevision = _isRevision, };
+                        _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
+                    { IsRevision = _isRevision, };
 
                     if (_throwOnCollectionMismatchError == false)
                         _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
@@ -759,7 +761,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_compareExchangeAddOrUpdateCommands.Count == 0)
                     return;
 
-                var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(context, new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
+                var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, RaftIdGenerator.DontCareId));
                 foreach (var command in _compareExchangeAddOrUpdateCommands)
                 {
                     command.Value.Dispose();
@@ -773,7 +775,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_compareExchangeRemoveCommands.Count == 0)
                     return;
-                var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(context, new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId));
+                var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, RaftIdGenerator.DontCareId));
                 _compareExchangeRemoveCommands.Clear();
 
                 _lastAddOrUpdateOrRemoveResultIndex = addOrUpdateResult.Index;
@@ -1381,7 +1383,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring Indexes History configuration from smuggler");
-                    
+
                     foreach (var newIndexHistory in databaseRecord.IndexesHistory)
                     {
                         if (currentDatabaseRecord.IndexesHistory.ContainsKey(newIndexHistory.Key))
@@ -1401,12 +1403,27 @@ namespace Raven.Server.Smuggler.Documents
                 long maxIndex = 0;
                 foreach (var task in tasks)
                 {
-                    var (index, _) = await task;
+                    (long index, _) = await task;
                     if (index > maxIndex)
                         maxIndex = index;
                 }
 
-                await _database.RachisLogIndexNotifications.WaitForIndexNotification(maxIndex, _database.ServerStore.Engine.OperationTimeout);
+                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    List<string> members;
+
+                    using (context.OpenReadTransaction())
+                        members = _database.ServerStore.Cluster.ReadDatabaseTopology(context, _database.Name).Members;
+
+                    try
+                    {
+                        await _database.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, maxIndex);
+                    }
+                    catch (RaftIndexWaitAggregateException e)
+                    {
+                        throw new InvalidDataException("Respective tasks were dispatched, however, we couldn't achieve consistency across one or more target nodes due to errors.", e);
+                    }
+                }
 
                 tasks.Clear();
             }
@@ -1896,7 +1913,7 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove,  null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                         }
 
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -2174,14 +2191,14 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class SubscriptionActions : ISubscriptionActions
+        protected class SubscriptionActions : ISubscriptionActions
         {
-            private readonly DocumentDatabase _database;
+            protected readonly DocumentDatabase Database;
             private readonly List<PutSubscriptionCommand> _subscriptionCommands = new List<PutSubscriptionCommand>();
 
             public SubscriptionActions(DocumentDatabase database)
             {
-                _database = database;
+                Database = database;
             }
 
             public async ValueTask DisposeAsync()
@@ -2192,16 +2209,22 @@ namespace Raven.Server.Smuggler.Documents
                 await SendCommandsAsync();
             }
 
-            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
+            protected virtual PutSubscriptionCommand CreatePutSubscriptionCommand(SubscriptionState subscriptionState)
             {
-                const int batchSize = 1024;
-
-                _subscriptionCommands.Add(new PutSubscriptionCommand(_database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
+                var command = new PutSubscriptionCommand(Database.Name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
                     SubscriptionName = subscriptionState.SubscriptionName,
                     //After restore/export , subscription will start from the start
                     InitialChangeVector = null
-                });
+                };
+                return command;
+            }
+
+            public async ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState)
+            {
+                const int batchSize = 1024;
+
+                _subscriptionCommands.Add(CreatePutSubscriptionCommand(subscriptionState));
 
                 if (_subscriptionCommands.Count < batchSize)
                     return;
@@ -2211,7 +2234,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private async ValueTask SendCommandsAsync()
             {
-                await _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands, RaftIdGenerator.DontCareId));
+                await Database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands, RaftIdGenerator.DontCareId));
                 _subscriptionCommands.Clear();
             }
         }
@@ -2318,7 +2341,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _cmd.AddToReturn(data);
             }
-            
+
             private async ValueTask HandleBatchOfTimeSeriesIfNecessaryAsync()
             {
                 if (_segmentsSize < _maxBatchSize)

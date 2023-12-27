@@ -130,7 +130,9 @@ class databaseIDs extends viewModelBase {
     }
 
     addInputToUnusedList() {
-        this.addWithBlink(this.inputDatabaseId());
+        const databaseId = this.inputDatabaseId().trim();
+        this.addWithBlink(databaseId);
+        this.inputDatabaseId("");
     }
     
     addToUnusedList(cvEntry: string) {

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -433,7 +434,7 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
-
+        private readonly bool _ignoreMaxStepsForScript;
         public PatchResult PatchResult { get; private set; }
 
         public PatchDocumentCommand(
@@ -448,11 +449,12 @@ namespace Raven.Server.Documents.Patch
             bool isTest,
             bool debugMode,
             bool collectResultsNeeded,
-            bool returnDocument) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, database, isTest, debugMode, collectResultsNeeded, returnDocument)
+            bool returnDocument,
+            bool ignoreMaxStepsForScript = false) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, database, isTest, debugMode, collectResultsNeeded, returnDocument)
         {
             _id = id;
             _expectedChangeVector = expectedChangeVector;
-
+            _ignoreMaxStepsForScript = ignoreMaxStepsForScript;
             if (string.IsNullOrEmpty(id) || id.EndsWith(database.IdentityPartsSeparator) || id.EndsWith('|'))
                 throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
         }
@@ -462,10 +464,16 @@ namespace Raven.Server.Documents.Patch
             ScriptRunner.SingleRun runIfMissing = null;
 
             using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
-            using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
             {
-                PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
-                return 1;
+                using (_ignoreMaxStepsForScript ? run.ScriptEngine.DisableMaxStatements() : null)
+                {
+                    using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
+                    {
+
+                        PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
+                        return 1;
+                    }
+                }
             }
         }
 

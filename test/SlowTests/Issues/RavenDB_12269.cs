@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -79,8 +81,20 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
 
                     // this will ensure that index isn't in error state
-                    var count = await session.Query<User>("Users_ByName").Customize(x => x.WaitForNonStaleResults()).CountAsync();
-                    Assert.Equal(3, count);
+                    try
+                    {
+                        var count = await session.Query<User>("Users_ByName").Customize(x => x.WaitForNonStaleResults()).CountAsync();
+                        Assert.Equal(3, count);
+                    }
+                    catch (TimeoutException e)
+                    {
+                        var errors = Indexes.WaitForIndexingErrors(store, new[] {"Users_ByName"}, errorsShouldExists: true);
+
+                        if (errors != null && errors.Length > 0 && errors[0].Errors.Length > 0)
+                            throw new AggregateException($"Got the following index errors: {(string.Join(',', errors[0].Errors.SelectMany(x => x.Error)))}", e);
+
+                        throw;
+                    }
                 }
             }
         }

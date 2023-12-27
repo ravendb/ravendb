@@ -1569,7 +1569,7 @@ namespace SlowTests.Client.Attachments
                 }
 
                 var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: toRemove, timeToWaitForConfirmation: TimeSpan.FromSeconds(60)));
-                await mainServer.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex + 1);
+                await mainServer.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex);
 
                 using (var session = temp.OpenAsyncSession())
                 {

@@ -1,9 +1,11 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using CloudNative.CloudEvents;
 using Jint;
 using Jint.Native;
+using Jint.Native.Date;
 using Jint.Native.Object;
+using Jint.Runtime.Descriptors;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Stats;
@@ -86,37 +88,105 @@ where TSelf : QueueItem
     {
         var cloudEventAttributes = new CloudEventAttributes();
 
-        attributes.GetOwnPropertyKeys().ForEach(x =>
+        foreach (var property in attributes.GetOwnProperties())
         {
-            if (CloudEventAttributes.ValidAttributeNames.Contains(x.ToString()) == false)
-                throw new InvalidOperationException($"Unknown attribute passed to loadTo(..., {{ {x}: ... }}). '{x}' is not a valid attribute name (note: field names are case sensitive)");
+            var attributeName = property.Key.ToString();
+            var attributeValue = property.Value;
 
-            if (TryGetOptionValue(nameof(CloudEventAttributes.Id), out var messageId))
-                cloudEventAttributes.Id = messageId;
+            if (CloudEventAttributes.ValidAttributeNames.Contains(attributeName) == false)
+                throw new InvalidOperationException(@$"Unknown attribute passed to loadTo(..., {{ {attributeName}: ... }}). '{attributeName}' is not a valid attribute name");
 
-            if (TryGetOptionValue(nameof(CloudEventAttributes.Type), out var type))
-                cloudEventAttributes.Type = type;
+            if (attributeName is nameof(CloudEventAttributes.Time) || attributeName == CloudEventsSpecVersion.V1_0.TimeAttribute.Name)
+            {
+                if (TryGetDateAttributeValue(attributeValue, out var time))
+                {
+                    CloudEventsSpecVersion.V1_0.TimeAttribute.Validate(time);
+                    cloudEventAttributes.Time = time;
+                }
+            }
+            else
+            {
+                if (TryGetStringAttributeValue(attributeValue, out string value) == false)
+                    continue;
 
-            if (TryGetOptionValue(nameof(CloudEventAttributes.Source), out var source))
-                cloudEventAttributes.Source = source;
-
-            if (TryGetOptionValue(nameof(CloudEventAttributes.PartitionKey), out var partitionKey))
-                cloudEventAttributes.PartitionKey = partitionKey;
-        });
+                if (attributeName is nameof(CloudEventAttributes.Id) || attributeName == CloudEventsSpecVersion.V1_0.IdAttribute.Name)
+                {
+                    CloudEventsSpecVersion.V1_0.IdAttribute.Validate(value);
+                    cloudEventAttributes.Id = value;
+                }
+                else if (attributeName is nameof(CloudEventAttributes.Type) || attributeName == CloudEventsSpecVersion.V1_0.TypeAttribute.Name)
+                {
+                    CloudEventsSpecVersion.V1_0.TypeAttribute.Validate(value);
+                    cloudEventAttributes.Type = value;
+                }
+                else if (attributeName is nameof(CloudEventAttributes.PartitionKey) || attributeName == CloudEventAttributes.PartitionKeyLowercased)
+                {
+                    cloudEventAttributes.PartitionKey = value;
+                }
+                else if (attributeName is nameof(CloudEventAttributes.Source) || attributeName == CloudEventsSpecVersion.V1_0.SourceAttribute.Name)
+                {
+                    var sourceUri = new Uri(value, UriKind.RelativeOrAbsolute);
+                    CloudEventsSpecVersion.V1_0.SourceAttribute.Validate(sourceUri);
+                    cloudEventAttributes.Source = sourceUri;
+                }
+                else if (attributeName is nameof(CloudEventAttributes.DataSchema) || attributeName == CloudEventsSpecVersion.V1_0.DataSchemaAttribute.Name)
+                {
+                    var dataSchemaUri = new Uri(value, UriKind.RelativeOrAbsolute);
+                    CloudEventsSpecVersion.V1_0.DataSchemaAttribute.Validate(dataSchemaUri);
+                    cloudEventAttributes.DataSchema = dataSchemaUri;
+                }
+                else if (attributeName is nameof(CloudEventAttributes.Subject) || attributeName == CloudEventsSpecVersion.V1_0.SubjectAttribute.Name)
+                {
+                    CloudEventsSpecVersion.V1_0.SubjectAttribute.Validate(value);
+                    cloudEventAttributes.Subject = value;
+                }
+            }
+        }
 
         return cloudEventAttributes;
 
-        bool TryGetOptionValue(string optionName, out string value)
+        bool TryGetStringAttributeValue(PropertyDescriptor attributeValue, out string value)
         {
-            var optionValue = attributes.GetOwnProperty(optionName).Value;
+            var optionValue = attributeValue.Value;
 
             if (optionValue != null && optionValue.IsNull() == false && optionValue.IsUndefined() == false)
             {
-                value = optionValue.AsString();
-                return true;
+                if (optionValue.IsString())
+                {
+                    value = optionValue.AsString();
+                    return true;
+                }
             }
 
             value = null;
+            return false;
+        }
+
+        bool TryGetDateAttributeValue(PropertyDescriptor attributeValue, out DateTimeOffset value)
+        {
+            var optionValue = attributeValue.Value;
+
+            if (optionValue != null && optionValue.IsNull() == false && optionValue.IsUndefined() == false)
+            {
+                if (optionValue.IsString())
+                {
+                    if (DateTimeOffset.TryParse(optionValue.AsString(), out var dateTimeOffset) == false)
+                        throw new ArgumentException($"Invalid format of date attribute: {optionValue.AsString()}");
+
+                    value = dateTimeOffset;
+                    return true;
+
+                }
+                if (optionValue.IsDate())
+                {
+                    DateInstance dateInstance = optionValue.AsDate();
+                    value = dateInstance.ToDateTime();
+
+                    return true;
+                }
+            }
+
+            value = default;
             return false;
         }
     }

@@ -19,12 +19,14 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            if (record.Topology.Promotables.Contains(NodeTag) == false)
+            if (record.Topology.Promotables.Contains(NodeTag) == false &&
+                record.Topology.Rehabs.Contains(NodeTag) == false)
                 return ;
 
             record.Topology.PromotablesStatus.Remove(NodeTag);
             record.Topology.DemotionReasons.Remove(NodeTag);
             record.Topology.Promotables.Remove(NodeTag);
+            record.Topology.Rehabs.Remove(NodeTag);
             record.Topology.Members.Add(NodeTag);
         }
 

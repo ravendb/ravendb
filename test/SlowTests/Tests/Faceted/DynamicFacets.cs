@@ -43,11 +43,15 @@ namespace SlowTests.Tests.Faceted
                     foreach (var exp in expressions)
                     {
                         var facetResults = s.Query<Camera, CameraCostIndex>()
+                            .Statistics(out var stats)
                             .Where(exp)
                             .AggregateBy(facets)
                             .Execute();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
+
+                        Assert.Equal(3, stats.TotalResults);
+                        Assert.Equal(stats.TotalResults, stats.LongTotalResults);
 
                         CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
                     }

@@ -63,7 +63,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [MultiTheory(typeof(NightlyBuildTheoryAttribute), typeof(AzureTheoryAttribute))]
+        [MultiTheory(typeof(NightlyBuildTheoryAttribute), typeof(AzureRetryTheoryAttribute))]
         [InlineData(20, 5, false)]
         [InlineData(20, 20, false)]
         [InlineData(25, 10, false)]

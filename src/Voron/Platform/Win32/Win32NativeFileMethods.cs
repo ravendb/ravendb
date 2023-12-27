@@ -145,6 +145,8 @@ namespace Voron.Platform.Win32
         ERROR_FILE_NOT_FOUND = 0x2,
         ERROR_DISK_FULL = 0x70,
         ERROR_NOT_READY = 0x15,
+        ERROR_SHARING_VIOLATION = 0x20, // The process cannot access the file because it is being used by another process
+        ERROR_LOCK_VIOLATION = 0x20, // The process cannot access the file because another process has locked a portion of the file
         ERROR_HANDLE_DISK_FULL = 0x27
     }
 

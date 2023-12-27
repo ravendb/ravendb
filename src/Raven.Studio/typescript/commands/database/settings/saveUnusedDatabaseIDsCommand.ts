@@ -9,7 +9,8 @@ class saveUnusedDatabaseIDsCommand extends commandBase {
 
     execute(): JQueryPromise<void> {
         const args = {
-            name: this.dbName
+            name: this.dbName,
+            validate: true
         }
 
         const url = endpoints.global.adminDatabases.adminDatabasesUnusedIds + this.urlEncodeArgs(args);

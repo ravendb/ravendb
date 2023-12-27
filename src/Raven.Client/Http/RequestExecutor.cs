@@ -70,8 +70,7 @@ namespace Raven.Client.Http
         private readonly string _databaseName;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
-        private DateTime _lastReturnedResponse;
-
+        
         public readonly JsonContextPool ContextPool;
 
         public readonly AsyncLocal<AggressiveCacheOptions> AggressiveCaching = new AsyncLocal<AggressiveCacheOptions>();
@@ -102,7 +101,7 @@ namespace Raven.Client.Http
 
         private Timer _updateTopologyTimer;
 
-        protected NodeSelector _nodeSelector;
+        protected internal NodeSelector _nodeSelector;
 
         private TimeSpan? _defaultTimeout;
 
@@ -326,9 +325,7 @@ namespace Raven.Client.Http
 
             _databaseName = databaseName;
             Certificate = certificate;
-
-            _lastReturnedResponse = DateTime.UtcNow;
-
+            
             Conventions = conventions.Clone();
 
             var maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
@@ -540,7 +537,7 @@ namespace Raven.Client.Http
             else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate))
             {
                 DisposeAllFailedNodesTimers();
-                if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode && _nodeSelector.InSpeedTestPhase)
                 {
                     _nodeSelector.ScheduleSpeedTest();
                 }
@@ -674,40 +671,29 @@ namespace Raven.Client.Http
             }
         }
 
-        private void UpdateTopologyCallback(object _)
+        internal async void UpdateTopologyCallback(object _)
         {
-            var time = DateTime.UtcNow;
-            if (time - _lastReturnedResponse <= TimeSpan.FromMinutes(5))
+            var selector = _nodeSelector;
+            if (selector == null || selector.Topology == null)
                 return;
-
-            ServerNode serverNode;
-
-            try
-            {
-                var selector = _nodeSelector;
-                if (selector == null)
-                    return;
-                var preferredNode = selector.GetPreferredNode();
-                serverNode = preferredNode.Node;
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Couldn't get preferred node Topology from _updateTopologyTimer task", e);
-                return;
-            }
-            GC.KeepAlive(Task.Run(async () =>
+            
+            // Fetch topologies from all nodes, the executor's topology will be updated to the most recent one
+            foreach (var serverNode in selector.Topology.Nodes)
             {
                 try
                 {
-                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, DebugTag = "timer-callback" }).ConfigureAwait(false);
+                    if(serverNode.ServerRole != ServerNode.Role.Member)
+                        continue;
+
+                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) {TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}"})
+                        .ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info("Couldn't Update Topology from _updateTopologyTimer task", e);
+                        Logger.Info($"Couldn't Update Topology from _updateTopologyTimer task when fetching from node {serverNode.ClusterTag}", e);
                 }
-            }));
+            }
         }
 
         protected async Task SingleTopologyUpdateAsync(string[] initialUrls, Guid? applicationIdentifier = null)
@@ -995,7 +981,6 @@ namespace Raven.Client.Http
 
                     OnSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
-                    _lastReturnedResponse = DateTime.UtcNow;
                 }
                 finally
                 {

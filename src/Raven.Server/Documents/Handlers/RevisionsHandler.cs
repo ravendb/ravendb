@@ -157,6 +157,27 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/admin/revisions/orphaned/adopt", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task AdoptOrphans()
+        {
+            var token = CreateTimeLimitedBackgroundOperationToken();
+            var operationId = ServerStore.Operations.GetNextOperationId();
+
+            var t = Database.Operations.AddOperation(
+                Database,
+                $"Adopting orphaned revisions in database '{Database.Name}'.",
+                Operations.Operations.OperationType.AdoptOrphanedRevisions,
+                onProgress => Database.DocumentsStorage.RevisionsStorage.AdoptOrphanedAsync(onProgress, token),
+                operationId,
+                token: token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+            }
+        }
+
         [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsCountFor()
         {
@@ -401,23 +422,27 @@ namespace Raven.Server.Documents.Handlers
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
 
             var sw = Stopwatch.StartNew();
-            var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
+            var etag = GetLongQueryString("etag", false) ?? 0;
             var pageSize = GetPageSize();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out var actualChangeVector);
+                string match = null;
+                revisionsStorage.GetLatestRevisionsBinEntry(context, out var actualChangeVector);
+                
                 if (actualChangeVector != null)
                 {
-                    if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == actualChangeVector)
+                    var countRevs = revisionsStorage.GetNumberOfRevisionDocuments(context);
+                    match = $"{actualChangeVector}/{countRevs}";
+                    if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == match)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                         return;
                     }
-
-                    HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
                 }
+
+                HttpContext.Response.Headers["ETag"] = "\"" + match + "\"";
 
                 long count;
                 long totalDocumentsSizeInBytes;

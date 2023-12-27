@@ -11,6 +11,7 @@ class googleCloudSettings extends backupSettings {
     bucket = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
     googleCredentialsJson = ko.observable<string>();
+    credentialsVisible = ko.observable<boolean>(true);
 
     targetOperation: string;
     
@@ -20,10 +21,13 @@ class googleCloudSettings extends backupSettings {
         this.bucket(dto.BucketName);
         this.remoteFolderName(dto.RemoteFolderName || "");
         this.googleCredentialsJson(dto.GoogleCredentialsJson);
+        this.credentialsVisible(!dto.GoogleCredentialsJson);
 
         this.targetOperation = targetOperation;
         
         this.initValidation();
+        
+        _.bindAll(this, "toggleCredentials");
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.enabled,
@@ -32,6 +36,10 @@ class googleCloudSettings extends backupSettings {
             this.googleCredentialsJson,
             this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
+    }
+
+    toggleCredentials() {
+        this.credentialsVisible.toggle();
     }
 
     compositionComplete(view: Element, container: HTMLElement) {

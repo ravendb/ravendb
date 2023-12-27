@@ -92,9 +92,9 @@ function get_installation_type { # returns IS_UPSTART, IS_SYSTEMD
             ANS=''
         fi
 
-        if [ "${ANS}" == "u"] || [ "${ANS}" == "U" ]; then
+        if [ "${ANS}" == "u" ] || [ "${ANS}" == "U" ]; then
             IS_UPSTART=1
-        elif [ "${ANS}" == "s"] || [ "${ANS}" == "S" ]; then
+        elif [ "${ANS}" == "s" ] || [ "${ANS}" == "S" ]; then
             IS_SYSTEMD=1
         else
             echo -e "${ERR_STRING}Could not determine type of installation.${NC}"
@@ -139,7 +139,7 @@ LimitMEMLOCK=infinity
 TasksMax=infinity
 StartLimitBurst=0
 Restart=on-failure
-Type=simple
+Type=exec
 TimeoutStopSec=300
 User=USER
 ExecStart=RAVENDB_DIR/run.sh

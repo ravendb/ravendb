@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return pathResult;
         }
 
-        public static void AssertBackupConfiguration(PeriodicBackupConfiguration configuration)
+        public static void AssertBackupConfiguration(PeriodicBackupConfiguration configuration, Config.Categories.BackupConfiguration localConfiguration)
         {
             if (VerifyBackupFrequency(configuration.FullBackupFrequency) == null &&
                 VerifyBackupFrequency(configuration.IncrementalBackupFrequency) == null)
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             AssertBackupConfigurationInternal(configuration);
-            AssertDirectUpload(configuration);
+            AssertDirectUpload(configuration, localConfiguration);
 
             var retentionPolicy = configuration.RetentionPolicy;
             if (retentionPolicy != null && retentionPolicy.Disabled == false)
@@ -129,16 +129,16 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private static void AssertDirectUpload(PeriodicBackupConfiguration configuration)
+        private static void AssertDirectUpload(PeriodicBackupConfiguration configuration, Config.Categories.BackupConfiguration localConfiguration)
         {
             if (configuration.BackupUploadMode != BackupUploadMode.DirectUpload)
                 return;
 
             var backupToLocalFolder = BackupConfiguration.CanBackupUsing(configuration.LocalSettings);
-            GetBackupDestinationForDirectUpload(backupToLocalFolder, configuration); // will throw if destination isn't set correctly
+            GetBackupDestinationForDirectUpload(backupToLocalFolder, configuration, localConfiguration); // will throw if destination isn't set correctly
         }
 
-        internal static BackupConfiguration.BackupDestination GetBackupDestinationForDirectUpload(bool backupToLocalFolder, BackupConfiguration configuration)
+        internal static BackupConfiguration.BackupDestination GetBackupDestinationForDirectUpload(bool backupToLocalFolder, BackupConfiguration configuration, Config.Categories.BackupConfiguration localConfiguration)
         {
             if (backupToLocalFolder)
             {
@@ -159,6 +159,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (hasAws)
                 return BackupConfiguration.BackupDestination.AmazonS3;
+
+            if (hasAzure)
+            {
+                if (localConfiguration.AzureLegacy)
+                    throw new NotSupportedException("Direct upload for Azure Legacy client isn't supported.");
+
+                return BackupConfiguration.BackupDestination.Azure;
+            }
 
             throw new NotSupportedException("No supported backup destination for direct upload was set.");
         }

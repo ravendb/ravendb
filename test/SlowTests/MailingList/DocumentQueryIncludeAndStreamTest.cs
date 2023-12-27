@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,7 +68,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void StreamDocumentQueryWithInclude()
         {
             var store = GetDocumentStore();
@@ -89,7 +90,30 @@ namespace SlowTests.MailingList
                         }
                     }
                 }).InnerException;
-                Assert.Contains("Includes are not supported by this type of query", notSupportedException.Message);
+                Assert.Contains("Includes are not supported by this type of query.", notSupportedException.Message);
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.Querying)]
+        public void StreamDocumentCollectionQueryWithInclude()
+        {
+            var store = GetDocumentStore();
+            Setup(store);
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include StepExecutionsId");
+                var notSupportedException = Assert.Throws<RavenException>(() =>
+                {
+                    using (var stream = session.Advanced.Stream(query))
+                    {
+                        while (stream.MoveNext())
+                        {
+
+                        }
+                    }
+                });
+                Assert.Contains("Includes are not supported by this type of query.", notSupportedException.Message);
             }
         }
 
