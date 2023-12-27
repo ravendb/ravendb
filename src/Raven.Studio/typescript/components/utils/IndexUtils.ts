@@ -12,6 +12,7 @@ export default class IndexUtils {
     static readonly DefaultIndexGroupName = "Other";
     static readonly AutoIndexPrefix = "Auto/";
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
+    static readonly ReferenceCollectionExtension = "/References";
 
     static readonly FieldsToHideOnUi = ["_", "__"];
 
@@ -36,6 +37,19 @@ export default class IndexUtils {
                 return "Locked (error)";
             case "Unlock":
                 return "Unlock";
+            default:
+                assertUnreachable(lockMode);
+        }
+    }
+
+    static getLockIcon(lockMode: IndexLockMode): IconName {
+        switch (lockMode) {
+            case "Unlock":
+                return "unlock";
+            case "LockedError":
+                return "lock-error";
+            case "LockedIgnore":
+                return "lock";
             default:
                 assertUnreachable(lockMode);
         }

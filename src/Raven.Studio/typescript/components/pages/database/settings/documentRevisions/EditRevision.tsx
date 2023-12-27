@@ -28,6 +28,7 @@ import moment from "moment";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
+const minimumRevisionsToKeepDefaultValue = 1000;
 
 export type EditRevisionConfigType = "collectionSpecific" | keyof typeof documentRevisionsConfigNames;
 export type EditRevisionTaskType = "edit" | "new";
@@ -45,6 +46,9 @@ export default function EditRevision(props: EditRevisionProps) {
 
     const isForNewCollection: boolean = configType === "collectionSpecific" && taskType === "new";
 
+    const revisionsToKeepLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsToKeep"));
+    const revisionsAgeInDaysLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionAgeToKeepInDays"));
+
     const originalConfig = useAppSelector(documentRevisionsSelectors.originalConfig(config?.Name));
     const collectionConfigsNames = useAppSelector(documentRevisionsSelectors.allConfigsNames);
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
@@ -61,7 +65,7 @@ export default function EditRevision(props: EditRevisionProps) {
             ? documentRevisionsCollectionConfigYupResolver
             : documentRevisionsConfigYupResolver,
         mode: "all",
-        defaultValues: getInitialValues(config),
+        defaultValues: getInitialValues(config, revisionsToKeepLimit),
     });
 
     const formValues = useEditRevisionFormController(control, setValue);
@@ -76,11 +80,14 @@ export default function EditRevision(props: EditRevisionProps) {
         ? generalUtils.formatTimeSpan(formValues.minimumRevisionAgeToKeep * 1000, true)
         : null;
 
-    const isRevisionsToKeepLimitWarning =
+    const isRevisionsToKeepLimitTooLowWarning =
         originalConfig?.MinimumRevisionsToKeep != null &&
         formValues.minimumRevisionsToKeep != null &&
         !formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
         originalConfig.MinimumRevisionsToKeep - formValues.minimumRevisionsToKeep > revisionsDelta;
+
+    const isRevisionsToKeepLimitNotSetWarning =
+        !formValues.isMinimumRevisionsToKeepEnabled || !formValues.minimumRevisionsToKeep;
 
     const isRevisionsToKeepByAgeLimitWarning =
         originalConfig?.MinimumRevisionAgeToKeep != null &&
@@ -88,9 +95,6 @@ export default function EditRevision(props: EditRevisionProps) {
         !formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled &&
         genUtils.timeSpanToSeconds(originalConfig.MinimumRevisionAgeToKeep) - formValues.minimumRevisionAgeToKeep >
             revisionsByAgeDelta;
-
-    const revisionsToKeepLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsToKeep"));
-    const revisionsAgeInDaysLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionAgeToKeepInDays"));
 
     const isDefaultConflicts = config?.Name === documentRevisionsConfigNames.defaultConflicts;
 
@@ -104,7 +108,7 @@ export default function EditRevision(props: EditRevisionProps) {
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info" centered>
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-                <ModalBody className="vstack gap-2">
+                <ModalBody className="vstack gap-3">
                     <h4>{getTitle(taskType, configType)}</h4>
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
@@ -138,7 +142,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                     name="minimumRevisionsToKeep"
                                     placeholder="Enter number of revisions to keep"
                                 />
-                                {isRevisionsToKeepLimitWarning && <LimitWarning limit={revisionsDelta} />}
+                                {isRevisionsToKeepLimitTooLowWarning && <LimitTooLowWarning limit={revisionsDelta} />}
                             </InputGroup>
                             {!isDefaultConflicts &&
                             revisionsToKeepLimit > 0 &&
@@ -170,7 +174,9 @@ export default function EditRevision(props: EditRevisionProps) {
                                 </Alert>
                             ) : null}
                             {isRevisionsToKeepByAgeLimitWarning && (
-                                <LimitWarning limit={generalUtils.formatTimeSpan(revisionsByAgeDelta * 1000, true)} />
+                                <LimitTooLowWarning
+                                    limit={generalUtils.formatTimeSpan(revisionsByAgeDelta * 1000, true)}
+                                />
                             )}
                         </InputGroup>
                     )}
@@ -191,8 +197,8 @@ export default function EditRevision(props: EditRevisionProps) {
                             )}
                         </>
                     )}
-
-                    <Alert color="info" className="mt-3">
+                    {isRevisionsToKeepLimitNotSetWarning && <LimitNotSetWarning />}
+                    <Alert color="info" className="mt-2">
                         <ul className="m-0 ps-2 vstack gap-1">
                             <li>
                                 A revision will be created anytime a document is modified
@@ -263,16 +269,36 @@ export default function EditRevision(props: EditRevisionProps) {
     );
 }
 
-interface LimitWarningProps {
+interface LimitTooLowWarningProps {
     limit: number | string;
 }
 
-function LimitWarning({ limit }: LimitWarningProps) {
+function LimitTooLowWarning({ limit }: LimitTooLowWarningProps) {
     return (
-        <Alert color="warning" className="mt-1">
-            The new limit is much lower than the current value (delta &gt; {limit}).
-            <br />
-            It is advised to set the # of revisions to delete upon document update.
+        <Alert color="warning" className="d-flex mt-1">
+            <div>
+                <Icon icon="warning" />
+            </div>
+            <div>
+                The new limit is much lower than the current value (delta &gt; {limit}).
+                <br />
+                It is advised to set the # of revisions to delete upon document update.
+            </div>
+        </Alert>
+    );
+}
+
+function LimitNotSetWarning() {
+    return (
+        <Alert color="warning" className="d-flex mt-1">
+            <div>
+                <Icon icon="warning" />
+            </div>
+            <div>
+                No limit has been set on the number of revisions to keep.
+                <br />
+                An excessive number of revisions will lead to increased storage usage and may affect system performance.
+            </div>
         </Alert>
     );
 }
@@ -308,16 +334,24 @@ function getTitle(taskType: EditRevisionTaskType, configType: EditRevisionConfig
     return `${_.startCase(taskType)} ${suffix}`;
 }
 
-function getInitialValues(config: DocumentRevisionsConfig): EditDocumentRevisionsCollectionConfig {
+function getInitialValues(
+    config: DocumentRevisionsConfig,
+    licenseRevisionsToKeepLimit: number
+): EditDocumentRevisionsCollectionConfig {
     if (!config) {
+        const minimumRevisionsToKeep =
+            licenseRevisionsToKeepLimit && licenseRevisionsToKeepLimit < minimumRevisionsToKeepDefaultValue
+                ? licenseRevisionsToKeepLimit
+                : minimumRevisionsToKeepDefaultValue;
+
         return {
             disabled: false,
             collectionName: null,
             isPurgeOnDeleteEnabled: false,
             isMinimumRevisionAgeToKeepEnabled: false,
             minimumRevisionAgeToKeep: null,
-            isMinimumRevisionsToKeepEnabled: false,
-            minimumRevisionsToKeep: null,
+            isMinimumRevisionsToKeepEnabled: true,
+            minimumRevisionsToKeep,
             isMaximumRevisionsToDeleteUponDocumentUpdateEnabled: false,
             maximumRevisionsToDeleteUponDocumentUpdate: null,
         };

@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task RestoreAsync()
         {
-            await SmugglerRestoreAsync(Database, Context);
+            await SmugglerRestoreAsync(Database, Context, Database.Smuggler.CreateDestination());
         }
 
         protected override async Task InitializeAsync()

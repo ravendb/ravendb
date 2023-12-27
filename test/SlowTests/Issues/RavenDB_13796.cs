@@ -25,7 +25,7 @@ namespace SlowTests.Issues
 
             var defaultDatabase = GetDatabaseName();
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl);
 
             using (var store = new DocumentStore
             {

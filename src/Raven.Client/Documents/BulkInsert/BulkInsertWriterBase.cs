@@ -3,8 +3,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Http;
 using Sparrow.Json;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.BulkInsert;
 
@@ -22,7 +24,7 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
     private JsonOperationContext.MemoryBuffer _backgroundMemoryBuffer;
     private bool _isInitialWrite = true;
 
-    private Stream _requestBodyStream;
+    internal Stream _requestBodyStream;
 
     internal readonly BulkInsertOperation.BulkInsertStreamExposerContent StreamExposer;
 
@@ -134,13 +136,30 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         }
     }
 
-    public async Task EnsureStreamAsync(CompressionLevel compression)
+    public async Task EnsureStreamAsync(HttpCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
     {
         var stream = await StreamExposer.OutputStream.ConfigureAwait(false);
 
-        if (compression != CompressionLevel.NoCompression)
+        if (compressionLevel != CompressionLevel.NoCompression)
         {
-            stream = new GZipStream(stream, compression, leaveOpen: true);
+            switch (compressionAlgorithm)
+            {
+                case HttpCompressionAlgorithm.Gzip:
+                    stream = new GZipStream(stream, compressionLevel, leaveOpen: true);
+                    break;
+#if FEATURE_BROTLI_SUPPORT
+                case HttpCompressionAlgorithm.Brotli:
+                    stream = new BrotliStream(stream, compressionLevel, leaveOpen: true);
+                    break;
+#endif
+#if FEATURE_ZSTD_SUPPORT
+                case HttpCompressionAlgorithm.Zstd:
+                    stream = ZstdStream.Compress(stream, compressionLevel, leaveOpen: true);
+                    break;
+#endif
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(compressionAlgorithm), compressionAlgorithm, null);
+            }
         }
 
         _requestBodyStream = stream;

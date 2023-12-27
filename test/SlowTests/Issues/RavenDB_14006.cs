@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -6,6 +7,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -422,7 +424,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript(Options options)
+        public async Task CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -486,13 +488,25 @@ select incl(c)"
                     Assert.Equal(-1, stats.DurationInMs); // from cache
                     Assert.Equal(resultEtag, stats.ResultEtag);
 
+                    long lastClusterTxIndex;
+
+                    List<DocumentDatabase> databases;
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                        databases = await Sharding.GetShardsDocumentDatabaseInstancesFor(store).Select(x => (DocumentDatabase)x).ToListAsync();
+                    else
+                        databases = new List<DocumentDatabase> { await Databases.GetDocumentDatabaseInstanceFor(store) };
+
                     using (var innerSession = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
                         var value = innerSession.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
                         value.Value.City = "Bydgoszcz";
 
                         innerSession.SaveChanges();
+                        lastClusterTxIndex = value.Index;
                     }
+
+                    foreach (var database in databases)
+                        await database.RachisLogIndexNotifications.WaitForIndexNotification(lastClusterTxIndex, TimeSpan.FromSeconds(5));
 
                     companies = session.Advanced
                         .RawQuery<Company>(

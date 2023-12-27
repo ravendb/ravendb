@@ -537,7 +537,7 @@ namespace SlowTests.Sharding.Cluster
                 try
                 {
                     await t.WaitAsync(TimeSpan.FromSeconds(5));
-                    Assert.True(false, "Worker completed without exception");
+                    Assert.Fail("Worker completed without exception");
                 }
                 catch (TimeoutException)
                 {
@@ -607,7 +607,7 @@ namespace SlowTests.Sharding.Cluster
                 try
                 {
                     await t.WaitAsync(TimeSpan.FromSeconds(15));
-                    Assert.True(false, "Worker completed without exception");
+                    Assert.Fail("Worker completed without exception");
                 }
                 catch (TimeoutException)
                 {
@@ -705,7 +705,7 @@ namespace SlowTests.Sharding.Cluster
                 try
                 {
                     await t.WaitAsync(TimeSpan.FromSeconds(5));
-                    Assert.True(false, "Worker completed without exception");
+                    Assert.Fail("Worker completed without exception");
                 }
                 catch (TimeoutException)
                 {
@@ -858,7 +858,7 @@ namespace SlowTests.Sharding.Cluster
                 try
                 {
                     await t.WaitAsync(TimeSpan.FromSeconds(1));
-                    Assert.True(false, "Worker completed without exception");
+                    Assert.Fail("Worker completed without exception");
                 }
                 catch (TimeoutException)
                 {
@@ -1319,7 +1319,7 @@ namespace SlowTests.Sharding.Cluster
                 try
                 {
                     await t.WaitAsync(TimeSpan.FromSeconds(5));
-                    Assert.True(false, "Worker completed without exception");
+                    Assert.Fail("Worker completed without exception");
                 }
                 catch (TimeoutException)
                 {
@@ -1337,7 +1337,7 @@ namespace SlowTests.Sharding.Cluster
                 try
                 {
                     await t.WaitAsync(TimeSpan.FromSeconds(5));
-                    Assert.True(false, "Worker completed without exception");
+                    Assert.Fail("Worker completed without exception");
                 }
                 catch (TimeoutException)
                 {

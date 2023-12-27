@@ -311,6 +311,7 @@ namespace Corax.Querying.Matches
                     return 0;
 
                 Span<long> postingListItems = stackalloc long[1024];
+                ref var postingListBuffer = ref MemoryMarshal.GetReference(postingListItems);
                 
                 //Maximum value we can match.
                 var maxValidValue = Unsafe.Add(ref matchesBuffer, matchesCount - 1) + 1;
@@ -318,15 +319,17 @@ namespace Corax.Querying.Matches
 
                 while (resultCursor < matchesCount && it.Fill(postingListItems, out var read, maxValidValue) && read > 0)
                 {
-                    var isFirstItemInsideRange = EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[0]) >= matchesLowest
-                                                && EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[0]) <= matchesHighest;
+                    var firstElementInPostingList = EntryIdEncodings.DecodeAndDiscardFrequency(postingListBuffer);
+                    var isFirstItemInsideRange = firstElementInPostingList >= matchesLowest
+                                                 && firstElementInPostingList <= matchesHighest;
                     
                     // Match is impossible, proceed.
                     if (read == 1 && isFirstItemInsideRange == false)
                         continue;
-                    
-                    var isLastItemInsideRange = EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[read - 1]) >= matchesLowest
-                                               && EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[read - 1]) <= matchesHighest;
+
+                    var lastElementInPostingList = EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListBuffer, read - 1));
+                    var isLastItemInsideRange = lastElementInPostingList >= matchesLowest
+                                                && lastElementInPostingList <= matchesHighest;
                     
                     // Since the posting list and buffer matches are sorted, it implies that no additional matches can occur in this batch.
                     if (isLastItemInsideRange == false && isFirstItemInsideRange == false)
@@ -336,8 +339,8 @@ namespace Corax.Querying.Matches
                     for (int readCursor = 0; readCursor < read; ++readCursor)
                     {
                         long currentPostingListDocument = typeof(HasBoosting) == typeof(TBoostingMode) && term._bm25Relevance.IsStored 
-                            ? term._bm25Relevance.Add(postingListItems[readCursor]) 
-                            : EntryIdEncodings.DecodeAndDiscardFrequency(postingListItems[readCursor]);
+                            ? term._bm25Relevance.Add(Unsafe.Add(ref postingListBuffer, readCursor)) 
+                            : EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListBuffer, readCursor));
                         
                         // When current document from posting list is bigger or equal than our current document from buffer.
                         while (currentPostingListDocument >= currentMatchesDocument)
@@ -354,9 +357,8 @@ namespace Corax.Querying.Matches
                                 
                                 continue;
                             }
-                            
-                            buffer[resultCursor++] = currentPostingListDocument;
-                            
+
+                            Unsafe.Add(ref matchesBuffer, resultCursor++) = currentPostingListDocument;
                             if (bufferCursor + 1 >= matchesCount)
                                 return resultCursor;
                             

@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                 var deletion = await src.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(src.Database, hardDelete: true, fromNode: mentorTag,
                     timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
 
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deletion.RaftCommandIndex + 1, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deletion.RaftCommandIndex, TimeSpan.FromSeconds(30));
                 await RavenDB_7912.WaitForDatabaseToBeDeleted(leader, src.Database, TimeSpan.FromSeconds(15), CancellationToken.None);
                 await WaitAndAssertForValueAsync(() => GetMembersCount(src), 2);
 
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(newResponsibleTag);
 
                 var newResponsible = nodes.Single(s => s.ServerStore.NodeTag == newResponsibleTag);
-                var db = await newResponsible.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(src.Database).ConfigureAwait(false);
+                var db = await newResponsible.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(src.Database);
                 var etlDone = WaitForEtl(db, (s, statistics) => statistics.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())

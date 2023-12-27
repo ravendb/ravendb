@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenMultiplatformTheory(RavenTestCategory.Querying, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void MapOnSeveralCompressedStrings(Options options)
         {
@@ -39,7 +39,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenMultiplatformTheory(RavenTestCategory.Querying, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void MapReduceOnSeveralCompressedStrings(Options options)
         {

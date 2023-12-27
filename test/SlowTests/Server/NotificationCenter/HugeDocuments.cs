@@ -43,7 +43,7 @@ namespace SlowTests.Server.NotificationCenter
                 {
                     if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                     {
-                        Assert.False(true, "Unable to read stored notification");
+                        Assert.Fail("Unable to read stored notification");
                     }
                     else
                     {
@@ -96,7 +96,7 @@ namespace SlowTests.Server.NotificationCenter
                 {
                     if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                     {
-                        Assert.False(true, "Unable to read stored notification");
+                        Assert.Fail("Unable to read stored notification");
                     }
                     else
                     {
@@ -152,7 +152,7 @@ namespace SlowTests.Server.NotificationCenter
                 {
                     if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                     {
-                        Assert.False(true, "Unable to read stored notification");
+                        Assert.Fail("Unable to read stored notification");
                     }
                     else
                     {

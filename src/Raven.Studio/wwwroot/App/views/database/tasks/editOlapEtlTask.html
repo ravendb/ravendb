@@ -44,12 +44,12 @@
                                     </ul>
                                 </div>
                             </div>
-                            <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted">
+                            <div data-bind="if: $root.db && $root.db.isEncrypted">
                                 <div class="form-group">
                                     <label class="control-label">&nbsp;</label>
                                     <div class="bg-info inline-block padding padding-xs small">
                                         <i class="icon-info"></i>
-                                        Note: Database <strong data-bind="text: $root.activeDatabase().name"></strong> is encrypted
+                                        Note: Database <strong data-bind="text: $root.db.name"></strong> is encrypted
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -380,7 +380,7 @@
         </div>
     </div>
     <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.hasOlapEtl }">
-        <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
+        <div class="absolute-center text-center z-1" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
             <i class="icon-info icon-xl"></i>
             Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.
         </div>

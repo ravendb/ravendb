@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.Revisions
     {
         private readonly Parameters _parameters;
 
-        public sealed class Parameters
+        public sealed class Parameters : IRevisionsOperationParameters
         {
             public bool IncludeForceCreated { get; set; } = false;
             public string[] Collections { get; set; } = null;

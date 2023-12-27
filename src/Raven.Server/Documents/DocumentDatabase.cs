@@ -63,12 +63,10 @@ using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
@@ -111,6 +109,10 @@ namespace Raven.Server.Documents
         private Lazy<RequestExecutor> _proxyRequestExecutor;
 
         private readonly DatabasesLandlord.StateChange _databaseStateChange;
+
+        public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
+        private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
+        private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
 
         public void ResetIdleTime()
         {
@@ -240,6 +242,8 @@ namespace Raven.Server.Documents
 
         public RequestExecutor RequestExecutor => _proxyRequestExecutor.Value;
 
+        private bool IsRequestExecutorCreated => _proxyRequestExecutor.IsValueCreated;
+
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
         public DateTime LastAccessTime;
@@ -271,7 +275,7 @@ namespace Raven.Server.Documents
         public DocumentsStorage DocumentsStorage { get; private set; }
 
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner { get; private set; }
-        
+
         public DataArchivist DataArchivist { get; private set; }
 
         public TimeSeriesPolicyRunner TimeSeriesPolicyRunner { get; private set; }
@@ -301,7 +305,7 @@ namespace Raven.Server.Documents
         public ReplicationLoader ReplicationLoader { get; internal set; }
 
         public EtlLoader EtlLoader { get; private set; }
-        
+
         public QueueSinkLoader QueueSinkLoader { get; private set; }
 
         public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
@@ -407,7 +411,7 @@ namespace Raven.Server.Documents
                 EtlLoader.Initialize(record);
                 QueueSinkLoader.Initialize(record);
 
-                TombstoneCleaner.Start();
+
                 InitializeAndStartDocumentsMigration();
 
                 try
@@ -428,6 +432,8 @@ namespace Raven.Server.Documents
                 DatabaseShutdown.ThrowIfCancellationRequested();
 
                 _addToInitLog("Initializing SubscriptionStorage completed");
+
+                TombstoneCleaner.Start();
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
@@ -809,7 +815,7 @@ namespace Raven.Server.Documents
                 if (_skipUsagesCount == false)
                     Interlocked.Increment(ref _parent._usages);
 
-                if (_parent.DatabaseShutdown.IsCancellationRequested)
+                if (_parent.IsShutdownRequested())
                 {
                     Dispose();
                     _parent.ThrowDatabaseShutdown();
@@ -970,7 +976,7 @@ namespace Raven.Server.Documents
                 EtlLoader?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed EtlLoader");
-            
+
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing QueueSinkLoader");
             exceptionAggregator.Execute(() =>
             {
@@ -1530,13 +1536,18 @@ namespace Raven.Server.Documents
                         Database = Name
                     });
 
-                    _ = RequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode()
+                    if (IsRequestExecutorCreated)
                     {
-                        ClusterTag = _serverStore.NodeTag, Database = Name, Url = ServerStore.GetNodeHttpServerUrl()
-                    })
-                    {
-                        DebugTag = "database-topology-update"
-                    });
+                        _ = RequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode()
+                        {
+                            ClusterTag = _serverStore.NodeTag,
+                            Database = Name,
+                            Url = ServerStore.GetNodeHttpServerUrl()
+                        })
+                        {
+                            DebugTag = "database-topology-update"
+                        });
+                    }
                 }
 
                 ClientConfiguration = record.Client;
@@ -1679,6 +1690,7 @@ namespace Raven.Server.Documents
             DataArchivist = DataArchivist.LoadConfiguration(this, record, DataArchivist);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             PeriodicBackupRunner.UpdateConfigurations(record);
+            UpdateCompressionConfigurationFromDatabaseRecord(record);
         }
 
         public void InitializeCompressionFromDatabaseRecord(DatabaseRecord record)
@@ -1695,21 +1707,6 @@ namespace Raven.Server.Documents
 
             _documentsCompression = record.DocumentsCompression;
             _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
-        }
-
-        public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
-
-        private DocumentsCompressionConfiguration _documentsCompression = new DocumentsCompressionConfiguration(false, Array.Empty<string>());
-        private HashSet<string> _compressedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        public TableSchema GetDocsSchemaForCollection(CollectionName collection)
-        {
-            if (_documentsCompression.CompressAllCollections || _compressedCollections.Contains(collection.Name))
-            {
-                return DocumentsStorage.CompressedDocsSchema;
-            }
-
-            return DocumentsStorage.DocsSchema;
         }
 
         public TableSchema GetDocsSchemaForCollection(CollectionName collection, DocumentFlags flags)
@@ -1799,10 +1796,31 @@ namespace Raven.Server.Documents
             using (_proxyRequestExecutor.Value)
                 _proxyRequestExecutor = CreateRequestExecutor();
         }
-        
+
+        public TableSchema GetDocsSchemaForCollection(CollectionName collection) =>
+            _documentsCompression.CompressAllCollections || _compressedCollections.Contains(collection.Name)
+                ? DocumentsStorage.CompressedDocsSchema
+                : DocumentsStorage.DocsSchema;
+
+        private void UpdateCompressionConfigurationFromDatabaseRecord(DatabaseRecord record)
+        {
+            if (_documentsCompression.Equals(record.DocumentsCompression))
+                return;
+
+            if (record.DocumentsCompression == null) // legacy configurations
+            {
+                _compressedCollections.Clear();
+                _documentsCompression = new DocumentsCompressionConfiguration(false);
+                return;
+            }
+
+            _documentsCompression = record.DocumentsCompression;
+            _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
+        }
+
         private Lazy<RequestExecutor> CreateRequestExecutor() =>
             new(
-                () => RequestExecutor.CreateForProxy(new[] {ServerStore.Configuration.Core.GetNodeHttpServerUrl(ServerStore.Server.WebUrl)}, Name,
+                () => RequestExecutor.CreateForProxy(new[] { ServerStore.Configuration.Core.GetNodeHttpServerUrl(ServerStore.Server.WebUrl) }, Name,
                     ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
@@ -1996,6 +2014,19 @@ namespace Raven.Server.Documents
             return hash;
         }
 
+        public bool IsShutdownRequested()
+        {
+            return _databaseShutdown.IsCancellationRequested;
+        }
+
+        public void ThrowIfShutdownRequested()
+        {
+            if (_databaseShutdown.IsCancellationRequested)
+            {
+                throw new OperationCanceledException($"Database '{Name}' is shutting down.");
+            }
+        }
+
         internal TestingStuff ForTestingPurposesOnly()
         {
             if (ForTestingPurposes != null)
@@ -2039,6 +2070,8 @@ namespace Raven.Server.Documents
 
             internal Action Subscription_ActionToCallDuringWaitForChangedDocuments;
             internal Action<long> Subscription_ActionToCallAfterRegisterSubscriptionConnection;
+            internal Action<ConcurrentSet<SubscriptionConnection>> ConcurrentSubscription_ActionToCallDuringWaitForSubscribe;
+            internal Action Subscription_ActionToCallDuringWaitForAck;
 
             internal IDisposable CallDuringWaitForChangedDocuments(Action action)
             {
@@ -2052,11 +2085,23 @@ namespace Raven.Server.Documents
 
                 return new DisposableAction(() => Subscription_ActionToCallAfterRegisterSubscriptionConnection = null);
             }
+            internal IDisposable CallDuringWaitForSubscribe(Action<ConcurrentSet<SubscriptionConnection>> action)
+            {
+                ConcurrentSubscription_ActionToCallDuringWaitForSubscribe = action;
+
+                return new DisposableAction(() => ConcurrentSubscription_ActionToCallDuringWaitForSubscribe = null);
+            }
+            internal IDisposable CallDuringWaitForAck(Action action)
+            {
+                Subscription_ActionToCallDuringWaitForAck = action;
+
+                return new DisposableAction(() => Subscription_ActionToCallDuringWaitForAck = null);
+            }
 
             internal ManualResetEvent DatabaseRecordLoadHold;
             internal ManualResetEvent HealthCheckHold;
 
-            internal int BulkInsertStreamWriteTimeout;
+            internal int BulkInsertStreamReadTimeout;
         }
     }
 

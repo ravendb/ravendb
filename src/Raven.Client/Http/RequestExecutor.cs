@@ -33,6 +33,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Client.Http
 {
@@ -70,8 +71,7 @@ namespace Raven.Client.Http
         private readonly string _databaseName;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
-        private DateTime _lastReturnedResponse;
-
+        
         public readonly JsonContextPool ContextPool;
 
         public readonly AsyncLocal<AggressiveCacheOptions> AggressiveCaching = new AsyncLocal<AggressiveCacheOptions>();
@@ -102,7 +102,7 @@ namespace Raven.Client.Http
 
         private Timer _updateTopologyTimer;
 
-        protected NodeSelector _nodeSelector;
+        protected internal NodeSelector _nodeSelector;
 
         private TimeSpan? _defaultTimeout;
 
@@ -330,9 +330,7 @@ namespace Raven.Client.Http
 
             _databaseName = databaseName;
             Certificate = certificate;
-
-            _lastReturnedResponse = DateTime.UtcNow;
-
+            
             Conventions = conventions.Clone();
 
             var maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
@@ -539,13 +537,13 @@ namespace Raven.Client.Http
                             var msg = $"Expected topology for database '{_databaseName}', but got the database '{node.Database}' (reason: {parameters.DebugTag})";
                             Debug.Assert(false, msg);
                         }
-                    }          
+                    }
 #endif
-                    
+
                     await DatabaseTopologyLocalCache.TrySavingAsync(_databaseName, TopologyHash, topology, Conventions, context, CancellationToken.None).ConfigureAwait(false);
-                    
+
                     UpdateNodeSelector(topology, parameters.ForceUpdate);
-                    
+
                     var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
                     UpdateConnectionLimit(urls);
 
@@ -580,7 +578,7 @@ namespace Raven.Client.Http
             else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate))
             {
                 DisposeAllFailedNodesTimers();
-                if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode && _nodeSelector.InSpeedTestPhase)
                 {
                     _nodeSelector.ScheduleSpeedTest();
                 }
@@ -636,7 +634,7 @@ namespace Raven.Client.Http
                 }
                 return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
             }
-            
+
             switch (Conventions.LoadBalanceBehavior)
             {
                 case LoadBalanceBehavior.UseSessionContext:
@@ -722,50 +720,39 @@ namespace Raven.Client.Http
             }
         }
 
-        private void UpdateTopologyCallback(object _)
+        internal async void UpdateTopologyCallback(object _)
         {
-            var time = DateTime.UtcNow;
-            if (time - _lastReturnedResponse <= TimeSpan.FromMinutes(5))
+            var selector = _nodeSelector;
+            if (selector == null || selector.Topology == null)
                 return;
-
-            ServerNode serverNode;
-
-            try
-            {
-                var selector = _nodeSelector;
-                if (selector == null)
-                    return;
-                var preferredNode = selector.GetPreferredNode();
-                serverNode = preferredNode.Node;
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Couldn't get preferred node Topology from _updateTopologyTimer task", e);
-                return;
-            }
-            GC.KeepAlive(Task.Run(async () =>
+            
+            // Fetch topologies from all nodes, the executor's topology will be updated to the most recent one
+            foreach (var serverNode in selector.Topology.Nodes)
             {
                 try
                 {
-                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, DebugTag = "timer-callback" }).ConfigureAwait(false);
+                    if(serverNode.ServerRole != ServerNode.Role.Member)
+                        continue;
+
+                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) {TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}"})
+                        .ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info("Couldn't Update Topology from _updateTopologyTimer task", e);
+                        Logger.Info($"Couldn't Update Topology from _updateTopologyTimer task when fetching from node {serverNode.ClusterTag}", e);
                 }
-            }));
+            }
         }
 
         protected async Task SingleTopologyUpdateAsync(string[] initialUrls, Guid? applicationIdentifier = null)
         {
-            if(Disposed)
+            if (Disposed)
                 return;
 
             //fetch tag for each of the urls
-            Topology topology = new Topology() {Nodes = new List<ServerNode>(), Etag = TopologyEtag};
-            
+            Topology topology = new Topology() { Nodes = new List<ServerNode>(), Etag = TopologyEtag };
+
             foreach (var url in initialUrls)
             {
                 var serverNode = new ServerNode
@@ -802,7 +789,7 @@ namespace Raven.Client.Http
                 catch (Exception e)
                 {
                     serverNode.ClusterTag = "!";
-                    if(Logger.IsInfoEnabled)
+                    if (Logger.IsInfoEnabled)
                         Logger.Info($"Error occurred while attempting to fetch the Cluster Tag for {url} in {nameof(SingleTopologyUpdateAsync)}", e);
                 }
 
@@ -810,7 +797,7 @@ namespace Raven.Client.Http
 
                 UpdateNodeSelector(topology, forceUpdate: true);
             }
-            
+
             _lastKnownUrls = initialUrls;
         }
 
@@ -1045,7 +1032,6 @@ namespace Raven.Client.Http
 
                     OnSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
-                    _lastReturnedResponse = DateTime.UtcNow;
                 }
                 finally
                 {
@@ -1246,6 +1232,11 @@ namespace Raven.Client.Http
 
             if (_disableClientConfigurationUpdates == false)
                 request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
+
+#if FEATURE_ZSTD_SUPPORT
+            if (Conventions.UseHttpCompression && Conventions.HttpCompressionAlgorithm == HttpCompressionAlgorithm.Zstd)
+                request.Headers.TryAddWithoutValidation(Constants.Headers.AcceptEncoding, Constants.Headers.Encodings.Zstd);
+#endif
 
             if (sessionInfo?.LastClusterTransactionIndex != null)
             {
@@ -1535,7 +1526,14 @@ namespace Raven.Client.Http
             }
 
             if (Conventions.HttpVersion != null)
+            {
                 request.Version = Conventions.HttpVersion;
+            }
+
+#if NETCOREAPP
+            if (Conventions.HttpVersionPolicy != null)
+                request.VersionPolicy = Conventions.HttpVersionPolicy.Value;
+#endif
 
             request.RequestUri = builder.Uri;
 
@@ -1646,7 +1644,7 @@ namespace Raven.Client.Http
         {
             try
             {
-                return (await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                return (await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -1659,10 +1657,24 @@ namespace Raven.Client.Http
             var serverStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var stream = serverStream;
             var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
-            if (encoding != null && encoding.Contains("gzip"))
-                return new GZipStream(stream, CompressionMode.Decompress);
-            if (encoding != null && encoding.Contains("deflate"))
-                return new DeflateStream(stream, CompressionMode.Decompress);
+            if (encoding != null)
+            {
+                switch (encoding)
+                {
+                    case Constants.Headers.Encodings.Gzip:
+                        return new GZipStream(stream, CompressionMode.Decompress);
+#if FEATURE_BROTLI_SUPPORT
+                    case Constants.Headers.Encodings.Brotli:
+                        return new BrotliStream(stream, CompressionMode.Decompress);
+#endif
+#if FEATURE_ZSTD_SUPPORT
+                    case Constants.Headers.Encodings.Zstd:
+                        return ZstdStream.Decompress(stream);
+#endif
+                    case Constants.Headers.Encodings.Deflate:
+                        return new DeflateStream(stream, CompressionMode.Decompress);
+                }
+            }
 
             return serverStream;
         }
@@ -1918,7 +1930,7 @@ namespace Raven.Client.Http
 
                 return;
             }
-            
+
             if (serverNode == null || nodeIndex == null)
                 return;
 
@@ -1994,7 +2006,7 @@ namespace Raven.Client.Http
         {
             if (response != null)
             {
-                var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
                 var ms = new MemoryStream(); // todo: have a pool of those
                 await stream.CopyToAsync(ms).ConfigureAwait(false);
                 try
@@ -2065,7 +2077,11 @@ namespace Raven.Client.Http
             {
                 httpMessageHandler.AutomaticDecompression =
                     useHttpDecompression ?
-                        DecompressionMethods.GZip | DecompressionMethods.Deflate
+                        DecompressionMethods.GZip
+                        | DecompressionMethods.Deflate
+#if FEATURE_BROTLI_SUPPORT
+                        | DecompressionMethods.Brotli
+#endif
                         : DecompressionMethods.None;
             }
             else if (useHttpDecompression && hasExplicitlySetDecompressionUsage)
@@ -2475,9 +2491,9 @@ namespace Raven.Client.Http
 
             private bool Equals(HttpClientCacheKey other)
             {
-                return _certificateThumbprint == other._certificateThumbprint 
-                       && _useHttpDecompression == other._useHttpDecompression 
-                       && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime) 
+                return _certificateThumbprint == other._certificateThumbprint
+                       && _useHttpDecompression == other._useHttpDecompression
+                       && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime)
                        && Nullable.Equals(_pooledConnectionIdleTimeout, other._pooledConnectionIdleTimeout)
                        && Nullable.Equals(_globalHttpClientTimeout, other._globalHttpClientTimeout)
                        && _httpClientType == other._httpClientType;

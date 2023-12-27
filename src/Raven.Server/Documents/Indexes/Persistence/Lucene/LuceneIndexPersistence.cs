@@ -589,6 +589,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name}' was not initialized.");
         }
+
+        public override void AssertCanOptimize()
+        {
+            
+        }
+        
+        public override void AssertCanDump()
+        {
+            
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public void FullBackupShouldBackupDocumentTombstones()
+        public async Task FullBackupShouldBackupDocumentTombstones()
         {
             using var store = GetDocumentStore();
 
@@ -49,8 +50,8 @@ namespace SlowTests.Issues
             var res = store.Operations.Send(new DeleteCompareExchangeValueOperation<DummyDoc>($"emojis/Rhinoceros", rhinoceros.Index));
             Assert.True(res.Successful);
 
-            var documentDb = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            (long etag, _) = documentDb.Result.ReadLastEtagAndChangeVector();
+            var documentDb = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            (long etag, _) = documentDb.ReadLastEtagAndChangeVector();
 
             var config = Backup.CreateBackupConfiguration(NewDataPath(forceCreateDir: true));
             var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);

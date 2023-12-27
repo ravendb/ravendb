@@ -19,7 +19,7 @@ public sealed class OrchestratorIncludesCommandImpl : AbstractIncludesCommand
         IncludeCountersCommand = includeCountersCommand;
     }
 
-    protected override ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context,
+    public override ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context,
         CancellationToken token)
     {
         return writer.WriteIncludesAsync(IncludeDocumentsCommand.Includes, token);

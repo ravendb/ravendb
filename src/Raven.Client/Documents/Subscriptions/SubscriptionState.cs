@@ -6,8 +6,6 @@
 
 using System;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
@@ -26,6 +24,8 @@ namespace Raven.Client.Documents.Subscriptions
         public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
         public bool Disabled { get; set; }
+        // raft index used to create or update subscription task
+        public long RaftCommandIndex { get; set; }
 
         // the responsible node of the subscription,
         // in sharding context - orchestrator node tag
@@ -79,7 +79,8 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled,
-                [nameof(ArchivedDataProcessingBehavior)] = ArchivedDataProcessingBehavior
+                [nameof(ArchivedDataProcessingBehavior)] = ArchivedDataProcessingBehavior,
+                [nameof(RaftCommandIndex)] = RaftCommandIndex
             };
 
             if (ShardingState != null)
@@ -97,8 +98,10 @@ namespace Raven.Client.Documents.Subscriptions
 
         public static string SubscriptionPrefix(string databaseName)
         {
-            return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}subscriptions/";
+            return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}{Prefix}";
         }
+
+        internal static string Prefix => "subscriptions/";
     }
 
     internal sealed class SubscriptionStateWithNodeDetails : SubscriptionState

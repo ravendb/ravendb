@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenMultiplatformTheory(RavenTestCategory.Querying, RavenArchitecture.X64)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseOrderByNumberInProjection(Options options)
         {
@@ -67,8 +67,8 @@ namespace SlowTests.Issues
                 }
             }
         }
-
-        [Fact]
+        
+        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void CanUseOrderByStringInProjection()
         {
             using (var store = GetDocumentStore())
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void CanUseOrderByDateInProjection()
         {
             using (var store = GetDocumentStore())
@@ -176,7 +176,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void CanUseOrderByNestedNumberInProjection()
         {
             using (var store = GetDocumentStore())
@@ -234,7 +234,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void CanUseOrderByNestedStringInProjection()
         {
             using (var store = GetDocumentStore())
@@ -293,7 +293,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void CanUseOrderByDescendingNumberInProjection()
         {
             using (var store = GetDocumentStore())
@@ -342,7 +342,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void CanUseOrderByDescendingStringInProjection()
         {
             using (var store = GetDocumentStore())
@@ -393,7 +393,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void TestProjectionCanReturnOrderedCollections()
         {
             using (var store = GetDocumentStore())

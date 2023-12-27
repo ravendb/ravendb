@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.Indexes.IndexMerging;
+using Raven.Server.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -735,7 +736,7 @@ select new
             var re = store.GetRequestExecutor();
             var c = re.HttpClient;
         
-            var response = await re.HttpClient.GetAsync(new Uri($"{store.Urls.First()}/databases/{store.Database}/indexes/suggest-index-merge"));
+            var response = await re.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/databases/{store.Database}/indexes/suggest-index-merge").WithConventions(store.Conventions));
             Assert.True(response.IsSuccessStatusCode);
         }
 

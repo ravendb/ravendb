@@ -73,6 +73,7 @@ public sealed class ShardedFacetedQueryOperation : AbstractShardedQueryOperation
         }
 
         result.Results = facets.Values.Select(x => x.GetResult()).ToList();
+        result.TotalResults = result.Results.Count;
 
         return result;
     }

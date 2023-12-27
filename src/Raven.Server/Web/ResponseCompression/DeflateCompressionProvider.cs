@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Options;
+using Raven.Client;
 
 namespace Raven.Server.Web.ResponseCompression
 {
@@ -25,7 +26,7 @@ namespace Raven.Server.Web.ResponseCompression
             return new DeflateStream(outputStream, Options.Level, true);
         }
 
-        public string EncodingName => "deflate";
+        public string EncodingName => Constants.Headers.Encodings.Deflate;
         public bool SupportsFlush => false;
     }
 }

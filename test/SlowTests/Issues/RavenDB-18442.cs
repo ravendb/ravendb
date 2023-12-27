@@ -3,11 +3,13 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Orders;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -85,7 +87,7 @@ namespace SlowTests.Issues
 
         private async Task<BackupInfo> GetBackupInfo(RavenServer server)
         {
-            using var client = new HttpClient();
+            using var client = new HttpClient().WithConventions(DocumentConventions.DefaultForServer);
             var res = await client.GetAsync($"{server.WebUrl}/databases");
             string resBodyJson = await res.Content.ReadAsStringAsync();
             var resBody = JsonConvert.DeserializeObject<ResBody>(resBodyJson);

@@ -449,7 +449,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 
-            var database = GetDatabase(store.Database).Result;
+            var database = await GetDatabase(store.Database);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -505,7 +505,7 @@ output('test output')"
                     Assert.Equal("myRoutingKey", result.Summary[0].Messages[0].RoutingKey);
                     Assert.Equal("orders/1-A", result.Summary[0].Messages[0].Attributes.Id);
                     Assert.Equal("com.github.users", result.Summary[0].Messages[0].Attributes.Type);
-                    Assert.Equal("/registrations/direct-signup", result.Summary[0].Messages[0].Attributes.Source);
+                    Assert.Equal("/registrations/direct-signup", result.Summary[0].Messages[0].Attributes.Source.ToString());
 
                     Assert.Equal("test output", result.DebugOutput[0]);
                 }

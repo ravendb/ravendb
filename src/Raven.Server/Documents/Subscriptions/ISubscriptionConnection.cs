@@ -35,4 +35,6 @@ public interface ISubscriptionConnection : IDisposable
     public const int WaitForChangedDocumentsTimeoutInMs = 3000;
 
     internal Task SendHeartBeatAsync(string reason);
+
+    long LastModifiedIndex { get; }
 }

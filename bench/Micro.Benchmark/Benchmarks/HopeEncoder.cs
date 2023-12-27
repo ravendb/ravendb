@@ -123,6 +123,7 @@ namespace Micro.Benchmark.Benchmarks
             private int _currentIdx = 0;
 
             public int Length => _values.Length;
+            public int Count { get; private set; }
 
             public bool IsNull(int i)
             {
@@ -161,6 +162,7 @@ namespace Micro.Benchmark.Benchmarks
             public void Reset()
             {
                 _currentIdx = 0;
+                Count = 0;
             }
 
             public bool MoveNext(out ReadOnlySpan<byte> result)
@@ -172,6 +174,7 @@ namespace Micro.Benchmark.Benchmarks
                 }
 
                 result = new(_values[_currentIdx++]);
+                Count++;
                 return true;
             }
         }

@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanMigrateLegacyCounters()
+        public async Task CanMigrateLegacyCounters()
         {
             From41016.NumberOfCountersToMigrateInSingleTransaction = 20;
 
@@ -85,7 +86,7 @@ namespace SlowTests.Issues
                         Assert.Equal(3, details.Counters[0].TotalValue);
 
                         // verify that we removed the counter-tombstones from tombstones table
-                        var db = Databases.GetDocumentDatabaseInstanceFor(store, databaseName).Result;
+                        var db = await Databases.GetDocumentDatabaseInstanceFor(store, databaseName);
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {

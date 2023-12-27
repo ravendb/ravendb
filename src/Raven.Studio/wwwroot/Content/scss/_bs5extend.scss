@@ -405,3 +405,64 @@ select {
     background-color: $panel-bg-1-var;
     color: $text-color-var;
 }
+
+// react-select placed inside input group text (see: Revert Revisions > Time Window)
+.input-group-text {
+    .react-select-container {
+        border: none;
+
+        .react-select__control {
+            background: transparent;
+            min-height: unset;
+        }
+        .react-select__indicators {
+            .react-select__indicator {
+                padding: 0;
+            }
+            [class$="-indicatorContainer"] {
+                color: var(--border-color-light);
+                &:hover {
+                    color: var(--border-color);
+                }
+            }
+        }
+        .react-select__menu {
+            text-align: left;
+            min-width: 120px;
+            width: auto;
+        }
+    }
+}
+
+.input-group {
+    .react-datepicker-wrapper {
+        display: flex;
+        flex-grow: 1;
+        input {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+    }
+}
+
+.preview-password {
+    border-top-right-radius: $border-radius-sm !important;
+    border-bottom-right-radius: $border-radius-sm !important;
+}
+
+.btn-preview {
+    z-index: 5 !important;
+}
+
+.toggle-field-checkbox {
+    @extend .input-group-text;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    + .position-relative {
+        input,
+        .react-select-container {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+    }
+}

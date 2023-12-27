@@ -95,8 +95,23 @@ namespace Voron.Impl.Paging
 
             if (_handle.IsInvalid)
             {
+                var message = $"Failed to open file storage of {nameof(Windows32BitsMemoryMapPager)} for {file}";
+
                 var lastWin32ErrorCode = Marshal.GetLastWin32Error();
-                throw new IOException("Failed to open file storage of Windows32BitsMemoryMapPager for " + file,
+
+                if (lastWin32ErrorCode is (int)Win32NativeFileErrors.ERROR_SHARING_VIOLATION or (int)Win32NativeFileErrors.ERROR_LOCK_VIOLATION)
+                {
+                    try
+                    {
+                        message += $". {WhoIsLocking.ThisFile(file.FullPath)}";
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+
+                throw new IOException(message,
                     new Win32Exception(lastWin32ErrorCode));
             }
 

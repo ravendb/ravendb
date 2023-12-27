@@ -31,6 +31,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Revisions;
+using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
 
@@ -577,7 +578,9 @@ namespace Raven.Server.Documents.Revisions
             else
             {
                 revisionsToDelete = GetRevisionsForCollectionOrDefault(context, table, lowerIdPrefix,
-                    configuration, result.PreviousCount, result);
+                    configuration, result.PreviousCount,
+                    stopWhenReachingAge: nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false,
+                    result);
             }
 
             var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result, tombstoneFlags: flags);
@@ -730,6 +733,7 @@ namespace Raven.Server.Documents.Revisions
             Slice prefixSlice,
             RevisionsCollectionConfiguration configuration,
             long revisionsCount,
+            bool stopWhenReachingAge,
             DeleteOldRevisionsResult result)
         {
             result.HasMore = false;
@@ -780,6 +784,13 @@ namespace Raven.Server.Documents.Revisions
                         _database.Time.GetUtcNow() - revision.LastModified <= configuration.MinimumRevisionAgeToKeep.Value)
                     {
                         revision.Dispose();
+
+                        if (stopWhenReachingAge == false)
+                        {
+                            result.Skip++;
+                            ended = false;
+                        }
+
                         break;
                     }
 
@@ -865,7 +876,43 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        private void DeleteRevisionFromTable(DocumentsOperationContext context, Table table, Dictionary<string, Table> writeTables,
+
+        private bool ShouldAdoptRevision(DocumentsOperationContext context, Slice lowerId, Slice lowerIdPrefix, CollectionName collectionName, out Table table, out Document lastRevision)
+        {
+            lastRevision = null;
+            table = null;
+
+            var local = _documentsStorage.Get(context, lowerId, fields: DocumentFields.Default, throwOnConflict: false);
+            if (local != null) // doc isn't deleted, so we don't need to create delete revision
+                return false;
+
+            lastRevision = GetLastRevisionFor(context, lowerId, lowerIdPrefix, collectionName, out table);
+            return lastRevision != null && lastRevision.Flags.Contain(DocumentFlags.DeleteRevision) == false;
+        }
+
+        private Document GetLastRevisionFor(DocumentsOperationContext context,
+            Slice lowerId,
+            Slice lowerIdPrefix,
+            CollectionName collectionName,
+            out Table table)
+        {
+            table = null;
+
+            using (GetKeyWithEtag(context, lowerId, etag: long.MaxValue, out var compoundPrefix))
+            {
+                table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+                var holder = table.SeekOneBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], lowerIdPrefix, compoundPrefix);
+                if (holder == null)
+                {
+                    table = null;
+                    return null;
+                }
+
+                return TableValueToRevision(context, ref holder.Reader, DocumentFields.ChangeVector);
+            }
+        }
+
+        internal void DeleteRevisionFromTable(DocumentsOperationContext context, Table table, Dictionary<string, Table> writeTables,
             Document revision, CollectionName collectionName,
             ChangeVector changeVector, long lastModifiedTicks, DocumentFlags flags)
         {
@@ -1650,13 +1697,73 @@ namespace Raven.Server.Documents.Revisions
         }
 
         public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress,
-            bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
-            string[] collections,
+           bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
+           HashSet<string> collections,
+           OperationCancelToken token)
+        {
+            var result = new EnforceConfigurationResult();
+            await PerformRevisionsOperationAsync(onProgress, result,
+                (ids, res, tk) => new EnforceRevisionConfigurationCommand(this, ids, res, includeForceCreated, tk),
+                collections, token);
+
+            return result;
+        }
+
+        public async Task<IOperationResult> AdoptOrphanedAsync(Action<IOperationProgress> onProgress,
+            HashSet<string> collections,
             OperationCancelToken token)
         {
-            HashSet<string> collectionsToUse = null;
-            if (collections is { Length: > 0 })
-                collectionsToUse = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
+            var result = new AdoptOrphanedRevisionsResult();
+            await PerformRevisionsOperationAsync(onProgress, result,
+                (ids, res, tk) => new AdoptOrphanedRevisionsCommand(this, ids, result, tk),
+                collections: collections, token);
+
+            return result;
+        }
+
+        public async Task<IOperationResult> AdoptOrphanedAsync(Action<IOperationProgress> onProgress,
+            OperationCancelToken token)
+        {
+            var result = new AdoptOrphanedRevisionsResult();
+            await PerformRevisionsOperationAsync(onProgress, result,
+                (ids, res, tk) => new AdoptOrphanedRevisionsCommand(this, ids, result, tk),
+                collections: null, token);
+
+            return result;
+        }
+
+        private bool CanContinueBatch(List<string> idsToCheck, TimeSpan elapsed, JsonOperationContext context)
+        {
+            if (idsToCheck.Count > 1024)
+                return false;
+
+            if (elapsed > MaxEnforceConfigurationSingleBatchTime)
+                return false;
+
+            if (context.AllocatedMemory > SizeLimitInBytes)
+                return false;
+
+            return true;
+        }
+
+        private async Task PerformRevisionsOperationAsync<TOperationResult>(
+            Action<IOperationProgress> onProgress,
+            TOperationResult result,
+            Func<List<string>, TOperationResult, OperationCancelToken, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
+            HashSet<string> collections,
+            OperationCancelToken token) where TOperationResult : OperationResult
+        {
+            if (collections != null)
+            {
+                if (collections.Comparer?.Equals(StringComparer.OrdinalIgnoreCase) == false)
+                    throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
+
+                foreach (var collection in collections)
+                {
+                    if (string.IsNullOrEmpty(collection))
+                        throw new InvalidOperationException("There is no collection with name which is empty string or 'null'.");
+                }
+            }
 
             var parameters = new Parameters
             {
@@ -1668,7 +1775,6 @@ namespace Raven.Server.Documents.Revisions
 
             parameters.LastScannedEtag = parameters.EtagBarrier;
 
-            var result = new EnforceConfigurationResult();
             var ids = new List<string>();
             var sw = Stopwatch.StartNew();
 
@@ -1687,7 +1793,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     using (ctx.OpenReadTransaction())
                     {
-                        var tables = GetRevisionsTables(ctx, collectionsToUse, parameters.LastScannedEtag);
+                        var tables = GetRevisionsTables(ctx, collections, parameters.LastScannedEtag);
 
                         foreach (var table in tables)
                         {
@@ -1717,40 +1823,26 @@ namespace Raven.Server.Documents.Revisions
                                     break;
                                 }
                             }
+
+                            var moreWork = true;
+                            while (moreWork)
+                            {
+                                token.Delay();
+                                var cmd = createCommand(ids, result, token);
+                                await _database.TxMerger.Enqueue(cmd);
+                                moreWork = cmd.MoreWork;
+                            }
                         }
-
-                        EnforceRevisionConfigurationCommand cmd;
-                        do
-                        {
-                            token.Delay();
-                            cmd = new EnforceRevisionConfigurationCommand(this, ids, result, includeForceCreated, token);
-                            await _database.TxMerger.Enqueue(cmd);
-                        } while (cmd.MoreWork);
                     }
+
+
                 }
-            }
-
-
-            return result;
-
-            bool CanContinueBatch(List<string> idsToCheck, TimeSpan elapsed, JsonOperationContext context)
-            {
-                if (idsToCheck.Count > 1024)
-                    return false;
-
-                if (elapsed > MaxEnforceConfigurationSingleBatchTime)
-                    return false;
-
-                if (context.AllocatedMemory > SizeLimitInBytes)
-                    return false;
-
-                return true;
             }
         }
 
-        private List<IEnumerable<Table.TableValueHolder>> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, long lastScannedEtag)
+        private List<IEnumerable<TableValueHolder>> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, long lastScannedEtag)
         {
-            var collectionsTables = new List<IEnumerable<Table.TableValueHolder>>();
+            var collectionsTables = new List<IEnumerable<TableValueHolder>>();
 
             if (collections == null)
             {
@@ -1762,8 +1854,7 @@ namespace Raven.Server.Documents.Revisions
             {
                 foreach (var collection in collections)
                 {
-                    IEnumerable<Table.TableValueHolder> table = null;
-                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: true);
+                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
                     var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
                     var revisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
                     if (revisions == null) // there is no revisions for that collection
@@ -1771,7 +1862,7 @@ namespace Raven.Server.Documents.Revisions
                         continue;
                     }
 
-                    table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
+                    var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
 
                     collectionsTables.Add(table);
                 }
@@ -1785,7 +1876,7 @@ namespace Raven.Server.Documents.Revisions
             MinimumRevisionsToKeep = 0
         };
 
-        private long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
+        internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
@@ -1835,64 +1926,80 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private sealed class EnforceRevisionConfigurationCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal bool AdoptOrphanedFor(DocumentsOperationContext context, string id)
         {
-            private readonly RevisionsStorage _revisionsStorage;
-            private readonly List<string> _ids;
-            private readonly bool _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration;
-            private readonly EnforceConfigurationResult _result;
-            private readonly OperationCancelToken _token;
-
-            public bool MoreWork;
-
-            public EnforceRevisionConfigurationCommand(
-                RevisionsStorage revisionsStorage,
-                List<string> ids,
-                EnforceConfigurationResult result,
-                bool includeForceCreated,
-                OperationCancelToken token)
+            using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
+            using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
             {
-                _revisionsStorage = revisionsStorage;
-                _ids = ids;
-                _result = result;
-                _token = token;
-                _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration = includeForceCreated;
-            }
-
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                MoreWork = false;
-                foreach (var id in _ids)
+                var collectionName = GetCollectionFor(context, lowerIdPrefix);
+                if (collectionName == null)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    _result.RemovedRevisions += (int)_revisionsStorage.EnforceConfigurationFor(context, id, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration == false, ref MoreWork);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Tried to delete revisions for '{id}' but no collection was found.");
+                    return false;
                 }
 
-                return _ids.Count;
-            }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
-            {
-                return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration);
-            }
-
-            private sealed class EnforceRevisionConfigurationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, EnforceRevisionConfigurationCommand>
-            {
-                private readonly RevisionsStorage _revisionsStorage;
-                private readonly List<string> _ids;
-                private readonly bool _includeForceCreated;
-
-                public EnforceRevisionConfigurationCommandDto(RevisionsStorage revisionsStorage, List<string> ids, bool includeForceCreated)
+                if (ShouldAdoptRevision(context, lowerId, lowerIdPrefix, collectionName, out var table, out var lastRevision))
                 {
-                    _revisionsStorage = revisionsStorage;
-                    _ids = ids;
-                    _includeForceCreated = includeForceCreated;
+                    var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
+                    CreateDeletedRevision(context, table, id, collectionName, lastModifiedTicks, lastRevision.Flags);
+                    return true;
                 }
 
-                public EnforceRevisionConfigurationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                return false;
+            }
+        }
+
+        private unsafe void CreateDeletedRevision(DocumentsOperationContext context, Table table, string id, CollectionName collectionName,
+            long lastModifiedTicks, DocumentFlags flags)
+        {
+            var deleteRevisionDocument = context.ReadObject(new DynamicJsonValue
+            {
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
-                    return new EnforceRevisionConfigurationCommand(_revisionsStorage, _ids, new EnforceConfigurationResult(), _includeForceCreated, OperationCancelToken.None);
+                    [Constants.Documents.Metadata.Collection] = collectionName.Name
                 }
+            }, "RevisionsBin");
+
+            var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+            var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+
+            Debug.Assert(changeVector != null, "Change vector must be set");
+            flags = flags.Strip(DocumentFlags.HasAttachments);
+            flags |= DocumentFlags.HasRevisions;
+
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
+            using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
+            {
+                using var _ = GetKeyPrefix(context, lowerId, out Slice lowerIdPrefix);
+                var newEtagSwapBytes = Bits.SwapBytes(newEtag);
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
+                    tvb.Add(lowerId);
+                    tvb.Add(SpecialChars.RecordSeparator);
+                    tvb.Add(newEtagSwapBytes);
+                    tvb.Add(idSlice);
+                    tvb.Add(deleteRevisionDocument.BasePointer, deleteRevisionDocument.Size);
+                    tvb.Add((int)(DocumentFlags.DeleteRevision | flags));
+                    tvb.Add(newEtagSwapBytes);
+                    tvb.Add(lastModifiedTicks);
+                    tvb.Add(context.GetTransactionMarker());
+                    if (flags.Contain(DocumentFlags.Resolved))
+                    {
+                        tvb.Add((int)DocumentFlags.Resolved);
+                    }
+                    else
+                    {
+                        tvb.Add(0);
+                    }
+
+                    tvb.Add(Bits.SwapBytes(lastModifiedTicks));
+                    table.Insert(tvb);
+                }
+
+                IncrementCountOfRevisions(context, lowerIdPrefix, 1);
             }
         }
 
@@ -2238,10 +2345,10 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public void GetLatestRevisionsBinEntry(DocumentsOperationContext context, long startEtag, out string latestChangeVector)
+        public void GetLatestRevisionsBinEntry(DocumentsOperationContext context, out string latestChangeVector)
         {
             latestChangeVector = null;
-            foreach (var entry in GetRevisionsBinEntries(context, startEtag, 1))
+            foreach (var entry in GetRevisionsBinEntries(context, 0, 1))
             {
                 latestChangeVector = entry.ChangeVector;
             }
@@ -2301,9 +2408,9 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, long take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, long take, DocumentFields fields = DocumentFields.All, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction, onCorruptedDataHandler);
 
             foreach (var tvr in table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, 0))
             {

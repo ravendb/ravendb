@@ -32,6 +32,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
                 case ClusterDashboardPayloadType.Server:
                     return new TrafficWatchPayload
                     {
+                        RequestsPerSecond = trafficWatch.RequestsPerSecond,
                         TrafficPerDatabase = trafficWatch.Items
                     };
                 case ClusterDashboardPayloadType.Database:

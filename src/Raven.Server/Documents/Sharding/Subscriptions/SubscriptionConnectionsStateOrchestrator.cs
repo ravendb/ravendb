@@ -110,10 +110,11 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         LastChangeVectorSent = connection.SubscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointForOrchestrator;
     }
 
-    public override void Initialize(OrchestratedSubscriptionConnection connection, bool afterSubscribe = false)
+    public override async Task InitializeAsync(OrchestratedSubscriptionConnection connection, bool afterSubscribe = false)
     {
-        base.Initialize(connection, afterSubscribe);
+        await base.InitializeAsync(connection, afterSubscribe);
         SetLastChangeVectorSent(connection);
+        _subscriptionState = connection.SubscriptionState;
     }
 
     protected override UpdateSubscriptionClientConnectionTime GetUpdateSubscriptionClientConnectionTime()

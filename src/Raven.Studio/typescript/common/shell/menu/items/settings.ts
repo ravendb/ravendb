@@ -13,6 +13,7 @@ import TombstonesState from "components/pages/database/settings/tombstones/Tombs
 import DatabaseCustomSorters from "components/pages/database/settings/customSorters/DatabaseCustomSorters";
 import DatabaseCustomAnalyzers from "components/pages/database/settings/customAnalyzers/DatabaseCustomAnalyzers";
 import DocumentCompression from "components/pages/database/settings/documentCompression/DocumentCompression";
+import RevertRevisions from "components/pages/database/settings/documentRevisions/revertRevisions/RevertRevisions";
 
 export = getSettingsMenuItem;
 
@@ -78,7 +79,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/revertRevisions',
-            moduleId: require('viewmodels/database/settings/revertRevisions'),
+            moduleId: bridgeToReact(RevertRevisions, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Revert Revisions',
             nav: false,

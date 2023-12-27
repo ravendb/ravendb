@@ -12,7 +12,7 @@ namespace Corax.Querying.Matches
         where TInner : IQueryMatch
         where TOuter : IQueryMatch
     {
-        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int>  _fillFunc;
+        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> _fillFunc;
         private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> _andWithFunc;
         private readonly delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> _inspectFunc;
 
@@ -23,11 +23,11 @@ namespace Corax.Querying.Matches
         private readonly Querying.IndexSearcher _indexSearcher;
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
-        private readonly SkipSortingResult _skipSortingResult;
         private readonly CancellationToken _token;
-        private readonly SkipSortingResult _innerSkipSorting;
-        private readonly SkipSortingResult _outerSkipSorting;
 
+        private SkipSortingResult _skipSortingResult;
+
+        private int _fillCallCounter;
         public SkipSortingResult AttemptToSkipSorting() => _skipSortingResult;
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
@@ -60,15 +60,26 @@ namespace Corax.Querying.Matches
             _skipSortingResult = skipSortingResult;
             _token = token;
             _ctx = indexSearcher.Allocator;
-
-            _innerSkipSorting = _inner.AttemptToSkipSorting();
-            _outerSkipSorting = _outer.AttemptToSkipSorting();
+            _fillCallCounter = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
-            return _fillFunc(ref this, buffer);
+        // Rationale: Even though 'and' will always return a sorted array, it only sorts locally.
+        // Since we designed Fill to work in a streaming manner, the user can (and in most cases will) call Fill multiple times.
+        // There is no guarantee that returned IDs are sorted between batches.
+        // To better understand the issue, let's assume we have a MultiTermMatch (startsWith) with terms "a" and "aa".
+        // The term "a" has documents with IDs in the range <8k; 12k>, and "aa" has older documents in the range <6k; 7k>.
+        // The first call will return sorted matches in the range <8k; 12k> (and will fetch all from this term)
+        // , so the next call will get values from <6k; 7k>.
+        // Therefore, if the caller is relying on _skipSortingResult, we have to change it to SortingIsRequired
+        // since there is no guarantee it will be sorted.
+            var results = _fillFunc(ref this, buffer);
+            if (results > 0 && _fillCallCounter++ > 0)
+                _skipSortingResult = SkipSortingResult.SortingIsRequired;
+
+            return results;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -86,7 +97,7 @@ namespace Corax.Querying.Matches
             bool outerBoosting = _outer.IsBoosting;
             if (innerBoosting == false && outerBoosting == false)
                 return;
-            
+
             // From now on we have boosting happening somewhere in this chain. 
 
             // If there are two chains we need to combine them.

@@ -21,7 +21,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected IIndexReadOperationFactory IndexReadOperationFactory { get; }
 
         public abstract bool HasWriter { get; }
-
         public abstract void CleanWritersIfNeeded();
 
         public abstract void Clean(IndexCleanup mode);
@@ -43,6 +42,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract bool ContainsField(string field);
         public abstract IndexFacetReadOperationBase OpenFacetedIndexReader(Transaction readTransaction);
         public abstract SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field);
+        public abstract void AssertCanOptimize();
+        public abstract void AssertCanDump();
         internal abstract void RecreateSearcher(Transaction asOfTx);
         internal abstract void RecreateSuggestionsSearchers(Transaction asOfTx);
         public abstract void DisposeWriters();

@@ -128,7 +128,8 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     debugMode: false,
                     isTest: false,
                     collectResultsNeeded: true,
-                    returnDocument: false);
+                    returnDocument: false,
+                    ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails,
                     x => new BulkOperationResult.PatchDetails

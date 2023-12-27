@@ -21,7 +21,7 @@ namespace FastTests.Issues
             try
             {
                 new PathSetting(path);
-                Assert.True(false, "Should have thrown ArgumentException");
+                Assert.Fail("Should have thrown ArgumentException");
             }
             catch (ArgumentException)
             {

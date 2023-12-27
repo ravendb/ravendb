@@ -6,6 +6,7 @@ import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import accessManager = require("common/shell/accessManager");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import moment = require("moment");
+import serverSettings from "common/settings/serverSettings";
 
 interface serverCertificateInfo {
     dateFormatted: string;
@@ -60,14 +61,14 @@ class licenseWidget extends widget {
                 const date = moment.utc(serverCertificate.NotAfter);
                 const dateFormatted = date.format("YYYY-MM-DD");
 
-                const nowPlus14Days = moment.utc().add(14, 'days');
+                const nowPlusExpirationThresholdInDays = moment.utc().add(serverSettings.default.certificateExpiringThresholdInDays(), 'days');
                 
                 let expirationClass = "";
 
                 if (date.isBefore()) {
                     expirationClass = "text-danger";
-                } else if (date.isAfter(nowPlus14Days)) {
-                    // valid for at least 2 weeks - use defaults
+                } else if (date.isAfter(nowPlusExpirationThresholdInDays)) {
+                    // valid for at least {expiration threshold} - use defaults
                 } else {
                     expirationClass = "text-warning";
                 }

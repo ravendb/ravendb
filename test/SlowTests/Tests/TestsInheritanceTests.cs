@@ -16,7 +16,6 @@ using Raven.TestDriver;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static SlowTests.Issues.RavenDB_13335;
 
 namespace SlowTests.Tests
 {
@@ -91,7 +90,9 @@ namespace SlowTests.Tests
                         select method;
 
             var array = types.ToArray();
-            const int numberToTolerate = 4682;
+
+            const int numberToTolerate = 4633;
+
             if (array.Length == numberToTolerate)
                 return;
 

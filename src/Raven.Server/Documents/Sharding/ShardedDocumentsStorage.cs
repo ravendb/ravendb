@@ -399,7 +399,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 var writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
 
                 var newEtag = GenerateNextEtag();
-                var cv = ChangeVector.Merge(context.LastDatabaseChangeVector, tombstoneChangeVector, context);
+                var cv = ChangeVector.MergeWithDatabaseChangeVector(context, tombstoneChangeVector);
                 var flags = tombstone.Flags | DocumentFlags.Artificial | DocumentFlags.FromResharding;
 
                 using (Slice.From(context.Allocator, cv, out var cvSlice))

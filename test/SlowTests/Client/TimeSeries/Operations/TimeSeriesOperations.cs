@@ -1036,7 +1036,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
         
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.TimeSeries, RavenArchitecture.X64)]
         [InlineData(0)]
         [InlineData(12)]
         [InlineData(123)]

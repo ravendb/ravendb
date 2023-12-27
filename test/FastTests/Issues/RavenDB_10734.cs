@@ -2,6 +2,9 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
+using Raven.Server.Extensions;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,21 +28,23 @@ namespace FastTests.Issues
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(ComplexDocument)))
                 using (var blittableJson = await context.ReadForDiskAsync(stringStream, "Reading of foo/bar"))
                 {
-                    requestExecutor.Execute(new PutDocumentCommand(requestExecutor.Conventions, "foo/bar", null, blittableJson), context);
+                    await requestExecutor.ExecuteAsync(new PutDocumentCommand(requestExecutor.Conventions, "foo/bar", null, blittableJson), context);
                 }
 
                 var url = $"{store.Urls[0]}/databases/{store.Database}/docs/class?id=foo/bar";
-                var responseAsString = await SendGetAndReadString(url);
+                var responseAsString = await SendGetAndReadString(requestExecutor, url);
 
                 Assert.DoesNotContain("NotSupportedException", responseAsString);
                 Assert.Contains("public class Item", responseAsString);
             }
         }
 
-        public async Task<string> SendGetAndReadString(string url)
+        private static async Task<string> SendGetAndReadString(RequestExecutor requestExecutor, string url)
         {
-            using (var client = new HttpClient())
-                return await client.GetStringAsync(url);
+            var message = new HttpRequestMessage(HttpMethod.Get, url).WithConventions(requestExecutor.Conventions);
+
+            var response = await requestExecutor.HttpClient.SendAsync(message);
+            return await response.Content.ReadAsStringAsync();
         }
 
         private const string ComplexDocument = @"

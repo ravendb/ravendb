@@ -27,6 +27,8 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Threading;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Util.Settings;
@@ -36,7 +38,8 @@ namespace Raven.Server.Documents
     public sealed class DatabasesLandlord : IDisposable
     {
         public const string DoNotRemove = "DoNotRemove";
-        private readonly AsyncReaderWriterLock _disposing = new AsyncReaderWriterLock();
+
+        private readonly AsyncGuard _disposing;
 
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(StringSegmentComparer.OrdinalIgnoreCase);
@@ -58,6 +61,8 @@ namespace Raven.Server.Documents
 
         public DatabasesLandlord(ServerStore serverStore)
         {
+            _disposing = new AsyncGuard();
+            
             _serverStore = serverStore;
             _databaseSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentLoads);
             _concurrentDatabaseLoadTimeout = _serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan;
@@ -109,7 +114,9 @@ namespace Raven.Server.Documents
             if (PreventWakeUpIdleDatabase(databaseName, type))
                 return;
 
-            using (await _disposing.ReaderLockAsync(_serverStore.ServerShutdown))
+            if (_disposing.TryEnter(out var idx) == false)
+                ThrowServerIsBeingDisposed(databaseName);
+            try
             {
                 try
                 {
@@ -159,6 +166,7 @@ namespace Raven.Server.Documents
                                 using (ShardedDatabasesCache.RemoveLockAndReturn(databaseName, (databaseContext) => databaseContext.Dispose(), out _))
                                 {
                                 }
+
                                 _serverStore.NotificationCenter.Storage.DeleteStorageFor(databaseName);
                             }
                         }
@@ -190,14 +198,16 @@ namespace Raven.Server.Documents
                 {
                     var title = $"Concurrent load timeout of '{databaseName}' database";
 
-                    var message = $"Failed to load database '{databaseName}' concurrently with other databases within {_serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan}. " +
-                                "Database load will be attempted on next request accessing it. If you see this on regular basis you might consider adjusting the following configuration options: " +
-                                $"{RavenConfiguration.GetKey(x => x.Databases.ConcurrentLoadTimeout)} and {RavenConfiguration.GetKey(x => x.Databases.MaxConcurrentLoads)}";
+                    var message =
+                        $"Failed to load database '{databaseName}' concurrently with other databases within {_serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan}. " +
+                        "Database load will be attempted on next request accessing it. If you see this on regular basis you might consider adjusting the following configuration options: " +
+                        $"{RavenConfiguration.GetKey(x => x.Databases.ConcurrentLoadTimeout)} and {RavenConfiguration.GetKey(x => x.Databases.MaxConcurrentLoads)}";
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info(message, e);
 
-                    _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, message, AlertType.ConcurrentDatabaseLoadTimeout, NotificationSeverity.Warning,
+                    _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, message, AlertType.ConcurrentDatabaseLoadTimeout,
+                        NotificationSeverity.Warning,
                         details: new ExceptionDetails(e)));
 
                     throw;
@@ -211,6 +221,10 @@ namespace Raven.Server.Documents
                         details: new ExceptionDetails(e)));
                     throw;
                 }
+            }
+            finally
+            {
+                _disposing.Exit(idx);
             }
         }
 
@@ -540,102 +554,96 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            var release = _disposing.WriterLock();
+            _disposing.CloseAndLock();
+            var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
             try
             {
-                var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
-
-                try
-                {
-                    // prevent creating new databases
-                    _databaseSemaphore.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Failed to dispose resource semaphore", e);
-                }
-
-                // we don't want to wake up database during dispose.
-                var handles = new List<WaitHandle>();
-                foreach (var timer in _wakeupTimers.Values)
-                {
-                    var handle = new ManualResetEvent(false);
-                    timer.Dispose(handle);
-                    handles.Add(handle);
-                }
-
-                if (handles.Count > 0)
-                {
-                    var count = handles.Count;
-                    var batchSize = Math.Min(64, count);
-
-                    var numberOfBatches = count / batchSize;
-                    if (count % batchSize != 0)
-                    {
-                        // if we have a reminder, we need another batch
-                        numberOfBatches++;
-                    }
-
-                    var batch = new WaitHandle[batchSize];
-                    for (var i = 0; i < numberOfBatches; i++)
-                    {
-                        var toCopy = Math.Min(64, count - i * batchSize);
-                        handles.CopyTo(i * batchSize, batch, 0, toCopy);
-                        WaitHandle.WaitAll(batch);
-                    }
-                }
-
-                // shut down all databases in parallel, avoid having to wait for each one
-                Parallel.ForEach(DatabasesCache.Values, new ParallelOptions
-                {
-                    // we limit the number of resources we dispose concurrently to avoid
-                    // putting too much pressure on the I/O system if a disposing db need
-                    // to flush data to disk
-                    MaxDegreeOfParallelism = Math.Max(1, ProcessorInfo.ProcessorCount / 2)
-                }, dbTask =>
-                {
-                    if (dbTask.IsCompleted == false)
-                        dbTask.ContinueWith(task =>
-                        {
-                            if (task.Status != TaskStatus.RanToCompletion)
-                                return;
-
-                            try
-                            {
-                                task.Result.Dispose();
-                            }
-                            catch (Exception e)
-                            {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info("Failure in deferred disposal of a database", e);
-                            }
-                        });
-                    else if (dbTask.Status == TaskStatus.RanToCompletion && dbTask.Result != null)
-                        exceptionAggregator.Execute(dbTask.Result.Dispose);
-                    // there is no else, the db is probably faulted
-                });
-                DatabasesCache.Clear();
-
-                Parallel.ForEach(ShardedDatabasesCache.Values, new ParallelOptions
-                {
-                    // we limit the number of resources we dispose concurrently to avoid
-                    // putting too much pressure on the I/O system if a disposing db need
-                    // to flush data to disk
-                    MaxDegreeOfParallelism = Math.Max(1, ProcessorInfo.ProcessorCount / 2)
-                }, dbTask =>
-                {
-                    // this is not really a task
-                    exceptionAggregator.Execute(dbTask.Result.Dispose);
-                });
-                ShardedDatabasesCache.Clear();
-
-                exceptionAggregator.ThrowIfNeeded();
+                // prevent creating new databases
+                _databaseSemaphore.Dispose();
             }
-            finally
+            catch (Exception e)
             {
-                release.Dispose();
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Failed to dispose resource semaphore", e);
             }
+
+            // we don't want to wake up database during dispose.
+            var handles = new List<WaitHandle>();
+            foreach (var timer in _wakeupTimers.Values)
+            {
+                var handle = new ManualResetEvent(false);
+                timer.Dispose(handle);
+                handles.Add(handle);
+            }
+
+            if (handles.Count > 0)
+            {
+                var count = handles.Count;
+                var batchSize = Math.Min(64, count);
+
+                var numberOfBatches = count / batchSize;
+                if (count % batchSize != 0)
+                {
+                    // if we have a reminder, we need another batch
+                    numberOfBatches++;
+                }
+
+                var batch = new WaitHandle[batchSize];
+                for (var i = 0; i < numberOfBatches; i++)
+                {
+                    var toCopy = Math.Min(64, count - i * batchSize);
+                    handles.CopyTo(i * batchSize, batch, 0, toCopy);
+                    WaitHandle.WaitAll(batch);
+                }
+            }
+
+            // shut down all databases in parallel, avoid having to wait for each one
+            Parallel.ForEach(DatabasesCache.Values, new ParallelOptions
+            {
+                // we limit the number of resources we dispose concurrently to avoid
+                // putting too much pressure on the I/O system if a disposing db need
+                // to flush data to disk
+                MaxDegreeOfParallelism = Math.Max(1, ProcessorInfo.ProcessorCount / 2)
+            }, dbTask =>
+            {
+                if (dbTask.IsCompleted == false)
+                    dbTask.ContinueWith(task =>
+                    {
+                        if (task.Status != TaskStatus.RanToCompletion)
+                            return;
+
+                        try
+                        {
+                            task.Result.Dispose();
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Failure in deferred disposal of a database", e);
+                        }
+                    });
+                else if (dbTask.Status == TaskStatus.RanToCompletion && dbTask.Result != null)
+                    exceptionAggregator.Execute(dbTask.Result.Dispose);
+                // there is no else, the db is probably faulted
+            });
+            DatabasesCache.Clear();
+
+            Parallel.ForEach(ShardedDatabasesCache.Values, new ParallelOptions
+            {
+                // we limit the number of resources we dispose concurrently to avoid
+                // putting too much pressure on the I/O system if a disposing db need
+                // to flush data to disk
+                MaxDegreeOfParallelism = Math.Max(1, ProcessorInfo.ProcessorCount / 2)
+            }, dbTask =>
+            {
+                // this is not really a task
+                exceptionAggregator.Execute(dbTask.Result.Dispose);
+            });
+            exceptionAggregator.Execute(ShardedDatabasesCache.Clear);
+            
+            exceptionAggregator.Execute(_disposing.Dispose);
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public event Action<string> OnDatabaseLoaded = delegate { };
@@ -679,7 +687,9 @@ namespace Raven.Server.Documents
 
         public DatabaseSearchResult TryGetOrCreateDatabase(StringSegment databaseName)
         {
-            using (EnterReadLockImmediately(databaseName))
+            if (_disposing.TryEnter(out var idx) == false)
+                ThrowServerIsBeingDisposed(databaseName);
+            try
             {
                 if (TryGetResourceStore(databaseName, out var databaseTask))
                 {
@@ -710,10 +720,17 @@ namespace Raven.Server.Documents
 
                 return new DatabaseSearchResult(DatabaseSearchResult.Status.Database, TryGetOrCreateResourceStore(databaseName), databaseContext: null);
             }
+            finally
+            {
+                _disposing.Exit(idx);
+            }
         }
 
         private ShardedDatabaseContext GetOrAddShardedDatabaseContext(StringSegment databaseName, RawDatabaseRecord databaseRecord)
         {
+            if (databaseRecord.IsDisabled)
+                throw new DatabaseDisabledException(databaseName + " has been disabled");
+
             if (databaseRecord.Sharding.Orchestrator.Topology.RelevantFor(_serverStore.NodeTag) == false)
                 throw new DatabaseNotRelevantException($"Can't get or add orchestrator for database {databaseName} because it is not relevant on this node {_serverStore.NodeTag}");
 
@@ -770,15 +787,14 @@ namespace Raven.Server.Documents
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
         {
-            IDisposable release = null;
+            if (_wakeupTimers.TryRemove(databaseName.Value, out var timer))
+            {
+                timer.Dispose();
+            }
+            if (_disposing.TryEnter(out var idx) == false)
+                ThrowServerIsBeingDisposed(databaseName);
             try
             {
-                if (_wakeupTimers.TryRemove(databaseName.Value, out var timer))
-                {
-                    timer.Dispose();
-                }
-                release = EnterReadLockImmediately(databaseName);
-
                 if (TryGetResourceStore(databaseName, out var database))
                     return database;
 
@@ -786,7 +802,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                release?.Dispose();
+                _disposing.Exit(idx);
             }
         }
 
@@ -822,9 +838,15 @@ namespace Raven.Server.Documents
 
         public async Task RestartDatabaseAsync(string databaseName)
         {
-            using (await _disposing.ReaderLockAsync(_serverStore.ServerShutdown))
+            if (_disposing.TryEnter(out var idx) == false)
+                ThrowServerIsBeingDisposed(databaseName);
+            try
             {
                 UnloadDatabaseInternal(databaseName);
+            }
+            finally
+            {
+                _disposing.Exit(idx);
             }
 
             var result = TryGetOrCreateDatabase(databaseName);
@@ -842,35 +864,6 @@ namespace Raven.Server.Documents
                 return false;
             var extractSingleInnerException = exception.ExtractSingleInnerException();
             return Equals(extractSingleInnerException.Data[DoNotRemove], true);
-        }
-
-        private IDisposable EnterReadLockImmediately(StringSegment databaseName)
-        {
-            using (var cts = new CancellationTokenSource())
-            {
-                var awaiter = _disposing.ReaderLockAsync(cts.Token).GetAwaiter();
-                if (awaiter.IsCompleted == false)
-                {
-                    cts.Cancel();
-                    try
-                    {
-                        ThrowServerIsBeingDisposed(databaseName);
-                    }
-                    finally
-                    {
-                        try
-                        {
-                            awaiter.GetResult()?.Dispose();
-                        }
-                        catch
-                        {
-                            // nothing to do here
-                        }
-                    }
-                }
-
-                return awaiter.GetResult();
-            }
         }
 
         [DoesNotReturn]
@@ -934,20 +927,25 @@ namespace Raven.Server.Documents
 
         private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<string> addToInitLog = null)
         {
-            IDisposable release = null;
             try
             {
                 if (_serverStore.Disposed)
                     ThrowServerIsBeingDisposed(databaseName);
 
-                //if false, this means we have started disposing, so we shouldn't create a database now
-                release = EnterReadLockImmediately(databaseName);
+                if (_disposing.TryEnter(out var idx) == false)
+                    ThrowServerIsBeingDisposed(databaseName);
+                try
+                {
+                    var db = CreateDocumentsStorage(databaseName, config, wakeup, addToInitLog);
+                    _serverStore.NotificationCenter.Add(
+                        DatabaseChanged.Create(databaseName.Value, DatabaseChangeType.Load));
 
-                var db = CreateDocumentsStorage(databaseName, config, wakeup, addToInitLog);
-                _serverStore.NotificationCenter.Add(
-                    DatabaseChanged.Create(databaseName.Value, DatabaseChangeType.Load));
-
-                return db;
+                    return db;
+                }
+                finally
+                {
+                    _disposing.Exit(idx);
+                }
             }
             catch (Exception e)
             {
@@ -968,8 +966,6 @@ namespace Raven.Server.Documents
                 {
                     // nothing to do
                 }
-
-                release?.Dispose();
             }
         }
 
@@ -977,7 +973,9 @@ namespace Raven.Server.Documents
         {
             try
             {
-                using (_disposing.ReaderLock(_serverStore.ServerShutdown))
+                if (_disposing.TryEnter(out var idx) == false)
+                    ThrowServerIsBeingDisposed(databaseName);
+                try
                 {
                     if (_serverStore.ServerShutdown.IsCancellationRequested)
                         return;
@@ -991,6 +989,10 @@ namespace Raven.Server.Documents
 
                         ShouldDeleteDatabase(context, databaseName.Value, rawRecord, fromReplication);
                     }
+                }
+                finally
+                {
+                    _disposing.Exit(idx);
                 }
             }
             catch
@@ -1354,7 +1356,9 @@ namespace Raven.Server.Documents
         {
             try
             {
-                using (_disposing.ReaderLock(_serverStore.ServerShutdown))
+                if (_disposing.TryEnter(out var idx) == false)
+                    ThrowServerIsBeingDisposed(databaseName);
+                try
                 {
                     if (_serverStore.ServerShutdown.IsCancellationRequested)
                         return;
@@ -1379,10 +1383,7 @@ namespace Raven.Server.Documents
 
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
                             {
-                                DatabaseName = databaseName,
-                                LastEtag = nextIdleDatabaseActivity.LastEtag,
-                                Logger = _logger,
-                                ServerStore = _serverStore
+                                DatabaseName = databaseName, LastEtag = nextIdleDatabaseActivity.LastEtag, Logger = _logger, ServerStore = _serverStore
                             });
 
                             RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
@@ -1406,6 +1407,10 @@ namespace Raven.Server.Documents
                             }, TaskContinuationOptions.OnlyOnFaulted);
                             break;
                     }
+                }
+                finally
+                {
+                    _disposing.Exit(idx);
                 }
             }
             catch (Exception e)

@@ -10,7 +10,7 @@ const collectionNames = {
 
 type CollectionName = (typeof collectionNames)[keyof typeof collectionNames] | (string & NonNullable<unknown>);
 
-interface Collection {
+export interface Collection {
     name: CollectionName;
     documentCount: number;
     lastDocumentChangeVector: string;

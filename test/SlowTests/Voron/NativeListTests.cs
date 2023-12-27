@@ -30,10 +30,10 @@ public class NativeListTests : StorageTest
             var initCapacity = nativeList.Capacity;
             var randomLong = random.NextInt64(long.MinValue, long.MaxValue);
 
-            if (nativeList.TryPush(randomLong) == false)
+            if (nativeList.TryAdd(randomLong) == false)
             {
                 nativeList.Grow(Allocator, 1);
-                nativeList.PushUnsafe(randomLong);
+                nativeList.AddUnsafe(randomLong);
             }
 
             managedList.Add(randomLong);

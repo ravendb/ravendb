@@ -130,37 +130,33 @@ internal unsafe struct EntriesModifications
     public EntriesModifications([NotNull] ByteStringContext context, int size)
     {
         TermSize = size;
+        //do not initialize native list by default since some of them never will be allocated.
         Additions = new();
-        Additions.Initialize(context);
         Removals = new();
-        Removals.Initialize(context);
         Updates = new();
-        Updates.Initialize(context);
     }
 
     public void Addition([NotNull] ByteStringContext context, long entryId, int termsPerEntryIndex, short freq)
     {
         if (Additions.HasCapacityFor(1) == false)
             Additions.Grow(context, 1);
-
-        AddToList(ref Additions, entryId, termsPerEntryIndex, freq);
+        AddToList(context, ref Additions, entryId, termsPerEntryIndex, freq);
     }
 
     public void Removal([NotNull] ByteStringContext context, long entryId, int termsPerEntryIndex, short freq)
     {
         if (Removals.HasCapacityFor(1) == false)
             Removals.Grow(context, 1);
-
-        AddToList(ref Removals, entryId, termsPerEntryIndex, freq);
+        AddToList(context, ref Removals, entryId, termsPerEntryIndex, freq);
     }
 
-    private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, int termsPerEntryIndex, short freq)
+    private void AddToList([NotNull] ByteStringContext context, ref NativeList<TermInEntryModification> list, long entryId, int termsPerEntryIndex, short freq)
     {
         AssertPreparationIsNotFinished();
         NeedToUpdate = true;
         if (list.Count > 0)
         {
-            ref var cur = ref list.RawItems[list.Count - 1];
+            ref var cur = ref list[list.Count - 1];
             if (cur.EntryId == entryId)
             {
                 if (cur.Frequency + freq < short.MaxValue)
@@ -181,14 +177,15 @@ internal unsafe struct EntriesModifications
             }
         }
 
-        var term = new TermInEntryModification {EntryId = entryId, TermsPerEntryIndex = termsPerEntryIndex, Frequency = freq};
-        list.PushUnsafe(term);
+        ref var term = ref list.AddByRefUnsafe();
+        term = new TermInEntryModification(entryId, termsPerEntryIndex, freq);
     }
 
     private void DeleteAllDuplicates([NotNull] ByteStringContext context)
     {
         if (NeedToUpdate == false)
             return;
+
         NeedToUpdate = false;
 
         if (NeedToSort)
@@ -200,49 +197,43 @@ internal unsafe struct EntriesModifications
 
         var oldUpdates = Updates.Count;
         int additionPos = 0, removalPos = 0;
-        var additions = Additions.RawItems;
-        var removals = Removals.RawItems;
-        int add = 0, rem = 0;
-        for (; add < Additions.Count && rem < Removals.Count; ++add)
+
+        int additionIndex = 0, removalIndex = 0;
+        for (; additionIndex < Additions.Count && removalIndex < Removals.Count; ++additionIndex)
         {
-            ref var currentAdd = ref additions[add];
-            ref var currentRemoval = ref removals[rem];
+            ref var currentAdd = ref Additions[additionIndex];
+            ref var currentRemoval = ref Removals[removalIndex];
 
             //We've to delete exactly same item in additions and removals and delete those.
             //This is made for Set structure.
             if (currentAdd.Equals(currentRemoval))
             {
-                if (Updates.TryPush(currentAdd) == false)
-                {
-                    Updates.Grow(context, 1);
-                    Updates.PushUnsafe(currentAdd);
-                }
-
-                rem++;
+                Updates.Add(context, currentAdd);
+                removalIndex++;
                 continue;
             }
-
+            
             // if it is equal, then we have same entry, different freq, so need to remove & add
             // the remove is the old one in this case
             if (currentAdd.EntryId >= currentRemoval.EntryId)
             {
-                removals[removalPos++] = currentRemoval;
-                rem++;
-                add--; // so the loop increment will stay the same
+                Removals[removalPos++] = currentRemoval;
+                removalIndex++;
+                additionIndex--; // so the loop increment will stay the same
                 continue;
             }
 
-            additions[additionPos++] = currentAdd;
+            Additions[additionPos++] = currentAdd;
         }
 
-        for (; add < Additions.Count; add++)
+        for (; additionIndex < Additions.Count; additionIndex++)
         {
-            additions[additionPos++] = additions[add];
+            Additions[additionPos++] = Additions[additionIndex];
         }
 
-        for (; rem < Removals.Count; rem++)
+        for (; removalIndex < Removals.Count; removalIndex++)
         {
-            removals[removalPos++] = removals[rem];
+            Removals[removalPos++] = Removals[removalIndex];
         }
 
         Additions.Shrink(additionPos);
@@ -253,9 +244,7 @@ internal unsafe struct EntriesModifications
 
         ValidateNoDuplicateEntries();
     }
-
-    public void GetEncodedAdditions([NotNull] ByteStringContext context, out long* additions) => GetEncodedAdditionsAndRemovals(context, out additions, out _);
-
+    
     public void GetEncodedAdditionsAndRemovals([NotNull] ByteStringContext context, out long* additions, out long* removals)
     {
 #if DEBUG
@@ -272,14 +261,14 @@ internal unsafe struct EntriesModifications
         additions = (long*)Additions.RawItems;
         for (int i = 0; i < Additions.Count; i++)
         {
-            ref var cur = ref Additions.RawItems[i];
+            ref var cur = ref Additions[i];
             additions[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, TermIdMask.Single);
         }
 
         removals = (long*)Removals.RawItems;
         for (int i = 0; i < Removals.Count; i++)
         {
-            ref var cur = ref Removals.RawItems[i];
+            ref var cur = ref Removals[i];
             // Here we use a trick, we want to avoid a 3 way merge, so we use the last bit as indication that this is a
             // value that needs to be removed, after the sorting, we can scan, find the matching removal & addition and skip both
             removals[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, (TermIdMask)1);

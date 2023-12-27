@@ -69,9 +69,9 @@ namespace RachisTests
             ReconnectToNode(node4);
             ReconnectToNode(node5);
 
-            Assert.True(await node4.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, t.Result).WaitWithoutExceptionAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
+            Assert.True(await node4.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, await t).WaitWithoutExceptionAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
                 "#D server didn't get the commands in time");
-            Assert.True(await node5.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, t.Result).WaitWithoutExceptionAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
+            Assert.True(await node5.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, await t).WaitWithoutExceptionAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
                 "#E server didn't get the commands in time");
         }
 

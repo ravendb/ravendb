@@ -76,7 +76,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AmazonS3Theory]
+        [AmazonS3RetryTheory]
         [InlineData(7, 3, false)]
         [InlineData(10, 3, true)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
@@ -102,13 +102,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureTheory, Trait("Category", "Smuggler")]
+        [AzureRetryTheory, Trait("Category", "Smuggler")]
         [InlineData(7, 3, false)]
         [InlineData(10, 3, true)]
         public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             using (await SkipMinimumBackupAgeToKeepValidationAsync())
-            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
+            using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
                 await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                         (configuration, databaseName) =>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Raven.Client.Util;
 using Xunit;
 
 namespace Tests.Infrastructure;
@@ -32,28 +33,42 @@ public class RavenMemberDataAttribute : MemberDataAttributeBase
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
         foreach (var item in base.GetData(testMethod))
-        foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
-        {
-            foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
+            foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
             {
-                var length = item.Length + 1;
-                if (Data is { Length: > 0 })
-                    length += Data.Length;
-
-                var array = new object[length];
-                
-                array[0] = o;
-
-                for (int i = 0; i < item.Length; i++)
+                foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
                 {
-                    array[i + 1] = item[i];
+                    using (SkipIfNeeded(databaseMode))
+                    {
+                        var length = item.Length + 1;
+                        if (Data is { Length: > 0 })
+                            length += Data.Length;
+
+                        var array = new object[length];
+
+                        array[0] = o;
+
+                        for (int i = 0; i < item.Length; i++)
+                        {
+                            array[i + 1] = item[i];
+                        }
+
+                        for (var i = item.Length + 1; i < array.Length; i++)
+                            array[i] = Data[i - 1];
+
+                        yield return array;
+                    }
                 }
-
-                for (var i = item.Length + 1; i < array.Length; i++)
-                    array[i] = Data[i - 1];
-
-                yield return array;
             }
+    }
+
+    private IDisposable SkipIfNeeded(RavenDatabaseMode databaseMode)
+    {
+        if (RavenDataAttributeBase.CanContinue(databaseMode, Skip))
+        {
+            return null;
         }
+
+        Skip = RavenDataAttributeBase.ShardingSkipMessage;
+        return new DisposableAction(() => Skip = null);
     }
 }

@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -37,6 +36,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -159,7 +159,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                    await ServerStore.WaitForExecutionOnSpecificNodeAsync(context, node, newIndex);
                 }
                 catch (DatabaseLoadFailureException e)
                 {
@@ -418,7 +418,15 @@ namespace Raven.Server.Web.System
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
             var members = (List<string>)result;
-            await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, members, newIndex);
+            try
+            {
+                await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, members, newIndex);
+            }
+            catch (RaftIndexWaitAggregateException e)
+            {
+                throw new InvalidDataException(
+                    $"The database '{name}' was created but is not accessible, because one or more of the nodes on which this database was supposed to reside on, threw an exception.", e);
+            }
 
             var nodeUrlsAddedTo = new List<string>();
             foreach (var member in members)
@@ -581,7 +589,7 @@ namespace Raven.Server.Web.System
                     detailedDescription: null,
                     taskFactory: async onProgress =>
                     {
-                        var restoreBackupTask = await RestoreUtils.CreateBackupTaskAsync(ServerStore, restoreConfiguration, restoreSource, operationId, cancelToken);
+                        using var restoreBackupTask = await RestoreUtils.CreateBackupTaskAsync(ServerStore, restoreConfiguration, restoreSource, operationId, cancelToken);
                         return await restoreBackupTask.ExecuteAsync(onProgress);
                     },
                     token: cancelToken);
@@ -619,7 +627,7 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.EnsureNotPassiveAsync();
 
-            var waitOnRecordDeletion = new List<string>();
+            var waitOnDeletion = new List<string>();
             var pendingDeletes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var databasesToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -640,11 +648,8 @@ namespace Raven.Server.Web.System
 
                 using (context.OpenReadTransaction())
                 {
-                    var fromNodes = parameters.FromNodes != null && parameters.FromNodes.Length > 0;
-
                     foreach (var databaseName in parameters.DatabaseNames)
                     {
-                        DatabaseTopology topology = null;
                         var isShard = ShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out string shardedDatabaseName, out int shardNumber);
                         var dbRecordName = isShard ? shardedDatabaseName : databaseName;
 
@@ -684,12 +689,12 @@ namespace Raven.Server.Web.System
                                     throw new ArgumentOutOfRangeException(nameof(rawRecord.LockMode));
                             }
 
-                            if (fromNodes)
+                            if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
                             {
                                 if(rawRecord.IsSharded && isShard == false)
                                     throw new InvalidOperationException($"Deleting entire sharded database {rawRecord.DatabaseName} from a specific node is not allowed.");
 
-                                topology = isShard ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
+                                var topology = isShard ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
 
                                 foreach (var node in parameters.FromNodes)
                                 {
@@ -707,14 +712,9 @@ namespace Raven.Server.Web.System
                                     pendingDeletes.Add(node);
                                     topology.RemoveFromTopology(node);
                                 }
-
-                                if (topology.Count == 0)
-                                    waitOnRecordDeletion.Add(databaseName);
-
-                                continue;
                             }
 
-                            waitOnRecordDeletion.Add(databaseName);
+                            waitOnDeletion.Add(databaseName);
                         }
                     }
                 }
@@ -734,47 +734,7 @@ namespace Raven.Server.Web.System
                     index = newIndex;
                 }
 
-                var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
-
-                await ServerStore.Cluster.WaitForIndexNotification(index, timeToWaitForConfirmation);
-
-                long actualDeletionIndex = index;
-
-                var sp = Stopwatch.StartNew();
-                int databaseIndex = 0;
-                while (waitOnRecordDeletion.Count > databaseIndex)
-                {
-                    var databaseName = waitOnRecordDeletion[databaseIndex];
-                    using (context.OpenReadTransaction())
-                    {
-                        if (ServerStore.Cluster.DatabaseExists(context, databaseName) == false)
-                        {
-                            waitOnRecordDeletion.RemoveAt(databaseIndex);
-                            continue;
-                        }
-                    }
-                    // we'll now wait for the _next_ operation in the cluster
-                    // since deletion involve multiple operations in the cluster
-                    // we'll now wait for the next command to be applied and check
-                    // whatever that removed the db in question
-                    index++;
-                    var remaining = timeToWaitForConfirmation - sp.Elapsed;
-                    try
-                    {
-                        if (remaining < TimeSpan.Zero)
-                        {
-                            databaseIndex++;
-                            continue; // we are done waiting, but still want to locally check the rest of the dbs
-                        }
-
-                        await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
-                        actualDeletionIndex = index;
-                    }
-                    catch (TimeoutException)
-                    {
-                        databaseIndex++;
-                    }
-                }
+                long actualDeletionIndex = await WaitForDeletionToComplete(context, parameters, index, waitOnDeletion);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -788,6 +748,88 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
+        }
+
+        private async Task<long> WaitForDeletionToComplete(TransactionOperationContext context, DeleteDatabasesOperation.Parameters parameters, long index, IList<string> waitOnDeletion)
+        {
+            var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
+
+            await ServerStore.Cluster.WaitForIndexNotification(index, timeToWaitForConfirmation);
+
+            var fromNodes = parameters.FromNodes is { Length: > 0 };
+            long actualDeletionIndex = index;
+            var sp = Stopwatch.StartNew();
+            int databaseIndex = 0;
+
+            while (waitOnDeletion.Count > databaseIndex)
+            {
+                var databaseName = waitOnDeletion[databaseIndex];
+                using (context.OpenReadTransaction())
+                using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                {
+                    if (raw == null)
+                    {
+                        waitOnDeletion.RemoveAt(databaseIndex);
+                        continue;
+                    }
+
+                    if (fromNodes)
+                    {
+                        var allNodesDeleted = true;
+                        foreach (var node in parameters.FromNodes)
+                        {
+                            var key = DatabaseRecord.GetKeyForDeletionInProgress(node, databaseName);
+                            if (raw.DeletionInProgress.ContainsKey(key) == false)
+                                continue;
+
+                            allNodesDeleted = false;
+                            break;
+                        }
+
+                        if (allNodesDeleted)
+                        {
+                            waitOnDeletion.RemoveAt(databaseIndex);
+                            continue;
+                        }
+                    }
+                }
+
+                // we'll now wait for the _next_ operation in the cluster
+                // since deletion involve multiple operations in the cluster
+                // we'll now wait for the next command to be applied and check
+                // whatever that removed the db in question
+                index++;
+                var remaining = timeToWaitForConfirmation - sp.Elapsed;
+                try
+                {
+                    if (remaining < TimeSpan.Zero)
+                    {
+                        databaseIndex++;
+                        continue; // we are done waiting, but still want to locally check the rest of the dbs
+                    }
+
+                    await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
+                    actualDeletionIndex = index;
+                }
+                catch (TimeoutException)
+                {
+                    databaseIndex++;
+                }
+            }
+
+            if (fromNodes)
+            {
+                try
+                {
+                    await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, parameters.FromNodes.ToList(), actualDeletionIndex);
+                }
+                catch (RaftIndexWaitAggregateException e)
+                {
+                    throw new InvalidDataException($"Deletion of databases {string.Join(", ", parameters.DatabaseNames)} was performed, but it could not be propagated due to errors on one or more target nodes.", e);
+                }
+            }
+
+            return actualDeletionIndex;
         }
 
         [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.Operator)]
@@ -1158,18 +1200,80 @@ namespace Raven.Server.Web.System
         public async Task SetUnusedDatabaseIds()
         {
             var database = GetStringQueryString("name");
+            var validate = GetBoolValueQueryString("validate", required: false) ?? false;
+
             await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "unused-databases-ids"))
             {
                 var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
+                if (validate)
+                {
+                    using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
+                        await ValidateUnusedIdsAsync(parameters.DatabaseIds, database, token.Token);
+                }
+
                 var command = new UpdateUnusedDatabaseIdsCommand(database, parameters.DatabaseIds, GetRaftRequestIdFromQuery());
                 await ServerStore.SendToLeaderAsync(command);
             }
 
             NoContentStatus();
         }
+
+        private async Task ValidateUnusedIdsAsync(HashSet<string> unusedIds, string databaseName, CancellationToken token)
+        {
+            foreach (var id in unusedIds)
+            {
+                if(IsBase64String(id)==false)
+                    throw new InvalidOperationException($"Database id '{id}' isn't valid because it isn't Base64String (it contains chars which cannot be in Base64String).");
+            }
+
+            DatabaseTopology topology;
+            ClusterTopology clusterTopology;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+            {
+                topology = rawRecord.Topology;
+                clusterTopology = ServerStore.GetClusterTopology(context);
+            }
+
+            if (unusedIds.Contains(topology.DatabaseTopologyIdBase64))
+                throw new InvalidOperationException($"'DatabaseTopologyIdBase64' ({topology.DatabaseTopologyIdBase64}) cannot be added to the 'unused ids' list (of '{databaseName}').");
+
+            if (unusedIds.Contains(topology.ClusterTransactionIdBase64))
+                throw new InvalidOperationException($"'ClusterTransactionIdBase64' ({topology.ClusterTransactionIdBase64}) cannot be added to the 'unused ids' list (of '{databaseName}').");
+
+            var nodesUrls = topology.AllNodes.Select(clusterTopology.GetUrlFromTag).ToArray();
+
+            using var requestExecutor = RequestExecutor.Create(nodesUrls, databaseName, Server.Certificate.Certificate, DocumentConventions.Default);
+
+            foreach (var nodeTag in topology.AllNodes)
+            {
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var cmd = new GetStatisticsOperation.GetStatisticsCommand(debugTag: "unused-database-validation", nodeTag);
+                    await requestExecutor.ExecuteAsync(cmd, context, token: token);
+                    var stats = cmd.Result;
+
+                    if (unusedIds.Contains(stats.DatabaseId))
+                    {
+                        throw new InvalidOperationException(
+                            $"'{stats.DatabaseId}' cannot be added to the 'unused ids' list (of '{databaseName}'), because it's the database id of '{databaseName}' on node {nodeTag}.");
+                    }
+                }
+            }
+
+        }
+
+        public static unsafe bool IsBase64String(string base64)
+        {
+            int base64Size = (int)Math.Ceiling((double)base64.Length / 3) * 4;
+            Span<byte> bytes = stackalloc byte[base64Size];
+            return Convert.TryFromBase64String(base64, bytes, out int bytesParsed);
+        }
+
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabases()

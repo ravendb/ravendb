@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
                 var node = Database.SubscriptionStorage.GetResponsibleNode(serverContext, name);
                 if (node != null && node != ServerStore.NodeTag)
                 {
-                    await WaitForExecutionOnSpecificNode(serverContext, ServerStore.GetClusterTopology(serverContext), node, index);
+                    await ServerStore.WaitForExecutionOnSpecificNodeAsync(serverContext, node, subscriptionId);
                 }
             }
 

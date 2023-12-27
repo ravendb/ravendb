@@ -107,8 +107,11 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                         case OngoingTaskType.PullReplicationAsHub:
                             Result = JsonDeserializationClient.OngoingTaskPullReplicationAsHubResult(response);
                             break;
+                        case OngoingTaskType.QueueSink:
+                            Result = JsonDeserializationClient.GetOngoingTaskQueueSinkResult(response);
+                            break;
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new ArgumentOutOfRangeException(nameof(_type), _type, "Unknown task type");
                     }
                 }
             }

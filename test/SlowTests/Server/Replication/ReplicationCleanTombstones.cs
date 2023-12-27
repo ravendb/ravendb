@@ -35,7 +35,7 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenMultiplatformTheory(RavenTestCategory.Replication, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CleanTombstones(Options options)
         {
@@ -386,7 +386,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 if (sent.Wait(TimeSpan.FromSeconds(30)) == false)
-                    Assert.False(true, "timeout!");
+                    Assert.Fail("timeout!");
 
                 using (var session = store.OpenSession())
                 {

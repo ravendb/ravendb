@@ -346,7 +346,7 @@ public class MicrosoftLogTests : RavenTestBase
         userMessage.AppendLiteral(". Condition expression:");
         userMessage.AppendLiteral(strExpression);
         
-        Assert.True(false, userMessage.ToStringAndClear());
+        Assert.Fail(userMessage.ToStringAndClear());
     }
     
     private async Task<string> CreateConfigurationFileAsync(string configurationContent)

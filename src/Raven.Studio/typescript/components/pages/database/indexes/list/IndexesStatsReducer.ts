@@ -7,6 +7,7 @@ import { produce } from "immer";
 import { databaseLocationComparator } from "components/utils/common";
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import { WritableDraft } from "immer/dist/types/types-external";
+import genUtils = require("common/generalUtils");
 
 interface ActionStatsLoaded {
     location: databaseLocationSpecifier;
@@ -111,6 +112,7 @@ function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
         patternForReferencesToReduceOutputCollection: stats.ReduceOutputReferencePattern,
         collectionNameForReferenceDocuments: stats.PatternReferencesCollectionName,
         searchEngine: stats.SearchEngineType,
+        createdTimestamp: genUtils.isServerMinDate(stats.CreatedTimestamp) ? null : new Date(stats.CreatedTimestamp),
     };
 }
 
@@ -125,6 +127,8 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
             status: stats.Status,
             stale: stats.IsStale,
             faulty: stats.Type === "Faulty",
+            lastIndexingTime: stats.LastIndexingTime ? new Date(stats.LastIndexingTime) : null,
+            lastQueryingTime: stats.LastQueryingTime ? new Date(stats.LastQueryingTime) : null,
         },
         progress: null,
     };

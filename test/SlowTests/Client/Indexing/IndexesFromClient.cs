@@ -50,7 +50,7 @@ namespace SlowTests.Client.Indexing
                     .SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, new QueryOperationOptions { AllowStale = false }));
 
                 var deleteResult = await operation
-                    .WaitForCompletionAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false) as BulkOperationResult;
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(15)) as BulkOperationResult;
 
                 Assert.Equal(2, deleteResult.Total);
 

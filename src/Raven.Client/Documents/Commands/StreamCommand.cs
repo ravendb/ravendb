@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Commands
 
         public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
 
             Result = new StreamResult
             {

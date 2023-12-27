@@ -16,16 +16,12 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Extensions;
@@ -38,6 +34,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web
 {
@@ -46,6 +43,13 @@ namespace Raven.Server.Web
         public const string StartParameter = "start";
 
         public const string PageSizeParameter = "pageSize";
+
+        internal static readonly HashSet<string> SafeCsrfMethods = new()
+        {
+            HttpMethod.Head.Method,
+            HttpMethod.Options.Method,
+            HttpMethod.Trace.Method
+        };
 
         private RequestHandlerContext _context;
 
@@ -133,11 +137,25 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Stream GetDecompressedStream(Stream stream, IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers)
+        internal Stream GetDecompressedStream(Stream stream, IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers)
         {
-            if (HeadersAllowGzip(headers, Constants.Headers.ContentEncoding) == false)
-                return stream;
-            return GetGzipStream(stream, CompressionMode.Decompress);
+            var httpCompressionAlgorithm = GetHttpCompressionAlgorithmFromHeaders(headers, Constants.Headers.ContentEncoding);
+
+            switch (httpCompressionAlgorithm)
+            {
+                case HttpCompressionAlgorithm.Gzip:
+                    return GetGzipStream(stream, CompressionMode.Decompress);
+#if FEATURE_BROTLI_SUPPORT
+                case HttpCompressionAlgorithm.Brotli:
+                    return new BrotliStream(stream, CompressionMode.Decompress);
+#endif
+                case HttpCompressionAlgorithm.Zstd:
+                    return ZstdStream.Decompress(stream);
+                case null:
+                    return stream;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -158,23 +176,31 @@ namespace Raven.Server.Web
                 Server.Configuration.Http.UseResponseCompression &&
                 (HttpContext.Request.IsHttps == false ||
                     (HttpContext.Request.IsHttps && Server.Configuration.Http.AllowResponseCompressionOverHttps)) &&
-                HeadersAllowGzip(HttpContext.Request.Headers, "Accept-Encoding");
+                GetHttpCompressionAlgorithmFromHeaders(HttpContext.Request.Headers, Constants.Headers.AcceptEncoding) == HttpCompressionAlgorithm.Gzip;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HeadersAllowGzip(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
+        private static HttpCompressionAlgorithm? GetHttpCompressionAlgorithmFromHeaders(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
         {
             if (headers.TryGetValue(encodingsHeader, out Microsoft.Extensions.Primitives.StringValues acceptedContentEncodings) == false)
-                return false;
+                return null;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var encoding in acceptedContentEncodings)
             {
-                if (encoding.Contains("gzip"))
-                    return true;
+                switch (encoding)
+                {
+                    case Constants.Headers.Encodings.Zstd:
+                        return HttpCompressionAlgorithm.Zstd;
+#if FEATURE_BROTLI_SUPPORT
+                    case Constants.Headers.Encodings.Brotli:
+                        return HttpCompressionAlgorithm.Brotli;
+#endif
+                    case Constants.Headers.Encodings.Gzip:
+                        return HttpCompressionAlgorithm.Gzip;
+                }
             }
 
-            return false;
+            return null;
         }
 
         public static void ValidateNodeForAddingToDb(string databaseName, string node, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, RavenServer server, string baseMessage = null)
@@ -204,108 +230,6 @@ namespace Raven.Server.Web
         public void AddStringToHttpContext(string str, TrafficWatchChangeType type)
         {
             HttpContext.Items["TrafficWatch"] = (str, type);
-        }
-
-        protected async Task WaitForExecutionOnSpecificNode(JsonOperationContext context, ClusterTopology clusterTopology, string node, long index)
-        {
-            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-
-            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
-            {
-                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: AbortRequestToken);
-            }
-        }
-
-        protected internal async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
-        {
-            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-            if (members.Count == 0)
-                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
-
-            var executors = new List<ClusterRequestExecutor>();
-
-            try
-            {
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
-                {
-                    cts.CancelAfter(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
-
-                    var waitingTasks = new List<Task<Exception>>();
-                    List<Exception> exceptions = null;
-
-                    foreach (var member in members)
-                    {
-                        var url = clusterTopology.GetUrlFromTag(member);
-                        var executor = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
-                        executors.Add(executor);
-                        waitingTasks.Add(ExecuteTask(executor, member, cts.Token));
-                    }
-
-                    while (waitingTasks.Count > 0)
-                    {
-                        var task = await Task.WhenAny(waitingTasks);
-                        waitingTasks.Remove(task);
-
-                        if (task.Result == null)
-                            continue;
-
-                        var exception = task.Result.ExtractSingleInnerException();
-
-                        if (exceptions == null)
-                            exceptions = new List<Exception>();
-
-                        exceptions.Add(exception);
-                    }
-
-                    if (exceptions != null)
-                    {
-                        var allTimeouts = true;
-                        foreach (var exception in exceptions)
-                        {
-                            if (exception is OperationCanceledException)
-                                continue;
-
-                            allTimeouts = false;
-                        }
-
-                        var aggregateException = new AggregateException(exceptions);
-
-                        if (allTimeouts)
-                            throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.", aggregateException);
-
-                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", aggregateException);
-                    }
-                }
-            }
-            finally
-            {
-                foreach (var executor in executors)
-                {
-                    executor.Dispose();
-                }
-            }
-
-            async Task<Exception> ExecuteTask(RequestExecutor executor, string nodeTag, CancellationToken token)
-            {
-                try
-                {
-                    await executor.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: token);
-                    return null;
-                }
-                catch (RavenException re) when (re.InnerException is HttpRequestException)
-                {
-                    // we want to throw for self-checks
-                    if (nodeTag == ServerStore.NodeTag)
-                        return re;
-
-                    // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
-                    return null;
-                }
-                catch (Exception e)
-                {
-                    return e;
-                }
-            }
         }
 
         private Stream _responseStream;
@@ -697,6 +621,70 @@ namespace Raven.Server.Web
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
 
+        public static bool CheckCSRF(HttpContext httpContext, ServerStore serverStore)
+        {
+            if (serverStore.Configuration.Security.EnableCsrfFilter == false)
+                return true;
+            
+            var requestedOrigin = httpContext.Request.Headers[Constants.Headers.Origin];
+            
+            if (requestedOrigin.Count == 0 || requestedOrigin[0] == null)
+                return true;
+            
+            // no origin at this point - it means it is safe request or non-browser
+
+            var host = httpContext.Request.Host;
+            if (string.IsNullOrEmpty(host.Host))
+                return false;
+            
+            if (SafeCsrfMethods.Contains(httpContext.Request.Method))
+                return true;
+            
+            var origin = requestedOrigin[0];
+            var uriOrigin = new Uri(origin);
+            var originHost = uriOrigin.Host;
+            var originAuthority = uriOrigin.Authority;
+            
+            // for hostname matching we validate both hostname and port
+            var hostMatches = host.ToString() == originAuthority;
+            if (hostMatches)
+                return true;
+            
+            // for requests with-in cluster we value both hostname and port
+            var requestWithinCluster = IsOriginAllowed(origin, serverStore);
+            if (requestWithinCluster)
+                return true;
+            
+            // for trusted origins we match hostname only, port is ignored
+            var trustedOrigins = serverStore.Configuration.Security.CsrfTrustedOrigins ?? Array.Empty<string>();
+            if (trustedOrigins.Length > 0)
+            {
+                foreach (var o in trustedOrigins)
+                {
+                    if (originHost == o)
+                        return true;
+                }
+            }
+
+            // for additional origin headers we match hostname only, port is ignored
+            var additionalHeaders = serverStore.Configuration.Security.CsrfAdditionalOriginHeaders ?? Array.Empty<string>();
+            if (additionalHeaders.Length > 0)
+            {
+                foreach (string additionalHeader in additionalHeaders)
+                {
+                    if (httpContext.Request.Headers.TryGetValue(additionalHeader, out var headerValue) == false)
+                        continue;
+
+                    var stringHeader = headerValue.ToString();
+
+                    if (stringHeader == originAuthority)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+        
         public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore, CorsMode corsMode)
         {
             httpContext.Response.Headers.Add("Vary", "Origin");
@@ -717,7 +705,7 @@ namespace Raven.Server.Web
                     allowedOrigin = requestedOrigin;
                     break;
                 case CorsMode.Cluster:
-                    if (IsOriginAllowed(requestedOrigin, serverStore))
+                    if (serverStore.Server.Certificate.Certificate == null || IsOriginAllowed(requestedOrigin, serverStore))
                         allowedOrigin = requestedOrigin;
                     break;
             }
@@ -730,12 +718,6 @@ namespace Raven.Server.Web
 
         private static bool IsOriginAllowed(string origin, ServerStore serverStore)
         {
-            if (serverStore.Server.Certificate.Certificate == null)
-            {
-                // running in unsafe mode - since server can be access via multiple urls/aliases accept them 
-                return true;
-            }
-
             var topology = serverStore.GetClusterTopology();
 
             // check explicitly each topology type to avoid allocations in topology.AllNodes

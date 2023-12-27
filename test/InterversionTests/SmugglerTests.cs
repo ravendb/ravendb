@@ -243,7 +243,7 @@ namespace InterversionTests
             }
 
             //Export
-            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
             exportOptions.OperateOnTypes = _operateOnTypes42;
             exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)

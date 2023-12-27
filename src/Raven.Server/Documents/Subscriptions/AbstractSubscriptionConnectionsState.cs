@@ -195,7 +195,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
     protected readonly ServerStore _server;
     protected readonly string _databaseName;
     private readonly long _subscriptionId;
-    private SubscriptionState _subscriptionState;
+    protected SubscriptionState _subscriptionState;
     protected ConcurrentSet<TSubscriptionConnection> _connections;
     private int _maxConcurrentConnections;
 
@@ -233,11 +233,11 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
 
     public abstract void DropSubscription(SubscriptionException e);
 
-    public virtual void Initialize(TSubscriptionConnection connection, bool afterSubscribe = false)
+    public virtual Task InitializeAsync(TSubscriptionConnection connection, bool afterSubscribe = false)
     {
         _subscriptionName = connection.Options.SubscriptionName ?? _subscriptionId.ToString();
-        _subscriptionState = connection.SubscriptionState;
         Query = connection.SubscriptionState.Query;
+        return Task.CompletedTask;
     }
 
     public virtual async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync(TSubscriptionConnection connection)
@@ -251,6 +251,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
 
         try
         {
+            var sp = Stopwatch.StartNew();
             while (true)
             {
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -272,8 +273,8 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
 
                     var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)connection.Options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                     await Task.Delay(timeout, connection.CancellationTokenSource.Token);
-                    await connection.SendHeartBeatAsync(
-                        $"A connection from IP {connection.ClientUri} is waiting for Subscription Task that is serving a connection from IP " +
+                    await connection.SendHeartBeatIfNeededAsync(sp,
+                   $"A connection from IP {connection.ClientUri} is waiting for Subscription Task that is serving a connection from IP " +
                         $"{GetConnectionsAsString()} to be released");
                 }
             }

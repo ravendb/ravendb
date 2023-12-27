@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using FastTests;
 using Raven.Server.Config;
-using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
 
@@ -23,7 +22,7 @@ public enum RavenDatabaseMode : byte
     All = Single | Sharded
 }
 
-public class RavenDataAttribute : DataAttribute
+public class RavenDataAttribute : RavenDataAttributeBase
 {
     public RavenSearchEngineMode SearchEngineMode { get; set; } = RavenSearchEngineMode.Lucene;
 
@@ -44,19 +43,22 @@ public class RavenDataAttribute : DataAttribute
     {
         foreach (var (databaseMode, options) in GetOptions(DatabaseMode))
         {
-            foreach (var (searchMode, o) in FillOptions(options, SearchEngineMode))
+            foreach (var (_, o) in FillOptions(options, SearchEngineMode))
             {
-                var length = 1;
-                if (Data is { Length: > 0 })
-                    length += Data.Length;
+                using (SkipIfNeeded(databaseMode))
+                {
+                    var length = 1;
+                    if (Data is { Length: > 0 })
+                        length += Data.Length;
 
-                var array = new object[length];
-                array[0] = o;
+                    var array = new object[length];
+                    array[0] = o;
 
-                for (var i = 1; i < array.Length; i++)
-                    array[i] = Data[i - 1];
+                    for (var i = 1; i < array.Length; i++)
+                        array[i] = Data[i - 1];
 
-                yield return array;
+                    yield return array;
+                }
             }
         }
     }

@@ -27,12 +27,14 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
                 staticIndex.Priority = Priority;
+                staticIndex.ClusterState ??= new IndexDefinitionClusterState();
                 staticIndex.ClusterState.LastIndex = etag;
             }
 
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.Priority = Priority;
+                autoIndex.ClusterState ??= new IndexDefinitionClusterState();
                 autoIndex.ClusterState.LastIndex = etag;
             }
         }

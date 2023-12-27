@@ -1,8 +1,6 @@
 import React, { useState } from "react";
-import { Col, Button, Row, Card, Collapse, Form, Alert } from "reactstrap";
+import { Col, Row, Card, Collapse, Form, Alert } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
-import { EmptySet } from "components/common/EmptySet";
 import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
@@ -13,7 +11,7 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormRadioToggleWithIcon, FormSelectCreatable, FormSwitch } from "components/common/Form";
+import { FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { NonShardedViewProps } from "components/models/common";
@@ -30,6 +28,7 @@ import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { SelectOption } from "components/common/select/Select";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 
 export default function DocumentCompression({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
@@ -85,23 +84,6 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
         return <LoadError error="Unable to load document compression configuration" refresh={asyncGetConfig.execute} />;
     }
 
-    const removeCollection = (name: string) => {
-        setValue(
-            "Collections",
-            Collections.filter((x) => x !== name),
-            { shouldDirty: true }
-        );
-    };
-
-    const removeAllCollections = () => {
-        setValue("Collections", [], { shouldDirty: true });
-    };
-
-    const addAllCollections = () => {
-        const remainingCollectionNames = allCollectionNames.filter((name) => !Collections.includes(name));
-        setValue("Collections", [...Collections, ...remainingCollectionNames], { shouldDirty: true });
-    };
-
     const onSave: SubmitHandler<DocumentsCompressionConfiguration> = async (formData) => {
         return tryHandleSubmit(async () => {
             reportEvent("documents-compression", "save");
@@ -114,8 +96,6 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
             reset(formData);
         });
     };
-
-    const isAddAllCollectionsDisabled = allCollectionNames.filter((name) => !Collections.includes(name)).length === 0;
 
     const infoTextSuffix = CompressAllCollections ? "all collections" : "the selected collections";
 
@@ -157,79 +137,17 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                             </div>
 
                             <Card className={classNames("p-4", { "item-disabled pe-none": !hasDocumentsCompression })}>
-                                {isDatabaseAdmin && (
-                                    <FormRadioToggleWithIcon
-                                        control={control}
-                                        name="CompressAllCollections"
-                                        leftItem={leftRadioToggleItem}
-                                        rightItem={rightRadioToggleItem}
-                                        className="mb-4 d-flex justify-content-center"
-                                    />
-                                )}
-                                <Collapse isOpen={!CompressAllCollections}>
-                                    {isDatabaseAdmin && (
-                                        <Row className="mb-4">
-                                            <Col>
-                                                <FormSelectCreatable
-                                                    control={control}
-                                                    name="Collections"
-                                                    options={allCollectionNames.map((x) => ({ label: x, value: x }))}
-                                                    customOptions={customCollectionOptions}
-                                                    isMulti
-                                                    controlShouldRenderValue={false}
-                                                    isClearable={false}
-                                                    placeholder="Select collection (or enter new collection)"
-                                                    maxMenuHeight={300}
-                                                />
-                                            </Col>
-                                            <Col sm="auto" className="d-flex">
-                                                <Button
-                                                    color="info"
-                                                    onClick={addAllCollections}
-                                                    disabled={isAddAllCollectionsDisabled}
-                                                >
-                                                    <Icon icon="documents" addon="plus" /> Add all
-                                                </Button>
-                                            </Col>
-                                        </Row>
-                                    )}
-                                    <div className="d-flex flex-wrap mb-1 align-items-center">
-                                        <h4 className="m-0">Selected collections</h4>
-                                        <FlexGrow />
-                                        {Collections.length > 0 && isDatabaseAdmin && (
-                                            <Button
-                                                color="link"
-                                                size="xs"
-                                                onClick={removeAllCollections}
-                                                className="p-0"
-                                            >
-                                                Remove all
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <div className="well p-2">
-                                        <div className="simple-item-list">
-                                            {Collections.map((name) => (
-                                                <div key={name} className="p-1 hstack slidein-style">
-                                                    <div className="flex-grow-1">{name}</div>
-                                                    {isDatabaseAdmin && (
-                                                        <Button
-                                                            color="link"
-                                                            size="xs"
-                                                            onClick={() => removeCollection(name)}
-                                                            className="p-0"
-                                                        >
-                                                            <Icon icon="trash" margin="m-0" />
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <Collapse isOpen={Collections.length === 0}>
-                                            <EmptySet>No collections have been selected</EmptySet>
-                                        </Collapse>
-                                    </div>
-                                </Collapse>
+                                <FormCollectionsSelect
+                                    control={control}
+                                    collectionsFormName="Collections"
+                                    collections={Collections}
+                                    isAllCollectionsFormName="CompressAllCollections"
+                                    isAllCollections={CompressAllCollections}
+                                    allCollectionNames={allCollectionNames}
+                                    setValue={setValue}
+                                    customOptions={customCollectionOptions}
+                                    isReadOnly={!isDatabaseAdmin}
+                                />
                                 <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
                                     <Alert color="info" className="hstack gap-3 p-3 mt-4">
                                         <Icon icon="documents-compression" className="fs-1" />
@@ -293,18 +211,6 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
         </div>
     );
 }
-
-const leftRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
-    label: "Compress selected collections",
-    value: false,
-    iconName: "document",
-};
-
-const rightRadioToggleItem: RadioToggleWithIconInputItem<boolean> = {
-    label: "Compress all collections",
-    value: true,
-    iconName: "documents",
-};
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {

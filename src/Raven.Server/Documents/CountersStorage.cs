@@ -1008,7 +1008,7 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        var changeVectorToSave = ChangeVector.MergeChangeVectors(putCountersData.ChangeVector, changeVector, context);
+                        var changeVectorToSave = ChangeVector.Merge(putCountersData.ChangeVector, changeVector, context);
 
                         using (Slice.External(context.Allocator, kvp.Key, out var countersGroupKey))
                         {

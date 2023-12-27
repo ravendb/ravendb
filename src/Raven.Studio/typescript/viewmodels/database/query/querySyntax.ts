@@ -17,7 +17,7 @@ class querySyntax extends dialogViewModelBase {
 
     copySample(sampleTitle: string) {
         const sampleText = querySyntax.samples.find(x => x.title === sampleTitle).text;
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard");
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly samples: Array<sampleCode> = [

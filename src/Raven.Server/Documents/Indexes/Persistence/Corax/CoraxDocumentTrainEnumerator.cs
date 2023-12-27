@@ -19,7 +19,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
+internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 {
     private sealed class Builder : IIndexEntryBuilder
     {
@@ -213,6 +213,8 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
     private readonly Size _maxAllocatedMemory;
     private readonly IndexingStatsScope _indexingStatsScope;
 
+    public int Count { get; private set; }
+
     public CoraxDocumentTrainEnumerator(TransactionOperationContext indexContext, CoraxDocumentConverterBase converter, Index index, IndexType indexType, DocumentsStorage storage, DocumentsOperationContext docsContext, HashSet<string> collections, CancellationToken token, IndexingStatsScope indexingStatsScope, int take = int.MaxValue)
     {
         _indexContext = indexContext;
@@ -232,6 +234,8 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         _documentStorage = storage;
         _docsContext = docsContext;
         _collections = collections;
+
+        Count = 0;
     }
 
     private IEnumerable<ArraySegment<byte>> GetItems()
@@ -326,6 +330,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
     public void Reset()
     {
+        Count = 0;
         _itemsEnumerable = GetItems().GetEnumerator();
     }
 
@@ -359,6 +364,7 @@ internal struct CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
         var current = _itemsEnumerable.Current;
         output = current.AsSpan();
+        Count++;
         return true;
     }
 }

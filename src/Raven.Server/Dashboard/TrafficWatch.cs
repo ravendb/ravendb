@@ -9,6 +9,8 @@ namespace Raven.Server.Dashboard
 
         public double AverageRequestDuration { get; set; }
 
+        public int RequestsPerSecond { get; set; }
+
         public TrafficWatch()
         {
             Items = new List<TrafficWatchItem>();

@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -109,7 +110,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldNotRecreateReplacementIndexIfItIsTheSame()
+        public async Task ShouldNotRecreateReplacementIndexIfItIsTheSame()
         {
             using (var documentStore = GetDocumentStore())
             {
@@ -122,11 +123,11 @@ namespace SlowTests.Issues
                 var index = $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById";
                 var index1 = documentStore.Maintenance.Send(new GetIndexOperation(index));
 
-                var indexInstance1 = Databases.GetDocumentDatabaseInstanceFor(documentStore).Result.IndexStore.GetIndex(index);
+                var indexInstance1 = (await Databases.GetDocumentDatabaseInstanceFor(documentStore)).IndexStore.GetIndex(index);
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                var indexInstance2 = Databases.GetDocumentDatabaseInstanceFor(documentStore).Result.IndexStore.GetIndex(index);
+                var indexInstance2 = (await Databases.GetDocumentDatabaseInstanceFor(documentStore)).IndexStore.GetIndex(index);
 
                 Assert.Same(indexInstance1, indexInstance2);
             }

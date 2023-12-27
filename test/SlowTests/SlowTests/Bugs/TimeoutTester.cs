@@ -87,7 +87,7 @@ namespace SlowTests.SlowTests.Bugs
         }
 
         [Fact]
-        public void will_timeout_query_after_some_time()
+        public async Task will_timeout_query_after_some_time()
         {
             using (var store = GetDocumentStore(new Options
             {
@@ -124,7 +124,7 @@ namespace SlowTests.SlowTests.Bugs
                     }
                 });
 
-                Assert.True(thread.Wait(TimeSpan.FromMinutes(1)));
+                await thread.WaitAsync(TimeSpan.FromMinutes(1));
             }
         }
 

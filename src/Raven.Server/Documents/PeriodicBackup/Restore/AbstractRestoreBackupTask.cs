@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -293,7 +292,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreConfiguration.DataDirectory;
         }
 
-        protected async Task SmugglerRestoreAsync(DocumentDatabase database, JsonOperationContext context)
+        protected async Task SmugglerRestoreAsync(DocumentDatabase database, JsonOperationContext context, DatabaseDestination lastFileDestination)
         {
             Debug.Assert(Progress != null);
 
@@ -344,8 +343,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Progress.Invoke(Result.Progress);
 
             var lastFilePath = RestoreSource.GetBackupPath(lastFileName);
-            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true);
 
+            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, lastFileDestination, options, isLastFile: true);
             ExecuteClusterTransactions(database);
         }
 
@@ -668,7 +667,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                    Directory.GetDirectories(location).Length > 0;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             RestoreSource?.Dispose();
             OperationCancelToken?.Dispose();

@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -23,6 +24,7 @@ using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Extensions;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -252,7 +254,7 @@ namespace SlowTests.Authentication
                 }
 
                 //trigger cert refresh
-                await requestExecutor.HttpClient.PostAsync($"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew", null);
+                await requestExecutor.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew").WithConventions(store.Conventions));
 
                 await Task.WhenAll(replaceTasks.Values.Select(x => x.WaitAsync()).ToArray());
 

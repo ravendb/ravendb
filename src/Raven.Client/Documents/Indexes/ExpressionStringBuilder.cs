@@ -144,7 +144,10 @@ namespace Raven.Client.Documents.Indexes
                 Visit(instance);
                 if (ShouldParenthesisMemberExpression(instance))
                     Out(")");
-
+                
+                if (instance.Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)) && name == "Values")
+                    Out(".ToDictionary(e2 => e2.Key, e2 => e2.Value)");
+                
                 if (isId == false)
                     OutMemberCall(name);
             }
@@ -173,7 +176,10 @@ namespace Raven.Client.Documents.Indexes
         {
             if (ValidCSharpName(name))
             {
-                Out("." + name);
+                if (KeywordsInCSharp.Contains(name))
+                    Out(".@" + name);
+                else
+                    Out("." + name);
             }
             else
             {
@@ -1270,6 +1276,10 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
             Visit(body);
+            
+            if (body.NodeType == ExpressionType.MemberAccess && body.Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
+                Out(".ToDictionary(e3 => e3.Key, e3 => e3.Value)");
+            
             return node;
         }
 
@@ -1375,7 +1385,13 @@ namespace Raven.Client.Documents.Indexes
         /// <returns></returns>
         protected override MemberAssignment VisitMemberAssignment(MemberAssignment assignment)
         {
-            Out(_conventions.GetConvertedPropertyNameFor(assignment.Member));
+            var memberName = _conventions.GetConvertedPropertyNameFor(assignment.Member);
+
+            if (KeywordsInCSharp.Contains(memberName))
+                Out("@" + memberName);
+            else
+                Out(memberName);
+
             Out(" = ");
             var constantExpression = assignment.Expression as ConstantExpression;
             if (constantExpression != null && constantExpression.Value == null)
@@ -1668,7 +1684,14 @@ namespace Raven.Client.Documents.Indexes
                     }
                     else
                     {
-                        Visit(expression);
+                        if (expression is MemberExpression memberExpression && memberExpression.Member.Name == "Values")
+                        {
+                            Out("new DynamicArray(");
+                            Visit(expression);
+                            Out(")");
+                        }
+                        else
+                            Visit(expression);
                     }
                     if (IsIndexerCall(node) == false)
                     {

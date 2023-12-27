@@ -233,7 +233,7 @@ namespace SlowTests.Issues
                                 {
                                     msg = "item and item2 got invalid type.";
                                 }
-                                Assert.True(false, $"Expected to get exact order of replication on destination as on source but got: {msg}");
+                                Assert.Fail($"Expected to get exact order of replication on destination as on source but got: {msg}");
                             }
                         }
                     }

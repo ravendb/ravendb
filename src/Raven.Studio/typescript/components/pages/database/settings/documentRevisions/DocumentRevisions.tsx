@@ -120,11 +120,13 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         dispatch(documentRevisionsActions.saveConfigs());
     });
 
-    const asyncEnforceRevisionsConfiguration = useAsyncCallback(async () => {
-        const dto = await databasesService.enforceRevisionsConfiguration(db);
+    const asyncEnforceRevisionsConfiguration = useAsyncCallback(
+        async (includeForceCreated: boolean, collections: string[]) => {
+            const dto = await databasesService.enforceRevisionsConfiguration(db, includeForceCreated, collections);
 
-        notificationCenter.instance.openDetailsForOperationById(db, dto.OperationId);
-    });
+            notificationCenter.instance.openDetailsForOperationById(db, dto.OperationId);
+        }
+    );
 
     const onEditRevision = (editRevisionData: Omit<EditRevisionData, "toggle">) => {
         if (editRevisionData.taskType === "new") {

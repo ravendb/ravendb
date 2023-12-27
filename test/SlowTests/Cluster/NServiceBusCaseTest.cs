@@ -47,7 +47,7 @@ namespace SlowTests.Cluster
 
                 if (failedUpdates.Any())
                 {
-                    Assert.True(false, $"{failedUpdates.Count} updated failed. {string.Join(Environment.NewLine, failedUpdates.Select(f => f.ErrorMessage))}");
+                    Assert.Fail($"{failedUpdates.Count} updated failed. {string.Join(Environment.NewLine, failedUpdates.Select(f => f.ErrorMessage))}");
                 }
 
                 using var checkSession = store.OpenAsyncSession();
@@ -60,7 +60,7 @@ namespace SlowTests.Cluster
 
                 if (diff.Any())
                 {
-                    Assert.True(false, $"Cannot find an update for the following index(es): {string.Join(Environment.NewLine, diff)}");
+                    Assert.Fail($"Cannot find an update for the following index(es): {string.Join(Environment.NewLine, diff)}");
                 }
             }
         }

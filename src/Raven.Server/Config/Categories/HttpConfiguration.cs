@@ -62,8 +62,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Http.UseResponseCompression", ConfigurationEntryScope.ServerWideOnly)]
         public bool UseResponseCompression { get; set; }
 
-        [Description("Whether Raven's HTTP server should allow response compression to happen when HTTPS is enabled. Please see http://breachattack.com/ before enabling this")]
-        [DefaultValue(false)]
+        [Description("Whether Raven's HTTP server should allow response compression to happen when HTTPS is enabled.")]
+        [DefaultValue(true)]
         [ConfigurationEntry("Http.AllowResponseCompressionOverHttps", ConfigurationEntryScope.ServerWideOnly)]
         public bool AllowResponseCompressionOverHttps { get; set; }
 
@@ -76,6 +76,16 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(CompressionLevel.Fastest)]
         [ConfigurationEntry("Http.DeflateResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
         public CompressionLevel DeflateResponseCompressionLevel { get; set; }
+
+        [Description("Compression level to be used when compressing HTTP responses with Brotli")]
+        [DefaultValue(CompressionLevel.Optimal)]
+        [ConfigurationEntry("Http.BrotliResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
+        public CompressionLevel BrotliResponseCompressionLevel { get; set; }
+
+        [Description("Compression level to be used when compressing HTTP responses with Zstd")]
+        [DefaultValue(CompressionLevel.Fastest)]
+        [ConfigurationEntry("Http.ZstdResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
+        public CompressionLevel ZstdResponseCompressionLevel { get; set; }
 
         [Description("Compression level to be used when compressing static files")]
         [DefaultValue(CompressionLevel.Optimal)]

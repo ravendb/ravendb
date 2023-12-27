@@ -26,11 +26,15 @@ public abstract class QueueEtl<T> : EtlProcess<QueueItem, QueueWithItems<T>, Que
 {
 
     public const string QueueEtlTag = "Queue ETL";
+    private const string DefaultCloudEventType = "ravendb.etl.put";
 
     protected QueueEtl(Transformation transformation, QueueEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, QueueEtlTag)
     {
         Metrics = new EtlMetricsCountersManager();
+
+        DefaultCloudEventSource = new Uri($"{Database.Configuration.Core.PublicServerUrl?.UriValue ?? Database.ServerStore.Server.WebUrl}/{Database.Name}/{Name}",
+            UriKind.RelativeOrAbsolute);
     }
 
     public static EtlProcess CreateInstance(Transformation transformation, QueueEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
@@ -46,9 +50,7 @@ public abstract class QueueEtl<T> : EtlProcess<QueueItem, QueueWithItems<T>, Que
         }
     }
 
-    private const string DefaultCloudEventType = "ravendb.etl.put";
-    private string DefaultCloudEventSource =>
-        $"{Database.Configuration.Core.PublicServerUrl?.UriValue ?? Database.ServerStore.Server.WebUrl}/{Database.Name}/{Name}";
+    private Uri  DefaultCloudEventSource { get; }
 
     public override string EtlSubType => Configuration.BrokerType.ToString();
 
@@ -135,11 +137,18 @@ public abstract class QueueEtl<T> : EtlProcess<QueueItem, QueueWithItems<T>, Que
     {
         var eventMessage = new CloudEvent
         {
+            Data = item.TransformationResult,
+
+            // required attributes
             Id = item.Attributes?.Id ?? item.ChangeVector,
             DataContentType = "application/json",
             Type = item.Attributes?.Type ?? DefaultCloudEventType,
-            Source = new Uri(item.Attributes?.Source ?? DefaultCloudEventSource, UriKind.RelativeOrAbsolute),
-            Data = item.TransformationResult
+            Source = item.Attributes?.Source ?? DefaultCloudEventSource,
+
+            // optional attributes
+            DataSchema = item.Attributes?.DataSchema,
+            Subject = item.Attributes?.Subject,
+            Time = item.Attributes?.Time
         };
 
         eventMessage.SetPartitionKey(item.Attributes?.PartitionKey ?? item.DocumentId);

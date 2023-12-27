@@ -3589,7 +3589,7 @@ namespace Raven.Server.ServerWide
 
             rawRecord = new RawDatabaseRecord(context, rawRecord)
                 .GetShardedDatabaseRecord(shardNumber)
-                .Raw;
+                ?.Raw;
 
             return rawRecord;
         }

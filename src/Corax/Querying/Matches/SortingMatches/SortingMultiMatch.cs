@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -11,6 +11,7 @@ using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.PostingLists;
+using Voron.Util;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -19,7 +20,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
     private const int NextComparerOffset = 3;
-    private readonly Querying.IndexSearcher _searcher;
+    private readonly IndexSearcher _searcher;
     private readonly TInner _inner;
     private readonly OrderMetadata[] _orderMetadata;
     private readonly delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> _fillFunc;
@@ -30,23 +31,26 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesBufferScope;
 
-    private NativeIntegersList _results;
+    private ContextBoundNativeList<long> _results;
 
     private SortingDataTransfer _sortingDataTransfer;
-    private NativeUnmanagedList<SpatialResult> _distancesResults;
-    private NativeUnmanagedList<float> _scoresResults;
-    
+    private ContextBoundNativeList<SpatialResult> _distancesResults;
+    private ContextBoundNativeList<float> _scoresResults;
+    private int _alreadyReadIdx;
+
+
     public long TotalResults;
     public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();
 
-    public SortingMultiMatch(Querying.IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1, in CancellationToken token = default)
+    public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1, in CancellationToken token = default)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
         _take = take;
         _token = token;
-        _results = new NativeIntegersList(searcher.Allocator);
+        _alreadyReadIdx = 0;
+        _results = new ContextBoundNativeList<long>(searcher.Allocator);
         TotalResults = NotStarted;
         AssertNoScoreInnerComparer(orderMetadata);
         _fillFunc = SortBy(orderMetadata);
@@ -134,13 +138,18 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             SortResults<TComparer1, TComparer2, TComparer3>(ref match, allMatches);
         }
 
-        var read = match._results.MoveTo(matches);
-        match._scoresResults.MoveTo(match._sortingDataTransfer.ScoresBuffer);
-        match._distancesResults.MoveTo(match._sortingDataTransfer.DistancesBuffer);
+        var read = match._results.CopyTo(matches, match._alreadyReadIdx);
+        match._distancesResults.CopyTo(match._sortingDataTransfer.DistancesBuffer, match._alreadyReadIdx, read);
+        match._scoresResults.CopyTo(match._sortingDataTransfer.ScoresBuffer, match._alreadyReadIdx, read);
 
-        if (read != 0) 
+        if (read != 0)
+        {
+            match._alreadyReadIdx += read;
             return read;
-            
+        }
+
+        match._alreadyReadIdx = 0;
+
         match._results.Dispose();
         match._scoresResults.Dispose();
         match._distancesResults.Dispose();

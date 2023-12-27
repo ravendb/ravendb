@@ -23,6 +23,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Extensions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -231,7 +232,7 @@ namespace RachisTests
                 {
                     Method = HttpMethod.Put,
                     RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
                 var response = await requestExecutor.HttpClient.SendAsync(request);
                 Assert.False(response.IsSuccessStatusCode);
             }
@@ -261,7 +262,7 @@ namespace RachisTests
                 {
                     Method = HttpMethod.Put,
                     RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
                 var response = await requestExecutor.HttpClient.SendAsync(request);
                 Assert.False(response.IsSuccessStatusCode);
             }
@@ -292,7 +293,7 @@ namespace RachisTests
                 {
                     Method = HttpMethod.Put,
                     RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
                 var response = await requestExecutor.HttpClient.SendAsync(request);
                 Assert.False(response.IsSuccessStatusCode);
             }
@@ -322,7 +323,7 @@ namespace RachisTests
                 {
                     Method = HttpMethod.Put,
                     RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
-                };
+                }.WithConventions(DocumentConventions.DefaultForServer);
                 var response = await requestExecutor.HttpClient.SendAsync(request);
                 Assert.False(response.IsSuccessStatusCode);
             }
@@ -716,7 +717,7 @@ namespace RachisTests
                     x.ServerStore.LoadDatabaseTopology(db)
                         .WhoseTaskIsIt(x.ServerStore.Engine.CurrentState, new PromotableTask(x.ServerStore.NodeTag, x.WebUrl, db, firstFollowerTag), null) == firstFollowerTag);
 
-                Assert.True(false, $"removed node was selected :/ Leader: {cluster.Leader.ServerStore.NodeTag}, first: {firstFollowerTag}, second {res.ServerStore.NodeTag}");
+                Assert.Fail($"removed node was selected :/ Leader: {cluster.Leader.ServerStore.NodeTag}, first: {firstFollowerTag}, second {res.ServerStore.NodeTag}");
             });
         }
 

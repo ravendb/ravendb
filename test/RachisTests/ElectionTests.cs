@@ -489,7 +489,7 @@ namespace RachisTests
 
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
                 if (count == 0)
-                    Assert.False(true, $"last appended index in the leader is {last}, last committed index in the follower is {index}");
+                    Assert.Fail($"last appended index in the leader is {last}, last committed index in the follower is {index}");
             }
 
             Assert.Equal(GetLastAppendedIndex(firstLeader), GetLastAppendedIndex(follower));

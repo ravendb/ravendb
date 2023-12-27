@@ -242,39 +242,6 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         Assert.Equal("Script 'test' must not be empty", errors[0]);
     }
 
-    private QueueSinkConfiguration SetupRabbitMqQueueSink(DocumentStore store, string script, List<string> queues,
-        string configurationName = null, string transformationName = null)
-    {
-        var connectionStringName = $"{store.Database} to Kafka";
-
-        QueueSinkScript queueSinkScript = new QueueSinkScript
-        {
-            Name = transformationName ?? $"Queue Sink : {connectionStringName}",
-            Queues = new List<string>(queues),
-            Script = script,
-        };
-        var config = new QueueSinkConfiguration
-        {
-            Name = configurationName ?? connectionStringName,
-            ConnectionStringName = connectionStringName,
-            Scripts = { queueSinkScript },
-            BrokerType = QueueBrokerType.RabbitMq
-        };
-
-        AddQueueSink(store, config,
-            new QueueConnectionString
-            {
-                Name = connectionStringName,
-                BrokerType = QueueBrokerType.RabbitMq,
-                RabbitMqConnectionSettings = new RabbitMqConnectionSettings
-                {
-                    ConnectionString = RabbitMqConnectionString.Instance.VerifiedConnectionString.Value
-                }
-            });
-
-        return config;
-    }
-
     private IModel CreateRabbitMqProducer()
     {
         var connectionFactory = new ConnectionFactory { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedConnectionString.Value) };

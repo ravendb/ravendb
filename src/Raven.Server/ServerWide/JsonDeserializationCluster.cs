@@ -50,8 +50,6 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, IncrementClusterIdentitiesBatchCommand> IncrementClusterIdentitiesBatchCommand = GenerateJsonDeserializationRoutine<IncrementClusterIdentitiesBatchCommand>();
 
-        public static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();
-
         public static readonly Func<BlittableJsonReaderObject, DeleteValueCommand> DeleteValueCommand = GenerateJsonDeserializationRoutine<DeleteValueCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, DeleteMultipleValuesCommand> DeleteMultipleValuesCommand = GenerateJsonDeserializationRoutine<DeleteMultipleValuesCommand>();

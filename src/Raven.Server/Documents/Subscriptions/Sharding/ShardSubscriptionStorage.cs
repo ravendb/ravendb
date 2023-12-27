@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Raven.Client.Documents.Subscriptions;
+﻿using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
@@ -49,9 +48,8 @@ public sealed class ShardSubscriptionStorage : SubscriptionStorage
 
                 if (SubscriptionChangeVectorHasChanges(state, taskState))
                 {
-                    DropSubscriptionConnections(id, new SubscriptionClosedException(
-                        $"The subscription '{subscriptionName}' change vector was modified on shard '{_shardName}', connection must be restarted",
-                        canReconnect: true));
+                    // shard workers will be recreated on new orchestrator connection 
+                    DropSubscriptionConnections(id, new SubscriptionChangeVectorUpdateConcurrencyException($"The subscription '{subscriptionName}' was modified on shard '{_shardName}', connection must be restarted"));
                     continue;
                 }
                
@@ -81,21 +79,13 @@ public sealed class ShardSubscriptionStorage : SubscriptionStorage
         if (taskStatus.LastClientConnectionTime != null)
             return false;
 
-        Debug.Assert(taskStatus.ShardingState != null);
+        // the subscription connection is currently connecting
+        if (state.SubscriptionState == null)
+            return false;
 
-        if (taskStatus.ShardingState != null)
-        {
-            if (taskStatus.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(_shardName, out var cv) == false &&
-                state.LastChangeVectorSent == null)
-            {
-                return false;
-            }
-
-            if (cv == state.LastChangeVectorSent)
-                return false;
-        }
-
-        return true;
+        // persisted subscription state has different RaftCommandIndex than state of current connection
+        // the subscription was modified and needs to reconnect
+        return taskStatus.RaftCommandIndex != state.SubscriptionState.RaftCommandIndex;
     }
 
     internal override void CleanupSubscriptions()

@@ -294,7 +294,7 @@ namespace FastTests
                                 {
                                     // check that the database wasn't deleted
                                     var record = serverOperationStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(name));
-                                    if (record != null)
+                                    if (record != null && record.Disabled == false)
                                         AsyncHelpers.RunSync(() => Sharding.EnsureNoDatabaseChangeVectorLeakAsync(store.Database));
                                 }
                             }

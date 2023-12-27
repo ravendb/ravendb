@@ -9,7 +9,7 @@ using Sparrow.Collections;
 namespace Sparrow.Server.Compression
 {
     internal sealed unsafe class Encoder3GramSymbolSelector<TSampleEnumerator>
-        where TSampleEnumerator : struct, IReadOnlySpanEnumerator
+        where TSampleEnumerator : IReadOnlySpanEnumerator
     {
         private struct ByFrequencyComparer : IComparer<SymbolFrequency>
         {

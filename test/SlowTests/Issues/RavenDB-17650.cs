@@ -8,6 +8,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -75,7 +76,7 @@ namespace SlowTests.Issues
             Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
-        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenArchitecture.X64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Should_Retry_When_AllTopologyNodesDownException_Was_Thrown(Options options)
         {
@@ -142,8 +143,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21555")]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Should_Throw_DatabaseDisabledException_When_MaxErroneousPeriod_Was_Passed(Options options)
         {
             using var store = GetDocumentStore(new Options(options)
@@ -179,6 +179,69 @@ namespace SlowTests.Issues
             var cts = new CancellationTokenSource();
 
             var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => worker.Run(batch => { }, cts.Token));
+            var actualExceptionWasThrown = false;
+            var subscriptionInvalidStateExceptionWasThrown = false;
+            foreach (var e in aggregateException.InnerExceptions)
+            {
+                if (e is SubscriptionInvalidStateException)
+                {
+                    subscriptionInvalidStateExceptionWasThrown = true;
+                }
+                if (e is DatabaseDisabledException)
+                {
+                    actualExceptionWasThrown = true;
+                }
+
+                if (subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown)
+                    break;
+            }
+            Assert.True(subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown);
+        }
+
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Should_Throw_DatabaseDisabledException_When_MaxErroneousPeriod_Was_Passed_DuringSubscriptionInProgress(Options options)
+        {
+            using var store = GetDocumentStore(new Options(options)
+            {
+                ReplicationFactor = 1,
+                RunInMemory = false
+            });
+
+            string id = "User/33-A";
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = id, Name = "1" });
+                await session.StoreAsync(new User { Name = "2" });
+
+                await session.SaveChangesAsync();
+            }
+
+            await store.Subscriptions
+                .CreateAsync(new SubscriptionCreationOptions<User>
+                {
+                    Name = "BackgroundSubscriptionWorker"
+                });
+
+            using var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("BackgroundSubscriptionWorker")
+            {
+                MaxErroneousPeriod = TimeSpan.Zero
+            });
+
+            var cts = new CancellationTokenSource();
+            var mre = new AsyncManualResetEvent();
+
+            var t = worker.Run(batch => { mre.Set(); }, cts.Token);
+            await mre.WaitAsync(cts.Token);
+
+            // disable database
+            var disableSucceeded = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
+            Assert.True(disableSucceeded.Success);
+            Assert.True(disableSucceeded.Disabled);
+
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => t);
+            
             var actualExceptionWasThrown = false;
             var subscriptionInvalidStateExceptionWasThrown = false;
             foreach (var e in aggregateException.InnerExceptions)

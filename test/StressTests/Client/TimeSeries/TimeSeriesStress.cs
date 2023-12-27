@@ -10,9 +10,11 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Patch;
 using SlowTests.Client.TimeSeries.Replication;
@@ -20,6 +22,7 @@ using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace StressTests.Client.TimeSeries
 {
@@ -83,9 +86,7 @@ namespace StressTests.Client.TimeSeries
                 var check = true;
                 while (check)
                 {
-                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention),
-                        $"too long has passed {sp.Elapsed}, retention is {retention} {Environment.NewLine}" +
-                        $"debug: {string.Join(',', debug.Select(kvp => $"{kvp.Key}: ({kvp.Value.Count},{kvp.Value.Start},{kvp.Value.End})"))}");
+                    await AssertTimeElapsed(store, sp, retention, debug);
 
                     await Task.Delay(100);
                     check = false;
@@ -124,6 +125,23 @@ namespace StressTests.Client.TimeSeries
                 {
                     var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     await TimeSeriesReplicationTests.AssertNoLeftOvers(database);
+                }
+            }
+
+            async Task AssertTimeElapsed(DocumentStore store, Stopwatch sp, TimeValue retention, Dictionary<string, (long Count, DateTime Start, DateTime End)> debug)
+            {
+                try
+                {
+                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention),
+                        $"too long has passed {sp.Elapsed}, retention is {retention} {Environment.NewLine}" +
+                        $"debug: {string.Join(',', debug.Select(kvp => $"{kvp.Key}: ({kvp.Value.Count},{kvp.Value.Start},{kvp.Value.End})"))}");
+                }
+                catch (TrueException e)
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var errorMessage = e.Message +
+                                       $"{Environment.NewLine}Database topology: Members: [{string.Join(", ", record.Topology.Members)}], Rehabs: [{string.Join(", ", record.Topology.Rehabs)}]";
+                    throw TrueException.ForNonTrueValue(errorMessage, false);
                 }
             }
         }
@@ -236,13 +254,25 @@ namespace StressTests.Client.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task PatchTimestamp_IntegrationTest()
+        [RavenMultiplatformFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching, RavenArchitecture.AllX64)]
+        public Task PatchTimestamp_IntegrationTest_x64()
         {
+            return PatchTimestamp_IntegrationTest(8_192);
+        }
+
+        [RavenMultiplatformFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching, RavenArchitecture.AllX86)]
+        public Task PatchTimestamp_IntegrationTest_x86()
+        {
+            return PatchTimestamp_IntegrationTest(4_096);
+        }
+
+        public async Task PatchTimestamp_IntegrationTest(int docAmount)
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
             string[] tags = { "tag/1", "tag/2", "tag/3", "tag/4", null };
             const string timeseries = "Heartrate";
             const int timeSeriesPointsAmount = 128;
-            const int docAmount = 8_192;
 
             using (var store = GetDocumentStore())
             {
@@ -285,8 +315,13 @@ update
     }
 }"
                     }));
-                await appendOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
+#if DEBUG
+                TimeSpan time = TimeSpan.FromMinutes(8);
+#else
+                TimeSpan time = TimeSpan.FromMinutes(5);
+#endif
+                await appendOperation.WaitForCompletionAsync(time);
                 var deleteFrom = toAppend[timeSeriesPointsAmount * 1 / 3].Timestamp;
                 var deleteTo = toAppend[timeSeriesPointsAmount * 3 / 4].Timestamp;
                 var deleteOperation = store

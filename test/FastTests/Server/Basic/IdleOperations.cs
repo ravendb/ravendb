@@ -20,11 +20,11 @@ namespace FastTests.Server.Basic
         }
 
         [Fact]
-        public void Should_Update_LastIdle()
+        public async Task Should_Update_LastIdle()
         {
             using (var store = GetDocumentStore())
             {
-                var db = GetDatabase(store.Database).Result;
+                var db = await GetDatabase(store.Database);
 
                 var lastIdleTime = db.LastIdleTime;
 
@@ -61,7 +61,7 @@ namespace FastTests.Server.Basic
         }
 
         [Fact]
-        public void Should_Cleanup_Resources()
+        public async Task Should_Cleanup_Resources()
         {
             DoNotReuseServer();
 
@@ -77,7 +77,7 @@ namespace FastTests.Server.Basic
 
                     store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
-                    var documentDatabase = landlord.TryGetOrCreateResourceStore("IdleOperations_CleanupResources_DB_" + i).Result;
+                    var documentDatabase = await landlord.TryGetOrCreateResourceStore("IdleOperations_CleanupResources_DB_" + i);
 
                     documentDatabase.Configuration.Core.RunInMemory = false;
 

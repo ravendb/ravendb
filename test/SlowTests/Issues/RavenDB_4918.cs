@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,9 +20,9 @@ namespace SlowTests.Issues
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.ExecuteIndex(new MultiMap());
+                await documentStore.ExecuteIndexAsync(new MultiMap());
 
-                using (var client = new HttpClient())
+                using (var client = new HttpClient().WithConventions(documentStore.Conventions))
                 {
                     var url = $"{documentStore.Urls.First()}/databases/{documentStore.Database}/indexes/c-sharp-index-definition?name=MultiMap";
                     var response = await client.GetStringAsync(url);

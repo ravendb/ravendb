@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Net.Http;
 using EmbeddedTests.TestDriver;
 using Raven.Client.Documents;
 using Raven.Server.Utils;
@@ -26,6 +27,7 @@ namespace SlowTests.Issues
             Directory.CreateDirectory(dir);
 
             documentStore.Conventions.TopologyCacheLocation = dir;
+            documentStore.Conventions.HttpVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         }
     }
 

@@ -111,14 +111,26 @@ namespace Voron.Data.CompactTrees
             return pageNumber;
         }
 
-        public static PersistentDictionary Create<TKeys1>(LowLevelTransaction llt, TKeys1 trainEnumerator)
-            where TKeys1 : struct, IReadOnlySpanEnumerator
+        public const int MinSamplesToTrain = 500;
+
+        public static bool TryCreate<TKeys1>(LowLevelTransaction llt, TKeys1 trainEnumerator, out PersistentDictionary dictionary)
+            where TKeys1 : IReadOnlySpanEnumerator
         {
             var encoderState = new AdaptiveMemoryEncoderState();
             using var encoder = new HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>>(new Encoder3Gram<AdaptiveMemoryEncoderState>(encoderState));
-            encoder.Train(trainEnumerator, MaxDictionaryEntriesForTraining);                
-            
+            encoder.Train(trainEnumerator, MaxDictionaryEntriesForTraining);
+
             int requiredSize = Encoder3Gram<AdaptiveMemoryEncoderState>.GetDictionarySize(encoderState);
+            
+            // Check if the actual encoding table has enough diversity so that it makes sense to be using it.
+            // If there is not enough diversity it means that we are probably overfitting to a single page,
+            // so whatever we do it is most likely going to be less efficient than the default dictionary. 
+            if (trainEnumerator.Count < MinSamplesToTrain)
+            {
+                dictionary = null;
+                return false;
+            }
+
             int requiredTotalSize = requiredSize + PersistentDictionaryHeader.SizeOf;
             var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(requiredTotalSize);
             var p = llt.AllocatePage(numberOfPages);
@@ -147,7 +159,8 @@ namespace Voron.Data.CompactTrees
                 PageNumber = p.PageNumber
             };
 
-            return new PersistentDictionary(p);
+            dictionary = new PersistentDictionary(p);
+            return true;
         }
 
         public static void VerifyTable(Page page)

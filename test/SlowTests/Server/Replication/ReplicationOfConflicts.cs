@@ -134,7 +134,7 @@ namespace SlowTests.Server.Replication
                     try
                     {
                         session.Load<User>("users/1");
-                        Assert.False(true, "Expected a confclit here");
+                        Assert.Fail("Expected a confclit here");
                     }
                     catch (DocumentConflictException e)
                     {
@@ -320,6 +320,10 @@ namespace SlowTests.Server.Replication
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store3);
                 await EnsureReplicatingAsync(store3, store1);
+
+                await EnsureNoReplicationLoopAsync(store1, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(store2, options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(store3, options.DatabaseMode);
             }
         }
 
@@ -390,6 +394,10 @@ namespace SlowTests.Server.Replication
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store3);
                 await EnsureReplicatingAsync(store3, store1);
+
+                await EnsureNoReplicationLoopAsync(store1, mode: options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(store2, mode: options.DatabaseMode);
+                await EnsureNoReplicationLoopAsync(store3, mode: options.DatabaseMode);
             }
         }
     }

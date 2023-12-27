@@ -14,7 +14,7 @@ public class CustomS3 : RestoreFromS3
     {
     }
 
-    [CustomS3Fact]
+    [CustomS3RetryFact]
     public void can_use_custom_region()
     {
         const string customUrl = "https://s3.pl-waw.scw.cloud";

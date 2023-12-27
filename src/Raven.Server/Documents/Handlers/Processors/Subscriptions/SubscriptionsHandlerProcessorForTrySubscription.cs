@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             using (RequestHandler.Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
             using (clusterOperationContext.OpenReadTransaction())
-            using (processor.InitializeForNewBatch(clusterOperationContext, out DatabaseIncludesCommandImpl includeDocuments))
+            using (processor.InitializeForNewBatch(clusterOperationContext, out DatabaseIncludesCommandImpl includes))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
@@ -96,8 +96,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                     {
                         using (itemDetails.Document.Data)
                         {
-                            includeDocuments?.GatherIncludesForDocument(itemDetails.Document);
-
+                            includes?.GatherIncludesForDocument(itemDetails.Document);
                             if (first == false)
                                 writer.WriteComma();
 
@@ -125,12 +124,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 }
 
                 writer.WriteEndArray();
-               
-                if (includeDocuments != null)
+                if (includes is { IncludeDocumentsCommand.Count: > 0 })
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName("Includes");
-                    await includeDocuments.WriteIncludesAsync(writer, context, batchScope: null, CancellationToken.None);
+                    writer.WritePropertyName(AbstractIncludesCommand.IncludesSegment);
+                    await includes.WriteIncludedDocumentsInternalAsync(writer, context, CancellationToken.None);
                 }
 
                 writer.WriteEndObject();

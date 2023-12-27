@@ -36,7 +36,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanAggressivelyCacheLoads_404()
+        public async Task CanAggressivelyCacheLoads_404()
         {
             using (var store = InitAggressiveCachingWithNotTrackingMode())
             using (var anotherStore = new DocumentStore()
@@ -83,12 +83,12 @@ namespace SlowTests.Issues
 
                 backgroundUpdatesCts.Cancel();
 
-                Assert.True(backgroundUpdatesTask.Wait(TimeSpan.FromMinutes(1)));
+                await backgroundUpdatesTask.WaitAsync(TimeSpan.FromMinutes(1));
             }
         }
 
         [Fact]
-        public void CanAggressivelyCacheLoads()
+        public async Task CanAggressivelyCacheLoads()
         {
             using (var store = InitAggressiveCachingWithNotTrackingMode())
             using (var anotherStore = new DocumentStore()
@@ -134,7 +134,7 @@ namespace SlowTests.Issues
 
                 backgroundUpdatesCts.Cancel();
 
-                Assert.True(backgroundUpdatesTask.Wait(TimeSpan.FromMinutes(1)));
+                await backgroundUpdatesTask.WaitAsync(TimeSpan.FromMinutes(1));
             }
         }
 
@@ -190,7 +190,7 @@ namespace SlowTests.Issues
 
 
         [Fact]
-        public void CanAggressivelyCacheQueries()
+        public async Task CanAggressivelyCacheQueries()
         {
             using (var store = InitAggressiveCachingWithNotTrackingMode())
             using (var anotherStore = new DocumentStore()
@@ -231,7 +231,7 @@ namespace SlowTests.Issues
 
                 backgroundUpdatesCts.Cancel();
 
-                Assert.True(backgroundUpdatesTask.Wait(TimeSpan.FromMinutes(1)));
+                await backgroundUpdatesTask.WaitAsync(TimeSpan.FromMinutes(1));
             }
         }
 

@@ -2,9 +2,9 @@
 
 import getClientCertificateCommand = require("commands/auth/getClientCertificateCommand");
 import moment from "moment";
+import serverSettings from "common/settings/serverSettings";
 
 type clientCertificateExpiration = "unknown" | "valid" | "aboutToExpire" | "expired";
-const aboutToExpirePeriod = moment.duration(14, "days");
 
 class clientCertificateModel {
     static certificateInfo = ko.observable<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>();
@@ -24,6 +24,8 @@ class clientCertificateModel {
         if (notAfter.isBefore()) {
             return "expired";
         }
+
+        const aboutToExpirePeriod = moment.duration(serverSettings.default.certificateExpiringThresholdInDays(), "days"); 
         
         const warningDate = moment().add(aboutToExpirePeriod);
         if (notAfter.isBefore(warningDate)) {

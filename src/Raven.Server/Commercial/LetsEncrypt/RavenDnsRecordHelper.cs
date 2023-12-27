@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Http;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -84,7 +85,7 @@ public sealed class RavenDnsRecordHelper
                 throw new InvalidOperationException("Registration request to api.ravendb.net failed for: " + serializeObject, e);
             }
 
-            var responseString = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+            var responseString = await response.Content.ReadAsStringWithZstdSupportAsync(cts.Token).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode == false)
             {
@@ -121,7 +122,7 @@ public sealed class RavenDnsRecordHelper
                         throw new InvalidOperationException("Registration-result request to api.ravendb.net failed.", e); //add the object we tried to send to error
                     }
 
-                    responseString = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+                    responseString = await response.Content.ReadAsStringWithZstdSupportAsync(cts.Token).ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode == false)
                     {
@@ -171,7 +172,7 @@ public sealed class RavenDnsRecordHelper
             {
                 var response = await client.GetAsync($"/resolve?name={hostname}", cts.Token);
 
-                var responseString = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+                var responseString = await response.Content.ReadAsStringWithZstdSupportAsync(cts.Token).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode == false)
                     throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}" +
                                                                $"Request failed with status {response.StatusCode}.{Environment.NewLine}{responseString}");
@@ -274,7 +275,7 @@ public sealed class RavenDnsRecordHelper
                 throw new InvalidOperationException("Registration request to api.ravendb.net failed for: " + serializeObject, e);
             }
 
-            var responseString = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+            var responseString = await response.Content.ReadAsStringWithZstdSupportAsync(cts.Token).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode == false)
             {
@@ -298,7 +299,7 @@ public sealed class RavenDnsRecordHelper
                         throw new InvalidOperationException("Registration-result request to api.ravendb.net failed.", e); //add the object we tried to send to error
                     }
 
-                    responseString = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+                    responseString = await response.Content.ReadAsStringWithZstdSupportAsync(cts.Token).ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode == false)
                     {

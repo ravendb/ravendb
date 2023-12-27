@@ -26,7 +26,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
@@ -36,6 +36,7 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.Issues.RavenDB_8450;
 using DisposableAction = Voron.Util.DisposableAction;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -378,7 +379,7 @@ namespace SlowTests.Client.Subscriptions
 
                     Assert.True(await ackFirstCV.WaitAsync(_reasonableWaitTime));
 
-                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
+                    SubscriptionState subscriptionState;
                     using (database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -413,7 +414,7 @@ namespace SlowTests.Client.Subscriptions
                     foreach (var item in items)
                     {
                         if (item.Age > 20 && item.Age < 30)
-                            Assert.True(false, "Got age " + item.Age);
+                            Assert.Fail("Got age " + item.Age);
                     }
                 }
             }
@@ -1450,7 +1451,8 @@ namespace SlowTests.Client.Subscriptions
             Assert.True(await WaitForValueAsync(async () =>
             {
                 var url = Uri.EscapeDataString($"{store.Urls.First()}/admin/debug/databases/idle");
-                var raw = (await re.HttpClient.GetAsync($"{store.Urls.First()}/admin/debug/databases/idle")).Content.ReadAsStringAsync().Result;
+                var response = await re.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"{store.Urls.First()}/admin/debug/databases/idle").WithConventions(store.Conventions));
+                var raw = await response.Content.ReadAsStringAsync();
                 var idleDatabaseStatistics = JsonConvert.DeserializeObject<IdleDatabaseStatistics>(raw);
                 if (idleDatabaseStatistics == null)
                     return false;
@@ -1548,6 +1550,39 @@ namespace SlowTests.Client.Subscriptions
             await AssertWaitForExceptionAsync<KeyNotFoundException>(async () => await Task.Run(() => db.SubscriptionStorage.GetSubscriptionStateById(state.SubscriptionId)), interval: 1000);
         }
 
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "RavenDB-20024")]
+        public void CanGetSubscriptionsResultsWithEscapeHandling(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Arava"
+                    }, "people/1");
+                    session.Store(new Dog(DateTime.Now)
+                    {
+                        Name = 322,
+                        Owner = "people/1"
+                    });
+                     session.SaveChanges();
+                }
+
+                var result = store.Operations.Send(new SubscriptionTryoutOperation(new SubscriptionTryout
+                {
+                    Query = "from Dogs include Owner"
+                }));
+
+                dynamic obj = JObject.Parse(result);
+                Assert.NotNull(obj.Includes);
+                Assert.NotNull(obj.Includes["people/1"]);
+                Assert.Equal("Arava", obj.Includes["people/1"].Name.ToString());
+            }
+        }
+
         private class IdleDatabaseStatistics
         {
             public string MaxIdleTime { get; set; }
@@ -1590,6 +1625,8 @@ namespace SlowTests.Client.Subscriptions
             public int Name { get; set; }
 
             public DateTime Zz { get; set; }
+
+            public string Owner { get; set; }
 
             public Dog(DateTime zz)
             {

@@ -48,20 +48,20 @@ namespace SlowTests.Issues
                 _ = t.Subscribe(x => { });
 
                 // Check if the database exists.
-                var getResult = await documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(documentStore.Database), cts.Token).ConfigureAwait(false);
+                var getResult = await documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(documentStore.Database), cts.Token);
                 Assert.Null(getResult);
 
                 var dbRecord = new DatabaseRecord(documentStore.Database);
                 var operation = new CreateDatabaseOperation(dbRecord);
                 try
                 {
-                    await documentStore.Maintenance.Server.SendAsync(operation, cts.Token).ConfigureAwait(false);
+                    await documentStore.Maintenance.Server.SendAsync(operation, cts.Token);
 
                     Version dbVersion;
                     using (var session = documentStore.OpenAsyncSession())
                     {
                         // should work
-                        dbVersion = await session.LoadAsync<Version>("TheVersion", cts.Token).ConfigureAwait(false);
+                        dbVersion = await session.LoadAsync<Version>("TheVersion", cts.Token);
                     }
                 }
                 finally

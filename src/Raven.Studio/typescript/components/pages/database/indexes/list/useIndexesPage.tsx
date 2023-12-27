@@ -17,10 +17,7 @@ import collectionsTracker from "common/helpers/database/collectionsTracker";
 import useInterval from "hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 import IndexUtils from "components/utils/IndexUtils";
-import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
-import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";
-import app from "durandal/app";
 import { delay } from "components/utils/common";
 import { useServices } from "hooks/useServices";
 import { useEventsCollector } from "hooks/useEventsCollector";
@@ -38,10 +35,28 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
+import useConfirm from "components/common/ConfirmDialog";
+import React from "react";
+import { Alert } from "reactstrap";
+import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shared/DeleteIndexesConfirmBody";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
     | Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
+
+export interface ResetIndexData {
+    indexName: string;
+    setIndexName: (x: string) => void;
+    onConfirm: (contexts: DatabaseActionContexts[]) => Promise<void>;
+}
+
+export interface SwapSideBySideData {
+    indexName: string;
+    setIndexName: React.Dispatch<React.SetStateAction<string>>;
+    onConfirm: (contexts: DatabaseActionContexts[]) => Promise<void>;
+    inProgress: (indexName: string) => boolean;
+}
 
 export function useIndexesPage(database: database, stale: boolean) {
     //TODO: use DatabaseSharedInfo?
@@ -63,6 +78,8 @@ export function useIndexesPage(database: database, stale: boolean) {
     const { databaseChangesApi, serverNotifications } = useChanges();
 
     const [resetIndexName, setResetIndexName] = useState<string>(null);
+
+    const confirm = useConfirm();
 
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
 
@@ -89,7 +106,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [globalLockChanges, setGlobalLockChanges] = useState(false);
 
-    const { groups, replacements } = useMemo(() => {
+    const { regularIndexes, groups, replacements } = useMemo(() => {
         const collections = collectionsTracker.default.collections();
         const groupedIndexes = groupAndFilterIndexStats(stats.indexes, collections, filter, globalIndexingStatus);
 
@@ -421,47 +438,70 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const confirmSetLockModeSelectedIndexes = useCallback(
         async (lockMode: IndexLockMode) => {
-            const lockModeFormatted = IndexUtils.formatLockMode(lockMode);
-
             const indexes = getSelectedIndexes().filter(
                 (index) => index.type !== "AutoMap" && index.type !== "AutoMapReduce"
             );
 
-            viewHelpers
-                .confirmationMessage(
-                    "Are you sure?",
-                    `Do you want to <strong>${genUtils.escapeHtml(
-                        lockModeFormatted
-                    )}</strong> selected indexes?</br>Note: Static-indexes only will be set, 'Lock Mode' is not relevant for auto-indexes.`,
-                    {
-                        html: true,
-                    }
-                )
-                .done((can) => {
-                    if (can) {
-                        setLockModeSelectedIndexes(lockMode, indexes);
-                    }
-                });
+            const isConfirmed = await confirm({
+                icon: IndexUtils.getLockIcon(lockMode),
+                title: (
+                    <span>
+                        Do you want to <strong>{IndexUtils.formatLockMode(lockMode)}</strong> selected indexes?
+                    </span>
+                ),
+                actionColor: "primary",
+                message: (
+                    <div>
+                        <ul className="overflow-auto" style={{ maxHeight: "200px" }}>
+                            {indexes.map((x) => (
+                                <li key={x.name}>{x.name}</li>
+                            ))}
+                        </ul>
+                        <Alert color="info">
+                            Static-indexes only will be set, &apos;Lock Mode&apos; is not relevant for auto-indexes.
+                        </Alert>
+                    </div>
+                ),
+            });
+
+            if (isConfirmed) {
+                await setLockModeSelectedIndexes(lockMode, indexes);
+            }
         },
-        [setLockModeSelectedIndexes, getSelectedIndexes]
+        [getSelectedIndexes, confirm, setLockModeSelectedIndexes]
     );
 
     const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
         eventsCollector.reportEvent("indexes", "delete");
-        if (indexes.length > 0) {
-            const deleteIndexesVm = new deleteIndexesConfirm(indexes, db);
-            app.showBootstrapDialog(deleteIndexesVm);
-            deleteIndexesVm.deleteTask.done((succeed: boolean, deletedIndexNames: string[]) => {
-                if (succeed) {
-                    setSelectedIndexes((x) => x.filter((x) => !deletedIndexNames.includes(x)));
-                    dispatch({
-                        type: "DeleteIndexes",
-                        indexNames: deletedIndexNames,
-                    });
-                }
-            });
-            await deleteIndexesVm.deleteTask;
+
+        const confirmData = getIndexInfoForDelete(indexes);
+
+        const isConfirmed = await confirm({
+            title: `Delete ${confirmData.indexesInfoForDelete.length === 1 ? "index" : "indexes"}?`,
+            message: <DeleteIndexesConfirmBody {...confirmData} />,
+            icon: "trash",
+            confirmText: "Delete",
+            actionColor: "danger",
+        });
+
+        if (!isConfirmed) {
+            return;
         }
+
+        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db));
+        await Promise.all(tasks);
+
+        if (tasks.length > 1) {
+            messagePublisher.reportSuccess(`Successfully deleted ${tasks.length} indexes!`);
+        }
+
+        const deletedIndexNames = confirmData.indexesInfoForDelete.map((x) => x.indexName);
+
+        setSelectedIndexes((x) => x.filter((x) => !deletedIndexNames.includes(x)));
+        dispatch({
+            type: "DeleteIndexes",
+            indexNames: deletedIndexNames,
+        });
     };
 
     const setIndexPriority = async (index: IndexSharedInfo, priority: IndexPriority) => {
@@ -493,21 +533,20 @@ export function useIndexesPage(database: database, stale: boolean) {
     };
 
     const openFaulty = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
-        viewHelpers
-            .confirmationMessage(
-                "Open index?",
-                `You're opening a faulty index <strong>'${genUtils.escapeHtml(index.name)}'</strong>`,
-                {
-                    html: true,
-                }
-            )
-            .done((result) => {
-                if (result.can) {
-                    eventsCollector.reportEvent("indexes", "open");
+        const isConfirmed = await confirm({
+            title: (
+                <span>
+                    Do you want to open faulty index <strong>{index.name}</strong>?
+                </span>
+            ),
+            confirmText: "Open",
+            actionColor: "primary",
+        });
 
-                    indexesService.openFaulty(index, database, location);
-                }
-            });
+        if (isConfirmed) {
+            eventsCollector.reportEvent("indexes", "open");
+            await indexesService.openFaulty(index, database, location);
+        }
     };
 
     const onResetIndexConfirm = async (contexts: DatabaseActionContexts[]) => {
@@ -670,6 +709,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         setFilter,
         filterByStatusOptions,
         filterByTypeOptions,
+        regularIndexes,
         groups,
         replacements,
         swapNowProgress,
@@ -687,13 +727,13 @@ export function useIndexesPage(database: database, stale: boolean) {
             indexName: resetIndexName,
             setIndexName: setResetIndexName,
             onConfirm: onResetIndexConfirm,
-        },
+        } satisfies ResetIndexData,
         swapSideBySideData: {
             indexName: swapSideBySideConfirmIndexName,
             setIndexName: setSwapSideBySideConfirmIndexName,
             onConfirm: onSwapSideBySideIndexConfirm,
             inProgress: (indexName: string) => swapNowProgress.includes(indexName),
-        },
+        } satisfies SwapSideBySideData,
         openFaulty,
         confirmDeleteIndexes,
         globalIndexingStatus,
@@ -706,6 +746,9 @@ export const defaultFilterCriteria: IndexFilterCriteria = {
     autoRefresh: true,
     showOnlyIndexesWithIndexingErrors: false,
     searchText: "",
+    sortBy: "name",
+    sortDirection: "asc",
+    groupBy: "Collection",
 };
 
 export function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
@@ -724,18 +767,39 @@ export function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInf
     return allIndexes;
 }
 
+function getSortedRegularIndexes(
+    indexes: IndexSharedInfo[],
+    { sortBy, sortDirection }: IndexFilterCriteria
+): IndexSharedInfo[] {
+    switch (sortBy) {
+        case "name":
+        case "createdTimestamp":
+            return _.orderBy(indexes, [sortBy], [sortDirection]);
+        case "lastIndexingTime":
+        case "lastQueryingTime":
+            return _.orderBy(
+                indexes,
+                (index) => _.max(index.nodesInfo.map((nodesInfo) => nodesInfo.details?.[sortBy])),
+                [sortDirection]
+            );
+        default:
+            assertUnreachable(sortBy);
+    }
+}
+
 function groupAndFilterIndexStats(
     indexes: IndexSharedInfo[],
     collections: collection[],
     filter: IndexFilterCriteria,
     globalIndexingStatus: IndexRunningStatus
-): { groups: IndexGroup[]; replacements: IndexSharedInfo[] } {
+): { regularIndexes: IndexSharedInfo[]; groups: IndexGroup[]; replacements: IndexSharedInfo[] } {
     const result = new Map<string, IndexGroup>();
 
     const replacements = indexes.filter(IndexUtils.isSideBySide);
     const regularIndexes = indexes.filter((x) => !IndexUtils.isSideBySide(x));
+    const sortedRegularIndexes = getSortedRegularIndexes(regularIndexes, filter);
 
-    regularIndexes.forEach((index) => {
+    sortedRegularIndexes.forEach((index) => {
         let match = indexMatchesFilter(index, filter, globalIndexingStatus);
 
         if (!match) {
@@ -763,15 +827,15 @@ function groupAndFilterIndexStats(
         group.indexes.push(index);
     });
 
-    // sort groups
     const groups = Array.from(result.values());
-    groups.sort((l, r) => genUtils.sortAlphaNumeric(l.name, r.name));
 
+    // sort groups
     groups.forEach((group) => {
-        group.indexes.sort((a, b) => genUtils.sortAlphaNumeric(a.name, b.name));
+        group.indexes = getSortedRegularIndexes(group.indexes, filter);
     });
 
     return {
+        regularIndexes: sortedRegularIndexes,
         groups,
         replacements,
     };
@@ -829,4 +893,25 @@ function indexMatchesFilter(
     const typeMatch = matchesIndexType(index, filter.types);
 
     return nameMatch && statusMatch && indexingErrorsMatch && typeMatch;
+}
+
+function getIndexInfoForDelete(indexes: IndexSharedInfo[]): DeleteIndexesConfirmBodyProps {
+    const lockedIndexNames = indexes
+        .filter((x) => x.lockMode === "LockedError" || x.lockMode === "LockedIgnore")
+        .map((x) => x.name);
+
+    const indexesInfoForDelete = indexes
+        .filter((x) => x.lockMode === "Unlock")
+        .map((x) => ({
+            indexName: x.name,
+            reduceOutputCollection: x.reduceOutputCollectionName,
+            referenceCollection: x.patternForReferencesToReduceOutputCollection
+                ? x.reduceOutputCollectionName + IndexUtils.ReferenceCollectionExtension
+                : "",
+        }));
+
+    return {
+        lockedIndexNames,
+        indexesInfoForDelete,
+    };
 }

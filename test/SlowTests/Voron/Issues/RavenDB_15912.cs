@@ -91,7 +91,7 @@ namespace SlowTests.Voron.Issues
                         if (validate)
                         {
                             if (i % 10 != 0)
-                                Assert.True(false,$"Oops {i}");
+                                Assert.Fail($"Oops {i}");
                         }
                     }
                 }

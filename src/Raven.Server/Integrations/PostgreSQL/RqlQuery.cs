@@ -134,6 +134,11 @@ namespace Raven.Server.Integrations.PostgreSQL
                 {
                     // Using GetPropertyIndex to get the properties in the right order
                     var propIndex = sample.Data.GetPropertyIndex(propertyName);
+
+                    // If the document does not have this property, there is nothing to do.
+                    if (propIndex == -1)
+                        continue;
+                    
                     sample.Data.GetPropertyByIndex(propIndex, ref prop);
                     
                     if (prop.Value == null)

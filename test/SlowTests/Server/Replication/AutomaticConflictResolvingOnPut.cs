@@ -89,7 +89,7 @@ namespace SlowTests.Server.Replication
                     Thread.Sleep(500);
                 }
 
-                Assert.True(false, "We were expected to get a conflict on user/1 but we didn't");
+                Assert.Fail("We were expected to get a conflict on user/1 but we didn't");
             }
         }
     }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Sparrow.Json;
@@ -87,6 +88,11 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                     currentCtxReset = ContextPool.AllocateOperationContext(out JsonOperationContext docsCtx);
                     var requestBodyStream = RequestHandler.RequestBodyStream();
 
+                    if (ForTestingPurposes?.BulkInsertStreamReadTimeout > 0)
+                    {
+                        var streamWithTimeout = (StreamWithTimeout)requestBodyStream;
+                        streamWithTimeout.ReadTimeout = ForTestingPurposes.BulkInsertStreamReadTimeout;
+                    }
                     using (var reader = GetCommandsReader(context, requestBodyStream, buffer, _cts.Token))
                     {
                         await reader.InitAsync();
@@ -133,6 +139,9 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                                 var commandData = await task;
                                 if (commandData.Type == CommandType.None)
                                     break;
+
+                                if (commandData.Type == CommandType.HeartBeat)
+                                    continue;
 
                                 if (commandData.Type == CommandType.AttachmentPUT)
                                 {
@@ -273,5 +282,20 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
         base.Dispose();
 
         _cts.Dispose();
+    }
+
+    internal TestingStuff ForTestingPurposes;
+
+    internal TestingStuff ForTestingPurposesOnly()
+    {
+        if (ForTestingPurposes != null)
+            return ForTestingPurposes;
+
+        return ForTestingPurposes = new TestingStuff();
+    }
+
+    internal sealed class TestingStuff
+    {
+        internal int BulkInsertStreamReadTimeout;
     }
 }

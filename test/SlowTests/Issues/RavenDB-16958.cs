@@ -16,6 +16,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -279,10 +280,10 @@ namespace SlowTests.Issues
             using (var serverB = CreateSecuredServer(serverA.ServerStore.GetNodeTcpServerUrl(), false))
             {
                 using (var handler = RequestExecutor.CreateHttpMessageHandler(serverA.Certificate.Certificate, true, true))
-                using (var client = new HttpClient(handler))
+                using (var client = new HttpClient(handler).WithConventions(DocumentConventions.DefaultForServer))
                 {
                     var url = $"{serverA.WebUrl}/admin/debug/node/ping?url={Uri.EscapeDataString(serverB.WebUrl)}";
-                    var rawResponse = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
+                    var rawResponse = await (await client.GetAsync(url)).Content.ReadAsStringAsync();
                     var res = JsonConvert.DeserializeObject<HttpPingResult>(rawResponse);
                     Assert.NotNull(res);
                     Assert.Equal(1, res.Result.Count);
