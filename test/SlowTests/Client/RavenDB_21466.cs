@@ -70,7 +70,7 @@ namespace SlowTests.Client
                     using(database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var count = database.DocumentsStorage.RevisionsStorage.GetRevisionsBinEntries(context, long.MaxValue, long.MaxValue).Count();
+                        var count = database.DocumentsStorage.RevisionsStorage.GetRevisionsBinEntries(context, 0, long.MaxValue).Count();
                         Assert.Equal(1, count);
                     }
                 }

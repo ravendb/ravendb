@@ -26,5 +26,7 @@ namespace Sparrow.Server.Extensions
 
             return scope;
         }
+
+        public static DateTime Max(DateTime dt1, DateTime dt2) => dt1 > dt2 ? dt1 : dt2;
     }
 }

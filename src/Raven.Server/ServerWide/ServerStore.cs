@@ -49,6 +49,7 @@ using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.Monitoring;
@@ -108,6 +109,7 @@ namespace Raven.Server.ServerWide
         public const string LicenseLimitsStorageKey = "License/Limits/Key";
 
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
+        private FileLocker _fileLocker;
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
 
@@ -334,7 +336,14 @@ namespace Raven.Server.ServerWide
                             {
                                 var topology = GetClusterTopology();
                                 var leader = _engine.LeaderTag;
-                                if (leader == null || leader == _engine.Tag)
+
+                                if (leader == null)
+                                {
+                                    delay = ReconnectionBackoff(delay);
+                                    break;
+                                }
+
+                                if (leader == _engine.Tag)
                                     break;
 
                                 var leaderUrl = topology.GetUrlFromTag(leader);
@@ -609,6 +618,9 @@ namespace Raven.Server.ServerWide
             }
             else
             {
+                _fileLocker = new FileLocker(Path.Combine(path.FullPath, "system.lock"));
+                _fileLocker.TryAcquireWriteLock(Logger);
+
                 options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, CatastrophicFailureNotification);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
@@ -2442,7 +2454,8 @@ namespace Raven.Server.ServerWide
                         _clusterRequestExecutor,
                         ContextPool,
                         ByteStringMemoryCache.Cleaner,
-                        InitializationCompleted
+                        InitializationCompleted,
+                        _fileLocker
                     };
 
                     foreach (var disposable in toDispose)
@@ -2847,27 +2860,6 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState == RachisState.Passive;
         }
 
-        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
-        {
-            var response = await SendToLeaderAsyncInternal(cmd);
-
-#if DEBUG
-            if (response.Result.ContainsBlittableObject())
-            {
-                throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}({response.Result}) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
-            }
-#endif
-
-            return response;
-        }
-
-        //this is needed for cases where Result or any of its fields are blittable json.
-        //(for example, this is needed for use with AddOrUpdateCompareExchangeCommand, since it returns BlittableJsonReaderObject as result)
-        public Task<(long Index, object Result)> SendToLeaderAsync(JsonOperationContext context, CommandBase cmd)
-        {
-            return SendToLeaderAsyncInternal(cmd);
-        }
-
         public DynamicJsonArray GetClusterErrors()
         {
             return _engine.GetClusterErrorsFromLeader();
@@ -3023,7 +3015,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(CommandBase cmd)
+        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 return await SendToLeaderAsyncInternal(context, cmd);
@@ -3141,6 +3133,82 @@ namespace Raven.Server.ServerWide
             }
 
             return (command.Result.RaftCommandIndex, command.Result.Data);
+        }
+
+        protected internal async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, string node, long index)
+        {
+            await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+
+            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(GetClusterTopology().GetUrlFromTag(node), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
+                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: oct.Token);
+        }
+
+        public async Task WaitForExecutionOnRelevantNodesAsync(JsonOperationContext context, List<string> members, long index)
+        {
+            await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+
+            if (members == null || members.Count == 0)
+                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute on.");
+
+            using (var requestExecutor = ClusterRequestExecutor.Create(GetClusterTopology().Members.Values.ToArray(), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
+            {
+                List<Exception> exceptions = null;
+
+                var waitingTasks =
+                    members.Select(member => WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(requestExecutor, member, index, context, oct.Token));
+
+                foreach (var exception in await Task.WhenAll(waitingTasks))
+                {
+                    if (exception == null)
+                        continue;
+
+                    exceptions ??= new List<Exception>();
+                    exceptions.Add(exception.ExtractSingleInnerException());
+                }
+
+                HandleExceptions(exceptions);
+            }
+
+            return;
+
+            void HandleExceptions(IReadOnlyCollection<Exception> exceptions)
+            {
+                if (exceptions == null || exceptions.Count == 0)
+                    return;
+
+                var allExceptionsAreTimeouts  = exceptions.All(exception => exception is OperationCanceledException);
+                var aggregateException = new RaftIndexWaitAggregateException(index, exceptions);
+
+                if (allExceptionsAreTimeouts)
+                    throw new TimeoutException($"The raft command (number '{index}') took too long to run on the intended nodes.", aggregateException);
+
+                throw aggregateException;
+            }
+        }
+
+        private async Task<Exception> WaitForRaftIndexOnNodeAndReturnIfExceptionAsync(RequestExecutor executor, string nodeTag, long index, JsonOperationContext context, CancellationToken token)
+        {
+            try
+            {
+                var cmd = new WaitForRaftIndexCommand(index, nodeTag);
+                await executor.ExecuteAsync(cmd, context, token: token);
+                return null;
+            }
+            catch (RavenException re) when (re.InnerException is HttpRequestException)
+            {
+                // we want to throw for self-checks
+                if (nodeTag == NodeTag)
+                    return re;
+
+                // ignore - we are ok when connection with a node cannot be established (test: AddDatabaseOnDisconnectedNode)
+                return null;
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
         }
 
         private ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)

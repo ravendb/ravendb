@@ -298,7 +298,13 @@ namespace Raven.Server.Routing
                     skipAuthorization = context.Request.Method == "OPTIONS";
                 }
 
-                var status = RavenServer.AuthenticationStatus.ClusterAdmin;
+                if (RequestHandler.CheckCSRF(context, reqCtx.RavenServer.ServerStore) == false)
+                {
+                    context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    return;
+                } 
+                
+                var status = AuthenticationStatus.ClusterAdmin;
                 try
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)

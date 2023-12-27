@@ -205,7 +205,7 @@ namespace Tests.Infrastructure
             var deleteResult = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true,
                 fromNode: toDeleteTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
             await Task.WhenAll(nonDeleted.Select(n =>
-                n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
+                n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex)));
 
             Assert.True(await WaitForDatabaseToBeDeleted(store, database, TimeSpan.FromSeconds(15)), await Task.Run(async () =>
             {
@@ -1035,9 +1035,11 @@ namespace Tests.Infrastructure
             }
 
             if (numberOfInstances != replicationFactor)
-                throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances}
-                                                    out of {replicationFactor}{Environment.NewLine}
-                                                    Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster (members) urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentCluster.Select(x => x.WebUrl))}");
+                throw new InvalidOperationException($"Couldn't create the db on all nodes, just on {numberOfInstances} out of {replicationFactor}{Environment.NewLine}" +
+                                                    $"Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))};{Environment.NewLine}" +
+                                                    $"Current cluster (members) urls are : {string.Join(",", urls)};{Environment.NewLine}" +
+                                                    $"The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))};{Environment.NewLine}" +
+                                                    $"current servers are: {string.Join(",", currentCluster.Select(x => x.WebUrl))}");
             return (databaseResult, relevantServers.ToList());
         }
 

@@ -3,11 +3,11 @@ using System.Runtime.CompilerServices;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
-using Xunit;
+using xRetry;
 
 namespace Tests.Infrastructure
 {
-    public class AmazonGlacierFactAttribute : FactAttribute
+    public class AmazonGlacierRetryFactAttribute : RetryFactAttribute
     {
         private const string GlacierCredentialEnvironmentVariable = "GLACIER_CREDENTIAL";
 
@@ -19,7 +19,7 @@ namespace Tests.Infrastructure
 
         private static readonly bool EnvVariableMissing;
 
-        static AmazonGlacierFactAttribute()
+        static AmazonGlacierRetryFactAttribute()
         {
             var glacierSettingsString = Environment.GetEnvironmentVariable(GlacierCredentialEnvironmentVariable);
             if (glacierSettingsString == null)
@@ -38,7 +38,8 @@ namespace Tests.Infrastructure
             }
         }
 
-        public AmazonGlacierFactAttribute([CallerMemberName] string memberName = "")
+        public AmazonGlacierRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
+            : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
             if (RavenTestHelper.IsRunningOnCI)
                 return;

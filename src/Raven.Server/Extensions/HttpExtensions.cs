@@ -24,7 +24,7 @@ namespace Raven.Server.Extensions
                 throw new InvalidOperationException("Missing Host");
 
             string path = (request.PathBase.HasValue || request.Path.HasValue) ? (request.PathBase + request.Path).ToString() : "/";
-            return request.Scheme + "://" + request.Host + path + request.Query;
+            return request.Scheme + "://" + request.Host + path + request.QueryString;
         }
 
         public static string ExtractNodeUrlFromRequest(HttpRequest request)

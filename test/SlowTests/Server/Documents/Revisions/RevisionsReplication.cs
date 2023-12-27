@@ -556,7 +556,7 @@ namespace SlowTests.Server.Documents.Revisions
                 });
                 await SetupReplicationAsync(store1, store2);
 
-                var deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                var deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(0, deletedRevisions.Count());
 
                 var id = "users/1";
@@ -592,10 +592,10 @@ namespace SlowTests.Server.Documents.Revisions
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
                 //sanity
-                deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(1, deletedRevisions.Count());
 
-                deletedRevisions = await store2.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                deletedRevisions = await store2.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(1, deletedRevisions.Count());
 
                 using (var session = store2.OpenAsyncSession())

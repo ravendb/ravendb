@@ -473,5 +473,39 @@ namespace RachisTests.DatabaseCluster
             }
             return removed;
         }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task NodeShouldBeRemovedFromPriorityOrder()
+        {
+            const int clusterSize = 3;
+            var cluster = await CreateRaftCluster(clusterSize, leaderIndex: 0, watcherCluster: true);
+            var order = new List<string> { "A", "B", "C" };
+
+            using (var store = GetDocumentStore(new Options
+                   {
+                       Server = cluster.Leader,
+                       ReplicationFactor = clusterSize,
+                       ModifyDatabaseRecord = x => x.Topology = new DatabaseTopology
+                       {
+                           Members = order,
+                           ReplicationFactor = 3,
+                           PriorityOrder = order
+                       }
+                   }))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.True(order.All(x => record.Topology.PriorityOrder.Contains(x)));
+
+                var toRemove = cluster.Nodes.First(x => x.ServerStore.NodeTag != cluster.Leader.ServerStore.NodeTag);
+                var removed = await DisposeServerAndWaitForFinishOfDisposalAsync(toRemove);
+                await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(removed.NodeTag));
+
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Topology.PriorityOrder.Contains(removed.NodeTag);
+                }, false);
+            }
+        }
     }
 }

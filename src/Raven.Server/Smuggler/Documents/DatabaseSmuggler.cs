@@ -186,7 +186,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            result.AddInfo($"Started processing {type}.");
+            result.StartProcessingForType(type);
             _onProgress.Invoke(result.Progress);
 
             SmugglerProgressBase.Counts counts;
@@ -287,7 +287,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            result.AddInfo($"Finished processing {type}. {counts}");
+            result.StopProcessingActualType(counts);
             _onProgress.Invoke(result.Progress);
         }
 

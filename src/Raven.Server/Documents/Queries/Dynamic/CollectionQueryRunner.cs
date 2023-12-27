@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             var result = new DocumentQueryResult();
+            
+            QueryRunner.AssertValidQuery(query, result);
 
             if (queryContext.AreTransactionsOpened() == false)
                 queryContext.OpenReadTransaction();
@@ -60,6 +62,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, token);
+            
+            QueryRunner.AssertValidQuery(query, result);
 
             using (queryContext.OpenReadTransaction())
             {
@@ -105,6 +109,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             return runner.ExecutePatch(query.Metadata.CollectionName, query.Start, query.PageSize, new CollectionOperationOptions
             {
+                IgnoreMaxStepsForScript = options.IgnoreMaxStepsForScript,
                 MaxOpsPerSecond = options.MaxOpsPerSecond
             }, patch, patchArgs, onProgress, token);
         }

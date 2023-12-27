@@ -24,7 +24,8 @@ namespace Raven.Server.Config.Categories
             Initialized = true;
         }
 
-        public class PostgreSqlConfiguration : ConfigurationCategory
+        [ConfigurationCategory(ConfigurationCategoryType.Integrations)]
+        public sealed class PostgreSqlConfiguration : ConfigurationCategory
         {
             [Description("Indicates if PostgreSQL integration is enabled or not. Default: false")]
             [DefaultValue(false)]

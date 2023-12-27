@@ -14,27 +14,38 @@ namespace Raven.Server.NotificationCenter.Handlers
         [RavenAction("/databases/*/notification-center/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task Get()
         {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            try
             {
-                using (var writer = new NotificationCenterWebSocketWriter(webSocket, Database.NotificationCenter, ContextPool, Database.DatabaseShutdown))
+                using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
                 {
-                    using (Database.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
+                    using (var writer = new NotificationCenterWebSocketWriter(webSocket, Database.NotificationCenter, ContextPool, Database.DatabaseShutdown))
                     {
-                        foreach (var alert in storedNotifications)
+                        using (Database.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
                         {
-                            await writer.WriteToWebSocket(alert.Json);
+                            foreach (var alert in storedNotifications)
+                            {
+                                await writer.WriteToWebSocket(alert.Json);
+                            }
                         }
-                    }
 
-                    foreach (var operation in Database.Operations.GetActive().OrderBy(x => x.Description.StartTime))
-                    {
-                        var action = OperationChanged.Create(Database.Name, operation.Id, operation.Description, operation.State, operation.Killable);
+                        foreach (var operation in Database.Operations.GetActive().OrderBy(x => x.Description.StartTime))
+                        {
+                            var action = OperationChanged.Create(Database.Name, operation.Id, operation.Description, operation.State, operation.Killable);
 
-                        await writer.WriteToWebSocket(action.ToJson());
+                            await writer.WriteToWebSocket(action.ToJson());
+                        }
+                        writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutClusterTopologyAndConnectivityChanges;
+                        await writer.WriteNotifications(null);
                     }
-                    writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutClusterTopologyAndConnectivityChanges;
-                    await writer.WriteNotifications(null);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // disposing
+            }
+            catch (ObjectDisposedException)
+            {
+                // disposing
             }
         }
 

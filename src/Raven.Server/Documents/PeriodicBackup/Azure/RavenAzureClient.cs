@@ -10,6 +10,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
@@ -17,7 +18,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
-    public interface IRavenAzureClient : IDisposable
+    public interface IRavenAzureClient : IDirectUploader, IDisposable
     {
         void PutBlob(string blobName, Stream stream, Dictionary<string, string> metadata);
         RavenStorageClient.ListBlobResult ListBlobs(string prefix, string delimiter, bool listFolders, string continuationToken = null);
@@ -249,5 +250,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             return new RavenAzureClient(settings, configuration, progress, cancellationToken);
     }
-}
+
+        public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
+        {
+            return new AzureMultiPartUploader(_client, key, metadata, _progress, _cancellationToken);
+        }
+    }
 }

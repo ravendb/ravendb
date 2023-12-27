@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
@@ -159,7 +160,7 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
@@ -224,7 +225,7 @@ namespace InterversionTests
             }
             
             //Export
-            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOptions = new DatabaseSmugglerExportOptions { CompressionAlgorithm = ExportCompressionAlgorithm.Gzip };
             exportOptions.OperateOnTypes = _operateOnTypes42;
             exportOptions.OperateOnDatabaseRecordTypes = _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)
@@ -314,8 +315,12 @@ namespace InterversionTests
         public async Task CanMigrateFromCurrentTo42()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
-            using var storeCurrent = GetDocumentStore();
-
+            using var storeCurrent = GetDocumentStore(new Options
+            {
+                // workaround for RavenDB-21687
+                ModifyDatabaseRecord = record =>
+                    record.Settings[RavenConfiguration.GetKey(x => x.ExportImport.CompressionAlgorithm)] = "Gzip"
+            });
             storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
             using (var session = storeCurrent.OpenAsyncSession())
             {

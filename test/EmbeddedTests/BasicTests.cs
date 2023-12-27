@@ -8,6 +8,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Embedded;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace EmbeddedTests
@@ -39,10 +40,16 @@ namespace EmbeddedTests
                     {
                         session.Store(new Person
                         {
-                            Name = "John"
+                            Name = "John",
+                            Amount = 55.5m
                         }, "people/1");
 
                         session.SaveChanges();
+
+                        session.Advanced.Context.ReadObject(new DynamicJsonValue
+                        {
+                            ["Value"] = 55.5m
+                        }, "");
                     }
                 }
             }
@@ -63,6 +70,7 @@ namespace EmbeddedTests
 
                         Assert.NotNull(person);
                         Assert.Equal("John", person.Name);
+                        Assert.Equal(55.5m, person.Amount);
                     }
                 }
             }
@@ -188,6 +196,8 @@ namespace EmbeddedTests
             public string Id { get; set; }
 
             public string Name { get; set; }
+
+            public decimal Amount { get; set; }
         }
     }
 }

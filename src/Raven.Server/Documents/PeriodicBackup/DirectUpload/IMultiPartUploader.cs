@@ -9,9 +9,9 @@ public interface IMultiPartUploader
 
     Task InitializeAsync();
 
-    void UploadPart(Stream stream, long size);
+    void UploadPart(Stream stream);
 
-    Task UploadPartAsync(Stream stream, long size);
+    Task UploadPartAsync(Stream stream);
 
     void CompleteUpload();
 

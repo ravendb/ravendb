@@ -189,7 +189,10 @@ namespace Raven.Server.Monitoring.Snmp
             public const string TotalRequests = "1.7.2";
 
             [Description("Number of requests per second (one minute rate)")]
-            public const string RequestsPerSecond = "1.7.3";
+            public const string RequestsPerSecond1M = "1.7.3";
+
+            [Description("Number of requests per second (five second rate)")]
+            public const string RequestsPerSecond5S = "1.7.3.1";
 
             [Description("Average request time in milliseconds")]
             public const string RequestAverageDuration = "1.7.4";

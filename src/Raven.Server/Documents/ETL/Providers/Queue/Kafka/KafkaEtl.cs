@@ -26,7 +26,7 @@ public class KafkaEtl : QueueEtl<KafkaItem>
 
     public KafkaEtl(Transformation transformation, QueueEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore)
     {
-        TransactionalId = EnsureValidTransactionalId($"{Database.DatabaseGroupId}-{Name}");
+        TransactionalId = EnsureValidTransactionalId($"{Name}-{Database.DatabaseGroupId}");
     }
 
 

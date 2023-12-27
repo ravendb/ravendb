@@ -637,7 +637,8 @@ namespace Raven.Server.Documents.Handlers
                 AllowStale = GetBoolValueQueryString("allowStale", required: false) ?? false,
                 MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false),
                 StaleTimeout = GetTimeSpanQueryString("staleTimeout", required: false),
-                RetrieveDetails = GetBoolValueQueryString("details", required: false) ?? false
+                RetrieveDetails = GetBoolValueQueryString("details", required: false) ?? false,
+                IgnoreMaxStepsForScript = GetBoolValueQueryString("ignoreMaxStepsForScript", required: false) ?? false
             };
         }
     }

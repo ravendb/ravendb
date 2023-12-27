@@ -5,7 +5,7 @@ function SetSchemaInfoInTeamCity($projectDir) {
     $m = [regex]::Match($content, $currentVersionClassRegex)
     $versions = $m[0]
 
-    $versionRegex = [regex]'(?sm)public const int ([A-Za-z]+Version) = (\d+);'
+    $versionRegex = [regex]'(?sm)public const int ([A-Za-z]+Version) = (\d+_\d+);'
     $versions `
         | Select-String -Pattern $versionRegex -AllMatches `
         | ForEach-Object { $_.Matches } `

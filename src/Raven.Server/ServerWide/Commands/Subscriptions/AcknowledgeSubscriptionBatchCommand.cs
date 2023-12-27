@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
@@ -58,7 +59,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return new UpdatedValue(UpdatedValueActionType.Noop, value: null);
             }
 
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+            var subscription = JsonDeserializationClient.SubscriptionState(existingValue);
             AssertSubscriptionState(record, subscription, subscriptionName);
 
             if (IsLegacyCommand())

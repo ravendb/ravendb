@@ -65,7 +65,7 @@ namespace SlowTests.Issues
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, long.MaxValue, 2).Count();
+                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, 0, 2).Count();
                     Assert.Equal(1, revisions);
                 }
 
@@ -74,7 +74,7 @@ namespace SlowTests.Issues
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, long.MaxValue, 2).Count();
+                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, 0, 2).Count();
                     Assert.Equal(1, revisions);
                 }
             }
@@ -136,7 +136,7 @@ namespace SlowTests.Issues
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, long.MaxValue, 6).Count();
+                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, 0, 6).Count();
                     Assert.Equal(1, revisions);
                 }
 
@@ -145,7 +145,7 @@ namespace SlowTests.Issues
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, long.MaxValue, 6).Count();
+                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, 0, 6).Count();
                     Assert.Equal(1, revisions);
                 }
             }

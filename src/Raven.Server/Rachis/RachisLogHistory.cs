@@ -434,13 +434,17 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe bool HasHistoryLog(ClusterOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out Exception exception)
+        public bool HasHistoryLog(ClusterOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out Exception exception)
+        {
+            var guid = GetGuidFromCommand(cmd);
+            return HasHistoryLog(context, guid, out index, out result, out exception);
+        }
+        public unsafe bool HasHistoryLog(ClusterOperationContext context, string guid, out long index, out object result, out Exception exception)
         {
             result = null;
             exception = null;
             index = 0;
 
-            var guid = GetGuidFromCommand(cmd);
             if (guid == null) // shouldn't happened in new cluster version!
                 return false;
 

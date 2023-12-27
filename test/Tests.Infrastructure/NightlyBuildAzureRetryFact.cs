@@ -2,9 +2,9 @@
 
 namespace Tests.Infrastructure
 {
-    public class NightlyBuildAzureFact : AzureFactAttribute
+    public class NightlyBuildAzureRetryFact : AzureRetryFactAttribute
     {
-        public NightlyBuildAzureFact([CallerMemberName] string memberName = "")
+        public NightlyBuildAzureRetryFact([CallerMemberName] string memberName = "")
             : base(memberName)
         {
             if (NightlyBuildTheoryAttribute.IsNightlyBuild == false)

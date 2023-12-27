@@ -13,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
@@ -640,7 +641,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                         }
                                     }, TaskCancelToken.Token);
 
-                                FlushToDiskIfNeeded(stream);
+                                FlushToDisk(stream);
 
                                 EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
                             }
@@ -805,7 +806,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     smuggler.ExecuteAsync().Wait();
 
-                    FlushToDiskIfNeeded(outputStream);
+                    FlushToDisk(outputStream);
 
                     currentBackupResults.LastEtag = smugglerSource.LastEtag;
                     currentBackupResults.LastDatabaseChangeVector = smugglerSource.LastDatabaseChangeVector;
@@ -821,7 +822,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private static void FlushToDiskIfNeeded(Stream outputStream)
+        protected virtual void FlushToDisk(Stream outputStream)
         {
             switch (outputStream)
             {
@@ -831,9 +832,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 case FileStream file:
                     file.Flush(flushToDisk: true);
-                    break;
-
-                case DirectUploadStream<RavenAwsS3Client>:
                     break;
 
                 default:
