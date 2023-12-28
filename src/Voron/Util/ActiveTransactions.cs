@@ -131,7 +131,7 @@ namespace Voron.Util
 
         private static LowLevelTransaction InvalidLowLevelTransaction = (LowLevelTransaction)FormatterServices.GetUninitializedObject(typeof(LowLevelTransaction));
 
-        private MultipleUseFlag _compactionInProgress = new MultipleUseFlag();
+        private readonly MultipleUseFlag _compactionInProgress = new MultipleUseFlag();
 
         public bool Remove(LowLevelTransaction tx)
         {
