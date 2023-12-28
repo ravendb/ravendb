@@ -240,7 +240,8 @@ public sealed unsafe class CompactKey : IDisposable
         Unsafe.WriteUnaligned<int>(ref _storage[0], key.Length);
 
         // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
-        Unsafe.CopyBlock(ref _storage[sizeof(int)], ref Unsafe.AsRef(key[0]), (uint)key.Length);
+        ref readonly byte kPtr = ref key[0];
+        Unsafe.CopyBlock(ref _storage[sizeof(int)],  in kPtr, (uint)key.Length);
 
         _currentIdx = key.Length + sizeof(int);
 

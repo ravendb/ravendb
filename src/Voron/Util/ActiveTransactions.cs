@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Threading;
 using Sparrow.Threading;
@@ -129,7 +130,7 @@ namespace Voron.Util
             return list;
         }
 
-        private static LowLevelTransaction InvalidLowLevelTransaction = (LowLevelTransaction)FormatterServices.GetUninitializedObject(typeof(LowLevelTransaction));
+        private static readonly LowLevelTransaction InvalidLowLevelTransaction = (LowLevelTransaction)RuntimeHelpers.GetUninitializedObject(typeof(LowLevelTransaction));
 
         private readonly MultipleUseFlag _compactionInProgress = new MultipleUseFlag();
 
