@@ -885,14 +885,15 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void BeforeAppendToRaftLog(ClusterOperationContext ctx, CommandBase cmd)
+        private void BeforeAppendToRaftLog(ClusterOperationContext ctx, Leader.RachisMergedCommand rachisMergedCommand)
         {
-            switch (cmd)
+            switch (rachisMergedCommand.Command)
             {
                 case AddDatabaseCommand addDatabase:
                     if (addDatabase.Record.Topology.Count == 0)
                     {
                         AssignNodesToDatabase(GetClusterTopology(ctx), addDatabase.Record);
+                        rachisMergedCommand.CommandAsJson = ctx.ReadObject(rachisMergedCommand.Command.ToJson(ctx), "topology-modified");
                     }
                     Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
                     break;

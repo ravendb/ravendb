@@ -313,7 +313,7 @@ namespace Raven.Server.Rachis
 
         public Action<ClusterOperationContext> SwitchToSingleLeaderAction;
 
-        public Action<ClusterOperationContext, CommandBase> BeforeAppendToRaftLog;
+        public Action<ClusterOperationContext, Leader.RachisMergedCommand> BeforeAppendToRaftLog;
 
         private string _tag;
         private string _clusterId;
@@ -2313,7 +2313,7 @@ namespace Raven.Server.Rachis
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
 
-        public void InvokeBeforeAppendToRaftLog(ClusterOperationContext context, CommandBase cmd)
+        public void InvokeBeforeAppendToRaftLog(ClusterOperationContext context, Leader.RachisMergedCommand cmd)
         {
             BeforeAppendToRaftLog?.Invoke(context, cmd);
         }

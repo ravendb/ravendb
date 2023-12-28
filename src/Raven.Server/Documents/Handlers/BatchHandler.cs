@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
@@ -639,7 +640,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commands != null)
                     {
-                        foreach (BlittableJsonReaderObject blittableCommand in commands)
+                        foreach (var cmd in commands)
                         {
                             count++;
                             var changeVector = $"{ChangeVectorParser.RaftTag}:{count}-{Database.DatabaseGroupId}";
@@ -647,7 +648,6 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 changeVector += $",{ChangeVectorParser.TrxnTag}:{command.Index}-{Database.ClusterTransactionId}";
                             }
-                            var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                             switch (cmd.Type)
                             {
@@ -666,10 +666,10 @@ namespace Raven.Server.Documents.Handlers
                                             }
                                         }
 
-                                        var document = cmd.Document.Clone(context);
-                                        var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, document, changeVector: changeVector,
+                                        //var document = cmd.Document.Clone(context);
+                                        var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, changeVector: changeVector,
                                             flags: DocumentFlags.FromClusterTransaction);
-                                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, document.Size);
+                                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                                         AddPutResult(putResult);
                                     }
                                     else
