@@ -32,7 +32,6 @@ namespace SlowTests.Issues
 
                 Etl.AddEtl(src, configuration, new RavenConnectionString { Name = "test", TopologyDiscoveryUrls = dst.Urls, Database = dst.Database, });
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 3);
                 var loadDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 2);
                 var deleteDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 3);
 
