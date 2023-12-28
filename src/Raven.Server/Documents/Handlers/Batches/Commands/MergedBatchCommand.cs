@@ -187,15 +187,18 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     if (attachmentPutResult.CollectionName != null)
                         ModifiedCollections?.Add(attachmentPutResult.CollectionName.Name);
 
-                    if (_documentsToUpdateAfterAttachmentChange == null)
-                        _documentsToUpdateAfterAttachmentChange = new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
+                    _documentsToUpdateAfterAttachmentChange ??= new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
 
                     if (_documentsToUpdateAfterAttachmentChange.TryGetValue(docId, out var apReplies) == false)
                         _documentsToUpdateAfterAttachmentChange[docId] = apReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
 
                     apReplies.Add((apReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
 
+                    if (IncludeReply == false)
+                        break;
+
                     Reply.Add(apReply);
+
                     break;
 
                 case CommandType.AttachmentDELETE:
@@ -211,15 +214,18 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         ["Name"] = cmd.Name
                     };
 
-                    if (_documentsToUpdateAfterAttachmentChange == null)
-                        _documentsToUpdateAfterAttachmentChange = new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
+                    _documentsToUpdateAfterAttachmentChange ??= new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
 
                     if (_documentsToUpdateAfterAttachmentChange.TryGetValue(cmd.Id, out var adReplies) == false)
                         _documentsToUpdateAfterAttachmentChange[cmd.Id] = adReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
 
                     adReplies.Add((adReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
 
+                    if (IncludeReply == false)
+                        break;
+
                     Reply.Add(adReply);
+
                     break;
 
                 case CommandType.AttachmentMOVE:
@@ -246,8 +252,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         [nameof(AttachmentDetails.Size)] = attachmentMoveResult.Size
                     };
 
-                    if (_documentsToUpdateAfterAttachmentChange == null)
-                        _documentsToUpdateAfterAttachmentChange = new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
+                    _documentsToUpdateAfterAttachmentChange ??= new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
 
                     if (_documentsToUpdateAfterAttachmentChange.TryGetValue(cmd.Id, out var amReplies) == false)
                         _documentsToUpdateAfterAttachmentChange[cmd.Id] = amReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
@@ -258,6 +263,9 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         _documentsToUpdateAfterAttachmentChange[cmd.DestinationId] = amReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
 
                     amReplies.Add((amReply, nameof(Constants.Fields.CommandData.DestinationDocumentChangeVector)));
+
+                    if (IncludeReply == false)
+                        break;
 
                     Reply.Add(amReply);
                     break;
@@ -286,15 +294,18 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         [nameof(AttachmentDetails.Size)] = attachmentCopyResult.Size
                     };
 
-                    if (_documentsToUpdateAfterAttachmentChange == null)
-                        _documentsToUpdateAfterAttachmentChange = new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
+                    _documentsToUpdateAfterAttachmentChange ??= new Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>>(StringComparer.OrdinalIgnoreCase);
 
                     if (_documentsToUpdateAfterAttachmentChange.TryGetValue(cmd.DestinationId, out var acReplies) == false)
                         _documentsToUpdateAfterAttachmentChange[cmd.DestinationId] = acReplies = new List<(DynamicJsonValue Reply, string FieldName)>();
 
                     acReplies.Add((acReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
 
+                    if (IncludeReply == false)
+                        break;
+
                     Reply.Add(acReply);
+
                     break;
 
                 case CommandType.TimeSeries:
@@ -308,6 +319,9 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     if (tsCmd.DocCollection != null)
                         ModifiedCollections?.Add(tsCmd.DocCollection);
+
+                    if (IncludeReply == false)
+                        break;
 
                     Reply.Add(new DynamicJsonValue
                     {
@@ -338,6 +352,9 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     ModifiedCollections?.Add(destinationDocCollection);
 
+                    if (IncludeReply == false)
+                        break;
+
                     Reply.Add(new DynamicJsonValue
                     {
                         [nameof(BatchRequestParser.CommandData.Id)] = cmd.DestinationId,
@@ -367,6 +384,9 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         }
                     }
 
+                    if (IncludeReply == false)
+                        break;
+
                     Reply.Add(new DynamicJsonValue
                     {
                         [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
@@ -389,11 +409,8 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         throw new InvalidOperationException($"Failed to create revision for document {cmd.Id} because document doesn't exits.");
                     }
 
-                    DynamicJsonValue forceRevisionReply;
-
                     // Note: here there is no point checking 'Before' or 'After' because if there were any changes then the forced revision is done from the PUT command....
 
-                    bool revisionCreated = false;
                     var clonedDocData = existingDoc.Data.Clone(context);
 
                     if (existingDoc.Flags.Contain(DocumentFlags.HasRevisions) == false)
@@ -413,7 +430,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     }
 
                     // Create the revision. Revision will be created only if there isn't a revision with identical content for this document
-                    revisionCreated = Database.DocumentsStorage.RevisionsStorage.Put(context, existingDoc.Id,
+                    bool revisionCreated = Database.DocumentsStorage.RevisionsStorage.Put(context, existingDoc.Id,
                                                                                  clonedDocData,
                                                                                  existingDoc.Flags,
                                                                                  nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
@@ -424,8 +441,11 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     {
                         LastChangeVector = existingDoc.ChangeVector;
 
+                        if (IncludeReply == false)
+                            break;
+
                         // Reply with new revision data
-                        forceRevisionReply = new DynamicJsonValue
+                        Reply.Add(new DynamicJsonValue
                         {
                             ["RevisionCreated"] = true,
                             ["Type"] = nameof(CommandType.ForceRevisionCreation),
@@ -433,19 +453,21 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                             [Constants.Documents.Metadata.ChangeVector] = existingDoc.ChangeVector,
                             [Constants.Documents.Metadata.LastModified] = existingDoc.LastModified,
                             [Constants.Documents.Metadata.Flags] = existingDoc.Flags
-                        };
+                        });
                     }
                     else
                     {
+                        if (IncludeReply == false)
+                            break;
+
                         // No revision was created
-                        forceRevisionReply = new DynamicJsonValue
+                        Reply.Add(new DynamicJsonValue
                         {
                             ["RevisionCreated"] = false,
                             ["Type"] = nameof(CommandType.ForceRevisionCreation)
-                        };
+                        });
                     }
 
-                    Reply.Add(forceRevisionReply);
                     break;
             }
         }
@@ -456,7 +478,6 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
             {
                 var documentId = kvp.Key;
                 var changeVector = Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId);
-
                 if (changeVector == null)
                     continue;
 
@@ -472,17 +493,14 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
         // We are requested to do not return result.
         if (IncludeReply == false)
-        {
-            Reply.Clear();
-            return 0;
-        }
+            Debug.Assert(Reply.Count == 0);
 
         return Reply.Count;
     }
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
     {
-        return new MergedBatchCommandDto(true)
+        return new MergedBatchCommandDto(includeReply: true)
         {
             ParsedCommands = ParsedCommands.ToArray(),
             AttachmentStreams = AttachmentStreams
