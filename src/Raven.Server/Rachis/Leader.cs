@@ -675,13 +675,47 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public class RachisMergedCommand
+        public class RachisMergedCommand : IDisposable
         {
+            private readonly ClusterContextPool _pool;
+            private IDisposable _ctxReturn;
+
             public CommandBase Command;
-            public BlittableJsonReaderObject CommandAsJson;
-            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
+            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs = new TaskCompletionSource<Task<(long Index, object Result)>>(TaskCreationOptions.RunContinuationsAsynchronously);
             public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
-            public BlittableResultWriter BlittableResultWriter { get; init; }
+            public BlittableResultWriter BlittableResultWriter { get; private set; }
+
+            public RachisMergedCommand(ClusterContextPool pool, CommandBase command)
+            {
+                _pool = pool;
+                Command = command;
+            }
+
+            public void Initialize()
+            {
+                BlittableResultWriter = Command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
+
+                // we prepare the command _not_ under the write lock
+                if (Command.Raw == null)
+                {
+                    _ctxReturn = _pool.AllocateOperationContext(out JsonOperationContext context);
+                    var djv = Command.ToJson(context);
+                    Command.Raw = context.ReadObject(djv, "prepare-raw-command");
+                }
+            }
+
+            public async Task<(long Index, object Result)> Result()
+            {
+                var inner = await Tcs.Task;
+                var r = await inner;
+                return BlittableResultWriter == null ? r : (r.Index, BlittableResultWriter.Result);
+            } 
+
+            public void Dispose()
+            {
+                BlittableResultWriter?.Dispose();
+                _ctxReturn?.Dispose();
+            }
         }
 
         private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
@@ -690,60 +724,50 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
+            using var rachisMergedCommand = new RachisMergedCommand(_engine.ContextPool, command);
 
-            using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            rachisMergedCommand.Initialize();
+
+            _commandsQueue.Enqueue(rachisMergedCommand);
+
+            while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
             {
-                var djv = command.ToJson(context);
-                var rachisMergedCommand = new RachisMergedCommand
+                var lockTaken = false;
+                try
                 {
-                    Command = command,
-                    CommandAsJson = context.ReadObject(djv, "raft/command"),
-                    Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously),
-                    BlittableResultWriter = blittableResultWriter
-                };
-                _commandsQueue.Enqueue(rachisMergedCommand);
-
-                while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
-                {
-                    var lockTaken = false;
-                    try
+                    var waitAsync = _waitForCommit.WaitAsync(timeout);
+                    Monitor.TryEnter(_commandsQueue, ref lockTaken);
+                    if (lockTaken)
                     {
-                        var waitAsync = _waitForCommit.WaitAsync(timeout);
-                        Monitor.TryEnter(_commandsQueue, ref lockTaken);
-                        if (lockTaken)
-                        {
-                            EmptyQueue();
-                        }
-                        else
-                        {
-                            if (await waitAsync == false)
-                            {
-                                if (rachisMergedCommand.Consumed.Raise())
-                                    throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-
-                                // if the command is already dequeued we must let it continue to keep its context valid.
-                                await rachisMergedCommand.Tcs.Task;
-                            }
-                        }
+                        EmptyQueue();
                     }
-                    finally
+                    else
                     {
-                        if (lockTaken)
+                        if (await waitAsync == false)
                         {
-                            Monitor.Exit(_commandsQueue);
-                            _waitForCommit.SetAndResetAtomically();
+                            if (rachisMergedCommand.Consumed.Raise())
+                                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+
+                            // if the command is already dequeued we must let it continue to keep its context valid.
+                            await rachisMergedCommand.Tcs.Task;
                         }
                     }
                 }
-
-                var inner = await rachisMergedCommand.Tcs.Task;
-                if (await inner.WaitWithTimeout(timeout) == false)
-                    throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-
-                var result = await inner;
-                return blittableResultWriter == null ? result : (result.Index, blittableResultWriter.Result);
+                finally
+                {
+                    if (lockTaken)
+                    {
+                        Monitor.Exit(_commandsQueue);
+                        _waitForCommit.SetAndResetAtomically();
+                    }
+                }
             }
+
+            var inner = await rachisMergedCommand.Tcs.Task;
+            if (await inner.WaitWithTimeout(timeout) == false)
+                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+
+            return await rachisMergedCommand.Result();
         }
 
         private void EmptyQueue()
@@ -812,7 +836,7 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
-                                index = _engine.InsertToLeaderLog(context, Term, cmd.CommandAsJson, RachisEntryFlags.StateMachineCommand);
+                                index = _engine.InsertToLeaderLog(context, Term, cmd.Command.Raw, RachisEntryFlags.StateMachineCommand);
                             }
 
                             if (_entries.TryGetValue(index, out var state) == false)
