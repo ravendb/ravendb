@@ -35,7 +35,7 @@ public static class HttpResponseHelper
             if (HeadersToIgnore.Contains(header.Key))
                 continue;
 
-            to.Headers.Add(header.Key, header.Value.ToArray());
+            to.Headers[header.Key] = header.Value.ToArray();
         }
 
         foreach (var header in from.Content.Headers)
@@ -43,7 +43,7 @@ public static class HttpResponseHelper
             if (HeadersToIgnore.Contains(header.Key))
                 continue;
 
-            to.Headers.Add(header.Key, header.Value.ToArray());
+            to.Headers[header.Key] = header.Value.ToArray();
         }
     }
 

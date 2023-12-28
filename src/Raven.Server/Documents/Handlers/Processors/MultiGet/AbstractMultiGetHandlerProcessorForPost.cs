@@ -234,7 +234,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
                 if (string.IsNullOrWhiteSpace(value))
                     continue;
 
-                httpContext.Request.Headers.Add(header, value);
+                httpContext.Request.Headers[header] = value;
             }
         }
         // initiated to use it at the end of for

@@ -25,8 +25,10 @@ namespace Raven.Server.Https
         public HttpsConnectionMiddleware(RavenServer server, KestrelServerOptions options, X509Certificate2 originalServerCertificate)
         {
             _server = server;
-            CipherSuitesPolicy = server.Configuration.Security.TlsCipherSuites != null && server.Configuration.Security.TlsCipherSuites.Length > 0
+            CipherSuitesPolicy = server.Configuration.Security.TlsCipherSuites is { Length: > 0 }
+#pragma warning disable CA1416
                 ? new CipherSuitesPolicy(server.Configuration.Security.TlsCipherSuites)
+#pragma warning restore CA1416
                 : null;
 
             _originalServerCertificate = originalServerCertificate;
