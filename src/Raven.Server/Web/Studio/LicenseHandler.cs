@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
@@ -202,6 +205,74 @@ namespace Raven.Server.Web.Studio
 
                     context.Write(writer, limits.ToJson());
                 }
+            }
+        }
+
+        [RavenAction("/studio/whats-new", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetWhatsNewData()
+        {
+            if (ServerVersion.Build == ServerVersion.DevBuildNumber)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+
+            var license = ServerStore.LoadLicense();
+
+            if (license == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+            
+            var licenseId = license.Id.ToString();
+            
+            var request = new AboutViewRequest() { CurrentFullVersion = ServerVersion.FullVersion, LicenseId = licenseId };
+
+            var requestPayload = JsonConvert.SerializeObject(request);
+
+            var content = new StringContent(requestPayload, Encoding.UTF8, "application/json");
+
+            var upgradeInfoResponse = await ApiHttpClient.Instance.PostAsync("api/v1/upgrade/get-upgrade-info", content);
+
+            if (upgradeInfoResponse.IsSuccessStatusCode == false)
+            {
+                HttpContext.Response.StatusCode = (int)upgradeInfoResponse.StatusCode;
+                return;
+            }
+            
+            var upgradeInfoContentStream = await upgradeInfoResponse.Content.ReadAsStreamAsync();
+            
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var json = await context.ReadForMemoryAsync(upgradeInfoContentStream, "about-view/data");
+                var response = JsonDeserializationServer.AboutViewResponse(json);
+                
+                context.Write(writer, response.ToJson());
+            }
+        }
+
+        private class AboutViewRequest
+        {
+            public string CurrentFullVersion { get; set; }
+            public string LicenseId { get; set; }
+        }
+
+        public class AboutViewResponse
+        {
+            public string ChangelogHtml { get; set; }
+            public bool CanDowngradeFollowingUpgrade { get; set; }
+            public bool LicenseEligibleForUpgrade { get; set; }
+            
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(ChangelogHtml)] = ChangelogHtml,
+                    [nameof(CanDowngradeFollowingUpgrade)] = CanDowngradeFollowingUpgrade,
+                    [nameof(LicenseEligibleForUpgrade)] = LicenseEligibleForUpgrade
+                };
             }
         }
     }
