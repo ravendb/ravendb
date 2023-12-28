@@ -53,7 +53,9 @@ namespace SlowTests.Issues
                         Reverse = e.CustomFields.Reverse(),
                         Take = e.CustomFields.Take(1),
                         Skip = e.CustomFields.Skip(1),
+#pragma warning disable CA2021
                         OfType = e.CustomFields.OfType<KeyValuePair<object, object>>()
+#pragma warning restore CA2021
                     };
             }
         }
@@ -102,7 +104,7 @@ namespace SlowTests.Issues
                     var booksByJohn = s.Query<Matter, Filter_key_Index>().ToList();
                     Assert.Equal(2, booksByJohn.Count);
                 }
-                
+
             }
         }
 
