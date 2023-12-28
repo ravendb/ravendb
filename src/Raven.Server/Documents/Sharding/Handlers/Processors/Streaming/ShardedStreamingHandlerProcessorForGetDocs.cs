@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                     OrderDocumentsById(streams, continuationToken) : 
                     OrderDocumentsByLastModified(streams, continuationToken);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 

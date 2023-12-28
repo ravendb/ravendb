@@ -1884,7 +1884,7 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(includeDoc.GetMetadata().GetId());
                 writer.WriteObject(includeDoc);
 
-                await writer.MaybeOuterFlushAsync();
+                await writer.MaybeFlushAsync();
             }
 
             writer.WriteEndObject();

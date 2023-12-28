@@ -66,7 +66,7 @@ internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHan
     {
         var explanations = RequestHandler.Database.QueryRunner.ExplainDynamicIndexSelection(query, out string indexName);
 
-        await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream(), token.Token))
+        await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
             writer.WritePropertyName("IndexName");

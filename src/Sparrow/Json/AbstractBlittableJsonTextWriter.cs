@@ -12,7 +12,8 @@ namespace Sparrow.Json
     public abstract unsafe class AbstractBlittableJsonTextWriter : IBlittableJsonTextWriter
     {
         protected readonly JsonOperationContext _context;
-        protected readonly Stream _stream;
+        protected Stream _stream;
+
         private const byte StartObject = (byte)'{';
         private const byte EndObject = (byte)'}';
         private const byte StartArray = (byte)'[';
@@ -84,6 +85,7 @@ namespace Sparrow.Json
         private protected readonly JsonOperationContext.MemoryBuffer _pinnedBuffer;
         private readonly byte* _buffer;
 
+        private protected bool _started;
         private protected int _pos;
         private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
 
@@ -94,6 +96,7 @@ namespace Sparrow.Json
 
             _returnBuffer = context.GetMemoryBuffer(out _pinnedBuffer);
             _buffer = _pinnedBuffer.Address;
+            _started = false;
         }
 
         public int Position => _pos;
@@ -613,6 +616,7 @@ namespace Sparrow.Json
             _stream.Write(_pinnedBuffer.Memory.Memory.Span.Slice(0, _pos));
             _stream.Flush();
 
+            _started = true;
             _pos = 0;
             return true;
         }
@@ -830,8 +834,8 @@ namespace Sparrow.Json
         {
             try
             {
-                FlushInternal();
-                _stream.Flush();
+                if (FlushInternal() == false)
+                    _stream.Flush();
             }
             catch (ObjectDisposedException)
             {

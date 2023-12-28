@@ -8,94 +8,141 @@ namespace Sparrow.Json
 {
     public sealed class AsyncBlittableJsonTextWriter : AbstractBlittableJsonTextWriter, IAsyncDisposable
     {
-        private readonly Stream _outputStream;
-        private readonly CancellationToken _cancellationToken;
+        private MemoryStream _inner;
+        private Task _innerFlushTask;
 
-        public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, context.CheckoutMemoryStream())
+        private MemoryStream _shadowInner;
+
+        private readonly Stream _outputStream;
+
+        public long BufferCapacity => _inner.Capacity;
+        public long BufferUsed => _inner.Length;
+
+        public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream) : base(context, context.CheckoutMemoryStream())
         {
             _outputStream = stream ?? throw new ArgumentNullException(nameof(stream));
-            _cancellationToken = cancellationToken;
-        }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<int> MaybeOuterFlushAsync()
-        {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
-            if (innerStream.Length * 2 <= innerStream.Capacity)
-                return new ValueTask<int>(0);
-
-            FlushInternal();
-            return new ValueTask<int>(OuterFlushAsync());
-        }
-
-        public async Task<int> OuterFlushAsync()
-        {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
+            if (_stream is not MemoryStream)
                 ThrowInvalidTypeException(_stream?.GetType());
 
-            FlushInternal();
-            innerStream.TryGetBuffer(out var bytes);
-            var bytesCount = bytes.Count;
-            if (bytesCount == 0)
-                return 0;
-            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, _cancellationToken).ConfigureAwait(false);
-            innerStream.SetLength(0);
-            return bytesCount;
+            _inner = (MemoryStream)_stream;
         }
 
         public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)
         {
-            await FlushAsync(token).ConfigureAwait(false);
+            var unmanagedMemory = _pinnedBuffer.Memory;
+
+            if (_pos != 0)
+            {
+                _inner.Write(unmanagedMemory.Memory.Span.Slice(0, _pos));
+                _pos = 0;
+                _started = true;
+            }
 
             while (true)
             {
-                _pos = await stream.ReadAsync(_pinnedBuffer.Memory.Memory, token).ConfigureAwait(false);
-                if (_pos == 0)
+                var read = await stream.ReadAsync(unmanagedMemory.Memory, token).ConfigureAwait(false);
+                if (read == 0)
                     break;
 
-                await FlushAsync(token).ConfigureAwait(false);
+                _inner.Write(unmanagedMemory.Memory.Span.Slice(0, read));
+                _started = true;
+
+                await MaybeFlushAsync(token).ConfigureAwait(false);
             }
+
+            await FlushAsync(token).ConfigureAwait(false);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
         {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
-            if (innerStream.Length * 2 <= innerStream.Capacity)
+            if (_inner.Length * 2 <= _inner.Capacity)
                 return new ValueTask<int>(0);
 
-            FlushInternal(); // this is OK, because inner stream is a MemoryStream
             return FlushAsync(token);
         }
 
         public async ValueTask<int> FlushAsync(CancellationToken token = default)
         {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
             FlushInternal();
-            innerStream.TryGetBuffer(out var bytes);
+
+            var currentStream = _inner;
+            currentStream.TryGetBuffer(out var bytes);
+
             var bytesCount = bytes.Count;
-            if (bytesCount == 0)
-                return 0;
-            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, token).ConfigureAwait(false);
-            innerStream.SetLength(0);
+
+            if (_outputStream is MemoryStream)
+            {
+                // We know it is safe to write and flush synchronously.
+                _outputStream.Write(bytes.Array, bytes.Offset, bytesCount);
+                _outputStream.Flush();
+            }
+            else
+            {
+                // We need to flush async, therefore we check if there is any pending flush.
+                if (_innerFlushTask != null)
+                {
+#if NETCOREAPP2_1_OR_GREATER                    
+                    if (_innerFlushTask.IsCompletedSuccessfully == false)
+#else
+                    if (_innerFlushTask.IsCompleted && _innerFlushTask.IsFaulted == false)
+#endif
+                    {
+                        // We need to wait because it didn't finished, since we are running asynchronously.
+                        // OR we need to cause an exception therefore we will request the result so the exception gets thrown.
+                        await _innerFlushTask.ConfigureAwait(false);
+                    }
+
+                    _innerFlushTask = null;
+                }
+
+                if (bytesCount != 0)
+                {
+                    _innerFlushTask = InternalWriteAsync(_outputStream, bytes.Array, bytes.Offset, bytesCount, token);
+
+                    // Therefore, we swap the inner stream with the shadow stream.
+                    _inner = _shadowInner ?? _context.CheckoutMemoryStream();
+                    _stream = _inner;
+                    _shadowInner = currentStream;
+                    _started = true;
+                }
+            }
+
+            _inner.SetLength(0);
             return bytesCount;
+        }
+
+        private async Task InternalWriteAsync(Stream stream, byte[] array, int offset, int bytesCount, CancellationToken token)
+        {
+            await stream.WriteAsync(array, offset, bytesCount, token).ConfigureAwait(false);
+            await stream.FlushAsync(token).ConfigureAwait(false);
         }
 
         public async ValueTask DisposeAsync()
         {
             DisposeInternal();
 
-            if (await FlushAsync().ConfigureAwait(false) > 0)
-                await _outputStream.FlushAsync().ConfigureAwait(false);
+            await FlushAsync().ConfigureAwait(false);
 
-            _context.ReturnMemoryStream((MemoryStream)_stream);
+            if (_innerFlushTask != null)
+            {
+                await _innerFlushTask.ConfigureAwait(false);
+            }
+
+            // We cant flush IF we haven't written anything. We rely on this behavior to detect exceptions. 
+            // Therefore, we need to check before flushing that there is something to be flushed.
+            if (_started)
+            {
+                await _outputStream.FlushAsync().ConfigureAwait(false);
+            }
+            
+            if (_shadowInner != null)
+            {
+                _context.ReturnMemoryStream(_shadowInner);
+            }
+
+            _context.ReturnMemoryStream(_inner);
         }
 
         private void ThrowInvalidTypeException(Type typeOfStream)

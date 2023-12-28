@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
                 long numberOfResults;
                 long totalDocumentsSizeInBytes;
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");

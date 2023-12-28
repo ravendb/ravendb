@@ -11,10 +11,10 @@ public sealed class StreamJsonlResultsWriter : IStreamResultsWriter<Document>
     private readonly AsyncBlittableJsonTextWriter _writer;
     private readonly JsonOperationContext _context;
 
-    public StreamJsonlResultsWriter(Stream stream, JsonOperationContext context, CancellationToken token)
+    public StreamJsonlResultsWriter(Stream stream, JsonOperationContext context)
     {
         _context = context;
-        _writer = new AsyncBlittableJsonTextWriter(context, stream, token);
+        _writer = new AsyncBlittableJsonTextWriter(context, stream);
     }
     
     public ValueTask DisposeAsync()

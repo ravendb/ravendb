@@ -13,10 +13,10 @@ public sealed class StreamResultsWriter : IStreamResultsWriter<Document>
     private bool _first = true;
     
 
-    public StreamResultsWriter(Stream stream, JsonOperationContext context, CancellationToken token)
+    public StreamResultsWriter(Stream stream, JsonOperationContext context)
     {
         _context = context;
-        _writer = new AsyncBlittableJsonTextWriter(context, stream, token);
+        _writer = new AsyncBlittableJsonTextWriter(context, stream);
     }
     
     public ValueTask DisposeAsync()

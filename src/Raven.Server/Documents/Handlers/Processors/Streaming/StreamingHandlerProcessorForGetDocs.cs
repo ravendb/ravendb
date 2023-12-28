@@ -83,8 +83,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         private IStreamResultsWriter<Document> GetLoadDocumentsResultsWriter(string format, JsonOperationContext context, Stream responseBodyStream, CancellationToken token)
         {
             if (string.IsNullOrEmpty(format) == false && string.Equals(format, "jsonl", StringComparison.OrdinalIgnoreCase))
-                return new StreamJsonlResultsWriter(responseBodyStream, context, token);
-            return new StreamResultsWriter(responseBodyStream, context, token);
+                return new StreamJsonlResultsWriter(responseBodyStream, context);
+            return new StreamResultsWriter(responseBodyStream, context);
         }
     }
 }
