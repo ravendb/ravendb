@@ -1253,7 +1253,7 @@ namespace Raven.Server.Utils.Cli
             [Command.TrustServerCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandTrustServerCert },
             [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandTrustClientCert },
             [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 3, DelegateFunc = CommandGenerateClientCert },
-            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandReplaceClusterCert },
+            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandReplaceClusterCert },
             [Command.TriggerCertificateRefresh] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandTriggerCertificateRefresh },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLogo },
