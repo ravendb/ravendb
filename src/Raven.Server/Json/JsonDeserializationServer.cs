@@ -306,6 +306,8 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionsDetails> SubscriptionConnectionsDetails = GenerateJsonDeserializationRoutine<SubscriptionConnectionsDetails>();
 
+        internal static readonly Func<BlittableJsonReaderObject, LicenseHandler.AboutViewResponse> AboutViewResponse = GenerateJsonDeserializationRoutine<LicenseHandler.AboutViewResponse>();
+
         public sealed class Parameters
         {
             private Parameters()
