@@ -236,7 +236,11 @@ namespace Raven.Server.Documents.Handlers
             if (topology.Promotables.Contains(ServerStore.NodeTag))
                 throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId)
+            {
+                Timeout = Timeout.InfiniteTimeSpan // we rely on the http token to cancel the command
+            };
+
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
@@ -248,20 +252,18 @@ namespace Raven.Server.Documents.Handlers
                 };
             }
 
-            // wait for the command to be applied on this node
-            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
-
             var array = new DynamicJsonArray();
+            using var cts = CreateHttpRequestBoundTimeLimitedOperationToken();
+            
+            // wait for the command to be applied on this node,
+            // canceling will be done through the cts and not with a timeout
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index, Timeout.InfiniteTimeSpan, cts.Token);
+
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
                 try
                 {
-                    ClusterTransactionCompletionResult reply;
-                    using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Engine.OperationTimeout))
-                    {
-                        reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
-                    }
-
+                    var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
                     if (reply.IndexTask != null)
                     {
                         await reply.IndexTask;

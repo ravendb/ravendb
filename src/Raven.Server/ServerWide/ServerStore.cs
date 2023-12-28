@@ -3042,7 +3042,7 @@ namespace Raven.Server.ServerWide
             Exception requestException = null;
             while (true)
             {
-                ServerShutdown.ThrowIfCancellationRequested();
+                _shutdownNotification.Token.ThrowIfCancellationRequested();
 
                 if (_engine.CurrentState == RachisState.Leader && _engine.CurrentLeader?.Running == true)
                 {
@@ -3070,7 +3070,9 @@ namespace Raven.Server.ServerWide
                     if (cachedLeaderTag == null)
                     {
                         await Task.WhenAny(logChange, timeoutTask);
-                        if (logChange.IsCompleted == false)
+                        _shutdownNotification.Token.ThrowIfCancellationRequested();
+
+                        if (timeoutTask.IsCompleted)
                             ThrowTimeoutException(cmd, requestException);
 
                         continue;
@@ -3091,7 +3093,9 @@ namespace Raven.Server.ServerWide
                 }
 
                 await Task.WhenAny(logChange, timeoutTask);
-                if (logChange.IsCompleted == false)
+                _shutdownNotification.Token.ThrowIfCancellationRequested();
+
+                if (timeoutTask.IsCompleted)
                 {
                     ThrowTimeoutException(cmd, requestException);
                 }
@@ -3346,9 +3350,14 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, CancellationToken token = default)
+        public Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, TimeSpan timeout, CancellationToken token = default)
         {
-            await _engine.WaitForCommitIndexChange(modification, value, token);
+            return _engine.WaitForCommitIndexChange(modification, value, timeout, token);
+        }
+
+        public Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, CancellationToken token = default)
+        {
+            return _engine.WaitForCommitIndexChange(modification, value, timeout: null, token);
         }
 
         public string LastStateChangeReason()
