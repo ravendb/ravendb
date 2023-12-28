@@ -650,7 +650,12 @@ namespace Raven.Server.ServerWide
                 _fileLocker = new FileLocker(Path.Combine(path.FullPath, "system.lock"));
                 _fileLocker.TryAcquireWriteLock(Logger);
 
-                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, CatastrophicFailureNotification);
+                string tempPath = null;
+
+                if (Configuration.Storage.TempPath != null)
+                    tempPath = Configuration.Storage.TempPath.Combine("System").FullPath;
+
+                options = StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, IoChanges, CatastrophicFailureNotification);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
@@ -2419,7 +2424,17 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case ConnectionStringType.Sql:
-                    command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
+                    // RavenDB-21784 - Replace obsolete MySql provider name
+                    var deserializedSqlConnectionString = JsonDeserializationCluster.SqlConnectionString(connectionString);
+                    if (deserializedSqlConnectionString.FactoryName == "MySql.Data.MySqlClient")
+                    {
+                        deserializedSqlConnectionString.FactoryName = "MySqlConnector.MySqlConnectorFactory";
+                        var alert = AlertRaised.Create(databaseName, "Deprecated MySql factory auto-updated", "MySql.Data.MySqlClient factory has been defaulted to MySqlConnector.MySqlConnectorFactory",
+                            AlertType.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
+                        NotificationCenter.Add(alert);
+                    }
+                    
+                    command = new PutSqlConnectionStringCommand(deserializedSqlConnectionString, databaseName, raftRequestId);
                     break;
                 case ConnectionStringType.Olap:
                     command = new PutOlapConnectionStringCommand(JsonDeserializationCluster.OlapConnectionString(connectionString), databaseName, raftRequestId);

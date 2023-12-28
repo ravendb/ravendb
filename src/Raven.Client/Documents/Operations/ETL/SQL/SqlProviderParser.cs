@@ -21,7 +21,6 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                 case "Oracle.ManagedDataAccess.Client":
                     return SqlProvider.OracleClient;
                 case "MySql.Data.MySqlClient":
-                    return SqlProvider.MySqlClient;
                 case "MySqlConnector.MySqlConnectorFactory":
                     return SqlProvider.MySqlConnectorFactory;
                 case "System.Data.SqlServerCe.3.5":

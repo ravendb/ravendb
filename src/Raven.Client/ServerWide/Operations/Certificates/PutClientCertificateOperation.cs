@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Conventions;
@@ -16,6 +17,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         private readonly Dictionary<string, DatabaseAccess> _permissions;
         private readonly string _name;
         private readonly SecurityClearance _clearance;
+        
+        public string TwoFactorAuthenticationKey { get; set; }
 
         public PutClientCertificateOperation(string name, X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
         {
@@ -27,7 +30,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutClientCertificateCommand(conventions, _name, _certificate, _permissions, _clearance);
+            return new PutClientCertificateCommand(conventions, _name, _certificate, _permissions, _clearance, TwoFactorAuthenticationKey);
         }
 
         private sealed class PutClientCertificateCommand : RavenCommand, IRaftCommand
@@ -37,14 +40,17 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly string _name;
             private readonly SecurityClearance _clearance;
+            private readonly string _twoFactorAuthenticationKey;
 
-            public PutClientCertificateCommand(DocumentConventions conventions, string name, X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
+            public PutClientCertificateCommand(DocumentConventions conventions, string name, X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance,
+                string twoFactorAuthenticationKey)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
                 _name = name;
                 _clearance = clearance;
+                _twoFactorAuthenticationKey = twoFactorAuthenticationKey;
             }
 
             public override bool IsReadRequest => false;
@@ -69,6 +75,12 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                             writer.WritePropertyName(nameof(CertificateDefinition.SecurityClearance));
                             writer.WriteString(_clearance.ToString());
                             writer.WriteComma();
+                            if (_twoFactorAuthenticationKey != null)
+                            {
+                                writer.WritePropertyName(nameof(TwoFactorAuthenticationKey));
+                                writer.WriteString(_twoFactorAuthenticationKey);
+                                writer.WriteComma();
+                            }
                             writer.WritePropertyName(nameof(CertificateDefinition.Permissions));
                             writer.WriteStartObject();
                             bool first = true;

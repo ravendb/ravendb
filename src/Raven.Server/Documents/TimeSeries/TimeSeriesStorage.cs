@@ -702,7 +702,6 @@ namespace Raven.Server.Documents.TimeSeries
                 else
                     holder.AppendExistingSegment(segment);
 
-
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
                     CollectionName = collectionName.Name,
@@ -716,7 +715,6 @@ namespace Raven.Server.Documents.TimeSeries
 
                 return true;
             }
-
         }
 
         public bool EnsureNoOverlap(
@@ -884,7 +882,7 @@ namespace Raven.Server.Documents.TimeSeries
                 CollectionName collection,
                 DateTime timeStamp,
                 ChangeVector fromReplicationChangeVector = null
-                ) : this(tss, context, docId, name, collection, fromReplicationChangeVector)
+            ) : this(tss, context, docId, name, collection, fromReplicationChangeVector)
             {
                 SliceHolder = new TimeSeriesSliceHolder(_context, docId, name, _collection.Name).WithBaseline(timeStamp);
                 SliceHolder.CreateSegmentBuffer();
@@ -898,7 +896,7 @@ namespace Raven.Server.Documents.TimeSeries
                 string name,
                 CollectionName collection,
                 AppendOptions options
-                ) : this(tss, context, docId, name, collection, options.ChangeVectorFromReplication)
+            ) : this(tss, context, docId, name, collection, options.ChangeVectorFromReplication)
             {
                 FromSmuggler = options.FromSmuggler;
                 SliceHolder = allocator;

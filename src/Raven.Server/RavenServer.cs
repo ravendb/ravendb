@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -100,6 +101,9 @@ namespace Raven.Server
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
 
+        public TwoFactor TwoFactor;
+        
+
         public event Action AfterDisposal;
 
         public readonly ServerStatistics Statistics;
@@ -142,6 +146,7 @@ namespace Raven.Server
             ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricCounters();
             MetricCacher = new ServerMetricCacher(this);
+            TwoFactor = new TwoFactor(Time);
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
             _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
@@ -1485,16 +1490,20 @@ namespace Raven.Server
 
         public sealed class AuthenticateConnection : IHttpAuthenticationFeature
         {
+            public bool RequiresTwoFactor;
+            private TwoFactor _twoFactor;
+            
             public Dictionary<string, DatabaseAccess> AuthorizedDatabases = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
             private Dictionary<string, DatabaseAccess> _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>();
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
-            public readonly DateTime CreatedAt;
+            
+            public readonly DateTime CreatedAt = SystemTime.UtcNow;
 
-            public AuthenticateConnection()
+            public AuthenticateConnection(TwoFactor twoFactor)
             {
-                CreatedAt = SystemTime.UtcNow;
+                _twoFactor = twoFactor;
             }
 
             public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
@@ -1549,9 +1558,29 @@ namespace Raven.Server
             public string WrongProtocolMessage;
 
             private AuthenticationStatus _status;
+            private AuthenticationStatus? _statusAfterTwoFactorAuth;
 
             public AuthenticationStatus StatusForAudit => _status;
 
+            public TwoFactor.TwoFactorAuthRegistration TwoFactorAuthRegistration => _twoFactor.GetAuthRegistration(Certificate.Thumbprint); 
+            
+            public void WaitingForTwoFactorAuthentication()
+            {
+                _statusAfterTwoFactorAuth = _status;
+                _status = AuthenticationStatus.TwoFactorAuthNotProvided;
+            }
+
+            public void SuccessfulTwoFactorAuthentication()
+            {
+                // _statusAfterTwoFactorAuth is nullable
+                // when we override existing configuration we skip WaitingForTwoFactorAuthentication stage
+                
+                if (_statusAfterTwoFactorAuth.HasValue)
+                    _status = _statusAfterTwoFactorAuth.Value;
+
+                _statusAfterTwoFactorAuth = null;
+            }
+            
             public AuthenticationStatus Status
             {
                 get
@@ -1598,7 +1627,7 @@ namespace Raven.Server
 
         internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
         {
-            var authenticationStatus = new AuthenticateConnection
+            var authenticationStatus = new AuthenticateConnection(TwoFactor)
             {
                 Certificate = certificate
             };
@@ -1654,6 +1683,16 @@ namespace Raven.Server
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
 
                         authenticationStatus.SetBasedOnCertificateDefinition(definition);
+
+                        var hasTwoFactorKey = cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
+
+                        authenticationStatus.RequiresTwoFactor = hasTwoFactorKey;
+                        
+                        if (authenticationStatus.RequiresTwoFactor && TwoFactor.ValidateTwoFactorConnectionLimits(certificate.Thumbprint) == false)
+                        {
+                            authenticationStatus.WaitingForTwoFactorAuthentication();
+                            return authenticationStatus;
+                        }
                     }
                 }
             }
@@ -2847,7 +2886,9 @@ namespace Raven.Server
             Operator,
             ClusterAdmin,
             Expired,
-            NotYetValid
+            NotYetValid,
+            TwoFactorAuthNotProvided,
+            TwoFactorAuthFromInvalidLimit
         }
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -2954,5 +2995,6 @@ namespace Raven.Server
 
             ArrayPool<byte>.Shared.Return(buffer);
         }
+
     }
 }

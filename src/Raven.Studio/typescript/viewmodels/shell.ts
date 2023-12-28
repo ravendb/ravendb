@@ -108,6 +108,7 @@ class shell extends viewModelBase {
     allShardsUrl: KnockoutObservable<string>;
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
+    
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
@@ -360,6 +361,12 @@ class shell extends viewModelBase {
 
                 const expirationDate = notAfter ? `${notAfter.substring(0, 10)} <span class="${this.getExpirationDurationClass()}">(${genUtils.formatDurationByDate(notAfterUtc, true)})</span>` : "n/a";
 
+                const twoFactorPart = this.footer.twoFactorSessionExpiration() ?
+                    `<dt>2FA Session Expiration:</dt>
+                      <dd><strong>${this.footer.twoFactorSessionExpiration().local().format("YYYY-MM-DD HH:mm:ss")}
+                       (${genUtils.formatDurationByDate(this.footer.twoFactorSessionExpiration(), true)})</strong></dd>`
+                    : "";
+
                 return `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
@@ -371,6 +378,7 @@ class shell extends viewModelBase {
                             <dd><strong>${certificateModel.clearanceLabelFor(this.clientCertificate().SecurityClearance)}</strong></dd>
                             <dt><span>Access to databases:</span></dt>
                             <dd><span>${allowedDatabasesText}</span></dd>
+                            ${twoFactorPart}
                           </dl>`;
             }
             

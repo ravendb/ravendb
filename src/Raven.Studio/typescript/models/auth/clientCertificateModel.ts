@@ -7,7 +7,7 @@ import serverSettings from "common/settings/serverSettings";
 type clientCertificateExpiration = "unknown" | "valid" | "aboutToExpire" | "expired";
 
 class clientCertificateModel {
-    static certificateInfo = ko.observable<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>();
+    static certificateInfo = ko.observable<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition & { HasTwoFactor: boolean; TwoFactorExpirationDate: string; }>();
     
     static certificateExpirationState = ko.pureComputed<clientCertificateExpiration>(() => {
         const info = clientCertificateModel.certificateInfo();
@@ -38,7 +38,7 @@ class clientCertificateModel {
     static fetchClientCertificate(): JQueryPromise<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition> {
         return new getClientCertificateCommand()
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) => {
+            .done((result) => {
                 this.certificateInfo(result);
             });
     }

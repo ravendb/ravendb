@@ -513,7 +513,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             TimeSeriesSegmentEntry segmentEntry, 
             string loadBehaviorFunction)
         {
-            if (ShouldFilterByScriptAndGetParams(docId, segmentEntry.Name, loadBehaviorFunction, out (DateTime begin, DateTime end)? toLoad)) 
+            var tsNameOriginalCasing = Database.DocumentsStorage.TimeSeriesStorage.Stats.GetTimeSeriesNameOriginalCasing(Context, segmentEntry.DocId, segmentEntry.Name);
+            if (ShouldFilterByScriptAndGetParams(docId, tsNameOriginalCasing, loadBehaviorFunction, out (DateTime begin, DateTime end)? toLoad)) 
                 return true;
 
             if (toLoad == null)

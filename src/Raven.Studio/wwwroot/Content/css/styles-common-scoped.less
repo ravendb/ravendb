@@ -2286,6 +2286,51 @@ ul.properties {
     }
 }
 
+.rounded-pill {
+    border-radius: 50rem;
+}
+
+.pt-0 {
+    padding-top: 0;
+}
+
+.mb-0 {
+    margin-bottom: 0;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.lh-1 {
+    line-height: 1;
+}
+
+.btn-2fa {
+    background-color: @btn-2fa-bg;
+    border-color: @btn-2fa-border;
+    color: @btn-2fa-color !important;
+    i {
+        color: @btn-2fa-icon;
+    }
+    &:hover {
+        filter: brightness(1.2) saturate(1.1);
+    }
+    &:focus, &:active {
+        background-color: @btn-2fa-bg;
+        filter: brightness(1.2) saturate(1.1);
+    }
+}
+
+.label-2fa {
+    background-color: @btn-2fa-bg;
+    color: @btn-2fa-color !important;
+}
+
+.me-0 {
+    margin-right: 0 !important;
+}
+
 .align-self-center {
     align-self: center;
 }
@@ -2359,4 +2404,5 @@ ul.properties {
 @import "pages/time-series-details.less";
 @import "pages/database-settings.less";
 @import "pages/databaseIDs.less";
+@import "pages/2fa.less";
 @import "pages/sharding.less";

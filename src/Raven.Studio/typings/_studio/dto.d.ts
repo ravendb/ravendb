@@ -541,6 +541,7 @@ type dbCreationMode = "newDatabase" | "restore";
 interface unifiedCertificateDefinition extends Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition {
     Thumbprints: Array<string>;
     Visible: KnockoutObservable<boolean>;
+    HasTwoFactor: boolean;
     LastUsed: KnockoutObservable<string>;
 }
 

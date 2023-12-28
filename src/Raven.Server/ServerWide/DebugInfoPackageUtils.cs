@@ -51,7 +51,7 @@ namespace Raven.Server.ServerWide
                 if (server.Certificate.Certificate != null)
                 {
                     Debug.Assert(feature != null);
-                    if (server.Router.CanAccessRoute(route, httpContext, databaseName, feature, out _))
+                    if (server.Router.CanAccessRoute(route, httpContext, databaseName, feature))
                     {
                         yield return route;
                     }
