@@ -482,7 +482,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
     {
-        return new MergedBatchCommandDto(true)
+        return new MergedBatchCommandDto(includeReply: true)
         {
             ParsedCommands = ParsedCommands.ToArray(),
             AttachmentStreams = AttachmentStreams

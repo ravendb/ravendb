@@ -470,25 +470,23 @@ namespace Raven.Server.Documents.Patch
 
             // If the caller is a DocumentsOperationContext, then we can apply the optimization.
             if (context is DocumentsOperationContext doContext)
-            {
-                _database = doContext.DocumentDatabase;
-                _returnRun = _database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out _run);
-                _disposableStatement = _ignoreMaxStepsForScript ? _run.ScriptEngine.DisableMaxStatements() : null;
-                _disposableScriptRunner = _patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out _runIfMissing) : null;
-            }
+                InitializeCmd(doContext);
+        }
+
+        private void InitializeCmd(DocumentsOperationContext context)
+        {
+            _database = context.DocumentDatabase;
+            _returnRun = _database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out _run);
+            _disposableStatement = _ignoreMaxStepsForScript ? _run.ScriptEngine.DisableMaxStatements() : null;
+            _disposableScriptRunner = _patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out _runIfMissing) : null;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
+            // PERF: Since we are not able to apply the optimization of shifting the cost of this operations into the constructor
+            // we will do it here instead. 
             if (_database == null)
-            {
-                // PERF: Since we are not able to apply the optimization of shifting the cost of this operations into the constructor
-                // we will do it here instead. 
-                _database = context.DocumentDatabase;
-                _returnRun = _database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out _run);
-                _disposableStatement = _ignoreMaxStepsForScript ? _run.ScriptEngine.DisableMaxStatements() : null;
-                _disposableScriptRunner = _patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out _runIfMissing) : null;
-            }
+                InitializeCmd(context);
 
             Debug.Assert(context.DocumentDatabase == _database);
 
