@@ -408,8 +408,9 @@ namespace Raven.Server.Web.System
             else
             {
                 databaseRecord.Topology ??= new DatabaseTopology();
-
                 databaseRecord.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
+
+                Server.ServerStore.AssignNodesToDatabase(clusterTopology, databaseRecord);
             }
 
             databaseRecord.Topology.ClusterTransactionIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
