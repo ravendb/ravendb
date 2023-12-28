@@ -444,6 +444,7 @@ namespace Raven.Server.Documents.Patch
         private ScriptRunner.ReturnRun _returnRun;
         private IDisposable _disposableStatement;
         private IDisposable _disposableScriptRunner;
+        private bool _isInitialized;
 
         public PatchResult PatchResult { get; private set; }
 
@@ -463,6 +464,7 @@ namespace Raven.Server.Documents.Patch
             bool ignoreMaxStepsForScript = false) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, isTest, debugMode, collectResultsNeeded, returnDocument)
         {
             _id = id;
+            _isInitialized = false;
             _expectedChangeVector = expectedChangeVector;
             _ignoreMaxStepsForScript = ignoreMaxStepsForScript;
             if (string.IsNullOrEmpty(id) || id.EndsWith(identityPartsSeparator) || id.EndsWith('|'))
@@ -470,25 +472,24 @@ namespace Raven.Server.Documents.Patch
 
             // If the caller is a DocumentsOperationContext, then we can apply the optimization.
             if (context is DocumentsOperationContext doContext)
-            {
-                _database = doContext.DocumentDatabase;
-                _returnRun = _database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out _run);
-                _disposableStatement = _ignoreMaxStepsForScript ? _run.ScriptEngine.DisableMaxStatements() : null;
-                _disposableScriptRunner = _patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out _runIfMissing) : null;
-            }
+                InitializeCmd(doContext);
+        }
+
+        private void InitializeCmd(DocumentsOperationContext context)
+        {
+            _database = context.DocumentDatabase;
+            _returnRun = _database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out _run);
+            _disposableStatement = _ignoreMaxStepsForScript ? _run.ScriptEngine.DisableMaxStatements() : null;
+            _disposableScriptRunner = _patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out _runIfMissing) : null;
+            _isInitialized = true;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            if (_database == null)
-            {
-                // PERF: Since we are not able to apply the optimization of shifting the cost of this operations into the constructor
-                // we will do it here instead. 
-                _database = context.DocumentDatabase;
-                _returnRun = _database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out _run);
-                _disposableStatement = _ignoreMaxStepsForScript ? _run.ScriptEngine.DisableMaxStatements() : null;
-                _disposableScriptRunner = _patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out _runIfMissing) : null;
-            }
+            // PERF: Since we were not able to apply the optimization of shifting the cost of the operations into the constructor
+            // we will do it here instead. 
+            if (_isInitialized == false)
+                InitializeCmd(context);
 
             Debug.Assert(context.DocumentDatabase == _database);
 
