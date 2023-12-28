@@ -237,12 +237,13 @@ namespace Raven.Server.Documents.Handlers
             if (topology.Promotables.Contains(ServerStore.NodeTag))
                 throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
+            using var cts = CreateHttpRequestBoundOperationToken();
             var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId)
             {
                 Timeout = Timeout.InfiniteTimeSpan // we rely on the http token to cancel the command
             };
 
-            var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+            var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand, cts.Token);
 
             if (result.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
             {
@@ -254,7 +255,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var array = new DynamicJsonArray();
-            using var cts = CreateHttpRequestBoundTimeLimitedOperationToken();
             
             // wait for the command to be applied on this node,
             // canceling will be done through the cts and not with a timeout
