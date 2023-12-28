@@ -163,7 +163,7 @@
     <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageReference Include="FluentFTP" Version="49.0.1" />
+    <PackageReference Include="FluentFTP" Version="48.0.3" />
     <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.11.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2023.3.0">
       <PrivateAssets>All</PrivateAssets>
