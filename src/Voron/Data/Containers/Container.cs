@@ -9,7 +9,6 @@ using System.Runtime.Intrinsics;
 using System.Text;
 using Sparrow;
 using Sparrow.Server;
-using Sparrow.Server.Platform;
 using Voron.Data.Lookups;
 using Voron.Exceptions;
 using Voron.Global;
@@ -866,7 +865,7 @@ namespace Voron.Data.Containers
                         return (reqSize, pos + first);
                 }
             }
-            if (PlatformSpecific.IsArm == false && Vector128.IsHardwareAccelerated)
+            if (Vector128.IsHardwareAccelerated)
             {
                 for (; pos + Vector128<ushort>.Count <= numberOfOffsets; pos += Vector128<ushort>.Count)
                 {
