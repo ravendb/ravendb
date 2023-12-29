@@ -44,7 +44,7 @@ class footer {
     constructor() {
         this.twoFactorSessionExpiration = ko.pureComputed(() => {
             const certInfo = clientCertificateModel.certificateInfo();
-            if (certInfo.HasTwoFactor) {
+            if (certInfo?.HasTwoFactor) {
                 return moment.utc(certInfo.TwoFactorExpirationDate);
             } else {
                 return null;
