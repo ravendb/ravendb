@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             var location = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
-            HttpContext.Response.Headers.Add("Location", location);
+            HttpContext.Response.Headers["Location"] = location;
         }
     }
 }

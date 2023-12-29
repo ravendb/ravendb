@@ -4,7 +4,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
@@ -12,12 +14,14 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -25,6 +29,8 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
@@ -33,6 +39,28 @@ namespace Raven.Server.Web.Authentication
 {
     public sealed class AdminCertificatesHandler : ServerRequestHandler
     {
+        
+        public const string HasTwoFactorFieldName = "HasTwoFactor";
+        public const string TwoFactorExpirationDate = "TwoFactorExpirationDate";
+        
+        [RavenAction("/admin/certificates/2fa/generate", "GET", AuthorizationStatus.Operator)]
+        public async Task GenerateSecret()
+        {
+            await ServerStore.EnsureNotPassiveAsync();
+
+            var secret = TwoFactorAuthentication.GenerateSecret();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Secret");
+                writer.WriteString(secret);
+                writer.WriteEndObject();
+            }
+        }
+        
         [RavenAction("/admin/certificates", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task Generate()
         {
@@ -47,9 +75,11 @@ namespace Raven.Server.Web.Authentication
                     operationId = ServerStore.Operations.GetNextOperationId();
 
                 var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
-
+                
                 var certificateJson = await ctx.ReadForDiskAsync(stream, "certificate-generation");
 
+                certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string twoFactorAuthenticationKey);
+                
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
                 if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
@@ -67,7 +97,7 @@ namespace Raven.Server.Web.Authentication
                         detailedDescription: null,
                         async onProgress =>
                         {
-                            certs = await GenerateCertificateInternal(certificate, ServerStore, GetRaftRequestIdFromQuery());
+                            certs = await GenerateCertificateInternal(certificate, ServerStore, twoFactorAuthenticationKey, GetRaftRequestIdFromQuery());
 
                             return ClientCertificateGenerationResult.Instance;
                         });
@@ -80,7 +110,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate, ServerStore serverStore, string raftRequestId)
+        public static async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate, ServerStore serverStore, string twoFactorAuthenticationKey, string raftRequestId)
         {
             ValidateCertificateDefinition(certificate, serverStore);
 
@@ -114,7 +144,10 @@ namespace Raven.Server.Web.Authentication
                 NotBefore = selfSignedCertificate.NotBefore
             };
 
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, raftRequestId));
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, raftRequestId)
+            {
+                TwoFactorAuthenticationKey = twoFactorAuthenticationKey
+            });
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
             var ms = new MemoryStream();
@@ -149,6 +182,8 @@ namespace Raven.Server.Web.Authentication
             using (var certificateJson = await ctx.ReadForDiskAsync(RequestBodyStream(), "put-certificate"))
             {
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
+
+                certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string twoFactorAuthenticationKey);
 
                 ValidateCertificateDefinition(certificate, ServerStore);
 
@@ -197,7 +232,7 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
-                    await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx, GetRaftRequestIdFromQuery());
+                    await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx, twoFactorAuthenticationKey, GetRaftRequestIdFromQuery());
                 }
                 catch (Exception e)
                 {
@@ -208,7 +243,8 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore, TransactionOperationContext ctx, string raftRequestId)
+        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore,
+            TransactionOperationContext ctx, string twoFactorAuthenticationKey, string raftRequestId)
         {
             var collection = new X509Certificate2Collection();
 
@@ -281,6 +317,10 @@ namespace Raven.Server.Web.Authentication
                 var certKey = currentCertDef.Thumbprint;
                 if (serverStore.CurrentRachisState == RachisState.Passive)
                 {
+                    if (twoFactorAuthenticationKey != null)
+                    {
+                        throw new InvalidOperationException("Cannot define two factor auth key when the node is in passive mode");
+                    }
                     using (var certificate = ctx.ReadObject(currentCertDef.ToJson(), "Client/Certificate/Definition"))
                     using (var tx = ctx.OpenWriteTransaction())
                     {
@@ -290,7 +330,11 @@ namespace Raven.Server.Web.Authentication
                 }
                 else
                 {
-                    var putResult = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, currentCertDef, $"{raftRequestId}/{certKey}"));
+                    var putCertificateCommand = new PutCertificateCommand(certKey, currentCertDef, $"{raftRequestId}/{certKey}")
+                    {
+                        TwoFactorAuthenticationKey = twoFactorAuthenticationKey
+                    };
+                    var putResult = await serverStore.PutValueInClusterAsync(putCertificateCommand);
                     await serverStore.Cluster.WaitForIndexNotification(putResult.Index);
                 }
 
@@ -543,14 +587,30 @@ namespace Raven.Server.Web.Authentication
                 var certificateRef = certificate;
                 if (metadataOnly)
                 {
+                    var defJson = def.ToJson(true);
+                    
+                    if (HttpContext.Request.IsFromStudio())
+                    {
+                        var hasTwoFactor = certificate.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
+                    
+                        defJson[HasTwoFactorFieldName] = hasTwoFactor;
+                    }
+                    
+                    certificateRef = context.ReadObject(defJson, "Client/Certificate/Definition");
+                    
                     certificate.Dispose();
-                    certificateRef = context.ReadObject(def.ToJson(true), "Client/Certificate/Definition");
                 }
+                else
+                {
+                    // make sure we don't leak fields like TwoFactorAuthenticationKey
+                    certificateRef = context.ReadObject(def.ToJson(false), "Client/Certificate/Definition");
+                }
+                
                 certificates.TryAdd(thumbprint, certificateRef);
             }
         }
 
-        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public async Task WhoAmI()
         {
             var clientCert = GetCurrentCertificate();
@@ -616,13 +676,21 @@ namespace Raven.Server.Web.Authentication
                             PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash()
                         };
                         certificate = ctx.ReadObject(wellKnownCertDef.ToJson(), "WellKnown/Certificate/Definition");
-
                     }
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
                 {
-                    writer.WriteObject(certificate);
+                    var certificateDefinition = JsonDeserializationServer.CertificateDefinition(certificate);
+                    var certificateDJV = certificateDefinition.ToJson(false);
+                    
+                    var hasTwoFactor = certificate.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
+                    certificateDJV[HasTwoFactorFieldName] = hasTwoFactor;
+                    
+                    var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+                    certificateDJV[TwoFactorExpirationDate] = feature?.TwoFactorAuthRegistration?.Expiry;
+                    
+                    ctx.Write(writer, certificateDJV);
                 }
             }
         }
@@ -632,6 +700,8 @@ namespace Raven.Server.Web.Authentication
         {
             await ServerStore.EnsureNotPassiveAsync();
 
+            var deleteTwoFactorConfiguration = GetBoolValueQueryString("deleteTwoFactorConfiguration", required: false) ?? false;
+            
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var clientCert = feature?.Certificate;
 
@@ -639,17 +709,31 @@ namespace Raven.Server.Web.Authentication
             using (var certificateJson = await ctx.ReadForDiskAsync(RequestBodyStream(), "edit-certificate"))
             {
                 var newCertificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
+                
+                certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string newTwoFactorAuthenticationKey);
 
                 ValidateCertificateDefinition(newCertificate, ServerStore);
 
                 CertificateDefinition existingCertificate;
+                string twoFactorAuthenticationKey;
                 using (ctx.OpenWriteTransaction())
                 {
-                    var certificate = ServerStore.Cluster.GetCertificateByThumbprint(ctx, newCertificate.Thumbprint);
-                    if (certificate == null)
+                    var existingCertificateJson = ServerStore.Cluster.GetCertificateByThumbprint(ctx, newCertificate.Thumbprint);
+                    if (existingCertificateJson == null)
                         throw new InvalidOperationException($"Cannot edit permissions for certificate with thumbprint '{newCertificate.Thumbprint}'. It doesn't exist in the cluster.");
-
-                    existingCertificate = JsonDeserializationServer.CertificateDefinition(certificate);
+                    
+                    existingCertificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out twoFactorAuthenticationKey);
+                    
+                    if (deleteTwoFactorConfiguration)
+                    {
+                        twoFactorAuthenticationKey = null;
+                    }
+                    else if (string.IsNullOrEmpty(newTwoFactorAuthenticationKey) == false)
+                    {
+                        twoFactorAuthenticationKey = newTwoFactorAuthenticationKey;
+                    }
+                    
+                    existingCertificate = JsonDeserializationServer.CertificateDefinition(existingCertificateJson);
 
                     if ((existingCertificate.SecurityClearance == SecurityClearance.ClusterAdmin || existingCertificate.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
                     {
@@ -666,7 +750,7 @@ namespace Raven.Server.Web.Authentication
                     ServerStore.Cluster.DeleteLocalState(ctx, newCertificate.Thumbprint);
                 }
 
-                var putResult = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint,
+                var cmd = new PutCertificateCommand(newCertificate.Thumbprint,
                     new CertificateDefinition
                     {
                         Name = newCertificate.Name,
@@ -677,7 +761,9 @@ namespace Raven.Server.Web.Authentication
                         PublicKeyPinningHash = existingCertificate.PublicKeyPinningHash,
                         NotAfter = existingCertificate.NotAfter,
                         NotBefore = existingCertificate.NotBefore
-                    }, GetRaftRequestIdFromQuery()));
+                    }, GetRaftRequestIdFromQuery()) {TwoFactorAuthenticationKey = twoFactorAuthenticationKey};
+
+                var putResult = await ServerStore.PutValueInClusterAsync(cmd);
                 await ServerStore.Cluster.WaitForIndexNotification(putResult.Index);
 
                 NoContentStatus(HttpStatusCode.Created);
@@ -1160,5 +1246,6 @@ namespace Raven.Server.Web.Authentication
                 }
             }
         }
+        
     }
 }

@@ -6,6 +6,7 @@ using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
@@ -23,6 +24,17 @@ namespace Raven.Server.Web.Studio
             using (var sourceSqlDatabaseBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "source-database-info"))
             {
                 var sourceSqlDatabase = JsonDeserializationServer.SourceSqlDatabase(sourceSqlDatabaseBlittable);
+                
+                // RavenDB-21784 - Replace obsolete MySql provider name
+#pragma warning disable CS0618 // Type or member is obsolete
+                if (sourceSqlDatabase.Provider == MigrationProvider.MySQL_MySql_Data)
+#pragma warning restore CS0618 // Type or member is obsolete
+                {
+                    sourceSqlDatabase.Provider = MigrationProvider.MySQL_MySqlConnector;
+                    var alert = AlertRaised.Create(Database.Name, "Deprecated MySql factory auto-updated", "MySql.Data.MySqlClient factory has been defaulted to MySqlConnector.MySqlConnectorFactory",
+                            AlertType.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
+                    Database.NotificationCenter.Add(alert);
+                }
 
                 var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString, sourceSqlDatabase.Schemas);
                 var schema = dbDriver.FindSchema();

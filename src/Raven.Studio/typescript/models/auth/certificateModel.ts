@@ -3,6 +3,8 @@
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
 import moment = require("moment");
 
+type TwoFactorAction = "leave" | "set" | "delete";
+
 class certificateModel {
 
     static allTimeUnits: Array<valueAndLabelItem<timeUnit, string>> = [
@@ -30,10 +32,30 @@ class certificateModel {
             value: "ValidUser"
         }];
     
+    static twoFactorEditModes: valueAndLabelItem<TwoFactorAction, string>[] = [
+        {
+            value: "set",
+            label: "Update existing authentication key"
+        },
+        {
+            value: "delete",
+            label: "Delete existing authentication key"
+        },
+        {
+            value: "leave",
+            label: "Leave existing authentication key"
+        }
+    ]
+    
     mode = ko.observable<certificateMode>();
     
     name = ko.observable<string>();
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>("ValidUser");
+    
+    requireTwoFactor = ko.observable<boolean>(false);
+    authenticationKey = ko.observable<string>("");
+    hasTwoFactor = ko.observable<boolean>(false);
+    twoFactorActionOnEdit = ko.observable<TwoFactorAction>("leave");
     
     certificateAsBase64 = ko.observable<string>();
     certificatePassphrase = ko.observable<string>();
@@ -50,6 +72,7 @@ class certificateModel {
 
     securityClearanceLabel: KnockoutComputed<string>;
     canEditClearance: KnockoutComputed<boolean>;
+    twoFactorActionOnEditLabel: KnockoutComputed<string>;
 
     deleteExpired = ko.observable<boolean>(false);
     
@@ -79,6 +102,10 @@ class certificateModel {
         });
         
         this.canEditClearance = ko.pureComputed(() => this.securityClearance() !== "ClusterNode");
+        
+        this.twoFactorActionOnEditLabel = ko.pureComputed(() => 
+            certificateModel.twoFactorEditModes.find(x => x.value === this.twoFactorActionOnEdit()).label
+        );
 
         this.expirationDateFormatted = ko.pureComputed(() => {
             const validPeriod = this.validityPeriod();
@@ -92,6 +119,22 @@ class certificateModel {
         
         this.validityPeriodUnitsLabel = ko.pureComputed(
             () => certificateModel.allTimeUnits.find(x => this.validityPeriodUnits() === x.value).label);
+        
+        this.twoFactorActionOnEdit.subscribe(action => {
+            if (this.mode() === "editExisting") {
+                switch (action) {
+                    case "delete":
+                        this.requireTwoFactor(false);
+                        break;
+                    case "set":
+                        this.requireTwoFactor(true);
+                        break;
+                    case "leave":
+                        this.requireTwoFactor(false);
+                        break;
+                }
+            }
+        })
     }
     
     static clearanceLabelFor(input: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
@@ -150,7 +193,8 @@ class certificateModel {
             Password: this.certificatePassphrase(),
             Permissions: this.serializePermissions(),
             SecurityClearance: this.securityClearance(),
-            NotAfter: this.expirationDateFormatted()
+            NotAfter: this.expirationDateFormatted(),
+            TwoFactorAuthenticationKey: this.requireTwoFactor() ? this.authenticationKey() : null,
         }
     }
     
@@ -168,7 +212,8 @@ class certificateModel {
             Password: this.certificatePassphrase(),
             Permissions: this.serializePermissions(),
             SecurityClearance: this.securityClearance(),
-            NotAfter: this.expirationDateFormatted()
+            NotAfter: this.expirationDateFormatted(),
+            TwoFactorAuthenticationKey: this.requireTwoFactor() ? this.authenticationKey() : null,
         }
     }
 
@@ -177,7 +222,8 @@ class certificateModel {
             Name: this.name(),
             Thumbprint: this.thumbprint(),
             SecurityClearance: this.securityClearance(),
-            Permissions: this.serializePermissions()
+            Permissions: this.serializePermissions(),
+            TwoFactorAuthenticationKey: this.requireTwoFactor() ? this.authenticationKey() : null,
         }
     }
     
@@ -229,6 +275,7 @@ class certificateModel {
         model.securityClearance(dto.SecurityClearance);
         model.thumbprint(dto.Thumbprint);
         model.thumbprints(dto.Thumbprints);
+        model.hasTwoFactor(dto.HasTwoFactor);
         
         model.permissions(_.map(dto.Permissions, (access, databaseName) => {
             const permission = new certificatePermissionModel();

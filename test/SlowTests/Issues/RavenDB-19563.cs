@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -112,7 +113,7 @@ namespace SlowTests.Issues
                         session.SaveChanges();
                     }
 
-                    cleanedTombstones = database.TombstoneCleaner.ExecuteCleanup().GetAwaiter().GetResult();
+                    cleanedTombstones = AsyncHelpers.RunSync(() => database.TombstoneCleaner.ExecuteCleanup());
                 };
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
@@ -177,7 +178,7 @@ namespace SlowTests.Issues
                         session.SaveChanges();
                     }
 
-                    cleanedTombstones = database.TombstoneCleaner.ExecuteCleanup().GetAwaiter().GetResult();
+                    cleanedTombstones = AsyncHelpers.RunSync(() => database.TombstoneCleaner.ExecuteCleanup());
                 };
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
@@ -242,7 +243,7 @@ namespace SlowTests.Issues
                         session.SaveChanges();
                     }
 
-                    cleanedTombstones = database.TombstoneCleaner.ExecuteCleanup().GetAwaiter().GetResult();
+                    cleanedTombstones = AsyncHelpers.RunSync(() => database.TombstoneCleaner.ExecuteCleanup());
                 };
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
