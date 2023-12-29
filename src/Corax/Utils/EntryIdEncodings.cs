@@ -7,7 +7,6 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using Corax.Indexing;
-using Sparrow.Server.Platform;
 
 namespace Corax.Utils;
 
@@ -91,7 +90,7 @@ public static class EntryIdEncodings
             DecodeAndDiscardFrequencyClassic(entries.Slice(idX), read - idX);
         
     }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static unsafe void DecodeAndDiscardFrequencyNeon(Span<long> entries, int read)
     {
@@ -131,7 +130,7 @@ public static class EntryIdEncodings
     {
         if (Avx2.IsSupported)
             DecodeAndDiscardFrequencyAvx2(entries, read);
-        else if (PlatformSpecific.IsArm == false && AdvSimd.IsSupported)
+        else if (AdvSimd.IsSupported)
             DecodeAndDiscardFrequencyNeon(entries, read);
         else
             DecodeAndDiscardFrequencyClassic(entries, read);
