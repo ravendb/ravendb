@@ -361,7 +361,7 @@ exit 0";
             Assert.True(Server.Certificate.Certificate.Equals(serverCertificate));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Certificates)]
         public async Task RenewCertificate_WhenGetTheSame_ShouldNotTriggerUpdatedServerCertificate()
         {
             var customSettings = new ConcurrentDictionary<string, string>();
@@ -417,12 +417,14 @@ exit 0";
             }
 
             var ts = new TaskCompletionSource();
-            Server.ServerStore.Engine.StateMachine.Changes.ValueChanged += async (index, type) =>
+            Server.ServerStore.Engine.StateMachine.Changes.ValueChanged += (index, type) =>
             {
                 if (type == nameof(InstallUpdatedServerCertificateCommand))
                 {
                     ts.SetResult();
                 }
+
+                return Task.CompletedTask;
             };
             
             using (var store = GetDocumentStore(new Options

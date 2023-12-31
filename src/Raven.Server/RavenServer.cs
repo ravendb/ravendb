@@ -1255,14 +1255,14 @@ namespace Raven.Server
                 {
                     if (Logger.IsOperationsEnabled)
                     {
-                        Logger.Operations($"The new certificate matches the current one. No further steps needed.");
+                        Logger.Operations($"The new certificate matches the current one. No further steps needed. {Certificate.Certificate.GetBasicCertificateInfo()}");
                     }
                     return;
                 }
                 
                 if (Logger.IsOperationsEnabled)
                 {
-                    Logger.Operations($"Starting certificate replication. old:{Certificate.Certificate.Thumbprint}, new:{newCertificate.Thumbprint}");
+                    Logger.Operations($"Starting certificate replication. current:{Certificate.Certificate.GetBasicCertificateInfo()}, new:{newCertificate.GetBasicCertificateInfo()}");
                 }
                 
                 // During replacement of a cluster certificate, we must have both the new and the old server certificates registered in the server store.

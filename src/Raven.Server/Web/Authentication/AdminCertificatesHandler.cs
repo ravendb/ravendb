@@ -1083,7 +1083,7 @@ namespace Raven.Server.Web.Authentication
                         var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
                         if (Logger.IsOperationsEnabled)
                         {
-                            Logger.Operations("Initiating the replacement of the certificate upon explicit request");
+                            Logger.Operations("Initiating the replacement of the certificate upon explicit request - \"/admin/certificates/replace-cluster-cert\".");
                         }
                         var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, GetRaftRequestIdFromQuery());
 
