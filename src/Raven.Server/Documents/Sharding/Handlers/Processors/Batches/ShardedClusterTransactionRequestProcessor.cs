@@ -19,14 +19,10 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
     }
 
     protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(ShardedBatchCommand command) => command.ParsedCommands;
-    
-    protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.DatabaseContext.Configuration.Cluster;
-    public override IDisposable CreateClusterTransactionTask(string id, long index, out Task task)
-    {
-        return RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id, out task);
-    }
 
-    public override Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, CancellationToken token)
+    protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.DatabaseContext.Configuration.Cluster;
+
+    public override Task<Task> WaitForDatabaseCompletion(Task<Task> onDatabaseCompletionTask, long index, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
 
@@ -34,7 +30,7 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
             return onDatabaseCompletionTask;
 
         // failover
-        return Task.CompletedTask;
+        return Task.FromResult(Task.CompletedTask);
     }
 
     protected override ClusterTransactionCommand CreateClusterTransactionCommand(

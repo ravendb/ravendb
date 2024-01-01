@@ -764,39 +764,22 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
+                Task indexTask = Task.CompletedTask;
                 if (options.WaitForIndexesTimeout != null)
                 {
-                    var indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
-                        options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                            mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-
-                    var removeTask = ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(command.Options.TaskId);
-
-                    /*
-                        the remove task that we are creating here is relevant only for a failover with wait for index:
-                        We need the task only when we do a failover during cluster transaction (batch handler) with 'wait for index'.
-                        Only then we will want the task that created here, because we'll want to 'wait for index' in the new node after the failover.
-                    */
-
-                    indexTask.ContinueWith(t =>
+                    try
                     {
-                        if(t.IsFaulted)
-                        {
-                            Exception e = t.Exception is AggregateException ae ? ae.InnerException : t.Exception;
-                            ServerStore.Cluster.ClusterTransactionWaiter.TrySetException(options.TaskId, e);
-                        }
-                        else
-                        {
-                            ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId);
-                        }
+                        indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
+                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                            mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                    }
+                    catch (Exception e)
+                    {
+                        indexTask = Task.FromException(e);
+                    }
+                }
 
-                        removeTask.Dispose();
-                    });
-                }
-                else
-                {
-                    ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId);
-                }
+                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, indexTask);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
