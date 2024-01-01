@@ -2,85 +2,59 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Documents;
+using Raven.Server.Extensions;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Rachis
 {
-    public sealed class ClusterTransactionWaiter : AsyncWaiter
+    public sealed class ClusterTransactionWaiter : AsyncWaiter<Task>
     {
-
-        public RemoveTask CreateTaskForDatabase(string id, long index, DocumentDatabase database, out Task task)
+        public RemoveTask CreateTask(string id, out Task<Task> task)
         {
-            var t = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            var current = _results.GetOrAdd(id, t);
-        
-            if (current == t)
-            {
-                var lastCompleted = Interlocked.Read(ref database.LastCompletedClusterTransactionIndex);
-                if (lastCompleted >= index)
-                {
-                    current.TrySetResult();
-                }
-            }
-        
-            task = current.Task;
+            task = _results.GetOrAdd(id, new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
             return new RemoveTask(this, id);
         }
     }
 
-    public class AsyncWaiter
+    public class AsyncWaiter<T>
     {
-        protected readonly ConcurrentDictionary<string, TaskCompletionSource> _results = new ConcurrentDictionary<string, TaskCompletionSource>();
+        protected readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
 
         public RemoveTask CreateTask(out string id)
         {
             id = Guid.NewGuid().ToString();
-            return CreateTask(id, out _);
-        }
-
-        public RemoveTask CreateTask(string id)
-        {
-            return CreateTask(id, out _);
-        }
-
-        public RemoveTask CreateTask(string id, out Task task)
-        {
-            task = _results.GetOrAdd(id, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+            _results.TryAdd(id, new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously));
             return new RemoveTask(this, id);
         }
 
-        public TaskCompletionSource Get(string id)
+        public TaskCompletionSource<T> Get(string id)
         {
             _results.TryGetValue(id, out var val);
             return val;
         }
 
-        public bool TrySetResult(string id)
+        public void TrySetResult(string id, T result)
         {
             if (_results.TryGetValue(id, out var task))
             {
-                return task.TrySetResult();
+                task.TrySetResult(result);
             }
-
-            return false;
         }
 
-        public bool TrySetException(string id, Exception e)
+        public void TrySetException(string id, Exception e)
         {
             if (_results.TryGetValue(id, out var task))
             {
-                return task.TrySetException(e);
+                task.TrySetException(e);
             }
-
-            return false;
         }
 
         public readonly struct RemoveTask : IDisposable
         {
-            private readonly AsyncWaiter _parent;
+            private readonly AsyncWaiter<T> _parent;
             private readonly string _id;
 
-            public RemoveTask(AsyncWaiter parent, string id)
+            public RemoveTask(AsyncWaiter<T> parent, string id)
             {
                 _parent = parent;
                 _id = id;
@@ -88,15 +62,13 @@ namespace Raven.Server.Rachis
 
             public void Dispose()
             {
-                if (_parent._results.TryRemove(_id, out var task))
-                {
-                    // cancel it, if someone still awaits
-                    task.TrySetCanceled();
-                }
+                _parent._results.TryRemove(_id, out var task);
+                // cancel it, if someone still awaits
+                task.TrySetCanceled();
             }
         }
 
-        public async Task WaitForResults(string id, CancellationToken token)
+        public async Task<T> WaitForResults(string id, CancellationToken token)
         {
             if (_results.TryGetValue(id, out var task) == false)
             {
@@ -105,7 +77,7 @@ namespace Raven.Server.Rachis
 
             await using (token.Register(() => task.TrySetCanceled()))
             {
-                await task.Task.ConfigureAwait(false);
+                return await task.Task.ConfigureAwait(false);
             }
         }
     }

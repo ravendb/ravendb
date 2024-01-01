@@ -305,6 +305,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, GetTombstonesStateCommand.Response> GetTombstonesStateResponse = GenerateJsonDeserializationRoutine<GetTombstonesStateCommand.Response>();
 
         internal static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionsDetails> SubscriptionConnectionsDetails = GenerateJsonDeserializationRoutine<SubscriptionConnectionsDetails>();
+        
+        internal static readonly Func<BlittableJsonReaderObject, ClusterTransactionResult> ClusterTransactionResult = GenerateJsonDeserializationRoutine<ClusterTransactionResult>();
 
         public sealed class Parameters
         {

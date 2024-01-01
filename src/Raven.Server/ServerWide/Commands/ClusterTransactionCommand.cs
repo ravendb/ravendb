@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
@@ -681,7 +682,7 @@ namespace Raven.Server.ServerWide.Commands
                     if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
                         return;
 
-                    clusterTransactionWaiter.TrySetResult(Options.TaskId);
+                    clusterTransactionWaiter.TrySetResult(Options.TaskId, Task.CompletedTask);
                 };
             }
             else
