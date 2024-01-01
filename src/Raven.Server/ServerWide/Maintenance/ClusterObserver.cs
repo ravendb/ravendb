@@ -498,7 +498,7 @@ namespace Raven.Server.ServerWide.Maintenance
             
             if (responsibleNodeBlittable == null)
             {
-                // TODO: add to the decision log
+                AddToDecisionLog(databaseName, "no responsible node for backup currently exists");
                 // no responsible node for backup currently exists
                 return new ResponsibleNodeInfo
                 {
@@ -512,10 +512,9 @@ namespace Raven.Server.ServerWide.Maintenance
             if (currentResponsibleNode == newResponsibleNode)
             {
                 // it's the same responsible node
-
                 if (notSuitableForTaskSince != null)
                 {
-                    // TODO: add to the decision log
+                    AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' is responsible of handling the backup for '{databaseName}'");
                     // we need to remove the NotSuitableForTaskSince since the node is suitable for backup
                     return new ResponsibleNodeInfo
                     {
@@ -531,7 +530,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (topology.AllNodes.Contains(currentResponsibleNode) == false)
             {
                 // the node was removed from the topology, choosing another node without a grace period
-                // TODO: add to the decision log
+                AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' has been removed frm topology. Node '{newResponsibleNode}' will now be responsible for backing up '{databaseName}'");
                 return new ResponsibleNodeInfo
                 {
                     TaskId = configuration.TaskId,
@@ -542,7 +541,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (notSuitableForTaskSince == null)
             {
                 // it's the first time that we identify that the node isn't suitable for backup
-                // TODO: add to the decision log
+                AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' not suitable for backing up '{databaseName}' since {DateTime.UtcNow}. ");
                 return new ResponsibleNodeInfo
                 {
                     TaskId = configuration.TaskId,
@@ -551,14 +550,13 @@ namespace Raven.Server.ServerWide.Maintenance
                 };
             }
 
-            //TODO: add a configuration
-            if (DateTime.UtcNow - notSuitableForTaskSince.Value < TimeSpan.FromMinutes(30))
+            if (DateTime.UtcNow - notSuitableForTaskSince.Value < _server.Configuration.Backup.MoveToNewResponsibleNode.AsTimeSpan)
             {
                 // grace period before moving the task to another node
                 return null;
             }
 
-            // TODO: add to the decision log
+            AddToDecisionLog(databaseName, $"Node '{newResponsibleNode}' has taken over the responsibility for backing up  '{databaseName}'");
             return new ResponsibleNodeInfo
             {
                 TaskId = configuration.TaskId,
