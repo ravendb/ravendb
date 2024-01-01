@@ -289,6 +289,7 @@ namespace Raven.Server.Documents
 
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
+                _documentDatabase.HugeDocuments.AddIfDocIsHuge(id, document.Size);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

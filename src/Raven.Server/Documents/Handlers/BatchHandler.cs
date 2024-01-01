@@ -667,7 +667,6 @@ namespace Raven.Server.Documents.Handlers
                                         var document = cmd.Document.Clone(context);
                                         var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, document, changeVector: changeVector,
                                             flags: DocumentFlags.FromClusterTransaction);
-                                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, document.Size);
                                         AddPutResult(putResult);
                                     }
                                     else
@@ -911,7 +910,6 @@ namespace Raven.Server.Documents.Handlers
                                 throw;
                             }
 
-                            context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(putResult.Id, cmd.Document.Size);
                             AddPutResult(putResult);
                             lastPutResult = putResult;
                             break;

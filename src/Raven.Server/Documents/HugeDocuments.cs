@@ -74,6 +74,25 @@ namespace Raven.Server.Documents
             }
         }
 
+        public void RemoveHintIfNeeded(string id)
+        {
+            if (_performanceHint == null)
+                return;
+
+            if (_details.HugeDocuments.ContainsKey(id) == false) 
+                return;
+
+            _needsSync = true;
+
+            _details.HugeDocuments.TryRemove(id, out _);
+
+            if (_details.HugeDocuments.Count > 0) 
+                return;
+
+            _performanceHint = null;
+            _notificationCenter.Dismiss(HugeDocumentsId);
+        }
+
         internal void UpdateHugeDocuments(object state)
         {
             try

@@ -1789,6 +1789,7 @@ namespace Raven.Server.Documents
                 }
 
                 EnsureLastEtagIsPersisted(context, etag);
+                DocumentDatabase.HugeDocuments.RemoveHintIfNeeded(id);
 
                 if (fromReplication == false)
                 {
