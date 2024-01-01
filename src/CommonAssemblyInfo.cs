@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Resources;
 
-[assembly: AssemblyCopyright("© Hibernating Rhinos 2009 - 2023 All rights reserved.")]
+[assembly: AssemblyCopyright("© Hibernating Rhinos 2009 - 2024 All rights reserved.")]
 
 [assembly: AssemblyVersion("5.4.114")]
 [assembly: AssemblyFileVersion("5.4.114.54")]
