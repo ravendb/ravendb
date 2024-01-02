@@ -1,7 +1,7 @@
 ﻿import { Badge, Button, Form, Label } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import React from "react";
-import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
+import { SubmitHandler, UseFormTrigger, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { exhaustiveStringTuple } from "components/utils/common";
 import { SelectOption } from "components/common/select/Select";
@@ -26,6 +26,7 @@ import ConnectionTestResult from "../../../../../common/connectionTests/Connecti
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ElasticSearchCertificate from "./ElasticSearchCertificate";
+import database = require("models/resources/database");
 
 type FormData = ConnectionFormData<ElasticSearchConnection>;
 
@@ -51,19 +52,7 @@ export default function ElasticSearchConnectionString({
     });
 
     const formValues = useWatch({ control });
-
     const { forCurrentDatabase } = useAppUrls();
-    const { tasksService } = useServices();
-
-    const asyncTest = useAsyncCallback(async (idx: number) => {
-        const isValid = await trigger(`nodes.${idx}`);
-        if (!isValid) {
-            return;
-        }
-
-        const url = formValues.nodes[idx].url;
-        return tasksService.testElasticSearchNodeConnection(db, url, mapElasticSearchAuthenticationToDto(formValues));
-    });
 
     const onCertificateUploaded = (data: string) => {
         const currentCertificates = formValues.certificatesBase64 ?? [];
@@ -129,54 +118,16 @@ export default function ElasticSearchConnectionString({
                         <div className="text-danger small">{formState.errors.nodes.message}</div>
                     )}
                     {urlFieldArray.fields.map((urlField, idx) => (
-                        <div>
-                            <div key={urlField.id} className="vstack mb-2 gap-1">
-                                <Label className="mb-0 d-flex align-items-center gap-1">
-                                    <span className="small-label mb-0">URL #{idx + 1}</span>
-                                    {asyncTest.result?.Success ? (
-                                        <Badge color="success" pill>
-                                            <Icon icon="check" />
-                                            Successfully connected
-                                        </Badge>
-                                    ) : asyncTest.result?.Error ? (
-                                        <Badge color="danger" pill>
-                                            <Icon icon="warning" />
-                                            Failed connection
-                                        </Badge>
-                                    ) : null}
-                                </Label>
-                                <div className="d-flex gap-1 mb-2">
-                                    <FormInput
-                                        type="text"
-                                        control={control}
-                                        name={`nodes.${idx}.url`}
-                                        placeholder="http(s)://hostName"
-                                        autoComplete="off"
-                                    />
-                                    {urlFieldArray.fields.length > 1 && (
-                                        <Button color="danger" onClick={() => urlFieldArray.remove(idx)}>
-                                            <Icon icon="trash" margin="m-0" title="Delete URL" />
-                                        </Button>
-                                    )}
-                                    <ButtonWithSpinner
-                                        color="secondary"
-                                        onClick={() => asyncTest.execute(idx)}
-                                        isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
-                                        icon={{
-                                            icon: "rocket",
-                                            title: "Test connection",
-                                        }}
-                                    >
-                                        Test connection
-                                    </ButtonWithSpinner>
-                                </div>
-                            </div>
-                            {asyncTest.result?.Error && (
-                                <div className="mt-3">
-                                    <ConnectionTestResult testResult={asyncTest.result} />
-                                </div>
-                            )}
-                        </div>
+                        <NodeUrl
+                            key={urlField.id}
+                            idx={idx}
+                            db={db}
+                            control={control}
+                            formValues={formValues}
+                            isDeleteButtonVisible={urlFieldArray.fields.length > 1}
+                            onDelete={() => urlFieldArray.remove(idx)}
+                            trigger={trigger}
+                        />
                     ))}
                 </div>
                 <Button color="info" className="mt-4" onClick={() => urlFieldArray.append({ url: null })}>
@@ -292,6 +243,79 @@ export default function ElasticSearchConnectionString({
                 urlProvider={forCurrentDatabase.editElasticSearchEtl}
             />
         </Form>
+    );
+}
+
+interface NodeUrlProps {
+    idx: number;
+    db: database;
+    control: any;
+    formValues: FormData;
+    isDeleteButtonVisible: boolean;
+    onDelete: () => void;
+    trigger: UseFormTrigger<FormData>;
+}
+
+function NodeUrl({ idx, db, control, formValues, isDeleteButtonVisible, onDelete, trigger }: NodeUrlProps) {
+    const { tasksService } = useServices();
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger(`nodes.${idx}`);
+        if (!isValid) {
+            return;
+        }
+
+        const url = formValues.nodes[idx].url;
+        return tasksService.testElasticSearchNodeConnection(db, url, mapElasticSearchAuthenticationToDto(formValues));
+    });
+
+    return (
+        <div className="vstack mb-2 gap-1">
+            <Label className="mb-0 d-flex align-items-center gap-1">
+                <span className="small-label mb-0">URL #{idx + 1}</span>
+                {asyncTest.result?.Success ? (
+                    <Badge color="success" pill>
+                        <Icon icon="check" />
+                        Successfully connected
+                    </Badge>
+                ) : asyncTest.result?.Error ? (
+                    <Badge color="danger" pill>
+                        <Icon icon="warning" />
+                        Failed connection
+                    </Badge>
+                ) : null}
+            </Label>
+            <div className="d-flex gap-1 mb-2">
+                <FormInput
+                    type="text"
+                    control={control}
+                    name={`nodes.${idx}.url`}
+                    placeholder="http(s)://hostName"
+                    autoComplete="off"
+                />
+                {isDeleteButtonVisible && (
+                    <Button color="danger" onClick={onDelete} disabled={asyncTest.loading}>
+                        <Icon icon="trash" margin="m-0" title="Delete URL" />
+                    </Button>
+                )}
+                <ButtonWithSpinner
+                    color="secondary"
+                    onClick={asyncTest.execute}
+                    isSpinning={asyncTest.loading}
+                    icon={{
+                        icon: "rocket",
+                        title: "Test connection",
+                    }}
+                >
+                    Test connection
+                </ButtonWithSpinner>
+            </div>
+            {asyncTest.result?.Error && (
+                <div className="mt-3">
+                    <ConnectionTestResult testResult={asyncTest.result} />
+                </div>
+            )}
+        </div>
     );
 }
 

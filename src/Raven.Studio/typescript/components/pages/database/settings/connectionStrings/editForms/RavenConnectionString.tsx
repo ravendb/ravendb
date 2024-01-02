@@ -1,7 +1,7 @@
 ﻿import { Alert, Badge, Button, Form, Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
-import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
+import { Control, SubmitHandler, UseFormTrigger, UseFormWatch, useFieldArray, useForm } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, RavenConnection } from "../connectionStringsTypes";
 import { useServices } from "components/hooks/useServices";
@@ -38,17 +38,6 @@ export default function RavenConnectionString({
     });
 
     const { forCurrentDatabase } = useAppUrls();
-    const { tasksService } = useServices();
-
-    const asyncTest = useAsyncCallback(async (idx: number) => {
-        const isValid = await trigger(`topologyDiscoveryUrls.${idx}`);
-        if (!isValid) {
-            return;
-        }
-
-        const url = watch(`topologyDiscoveryUrls.${idx}.url`);
-        return tasksService.testClusterNodeConnection(url, db.name, false);
-    });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
         onSave({
@@ -87,58 +76,16 @@ export default function RavenConnectionString({
                         <div className="text-danger small">{formState.errors.topologyDiscoveryUrls.message}</div>
                     )}
                     {urlFieldArray.fields.map((urlField, idx) => (
-                        <div>
-                            <div key={urlField.id} className="vstack mb-2 gap-1">
-                                <Label className="mb-0 d-flex align-items-center gap-1">
-                                    <span className="small-label mb-0">URL #{idx + 1}</span>
-                                    {asyncTest.result?.Success ? (
-                                        <Badge color="success" pill>
-                                            <Icon icon="check" />
-                                            Successfully connected
-                                        </Badge>
-                                    ) : asyncTest.result?.Error ? (
-                                        <Badge color="danger" pill>
-                                            <Icon icon="warning" />
-                                            Failed connection
-                                        </Badge>
-                                    ) : null}
-                                </Label>
-                                <div className="d-flex gap-1 mb-2">
-                                    <FormInput
-                                        type="text"
-                                        control={control}
-                                        name={`topologyDiscoveryUrls.${idx}.url`}
-                                        placeholder="http(s)://hostName"
-                                        autoComplete="off"
-                                    />
-                                    {urlFieldArray.fields.length > 1 && (
-                                        <Button
-                                            color="danger"
-                                            title="Delete URL"
-                                            onClick={() => urlFieldArray.remove(idx)}
-                                        >
-                                            <Icon icon="trash" margin="m-0" />
-                                        </Button>
-                                    )}
-                                    <ButtonWithSpinner
-                                        color="secondary"
-                                        onClick={() => asyncTest.execute(idx)}
-                                        disabled={asyncTest.loading}
-                                        isSpinning={asyncTest.loading && asyncTest.currentParams?.[0] === idx}
-                                        title="Test connection"
-                                        icon="rocket"
-                                    >
-                                        Test connection
-                                    </ButtonWithSpinner>
-                                </div>
-                                {asyncTest.result?.Error && (
-                                    <div className="vstack gap-1 mt-3">
-                                        <ConnectionTestError message={asyncTest.result.Error} />
-                                        <AboutError isHTTPSuccess={asyncTest.result.HTTPSuccess} />
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        <DiscoveryUrl
+                            key={urlField.id}
+                            idx={idx}
+                            dbName={db.name}
+                            control={control}
+                            isDeleteButtonVisible={urlFieldArray.fields.length > 1}
+                            onDelete={() => urlFieldArray.remove(idx)}
+                            trigger={trigger}
+                            watch={watch}
+                        />
                     ))}
                 </div>
                 <Button color="info" className="mt-3" onClick={() => urlFieldArray.append({ url: null })}>
@@ -151,6 +98,78 @@ export default function RavenConnectionString({
                 urlProvider={forCurrentDatabase.editRavenEtl}
             />
         </Form>
+    );
+}
+
+interface DiscoveryUrlsProps {
+    idx: number;
+    dbName: string;
+    control: Control<FormData>;
+    isDeleteButtonVisible: boolean;
+    onDelete: () => void;
+    trigger: UseFormTrigger<FormData>;
+    watch: UseFormWatch<FormData>;
+}
+
+function DiscoveryUrl({ idx, dbName, control, isDeleteButtonVisible, trigger, watch, onDelete }: DiscoveryUrlsProps) {
+    const { tasksService } = useServices();
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger(`topologyDiscoveryUrls.${idx}`);
+        if (!isValid) {
+            return;
+        }
+
+        const url = watch(`topologyDiscoveryUrls.${idx}.url`);
+        return tasksService.testClusterNodeConnection(url, dbName, false);
+    });
+
+    return (
+        <div className="vstack mb-2 gap-1">
+            <Label className="mb-0 d-flex align-items-center gap-1">
+                <span className="small-label mb-0">URL #{idx + 1}</span>
+                {asyncTest.result?.Success ? (
+                    <Badge color="success" pill>
+                        <Icon icon="check" />
+                        Successfully connected
+                    </Badge>
+                ) : asyncTest.result?.Error ? (
+                    <Badge color="danger" pill>
+                        <Icon icon="warning" />
+                        Failed connection
+                    </Badge>
+                ) : null}
+            </Label>
+            <div className="d-flex gap-1 mb-2">
+                <FormInput
+                    type="text"
+                    control={control}
+                    name={`topologyDiscoveryUrls.${idx}.url`}
+                    placeholder="http(s)://hostName"
+                    autoComplete="off"
+                />
+                {isDeleteButtonVisible && (
+                    <Button color="danger" title="Delete URL" onClick={onDelete} disabled={asyncTest.loading}>
+                        <Icon icon="trash" margin="m-0" />
+                    </Button>
+                )}
+                <ButtonWithSpinner
+                    color="secondary"
+                    onClick={asyncTest.execute}
+                    isSpinning={asyncTest.loading}
+                    title="Test connection"
+                    icon="rocket"
+                >
+                    Test connection
+                </ButtonWithSpinner>
+            </div>
+            {asyncTest.result?.Error && (
+                <div className="vstack gap-1 mt-3">
+                    <ConnectionTestError message={asyncTest.result.Error} />
+                    <AboutError isHTTPSuccess={asyncTest.result.HTTPSuccess} />
+                </div>
+            )}
+        </div>
     );
 }
 
