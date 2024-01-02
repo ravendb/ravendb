@@ -619,7 +619,7 @@ namespace Raven.Server.Utils
 
         public static string GetBasicCertificateInfo(this X509Certificate2 certificate)
         {
-            return $"{{\"Thumbprint\":\"{certificate.Thumbprint}\", \"Subject\":\"{certificate.Subject}\"}}";
+            return $"Thumbprint: {certificate.Thumbprint}, Subject: {certificate.Subject}";
         }
     }
     public static class PublicKeyPinningHashHelpers
