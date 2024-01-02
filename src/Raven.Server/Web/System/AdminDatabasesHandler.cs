@@ -1309,7 +1309,12 @@ namespace Raven.Server.Web.System
 
         public static unsafe bool IsBase64String(string base64)
         {
-            int base64Size = (int)Math.Ceiling((double)base64.Length / 3) * 4;
+            // base64string length has to be a product of 4
+            var paddingLen = base64.Length%4;
+            for (int i = 0; i < paddingLen; i++)
+                base64 += "=";
+            
+            int base64Size = base64.Length;
             Span<byte> bytes = stackalloc byte[base64Size];
             return Convert.TryFromBase64String(base64, bytes, out int bytesParsed);
         }
