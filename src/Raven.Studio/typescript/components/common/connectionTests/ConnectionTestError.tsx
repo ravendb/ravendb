@@ -27,7 +27,7 @@ export default function ConnectionTestError({ message }: ConnectionTestErrorProp
                     </div>
                 </AccordionHeader>
                 <AccordionBody accordionId="connectionErrorContent">
-                    <Code language="csharp" code={message} hasCopyToClipboard elementToCopy={message} />
+                    <Code language="csharp" code={message} elementToCopy={message} />
                 </AccordionBody>
             </AccordionItem>
         </UncontrolledAccordion>
