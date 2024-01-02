@@ -44,7 +44,7 @@ namespace SlowTests.Voron.Issues
         {
             using (var tx = Env.WriteTransaction())
             {
-                var pageLocator = new PageLocator(tx.LowLevelTransaction);
+                var pageLocator = tx.LowLevelTransaction.PageLocator;
 
                 Assert.False(pageLocator.TryGetReadOnlyPage(-1, out _));
 

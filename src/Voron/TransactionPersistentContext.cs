@@ -32,11 +32,11 @@ namespace Voron
             if (_pageLocators.Count != 0)
             {
                 locator = _pageLocators.Pop();
-                locator.Renew(tx);
+                locator.Renew();
             }
             else
             {
-                locator = new PageLocator(tx);
+                locator = new PageLocator();
             }
             return locator;
         }
@@ -44,7 +44,6 @@ namespace Voron
         public void FreePageLocator(PageLocator locator)
         {
             Debug.Assert(locator != null);
-            locator.Release();
             if (_pageLocators.Count < 1024)
                 _pageLocators.Push(locator);
         }

@@ -145,7 +145,7 @@ namespace Corax.Querying.Matches
                 _itBuffer = (long*)bs.Ptr;
                 _containerItemsScope = _allocator.Allocate(BufferSize * sizeof(UnmanagedSpan), out bs);
                 _containerItems = (UnmanagedSpan*)bs.Ptr;
-                _pageLocator = new PageLocator(searcher._transaction.LowLevelTransaction);
+                _pageLocator = new PageLocator();
             }
 
             public void Reset(ref MultiTermMatch<TTermProvider> match)
