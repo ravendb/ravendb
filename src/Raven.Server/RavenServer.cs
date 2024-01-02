@@ -65,6 +65,7 @@ using Sparrow.Logging;
 using Sparrow.Server.Debugging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.DiskStatsGetter;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
