@@ -283,7 +283,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             _itBuffer = (long*)bs.Ptr;
             _containerItemsScope = llt.Allocator.Allocate(BufferSize * sizeof(UnmanagedSpan), out bs);
             _containerItems = (UnmanagedSpan*)bs.Ptr;
-            _pageLocator = new PageLocator(llt);
+            _pageLocator = llt.PageLocator;
         }
 
 
@@ -573,12 +573,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         // Initialize the important infrastructure for the sorting.
         TEntryComparer entryComparer = new();
         entryComparer.Init(ref match);
-            
-        var pageCache = new PageLocator(llt);
         
-        entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
+        entryComparer.SortBatch(ref match, llt, llt.PageLocator, batchResults, batchTermIds, termsPtr);
 
-        pageCache.Release();
         bufScope.Dispose();
     }
 
