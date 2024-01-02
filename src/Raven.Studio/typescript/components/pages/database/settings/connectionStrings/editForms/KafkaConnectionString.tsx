@@ -75,6 +75,10 @@ export default function KafkaConnectionString({
         } satisfies KafkaConnection);
     };
 
+    const isDeleteUrlVisible = (optionKey: string) => {
+        return !(formValues.isUseRavenCertificate && optionKey === sslCaLocation);
+    };
+
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
@@ -163,9 +167,11 @@ export default function KafkaConnectionString({
                                         placeholder="Enter an option value"
                                         autoComplete="off"
                                     />
-                                    <Button color="danger" onClick={() => connectionOptionsFieldArray.remove(idx)}>
-                                        <Icon icon="trash" margin="m-0" title="Delete" />
-                                    </Button>
+                                    {isDeleteUrlVisible(option.key) && (
+                                        <Button color="danger" onClick={() => connectionOptionsFieldArray.remove(idx)}>
+                                            <Icon icon="trash" margin="m-0" title="Delete" />
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>
