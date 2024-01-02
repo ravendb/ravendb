@@ -1,4 +1,4 @@
-﻿import { Badge, Button, Form, Label, PopoverBody, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+﻿import { Badge, Button, Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import React, { useEffect } from "react";
 import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -10,12 +10,10 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
-import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { useAccessManager } from "components/hooks/useAccessManager";
 import ConnectionTestError from "components/common/connectionTests/ConnectionTestError";
-import { FlexGrow } from "components/common/FlexGrow";
 
 type FormData = ConnectionFormData<KafkaConnection>;
 

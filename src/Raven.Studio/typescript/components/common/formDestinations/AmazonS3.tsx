@@ -11,7 +11,6 @@ import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { availableS3Regions } from "./utils/amazonRegions";
-import ConnectionTestError from "components/common/connectionTests/ConnectionTestError";
 import { FlexGrow } from "components/common/FlexGrow";
 
 export default function AmazonS3() {
