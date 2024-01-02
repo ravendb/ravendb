@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -14,19 +16,25 @@ using Sparrow.Collections;
 
 namespace Raven.Server.Documents
 {
-    [SuppressMessage("ReSharper", "InconsistentlySynchronizedField")]
     public sealed class ResourceCache<TResource> : IEnumerable<KeyValuePair<StringSegment, Task<TResource>>>
     {
-        private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive =
-                    new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentComparer.OrdinalIgnoreCase);
-        private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive
-            = new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentComparer.Ordinal);
+        private FrozenDictionary<StringSegment, Task<TResource>> _readonlyCaseInsensitive;
+        private FrozenDictionary<StringSegment, Task<TResource>> _readonlyCaseSensitive;
+        private FrozenDictionary<Task<TResource>, ResourceDetails> _readonlyResourceDetails;
 
-        private readonly ConcurrentDictionary<Task<TResource>, ResourceDetails> _resourceDetails
-            = new ConcurrentDictionary<Task<TResource>, ResourceDetails>();
+        private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive = new(StringSegmentComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive = new (StringSegmentComparer.Ordinal);
+        private readonly ConcurrentDictionary<Task<TResource>, ResourceDetails> _resourceDetails = new ();
 
-        private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings =
-            new ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>>(StringSegmentComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings = new(StringSegmentComparer.OrdinalIgnoreCase);
+
+
+        public ResourceCache()
+        {
+            _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
+            _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
+            _readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+        }
 
         public sealed class ResourceDetails
         {
@@ -36,24 +44,29 @@ namespace Raven.Server.Documents
         /// <summary>
         /// This locks the entire cache. Use carefully.
         /// </summary>
-        public IEnumerable<Task<TResource>> Values => _caseInsensitive.Values;
+        public IEnumerable<Task<TResource>> Values => _readonlyCaseInsensitive.Values;
 
-        public int Count => _caseInsensitive.Count;
+        public int Count => _readonlyCaseInsensitive.Count;
 
-        internal int DetailsCount => _resourceDetails.Count;
+        internal int DetailsCount => _readonlyResourceDetails.Count;
 
         public void Clear()
         {
             _caseSensitive.Clear();
+            _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
+
             _caseInsensitive.Clear();
+            _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
+
             _resourceDetails.Clear();
+            _readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
         }
 
         public bool TryGetValue(StringSegment resourceName, out Task<TResource> resourceTask)
         {
-            if (_caseSensitive.TryGetValue(resourceName, out resourceTask))
+            if (_readonlyCaseSensitive.TryGetValue(resourceName, out resourceTask))
                 return true;
-            
+
             return UnlikelyTryGet(resourceName, out resourceTask);
         }
 
@@ -63,21 +76,22 @@ namespace Raven.Server.Documents
             if (TryGetValue(resourceName, out resourceTask) == false)
                 return false;
 
-            return _resourceDetails.TryGetValue(resourceTask, out details);
+            return _readonlyResourceDetails.TryGetValue(resourceTask, out details);
         }
 
         private bool UnlikelyTryGet(StringSegment resourceName, out Task<TResource> resourceTask)
         {
-            if (_caseInsensitive.TryGetValue(resourceName, out resourceTask) == false)
+            if (_readonlyCaseInsensitive.TryGetValue(resourceName, out resourceTask) == false)
                 return false;
 
             lock (this)
             {
-                //we have a case insensitive match, let us optimize that
+                //we have a case-insensitive match, let us optimize that
                 if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappingsForResource))
                 {
                     mappingsForResource.Add(resourceName);
                     _caseSensitive.TryAdd(resourceName, resourceTask);
+                    _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
                 }
             }
             return true;
@@ -86,17 +100,46 @@ namespace Raven.Server.Documents
 
         public bool TryRemove(StringSegment resourceName, Task<TResource> resourceTask)
         {
-            if (_caseInsensitive.TryRemove(new KeyValuePair<StringSegment, Task<TResource>>(resourceName, resourceTask)) == false)
-                return false;
-
-            _resourceDetails.TryRemove(resourceTask, out _);
-
             lock (this)
             {
+                if (_caseInsensitive.TryRemove(new KeyValuePair<StringSegment, Task<TResource>>(resourceName, resourceTask)) == false)
+                    return false;
+
+                _resourceDetails.Remove(resourceTask, out _);
+
                 RemoveCaseSensitive(resourceName, resourceTask);
+
+                // We need to refresh all of them. Since construction takes time, we will update all the references
+                // at the end of the execution in order to diminish the time that an unstable state can be observed.
+                // While this is not a big issue because the code already supports dealing with that, the smaller the
+                // time such inconsistencies can be observed, the better.
+                var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
+                var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
+                var readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+
+                _readonlyCaseSensitive = readonlyCaseSensitive;
+                _readonlyCaseInsensitive = readonlyCaseInsensitive;
+                _readonlyResourceDetails = readonlyResourceDetails;
             }
 
             return true;
+        }
+
+        private void RemoveCaseSensitive(StringSegment resourceName, Task<TResource> resourceTask)
+        {
+            Debug.Assert(Monitor.IsEntered(this));
+
+            if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappings))
+            {
+                foreach (var mapping in mappings)
+                {
+                    // Careful here, the TryRemove method by its documentation would perform a (key,value) check instead of 
+                    // removing the item which has a matching key. This is an important departure of usual usage and has already
+                    // been the source of RavenDB-19002 
+                    // https://github.com/ravendb/ravendb/commit/34c9fcb5a111b352795f30ce24bd91d7a68bfe31
+                    _caseSensitive.TryRemove(new KeyValuePair<StringSegment, Task<TResource>>(mapping, resourceTask));
+                }
+            }
         }
 
         public bool TryGetAndRemove(StringSegment resourceName, out Task<TResource> resourceTask)
@@ -110,20 +153,10 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        private void RemoveCaseSensitive(StringSegment resourceName, Task<TResource> resourceTask)
-        {
-            if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappings))
-            {
-                foreach (var mapping in mappings)
-                {
-                    _caseSensitive.TryRemove(new KeyValuePair<StringSegment, Task<TResource>>(mapping, resourceTask));
-                }
-            }
-        }
 
         public IEnumerator<KeyValuePair<StringSegment, Task<TResource>>> GetEnumerator()
         {
-            return _caseInsensitive.GetEnumerator();
+            return _readonlyCaseInsensitive.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -133,10 +166,10 @@ namespace Raven.Server.Documents
 
         public Task<TResource> GetOrAdd(StringSegment databaseName, Task<TResource> task)
         {
-            if (_caseSensitive.TryGetValue(databaseName, out Task<TResource> value))
+            if (_readonlyCaseSensitive.TryGetValue(databaseName, out Task<TResource> value))
                 return value;
 
-            if (_caseInsensitive.TryGetValue(databaseName, out value))
+            if (_readonlyCaseInsensitive.TryGetValue(databaseName, out value))
                 return value;
 
             lock (this)
@@ -153,15 +186,27 @@ namespace Raven.Server.Documents
                     };
                 }
                 _caseSensitive[databaseName] = value;
-                _mappings[databaseName] = new ConcurrentSet<StringSegment>
-                {
-                    databaseName
-                };
+                _mappings[databaseName] = [databaseName];
+
+                // We need to refresh all of them. Since construction takes time, we will update all the references
+                // at the end of the execution in order to diminish the time that an unstable state can be observed.
+                // While this is not a big issue because the code already supports dealing with that, the smaller the
+                // time such inconsistencies can be observed, the better.
+                var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
+                var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
+                var readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+
+                _readonlyCaseSensitive = readonlyCaseSensitive;
+                _readonlyCaseInsensitive = readonlyCaseInsensitive;
+                _readonlyResourceDetails = readonlyResourceDetails;
+
                 return value;
             }
         }
+
         public IDisposable RemoveLockAndReturn(string databaseName, Action<TResource> onSuccess, out TResource resource, [CallerMemberName] string caller = null, string reason = null)
         {
+
             Task<TResource> current = null;
             Task<TResource> resourceLocked;
 
@@ -169,10 +214,10 @@ namespace Raven.Server.Documents
             {
                 var dbDisabledExMessage = $"The database '{databaseName}' has been unloaded and locked";
 
-                if (string.IsNullOrEmpty(caller) == false) 
+                if (string.IsNullOrEmpty(caller) == false)
                     dbDisabledExMessage += $" by {caller}";
 
-                if (string.IsNullOrEmpty(reason) == false) 
+                if (string.IsNullOrEmpty(reason) == false)
                     dbDisabledExMessage += $" because {reason}";
 
                 var databaseDisabledException = new DatabaseDisabledException(dbDisabledExMessage)
@@ -183,7 +228,7 @@ namespace Raven.Server.Documents
                     }
                 };
 
-                if (caller != null) 
+                if (caller != null)
                     databaseDisabledException.Data["Source"] = caller;
 
                 resourceLocked = Task.FromException<TResource>(databaseDisabledException);
@@ -197,13 +242,17 @@ namespace Raven.Server.Documents
                     if (found == false)
                     {
                         resource = default(TResource);
-                        if (_caseInsensitive.TryAdd(databaseName, resourceLocked) == false) 
+                        if (_caseInsensitive.TryAdd(databaseName, resourceLocked) == false)
                             continue;
+
+                        // We need to refresh only the case-insensitive dictionary.
+                        _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
 
                         return new DisposableAction(() =>
                         {
                             _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
 
+                            // This is a disposable action, therefore it has to execute the locking one. 
                             TryRemove(databaseName, resourceLocked);
                         });
                     }
@@ -218,7 +267,7 @@ namespace Raven.Server.Documents
 
                     var databaseConcurrentLoadTimeoutException = new DatabaseConcurrentLoadTimeoutException(dbConcurrentLoadTimeoutExMessage);
 
-                    if (string.IsNullOrEmpty(caller) == false) 
+                    if (string.IsNullOrEmpty(caller) == false)
                         databaseConcurrentLoadTimeoutException.Data[caller] = null;
 
                     throw databaseConcurrentLoadTimeoutException;
@@ -229,8 +278,21 @@ namespace Raven.Server.Documents
                     _caseInsensitive.TryUpdate(databaseName, resourceLocked, current);
                     _resourceDetails.TryRemove(current, out _);
                     RemoveCaseSensitive(databaseName, current);
+
+                    // We need to refresh all of them. Since construction takes time, we will update all the references
+                    // at the end of the execution in order to diminish the time that an unstable state can be observed.
+                    // While this is not a big issue because the code already supports dealing with that, the smaller the
+                    // time such inconsistencies can be observed, the better.
+                    var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
+                    var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
+                    var readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+
+                    _readonlyCaseSensitive = readonlyCaseSensitive;
+                    _readonlyCaseInsensitive = readonlyCaseInsensitive;
+                    _readonlyResourceDetails = readonlyResourceDetails;
                 }
             }
+
             if (current.IsCompletedSuccessfully)
             {
                 resource = current.Result; // completed, not waiting here.
@@ -246,7 +308,7 @@ namespace Raven.Server.Documents
             if (current.IsFaulted && DatabasesLandlord.IsLockedDatabase(current.Exception) == false)
             {
                 // some real exception occurred, but we still want to remove / unload the faulty database
-                resource = default; 
+                resource = default;
                 return new DisposableAction(() =>
                 {
                     _forTestingPurposes?.OnRemoveLockAndReturnDispose?.Invoke(this);
@@ -284,7 +346,7 @@ namespace Raven.Server.Documents
 
             public Task<TResource> Replace(string databaseName, Task<TResource> task)
             {
-                lock (this)
+                lock (_parent)
                 {
                     Task<TResource> existingTask = null;
                     _parent._caseInsensitive.AddOrUpdate(databaseName, segment => task, (key, existing) =>
@@ -306,6 +368,19 @@ namespace Raven.Server.Documents
                             _parent._caseSensitive.TryRemove(mapping, out Task<TResource> _);
                         }
                     }
+
+                    // We need to refresh all of them. Since construction takes time, we will update all the references
+                    // at the end of the execution in order to diminish the time that an unstable state can be observed.
+                    // While this is not a big issue because the code already supports dealing with that, the smaller the
+                    // time such inconsistencies can be observed, the better.
+                    var readonlyCaseSensitive = _parent._caseSensitive.ToFrozenDictionary();
+                    var readonlyCaseInsensitive = _parent._caseInsensitive.ToFrozenDictionary();
+                    var readonlyResourceDetails = _parent._resourceDetails.ToFrozenDictionary();
+
+                    _parent._readonlyCaseSensitive = readonlyCaseSensitive;
+                    _parent._readonlyCaseInsensitive = readonlyCaseInsensitive;
+                    _parent._readonlyResourceDetails = readonlyResourceDetails;
+
                     return existingTask;
                 }
             }
