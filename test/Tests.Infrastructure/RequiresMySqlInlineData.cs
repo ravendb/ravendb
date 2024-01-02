@@ -20,7 +20,13 @@ namespace Tests.Infrastructure
 
         public override IEnumerable<object[]> GetData(MethodInfo testMethod)
         {
-            return new[] { new object[] { MigrationProvider.MySQL_MySql_Data }, new object[] { MigrationProvider.MySQL_MySqlConnector } };
+            return new[]
+            {
+#pragma warning disable CS0618 // Type or member is obsolete
+                new object[] { MigrationProvider.MySQL_MySql_Data }, 
+#pragma warning restore CS0618 // Type or member is obsolete
+                new object[] { MigrationProvider.MySQL_MySqlConnector }
+            };
         }
     }
 }
