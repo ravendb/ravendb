@@ -7,6 +7,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Utils.DiskStatsGetter;
 
 namespace Sparrow.Server.Utils
 {
@@ -80,8 +81,7 @@ namespace Sparrow.Server.Utils
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    realPath = GetWindowsRealPathByPath(path);
-                    return Path.GetPathRoot(realPath);
+                    return WindowsGetDriveName(path, out realPath);
                 }
 
                 realPath = GetPosixRealPath(path);
@@ -96,6 +96,12 @@ namespace Sparrow.Server.Utils
                 realPath = path;
                 return path;
             }
+        }
+
+        public static string WindowsGetDriveName(string path, out string realPath)
+        {
+            realPath = GetWindowsRealPathByPath(path);
+            return Path.GetPathRoot(realPath);
         }
 
         private static unsafe string GetPosixRealPath(string path)
@@ -241,9 +247,11 @@ namespace Sparrow.Server.Utils
 
         internal static IDiskStatsGetter GetOsDiskUsageCalculator(TimeSpan minInterval)
         {
-            return PlatformDetails.RunningOnLinux == false 
-                ? new NotImplementedDiskStatsGetter() 
-                : new DiskStatsGetter(minInterval);
+            return PlatformDetails.RunningOnLinux
+                ? new LinuxDiskStatsGetter(minInterval)
+                    : PlatformDetails.RunningOnWindows ?
+                        new WindowsDiskStatsGetter(minInterval)
+                        : new NotImplementedDiskStatsGetter();
         }
 
         private const uint FILE_READ_EA = 0x0008;
