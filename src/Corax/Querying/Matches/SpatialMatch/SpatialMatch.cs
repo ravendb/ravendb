@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
@@ -10,11 +11,13 @@ using Spatial4n.Context;
 using Spatial4n.Shapes;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Util;
 using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
 namespace Corax.Querying.Matches.SpatialMatch;
 
-public sealed class SpatialMatch : IQueryMatch
+public sealed class SpatialMatch<TBoosting> : IQueryMatch
+    where TBoosting : IBoostingMarker
 {
     private readonly Querying.IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
@@ -33,11 +36,19 @@ public sealed class SpatialMatch : IQueryMatch
     private IDisposable _startsWithDisposeHandler;
     private HashSet<long> _alreadyReturned;
     private long _fieldRootPage;
+    private SpatialScore _spatialScore;
+    private double _xShapeCenter;
+    private double _yShapeCenter;
+    
 
     public SpatialMatch(Querying.IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
         CompactTree tree,
         double errorInPercentage, Utils.Spatial.SpatialRelation spatialRelation, CancellationToken token)
     {
+        _spatialScore = default;
+        if (typeof(TBoosting) == typeof(HasBoosting))
+            _spatialScore.Init(allocator);
+        
         _indexSearcher = indexSearcher;
         _spatialContext = spatialContext ?? throw new ArgumentNullException($"{nameof(spatialContext)} passed to {nameof(SpatialMatch)} is null.");
         _field = field;
@@ -47,6 +58,8 @@ public sealed class SpatialMatch : IQueryMatch
         _allocator = allocator;
         _spatialRelation = spatialRelation;
         _token = token;
+        (_xShapeCenter, _yShapeCenter) = (shape.Center.X, shape.Center.Y);
+        
         _termGenerator = spatialRelation == Utils.Spatial.SpatialRelation.Disjoint 
             ? SpatialUtils.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
             : SpatialUtils.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
@@ -128,7 +141,12 @@ public sealed class SpatialMatch : IQueryMatch
             _point.Reset(termsReader.Longitude, termsReader.Latitude);
             if (IsTrue(_point.Relate(_shape)))
             {
-                _alreadyReturned.Add(id);
+                if (_alreadyReturned.Add(id) && typeof(TBoosting) == typeof(HasBoosting))
+                {
+                    ref var spatialScore = ref _spatialScore;
+                    spatialScore.Push(id, (float)SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, termsReader.Longitude, termsReader.Latitude));
+                }
+                
                 return true;
             }
         }
@@ -152,17 +170,9 @@ public sealed class SpatialMatch : IQueryMatch
         {
             if (i % 1024 == 0)
                 _token.ThrowIfCancellationRequested();
-            
-            var termsReader = _indexSearcher.GetEntryTermsReader(buffer[i], ref _lastPage);
-            while (termsReader.MoveNextSpatial())
+            if (CheckEntryManually(buffer[i]))
             {
-                if(termsReader.FieldRootPage != _fieldRootPage)
-                    continue;
-                _point.Reset(termsReader.Longitude, termsReader.Latitude);
-                if (IsTrue(_point.Relate(_shape)))
-                {
-                    buffer[currentIdx++] = buffer[i];
-                }
+                buffer[currentIdx++] = buffer[i];
             }
         }
 
@@ -171,7 +181,16 @@ public sealed class SpatialMatch : IQueryMatch
 
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
-        throw new NotImplementedException();
+        if (typeof(TBoosting) != typeof(HasBoosting))
+            ThrowPrimitiveHasNoBoostingData();
+     
+        _spatialScore.CalculateScore(matches, scores, boostFactor, _spatialRelation);
+        _spatialScore.Dispose();
+    }
+
+    private void ThrowPrimitiveHasNoBoostingData()
+    {
+        throw new InvalidDataException($"{nameof(SpatialMatch<TBoosting>)}");
     }
 
     public QueryInspectionNode Inspect()
@@ -184,5 +203,70 @@ public sealed class SpatialMatch : IQueryMatch
                 {"Error", _error.ToString(CultureInfo.InvariantCulture)},
                 {"SpatialRelation", _spatialRelation.ToString()},
             });
+    }
+}
+
+internal struct SpatialScore
+{
+    private ByteStringContext _context;
+    private NativeList<long> _matches;
+    private NativeList<double> _distances;
+    private double _maxDistance;
+
+    public SpatialScore()
+    {
+        _matches = default;
+        _distances = default;
+        _maxDistance = double.MinValue;
+    }
+
+    public void Init(ByteStringContext allocator)
+    {
+        _context = allocator;
+    }
+
+    public void Push(long id, double distance)
+    {
+        _matches.Add(_context, id);
+        _distances.Add(_context, distance);
+        _maxDistance = Math.Max(distance, _maxDistance);
+    }
+
+    public void Dispose()
+    {
+        _matches.Dispose(_context);
+        _distances.Dispose(_context);
+    }
+
+    /// <summary>
+    /// Calculates relevance by distance to the center of the figure. When spatial relation is not disjoint, we treat the center as the most relevant point and grant it a score of 1.01 (*boostFactor). 
+    /// We take the whole result set as a subset, so the farthest point returned by this query is the least relevant point and gets a score of 0.01 (just not being 0). 
+    /// Scores for points in between are just proportions between the center and the farthest.
+    ///
+    /// On the other hand, when the query is DISJOINT, we negate the formula. Now the center is the least relevant, and the farthest is most relevant. In this case center is 0.01
+    /// but for most queries there is impossible go get this (it's possible when center is outside body of figure). This allow us to avoid cases when points are very close to each other but gets
+    /// very different scores.
+    /// </summary>
+    /// <param name="matches">Requires sorted, non-encoded ids</param>
+    public void CalculateScore(Span<long> matches, Span<float> scores, float boostFactor, Utils.Spatial.SpatialRelation spatialRelation)
+    {
+        const double bias = 0.01;
+        if (_maxDistance < double.Epsilon)
+            return;
+        
+        var results = _matches.ToSpan();
+        var distances = _distances.ToSpan();
+        
+        for (int idX = 0; idX < results.Length; ++idX)
+        {
+            var incomingIdx = matches.BinarySearch(results[idX]);
+            if (incomingIdx < 0) continue;
+            
+            var relativeDistance = bias +
+                                   (spatialRelation is not Utils.Spatial.SpatialRelation.Disjoint
+                                       ? 1.0 - (distances[idX] / _maxDistance)
+                                       : (distances[idX] / _maxDistance));
+            scores[incomingIdx] += (float)relativeDistance * boostFactor;
+        }
     }
 }
