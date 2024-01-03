@@ -713,6 +713,8 @@ namespace Raven.Server.Rachis
 
             public void Dispose()
             {
+                Command.Raw?.Dispose();
+                Command.Raw = null;
                 BlittableResultWriter?.Dispose();
                 _ctxReturn?.Dispose();
             }
