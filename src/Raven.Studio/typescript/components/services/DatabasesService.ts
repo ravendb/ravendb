@@ -49,6 +49,8 @@ import getDocumentsCompressionConfigurationCommand = require("commands/database/
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
 import promoteDatabaseNodeCommand = require("commands/database/debug/promoteDatabaseNodeCommand");
 import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
+import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
+import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -202,5 +204,13 @@ export default class DatabasesService {
 
     async promoteDatabaseNode(databaseName: string, nodeTag: string) {
         return new promoteDatabaseNodeCommand(databaseName, nodeTag).execute();
+    }
+
+    async getDatabaseRecord(db: database, reportRefreshProgress = false) {
+        return new getDatabaseRecordCommand(db, reportRefreshProgress).execute();
+    }
+
+    async saveDatabaseRecord(db: database, databaseRecord: documentDto, etag: number) {
+        return new saveDatabaseRecordCommand(db, databaseRecord, etag).execute();
     }
 }
