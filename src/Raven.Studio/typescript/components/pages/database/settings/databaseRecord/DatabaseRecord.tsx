@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Button, Card, CardBody, Col, InputGroup, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { todo } from "common/developmentHelper";
 import { NonShardedViewProps } from "components/models/common";
 import useConfirm from "components/common/ConfirmDialog";
 import classNames from "classnames";
@@ -20,8 +19,6 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import genUtils from "common/generalUtils";
 import DatabaseRecordAboutView from "./DatabaseRecordAboutView";
 import ReactAce from "react-ace/lib/ace";
-
-todo("Feature", "Damian", "Remove legacy code");
 
 interface VisibleDocument {
     text: string;
