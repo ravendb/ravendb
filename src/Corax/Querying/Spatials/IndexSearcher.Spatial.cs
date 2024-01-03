@@ -18,8 +18,10 @@ public partial class IndexSearcher
             // If either the term or the field does not exist the request will be empty. 
             return TermMatch.CreateEmpty(this, Allocator);
         }
-
-        var match = new SpatialMatch(this, _transaction.Allocator, spatialContext, field, shape, terms, error, spatialRelation, token);
+        
+        IQueryMatch match = field.HasBoost 
+            ? new SpatialMatch<HasBoosting>(this, _transaction.Allocator, spatialContext, field, shape, terms, error, spatialRelation, token)
+            : new SpatialMatch<NoBoosting>(this, _transaction.Allocator, spatialContext, field, shape, terms, error, spatialRelation, token);
         if (isNegated)
         {
             return AndNot(AllEntries(), match);

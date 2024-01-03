@@ -114,7 +114,7 @@ public sealed class SpatialUtils
                     boundary = GeohashUtils.DecodeBoundary(geohashToCheck, ctx);
                 }
 
-                switch (shape.Relate(boundary))
+                switch (boundary.Relate(shape))
                 {
                     case Spatial4n.Shapes.SpatialRelation.Disjoint:
                         //Our termatch
@@ -131,10 +131,12 @@ public sealed class SpatialUtils
                         }
 
                         break;
+                    
+                    //Our figure contains whole boundary so we've to skip.
                     case Spatial4n.Shapes.SpatialRelation.Within:
-                    case Spatial4n.Shapes.SpatialRelation.Contains:
-                        //Inside figure, we can denied this geohash.
                         break;
+                    //Contains means our figure is within boundary, we've to go deeper to find out more information about it.
+                    case Spatial4n.Shapes.SpatialRelation.Contains:
                     case Spatial4n.Shapes.SpatialRelation.Intersects:
                         using (var _ = Slice.From(allocator, geohashToCheck, out var term))
                         {
