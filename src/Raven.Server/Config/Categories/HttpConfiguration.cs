@@ -16,13 +16,13 @@ namespace Raven.Server.Config.Categories
             Protocols = PlatformDetails.CanUseHttp2 ? HttpProtocols.Http1AndHttp2 : HttpProtocols.Http1;
         }
 
-        [Description("Set Kestrel's minimum required data rate in bytes per second. This option should configured together with 'Http.MinDataRateGracePeriod'")]
+        [Description("Set Kestrel's minimum required data rate in bytes per second. This option must be configured together with 'Http.MinDataRateGracePeriod'.")]
         [DefaultValue(null)]
         [SizeUnit(SizeUnit.Bytes)]
         [ConfigurationEntry("Http.MinDataRateBytesPerSec", ConfigurationEntryScope.ServerWideOnly)]
         public Size? MinDataRatePerSecond { get; set; }
 
-        [Description("Set Kestrel's allowed request and reponse grace in seconds. This option should configured together with 'Http.MinDataRateBytesPerSec'")]
+        [Description("Set Kestrel's allowed request and response grace in seconds. This option must be configured together with 'Http.MinDataRateBytesPerSec'.")]
         [DefaultValue(null)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Http.MinDataRateGracePeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
@@ -53,16 +53,16 @@ namespace Raven.Server.Config.Categories
         public TimeSetting? KeepAlivePingDelay { get; set; }
 
         [Description("Set Kestrel's HTTP2 max streams per connection. This limits the number of concurrent request streams per HTTP/2 connection. Excess streams will be refused.")]
-        [DefaultValue(null)]
+        [DefaultValue(int.MaxValue)]
         [ConfigurationEntry("Http.Http2.MaxStreamsPerConnection", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaxStreamsPerConnection { get; set; }
 
-        [Description("Whether Raven's HTTP server should compress its responses")]
+        [Description("Set whether Raven's HTTP server should compress its responses")]
         [DefaultValue(true)]
         [ConfigurationEntry("Http.UseResponseCompression", ConfigurationEntryScope.ServerWideOnly)]
         public bool UseResponseCompression { get; set; }
 
-        [Description("Whether Raven's HTTP server should allow response compression to happen when HTTPS is enabled.")]
+        [Description("Set whether Raven's HTTP server should allow response compression to happen when HTTPS is enabled.")]
         [DefaultValue(true)]
         [ConfigurationEntry("Http.AllowResponseCompressionOverHttps", ConfigurationEntryScope.ServerWideOnly)]
         public bool AllowResponseCompressionOverHttps { get; set; }
@@ -82,12 +82,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Http.StaticFilesResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
         public CompressionLevel StaticFilesResponseCompressionLevel { get; set; }
 
-        [Description("Sets HTTP protocols that should be supported by the server")]
+        [Description("Set HTTP protocols that should be supported by the server")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Http.Protocols", ConfigurationEntryScope.ServerWideOnly)]
         public HttpProtocols Protocols { get; set; }
 
-        [Description("Sets a value that controls whether synchronous IO is allowed for the Request and Response")]
+        [Description("Set a value that controls whether synchronous IO is allowed for the Request and Response")]
         [DefaultValue(false)]
         [ConfigurationEntry("Http.AllowSynchronousIO", ConfigurationEntryScope.ServerWideOnly)]
         public bool AllowSynchronousIo { get; set; }
