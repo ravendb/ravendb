@@ -662,18 +662,11 @@ namespace Raven.Server.Documents
             return task.Result.DatabaseShutdown.IsCancellationRequested == false;
         }
 
-        public sealed class DatabaseSearchResult
+        public readonly struct DatabaseSearchResult(DatabaseSearchResult.Status databaseStatus, Task<DocumentDatabase> databaseTask, ShardedDatabaseContext databaseContext)
         {
-            public readonly Task<DocumentDatabase> DatabaseTask;
-            public readonly ShardedDatabaseContext DatabaseContext;
-            public readonly Status DatabaseStatus;
-
-            public DatabaseSearchResult(Status databaseStatus, Task<DocumentDatabase> databaseTask, ShardedDatabaseContext databaseContext)
-            {
-                DatabaseStatus = databaseStatus;
-                DatabaseTask = databaseTask;
-                DatabaseContext = databaseContext;
-            }
+            public readonly Task<DocumentDatabase> DatabaseTask = databaseTask;
+            public readonly ShardedDatabaseContext DatabaseContext = databaseContext;
+            public readonly Status DatabaseStatus = databaseStatus;
 
             public enum Status
             {
