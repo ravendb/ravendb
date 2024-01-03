@@ -1265,8 +1265,11 @@ namespace Raven.Server.Web.System
         {
             foreach (var id in unusedIds)
             {
-                if(IsBase64String(id)==false)
-                    throw new InvalidOperationException($"Database id '{id}' isn't valid because it isn't Base64String (it contains chars which cannot be in Base64String).");
+                if (id.Length != 22)
+                    throw new InvalidOperationException($"Database id '{id}' isn't valid because its length isn't 22.");
+
+                if (IsBase64Id(id)==false)
+                    throw new InvalidOperationException($"Database id '{id}' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String).");
             }
 
             DatabaseTopology topology;
@@ -1307,16 +1310,17 @@ namespace Raven.Server.Web.System
 
         }
 
-        public static unsafe bool IsBase64String(string base64)
+        public static unsafe bool IsBase64Id(string base64)
         {
-            // base64string length has to be a product of 4
-            var paddingLen = base64.Length%4;
-            for (int i = 0; i < paddingLen; i++)
-                base64 += "=";
-            
-            int base64Size = base64.Length;
-            Span<byte> bytes = stackalloc byte[base64Size];
-            return Convert.TryFromBase64String(base64, bytes, out int bytesParsed);
+            Span<byte> bytes = stackalloc byte[(24/3)*4];
+            char* buffer = stackalloc char[24];
+            fixed (char* str = base64)
+            {
+                Buffer.MemoryCopy(str, buffer, 24 * sizeof(char), 22 * sizeof(char));
+                buffer[22] = '=';
+                buffer[23] = '=';
+                return Convert.TryFromBase64Chars(new ReadOnlySpan<char>(buffer, 24), bytes, out _);
+            }
         }
 
 
