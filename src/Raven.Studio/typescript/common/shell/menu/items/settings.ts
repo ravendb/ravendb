@@ -14,6 +14,7 @@ import DatabaseCustomSorters from "components/pages/database/settings/customSort
 import DatabaseCustomAnalyzers from "components/pages/database/settings/customAnalyzers/DatabaseCustomAnalyzers";
 import DocumentCompression from "components/pages/database/settings/documentCompression/DocumentCompression";
 import RevertRevisions from "components/pages/database/settings/documentRevisions/revertRevisions/RevertRevisions";
+import DatabaseRecord from "components/pages/database/settings/databaseRecord/DatabaseRecord";
 
 export = getSettingsMenuItem;
 
@@ -191,7 +192,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new separatorMenuItem('Advanced'),
         new leafMenuItem({
             route: 'databases/advanced/databaseRecord',
-            moduleId: require('viewmodels/database/advanced/databaseRecord'),
+            moduleId: bridgeToReact(DatabaseRecord, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Database Record',
             nav: true,

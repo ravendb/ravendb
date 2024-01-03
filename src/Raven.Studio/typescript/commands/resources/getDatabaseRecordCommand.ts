@@ -5,8 +5,13 @@ import endpoints = require("endpoints");
 
 class getDatabaseRecordCommand extends commandBase {
 
-    constructor(private db: database, private reportRefreshProgress = false) {
+    private readonly db: database;
+    private readonly reportRefreshProgress: boolean;
+
+    constructor(db: database, reportRefreshProgress = false) {
         super();
+        this.db = db;
+        this.reportRefreshProgress = reportRefreshProgress;
 
         if (!db) {
             throw new Error("Must specify database");

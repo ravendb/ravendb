@@ -1,40 +1,35 @@
 import React from "react";
-import { ComponentMeta } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { Meta, StoryObj } from "@storybook/react";
+import { withStorybookContexts, withBootstrap5, securityClearanceArgType } from "test/storybookTestUtils";
 import DatabaseRecord from "./DatabaseRecord";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
+import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
-    title: "Pages/Database/Settings/Database Record",
-    component: DatabaseRecord,
+    title: "Pages/Database/Settings",
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof DatabaseRecord>;
+    argTypes: {
+        securityClearance: securityClearanceArgType,
+    },
+} satisfies Meta<typeof DatabaseRecord>;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
-
-function commonInit() {
-    const { accessManager } = mockStore;
-
-    accessManager.with_securityClearance("ValidUser");
+interface DefaultDatabaseRecordProps {
+    securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 }
 
-export function FullAccess() {
-    commonInit();
+export const DefaultDatabaseRecord: StoryObj<DefaultDatabaseRecordProps> = {
+    name: "Database Record",
+    render: (props: DefaultDatabaseRecordProps) => {
+        const { accessManager } = mockStore;
+        const { databasesService } = mockServices;
 
-    const { accessManager } = mockStore;
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
-    });
+        accessManager.with_securityClearance(props.securityClearance);
+        databasesService.withDatabaseRecord();
 
-    return <DatabaseRecord db={db} />;
-}
-
-export function AccessForbidden() {
-    commonInit();
-    const { accessManager } = mockStore;
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseRead",
-    });
-    return <DatabaseRecord db={db} />;
-}
+        return <DatabaseRecord db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    },
+    args: {
+        securityClearance: "Operator",
+    },
+};

@@ -12,6 +12,7 @@ import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.Revi
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
+import document from "models/database/documents/document";
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -395,5 +396,77 @@ export class DatabasesStubs {
             CompressAllCollections: false,
             CompressRevisions: true,
         };
+    }
+
+    static databaseRecord(): document {
+        return new document({
+            DatabaseName: "drec",
+            Disabled: false,
+            Encrypted: false,
+            EtagForBackup: 0,
+            DeletionInProgress: {},
+            RollingIndexes: {},
+            DatabaseState: "Normal",
+            LockMode: "Unlock",
+            Topology: {
+                Members: ["A"],
+                Promotables: [],
+                Rehabs: [],
+                PredefinedMentors: {},
+                DemotionReasons: {},
+                PromotablesStatus: {},
+                Stamp: {
+                    Index: 512,
+                    Term: 1,
+                    LeadersTicks: -2,
+                },
+                DynamicNodesDistribution: false,
+                ReplicationFactor: 1,
+                PriorityOrder: [],
+                NodesModifiedAt: "2024-01-02T12:47:22.6904463Z",
+                DatabaseTopologyIdBase64: "V/OB7JEtLEiazn6QID9RQw",
+                ClusterTransactionIdBase64: "VtiBjDGBe0uajuJ7lArnbw",
+            },
+            Sharding: null,
+            ConflictSolverConfig: null,
+            DocumentsCompression: {
+                Collections: [],
+                CompressAllCollections: false,
+                CompressRevisions: true,
+            },
+            Sorters: {},
+            Analyzers: {},
+            Indexes: {},
+            IndexesHistory: {},
+            AutoIndexes: {},
+            Settings: {},
+            Revisions: null,
+            TimeSeries: null,
+            RevisionsForConflicts: null,
+            Expiration: null,
+            Refresh: null,
+            DataArchival: null,
+            Integrations: null,
+            PeriodicBackups: [],
+            ExternalReplications: [],
+            SinkPullReplications: [],
+            HubPullReplications: [],
+            RavenConnectionStrings: {},
+            SqlConnectionStrings: {},
+            OlapConnectionStrings: {},
+            ElasticSearchConnectionStrings: {},
+            QueueConnectionStrings: {},
+            RavenEtls: [],
+            SqlEtls: [],
+            ElasticSearchEtls: [],
+            OlapEtls: [],
+            QueueEtls: [],
+            QueueSinks: [],
+            Client: null,
+            Studio: null,
+            TruncatedClusterTransactionCommandsCount: 0,
+            UnusedDatabaseIds: [],
+            Etag: 512,
+        });
     }
 }

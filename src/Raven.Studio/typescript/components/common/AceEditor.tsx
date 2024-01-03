@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { LegacyRef, useEffect, useState } from "react";
 import { AceEditorMode, LanguageService } from "components/models/aceEditor";
 import { Ace } from "ace-builds";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
@@ -12,10 +12,11 @@ export interface AceEditorProps extends IAceEditorProps {
     validationErrorMessage?: string;
     execute?: (...args: any) => any;
     setIsValid?: (isValid: boolean) => void;
+    aceRef?: LegacyRef<ReactAce>;
 }
 
 export default function AceEditor(props: AceEditorProps) {
-    const { setOptions, languageService, validationErrorMessage, execute, setIsValid, ...rest } = props;
+    const { aceRef, setOptions, languageService, validationErrorMessage, execute, setIsValid, ...rest } = props;
 
     const overriddenSetOptions: IAceOptions = {
         enableBasicAutocompletion: true,
@@ -92,6 +93,7 @@ export default function AceEditor(props: AceEditorProps) {
         <div className={classNames("ace-editor", { "has-error": errorMessage })}>
             <div className="react-ace-wrapper">
                 <ReactAce
+                    ref={aceRef}
                     mode="csharp"
                     theme="raven"
                     editorProps={{ $blockScrolling: Infinity }}

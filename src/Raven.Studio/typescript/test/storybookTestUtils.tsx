@@ -70,3 +70,16 @@ export const databaseAccessArgType = {
     },
     options: ["DatabaseAdmin", "DatabaseRead", "DatabaseReadWrite"] satisfies databaseAccessLevel[],
 };
+
+export const securityClearanceArgType = {
+    control: {
+        type: "select",
+    },
+    options: [
+        "Operator",
+        "ClusterAdmin",
+        "ClusterNode",
+        "ValidUser",
+        "UnauthenticatedClients",
+    ] satisfies Raven.Client.ServerWide.Operations.Certificates.SecurityClearance[],
+};
