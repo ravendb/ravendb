@@ -19,6 +19,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import genUtils from "common/generalUtils";
 import DatabaseRecordAboutView from "./DatabaseRecordAboutView";
 import ReactAce from "react-ace/lib/ace";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 interface VisibleDocument {
     text: string;
@@ -28,6 +29,7 @@ interface VisibleDocument {
 export default function DatabaseRecord({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
     const confirm = useConfirm();
+    const { reportEvent } = useEventsCollector();
     const aceRef = useRef<ReactAce>(null);
 
     const { value: isEditMode, toggle: toggleIsEditMode } = useBoolean(false);
@@ -145,6 +147,11 @@ export default function DatabaseRecord({ db }: NonShardedViewProps) {
         }
     };
 
+    const refresh = () => {
+        reportEvent("database-record", "refresh");
+        asyncGetDatabaseRecord.execute(true);
+    };
+
     if (asyncGetDatabaseRecord.status === "error") {
         return (
             <LoadError error="Unable to load database record" refresh={() => asyncGetDatabaseRecord.execute(true)} />
@@ -180,7 +187,7 @@ export default function DatabaseRecord({ db }: NonShardedViewProps) {
                                 <>
                                     <ButtonWithSpinner
                                         color="primary"
-                                        onClick={() => asyncGetDatabaseRecord.execute(true)}
+                                        onClick={refresh}
                                         isSpinning={asyncGetDatabaseRecord.loading}
                                         icon="refresh"
                                     >
