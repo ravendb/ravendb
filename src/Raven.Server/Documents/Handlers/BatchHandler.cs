@@ -621,6 +621,8 @@ namespace Raven.Server.Documents.Handlers
                 Replies.Clear();
                 Options.Clear();
 
+                long lastIndexInBatch = 0L;
+
                 foreach (var command in _batch)
                 {
                     Replies.Add(command.Index, new DynamicJsonArray());
@@ -768,7 +770,14 @@ namespace Raven.Server.Documents.Handlers
                     {
                         context.LastDatabaseChangeVector = updatedChangeVector.ChangeVector;
                     }
+
+                    lastIndexInBatch = long.Max(lastIndexInBatch, command.Index);
                 }
+
+                // set last cluster transaction index (persistent)
+                var lastClusterTxIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(context.Transaction.InnerTransaction);
+                if (lastIndexInBatch > lastClusterTxIndex)
+                    Database.DocumentsStorage.SetLastCompletedClusterTransactionIndex(context, lastIndexInBatch);
 
                 return Reply.Count;
             }

@@ -51,6 +51,7 @@ using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -360,6 +361,13 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
+                using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
+                    Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
+                }
+
                 ThreadPool.QueueUserWorkItem(_ =>
                 {
                     try
@@ -450,6 +458,9 @@ namespace Raven.Server.Documents
         private long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+
+        public long LastCompletedClusterTransactionIndex;
+
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -514,7 +525,10 @@ namespace Raven.Server.Documents
         public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> ExecuteClusterTransaction(TransactionOperationContext context, int batchSize)
         {
             var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
-                ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: batchSize));
+                ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, lastCompletedClusterTransactionIndex: LastCompletedClusterTransactionIndex,take: batchSize));
+
+            // Console.WriteLine($"* {Name}   LastCompletedClusterTransactionIndex={LastCompletedClusterTransactionIndex} batchSize={batchSize} batch.Count={batch.Count}");
+            ServerStore.ForTestingPurposes?.BeforeExecuteClusterTransaction?.Invoke(Name, LastCompletedClusterTransactionIndex, batch.Count);
 
             Stopwatch stopwatch = null;
             if (_logger.IsInfoEnabled)
@@ -648,6 +662,9 @@ namespace Raven.Server.Documents
                         IndexTask = indexTask,
                     };
                     ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
+
+                    ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
+
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
                     return;
