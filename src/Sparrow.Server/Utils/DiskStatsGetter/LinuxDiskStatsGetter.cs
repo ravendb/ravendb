@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Text;
 using System.IO;
 using System.Runtime.Versioning;
 using System.Text;
@@ -37,9 +38,16 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
             var (major, minor) = GetDiskMajorMinor(path);
 
             var statPath = $"/sys/dev/block/{major}:{minor}/stat";
-            using var reader = File.OpenRead(statPath);
+            Span<byte> buf = stackalloc byte[1024];
+ 
+            var time = DateTime.UtcNow;
+            using (var reader = File.OpenRead(statPath))
+            {
+                var read = reader.Read(buf);
+                buf = buf.Slice(0, read);
+            }
             
-            return ReadParse(reader);
+            return Parse(buf, time, statPath);
         }
         catch (Exception e)
         {
@@ -53,9 +61,10 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
     {
         if (Syscall.stat(path, out var stats) != 0)
         {
+            const int bufferCapacity = 1024;
             var errno = Stdlib.GetLastError();
-            var errorBuilder = new StringBuilder();
-            Syscall.strerror_r(errno, errorBuilder,1024);
+            var errorBuilder = new StringBuilder(bufferCapacity);
+            Syscall.strerror_r(errno, errorBuilder,bufferCapacity);
             errorBuilder.Insert(0, $"Failed to get stat for \"{path}\" : ");
             throw new InvalidOperationException(errorBuilder.ToString());
         }
@@ -72,49 +81,13 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         minor |= (deviceId & 0x00000ffffff00000u) >> 12;
         return (major, minor);
     }
-        
-    private static LinuxDiskStatsRawResult ReadParse(FileStream fileStream)
+     
+    private static LinuxDiskStatsRawResult Parse(Span<byte> content, DateTime time, string statPath)
     {
-        const int maxLongLength = 19;
         const int maxValuesLength = 17;
 
-        Span<char> serializedValue = stackalloc char[maxLongLength];
         Span<long> values = stackalloc long[maxValuesLength];
-
-        var time = DateTime.UtcNow;
-            
-        int valuesIndex = 0;
-        while (fileStream.Position < fileStream.Length && valuesIndex < maxValuesLength)
-        {
-            int readByte = fileStream.ReadByte();
-            if(readByte == -1)
-                //end of file
-                break;
-                
-            var ch = (char)readByte;
-            if (char.IsWhiteSpace(ch))
-                continue;
-
-            var index = 0;
-            while (fileStream.Position < fileStream.Length)
-            {
-                serializedValue[index++] = ch;
-                readByte = fileStream.ReadByte();
-                if(readByte == -1)
-                    //end of file
-                    break;
-                    
-                ch = (char)readByte;
-                if (char.IsWhiteSpace(ch))
-                    break;
-            }
-
-            if (long.TryParse(serializedValue[..index], out var value) == false)
-                throw new InvalidOperationException($"Failed to parse {new string(serializedValue[..index])} to number");
-
-            values[valuesIndex++] = value;
-        }
-
+        int numberOfValues = Parse(content, values);
         /*
          *https://www.kernel.org/doc/Documentation/block/stat.txt
          *https://github.com/sysstat/sysstat/blob/master/iostat.c#L429
@@ -123,14 +96,14 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         int readSectorsIndex;
         int writeSectorsIndex;
         long? queueLength = null;
-        if (valuesIndex >= 11) {
+        if (numberOfValues >= 11) {
             /* Device or partition */
             ioWriteOperationsIndex = 4;
             readSectorsIndex = 2;
             writeSectorsIndex = 6;
             queueLength = values[8];
         }
-        else if (valuesIndex == 4) {
+        else if (numberOfValues == 4) {
             /* Partition without extended statistics */
             ioWriteOperationsIndex = 2;
             readSectorsIndex = 1;
@@ -139,7 +112,7 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         else
         {
             if(Logger.IsInfoEnabled)
-                Logger.Info($"The stats file {fileStream.Name} should contain at least 4 values");
+                Logger.Info($"The stats file {statPath} should contain at least 4 values. File content '{Encoding.UTF8.GetString(content)}'");
             return null;
         }
 
@@ -153,5 +126,29 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
                 
             Time = time
         };
+    }
+
+    private static int Parse(Span<byte> content, Span<long> values)
+    {
+        int valuesIndex = 0;
+        while (content.Length > 0)
+        {
+            var position = 0;
+            while (char.IsWhiteSpace((char)content[position]))
+            {
+                position++;
+                if (position >= content.Length)
+                    return valuesIndex;
+            }
+            content = content.Slice(position);
+
+            if (Utf8Parser.TryParse(content, out long value, out var bytesConsumed) == false)
+                throw new InvalidOperationException($"Failed to parse {Encoding.UTF8.GetString(content)} to number");
+            
+            values[valuesIndex++] = value;
+            content = content.Slice(bytesConsumed);
+        }
+
+        return valuesIndex;
     }
 }
