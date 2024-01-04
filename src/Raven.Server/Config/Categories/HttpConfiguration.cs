@@ -53,7 +53,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting? KeepAlivePingDelay { get; set; }
 
         [Description("Set Kestrel's HTTP2 max streams per connection. This limits the number of concurrent request streams per HTTP/2 connection. Excess streams will be refused.")]
-        [DefaultValue(int.MaxValue)]
+        [DefaultValue(null)]
         [ConfigurationEntry("Http.Http2.MaxStreamsPerConnection", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaxStreamsPerConnection { get; set; }
 
