@@ -247,11 +247,13 @@ namespace Sparrow.Server.Utils
 
         internal static IDiskStatsGetter GetOsDiskUsageCalculator(TimeSpan minInterval)
         {
+#pragma warning disable CA1416
             return PlatformDetails.RunningOnLinux
                 ? new LinuxDiskStatsGetter(minInterval)
-                    : PlatformDetails.RunningOnWindows ?
+                : PlatformDetails.RunningOnWindows ?
                         new WindowsDiskStatsGetter(minInterval)
                         : new NotImplementedDiskStatsGetter();
+#pragma warning restore CA1416
         }
 
         private const uint FILE_READ_EA = 0x0008;
