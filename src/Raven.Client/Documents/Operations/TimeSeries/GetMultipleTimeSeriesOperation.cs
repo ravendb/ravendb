@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public RavenCommand<TimeSeriesDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetMultipleTimeSeriesCommand(_docId, _ranges, _start, _pageSize, _includes);
+            return new GetMultipleTimeSeriesCommand(_docId, _ranges, _start, _pageSize, _includes, _returnFullResults);
         }
 
         internal class GetMultipleTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
