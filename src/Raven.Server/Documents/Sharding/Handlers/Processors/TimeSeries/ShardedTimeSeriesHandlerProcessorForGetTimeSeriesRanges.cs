@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
             };
 
             var requestedRanges = ConvertAndValidateMultipleTimeSeriesParameters(documentId, names, fromList, toList);
-            var cmd = new ShardedGetMultipleTimeSeriesCommand(documentId, requestedRanges, start, pageSize, action);
+            var cmd = new ShardedGetMultipleTimeSeriesCommand(documentId, requestedRanges, start, pageSize, action, returnFullResults);
             cmd.ModifyRequest = r => r.Headers.TryAddWithoutValidation(Constants.Headers.Sharded, "true");
             var rangesResult = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(context, cmd, shardNumber, token);
             
