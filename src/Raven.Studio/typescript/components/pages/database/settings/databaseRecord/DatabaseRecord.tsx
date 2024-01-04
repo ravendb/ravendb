@@ -105,7 +105,7 @@ export default function DatabaseRecord({ db }: NonShardedViewProps) {
         const confirmed = await confirm({
             icon: "database-record",
             actionColor: "warning",
-            title: "You're about to enter the edit mode",
+            title: "You're about to enter edit mode",
             message: <EditModeRiskAlert />,
             confirmText: "I understand the risk and want to proceed",
         });
@@ -272,7 +272,7 @@ function EditModeRiskAlert() {
         <Alert color="warning">
             <Icon icon="warning" />
             Tampering with the Database Record may result in unwanted behavior including loss of the database along with
-            all its data
+            all its data.
         </Alert>
     );
 }
