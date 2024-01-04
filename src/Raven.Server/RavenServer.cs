@@ -1078,7 +1078,7 @@ namespace Raven.Server
 
                 if (Logger.IsOperationsEnabled)
                 {
-                    var source = Configuration.Core.SetupMode == SetupMode.LetsEncrypt ? "Let's Encrypt" : $"executable ({Configuration.Security.CertificateRenewExec} {Configuration.Security.CertificateRenewExecArguments})";
+                    var source = Configuration.Core.SetupMode == SetupMode.LetsEncrypt ? "Let's Encrypt" : $"executable configured by ({RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)})";
                     Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
                 }
                 
@@ -1262,7 +1262,7 @@ namespace Raven.Server
                 
                 if (Logger.IsOperationsEnabled)
                 {
-                    Logger.Operations($"Starting certificate replication. current:\"{Certificate.Certificate.GetBasicCertificateInfo()}\", new:\"{newCertificate.GetBasicCertificateInfo()}\"");
+                    Logger.Operations($"Starting certificate replication. current:'{Certificate.Certificate.GetBasicCertificateInfo()}', new:'{newCertificate.GetBasicCertificateInfo()}'");
                 }
                 
                 // During replacement of a cluster certificate, we must have both the new and the old server certificates registered in the server store.
