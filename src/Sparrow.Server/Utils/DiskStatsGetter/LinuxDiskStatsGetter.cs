@@ -37,17 +37,7 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         {
             var (major, minor) = GetDiskMajorMinor(path);
 
-            var statPath = $"/sys/dev/block/{major}:{minor}/stat";
-            Span<byte> buf = stackalloc byte[1024];
- 
-            var time = DateTime.UtcNow;
-            using (var reader = File.OpenRead(statPath))
-            {
-                var read = reader.Read(buf);
-                buf = buf.Slice(0, read);
-            }
-            
-            return Parse(buf, time, statPath);
+            return ReadParse($"/sys/dev/block/{major}:{minor}/stat");
         }
         catch (Exception e)
         {
@@ -81,13 +71,19 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         minor |= (deviceId & 0x00000ffffff00000u) >> 12;
         return (major, minor);
     }
-     
-    private static LinuxDiskStatsRawResult Parse(Span<byte> content, DateTime time, string statPath)
-    {
-        const int maxValuesLength = 17;
 
-        Span<long> values = stackalloc long[maxValuesLength];
-        int numberOfValues = Parse(content, values);
+    private static LinuxDiskStatsRawResult ReadParse(string statPath)
+    {
+        const int maxNumberOfValues = 11;
+        Span<long> values = stackalloc long[maxNumberOfValues];
+        Span<byte> buffer = stackalloc byte[1024];
+        
+        var readTime = DateTime.UtcNow;
+        var read = ReadAllInto(statPath, buffer);
+        var contents = buffer[..read];
+
+        var numberOfValues = Parse(contents, values);
+
         /*
          *https://www.kernel.org/doc/Documentation/block/stat.txt
          *https://github.com/sysstat/sysstat/blob/master/iostat.c#L429
@@ -96,14 +92,16 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         int readSectorsIndex;
         int writeSectorsIndex;
         long? queueLength = null;
-        if (numberOfValues >= 11) {
+        if (numberOfValues >= maxNumberOfValues)
+        {
             /* Device or partition */
             ioWriteOperationsIndex = 4;
             readSectorsIndex = 2;
             writeSectorsIndex = 6;
             queueLength = values[8];
         }
-        else if (numberOfValues == 4) {
+        else if (numberOfValues == 4)
+        {
             /* Partition without extended statistics */
             ioWriteOperationsIndex = 2;
             readSectorsIndex = 1;
@@ -112,43 +110,60 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         else
         {
             if(Logger.IsInfoEnabled)
-                Logger.Info($"The stats file {statPath} should contain at least 4 values. File content '{Encoding.UTF8.GetString(content)}'");
+                Logger.Info($"The stats file {statPath} should contain at least 4 values. File content '{Encoding.UTF8.GetString(contents)}'");
             return null;
         }
 
         return new LinuxDiskStatsRawResult
         {
-            IoReadOperations = values[0], 
+            IoReadOperations = values[0],
             IoWriteOperations = values[ioWriteOperationsIndex],
             ReadSectors = values[readSectorsIndex],
             WriteSectors = values[writeSectorsIndex],
             QueueLength = queueLength,
-                
-            Time = time
+            Time = readTime
         };
     }
-
+    
+    private static int ReadAllInto(string path, Span<byte> remainedToRead)
+    {
+        using var stream = File.OpenRead(path);
+        int totalRead = 0;
+        while (true)
+        {
+            int read = stream.Read(remainedToRead);
+            remainedToRead = remainedToRead[read..];
+            if (read == 0)
+                return totalRead;
+            totalRead += read;
+        }
+    }
+    
     private static int Parse(Span<byte> content, Span<long> values)
     {
         int valuesIndex = 0;
-        while (content.Length > 0)
+        while (content.IsEmpty == false && valuesIndex < values.Length)
         {
             var position = 0;
-            while (char.IsWhiteSpace((char)content[position]))
+            while (content[position] == (byte)' ')
             {
                 position++;
                 if (position >= content.Length)
                     return valuesIndex;
             }
-            content = content.Slice(position);
-
-            if (Utf8Parser.TryParse(content, out long value, out var bytesConsumed) == false)
+            content = content[position..];
+            if (Utf8Parser.TryParse(content, out long v, out var consumed) == false)
+            {
+                if(content[0] == '\n')
+                    break;
                 throw new InvalidOperationException($"Failed to parse {Encoding.UTF8.GetString(content)} to number");
+            }
             
-            values[valuesIndex++] = value;
-            content = content.Slice(bytesConsumed);
+            content = content[consumed..];
+            values[valuesIndex++] = v;
         }
 
         return valuesIndex;
     }
+    
 }
