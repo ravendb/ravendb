@@ -21,14 +21,18 @@ namespace SlowTests.Monitoring
         [NightlyBuildMultiplatformFact(RavenPlatform.Linux)]
         public async Task LinuxDiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
         {
+#pragma warning disable CA1416
             var diskStatsGetter = new LinuxDiskStatsGetter(TimeSpan.FromMilliseconds(100));
+#pragma warning restore CA1416
             await DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(diskStatsGetter);
         }
         
         [NightlyBuildMultiplatformFact(RavenPlatform.Windows)]
         public async Task WindowsDiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
         {
+#pragma warning disable CA1416
             var diskStatsGetter = new WindowsDiskStatsGetter(TimeSpan.FromMilliseconds(100));
+#pragma warning restore CA1416
             await DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(diskStatsGetter);
         }
 

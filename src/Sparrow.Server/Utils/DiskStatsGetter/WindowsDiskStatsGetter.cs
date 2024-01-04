@@ -12,6 +12,8 @@ namespace Sparrow.Server.Utils.DiskStatsGetter;
 internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResult>
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<WindowsDiskStatsGetter>("Server");
+
+    private const string DiskCategory = "LogicalDisk";
     
     private readonly CountersPerDisk _countersPerDisk = new CountersPerDisk();
         
@@ -40,13 +42,12 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
             ? diffValue / (diffTime / 10000000.0) 
             : diffValue > 0 ? double.PositiveInfinity : double.NegativeInfinity;
     }
-        
 
-    protected override WindowsDiskStatsRawResult GetDiskInfo(string drive)
+    protected override WindowsDiskStatsRawResult GetDiskInfo(string path)
     {
         try
         {
-            var counters = _countersPerDisk.Get(drive);
+            var counters = _countersPerDisk.Get(path);
             if (counters == null)
                 return null;
 
@@ -63,7 +64,7 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
         catch (Exception e)
         {
             if(Logger.IsInfoEnabled)
-                Logger.Info($"Could not get GetDiskInfo for {drive}", e);
+                Logger.Info($"Could not get GetDiskInfo for {path}", e);
             return null;
         }
     }
@@ -72,11 +73,11 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
     {
         public DiskCounters(string drive)
         {
-            ReadIOCounter = new PerformanceCounter("PhysicalDisk", "Disk Reads/sec", drive);
-            WriteIOCounter = new PerformanceCounter("PhysicalDisk", "Disk Writes/sec", drive);
-            ReadThroughput = new PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec", drive);
-            WriteThroughput = new PerformanceCounter("PhysicalDisk", "Disk Write Bytes/sec", drive);
-            DiskQueue = new PerformanceCounter("PhysicalDisk", "Current Disk Queue Length", drive);
+            ReadIOCounter = new PerformanceCounter(DiskCategory, "Disk Reads/sec", drive);
+            WriteIOCounter = new PerformanceCounter(DiskCategory, "Disk Writes/sec", drive);
+            ReadThroughput = new PerformanceCounter(DiskCategory, "Disk Read Bytes/sec", drive);
+            WriteThroughput = new PerformanceCounter(DiskCategory, "Disk Write Bytes/sec", drive);
+            DiskQueue = new PerformanceCounter(DiskCategory, "Current Disk Queue Length", drive);
         }
 
         public PerformanceCounter ReadIOCounter { get; }
@@ -88,7 +89,7 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
         
     private class CountersPerDisk
     {
-        private readonly PerformanceCounterCategory _category = new PerformanceCounterCategory("PhysicalDisk");
+        private readonly PerformanceCounterCategory _category = new PerformanceCounterCategory(DiskCategory);
         private readonly ConcurrentDictionary<string, DiskCounters> _countersPerDisk = new ConcurrentDictionary<string, DiskCounters>();
         public DiskCounters Get(string path)
         {
@@ -97,14 +98,28 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
             {
                 foreach (string name in _category.GetInstanceNames())
                 {
-                    if (name.AsSpan().EndsWith(drive.AsSpan(0, drive.Length - 1), StringComparison.OrdinalIgnoreCase) == false)
+                    //The return value from GetInstanceNames for example can be "C:" while the return value from WindowsGetDriveName is "C:\"
+                    if (drive.StartsWith(name, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
+                    if (Logger.IsOperationsEnabled)
+                    {
+                        Logger.Operations($"{nameof(DiskCounters)} was created for \"{drive}\" (requested for path \"{path}\").");
+                    }
                     counter = _countersPerDisk[path] = new DiskCounters(name);
                     break;
                 }
-            }
 
+                if (counter == null)
+                {
+                    if (Logger.IsOperationsEnabled)
+                    {
+                        Logger.Operations($"Couldn't find instance in {DiskCategory} for \"{drive}\" (requested for path \"{path}\").");
+                    }
+                    _countersPerDisk[path] = null;
+                }
+            }
+            
             return counter;
         }
     }
