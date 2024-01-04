@@ -4,7 +4,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import React from "react";
 
 export default function DatabaseRecordAboutView() {
-    const databaseRecordDocsLink = useRavenLink({ hash: "QRCNKH" });
+    const databaseRecordDocsLink = useRavenLink({ hash: "LJNTFQ" });
 
     return (
         <AboutViewAnchored>
