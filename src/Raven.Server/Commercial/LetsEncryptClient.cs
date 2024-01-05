@@ -74,6 +74,8 @@ namespace Raven.Server.Commercial
         private List<AuthorizationChallenge> _challenges = new List<AuthorizationChallenge>();
         private Order _currentOrder;
 
+        public LetsEncryptClient(string url) : this(url, "directory") {}
+
         public LetsEncryptClient(string url, string directoryPath)
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
