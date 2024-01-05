@@ -42,7 +42,7 @@ namespace SlowTests.Client
                 Assert.Equal(1, changes.Length);
                 Assert.Equal(DocumentsChanges.ChangeType.RemovedField, changes[0].Change);
                 Assert.Equal("Key", changes[0].FieldName);
-                Assert.Equal("Value", changes[0].FieldOldValue); // Note: This should not be null
+                Assert.Equal("Value", changes[0].FieldOldValue?.ToString()); // Note: This should not be null
                 Assert.Equal(null, changes[0].FieldNewValue);
                 Assert.Equal("SomeData", changes[0].FieldPath);
             }
