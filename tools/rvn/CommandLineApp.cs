@@ -145,6 +145,8 @@ namespace rvn
                 var certPath = ConfigureCertPath(cmd);
                 var certPass = ConfigureCertPassword(cmd);
                 var generateHelmValues = ConfigureGenerateValues(cmd);
+                var acmeUrl = ConfigureAcmeUrl(cmd);
+                var acmeDirectoryPath = ConfigureAcmeDirectoryPath(cmd);
 
                 cmd.OnExecuteAsync(async token =>
                 {
@@ -154,6 +156,8 @@ namespace rvn
                     var certPathVal = certPath.Value();
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
                     var generateHelmValuesVal = generateHelmValues.HasValue() ? generateHelmValues.Value() is null ? "values.yaml": generateHelmValues.Value() : null;
+                    var acmeUrlVal = acmeUrl.Value();
+                    var acmeDirectoryPathVal = acmeDirectoryPath.Value();
 
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
@@ -163,6 +167,8 @@ namespace rvn
                         Mode = modeVal,
                         CertificatePath = certPathVal,
                         CertPassword = certPassTuple,
+                        AcmeUrl = acmeUrlVal,
+                        AcmeDirectoryPath = acmeDirectoryPathVal,
                         HelmValuesOutputPath = generateHelmValuesVal,
                         Progress = new SetupProgressAndResult(tuple =>
                         {
@@ -618,6 +624,20 @@ namespace rvn
         {
             var opt = cmd.Option("-m|--mode", "Specify setup mode to use: 'lets-encrypt', 'own-certificate' or 'unsecured'", CommandOptionType.SingleValue);
             opt.DefaultValue = "lets-encrypt";
+            return opt;
+        }
+        
+        private static CommandOption ConfigureAcmeUrl(CommandLineApplication cmd)
+        {
+            var opt = cmd.Option("--acme-url", "Specify acme url to use (default: 'https://acme-v02.api.letsencrypt.org')", CommandOptionType.SingleValue);
+            opt.DefaultValue = "https://acme-v02.api.letsencrypt.org";
+            return opt;
+        }
+        
+        private static CommandOption ConfigureAcmeDirectoryPath(CommandLineApplication cmd)
+        {
+            var opt = cmd.Option("--acme-directory-path", "Specify acme directory path to use (default: 'directory')", CommandOptionType.SingleValue);
+            opt.DefaultValue = "directory";
             return opt;
         }
         

@@ -126,6 +126,7 @@ namespace Raven.Server.Commercial
             
             parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
         }
+
         public override async Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters)
     {
         switch (parameters.Mode)
@@ -139,7 +140,7 @@ namespace Raven.Server.Commercial
             }
             case  "lets-encrypt":
             {
-                return await LetsEncryptSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.RegisterTcpDnsRecords, useProduction: true, parameters.CancellationToken);
+                return await LetsEncryptSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.RegisterTcpDnsRecords, parameters.AcmeUrl, parameters.AcmeDirectoryPath, parameters.CancellationToken);
             }
             default: throw new InvalidOperationException("Invalid mode provided.");
         }
