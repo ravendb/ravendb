@@ -66,6 +66,7 @@ using Sparrow.Logging;
 using Sparrow.Server.Debugging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.DiskStatsGetter;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -1082,6 +1083,12 @@ namespace Raven.Server
                 if (newCertBytes == null)
                     return;
 
+                if (Logger.IsOperationsEnabled)
+                {
+                    var source = Configuration.Core.SetupMode == SetupMode.LetsEncrypt ? "Let's Encrypt" : $"executable configured by ({RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)})";
+                    Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
+                }
+                
                 await StartCertificateReplicationAsync(newCertBytes, false, raftRequestId);
             }
             catch (Exception e)
@@ -1251,12 +1258,20 @@ namespace Raven.Server
                     throw new InvalidOperationException("Failed to load (and validate) the new certificate which was received during the refresh process.", e);
                 }
 
+                if (Certificate.Certificate.Thumbprint == newCertificate.Thumbprint)
+                {
+                    if (Logger.IsOperationsEnabled)
+                    {
+                        Logger.Operations($"The new certificate matches the current one. No further steps needed. {Certificate.Certificate.GetBasicCertificateInfo()}");
+                    }
+                    return;
+                }
+                
                 if (Logger.IsOperationsEnabled)
                 {
-                    var source = string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) ? "Let's Encrypt" : $"executable ({Configuration.Security.CertificateLoadExec} {Configuration.Security.CertificateLoadExecArguments})";
-                    Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
+                    Logger.Operations($"Starting certificate replication. current:'{Certificate.Certificate.GetBasicCertificateInfo()}', new:'{newCertificate.GetBasicCertificateInfo()}'");
                 }
-
+                
                 // During replacement of a cluster certificate, we must have both the new and the old server certificates registered in the server store.
                 // This is needed for trust in the case where a node replaced its own certificate while another node still runs with the old certificate.
                 // Since both nodes use different certificates, they will only trust each other if the certs are registered in the server store.

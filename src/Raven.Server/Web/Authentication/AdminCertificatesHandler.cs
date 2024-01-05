@@ -39,6 +39,8 @@ namespace Raven.Server.Web.Authentication
 {
     public sealed class AdminCertificatesHandler : ServerRequestHandler
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AdminCertificatesHandler>("Server");
+        
         
         public const string HasTwoFactorFieldName = "HasTwoFactor";
         public const string TwoFactorExpirationDate = "TwoFactorExpirationDate";
@@ -1076,7 +1078,10 @@ namespace Raven.Server.Web.Authentication
                             throw new InvalidOperationException("Cannot replace the server certificate. Only a ClusterAdmin can do this.");
 
                         var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
-
+                        if (Logger.IsOperationsEnabled)
+                        {
+                            Logger.Operations("Initiating the replacement of the certificate upon explicit request - '/admin/certificates/replace-cluster-cert'.");
+                        }
                         var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, GetRaftRequestIdFromQuery());
 
                         await Task.WhenAny(replicationTask, timeoutTask);

@@ -52,7 +52,7 @@ public class InitSetupParams
                     "A",
                     new NodeInfo()
                     {
-                        Addresses = new List<string>() { "https://0.0.0.0:0" },
+                        Addresses = new List<string> { "0.0.0.0" },
                         Port = 443,
                         TcpPort = 38888,
                         PublicServerUrl = "https://subdomain.example.com",
@@ -82,7 +82,7 @@ public class InitSetupParams
                     "A",
                     new NodeInfo()
                     {
-                        Addresses = new List<string>() { "https://0.0.0.0:0" },
+                        Addresses = new List<string> { "0.0.0.0" },
                         Port = 443,
                         TcpPort = 38888,
                         PublicServerUrl = "https://your-domain.development.run",
@@ -105,7 +105,7 @@ public class InitSetupParams
                     "A",
                     new NodeInfo()
                     {
-                        Addresses = new List<string>() {"http://0.0.0.0:0"},
+                        Addresses = new List<string> { "0.0.0.0" },
                         Port = 443,
                         TcpPort = 38888,
                     }
