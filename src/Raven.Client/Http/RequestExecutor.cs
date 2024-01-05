@@ -99,7 +99,7 @@ namespace Raven.Client.Http
 
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
 
-        private Timer _updateTopologyTimer;
+        private WeakReferencingTimer _updateTopologyTimer;
 
         protected internal NodeSelector _nodeSelector;
 
@@ -889,7 +889,7 @@ namespace Raven.Client.Http
                 if (_updateTopologyTimer != null)
                     return;
 
-                _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+                _updateTopologyTimer = new WeakReferencingTimer(UpdateTopologyCallback, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
             }
         }
 
@@ -2235,7 +2235,7 @@ namespace Raven.Client.Http
             private readonly RequestExecutor _requestExecutor;
             public readonly int NodeIndex;
             public readonly ServerNode Node;
-            private Timer _timer;
+            private WeakReferencingTimer _timer;
 
             public NodeStatus(RequestExecutor requestExecutor, int nodeIndex, ServerNode node)
             {
@@ -2256,7 +2256,7 @@ namespace Raven.Client.Http
 
             public void StartTimer()
             {
-                _timer = new Timer(TimerCallback, null, _timerPeriod, Timeout.InfiniteTimeSpan);
+                _timer = new WeakReferencingTimer(TimerCallback, null, _timerPeriod, Timeout.InfiniteTimeSpan);
             }
 
             private void TimerCallback(object state)
