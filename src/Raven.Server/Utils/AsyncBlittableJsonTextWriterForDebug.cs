@@ -16,11 +16,11 @@ namespace Raven.Server.Utils
         private bool _isOnlyWrite;
         private readonly AsyncBlittableJsonTextWriter _inner;
 
-        public AsyncBlittableJsonTextWriterForDebug(JsonOperationContext context, ServerStore serverStore, Stream stream, CancellationToken cancellationToken = default)
+        public AsyncBlittableJsonTextWriterForDebug(JsonOperationContext context, ServerStore serverStore, Stream stream)
         {
             _isFirst = true;
             _serverStore = serverStore;
-            _inner = new AsyncBlittableJsonTextWriter(context, stream, cancellationToken: cancellationToken);
+            _inner = new AsyncBlittableJsonTextWriter(context, stream);
         }
 
         public void WriteStartObject()
