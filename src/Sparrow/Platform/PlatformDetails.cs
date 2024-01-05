@@ -18,6 +18,8 @@ namespace Sparrow.Platform
         public static readonly bool RunningOnMacOsx = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         public static readonly bool RunningOnLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+        
+        public static readonly bool RunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
         public static readonly bool CanPrefetch;
         public static readonly bool CanDiscardMemory;

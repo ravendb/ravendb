@@ -1,6 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -83,14 +87,16 @@ namespace SlowTests.Issues
                               "group by Name, Tries[].ResultMessage " +
                               "select Name, Tries[].ResultMessage as ResultMessage, sum(Data.Items[].TotalPrice) as Total";
 
-                    var results = session.Advanced.RawQuery<ResultDifferentPath>(rql).ToList();
+                    var results = HandleQuery<ResultDifferentPath>(store, session, rql);
+                    
                     Assert.Equal(0, results.Count); // expected - wrong rql will produce 0 results
 
                     rql = "from 'Messages' " +
                           "group by Name, Tries[].ResultMessage " +
                           "select Name, Tries[].ResultMessage as ResultMessage, sum(Data[].Items[].TotalPrice) as Total";
 
-                    results = session.Advanced.RawQuery<ResultDifferentPath>(rql).ToList();
+                    results = HandleQuery<ResultDifferentPath>(store, session, rql);
+                    
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Initial", results[0].Name);
                     Assert.Equal("Received", results[0].ResultMessage);
@@ -100,7 +106,7 @@ namespace SlowTests.Issues
                           "group by Name, Data[].Items[].ProductName " +
                           "select Name, Data[].Items[].ProductName as ProductName, sum(Data[].Items[].TotalPrice) as Total";
 
-                    var resultsSamePath = session.Advanced.RawQuery<ResultSamePath>(rql).ToList();
+                    var resultsSamePath = HandleQuery<ResultSamePath>(store, session, rql);
                     Assert.Equal(4, resultsSamePath.Count);
 
                     Assert.True(resultsSamePath.Select(x => x.Name).All(x => x == "Initial"));
@@ -116,7 +122,7 @@ namespace SlowTests.Issues
                           "group by Name, Data[].Items[].ProductName " +
                           "select Name, Data[].Items[].ProductName as ProductName, sum(Data[].Items[].InternalItem.TotalPrice) as Total";
 
-                    resultsSamePath = session.Advanced.RawQuery<ResultSamePath>(rql).ToList();
+                    resultsSamePath = HandleQuery<ResultSamePath>(store, session, rql);
                     Assert.Equal(4, resultsSamePath.Count);
 
                     Assert.True(resultsSamePath.Select(x => x.Name).All(x => x == "Initial"));
@@ -132,7 +138,7 @@ namespace SlowTests.Issues
                           "group by Name, Numbers[] " +
                           "select Name, Numbers[] as OriginalNumber, sum(Numbers) as Total";
 
-                    var numbersResult = session.Advanced.RawQuery<ResultSamePathNumbers>(rql).ToList();
+                    var numbersResult = HandleQuery<ResultSamePathNumbers>(store, session, rql);
                     Assert.Equal(3, numbersResult.Count);
                     Assert.True(numbersResult.Select(x => x.Name).All(x => x == "Initial"));
 
@@ -146,6 +152,32 @@ namespace SlowTests.Issues
             }
         }
 
+        private List<T> HandleQuery<T>(IDocumentStore store, IDocumentSession session, string rql)
+        {
+            try
+            {
+                var results = session.Advanced.RawQuery<T>(rql).ToList();
+                
+                return results;
+            }
+            catch (Exception e)
+            {
+                var indexErrorsList = Indexes.WaitForIndexingErrors(store);
+
+                var sb = new StringBuilder();
+                sb.AppendLine("Indexing errors:");
+
+                foreach (var indexErrors in indexErrorsList)
+                {
+                    foreach (var indexingError in indexErrors.Errors)
+                    {
+                        sb.AppendLine(indexingError.Error);
+                    }
+                }
+                
+                throw new InvalidOperationException(sb.ToString(), e);
+            }
+        }
 
         private class Message
         {
