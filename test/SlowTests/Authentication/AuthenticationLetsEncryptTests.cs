@@ -33,8 +33,11 @@ namespace SlowTests.Authentication
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetPebbleCertificate()
         {
-            var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? "https://localhost:14000/";
-            var acmeDirectory = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_DIRECTORY") ?? "dir";
+            var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
+            var acmeDirectory = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_DIRECTORY") ?? string.Empty;
+
+            Assert.NotEmpty(acmeUrl);
+            Assert.NotEmpty(acmeDirectory);
             
             SetupLocalServer();
             SetupInfo setupInfo = await SetupClusterInfo(acmeUrl, acmeDirectory);
