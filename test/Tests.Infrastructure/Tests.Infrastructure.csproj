@@ -26,8 +26,8 @@
     <PackageReference Include="JunitXml.TestLogger" Version="3.0.134" />
     <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
     <PackageReference Include="xRetry" Version="1.9.0" />
-    <PackageReference Include="xunit" Version="2.6.4" />
-    <PackageReference Include="xunit.runner.utility" Version="2.6.4" />
+    <PackageReference Include="xunit" Version="2.6.5" />
+    <PackageReference Include="xunit.runner.utility" Version="2.6.5" />
     <PackageReference Include="XunitLogger" Version="4.0.991" />
   </ItemGroup>
   <ItemGroup>
