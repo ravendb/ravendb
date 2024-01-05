@@ -18,7 +18,7 @@ namespace Raven.Server.Extensions
 
         public static IDisposable ChangeMaxStatements(this Engine engine, int value)
         {
-            var maxStatements = engine.FindConstraint<MaxStatementsConstraint>();
+            var maxStatements = engine.Constraints.Find<MaxStatementsConstraint>();
             if (maxStatements == null)
                 return null;
 
@@ -41,8 +41,8 @@ namespace Raven.Server.Extensions
             }
             finally
             {
-                engine.ResetCallStack();
-                engine.ResetConstraints();
+                engine.Advanced.ResetCallStack();
+                engine.Constraints.Reset();
             }
         }
 
@@ -54,8 +54,8 @@ namespace Raven.Server.Extensions
             }
             finally
             {
-                engine.ResetCallStack();
-                engine.ResetConstraints();
+                engine.Advanced.ResetCallStack();
+                engine.Constraints.Reset();
             }
         }
 

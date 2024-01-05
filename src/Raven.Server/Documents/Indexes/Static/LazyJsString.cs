@@ -28,7 +28,7 @@ internal sealed class LazyJsString : JsString
         };
     }
 
-    public override bool IsLooselyEqual(JsValue value)
+    protected override bool IsLooselyEqual(JsValue value)
     {
         return value switch
         {

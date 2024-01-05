@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException("sum(doc => doc.fieldName) can only be used with dynamic index");
             }
 
-            if (args[0] is ScriptFunctionInstance sfi)
+            if (args[0] is ScriptFunction sfi)
             {
                 if (sfi.FunctionDeclaration.Body is StaticMemberExpression sme)    
                 {

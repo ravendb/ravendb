@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public sealed class JavaScriptMapOperation
     {
-        public FunctionInstance MapFunc;
+        public Function MapFunc;
 
         public bool HasDynamicReturns;
 
@@ -42,8 +42,8 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 foreach (var item in items)
                 {
-                    _engine.ResetCallStack();
-                    _engine.ResetConstraints();
+                    _engine.Advanced.ResetCallStack();
+                    _engine.Constraints.Reset();
 
                     if (JavaScriptIndexUtils.GetValue(_engine, item, out JsValue jsItem) == false)
                         continue;
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Static
             IFunction theFuncAst;
             switch (MapFunc)
             {
-                case ScriptFunctionInstance sfi:
+                case ScriptFunction sfi:
                     theFuncAst = sfi.FunctionDeclaration;
                     break;
 
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private (FunctionInstance Function, IFunction FunctionAst)? CheckIfSimpleMapExpression(Engine engine, IFunction function)
+        private (Function Function, IFunction FunctionAst)? CheckIfSimpleMapExpression(Engine engine, IFunction function)
         {
             var field = function.TryGetFieldFromSimpleLambdaExpression();
             if (field == null)
@@ -215,9 +215,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 for (uint i = 0; i < MoreArguments.Length; i++)
                 {
-                    var arg = MoreArguments[i].As<FunctionInstance>();
-
-                    if (arg is not ScriptFunctionInstance sfi)
+                    if (MoreArguments[i] is not ScriptFunction sfi)
                         continue;
 
                     var moreFuncAst = sfi.FunctionDeclaration;
@@ -241,10 +239,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 function.Strict,
                 async: false);
 
-            var functionObject = new ScriptFunctionInstance(
+            var functionObject = new ScriptFunction(
                 engine,
                 functionExp,
-                engine.CreateNewDeclarativeEnvironment(),
+                engine.Advanced.CreateDeclarativeEnvironment(),
                 function.Strict
             );
 
