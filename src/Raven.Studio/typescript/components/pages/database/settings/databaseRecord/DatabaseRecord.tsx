@@ -217,7 +217,7 @@ export default function DatabaseRecord({ db }: NonShardedViewProps) {
                                         {!isEditMode && (
                                             <Switch
                                                 type="switch"
-                                                color="secondary"
+                                                color="primary"
                                                 selected={isHideEmptyValues}
                                                 toggleSelection={toggleIsHideEmptyValues}
                                             >
