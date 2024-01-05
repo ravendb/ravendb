@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public sealed class JavaScriptReduceOperation
     {
-        public JavaScriptReduceOperation(ScriptFunctionInstance reduce, ScriptFunctionInstance key, Engine engine, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
+        public JavaScriptReduceOperation(ScriptFunction reduce, ScriptFunction key, Engine engine, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
         {
             Reduce = reduce ?? throw new ArgumentNullException(nameof(reduce));
             Key = key ?? throw new ArgumentNullException(nameof(key));
@@ -156,8 +156,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 foreach (var item in _groupedItems.Values)
                 {
-                    Engine.ResetCallStack();
-                    Engine.ResetConstraints();
+                    Engine.Advanced.ResetCallStack();
+                    Engine.Constraints.Reset();
 
                     _oneItemArray[0] = ConstructGrouping(item);
                     JsValue jsItem;
@@ -289,8 +289,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Engine Engine { get; }
 
-        public ScriptFunctionInstance Reduce { get; }
-        public ScriptFunctionInstance Key { get; }
+        public ScriptFunction Reduce { get; }
+        public ScriptFunction Key { get; }
         public string ReduceString { get; internal set; }
 
         private CompiledIndexField[] _groupByFields;

@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Patch
                 else
                     WriteObjectType(target);
             }
-            else if (obj is FunctionInstance)
+            else if (obj is Function)
                 _writer.WriteValueNull();
             else
                 WriteValueInternal(obj, obj, filterProperties);
