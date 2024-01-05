@@ -128,23 +128,25 @@ namespace Raven.Server.Commercial
         }
 
         public override async Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters)
-    {
-        switch (parameters.Mode)
         {
-            case  "own-certificate":
+            switch (parameters.Mode)
             {
-                var certBytes = await File.ReadAllBytesAsync(parameters.CertificatePath, parameters.CancellationToken);
-                var certBase64 = Convert.ToBase64String(certBytes);
-                Certificate = certBase64;
-                return await OwnCertificateSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.CancellationToken);
+                case "own-certificate":
+                {
+                    var certBytes = await File.ReadAllBytesAsync(parameters.CertificatePath, parameters.CancellationToken);
+                    var certBase64 = Convert.ToBase64String(certBytes);
+                    Certificate = certBase64;
+                    return await OwnCertificateSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.CancellationToken);
+                }
+                case "lets-encrypt":
+                {
+                    return await LetsEncryptSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.RegisterTcpDnsRecords, parameters.AcmeUrl,
+                        parameters.AcmeDirectoryPath, parameters.CancellationToken);
+                }
+                default: throw new InvalidOperationException("Invalid mode provided.");
             }
-            case  "lets-encrypt":
-            {
-                return await LetsEncryptSetupUtils.Setup(parameters.SetupInfo, parameters.Progress, parameters.RegisterTcpDnsRecords, parameters.AcmeUrl, parameters.AcmeDirectoryPath, parameters.CancellationToken);
-            }
-            default: throw new InvalidOperationException("Invalid mode provided.");
         }
-    }
+
         public X509Certificate2 GetX509Certificate()
         {
             try
