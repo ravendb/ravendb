@@ -76,6 +76,8 @@ $base-panel-bg-3: $panel-bg-3;
 
 $well-bg: $body-bg;
 $base-well-bg: $body-bg;
+$pre-bg: $well-bg;
+$ace-gutter-bg: $panel-header-bg;
 
 $primary: $color-5;
 $success: $color-3;
@@ -89,6 +91,14 @@ $link-color: #c072ee;
 $shadow-color: $black;
 
 $hover-filter: brightness(1.2) saturate(1.1);
+
+$token-string: $color-3-1;
+$token-number: $color-2-1;
+$token-boolean: $color-3-3;
+$token-operator: $color-2;
+$token-keyword: $color-5;
+$token-deleted: $color-1;
+$token-important: $color-2-2;
 
 // Blue Theme
 @if $theme == "blue" {
@@ -132,12 +142,34 @@ $hover-filter: brightness(1.2) saturate(1.1);
 
     $well-bg: $gray-200;
     $base-well-bg: $black;
+    $pre-bg: $white;
+    $ace-gutter-bg: $panel-bg-2;
 
     $link-color: $primary;
     $shadow-color: $gray-500;
 
     $hover-filter: brightness(1.03) saturate(1.3);
+
+    $token-string: $color-3-1;
+    $token-number: $color-2-1;
+    $token-boolean: $color-3-3;
+    $token-operator: $color-2;
+    $token-keyword: $color-5;
+    $token-deleted: $color-1;
+    $token-important: $color-2-2;
+
+    $ace-number: $color-1;
+    $ace-keyword: $token-string;
+    $ace-comment: $token-important;
+    $ace-string: $token-string;
+    $ace-regexp: $ace-string;
+    $ace-function: $token-operator;
+    $ace-language: $token-boolean;
+    $ace-character: $token-important;
+    $ace-name: $token-keyword;
+    $ace-constant: $token-operator;
 }
+
 // Light Theme
 @if $theme == "light" {
     $black: #292d3d;
@@ -207,6 +239,8 @@ $hover-filter: brightness(1.2) saturate(1.1);
 
     $well-bg: $gray-300;
     $base-well-bg: $body-bg;
+    $pre-bg: $white;
+    $ace-gutter-bg: $panel-header-bg;
 
     $link-color: $primary;
     $shadow-color: $gray-600;
@@ -285,6 +319,8 @@ $hover-filter: brightness(1.2) saturate(1.1);
 
     $well-bg: $body-bg;
     $base-well-bg: $body-bg;
+    $pre-bg: $well-bg;
+    $ace-gutter-bg: $panel-header-bg;
 
     $success: $color-3;
     $info: $color-4;
@@ -449,6 +485,8 @@ $panel-bg-2-var: var(--panel-bg-2);
 $panel-bg-3-var: var(--panel-bg-3);
 
 $well-bg-var: var(--well-bg);
+$pre-bg-var: var(--pre-bg);
+$ace-gutter-bg-var: var(--ace-gutter-bg);
 $shadow-color-var: var(--shadow-color);
 
 $hover-filter-var: var(--hover-filter);
@@ -467,4 +505,14 @@ $task-colors: (
     "rabbitmq-sink": $color-3-1,
     "backup": $color-4,
     "subscription": $color-4-1,
+) !default;
+
+$tokens: (
+    "string": $color-3-1,
+    "number": $color-1-3,
+    "boolean": $color-3-3,
+    "operator": $color-2,
+    "keyword": $color-5,
+    "deleted": $color-1,
+    "important": $color-2-2,
 ) !default;

@@ -15,7 +15,7 @@ export default function FeatureNotAvailable(props: FeatureNotAvailableProps) {
                 <div className="vstack gap-3">
                     <span>
                         <Badge pill color="faded-warning">
-                            {badgeText ? badgeText : "Feature not available"}
+                            {badgeText ?? "Feature not available"}
                         </Badge>
                     </span>
                     {children}
