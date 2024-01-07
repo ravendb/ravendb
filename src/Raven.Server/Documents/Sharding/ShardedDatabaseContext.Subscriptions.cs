@@ -28,7 +28,6 @@ public partial class ShardedDatabaseContext
 
         protected override void DropSubscriptionConnections(SubscriptionConnectionsStateOrchestrator state, SubscriptionException ex)
         {
-            state.DisposeWorkers();
             foreach (var subscriptionConnection in state.GetConnections())
             {
                 state.DropSingleConnection(subscriptionConnection, ex);

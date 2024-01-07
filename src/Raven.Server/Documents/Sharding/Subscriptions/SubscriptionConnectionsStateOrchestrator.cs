@@ -143,6 +143,7 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
 
     public override async Task HandleConnectionExceptionAsync(OrchestratedSubscriptionConnection connection, Exception e)
     {
+        var t = Task.Run(() => DisposeWorkers(waitForSubscriptionTask: true));
         await base.HandleConnectionExceptionAsync(connection, e);
         if (e is SubscriptionException se and not SubscriptionChangeVectorUpdateConcurrencyException and not SubscriptionInUseException)
         {
@@ -152,15 +153,28 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         {
             DropSubscription(new SubscriptionClosedException("Got unexpected exception, dropping workers connections.", canReconnect: true, e));
         }
+
+        try
+        {
+            await t;
+        }
+        catch (Exception ex) 
+        {
+            // connection is disposed
+            if (connection._logger.IsInfoEnabled)
+            {
+                connection._logger.Info("Got exception while disposing sharded subscription workers", ex);
+            }
+        }
     }
 
     public override void Dispose()
     {
-        DisposeWorkers();
+        DisposeWorkers(waitForSubscriptionTask: false);
         base.Dispose();
     }
 
-    public void DisposeWorkers()
+    public void DisposeWorkers(bool waitForSubscriptionTask)
     {
         var workers = _shardWorkers;
         var connection = _initialConnection;
@@ -180,8 +194,7 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         {
             try
             {
-                // this code can be called from sharded worker itself (AbstractSubscriptionWorker._subscriptionTask)
-                w.Value.Dispose(waitForSubscriptionTask: false);
+                w.Value.Dispose(waitForSubscriptionTask);
             }
             catch
             {

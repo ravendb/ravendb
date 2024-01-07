@@ -943,7 +943,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 case DatabaseDisabledException:
                 case AllTopologyNodesDownException:
-                    AssertLastConnectionFailure();
+                    assertLastConnectionFailure?.Invoke();
                     return (true, _redirectNode);
 
                 case NodeIsPassiveException _:
