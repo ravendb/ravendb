@@ -1265,11 +1265,7 @@ namespace Raven.Server.Web.System
         {
             foreach (var id in unusedIds)
             {
-                if (id.Length != 22)
-                    throw new InvalidOperationException($"Database id '{id}' isn't valid because its length isn't 22.");
-
-                if (IsBase64Id(id)==false)
-                    throw new InvalidOperationException($"Database id '{id}' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String).");
+                ValidateDatabaseId(id);
             }
 
             DatabaseTopology topology;
@@ -1310,16 +1306,25 @@ namespace Raven.Server.Web.System
 
         }
 
-        public static unsafe bool IsBase64Id(string base64)
+        public static unsafe void ValidateDatabaseId(string id)
         {
-            Span<byte> bytes = stackalloc byte[(24/3)*4];
-            char* buffer = stackalloc char[24];
-            fixed (char* str = base64)
+            const int length = 22;
+            const int fixedLength = length + length%4;
+
+            if (id.Length != length)
+                throw new InvalidOperationException($"Database id '{id}' isn't valid because its length ({id.Length}) isn't {length}.");
+
+            Span<byte> bytes = stackalloc byte[(fixedLength / 3) * 4];
+            char* buffer = stackalloc char[fixedLength];
+            fixed (char* str = id)
             {
                 Buffer.MemoryCopy(str, buffer, 24 * sizeof(char), 22 * sizeof(char));
-                buffer[22] = '=';
-                buffer[23] = '=';
-                return Convert.TryFromBase64Chars(new ReadOnlySpan<char>(buffer, 24), bytes, out _);
+                for (int i = length; i < fixedLength; i++)
+                {
+                    buffer[i] = '=';
+                }
+                if (Convert.TryFromBase64Chars(new ReadOnlySpan<char>(buffer, fixedLength), bytes, out _) == false)
+                    throw new InvalidOperationException($"Database id '{id}' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String).");
             }
         }
 
