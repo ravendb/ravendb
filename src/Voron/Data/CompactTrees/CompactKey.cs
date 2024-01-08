@@ -241,7 +241,7 @@ public sealed unsafe class CompactKey : IDisposable
 
         // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
         ref readonly byte kPtr = ref key[0];
-        Unsafe.CopyBlock(ref _storage[sizeof(int)],  in kPtr, (uint)key.Length);
+        //Unsafe.CopyBlock(_storage[sizeof(int)],  in kPtr, (uint)key.Length);
 
         _currentIdx = key.Length + sizeof(int);
 
