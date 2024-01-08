@@ -384,6 +384,8 @@ namespace Raven.Server.Routing
                     }
                 }
 
+                context.Response.Headers[Constants.Headers.ServerVersion] = RavenServerStartup.ServerVersionHeaderValue;
+
                 if (reqCtx.Database != null)
                 {
                     if (tryMatch.Value.DisableOnCpuCreditsExhaustion &&

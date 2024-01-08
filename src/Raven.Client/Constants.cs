@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Raven.Client
 {
     public static class Constants
@@ -57,6 +55,8 @@ namespace Raven.Client
             public const string TransferEncoding = "Transfer-Encoding";
 
             public const string ContentEncoding = "Content-Encoding";
+
+            public const string ContentType = "Content-Type";
 
             public const string ContentLength = "Content-Length";
 

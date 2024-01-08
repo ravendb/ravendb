@@ -190,6 +190,8 @@ namespace Raven.Server
 
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
+                    options.AddServerHeader = false;
+
                     options.AllowSynchronousIO = Configuration.Http.AllowSynchronousIo;
 
                     options.Limits.MaxRequestLineSize = (int)Configuration.Http.MaxRequestLineSize.GetValue(SizeUnit.Bytes);
