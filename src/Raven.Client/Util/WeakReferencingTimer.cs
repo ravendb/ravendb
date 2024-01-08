@@ -20,9 +20,13 @@ internal class WeakReferencingTimer : IDisposable
             Callback = new WeakReference<WeakReferencingTimerCallback>(callback)
         };
 
-        _timer = new Timer(StaticCallback, internalTimerState, dueTime, period);
+        const uint infinite = unchecked((uint)-1); // register the timer but do not activate it yet
 
-        internalTimerState.Timer = _timer;
+        _timer = new Timer(StaticCallback, internalTimerState, infinite, infinite);
+
+        internalTimerState.Timer = _timer; // assign timer instance to the state
+
+        _timer.Change(dueTime, period); // now let's activate the timer
     }
 
     private static void StaticCallback(object state)
@@ -32,13 +36,37 @@ internal class WeakReferencingTimer : IDisposable
 
         if (timerState.State is not null && timerState.State.TryGetTarget(out stateObj) == false)
         {
-            timerState.Timer.Dispose();
+            try
+            {
+                timerState.Timer.Dispose();
+            }
+#pragma warning disable CS0168
+            catch (Exception e)
+#pragma warning restore CS0168
+            {
+#if DEBUG
+                Console.WriteLine($"Disposal of timer instance got an exception:{Environment.NewLine}{e}");
+#endif
+                // ignored
+            }
             return;
         }
 
         if (timerState.Callback.TryGetTarget(out var callback) == false)
         {
-            timerState.Timer.Dispose();
+            try
+            {
+                timerState.Timer.Dispose();
+            }
+#pragma warning disable CS0168
+            catch (Exception e)
+#pragma warning restore CS0168
+            {
+#if DEBUG
+                Console.WriteLine($"Disposal of timer instance got an exception:{Environment.NewLine}{e}");
+#endif
+                // ignored
+            }
             return;
         }
 
@@ -52,13 +80,13 @@ internal class WeakReferencingTimer : IDisposable
         public Timer Timer;
     }
 
-    public void Dispose()
-    {
-        _timer?.Dispose();
-    }
-
     public void Change(TimeSpan dueTime, TimeSpan period)
     {
         _timer?.Change(dueTime, period);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
     }
 }
