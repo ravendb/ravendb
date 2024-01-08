@@ -78,9 +78,9 @@ export default function ConflictResolutionConfigPanel({
                 <RichPanelHeader>
                     <RichPanelInfo>
                         <RichPanelName>
-                            {formValues.collectionName || (
+                            {formValues.collectionName || "Collection name"}
+                            {(initialConfig.isEdited || initialConfig.isNewUnsaved) && (
                                 <>
-                                    Collection name
                                     <span id={unsavedChangesId} className="text-warning">
                                         *
                                     </span>

@@ -172,7 +172,7 @@ function mapToDto(
                 config.name,
                 {
                     Script: config.script,
-                    LastModifiedTime: config.lastModifiedTime,
+                    LastModifiedTime: null,
                 },
             ])
         ),
