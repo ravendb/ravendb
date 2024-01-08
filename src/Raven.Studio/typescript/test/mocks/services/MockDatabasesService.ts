@@ -117,6 +117,14 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         );
     }
 
+    withConflictSolverConfiguration(dto?: Raven.Client.ServerWide.ConflictSolver) {
+        return this.mockResolvedValue(
+            this.mocks.getConflictSolverConfiguration,
+            dto,
+            DatabasesStubs.conflictSolverConfiguration()
+        );
+    }
+
     withDatabaseRecord(dto?: document) {
         return this.mockResolvedValue(this.mocks.getDatabaseRecord, dto, DatabasesStubs.databaseRecord());
     }
