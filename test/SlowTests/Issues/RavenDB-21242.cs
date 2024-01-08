@@ -1,18 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
-using Raven.Server.Monitoring.Snmp;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -66,21 +57,20 @@ namespace SlowTests.Issues
             using (var rawRecord = leader.ServerStore.Cluster.ReadRawDatabaseRecord(context, database))
             {
                 var topology = rawRecord.Topology;
-            
+
                 var cmd = new UpdateUnusedDatabasesOperation(store.Database,
                     new HashSet<string> { topology.DatabaseTopologyIdBase64 }, validate: true);
-            
+
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd));
                 Assert.True(e.InnerException is InvalidOperationException);
                 Assert.Contains($"'DatabaseTopologyIdBase64' ({topology.DatabaseTopologyIdBase64}) cannot be added to the 'unused ids' list (of '{database}')", e.InnerException.Message);
 
                 cmd = new UpdateUnusedDatabasesOperation(store.Database,
                     new HashSet<string> { topology.ClusterTransactionIdBase64 }, validate: true);
-            
+
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd));
                 Assert.True(e.InnerException is InvalidOperationException);
                 Assert.Contains($"'ClusterTransactionIdBase64' ({topology.ClusterTransactionIdBase64}) cannot be added to the 'unused ids' list (of '{database}')", e.InnerException.Message);
-
             }
 
             Assert.True(await WaitForValueAsync(async () =>
@@ -92,21 +82,19 @@ namespace SlowTests.Issues
             await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database,
                 new HashSet<string> { deletedDbId }, validate: true));
 
-
-
             var cmd1 = new UpdateUnusedDatabasesOperation(store.Database,
                 new HashSet<string> { "6ZY2cIMkCEOzFD3CtbdH1@" }, validate: true); // @ is forbidden char
 
             var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd1));
             Assert.True(ex.InnerException is InvalidOperationException);
-            Assert.Contains($"Database id '6ZY2cIMkCEOzFD3CtbdH1@' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String)", ex.InnerException.Message);
+            Assert.Contains("Database ID '6ZY2cIMkCEOzFD3CtbdH1@' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String)", ex.InnerException.Message);
 
             cmd1 = new UpdateUnusedDatabasesOperation(store.Database,
                 new HashSet<string> { "6ZY2cIMkCEOzFD3CtbdH1AAA" }, validate: true);
 
             ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd1));
             Assert.True(ex.InnerException is InvalidOperationException);
-            Assert.Contains($"Database id '6ZY2cIMkCEOzFD3CtbdH1AAA' isn't valid because its length isn't 22", ex.InnerException.Message);
+            Assert.Contains("Database ID '6ZY2cIMkCEOzFD3CtbdH1AAA' isn't valid because its length (24) isn't 22", ex.InnerException.Message);
 
             cmd1 = new UpdateUnusedDatabasesOperation(store.Database,
                 new HashSet<string> { "6ZY2cIMkCEOzFD3CtbdH1+" }, validate: true);
@@ -114,7 +102,7 @@ namespace SlowTests.Issues
             await store.Maintenance.Server.SendAsync(cmd1);
         }
 
-        private async Task<string> GetDbId(RavenServer ravenServer, string database)
+        private static async Task<string> GetDbId(RavenServer ravenServer, string database)
         {
             var db = await ravenServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
             return db.DocumentsStorage.Environment.Base64Id;
