@@ -21,15 +21,14 @@ import {
 import { EmptySet } from "components/common/EmptySet";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 todo("Feature", "Damian", "Remove legacy code");
 todo("Other", "Danielle", "Add Info Hub text");
 
-// TODO report google analitics event
-
 export default function ConflictResolution({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
-    // To separate file
+    const { reportEvent } = useEventsCollector();
     const conflictResolutionDocsLink = useRavenLink({ hash: "QRCNKH" });
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
@@ -49,12 +48,12 @@ export default function ConflictResolution({ db }: NonShardedViewProps) {
         };
     }, [db, dispatch]);
 
-    const asyncSave = useAsyncCallback(
-        () => databasesService.saveConflictSolverConfiguration(db, mapToDto(isResolveToLatest, collectionConfigs)),
-        {
-            onSuccess: () => dispatch(conflictResolutionActions.saveAll()),
-        }
-    );
+    const asyncSave = useAsyncCallback(async () => {
+        reportEvent("conflict-resolution", "save");
+
+        await databasesService.saveConflictSolverConfiguration(db, mapToDto(isResolveToLatest, collectionConfigs));
+        dispatch(conflictResolutionActions.saveAll());
+    });
 
     if (loadStatus === "failure") {
         return (
