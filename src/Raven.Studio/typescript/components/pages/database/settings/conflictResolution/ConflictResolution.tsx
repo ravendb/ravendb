@@ -1,12 +1,11 @@
 ﻿import React, { useEffect } from "react";
 import { Button, Card, CardBody, Col, Row, UncontrolledTooltip } from "reactstrap";
-import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
+import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { todo } from "common/developmentHelper";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { NonShardedViewProps } from "components/models/common";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import { useRavenLink } from "components/hooks/useRavenLink";
 import { HrHeader } from "components/common/HrHeader";
 import ConflictResolutionConfigPanel from "components/pages/database/settings/conflictResolution/ConflictResolutionConfigPanel";
 import { Switch } from "components/common/Checkbox";
@@ -22,14 +21,13 @@ import { EmptySet } from "components/common/EmptySet";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import ConflictResolutionAboutView from "./ConflictResolutionAboutView";
 
 todo("Feature", "Damian", "Remove legacy code");
-todo("Other", "Danielle", "Add Info Hub text");
 
 export default function ConflictResolution({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
-    const conflictResolutionDocsLink = useRavenLink({ hash: "QRCNKH" });
     const isDatabaseAdmin =
         useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
@@ -139,22 +137,7 @@ export default function ConflictResolution({ db }: NonShardedViewProps) {
                 </LazyLoad>
             </Col>
             <Col sm={12} lg={4}>
-                <AboutViewAnchored>
-                    <AccordionItemWrapper
-                        targetId="1"
-                        icon="about"
-                        color="info"
-                        description="Get additional info on this feature"
-                        heading="About this view"
-                    >
-                        <p>Text for Conflicts Resolution</p>
-                        <hr />
-                        <div className="small-label mb-2">useful links</div>
-                        <a href={conflictResolutionDocsLink} target="_blank">
-                            <Icon icon="newtab" /> Docs - Conflict Resolution
-                        </a>
-                    </AccordionItemWrapper>
-                </AboutViewAnchored>
+                <ConflictResolutionAboutView />
             </Col>
         </Row>
     );
