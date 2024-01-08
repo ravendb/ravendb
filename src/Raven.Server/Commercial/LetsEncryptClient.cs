@@ -74,12 +74,12 @@ namespace Raven.Server.Commercial
         private List<AuthorizationChallenge> _challenges = new List<AuthorizationChallenge>();
         private Order _currentOrder;
 
-        public LetsEncryptClient(string url) : this(url, "directory") {}
-
-        public LetsEncryptClient(string url, string directoryPath)
+        public LetsEncryptClient(string url)
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
-            _directoryPath = directoryPath ?? throw new ArgumentNullException(nameof(directoryPath));
+            _directoryPath = new Uri(_url).LocalPath.TrimStart('/');
+            if(string.IsNullOrEmpty(_directoryPath))
+                throw new ArgumentNullException(nameof(_directoryPath), "Url does not contain directory path");
 
             var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
                 Environment.SpecialFolderOption.Create);

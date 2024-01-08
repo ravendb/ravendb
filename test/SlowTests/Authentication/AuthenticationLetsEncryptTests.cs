@@ -34,15 +34,13 @@ namespace SlowTests.Authentication
         public async Task CanGetPebbleCertificate()
         {
             var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
-            var acmeDirectory = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_DIRECTORY") ?? string.Empty;
 
             Assert.NotEmpty(acmeUrl);
-            Assert.NotEmpty(acmeDirectory);
             
             SetupLocalServer();
-            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl, acmeDirectory);
+            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
 
-            await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl, acmeDirectory);
+            await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
 
             Server.Dispose();
         }
@@ -50,13 +48,12 @@ namespace SlowTests.Authentication
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
-            var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/";
-            var acmeDirectory = "directory";
+            var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
             
             SetupLocalServer();
-            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl, acmeDirectory);
+            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
 
-            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl, acmeDirectory);
+            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
             var firstServerCertThumbprint = serverCert.Thumbprint;
             Server.Dispose();
 
@@ -73,7 +70,7 @@ namespace SlowTests.Authentication
             UseNewLocalServer(customConfigPath: settingPath);
         }
 
-        private async Task<X509Certificate2> GetCertificateFromLetsEncrypt(SetupInfo setupInfo, string acmeUrl, string acmeDirectory)
+        private async Task<X509Certificate2> GetCertificateFromLetsEncrypt(SetupInfo setupInfo, string acmeUrl)
         {
             X509Certificate2 serverCert;
             using (var store = GetDocumentStore())
@@ -122,8 +119,7 @@ namespace SlowTests.Authentication
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl,
                     [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                     [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
-                    [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeUrl,
-                    [RavenConfiguration.GetKey(x => x.Core.AcmeDirectoryPath)] = acmeDirectory,
+                    [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeUrl
                 };
 
                 DoNotReuseServer(customSettings);
@@ -176,10 +172,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        private async Task<SetupInfo> SetupClusterInfo(string acmeUrl, string acmeDirectory)
+        private async Task<SetupInfo> SetupClusterInfo(string acmeUrl)
         {
             Server.Configuration.Core.AcmeUrl = acmeUrl;
-            Server.Configuration.Core.AcmeDirectoryPath = acmeDirectory;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
 
             var domain = "RavenClusterTest" + Environment.MachineName.Replace("-", "");

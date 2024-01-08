@@ -76,14 +76,9 @@ namespace Raven.Server.Config.Categories
         public string SetupResultingServerCertificatePath { get; set; }
 
         [Description("The URLs which the server should contact when requesting certificates with the ACME protocol.")]
-        [DefaultValue("https://acme-v02.api.letsencrypt.org")]
+        [DefaultValue("https://acme-v02.api.letsencrypt.org/directory")]
         [ConfigurationEntry("AcmeUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string AcmeUrl { get; set; }
-
-        [Description("The ACME URL path which the server should contact when requesting directories with the ACME protocol.")]
-        [DefaultValue("directory")]
-        [ConfigurationEntry("AcmeDirectoryPath", ConfigurationEntryScope.ServerWideOnly)]
-        public string AcmeDirectoryPath { get; set; }
         
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
