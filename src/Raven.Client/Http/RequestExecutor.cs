@@ -2132,7 +2132,7 @@ namespace Raven.Client.Http
 
             var httpClient = Conventions.CreateHttpClient(httpMessageHandler);
             httpClient.Timeout = GlobalHttpClientTimeout;
-            httpClient.DefaultRequestVersion = HttpVersion.Version20;
+
             return httpClient;
         }
 

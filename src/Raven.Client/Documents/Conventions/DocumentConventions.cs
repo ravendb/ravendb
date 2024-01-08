@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Conventions
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
 #if NETCOREAPP
-        internal static HttpVersionPolicy? DefaultHttpVersionPolicy;
+        internal static HttpVersionPolicy? DefaultHttpVersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionOrHigher;
 
         internal static TimeSpan? DefaultHttpPooledConnectionIdleTimeout;
 #endif
@@ -57,7 +57,6 @@ namespace Raven.Client.Documents.Conventions
 #if NETCOREAPP3_1_OR_GREATER
             HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19),
             HttpVersion = System.Net.HttpVersion.Version20,
-            //HttpVersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionExact,
 #endif
             DisposeCertificate = false,
             DisableTopologyCache = true
