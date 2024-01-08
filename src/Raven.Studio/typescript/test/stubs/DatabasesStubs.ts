@@ -398,6 +398,36 @@ export class DatabasesStubs {
         };
     }
 
+    static conflictSolverConfiguration(): Raven.Client.ServerWide.ConflictSolver {
+        return {
+            ResolveByCollection: {
+                Categories: {
+                    Script: `
+var maxRecord = 0;
+for (var i = 0; i < docs.length; i++) {
+    maxRecord = Math.max(docs[i].MaxRecord, maxRecord);   
+}
+docs[0].MaxRecord = maxRecord;
+
+return docs[0];`,
+                    LastModifiedTime: "2024-01-03T12:13:16.7455603Z",
+                },
+                Shippers: {
+                    Script: `
+var maxPrice = 0;
+for (var i = 0; i < docs.length; i++) {
+    maxPrice = Math.max(docs[i].PricePerUnit, maxPrice);   
+}
+docs[0].PricePerUnit = maxPrice;
+
+return docs[0];`,
+                    LastModifiedTime: "2024-01-04T12:13:16.7455603Z",
+                },
+            },
+            ResolveToLatest: true,
+        };
+    }
+
     static databaseRecord(): document {
         return new document({
             DatabaseName: "drec",
