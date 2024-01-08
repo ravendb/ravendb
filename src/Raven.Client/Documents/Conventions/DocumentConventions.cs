@@ -56,6 +56,7 @@ namespace Raven.Client.Documents.Conventions
             MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes),
 #if NETCOREAPP3_1_OR_GREATER
             HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19),
+            HttpVersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionExact,
 #endif
             DisposeCertificate = false,
             DisableTopologyCache = true
