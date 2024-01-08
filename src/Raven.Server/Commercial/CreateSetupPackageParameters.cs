@@ -18,6 +18,5 @@ public class CreateSetupPackageParameters
     public SetupProgressAndResult Progress;
     public bool RegisterTcpDnsRecords;
     public string AcmeUrl;
-    public string AcmeDirectoryPath;
     public CancellationToken CancellationToken;
 }

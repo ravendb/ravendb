@@ -369,7 +369,6 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         },
             false,
             StagingAcmeClientUrl,
-            AcmeDirectoryPath,
             CancellationToken.None);
 
         X509Certificate2 serverCert;
@@ -507,7 +506,6 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         },
             false,
             StagingAcmeClientUrl,
-            AcmeDirectoryPath,
             CancellationToken.None);
 
         X509Certificate2 serverCert;
@@ -669,7 +667,5 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
     }
 
-    private const string StagingAcmeClientUrl = "https://acme-staging-v02.api.letsencrypt.org";
-    private const string AcmeDirectoryPath = "directory";
-
+    private const string StagingAcmeClientUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
 }
