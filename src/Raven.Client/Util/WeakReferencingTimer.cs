@@ -14,10 +14,13 @@ internal class WeakReferencingTimer : IDisposable
         if (callback == null)
             throw new ArgumentNullException(nameof(callback));
 
+        if (callback.Method.IsStatic == false)
+            throw new ArgumentException("Callback is supposed to be a static method", nameof(callback));
+
         var internalTimerState = new TimerState
         {
             State = state is not null ? new WeakReference<object>(state) : null,
-            Callback = new WeakReference<WeakReferencingTimerCallback>(callback)
+            Callback = callback
         };
 
         const uint infinite = unchecked((uint)-1); // register the timer but do not activate it yet
@@ -52,31 +55,13 @@ internal class WeakReferencingTimer : IDisposable
             return;
         }
 
-        if (timerState.Callback.TryGetTarget(out var callback) == false)
-        {
-            try
-            {
-                timerState.Timer.Dispose();
-            }
-#pragma warning disable CS0168
-            catch (Exception e)
-#pragma warning restore CS0168
-            {
-#if DEBUG
-                Console.WriteLine($"Disposal of timer instance got an exception:{Environment.NewLine}{e}");
-#endif
-                // ignored
-            }
-            return;
-        }
-
-        callback(stateObj);
+        timerState.Callback(stateObj);
     }
 
     private class TimerState
     {
         public WeakReference<object> State;
-        public WeakReference<WeakReferencingTimerCallback> Callback;
+        public WeakReferencingTimerCallback Callback;
         public Timer Timer;
     }
 
