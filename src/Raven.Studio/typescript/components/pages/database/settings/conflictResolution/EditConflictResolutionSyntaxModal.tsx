@@ -19,7 +19,7 @@ export function EditConflictResolutionSyntaxModal({ toggle }: EditConflictResolu
                     <Code code={conflictedDocument2} language="json" />
                 </div>
                 <h5 className="mb-1">Script</h5>
-                <Code code={script} language="javascript" hasCopyToClipboard elementToCopy={script} className="mb-3" />
+                <Code code={script} language="javascript" elementToCopy={script} className="mb-3" />
                 <h5 className="mb-1">Conflict resolution result</h5>
                 <Code code={result} language="json" />
             </ModalBody>

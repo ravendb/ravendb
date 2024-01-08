@@ -1,4 +1,4 @@
-import React, { ReactNode, useMemo } from "react";
+import React, { useMemo } from "react";
 import Prism from "prismjs";
 import "./Code.scss";
 import copyToClipboard from "common/copyToClipboard";
@@ -30,16 +30,15 @@ interface CodeProps {
     code: string;
     language: Language;
     className?: string;
-    hasCopyToClipboard?: boolean;
     elementToCopy?: string;
 }
 
-export default function Code({ code, language, className, hasCopyToClipboard, elementToCopy }: CodeProps) {
+export default function Code({ code, language, className, elementToCopy }: CodeProps) {
     const html = useMemo(() => Prism.highlight(code, Prism.languages[language], language), [code, language]);
 
     return (
         <div className={classNames("code d-flex flex-grow-1 position-relative", className)}>
-            {hasCopyToClipboard && (
+            {elementToCopy && (
                 <Button
                     className="rounded-pill position-absolute end-gutter-xs top-gutter-xs"
                     size="xs"
