@@ -2,7 +2,6 @@
 import { Button, Card, CardBody, Col, Row, UncontrolledTooltip } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { todo } from "common/developmentHelper";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { NonShardedViewProps } from "components/models/common";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
@@ -22,8 +21,6 @@ import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import ConflictResolutionAboutView from "./ConflictResolutionAboutView";
-
-todo("Feature", "Damian", "Remove legacy code");
 
 export default function ConflictResolution({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
