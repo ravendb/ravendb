@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries.Timings;
@@ -156,6 +157,10 @@ namespace Raven.Server
             $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrls) } setting value."
         };
 
+        private static readonly StringValues ContentTypeHeaderValue = "application/json; charset=utf-8";
+
+        internal static readonly StringValues ServerVersionHeaderValue = RavenVersionAttribute.Instance.AssemblyVersion;
+
         private async Task RequestHandler(HttpContext context)
         {
             var requestHandlerContext = new RequestHandlerContext
@@ -168,8 +173,7 @@ namespace Raven.Server
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
-                context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.AssemblyVersion;
+                context.Response.Headers[Constants.Headers.ContentType] = ContentTypeHeaderValue;
 
                 if (_server.ServerStore.Initialized == false)
                     await _server.ServerStore.InitializationCompleted.WaitAsync();
