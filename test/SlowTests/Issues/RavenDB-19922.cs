@@ -19,9 +19,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.BackupExportImport)]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         [InlineData(BackupType.Backup)]
-        public async Task DoNotChangeResponsibleNode(BackupType backupType)
+        public async Task DoNotChangeResponsibleNode()
         {
             DoNotReuseServer();
 
@@ -54,7 +54,7 @@ namespace SlowTests.Issues
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 Assert.NotNull(database);
 
-                var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, store, opStatus: OperationStatus.InProgress);
 
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId);
@@ -76,14 +76,13 @@ namespace SlowTests.Issues
                     return tag1.Equals(tag2);
                 },false);
 
-
                 Assert.Equal(tag1, tag2);
             }
         }
 
-        [RavenTheory(RavenTestCategory.BackupExportImport)]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         [InlineData(BackupType.Backup)]
-        public async Task ChangeResponsibleNode(BackupType backupType)
+        public async Task ChangeResponsibleNode()
         {
             DoNotReuseServer();
 
@@ -97,7 +96,7 @@ namespace SlowTests.Issues
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "0",
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNode)] = "1"
+                [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNodeGracePeriod)] = "1"
             };
 
             var (nodes, leaderServer) = await CreateRaftCluster(clusterSize, customSettings: settings);
@@ -117,7 +116,7 @@ namespace SlowTests.Issues
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 Assert.NotNull(database);
 
-                var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, store, opStatus: OperationStatus.InProgress);
 
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId);
