@@ -940,7 +940,7 @@ namespace Raven.Client.Http
                 if (_updateTopologyTimer != null)
                     return;
 
-                _updateTopologyTimer = new WeakReferencingTimer(UpdateTopologyCallback, this, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+                _updateTopologyTimer = new WeakReferencingTimer(UpdateTopologyCallback, this, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
             }
         }
 

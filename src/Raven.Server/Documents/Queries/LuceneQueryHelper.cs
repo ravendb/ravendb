@@ -249,7 +249,8 @@ namespace Raven.Server.Documents.Queries
             {
                 case LuceneTermType.Double:
                 case LuceneTermType.Long:
-                    return value;
+                    // In the case of a nullable numeric value, we have to match it via NULL_VALUE.
+                    return value ?? Constants.Documents.Indexing.Fields.NullValue;
                 default:
                     {
                         if (value == null)
