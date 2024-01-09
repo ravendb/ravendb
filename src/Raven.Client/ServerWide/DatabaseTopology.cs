@@ -462,6 +462,11 @@ namespace Raven.Client.ServerWide
             if (lastResponsibleNode != null)
                 return lastResponsibleNode;
 
+            return FindNewResponsibleNodeForTask(task);
+        }
+
+        internal string FindNewResponsibleNodeForTask(IDatabaseTask task)
+        {
             var topology = new List<string>(Members);
             topology.AddRange(Promotables);
             topology.AddRange(Rehabs);

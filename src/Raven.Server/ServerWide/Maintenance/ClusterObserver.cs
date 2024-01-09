@@ -16,6 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
@@ -324,19 +325,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                         }
 
-                        foreach (var configuration in rawRecord.PeriodicBackups)
-                        {
-                            var responsibleNodeInfo = GetResponsibleNodeInfo(database, configuration, state.DatabaseTopology, context);
-                            if (responsibleNodeInfo == null)
-                                continue;
-
-                            var command = new UpdateResponsibleNodeForTaskCommand(database, RaftIdGenerator.NewId())
-                            {
-                                ResponsibleNodeInfo = responsibleNodeInfo
-                            };
-
-                            responsibleNodeCommands.Add(command);
-                        }
+                        UpdateResponsibleNodeForBackup(rawRecord, database, state, context, responsibleNodeCommands);
                     }
                 }
             }
@@ -435,133 +424,133 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
+        private void UpdateResponsibleNodeForBackup(RawDatabaseRecord rawRecord, string databaseName, 
+            DatabaseObservationState state, TransactionOperationContext context,
+            List<UpdateResponsibleNodeForTaskCommand> responsibleNodeCommands)
+        {
+            var currentLeader = _engine.CurrentLeader;
+            if (currentLeader == null)
+                return;
+
+            // we must verify that all connected nodes are supporting the UpdateResponsibleNodeForTaskCommand command
+            foreach (var version in currentLeader.PeersVersion.Values)
+            {
+                if (version < UpdateResponsibleNodeForTaskCommand.CommandVersion)
+                {
+                    // the command isn't supported
+                    return;
+                }
+            }
+
+            var moveToNewResponsibleNodeGracePeriodConfig = (TimeSetting)RavenConfiguration.GetValue(x => x.Backup.MoveToNewResponsibleNodeGracePeriod, _server.Configuration, rawRecord.Settings);
+            var moveToNewResponsibleNodeGracePeriod = moveToNewResponsibleNodeGracePeriodConfig.AsTimeSpan;
+
+            foreach (var configuration in rawRecord.PeriodicBackups)
+            {
+                var responsibleNodeInfo = GetResponsibleNodeInfo(databaseName, configuration, state.DatabaseTopology, moveToNewResponsibleNodeGracePeriod, context);
+                if (responsibleNodeInfo == null)
+                    continue;
+
+                var command = new UpdateResponsibleNodeForTaskCommand(databaseName, RaftIdGenerator.NewId()) { ResponsibleNodeInfo = responsibleNodeInfo };
+
+                responsibleNodeCommands.Add(command);
+            }
+        }
+
         private ResponsibleNodeInfo GetResponsibleNodeInfo(
             string databaseName,
             PeriodicBackupConfiguration configuration,
             DatabaseTopology topology,
+            TimeSpan moveToNewResponsibleNodeGracePeriod,
             TransactionOperationContext context)
         {
-            var backupStatus = BackupUtils.GetBackupStatusFromCluster(_server, context, databaseName, configuration.TaskId);
             var responsibleNodeBlittable = BackupUtils.GetResponsibleNodeInfoFromCluster(_server, context, databaseName, configuration.TaskId);
             string currentResponsibleNode = null;
             responsibleNodeBlittable?.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out currentResponsibleNode);
 
-            var newResponsibleNode = topology.WhoseTaskIsIt(_server.Engine.CurrentState, configuration,
-                getLastResponsibleNode: () =>
-                {
-                    var lastResponsibleNode = currentResponsibleNode ?? backupStatus?.NodeTag;
-                    if (lastResponsibleNode == null)
-                    {
-                        // first time this task is assigned
-                        return null;
-                    }
-
-                    if (topology.AllNodes.Contains(lastResponsibleNode) == false)
-                    {
-                        // the topology doesn't include the last responsible node anymore
-                        // we'll choose a different one
-                        return null;
-                    }
-
-                    if (topology.Rehabs.Contains(lastResponsibleNode) &&
-                        topology.PromotablesStatus.TryGetValue(lastResponsibleNode, out var status) &&
-                        (status == DatabasePromotionStatus.OutOfCpuCredits ||
-                         status == DatabasePromotionStatus.EarlyOutOfMemory ||
-                         status == DatabasePromotionStatus.HighDirtyMemory))
-                    {
-                        // avoid moving backup tasks when the machine is out of CPU credits or out of memory
-                        return lastResponsibleNode;
-                    }
-
-                    if (topology.Members.Contains(lastResponsibleNode))
-                    {
-                        // keep the task on the original node
-                        return lastResponsibleNode;
-                    }
-
-                    if (_server.LicenseManager.HasHighlyAvailableTasks() == false)
-                    {
-                        // can't redistribute, keep it on the original node
-                        BackupUtils.RaiseAlertIfNecessary(topology, configuration, lastResponsibleNode, _server, _server.NotificationCenter);
-                        return lastResponsibleNode;
-                    }
-
-                    return null;
-                });
-
+            var newResponsibleNode = BackupUtils.GetResponsibleNodeForBackup(databaseName, configuration, topology, moveToNewResponsibleNodeGracePeriod, context, currentResponsibleNode, _server);
             if (newResponsibleNode == null)
             {
-                // don't have a responsible node at all. can happen for a new task that didn't ever perform a backup.
+                // didn't find a suitable node for backup
                 return null;
             }
 
-            
-            if (responsibleNodeBlittable == null)
-            {
-                AddToDecisionLog(databaseName, "no responsible node for backup currently exists");
-                // no responsible node for backup currently exists
-                return new ResponsibleNodeInfo
-                {
-                    TaskId = configuration.TaskId,
-                    ResponsibleNode = newResponsibleNode
-                };
-            }
+            DateTime? notSuitableForTaskSince = null;
+            responsibleNodeBlittable?.TryGet(nameof(ResponsibleNodeInfo.NotSuitableForTaskSince), out notSuitableForTaskSince);
 
-            responsibleNodeBlittable.TryGet(nameof(ResponsibleNodeInfo.NotSuitableForTaskSince), out DateTime? notSuitableForTaskSince);
-
-            if (currentResponsibleNode == newResponsibleNode)
+            if (currentResponsibleNode != null && newResponsibleNode.NodeTag == currentResponsibleNode)
             {
-                // it's the same responsible node
-                if (notSuitableForTaskSince != null)
+                if (notSuitableForTaskSince == null)
                 {
-                    AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' is responsible of handling the backup for '{databaseName}'");
-                    // we need to remove the NotSuitableForTaskSince since the node is suitable for backup
-                    return new ResponsibleNodeInfo
-                    {
-                        TaskId = configuration.TaskId,
-                        ResponsibleNode = currentResponsibleNode,
-                        NotSuitableForTaskSince = null
-                    };
+                    // it's the same responsible node for backup, noop
+                    return null;
                 }
 
-                return null;
-            }
+                AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' was in rehab for {DateTime.UtcNow - notSuitableForTaskSince}. " +
+                                               $"Since it's now in a member state, the backup will continue to run on that node");
 
-            if (topology.AllNodes.Contains(currentResponsibleNode) == false)
-            {
-                // the node was removed from the topology, choosing another node without a grace period
-                AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' has been removed frm topology. Node '{newResponsibleNode}' will now be responsible for backing up '{databaseName}'");
-                return new ResponsibleNodeInfo
-                {
-                    TaskId = configuration.TaskId,
-                    ResponsibleNode = newResponsibleNode
-                };
-            }
-
-            if (notSuitableForTaskSince == null)
-            {
-                // it's the first time that we identify that the node isn't suitable for backup
-                AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' not suitable for backing up '{databaseName}' since {DateTime.UtcNow}. ");
+                // we need to remove the NotSuitableForTaskSince since the node is suitable for backup
                 return new ResponsibleNodeInfo
                 {
                     TaskId = configuration.TaskId,
                     ResponsibleNode = currentResponsibleNode,
-                    NotSuitableForTaskSince = DateTime.UtcNow
+                    NotSuitableForTaskSince = null
                 };
             }
 
-            if (DateTime.UtcNow - notSuitableForTaskSince.Value < _server.Configuration.Backup.MoveToNewResponsibleNode.AsTimeSpan)
+            switch (newResponsibleNode.Reason)
             {
-                // grace period before moving the task to another node
-                return null;
-            }
+                case ResponsibleNodeForBackup.ChosenNodeReason.MentorNode:
+                case ResponsibleNodeForBackup.ChosenNodeReason.PinnedMentorNode:
+                case ResponsibleNodeForBackup.ChosenNodeReason.NonExistingResponsibleNode:
+                case ResponsibleNodeForBackup.ChosenNodeReason.CurrentResponsibleNodeRemovedFromTopology:
+                    Debug.Assert(newResponsibleNode.ReasonForDecisionLog != null);
+                    AddToDecisionLog(databaseName, newResponsibleNode.ReasonForDecisionLog);
+                    return new ResponsibleNodeInfo
+                    {
+                        TaskId = configuration.TaskId,
+                        ResponsibleNode = newResponsibleNode.NodeTag
+                    };
 
-            AddToDecisionLog(databaseName, $"Node '{newResponsibleNode}' has taken over the responsibility for backing up  '{databaseName}'");
-            return new ResponsibleNodeInfo
-            {
-                TaskId = configuration.TaskId,
-                ResponsibleNode = newResponsibleNode
-            };
+                case ResponsibleNodeForBackup.ChosenNodeReason.UnchangedResponsibleNode:
+                    // backward compatibility - we have a responsible node (the last which ran the backup)
+                    // but it's the first time that we save it in the storage
+                    return new ResponsibleNodeInfo
+                    {
+                        TaskId = configuration.TaskId,
+                        ResponsibleNode = newResponsibleNode.NodeTag
+                    };
+
+                case ResponsibleNodeForBackup.ChosenNodeReason.CurrentResponsibleNodeNotResponding:
+                    if (notSuitableForTaskSince == null)
+                    {
+                        // it's the first time that we identify that the node isn't suitable for backup
+                        AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' is currently in rehab and cannot be used for backup. " +
+                                                       $"Will move the task to another node in {moveToNewResponsibleNodeGracePeriod}.");
+                        return new ResponsibleNodeInfo
+                        {
+                            TaskId = configuration.TaskId,
+                            ResponsibleNode = currentResponsibleNode,
+                            NotSuitableForTaskSince = DateTime.UtcNow
+                        };
+                    }
+
+                    if (DateTime.UtcNow - notSuitableForTaskSince.Value < moveToNewResponsibleNodeGracePeriod)
+                    {
+                        // grace period before moving the task to another node
+                        return null;
+                    }
+
+                    AddToDecisionLog(databaseName, newResponsibleNode.ReasonForDecisionLog);
+                    return new ResponsibleNodeInfo
+                    {
+                        TaskId = configuration.TaskId,
+                        ResponsibleNode = newResponsibleNode.NodeTag
+                    };
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         private static string GetCommandId(Dictionary<string, long> dic)

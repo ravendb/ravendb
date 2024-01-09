@@ -8,6 +8,8 @@ public class UpdateResponsibleNodeForTaskCommand : UpdateValueForDatabaseCommand
 {
     public ResponsibleNodeInfo ResponsibleNodeInfo;
 
+    public const int CommandVersion = 60_001;
+
     // ReSharper disable once UnusedMember.Local
     private UpdateResponsibleNodeForTaskCommand()
     {

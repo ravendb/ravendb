@@ -140,6 +140,72 @@ internal static class BackupUtils
         };
     }
 
+    internal static ResponsibleNodeForBackup GetResponsibleNodeForBackup(
+        string databaseName,
+        PeriodicBackupConfiguration configuration,
+        DatabaseTopology topology,
+        TimeSpan moveToNewResponsibleNodeGracePeriod,
+        TransactionOperationContext context,
+        string currentResponsibleNode,
+        ServerStore serverStore)
+    {
+        var mentorNode = configuration.GetMentorNode();
+        if (mentorNode != null)
+        {
+            if (topology.Members.Contains(mentorNode))
+            {
+                return new MentorNode(mentorNode);
+            }
+
+            if (topology.AllNodes.Contains(mentorNode) && configuration.IsPinnedToMentorNode())
+            {
+                return new PinnedMentorNode(mentorNode);
+            }
+        }
+
+        var lastResponsibleNode = currentResponsibleNode ??
+                                  // backward compatibility - will continue running the backup on the last node that ran the backup
+                                  GetBackupStatusFromCluster(serverStore, context, databaseName, configuration.TaskId)?.NodeTag;
+
+        if (lastResponsibleNode == null)
+        {
+            // we don't have a responsible node for the backup
+            var newNode = topology.FindNewResponsibleNodeForTask(configuration);
+            return new NonExistingResponsibleNode(newNode);
+        }
+
+        if (topology.AllNodes.Contains(lastResponsibleNode) == false)
+        {
+            // the responsible node for the backup is not in the topology anymore
+            var newNode = topology.FindNewResponsibleNodeForTask(configuration);
+            return new CurrentResponsibleNodeRemovedFromTopology(newNode, lastResponsibleNode);
+        }
+
+        if (topology.Rehabs.Contains(lastResponsibleNode) &&
+            topology.PromotablesStatus.TryGetValue(lastResponsibleNode, out var status) &&
+            (status == DatabasePromotionStatus.OutOfCpuCredits ||
+             status == DatabasePromotionStatus.EarlyOutOfMemory ||
+             status == DatabasePromotionStatus.HighDirtyMemory))
+        {
+            // avoid moving backup tasks when the machine is out of CPU credits or out of memory
+            return new UnchangedResponsibleNode(lastResponsibleNode);
+        }
+
+        if (serverStore.LicenseManager.HasHighlyAvailableTasks() == false)
+        {
+            // can't redistribute, keep it on the original node
+            RaiseAlertIfNecessary(topology, configuration, lastResponsibleNode, serverStore, serverStore.NotificationCenter);
+            return new UnchangedResponsibleNode(lastResponsibleNode);
+        }
+
+        // find a new responsible node
+        var newResponsibleNode = topology.FindNewResponsibleNodeForTask(configuration);
+        if (newResponsibleNode == null)
+            return null;
+
+        return new CurrentResponsibleNodeNotResponding(newResponsibleNode, lastResponsibleNode, moveToNewResponsibleNodeGracePeriod);
+    }
+
     internal static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
     {
         var statusBlittable = serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
@@ -595,7 +661,7 @@ internal static class BackupUtils
         return whoseTaskIsIt;
     }
 
-    public static void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode,
+    private static void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode,
         ServerStore serverStore, NotificationCenter.NotificationCenter notificationCenter)
     {
         // raise alert if redistribution is necessary
