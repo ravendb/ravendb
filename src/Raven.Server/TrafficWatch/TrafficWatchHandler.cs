@@ -9,6 +9,7 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Server.Config;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Web;
@@ -110,7 +111,7 @@ namespace Raven.Server.TrafficWatch
                         jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.HttpMethods, x => x.TrafficWatch.HttpMethods);
                         jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.ChangeTypes, x => x.TrafficWatch.ChangeTypes);
                         jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.CertificateThumbprints, x => x.TrafficWatch.CertificateThumbprints);
-                        await jsonFileModifier.Execute();
+                        await jsonFileModifier.AsyncExecute();
                     }
                     catch (Exception e)
                     {
