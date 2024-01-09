@@ -108,7 +108,7 @@ export default class DatabasesService {
         return new getDatabaseStudioConfigurationCommand(db).execute();
     }
 
-    async saveDatabaseStudioConfiguration(dto: StudioConfiguration, db: database) {
+    async saveDatabaseStudioConfiguration(dto: Partial<StudioConfiguration>, db: database) {
         return new saveDatabaseStudioConfigurationCommand(dto, db).execute();
     }
 

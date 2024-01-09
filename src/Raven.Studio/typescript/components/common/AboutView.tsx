@@ -122,7 +122,14 @@ const AboutViewAnchored = (props: AboutViewProps) => {
 
     return (
         <div className={classNames(className)}>
-            <UncontrolledAccordion className="bs5 about-view-accordion" flush stayOpen defaultOpen={defaultOpen}>
+            <UncontrolledAccordion
+                className="bs5 about-view-accordion"
+                flush
+                stayOpen
+                defaultOpen={defaultOpen}
+                // reactstrap make it required in 9.2.1 but it is not used. Probably will be removed in new version
+                toggle={null}
+            >
                 {children}
             </UncontrolledAccordion>
         </div>
