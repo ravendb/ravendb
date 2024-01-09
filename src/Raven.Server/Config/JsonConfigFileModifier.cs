@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
-using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -30,7 +28,7 @@ public class JsonConfigFileModifier : IDisposable
     public static JsonConfigFileModifier Create(JsonOperationContext context, string path, bool overwriteWholeFile = false)
     {
         var obj = new JsonConfigFileModifier(context, path, overwriteWholeFile);
-        obj.Initial();
+        obj.Initialize();
         return obj;
     }
 
@@ -41,16 +39,16 @@ public class JsonConfigFileModifier : IDisposable
         _overwriteWholeFile = overwriteWholeFile;
     }
 
-    protected void Initial()
+    protected void Initialize()
     {
         _json = ReadBlittableFromFile(_context);
         _json.Modifications = new DynamicJsonValue(_json);
     }
     
-    public async Task Execute()
+    public async Task AsyncExecute()
     {
         var modifiedJsonObj = _context.ReadObject(_json, "modified-settings-json");
-        await PersistConfiguration(modifiedJsonObj);
+        await PersistConfigurationAsync(modifiedJsonObj);
     }
 
     protected virtual void Validate(string path){}
@@ -92,11 +90,15 @@ public class JsonConfigFileModifier : IDisposable
         }
     }
 
-    private static FileStream OpenFile(string path, FileMode fileMode, FileAccess fileAccess)
+    private static FileStream OpenFile(string path, FileMode fileMode, FileAccess fileAccess, FileOptions options = FileOptions.None)
     {
+        //dotnet default in System.IO.FileStream
+        const int defaultBufferSize = 4096;
+        const FileShare defaultShare = FileShare.Read;
+        
         try
         {
-            return SafeFileStream.Create(path, fileMode, fileAccess);
+            return SafeFileStream.Create(path, fileMode, fileAccess, defaultShare, defaultBufferSize, options);
         }
         catch (Exception e) when (e is UnauthorizedAccessException or SecurityException)
         {
@@ -104,11 +106,11 @@ public class JsonConfigFileModifier : IDisposable
         }
     }
 
-    private async Task PersistConfiguration(BlittableJsonReaderObject json)
+    private async Task PersistConfigurationAsync(BlittableJsonReaderObject json)
     {
-        using var tempFile = new TempFile(_path);
+        var tempFile = _path + ".tmp";
 
-        await using (var file = OpenFile(tempFile.Path, FileMode.Create, FileAccess.ReadWrite))
+        await using (var file = OpenFile(tempFile, FileMode.Create, FileAccess.ReadWrite, FileOptions.DeleteOnClose))
         await using (var streamWriter = new StreamWriter(file))
         await using (var writer = new JsonTextWriter(streamWriter))
         await using (var reader = new BlittableJsonReader())
@@ -123,8 +125,8 @@ public class JsonConfigFileModifier : IDisposable
             file.Flush(true);
         }
 
-        Validate(tempFile.Path);
-        SwitchTempWithOriginalAndCreateBackup(tempFile.Path);
+        Validate(tempFile);
+        SwitchTempWithOriginalAndCreateBackup(tempFile);
     }
 
     private void SwitchTempWithOriginalAndCreateBackup(string tempPath)
@@ -149,77 +151,8 @@ public class JsonConfigFileModifier : IDisposable
         }
     }
 
-    private class TempFile : IDisposable
-    {
-        public TempFile(string path)
-        {
-            Path = path + ".tmp";
-        }
-
-        public string Path { get; }
-
-        public void Dispose()
-        {
-            try
-            {
-                File.Delete(Path);
-            }
-            catch
-            {
-                // ignored
-            }
-        }
-    }
-
     public void Dispose()
     {
         _json?.Dispose();
-    }
-}
-
-public class SettingsJsonModifier : JsonConfigFileModifier
-{
-    private SettingsJsonModifier(JsonOperationContext context, string path, bool overwriteWholeFile = false) 
-        : base(context, path, overwriteWholeFile)
-    {
-    }
-
-    public new static SettingsJsonModifier Create(JsonOperationContext context, string path, bool reset = false)
-    {
-        var obj = new SettingsJsonModifier(context, path, reset);
-        obj.Initial();
-        return obj;
-    }
-
-    protected override void Validate(string path)
-    {
-        RavenConfiguration.CreateForTesting("for-validattion", ResourceType.Server, path).Initialize();
-    }
-
-    public void SetOrRemoveIfDefault<T, T1>(T1 value, Expression<Func<RavenConfiguration, T>> getKey)
-    {
-        if (CheckIfDefault(value, RavenConfiguration.GetDefaultValue(getKey)))
-        {
-            DynamicJsonValue.Remove(RavenConfiguration.GetKey(getKey));
-        }
-        else
-        {
-            DynamicJsonValue[RavenConfiguration.GetKey(getKey)] = value;
-        }
-    }
-    
-    public void CollectionSetOrRemoveIfDefault<T, T1>(IEnumerable<T1> value, Expression<Func<RavenConfiguration, T>> getKey)
-    {
-        var listValue = string.Join(';', value);
-        SetOrRemoveIfDefault(listValue, getKey);
-    }
-    
-    private bool CheckIfDefault<T>(T value, object defaultValue)
-    {
-        if (value is long longValue && defaultValue is int intDefaultValue)
-        {
-            return CheckIfDefault(longValue, (long)intDefaultValue);
-        }
-        return value.Equals(defaultValue);
     }
 }
