@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
@@ -18,12 +19,14 @@ namespace Raven.Server.Config;
 
 public class JsonConfigFileModifier : IDisposable
 {
+    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<JsonConfigFileModifier>("Server");
+    
     private readonly JsonOperationContext _context;
     private readonly string _path;
     private readonly bool _overwriteWholeFile;
-    private BlittableJsonReaderObject _json;
+    private BlittableJsonReaderObject _originJson;
 
-    public DynamicJsonValue DynamicJsonValue => _json.Modifications;
+    public DynamicJsonValue Modifications => _originJson.Modifications;
 
     public static JsonConfigFileModifier Create(JsonOperationContext context, string path, bool overwriteWholeFile = false)
     {
@@ -41,13 +44,13 @@ public class JsonConfigFileModifier : IDisposable
 
     protected void Initialize()
     {
-        _json = ReadBlittableFromFile(_context);
-        _json.Modifications = new DynamicJsonValue(_json);
+        _originJson = ReadBlittableFromFile(_context);
+        _originJson.Modifications = new DynamicJsonValue(_originJson);
     }
     
     public async Task AsyncExecute()
     {
-        var modifiedJsonObj = _context.ReadObject(_json, "modified-settings-json");
+        var modifiedJsonObj = _context.ReadObject(_originJson, "modified-settings-json");
         await PersistConfigurationAsync(modifiedJsonObj);
     }
 
@@ -90,15 +93,11 @@ public class JsonConfigFileModifier : IDisposable
         }
     }
 
-    private static FileStream OpenFile(string path, FileMode fileMode, FileAccess fileAccess, FileOptions options = FileOptions.None)
+    private static FileStream OpenFile(string path, FileMode fileMode, FileAccess fileAccess)
     {
-        //dotnet default in System.IO.FileStream
-        const int defaultBufferSize = 4096;
-        const FileShare defaultShare = FileShare.Read;
-        
         try
         {
-            return SafeFileStream.Create(path, fileMode, fileAccess, defaultShare, defaultBufferSize, options);
+            return SafeFileStream.Create(path, fileMode, fileAccess);
         }
         catch (Exception e) when (e is UnauthorizedAccessException or SecurityException)
         {
@@ -110,23 +109,37 @@ public class JsonConfigFileModifier : IDisposable
     {
         var tempFile = _path + ".tmp";
 
-        await using (var file = OpenFile(tempFile, FileMode.Create, FileAccess.ReadWrite, FileOptions.DeleteOnClose))
-        await using (var streamWriter = new StreamWriter(file))
-        await using (var writer = new JsonTextWriter(streamWriter))
-        await using (var reader = new BlittableJsonReader())
+        try
         {
-            writer.Formatting = Formatting.Indented;
-            reader.Initialize(json);
+            await using (var file = OpenFile(tempFile, FileMode.Create, FileAccess.ReadWrite))
+            await using (var streamWriter = new StreamWriter(file))
+            await using (var writer = new JsonTextWriter(streamWriter))
+            await using (var reader = new BlittableJsonReader())
+            {
+                writer.Formatting = Formatting.Indented;
+                reader.Initialize(json);
 
-            await writer.WriteTokenAsync(reader);
-                
-            await writer.FlushAsync();
-            await streamWriter.FlushAsync();
-            file.Flush(true);
+                await writer.WriteTokenAsync(reader);
+
+                await writer.FlushAsync();
+                await streamWriter.FlushAsync();
+                file.Flush(true);
+            }
+
+            Validate(tempFile);
+            SwitchTempWithOriginalAndCreateBackup(tempFile);
         }
-
-        Validate(tempFile);
-        SwitchTempWithOriginalAndCreateBackup(tempFile);
+        finally
+        {
+            try
+            {
+                File.Delete(tempFile);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
     }
 
     private void SwitchTempWithOriginalAndCreateBackup(string tempPath)
@@ -151,8 +164,22 @@ public class JsonConfigFileModifier : IDisposable
         }
     }
 
+    protected bool IsOriginalValue<T>(string key, T value)
+    {
+        if (_originJson.TryGetMember(key, out object result) == false)
+            return false;
+        if(BlittableJsonReaderObject.TryConvertType<T>(result, out var tValue) == false)
+        {
+            if (Logger.IsOperationsEnabled)
+                Logger.Info($"Can't compare {value} of type {value.GetType()} with {result} because {result.GetType()} is not convertable to {value.GetType()}");
+            return false;
+        }
+
+        return value.Equals(tValue);
+    }
+    
     public void Dispose()
     {
-        _json?.Dispose();
+        _originJson?.Dispose();
     }
 }

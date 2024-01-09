@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.TrafficWatch;
@@ -98,6 +100,29 @@ public class ModifyConfigurationTests : RavenTestBase
         Assert.Equal(TimeSpan.FromHours(200), configuration.Logs.RetentionTime.Value.AsTimeSpan);
         Assert.Equal(new Size(600, SizeUnit.Megabytes), configuration.Logs.RetentionSize);
         Assert.Equal(true, configuration.Logs.Compress);
+    }
+
+    [RavenFact(RavenTestCategory.Logging)]
+    public async Task JsonFileModifier_WhenOriginValueSetExplicitlyToDefault_ShouldNotRemoveIt()
+    {
+        var settingJsonPath = NewDataPath();
+        var content = @"
+{
+    ""Logs.RetentionTimeInHrs"":72,
+}";
+        await File.WriteAllTextAsync(settingJsonPath, content);
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
+        {
+            settingJsonModifier.SetOrRemoveIfDefault(72, x => x.Logs.RetentionTime);
+            await settingJsonModifier.AsyncExecute();
+        }
+
+        var modifiedContent = await File.ReadAllTextAsync(settingJsonPath);
+        var json = JsonConvert.DeserializeObject<JObject>(modifiedContent);
+        Assert.True(json.TryGetValue("Logs.RetentionTimeInHrs", out var value));
+        Assert.Equal(72, value.Value<int>());
     }
 
     [RavenFact(RavenTestCategory.Logging)]
