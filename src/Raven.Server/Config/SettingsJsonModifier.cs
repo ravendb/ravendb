@@ -27,13 +27,16 @@ public class SettingsJsonModifier : JsonConfigFileModifier
 
     public void SetOrRemoveIfDefault<T, T1>(T1 value, Expression<Func<RavenConfiguration, T>> getKey)
     {
+        var key = RavenConfiguration.GetKey(getKey);
         if (CheckIfDefault(value, RavenConfiguration.GetDefaultValue(getKey)))
         {
-            DynamicJsonValue.Remove(RavenConfiguration.GetKey(getKey));
+            //We don't want to remove the configuration entry if it was set explicitly to default 
+            if (IsOriginalValue(key, value) == false)
+                Modifications.Remove(key);
         }
         else
         {
-            DynamicJsonValue[RavenConfiguration.GetKey(getKey)] = value;
+            Modifications[key] = value;
         }
     }
     

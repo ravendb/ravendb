@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         using var microsoftConfigModifier = JsonConfigFileModifier.Create(context, ServerStore.Configuration.Logs.MicrosoftLogsConfigurationPath.FullPath, overwriteWholeFile: true);
                         foreach (var (category, logLevel) in Server.GetService<MicrosoftLoggingProvider>().Configuration)
                         {
-                            microsoftConfigModifier.DynamicJsonValue[category] = logLevel;
+                            microsoftConfigModifier.Modifications[category] = logLevel;
                         }
                         await microsoftConfigModifier.AsyncExecute();
 
