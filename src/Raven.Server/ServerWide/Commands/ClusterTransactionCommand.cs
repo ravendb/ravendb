@@ -609,7 +609,11 @@ namespace Raven.Server.ServerWide.Commands
             if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
                 throw new InvalidOperationException($"Got command with no type defined: {command}");
 
-            var result = new DynamicJsonValue { [nameof(ICommandData.Type)] = type, [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow, };
+            var result = new DynamicJsonValue
+            {
+                [nameof(ICommandData.Type)] = type, 
+                [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow,
+            };
 
             switch (type)
             {
@@ -628,7 +632,7 @@ namespace Raven.Server.ServerWide.Commands
                     break;
                 default:
                     throw new InvalidOperationException(
-                        $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.PUT} but got {type}");
+                        $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.DELETE} but got {type}");
             }
 
 
@@ -676,14 +680,6 @@ namespace Raven.Server.ServerWide.Commands
                     size = result.Count - size;
                     SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, command, size);
                 }
-
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-                {
-                    if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
-                        return;
-
-                    clusterTransactionWaiter.TrySetResult(Options.TaskId, Task.CompletedTask);
-                };
             }
             else
             {
