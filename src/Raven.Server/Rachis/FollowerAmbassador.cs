@@ -385,7 +385,7 @@ namespace Raven.Server.Rachis
                                     continue; // instead of waiting, we have new entries, start immediately
 
                                 if (_engine.GetLastCommitIndex(context) != myLastCommittedIndex)
-                                    continue;
+                                    continue; // there is a new committed command, continue to let the leader know immediately
                             }
 
                             // either we have new entries to send, or we waited for long enough 
