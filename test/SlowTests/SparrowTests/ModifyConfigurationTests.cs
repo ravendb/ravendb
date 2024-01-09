@@ -39,7 +39,7 @@ public class ModifyConfigurationTests : RavenTestBase
         using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
             settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
-            await settingJsonModifier.Execute();
+            await settingJsonModifier.AsyncExecute();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -61,7 +61,7 @@ public class ModifyConfigurationTests : RavenTestBase
         using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
             settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
-            await settingJsonModifier.Execute();
+            await settingJsonModifier.AsyncExecute();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -89,7 +89,7 @@ public class ModifyConfigurationTests : RavenTestBase
             settingJsonModifier.SetOrRemoveIfDefault(200, x => x.Logs.RetentionTime);
             settingJsonModifier.SetOrRemoveIfDefault(600, x => x.Logs.RetentionSize);
             settingJsonModifier.SetOrRemoveIfDefault(true, x => x.Logs.Compress);
-            await settingJsonModifier.Execute();
+            await settingJsonModifier.AsyncExecute();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -123,7 +123,7 @@ public class ModifyConfigurationTests : RavenTestBase
             settingJsonModifier.SetOrRemoveIfDefault(200, x => x.Logs.RetentionTime);
             settingJsonModifier.SetOrRemoveIfDefault(600, x => x.Logs.RetentionSize);
             settingJsonModifier.SetOrRemoveIfDefault(true, x => x.Logs.Compress);
-            await settingJsonModifier.Execute();
+            await settingJsonModifier.AsyncExecute();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
