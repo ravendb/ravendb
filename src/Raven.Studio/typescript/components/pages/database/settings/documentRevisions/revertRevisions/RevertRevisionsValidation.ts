@@ -10,4 +10,4 @@ const schema = yup.object({
 });
 
 export const revertRevisionsYupResolver = yupResolver(schema);
-export type RevertRevisionsFormData = Required<yup.InferType<typeof schema>>;
+export type RevertRevisionsFormData = yup.InferType<typeof schema>;
