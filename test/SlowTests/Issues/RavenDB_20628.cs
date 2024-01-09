@@ -30,7 +30,7 @@ namespace SlowTests.Issues
             options.ReplicationFactor = nodes.Count;
             using var store = GetDocumentStore(options);
 
-            await ApplyFailoverAfterCommitAsync(nodes);
+            ApplyFailoverAfterCommit(nodes);
 
             var user1 = new User() { Id = "Users/1-A", Name = "Alice" };
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -52,9 +52,12 @@ namespace SlowTests.Issues
         public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
+
+            options.Server = leader;
+            options.ReplicationFactor = nodes.Count;
             using var store = GetDocumentStore(options);
 
-            await ApplyFailoverAfterCommitAsync(nodes);
+            ApplyFailoverAfterCommit(nodes);
 
             var user1 = new User() { Id = "Users/1-A", Name = "Alice" };
             var user2 = new User() { Id = "Users/2-A", Name = "Bob" };
@@ -93,9 +96,12 @@ namespace SlowTests.Issues
         public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover_UseResults(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
+
+            options.Server = leader;
+            options.ReplicationFactor = nodes.Count;
             using var store = GetDocumentStore(options);
 
-            await ApplyFailoverAfterCommitAsync(nodes);
+            ApplyFailoverAfterCommit(nodes);
 
             var user1 = new User() { Id = "Users/1-A", Name = "Alice" };
             var user2 = new User() { Id = "Users/2-A", Name = "Bob" };
@@ -133,7 +139,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private async Task ApplyFailoverAfterCommitAsync(List<RavenServer> nodes)
+        private void ApplyFailoverAfterCommit(List<RavenServer> nodes)
         {
             int failover = 0;
             foreach (var server in nodes)

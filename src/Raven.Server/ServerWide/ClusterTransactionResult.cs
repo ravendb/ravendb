@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using Sparrow.Json;
+﻿using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
 
 namespace Raven.Server.ServerWide;
 public class ClusterTransactionResult : IDynamicJsonValueConvertible

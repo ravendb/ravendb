@@ -66,13 +66,12 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
         DynamicJsonArray array;
-        object result;
         long index;
 
         using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var onDatabaseCompletionTask))
         {
-            (index, result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-            array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, onDatabaseCompletionTask);
+            (index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+            array = await GetClusterTransactionDatabaseCommandsResults(result, parsedCommands, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask);
         }
 
         foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
@@ -88,9 +87,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         return (index, array);
     }
 
-    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, long databaseCommandsCount, long index, Task<Task> onDatabaseCompletionTask)
+    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, ArraySegment<BatchRequestParser.CommandData> parsedCommands, long databaseCommandsCount, long index, ClusterTransactionOptions options, Task onDatabaseCompletionTask)
     {
-        // old leader returned errors
         if (result is List<ClusterTransactionErrorInfo> errors)
             ThrowClusterTransactionConcurrencyException(errors);
 
@@ -103,19 +101,17 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         {
             using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
             {
-                var indexTask = await WaitForDatabaseCompletion(onDatabaseCompletionTask, index, cts.Token);
-                await indexTask;
+                await WaitForDatabaseCompletion(onDatabaseCompletionTask, index, options, parsedCommands, cts.Token);
             }
 
             return clusterTxResult.GeneratedResult;
         }
 
-        // old leader returned null
         throw new InvalidOperationException(
             "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
     }
 
-    public abstract Task<Task> WaitForDatabaseCompletion(Task<Task> onDatabaseCompletionTask, long index, CancellationToken token);
+    public abstract Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, long index, ClusterTransactionOptions options, ArraySegment<BatchRequestParser.CommandData> parsedCommands, CancellationToken token);
 
     private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionErrorInfo> errors)
     {

@@ -764,22 +764,8 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-                Task indexTask = Task.CompletedTask;
-                if (options.WaitForIndexesTimeout != null)
-                {
-                    try
-                    {
-                        indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
-                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                            mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                    }
-                    catch (Exception e)
-                    {
-                        indexTask = Task.FromException(e);
-                    }
-                }
 
-                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, indexTask);
+                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);

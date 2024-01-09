@@ -8,6 +8,8 @@ using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Sparrow.Json.Parsing;
+using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;
 
@@ -22,14 +24,10 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
 
     protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.DatabaseContext.Configuration.Cluster;
 
-    public override Task<Task> WaitForDatabaseCompletion(Task<Task> onDatabaseCompletionTask, long index, CancellationToken token)
+    public override Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, long index, ClusterTransactionOptions options, ArraySegment<BatchRequestParser.CommandData> parsedCommands, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
 
-        if (onDatabaseCompletionTask.IsCompletedSuccessfully)
-            return onDatabaseCompletionTask;
-
-        // failover
         return Task.FromResult(Task.CompletedTask);
     }
 
