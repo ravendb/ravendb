@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Config;
+using Raven.Server.Exceptions;
 using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         jsonFileModifier.SetOrRemoveIfDefault(retentionSize, x => x.Logs.RetentionSize);
                         jsonFileModifier.SetOrRemoveIfDefault((int)LoggingSource.Instance.RetentionTime.TotalHours, x => x.Logs.RetentionTime);
                         jsonFileModifier.SetOrRemoveIfDefault(LoggingSource.Instance.Compressing, x => x.Logs.Compress);
-                        await jsonFileModifier.Execute();
+                        await jsonFileModifier.AsyncExecute();
                     }
                     catch (Exception e)
                     {
@@ -243,11 +244,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                         {
                             microsoftConfigModifier.DynamicJsonValue[category] = logLevel;
                         }
-                        await microsoftConfigModifier.Execute();
+                        await microsoftConfigModifier.AsyncExecute();
 
                         using var settingJsonConfigModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
                         settingJsonConfigModifier.SetOrRemoveIfDefault(false, x => x.Logs.DisableMicrosoftLogs);
-                        await settingJsonConfigModifier.Execute();
+                        await settingJsonConfigModifier.AsyncExecute();
                     }
                     catch (Exception e)
                     {
