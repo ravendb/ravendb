@@ -3,6 +3,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Server.Config;
+using Raven.Server.Exceptions;
 using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -60,6 +62,25 @@ namespace Raven.Server.Documents.Handlers.Admin
                     configuration.RetentionTime,
                     configuration.RetentionSize?.GetValue(SizeUnit.Bytes),
                     configuration.Compress);
+
+                if (GetBoolValueQueryString("persist", false) == true)
+                {
+                    try
+                    {
+                        using var jsonFileModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
+                        jsonFileModifier.SetOrRemoveIfDefault(LoggingSource.Instance.LogMode, x => x.Logs.Mode);
+                        long? retentionSize = LoggingSource.Instance.RetentionSize == long.MaxValue
+                            ? null : new Size(LoggingSource.Instance.RetentionSize, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+                        jsonFileModifier.SetOrRemoveIfDefault(retentionSize, x => x.Logs.RetentionSize);
+                        jsonFileModifier.SetOrRemoveIfDefault((int)LoggingSource.Instance.RetentionTime.TotalHours, x => x.Logs.RetentionTime);
+                        jsonFileModifier.SetOrRemoveIfDefault(LoggingSource.Instance.Compressing, x => x.Logs.Compress);
+                        await jsonFileModifier.AsyncExecute();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new PersistConfigurationException("The log configuration was modified but couldn't be persisted. The configuration will be reverted on server restart.", e);
+                    }
+                }
             }
 
             NoContentStatus();
@@ -213,6 +234,27 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var provider = Server.GetService<MicrosoftLoggingProvider>();
                 await provider.Configuration.ReadConfigurationAsync(RequestBodyStream(), context, reset);
                 provider.ApplyConfiguration();
+                
+                if (GetBoolValueQueryString("persist", required: false) == true)
+                {
+                    try
+                    {
+                        using var microsoftConfigModifier = JsonConfigFileModifier.Create(context, ServerStore.Configuration.Logs.MicrosoftLogsConfigurationPath.FullPath, overwriteWholeFile: true);
+                        foreach (var (category, logLevel) in Server.GetService<MicrosoftLoggingProvider>().Configuration)
+                        {
+                            microsoftConfigModifier.Modifications[category] = logLevel;
+                        }
+                        await microsoftConfigModifier.AsyncExecute();
+
+                        using var settingJsonConfigModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
+                        settingJsonConfigModifier.SetOrRemoveIfDefault(false, x => x.Logs.DisableMicrosoftLogs);
+                        await settingJsonConfigModifier.AsyncExecute();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new PersistConfigurationException("The Microsoft configuration was modified but couldn't be persisted. The configuration will be reverted on server restart.", e);
+                    }
+                }
             }
 
             NoContentStatus();
