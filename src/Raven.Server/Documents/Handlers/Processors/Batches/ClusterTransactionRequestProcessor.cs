@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
             var database = RequestHandler.Database;
             var lastCompleted = Interlocked.Read(ref database.LastCompletedClusterTransactionIndex);
             if (lastCompleted < index)
-                await onDatabaseCompletionTask;
+                await onDatabaseCompletionTask; // already registered to the token
 
             if (options.WaitForIndexesTimeout.HasValue)
             {
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
 
                 await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(database, options.WaitForIndexesTimeout.Value,
                     options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                    lastDocumentEtag, lastTombstoneEtag, modifiedCollections);
+                    lastDocumentEtag, lastTombstoneEtag, modifiedCollections, token);
             }
         }
 

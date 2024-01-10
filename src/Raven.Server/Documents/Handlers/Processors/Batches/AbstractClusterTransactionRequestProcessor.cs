@@ -39,7 +39,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
     protected abstract ClusterConfiguration GetClusterConfiguration();
 
-    public async ValueTask<(long Index, DynamicJsonArray Results)> ProcessAsync(JsonOperationContext context, TBatchCommand command)
+    public async ValueTask<(long Index, DynamicJsonArray Results)> ProcessAsync(JsonOperationContext context, TBatchCommand command, CancellationToken token)
     {
         ArraySegment<BatchRequestParser.CommandData> parsedCommands = GetParsedCommands(command);
 
@@ -68,10 +68,11 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         DynamicJsonArray array;
         long index;
 
-        using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var onDatabaseCompletionTask))
+        using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var tcs))
+        await using (token.Register(() => tcs.TrySetCanceled()))
         {
             (index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-            array = await GetClusterTransactionDatabaseCommandsResults(result, parsedCommands, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask);
+            array = await GetClusterTransactionDatabaseCommandsResults(result, parsedCommands, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
         }
 
         foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
@@ -87,7 +88,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         return (index, array);
     }
 
-    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, ArraySegment<BatchRequestParser.CommandData> parsedCommands, long databaseCommandsCount, long index, ClusterTransactionOptions options, Task onDatabaseCompletionTask)
+    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, ArraySegment<BatchRequestParser.CommandData> parsedCommands, long databaseCommandsCount, long index, ClusterTransactionOptions options, Task onDatabaseCompletionTask, CancellationToken token)
     {
         if (result is List<ClusterTransactionErrorInfo> errors)
             ThrowClusterTransactionConcurrencyException(errors);
@@ -99,11 +100,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         if (result is ClusterTransactionResult clusterTxResult)
         {
-            using (var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout))
-            {
-                await WaitForDatabaseCompletion(onDatabaseCompletionTask, index, options, parsedCommands, cts.Token);
-            }
-
+            await WaitForDatabaseCompletion(onDatabaseCompletionTask, index, options, parsedCommands, token);
             return clusterTxResult.GeneratedResult;
         }
 

@@ -93,6 +93,12 @@ namespace Sparrow.Server
                 return _tcs.Task;
             }
 
+            public IDisposable Register(CancellationToken token)
+            {
+                var tcs = _tcs;
+                return token.Register(() => tcs.TrySetCanceled());
+            }
+
             [Pure]
             public async Task<bool> WaitAsync(TimeSpan timeout)
             {

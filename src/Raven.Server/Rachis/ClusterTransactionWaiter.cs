@@ -9,9 +9,9 @@ namespace Raven.Server.Rachis
 {
     public sealed class ClusterTransactionWaiter : AsyncWaiter
     {
-        public RemoveTask CreateTask(string id, out Task task)
+        public RemoveTask CreateTask(string id, out TaskCompletionSource tcs)
         {
-            task = _results.GetOrAdd(id, static (key) => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+            tcs = _results.GetOrAdd(id, static (key) => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
             return new RemoveTask(this, id);
         }
     }

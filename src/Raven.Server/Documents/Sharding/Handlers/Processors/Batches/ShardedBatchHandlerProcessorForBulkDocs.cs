@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
@@ -45,10 +46,11 @@ internal sealed class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHan
     }
 
     protected override ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
-        HashSet<string> modifiedCollections)
+        HashSet<string> modifiedCollections, CancellationToken token = default)
     {
         // no-op
         // this is passed as a parameter when we execute transaction on each shard
+        token.ThrowIfCancellationRequested();
         return ValueTask.CompletedTask;
     }
 
