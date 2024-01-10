@@ -14,7 +14,6 @@ import ClientConfigurationUtils from "components/common/clientConfiguration/Clie
 import useClientConfigurationFormController from "components/common/clientConfiguration/useClientConfigurationFormController";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
-import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
@@ -40,7 +39,6 @@ export default function ClientGlobalConfiguration() {
     const loadBalancingDocsLink = useRavenLink({ hash: "GYJ8JA" });
     const clientConfigurationDocsLink = useRavenLink({ hash: "TS7SGF" });
 
-    const popovers = useClientConfigurationPopovers();
     const formValues = useClientConfigurationFormController(control, setValue, true);
 
     useEffect(() => {

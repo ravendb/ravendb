@@ -8,11 +8,11 @@ interface DatabaseAccessInfo {
 }
 
 interface AccessManagerState {
-    databaseAccess: EntityState<DatabaseAccessInfo>;
+    databaseAccess: EntityState<DatabaseAccessInfo, string>;
     securityClearance: SecurityClearance;
 }
 
-const databaseAccessAdapter = createEntityAdapter<DatabaseAccessInfo>({
+const databaseAccessAdapter = createEntityAdapter<DatabaseAccessInfo, string>({
     selectId: (x) => x.databaseName,
 });
 

@@ -8,8 +8,6 @@ import databasesManager from "common/shell/databasesManager";
 import notificationCenter from "common/notifications/notificationCenter";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { UnsubscribeListener } from "@reduxjs/toolkit";
-import { addAppListener } from "components/storeUtils";
-import { databasesSlice } from "components/common/shell/databasesSlice";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
@@ -19,6 +17,8 @@ import changesContext from "common/changesContext";
 import compactDatabaseDialog from "viewmodels/resources/compactDatabaseDialog";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { addAppListener } from "components/storeUtils";
+import { databasesSlice } from "components/common/shell/databasesSlice";
 
 export const toggleIndexing =
     (db: DatabaseSharedInfo, disable: boolean): AppAsyncThunk =>
@@ -94,7 +94,7 @@ export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: App
 
 export const reloadDatabaseDetails =
     (databaseName: string): AppAsyncThunk =>
-    async (dispatch: AppDispatch, getState) => {
+    async (dispatch, getState) => {
         const nodeTags = clusterSelectors.allNodeTags(getState());
         const tasks = nodeTags.map((nodeTag) =>
             dispatch(databasesViewSliceInternal.fetchDatabase({ nodeTag, databaseName }))
@@ -102,7 +102,7 @@ export const reloadDatabaseDetails =
         await Promise.all(tasks);
     };
 
-export const reloadDatabasesDetails: AppAsyncThunk = async (dispatch: AppDispatch, getState) => {
+export const reloadDatabasesDetails: AppAsyncThunk = async (dispatch, getState) => {
     const state = getState();
     const nodeTags = clusterSelectors.allNodeTags(state);
 

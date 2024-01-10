@@ -1,7 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 import composition = require("durandal/composition");
-import moment = require("moment");
 import 'eonasdan-bootstrap-datetimepicker';
+import moment from "moment";
 
 class datePickerBindingHandler {
 
@@ -34,7 +34,7 @@ class datePickerBindingHandler {
                 $("#" + startDateElement).data("DateTimePicker").maxDate(ev.date);
             }
 
-            const newDate = moment(ev.date);
+            const newDate = moment(ev.date as unknown);
             const value = valueAccessor();
             
             value(newDate);
@@ -44,9 +44,9 @@ class datePickerBindingHandler {
     // Called by Knockout each time the dependent observable value changes.
     update(element: HTMLElement, valueAccessor: any) {
         
-        const date: moment.Moment = ko.unwrap(valueAccessor());
+        const date = ko.unwrap(valueAccessor());
         $(element).data("DateTimePicker").date(date || null);
-        }
     }
+}
 
 export = datePickerBindingHandler;
