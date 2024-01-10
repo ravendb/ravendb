@@ -119,7 +119,9 @@ namespace Raven.Server.Documents.Subscriptions
 
                 if (connection.SubscriptionState.RaftCommandIndex == _subscriptionState.RaftCommandIndex)
                 {
-                    // no changes in the subscription
+                    // no changes in the subscription task 
+                    // the LastChangeVectorSent have to be refreshed since the concurrent subscription task might got processed on different node 
+                    InitializeLastChangeVectorSent(connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint);
                     return;
                 }
 
@@ -152,13 +154,14 @@ namespace Raven.Server.Documents.Subscriptions
             }
 
             InitializeLastChangeVectorSent(connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint);
-            PreviouslyRecordedChangeVector = LastChangeVectorSent;
+
             _subscriptionState = connection.SubscriptionState;
         }
 
         internal void InitializeLastChangeVectorSent(string changeVectorForNextBatchStartingPoint)
         {
             LastChangeVectorSent = changeVectorForNextBatchStartingPoint;
+            PreviouslyRecordedChangeVector = LastChangeVectorSent;
         }
 
         public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
