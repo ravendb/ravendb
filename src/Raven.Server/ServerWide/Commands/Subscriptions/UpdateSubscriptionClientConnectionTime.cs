@@ -2,8 +2,8 @@
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -32,7 +32,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new SubscriptionDoesNotExistException($"Subscription with id '{itemId}' does not exist");
 
-            var subscription = JsonDeserializationClient.SubscriptionState(existingValue);
+            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             var topology = record.Topology;
             var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
