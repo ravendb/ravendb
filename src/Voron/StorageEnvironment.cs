@@ -1115,7 +1115,6 @@ namespace Voron
                 PersistentDictionaries = new(),
                 CompactTrees = new(),
                 IncludeDetails = includeDetails,
-                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
                 TempPath = Options.TempPath,
                 JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath,
                 TotalEncryptionBufferSize = totalCryptoBufferSize,
