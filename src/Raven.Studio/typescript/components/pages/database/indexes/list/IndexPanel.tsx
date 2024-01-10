@@ -40,8 +40,6 @@ import assertUnreachable from "../../../../utils/assertUnreachable";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { Icon } from "components/common/Icon";
-import genUtils from "common/generalUtils";
-import moment = require("moment");
 
 export interface IndexPanelProps {
     database: database;

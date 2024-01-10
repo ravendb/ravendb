@@ -8,19 +8,19 @@ export interface ClusterNode {
 
 interface ClusterState {
     localNodeTag: string;
-    nodes: EntityState<ClusterNode>;
+    nodes: EntityState<ClusterNode, string>;
     clientVersion: string;
     serverVersion: serverBuildVersionDto;
 }
 
-const clusterNodesAdapter = createEntityAdapter<ClusterNode>({
+const clusterNodesAdapter = createEntityAdapter<ClusterNode, string>({
     selectId: (node) => node.nodeTag,
 });
 
 const nodesSelectors = clusterNodesAdapter.getSelectors();
 
 const selectAllNodes = (store: RootState) => nodesSelectors.selectAll(store.cluster.nodes);
-const selectAllNodeTags = (store: RootState) => nodesSelectors.selectIds(store.cluster.nodes) as string[];
+const selectAllNodeTags = (store: RootState) => nodesSelectors.selectIds(store.cluster.nodes);
 const selectNodeByTag = (nodeTag: string) => (store: RootState) =>
     nodesSelectors.selectById(store.cluster.nodes, nodeTag);
 

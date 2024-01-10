@@ -21,9 +21,9 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 interface StatisticsState {
     databaseName: string;
     essentialStats: loadableData<EssentialDatabaseStatistics>;
-    databaseDetails: EntityState<locationAwareLoadableData<DetailedDatabaseStatistics>>;
+    databaseDetails: EntityState<locationAwareLoadableData<DetailedDatabaseStatistics>, string>;
     indexDetailsLoadStatus: Array<{ location: databaseLocationSpecifier; status: loadStatus }>;
-    indexDetails: EntityState<IndexItem>;
+    indexDetails: EntityState<IndexItem, string>;
     ui: {
         detailsVisible: boolean;
         refreshing: boolean;
@@ -34,11 +34,11 @@ function selectId(location: databaseLocationSpecifier) {
     return location.nodeTag + "__" + (location.shardNumber ?? "n-a");
 }
 
-const databaseStatsAdapter = createEntityAdapter<locationAwareLoadableData<DetailedDatabaseStatistics>>({
+const databaseStatsAdapter = createEntityAdapter<locationAwareLoadableData<DetailedDatabaseStatistics>, string>({
     selectId: (x) => selectId(x.location),
 });
 
-const indexStatsAdapter = createEntityAdapter<IndexItem>({
+const indexStatsAdapter = createEntityAdapter<IndexItem, string>({
     selectId: (x) => x.sharedInfo.name,
     sortComparer: (a, b) => (a.sharedInfo.name > b.sharedInfo.name ? 1 : -1),
 });

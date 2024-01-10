@@ -20,10 +20,10 @@ export interface Collection {
 }
 
 interface CollectionsTrackerState {
-    collections: EntityState<Collection>;
+    collections: EntityState<Collection, string>;
 }
 
-const collectionsAdapter = createEntityAdapter<Collection>({
+const collectionsAdapter = createEntityAdapter<Collection, string>({
     selectId: (collection) => collection.name,
 });
 
