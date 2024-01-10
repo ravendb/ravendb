@@ -391,5 +391,95 @@ namespace Raven.Server.Documents.Handlers.Debugging
             writer.WriteEndArray();
             writer.WriteEndObject();
         }
+
+        [RavenAction("/databases/*/debug/storage/environment/scratch-buffer-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task ScratchBufferPoolInfoReport()
+        {
+            var name = GetStringQueryString("name");
+            var typeAsString = GetStringQueryString("type");
+
+            if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
+                throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
+
+            var env = Database.GetAllStoragesEnvironment()
+                .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
+
+            if (env == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return;
+            }
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    WriteScratchBufferPoolInfo(writer, env, context);
+                }
+            }
+        }
+
+        private static void WriteScratchBufferPoolInfo(AsyncBlittableJsonTextWriter writer, StorageEnvironmentWithType env, DocumentsOperationContext context)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName("Name");
+            writer.WriteString(env.Name);
+            writer.WriteComma();
+
+            writer.WritePropertyName("Type");
+            writer.WriteString(env.Type.ToString());
+            writer.WriteComma();
+
+            using (var tx = env.Environment.ReadTransaction())
+            using (context.OpenWriteTransaction())
+            {
+                //Opening a write transaction to avoid concurrency problems (Issue #21088)
+                var sc = env.Environment.ScratchBufferPool.InfoForDebug(env.Environment.PossibleOldestReadTransaction(tx.LowLevelTransaction));
+                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(sc);
+                writer.WritePropertyName("Report");
+                writer.WriteObject(context.ReadObject(djv, env.Name));
+            }
+
+            writer.WriteEndObject();
+        }
+
+        [RavenAction("/databases/*/debug/storage/all-environments/scratch-buffer-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
+        public async Task AllEnvironmentScratchBuffernfoReport()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                {
+                    var envs = Database.GetAllStoragesEnvironment();
+
+                    bool first = true;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("DatabaseName");
+                    writer.WriteString(Database.Name);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("Environments");
+                    writer.WriteStartArray();
+
+                    foreach (var env in envs)
+                    {
+                        if (env == null)
+                            continue;
+
+                        if (!first)
+                            writer.WriteComma();
+                        first = false;
+
+                        WriteScratchBufferPoolInfo(writer, env, context);
+                    }
+                    writer.WriteEndArray();
+
+                    writer.WriteEndObject();
+                }
+            }
+        }
     }
 }
