@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
 using Tests.Infrastructure;
@@ -213,7 +212,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void Error_if_script_is_empty()
     {
         var config = new QueueSinkConfiguration

@@ -22,6 +22,7 @@ using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
 using Confluent.Kafka.Admin;
+using Raven.Client.Exceptions;
 
 namespace SlowTests.Server.Documents.QueueSink
 {
@@ -32,6 +33,44 @@ namespace SlowTests.Server.Documents.QueueSink
         }
 
         private const string DefaultScript = "put(this.Id, this)";
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public void Unique_QueueSink_Tasks()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var queueConnectionString = new QueueConnectionString { Name = store.Identifier, BrokerType = QueueBrokerType.RabbitMq, RabbitMqConnectionSettings = new RabbitMqConnectionSettings { ConnectionString = "test" } };
+                var putResult = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(queueConnectionString));
+                Assert.NotEqual(0, putResult.RaftCommandIndex);
+
+                var queues = new List<string> { UsersQueueName };
+                QueueSinkScript queueSinkScript = new QueueSinkScript
+                {
+                    Name = $"Queue Sink : {$"{store.Database} to Kafka"}",
+                    Queues = new List<string>(queues),
+                    Script = DefaultScript,
+                };
+                var configuration = new QueueSinkConfiguration
+                {
+                    Disabled = true,
+                    Name = $"{store.Database} to Kafka",
+                    ConnectionStringName = store.Identifier,
+                    Scripts = { queueSinkScript },
+                    BrokerType = QueueBrokerType.Kafka
+                };
+
+                foreach (var queue in queues)
+                {
+                    _definedTopics.Add(queue);
+                }
+
+                var addResult = store.Maintenance.Send(new AddQueueSinkOperation<QueueConnectionString>(configuration));
+                Assert.NotEqual(0, addResult.TaskId);
+
+                var error = Assert.Throws<RavenException>(() => store.Maintenance.Send(new AddQueueSinkOperation<QueueConnectionString>(configuration)));
+                Assert.Contains("there is already a Queue Sink task with that name", error.Message);
+            }
+        }
 
         [RequiresKafkaRetryFact]
         public void SimpleScript()
@@ -212,7 +251,7 @@ namespace SlowTests.Server.Documents.QueueSink
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public void Error_if_script_is_empty()
         {
             var config = new QueueSinkConfiguration
@@ -241,7 +280,7 @@ namespace SlowTests.Server.Documents.QueueSink
             Assert.Equal("Script 'test' must not be empty", errors[0]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task ShouldImportTask()
         {
             using (var srcStore = GetDocumentStore())
@@ -270,8 +309,8 @@ namespace SlowTests.Server.Documents.QueueSink
                 
             }
         }
-        
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task Simple_script_error_expected()
         {
             using (var store = GetDocumentStore())
@@ -305,7 +344,7 @@ namespace SlowTests.Server.Documents.QueueSink
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Sinks)]
         [InlineData(
 @"
 this['@metadata']['@collection'] = 'Users';
