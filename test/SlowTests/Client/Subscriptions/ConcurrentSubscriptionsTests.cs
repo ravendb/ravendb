@@ -1291,6 +1291,130 @@ where predicate.call(doc)"
             }
         }
 
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task ProcessOnResponsibleNodeThenOnDifferentNodeThenBackOnResponsible()
+        {
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ReplicationFactor = 3,
+                Server = cluster.Leader,
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User() { Name = "EGOR" }, "user/1");
+                    session.SaveChanges();
+                }
+
+                var database = store.Database;
+                var id = await store.Subscriptions.CreateAsync<User>();
+
+                //responsible node processes doc
+                HashSet<string> docs = await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id);
+
+                var node1 = string.Empty;
+                Assert.True(await WaitForValueAsync(async () =>
+                {
+                    foreach (var node in cluster.Nodes)
+                    {
+                        var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            if (db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out var subscriptionConnectionsState))
+                            {
+                                node1 = node.ServerStore.NodeTag;
+                                return true;
+                            }
+                        }
+                    }
+
+                    return false;
+                }, true), "1st doc processed");
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User() { Name = "EGR" }, "user/2");
+                    session.SaveChanges();
+                }
+
+                // move responsible node to rehab
+                var responsibleNode = cluster.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == node1);
+                Assert.NotNull(responsibleNode);
+                responsibleNode.CpuCreditsBalance.BackgroundTasksAlertRaised.Raise();
+                var rehabs = await WaitForValueAsync(async () => await GetRehabCount(store, store.Database), 1);
+                Assert.Equal(1, rehabs);
+
+                // another node processes doc
+                docs.UnionWith(await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id));
+
+                Assert.Equal(2, await WaitForValueAsync(async () =>
+                {
+                    var i = 0;
+                    foreach (var node in cluster.Nodes)
+                    {
+                        var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            if (db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out _))
+                            {
+                                i++;
+                            }
+                        }
+                    }
+
+                    return i;
+                }, 2));
+
+                // move responsible node back from rehab
+                responsibleNode.CpuCreditsBalance.BackgroundTasksAlertRaised.Lower();
+                var members = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), 3);
+                Assert.Equal(3, members);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User() { Name = "EGOOOOOOR" }, "user/3");
+                    session.SaveChanges();
+                }
+
+                Assert.Equal(2, docs.Count);
+
+                // responsible node processes doc
+                docs.UnionWith(await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id));
+
+                Assert.Equal(3, docs.Count);
+            }
+        }
+
+        private static async Task<HashSet<string>> RunSubscriptionWorkerAndProcessOneDocumentAsync(DocumentStore store, string id)
+        {
+            var docs = new HashSet<string>();
+            await using var worker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+            {
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                Strategy = SubscriptionOpeningStrategy.Concurrent,
+                MaxDocsPerBatch = 1
+            });
+
+            worker.AfterAcknowledgment += batch =>
+            {
+                foreach (var item in batch.Items)
+                {
+                    docs.Add(item.Id);
+                }
+
+                return Task.CompletedTask;
+            };
+
+            var t = worker.Run(x => { });
+
+            Assert.Equal(1, await WaitForValueAsync(() => docs.Count, 1));
+            return docs;
+        }
+
         private class GetSubscriptionResendListCommand : RavenCommand<ResendListResults>
         {
             private readonly string _database;
