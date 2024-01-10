@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Raven.Debug.Utils;
 using Sparrow;
+using Sparrow.Platform;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
@@ -24,7 +25,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        public static async Task<int> Collect(CancellationToken ct, CommandLineApplication cmd, int processId, string output, int timeout, bool verbose)
+        public static async Task<int> Collect(CancellationToken ct, CommandLineApplication cmd, int processId, string output, string outputOwner, int timeout, bool verbose)
         {
             try
             {
@@ -63,6 +64,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         return false;
                     memoryGraph.AllowReading();
                     GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
+
+                    if (string.IsNullOrEmpty(outputOwner) == false && PlatformDetails.RunningOnPosix)
+                    {
+                        cmd.Out.WriteLine($"Changing owner of '{outputFileInfo.FullName}' to '{outputOwner}'");
+                        PosixFileExtensions.ChangeFileOwner(outputFileInfo.FullName, outputOwner);
+                    }
+
                     return true;
                 });
 
@@ -81,7 +89,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
                 else
                 {
-                    cmd.Out.WriteLine($"\tFailed to collect gcdump. Try running with '-v' for more information.");
+                    cmd.Out.WriteLine($"\tFailed to collect gcdump. Try running with '--verbose' for more information.");
                     return -1;
                 }
             }
