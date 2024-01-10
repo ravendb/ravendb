@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
@@ -44,13 +45,13 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     }
 
     protected override async ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
-        HashSet<string> modifiedCollections)
+        HashSet<string> modifiedCollections, CancellationToken token = default)
     {
         long lastEtag = ChangeVectorUtils.GetEtagById(lastChangeVector, RequestHandler.Database.DbBase64Id);
-        await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastEtag, lastTombstoneEtag, modifiedCollections);
+        await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastEtag, lastTombstoneEtag, modifiedCollections, token);
     }
 
-    public static async Task WaitForIndexesAsync(DocumentDatabase database, TimeSpan timeout, string[] specifiedIndexesQueryString, bool throwOnTimeout, long lastDocumentEtag, long lastTombstoneEtag, HashSet<string> modifiedCollections)
+    public static async Task WaitForIndexesAsync(DocumentDatabase database, TimeSpan timeout, string[] specifiedIndexesQueryString, bool throwOnTimeout, long lastDocumentEtag, long lastTombstoneEtag, HashSet<string> modifiedCollections, CancellationToken token)
     {
         // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
         // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -103,8 +104,10 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
                         continue;
 
                     hadStaleIndexes = true;
-
-                    await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
+                    using (waitForIndexItem.IndexBatchAwaiter.Register(token))
+                    {
+                        await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
+                    }
 
                     if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
                     {

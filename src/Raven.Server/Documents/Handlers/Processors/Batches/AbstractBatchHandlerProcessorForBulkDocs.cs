@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
@@ -26,7 +27,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
     protected abstract ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, TBatchCommand command, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions);
 
-    protected abstract ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections);
+    protected abstract ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections, CancellationToken token = default);
 
     protected abstract ValueTask WaitForReplicationAsync(TOperationContext context, ReplicationBatchOptions options, string lastChangeVector);
 
@@ -92,7 +93,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (command.IsClusterTransaction)
                 {
                     var processor = GetClusterTransactionRequestProcessor();
-                    (long index, DynamicJsonArray clusterResults) = await processor.ProcessAsync(context, command);
+                    (long index, DynamicJsonArray clusterResults) = await processor.ProcessAsync(context, command, token.Token);
 
                     RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
