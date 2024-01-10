@@ -487,11 +487,9 @@ namespace Raven.Server.ServerWide
                     case nameof(SourceMigrationSendCompletedCommand):
                     case nameof(DestinationMigrationConfirmCommand):
                     case nameof(SourceMigrationCleanupCommand):
-
                     case nameof(AddPrefixedSettingCommand):
                     case nameof(DeletePrefixedSettingCommand):
                     case nameof(UpdatePrefixedSettingCommand):
-
                         UpdateDatabase(context, type, cmd, index, serverStore);
                         break;
 

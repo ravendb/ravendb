@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -21,6 +22,7 @@ using Tests.Infrastructure.Entities;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using BucketStats = Raven.Server.Documents.Sharding.BucketStats;
 
 namespace SlowTests.Sharding;
 
@@ -152,17 +154,12 @@ public class PrefixedSharding : RavenTestBase
     {
         using var store = Sharding.GetDocumentStore();
 
-        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-        var shardingConfiguration = record.Sharding;
-
-        shardingConfiguration.Prefixed ??= new List<PrefixedShardingSetting>();
-        shardingConfiguration.Prefixed.Add(new PrefixedShardingSetting
+        var task = store.Maintenance.SendAsync(new AddPrefixedShardingSettingOperation(new PrefixedShardingSetting
         {
             Prefix = "asia",
             Shards = new List<int> { 1, 2 }
-        });
+        }));
 
-        var task = store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
         var e = await Assert.ThrowsAsync<RavenException>(async () => await task);
         Assert.Contains(
             "Cannot add prefix 'asia' to ShardingConfiguration.Prefixed. In order to define sharding by prefix, the prefix string must end with '/' or '-' characters",
@@ -199,16 +196,12 @@ public class PrefixedSharding : RavenTestBase
             await session.SaveChangesAsync();
         }
 
-        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-        var shardingConfiguration = record.Sharding;
-
-        shardingConfiguration.Prefixed.Add(new PrefixedShardingSetting
+        var task = store.Maintenance.SendAsync(new AddPrefixedShardingSettingOperation(new PrefixedShardingSetting
         {
             Prefix = "asia/",
             Shards = new List<int> { 1, 2 }
-        });
+        }));
 
-        var task = store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
         var e = await Assert.ThrowsAsync<RavenException>(async () => await task);
         Assert.Contains(
             $"Cannot add prefix 'asia/' to ShardingConfiguration.Prefixed. There are existing documents in database '{store.Database}' that start with 'asia/'",
@@ -250,12 +243,7 @@ public class PrefixedSharding : RavenTestBase
             await session.SaveChangesAsync();
         }
 
-        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-        var shardingConfiguration = record.Sharding;
-
-        shardingConfiguration.Prefixed.RemoveAt(0);
-
-        var task = store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+        var task = store.Maintenance.SendAsync(new DeletePrefixedShardingSettingOperation("asia/"));
         var e = await Assert.ThrowsAsync<RavenException>(async () => await task);
         Assert.Contains(
             $"Cannot remove prefix 'asia/' from ShardingConfiguration.Prefixed. There are existing documents in database '{store.Database}' that start with 'asia/'",
@@ -408,10 +396,10 @@ public class PrefixedSharding : RavenTestBase
         Assert.Equal(2, shardingConfiguration.Prefixed.Count);
         Assert.Equal(7, shardingConfiguration.BucketRanges.Count);
 
-        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[3].BucketRangeStart);
-        Assert.Equal(ShardHelper.NumberOfBuckets * 2.5, shardingConfiguration.BucketRanges[4].BucketRangeStart);
-        Assert.Equal(ShardHelper.NumberOfBuckets * 3, shardingConfiguration.BucketRanges[5].BucketRangeStart);
-        Assert.Equal(ShardHelper.NumberOfBuckets * 3.5, shardingConfiguration.BucketRanges[6].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.BucketRanges[3].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 1.5, shardingConfiguration.BucketRanges[4].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[5].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2.5, shardingConfiguration.BucketRanges[6].BucketRangeStart);
     }
 
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
@@ -889,11 +877,12 @@ public class PrefixedSharding : RavenTestBase
             Shards = new List<int> { 0, 1, 2 }
         }));
 
-        // shard #2 should get no bucket ranges for the 'eu/' prefix
         shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
         Assert.Equal(2, shardingConfiguration.Prefixed.Count);
-        Assert.Equal(3, shardingConfiguration.Prefixed[0].Shards.Count);
+        Assert.Equal("eu/", shardingConfiguration.Prefixed[1].Prefix);
+        Assert.Equal(3, shardingConfiguration.Prefixed[1].Shards.Count);
 
+        // shard #2 should get no bucket ranges for the 'eu/' prefix
         Assert.Equal(bucketRanges.Count, shardingConfiguration.BucketRanges.Count);
         for (int index = 0; index < bucketRanges.Count; index++)
         {
@@ -907,15 +896,13 @@ public class PrefixedSharding : RavenTestBase
         // attempt to remove shard #1 from 'eu/' setting should throw
         // we cannot remove shard #1 because we have docs starting with 'eu/' on it
 
-        var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+        await Assert.ThrowsAsync<RavenException>(async () =>
             await store.Maintenance.SendAsync(
                 new UpdatePrefixedShardingSettingOperation(new PrefixedShardingSetting
                 {
                     Prefix = "eu/", 
                     Shards = new List<int> { 0, 2 }
                 })));
-
-        Assert.Contains($"Cannot remove prefix 'eu/' from ShardingConfiguration.Prefixed. There are existing documents in database '{store.Database}' that start with 'eu/'", ex.Message);
 
         // can delete shard #1 from 'us/' prefix setting (no docs starting with)
         await store.Maintenance.SendAsync(
@@ -929,18 +916,260 @@ public class PrefixedSharding : RavenTestBase
         Assert.Equal(2, shardingConfiguration.Prefixed.Count);
 
         // shard #1 should be removed from 'us/' prefix setting and shouldn't get any bucket ranges for 'us/' prefix
-        // shard #2 should get the entire 'us/' prefixed bucket range (2M - 3M)
-        Assert.Equal("us/", shardingConfiguration.Prefixed[1].Prefix);
-        Assert.Equal(1, shardingConfiguration.Prefixed[1].Shards.Count);
-        Assert.Equal(2, shardingConfiguration.Prefixed[1].Shards[0]);
+        // shard #2 should get the entire 'us/' prefixed bucket range (1M - 2M)
+        Assert.Equal("us/", shardingConfiguration.Prefixed[0].Prefix);
+        Assert.Equal(1, shardingConfiguration.Prefixed[0].Shards.Count);
+        Assert.Equal(2, shardingConfiguration.Prefixed[0].Shards[0]);
 
         Assert.Equal(6, shardingConfiguration.BucketRanges.Count);
 
         Assert.Equal(ShardHelper.NumberOfBuckets * 1, shardingConfiguration.BucketRanges[3].BucketRangeStart);
-        Assert.Equal(ShardHelper.NumberOfBuckets * 1.5, shardingConfiguration.BucketRanges[4].BucketRangeStart);
+        Assert.Equal(2, shardingConfiguration.BucketRanges[3].ShardNumber);
 
-        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[5].BucketRangeStart);
-        Assert.Equal(2, shardingConfiguration.BucketRanges[5].ShardNumber);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[4].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2.5, shardingConfiguration.BucketRanges[5].BucketRangeStart);
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task CanHandlePrefixOfPrefix()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                {
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/",
+                        Shards = new List<int> { 0 }
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/us/utah/",
+                        Shards = new List<int> { 1 }
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/us/",
+                        Shards = new List<int> { 2 }
+                    }
+                };
+            }
+        });
+
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "users/us/california/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 0)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/")).ToList();
+            Assert.Equal(0, docs.Count);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 1)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/")).ToList();
+            Assert.Equal(0, docs.Count);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 2)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/")).ToList();
+            Assert.Equal(10, docs.Count);
+        }
+
+        var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(3, shardingConfiguration.Prefixed.Count);
+
+        // should be sorted by descending 
+        Assert.Equal("users/us/utah/", shardingConfiguration.Prefixed[0].Prefix);
+        Assert.Equal("users/us/", shardingConfiguration.Prefixed[1].Prefix);
+        Assert.Equal("users/", shardingConfiguration.Prefixed[2].Prefix);
+
+        var bucketRanges = shardingConfiguration.BucketRanges;
+        Assert.Equal(6, bucketRanges.Count);
+        Assert.Equal(ShardHelper.NumberOfBuckets, bucketRanges[3].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, bucketRanges[4].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 3, bucketRanges[5].BucketRangeStart);
+
+        Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.Prefixed[0].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.Prefixed[1].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 3, shardingConfiguration.Prefixed[2].BucketRangeStart);
+
+        // add 'users/us/arizona/' prefix setting
+        await store.Maintenance.SendAsync(new AddPrefixedShardingSettingOperation(new PrefixedShardingSetting
+        {
+            Prefix = "users/us/arizona/",
+            Shards = new List<int> { 1 }
+        }));
+
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(4, shardingConfiguration.Prefixed.Count);
+
+        // should still be sorted
+        Assert.Equal("users/us/utah/", shardingConfiguration.Prefixed[0].Prefix);
+        Assert.Equal("users/us/arizona/", shardingConfiguration.Prefixed[1].Prefix);
+        Assert.Equal("users/us/", shardingConfiguration.Prefixed[2].Prefix);
+        Assert.Equal("users/", shardingConfiguration.Prefixed[3].Prefix);
+
+        Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.Prefixed[0].BucketRangeStart);
+        
+        // new prefix should be added at the end of BucketRanges
+        Assert.Equal(ShardHelper.NumberOfBuckets * 4, shardingConfiguration.Prefixed[1].BucketRangeStart);
+
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.Prefixed[2].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 3, shardingConfiguration.Prefixed[3].BucketRangeStart);
+
+        // check bucket ranges
+
+        var newBucketRanges = shardingConfiguration.BucketRanges;
+        Assert.Equal(7, newBucketRanges.Count);
+
+        for (int i = 0; i < bucketRanges.Count; i++)
+        {
+            var oldRange = bucketRanges[i];
+            var newRange = newBucketRanges[i];
+
+            Assert.Equal(oldRange.BucketRangeStart, newRange.BucketRangeStart);
+            Assert.Equal(oldRange.ShardNumber, newRange.ShardNumber);
+        }
+
+        Assert.Equal(ShardHelper.NumberOfBuckets * 4, newBucketRanges[6].BucketRangeStart);
+        Assert.Equal(1, newBucketRanges[6].ShardNumber);
+
+        // should all go to shard #1
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "users/us/arizona/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+
+            WaitForUserToContinueTheTest(store);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 0)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/arizona/")).ToList();
+            Assert.Equal(0, docs.Count);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 1)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/arizona/")).ToList();
+            Assert.Equal(10, docs.Count);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 2)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/arizona/")).ToList();
+            Assert.Equal(0, docs.Count);
+        }
+
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task AfterAddingNewPrefixMatchingDocsShouldNotGoToWrongShard()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                {
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/",
+                        Shards = new List<int> { 0 }
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/eu/",
+                        Shards = new List<int> { 0 }
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/asia/",
+                        Shards = new List<int> { 2 }
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/africa/",
+                        Shards = new List<int> { 2 }
+                    }
+                };
+            }
+        });
+
+        await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(store))
+        {
+            shard.ForTestingPurposes ??= new DocumentDatabase.TestingStuff
+            {
+                EnableWritesToTheWrongShard = true
+            };
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "users/eu/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        // add 'users/us/' prefix setting
+        await store.Maintenance.SendAsync(new AddPrefixedShardingSettingOperation(new PrefixedShardingSetting
+        {
+            Prefix = "users/us/",
+            Shards = new List<int> { 1 }
+        }));
+
+        // should all go to shard #1
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "users/us/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 0)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/")).ToList();
+            Assert.Equal(0, docs.Count);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 1)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/")).ToList();
+            Assert.Equal(10, docs.Count);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 2)))
+        {
+            var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/us/")).ToList();
+            Assert.Equal(0, docs.Count);
+        }
 
     }
 

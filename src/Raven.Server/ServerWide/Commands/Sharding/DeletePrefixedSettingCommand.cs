@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Sparrow.Json.Parsing;
@@ -22,10 +23,11 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         {
             int index = 0;
             PrefixedShardingSetting setting = null;
+
             for (; index < record.Sharding.Prefixed.Count; index++)
             {
                 setting = record.Sharding.Prefixed[index];
-                if (setting.Prefix == Prefix)
+                if (setting.Prefix.Equals(Prefix, StringComparison.OrdinalIgnoreCase))
                     break;
             }
 

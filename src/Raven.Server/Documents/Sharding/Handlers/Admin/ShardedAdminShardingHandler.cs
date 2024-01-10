@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -12,6 +13,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
@@ -35,14 +37,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), GetType().Name);
                 var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
-
-                if (setting.Prefix.EndsWith('/') == false && setting.Prefix.EndsWith('-') == false)
-                    throw new InvalidOperationException(
-                        $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                        "In order to define sharding by prefix, the prefix string must end with '/' or '-' characters.");
-
                 setting.Prefix = setting.Prefix.ToLower();
+
                 var shardingConfiguration = ServerStore.Cluster.ReadShardingConfiguration(DatabaseName);
+                ShardingStore.AssertValidPrefix(setting, shardingConfiguration);
 
                 foreach (var value in shardingConfiguration.Prefixed)
                 {
@@ -51,14 +49,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                             $"Prefix '{setting.Prefix}' already exists in {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. please use '{nameof(UpdatePrefixedShardingSettingOperation)} operation'");
                 }
 
-                foreach (var shardNumber in setting.Shards)
-                {
-                    if (shardingConfiguration.Shards.ContainsKey(shardNumber) == false)
-                    {
-                        throw new InvalidDataException($"Cannot assign shard number {shardNumber} to prefix {setting.Prefix}, " +
-                                                       $"there's no shard '{shardNumber}' in sharding topology!");
-                    }
-                }
 
                 var clusterTopology = ServerStore.GetClusterTopology(context);
                 var urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
@@ -70,7 +60,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                         "In order to define sharding by prefix, you cannot have any documents in the database that starts with this prefix.");
 
                 var cmd = new AddPrefixedSettingCommand(setting, DatabaseName, GetRaftRequestIdFromQuery());
-                await ServerStore.SendToLeaderAsync(cmd);
+                var (raftIndex, _) = await ServerStore.SendToLeaderAsync(cmd);
+
+                await DatabaseContext.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, shardingConfiguration.Orchestrator.Topology.Members, raftIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
@@ -82,9 +74,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                //var json = await context.ReadForMemoryAsync(RequestBodyStream(), GetType().Name);
-                //var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
-                var prefix = GetStringQueryString("prefix").ToLower();
+                var prefix = GetStringQueryString("prefix");
 
                 var shardingConfiguration = ServerStore.Cluster.ReadShardingConfiguration(DatabaseName);
                 bool found = shardingConfiguration.Prefixed.Any(value => value.Prefix == prefix);
@@ -101,7 +91,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                         "In order to remove a sharding by prefix setting, you cannot have any documents in the database that starts with this prefix.");
 
                 var cmd = new DeletePrefixedSettingCommand(prefix, DatabaseName, GetRaftRequestIdFromQuery());
-                await ServerStore.SendToLeaderAsync(cmd);
+                var (raftIndex, _) = await ServerStore.SendToLeaderAsync(cmd);
+
+                await DatabaseContext.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, shardingConfiguration.Orchestrator.Topology.Members, raftIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
@@ -117,25 +109,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                 var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
                 setting.Prefix = setting.Prefix.ToLower();
 
-                //DatabaseContext.
-
                 var shardingConfiguration = ServerStore.Cluster.ReadShardingConfiguration(DatabaseName);
-                PrefixedShardingSetting oldSetting = null;
-                foreach (var value in shardingConfiguration.Prefixed)
-                {
-                    if (value.Prefix != setting.Prefix)
-                        continue;
 
-                    oldSetting = value;
-                    break;
-                }
-
-                if (oldSetting == null)
+                var index = shardingConfiguration.Prefixed.BinarySearch(setting, PrefixedSettingComparer.Instance);
+                if (index < 0)
                     throw new InvalidDataException($"Prefix '{setting.Prefix}' wasn't found in sharding configuration");
 
-
+                var oldSetting = shardingConfiguration.Prefixed[index];
                 var removedShards = oldSetting.Shards;
-                //var newShards = new List<int>();
 
                 foreach (var shard in setting.Shards)
                 {
@@ -144,40 +125,23 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                     else if (shardingConfiguration.Shards.ContainsKey(shard) == false)
                         throw new InvalidDataException($"Cannot assign shard number {shard} to prefix {setting.Prefix}, " +
                                                        $"there's no shard '{shard}' in sharding topology!");
-                    //newShards.Add(shard);
                 }
-                /*
-                                foreach (var shard in newShards)
-                                {
-                                    if (shardingConfiguration.Shards.ContainsKey(shard) == false)
-                                        throw new InvalidDataException($"Cannot assign shard number {shard} to prefix {setting.Prefix}, " +
-                                                                       $"there's no shard '{shard}' in sharding topology!");
-
-
-                                    var urls = shardingConfiguration.Shards[shard].Members.Select(clusterTopology.GetUrlFromTag).ToArray();
-                                    if (await AssertNoDocsStartingWith(context, setting.Prefix, urls, ShardHelper.ToShardName(Database.Name, shard)) == false)
-                                        throw new InvalidOperationException(
-                                            $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                                            $"There are existing documents in database '{Database.Name}' that start with '{setting.Prefix}'. " +
-                                            "In order to define sharding by prefix, you cannot have any documents in the database that starts with this prefix.");
-                                }
-                */
 
                 var clusterTopology = ServerStore.GetClusterTopology(context);
-
                 foreach (var shard in removedShards)
                 {
                     var urls = shardingConfiguration.Shards[shard].Members.Select(clusterTopology.GetUrlFromTag).ToArray();
                     if (await AssertNoDocsStartingWith(context, setting.Prefix, urls, ShardHelper.ToShardName(DatabaseName, shard)) == false)
                         throw new InvalidOperationException(
-                            $"Cannot remove prefix '{setting.Prefix}' from {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                            $"There are existing documents in database '{DatabaseName}' that start with '{setting.Prefix}'. " +
-                            "In order to remove a sharding by prefix setting, you cannot have any documents in the database that starts with this prefix.");
+                            $"Cannot remove shard {shard} from '{setting.Prefix}' settings in {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
+                            $"There are existing documents on this shard that start with '{setting.Prefix}'. " +
+                            "In order to remove a shard from Prefixed setting, you cannot have any documents on that shard that starts with this prefix.");
                 }
 
-
                 var cmd = new UpdatePrefixedSettingCommand(setting, DatabaseName, GetRaftRequestIdFromQuery());
-                await ServerStore.SendToLeaderAsync(cmd);
+                var (raftIndex, _) = await ServerStore.SendToLeaderAsync(cmd);
+
+                await DatabaseContext.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, shardingConfiguration.Orchestrator.Topology.Members, raftIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }

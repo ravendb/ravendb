@@ -408,14 +408,7 @@ namespace Raven.Server.Web.System
             ValidateClusterMembers(clusterTopology, databaseRecord);
             UpdateDatabaseTopology(databaseRecord, clusterTopology, replicationFactor);
 
-            if (dbRecordExist && databaseRecord.IsSharded)
-            {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
-                    "remove this and introduce a dedicated command for updating Sharding.Prefixed");
-                await ServerStore.Sharding.UpdatePrefixedShardingIfNeeded(context, databaseRecord, clusterTopology);
-            }
-
-                                     var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
+            var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
             var members = (List<string>)result;

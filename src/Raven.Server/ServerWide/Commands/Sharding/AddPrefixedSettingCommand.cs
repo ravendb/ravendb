@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -31,7 +33,6 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                     maxBucketRangeStart = value.BucketRangeStart;
             }
 
-
             Setting.BucketRangeStart = maxBucketRangeStart + ShardHelper.NumberOfBuckets;
 
             var rangeStart = Setting.BucketRangeStart;
@@ -48,7 +49,8 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 rangeStart += step;
             }
 
-            record.Sharding.Prefixed.Add(Setting);
+            var index = record.Sharding.Prefixed.BinarySearch(Setting, PrefixedSettingComparer.Instance);
+            record.Sharding.Prefixed.Insert(~index, Setting);
         }
 
         public override void FillJson(DynamicJsonValue json)
