@@ -158,6 +158,10 @@ namespace Raven.Server
         
         private static readonly StringValues CacheControlHeaderValues = new[] { "must-revalidate", "no-cache" };
 
+        private static readonly StringValues ContentTypeHeaderValue = "application/json; charset=utf-8";
+
+        internal static readonly StringValues ServerVersionHeaderValue = RavenVersionAttribute.Instance.AssemblyVersion;
+
         private async Task RequestHandler(HttpContext context)
         {
             var requestHandlerContext = new RequestHandlerContext
@@ -170,8 +174,7 @@ namespace Raven.Server
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
-                context.Response.Headers[Constants.Headers.ContentType] = "application/json; charset=utf-8";
-                context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.AssemblyVersion;
+                context.Response.Headers[Constants.Headers.ContentType] = ContentTypeHeaderValue;
 
                 if (_server.ServerStore.Initialized == false)
                     await _server.ServerStore.InitializationCompleted.WaitAsync();

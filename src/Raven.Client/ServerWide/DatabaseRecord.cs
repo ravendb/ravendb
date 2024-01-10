@@ -463,6 +463,8 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an OLAP ETL task with that name");
             if (PeriodicBackups.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Periodic Backup task with that name");
+            if (QueueEtls.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Queue ETL task with that name");
         }
 
         internal string EnsureUniqueTaskName(string defaultTaskName)

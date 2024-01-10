@@ -121,6 +121,7 @@ namespace Raven.Client.Documents.BulkInsert
         private event EventHandler<BulkInsertOnProgressEventArgs> _onProgress;
         private bool _onProgressInitialized = false;
 
+        private readonly WeakReferencingTimer _timer;
         private DateTime _lastWriteToStream;
         private readonly SemaphoreSlim _streamLock;
         private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultReadTimeout.TotalSeconds / 3);
@@ -165,16 +166,14 @@ namespace Raven.Client.Documents.BulkInsert
 
             _streamLock = new SemaphoreSlim(1, 1);
             _lastWriteToStream = DateTime.UtcNow;
-            var timerState = new TimerState { Parent = new(this) };
 
             if (_options.ForTestingPurposes?.OverrideHeartbeatCheckInterval > 0)
                 _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval / 3);
 
-            Timer timer = new(HandleHeartbeat,
-                timerState,
+            _timer = new WeakReferencingTimer(HandleHeartbeat,
+                this,
                 _heartbeatCheckInterval,
                 _heartbeatCheckInterval);
-            timerState.Timer = timer;
 
             _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
             {
@@ -222,7 +221,7 @@ namespace Raven.Client.Documents.BulkInsert
                     _streamLock.Dispose();
                     try
                     {
-                        timer.Dispose();
+                        _timer.Dispose();
                     }
                     catch (Exception)
                     {
@@ -232,20 +231,9 @@ namespace Raven.Client.Documents.BulkInsert
             });
         }
 
-        private class TimerState
-        {
-            public WeakReference<BulkInsertOperation> Parent;
-            public Timer Timer;
-        }
-
         private static void HandleHeartbeat(object state)
         {
-            var timerState = (TimerState)state;
-            if (timerState.Parent.TryGetTarget(out BulkInsertOperation bulkInsert) == false)
-            {
-                timerState.Timer.Dispose();
-                return;
-            }
+            var bulkInsert = (BulkInsertOperation)state;
             _ = bulkInsert.SendHeartBeatAsync();
         }
 

@@ -254,6 +254,7 @@ namespace Raven.Server.Rachis
                         var readWatcher = Stopwatch.StartNew();
                         while (_leader.Running && _running)
                         {
+                            var myLastCommittedIndex = 0L;
                             entries.Clear();
                             _engine.ValidateTerm(_term);
 
@@ -290,6 +291,8 @@ namespace Raven.Server.Rachis
                                             TimeAsLeader = _leader.LeaderShipDuration,
                                             MinCommandVersion = _engine.CommandsVersionManager.CurrentClusterMinimalVersion
                                         };
+
+                                        myLastCommittedIndex = appendEntries.LeaderCommit;
                                     }
                                 }
 
@@ -381,6 +384,9 @@ namespace Raven.Server.Rachis
                             {
                                 if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
                                     continue; // instead of waiting, we have new entries, start immediately
+
+                                if (_engine.GetLastCommitIndex(context) != myLastCommittedIndex)
+                                    continue; // there is a new committed command, continue to let the leader know immediately
                             }
 
                             // either we have new entries to send, or we waited for long enough 
