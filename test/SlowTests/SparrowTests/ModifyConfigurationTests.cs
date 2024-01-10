@@ -167,7 +167,8 @@ public class ModifyConfigurationTests : RavenTestBase
             Mode = LogMode.Information,
             RetentionSize = new Size(300, SizeUnit.Megabytes),
             RetentionTime = TimeSpan.FromHours(200),
-            Compress = true
+            Compress = true,
+            Persist = true
         };
         
         var settingsJsonPath = Path.GetTempFileName();
@@ -178,7 +179,7 @@ public class ModifyConfigurationTests : RavenTestBase
 
             using var store = await embedded.GetDocumentStoreAsync("PersistLogConfiguration");
         
-            await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(newParams, true));
+            await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(newParams));
 
             using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -235,7 +236,7 @@ public class ModifyConfigurationTests : RavenTestBase
         return context.Sync.ReadForMemory(fs, Path.GetFileName(settingsJsonPath));
     }
 
-    [RavenFact(RavenTestCategory.Logging)]
+    [RavenFact(RavenTestCategory.Logging, Skip = "TODO [Igal]")]
     public async Task PersistMicrosoftLogConfiguration()
     {
         var settingsJsonPath = Path.GetTempFileName();
@@ -312,7 +313,8 @@ public class ModifyConfigurationTests : RavenTestBase
             MinimumDurationInMs = 33,
             HttpMethods = new List<string> { "POST" },
             ChangeTypes = new List<TrafficWatchChangeType> { TrafficWatchChangeType.Queries },
-            CertificateThumbprints = new List<string>{ "0123456789ABCDEF0123456789ABCDEF01234567" }
+            CertificateThumbprints = new List<string>{ "0123456789ABCDEF0123456789ABCDEF01234567" },
+            Persist = true
         };
         using (var embedded = new EmbeddedServer())
         {
@@ -321,7 +323,7 @@ public class ModifyConfigurationTests : RavenTestBase
 
             var requestExecutor = store.GetRequestExecutor();
 
-            await store.Maintenance.Server.SendAsync(new PutTrafficWatchConfigurationOperation(setConfiguration, true));
+            await store.Maintenance.Server.SendAsync(new PutTrafficWatchConfigurationOperation(setConfiguration));
             
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {

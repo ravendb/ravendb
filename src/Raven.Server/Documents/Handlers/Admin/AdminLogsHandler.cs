@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     configuration.RetentionSize?.GetValue(SizeUnit.Bytes),
                     configuration.Compress);
 
-                if (GetBoolValueQueryString("persist", false) == true)
+                if (configuration.Persist)
                 {
                     try
                     {

@@ -97,7 +97,7 @@ namespace Raven.Server.TrafficWatch
 
                 TrafficWatchToLog.Instance.UpdateConfiguration(configuration);
 
-                if (GetBoolValueQueryString("persist", false) == true)
+                if (configuration.Persist)
                 {
                     try
                     {
