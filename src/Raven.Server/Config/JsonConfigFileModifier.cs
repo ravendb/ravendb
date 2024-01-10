@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -170,8 +171,10 @@ public class JsonConfigFileModifier : IDisposable
             return false;
         if(BlittableJsonReaderObject.TryConvertType<T>(result, out var tValue) == false)
         {
-            if (Logger.IsOperationsEnabled)
-                Logger.Info($"Can't compare {value} of type {value.GetType()} with {result} because {result.GetType()} is not convertable to {value.GetType()}");
+            var msg = $"Can't compare {value} of type {value.GetType()} with {result} because {result.GetType()} is not convertable to {value.GetType()}";
+            Debug.Assert(false, msg);
+            if (Logger.IsInfoEnabled)
+                Logger.Info(msg);
             return false;
         }
 
