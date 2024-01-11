@@ -23,7 +23,7 @@ interface CollectionsTrackerState {
     collections: EntityState<Collection, CollectionName>;
 }
 
-const collectionsAdapter = createEntityAdapter<Collection, string>({
+const collectionsAdapter = createEntityAdapter<Collection, CollectionName>({
     selectId: (collection) => collection.name,
 });
 
@@ -47,7 +47,7 @@ export const collectionsTrackerActions = collectionsTrackerSlice.actions;
 
 const selectCollectionNames = createSelector(
     (store: RootState) => collectionsSelectors.selectIds(store.collectionsTracker.collections),
-    (collections) => collections.filter((name) => name !== collectionNames.allDocuments) satisfies CollectionName[]
+    (collections) => collections.filter((name) => name !== collectionNames.allDocuments)
 );
 
 export const collectionsTrackerSelectors = {
