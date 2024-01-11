@@ -12,7 +12,6 @@ namespace Raven.Client.ServerWide.Operations.Logs
     public class SetLogsConfigurationOperation : IServerOperation
     {
         private readonly Parameters _parameters;
-        private readonly bool _persist;
 
         public class Parameters
         {
@@ -42,14 +41,14 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new SetLogsConfigurationCommand(_parameters, _persist);
+            return new SetLogsConfigurationCommand(_parameters);
         }
 
         private class SetLogsConfigurationCommand : RavenCommand
         {
             private readonly Parameters _parameters;
 
-            public SetLogsConfigurationCommand(Parameters parameters, bool persist)
+            public SetLogsConfigurationCommand(Parameters parameters)
             {
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             }
