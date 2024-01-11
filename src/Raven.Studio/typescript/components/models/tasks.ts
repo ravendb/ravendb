@@ -176,7 +176,7 @@ export type AnyEtlOngoingTaskInfo =
 
 export interface OngoingTaskInfo<
     TSharded extends OngoingTaskSharedInfo = OngoingTaskSharedInfo,
-    TNodesInfo extends OngoingTaskNodeInfo = OngoingTaskNodeInfo
+    TNodesInfo extends OngoingTaskNodeInfo = OngoingTaskNodeInfo,
 > {
     shared: TSharded;
     nodesInfo: TNodesInfo[];

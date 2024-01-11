@@ -47,7 +47,7 @@ export default function AdminJSConsole() {
             horizontalSeparatorLine: allDatabaseNames.length > 0,
         },
         ...allDatabaseNames.map(
-            (x) => ({ value: x, label: x, icon: "database" } satisfies SelectOptionWithIconAndSeparator)
+            (x) => ({ value: x, label: x, icon: "database" }) satisfies SelectOptionWithIconAndSeparator
         ),
     ];
 
