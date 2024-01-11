@@ -380,10 +380,19 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             await InitAsync();
                             _subscriptionConnectionsState = await TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscriptionAsync(this);
-                            (disposeOnDisconnect, registerConnectionDurationInTicks) = await SubscribeAsync();
+                            await _subscriptionConnectionsState.TakeConcurrentConnectionLock(this);
+                            try
+                            {
+                                (disposeOnDisconnect, registerConnectionDurationInTicks) = await SubscribeAsync();
+                                _pendingConnectionScope.Dispose();
+                                await NotifyClientAboutSuccess(registerConnectionDurationInTicks);
+                            }
+                            finally
+                            {
+                                _subscriptionConnectionsState.ReleaseConcurrentConnectionLock(this);
+                            }
                         }
 
-                        await NotifyClientAboutSuccess(registerConnectionDurationInTicks);
                         await ProcessSubscriptionAsync();
                     }
                     finally
