@@ -6,6 +6,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Sparrow.Compression;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -21,10 +22,8 @@ public partial class IndexSearcher
         if (compactTree == null)
             return default;
 
-        var currentTermId = 0;
         Allocator.Allocate(terms.Length * sizeof(long), out var sequenceBuffer);
-        
-        var sequenceToFind = MemoryMarshal.Cast<byte, long>(sequenceBuffer.ToSpan());
+        var sequencePosition = 0;
         var pagesToField = GetIndexedFieldNamesByRootPage();
         var fieldName = field.GetPhraseQueryContainerName(Allocator);
         var rootPage = pagesToField.Where(x => x.Value == fieldName.ToString()).FirstOrDefault().Key; //todo perf
@@ -37,11 +36,10 @@ public partial class IndexSearcher
 
             var exists = compactTree.TryGetTermContainerId(termKey, out var termContainerId);
             //if term doesn't exists we can already finish since such sequence doesn't exists. right?
-
-            sequenceToFind[currentTermId++] = termContainerId;
+            sequencePosition += ZigZagEncoding.Encode(sequenceBuffer.ToSpan(), termContainerId, sequencePosition);
         }
         
-        return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, currentTermId, rootPage);
+        return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, sequencePosition, rootPage);
     }
 
     public PhraseMatch<TInner> PhraseMatch<TInner>(TInner inner, in FieldMetadata field, ReadOnlySpan<byte> terms, ReadOnlySpan<Token> tokens)

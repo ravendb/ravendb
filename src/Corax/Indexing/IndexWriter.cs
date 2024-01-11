@@ -17,6 +17,7 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Binary;
 using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
@@ -1315,27 +1316,32 @@ namespace Corax.Indexing
                 var termsPerEntrySpan = _writer._termsPerEntryId.ToSpan();
                 
                 var type = StoredFieldType.List | StoredFieldType.Term;
+                var dispose = _writer._entriesAllocator.Allocate(512, out Span<byte> processingBuffer);
+                var processingBufferPosition = 0;
+                
                 foreach (var (entry, value) in _indexedField.EntryToTerms)
                 {
                     var (storageIndex, terms) = value;
                     ref var entryTerms = ref termsPerEntrySpan[storageIndex];
-
+                    if (processingBuffer.Length / sizeof(long) < terms.Count)
+                        GrowUnlikely(_writer._entriesAllocator, ref processingBuffer, terms.Count);
+                    
                     for (var idX = 0; idX < terms.Count; ++idX)
                     {
                         ref var term = ref terms[idX];
                         //Impossible to get null ref
-                        term = CollectionsMarshal.GetValueRefOrNullRef(_indexedField.VirtualTermIdToTermContainerId, (int)term);
+                        processingBufferPosition += ZigZagEncoding.Encode(processingBuffer, CollectionsMarshal.GetValueRefOrNullRef(_indexedField.VirtualTermIdToTermContainerId, (int)term),
+                            processingBufferPosition);
                     }
-
+                    
                     var listContainerId = Container.Allocate(
                         _writer._transaction.LowLevelTransaction,
                         _writer._storedFieldsContainerId,
-                        size: sizeof(long) * terms.Count, //compression
+                        size: processingBufferPosition, //compression
                         pageLevelMetadata: _indexedField.TermsVectorFieldRootPage, // identifies list
                         out var listSpace);
                     
-                    var spaceAsLongArray = MemoryMarshal.Cast<byte, long>(listSpace);
-                    terms.CopyTo(spaceAsLongArray, 0, terms.Count);
+                    processingBuffer.Slice(0, processingBufferPosition).CopyTo(listSpace);
                     
                     var recordedTerm = new RecordedTerm
                     (
@@ -1347,13 +1353,27 @@ namespace Corax.Indexing
                         @long: listContainerId
                     );
                     
-
+                    terms.Dispose(_writer._entriesAllocator);
                     if (entryTerms.TryAdd(recordedTerm) == false)
                     {
                         entryTerms.Grow(_writer._entriesAllocator, 1);
                         entryTerms.AddUnsafe(recordedTerm);
                     }
+
+                    processingBufferPosition = 0;
                 }
+
+                void GrowUnlikely(ByteStringContext allocator, ref Span<byte> processingBuffer, int requiredSize)
+                {
+                    var newDisposable = allocator.Allocate(Math.Min(Bits.PowerOf2(processingBuffer.Length + 1), requiredSize * sizeof(long)), out Span<byte> output);
+                    
+                    processingBuffer.CopyTo(output);
+                    dispose.Dispose();
+                    processingBuffer = output;
+                    dispose = newDisposable;
+                }
+                
+                dispose.Dispose();
             }
             
             private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
