@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionConnectingLock.Release();
         }
 
-        public async Task TakeConcurrentConnectionLock(SubscriptionConnection connection)
+        public async Task TakeConcurrentConnectionLockAsync(SubscriptionConnection connection)
         {
             if (connection.Strategy != SubscriptionOpeningStrategy.Concurrent)
                 return;
@@ -157,6 +157,7 @@ namespace Raven.Server.Documents.Subscriptions
                 await connection.SendHeartBeatAsync($"A connection from IP '{connection.ClientUri}' is waiting for other concurrent connections to subscribe.");
             }
         }
+
         private void RefreshFeatures(SubscriptionConnection connection)
         {
             using (var old = _disposableNotificationsRegistration)
