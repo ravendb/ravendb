@@ -1232,10 +1232,12 @@ where predicate.call(doc)"
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var testingStuff = db.ForTestingPurposesOnly();
-
+                var connectionsCount = 0L;
                 using (testingStuff.CallDuringWaitForSubscribe(connections =>
                 {
-                    while (connections.Count < 2)
+                    Interlocked.Increment(ref connectionsCount);
+
+                    while (Interlocked.Read(ref connectionsCount) < 2)
                     {
                         Thread.Sleep(111);
                     }
