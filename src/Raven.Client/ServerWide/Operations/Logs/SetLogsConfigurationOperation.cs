@@ -20,6 +20,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
             public TimeSpan? RetentionTime { get; set; }
             public Size? RetentionSize { get; set; }
             public bool Compress { get; set; }
+            public bool Persist { get; set; }
 
             public Parameters()
             {
@@ -35,14 +36,8 @@ namespace Raven.Client.ServerWide.Operations.Logs
         }
 
         public SetLogsConfigurationOperation(Parameters parameters)
-            : this(parameters, false)
-        {
-        }
-        
-        public SetLogsConfigurationOperation(Parameters parameters, bool persist)
         {
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-            _persist = persist;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -53,17 +48,15 @@ namespace Raven.Client.ServerWide.Operations.Logs
         private class SetLogsConfigurationCommand : RavenCommand
         {
             private readonly Parameters _parameters;
-            private readonly bool? _persist;
 
             public SetLogsConfigurationCommand(Parameters parameters, bool persist)
             {
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-                _persist = persist;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/logs/configuration?persist={_persist}";
+                url = $"{node.Url}/admin/logs/configuration";
 
                 return new HttpRequestMessage(HttpMethod.Post, url)
                 {

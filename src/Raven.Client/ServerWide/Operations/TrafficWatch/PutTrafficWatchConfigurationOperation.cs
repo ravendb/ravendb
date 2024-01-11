@@ -13,38 +13,29 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
     public class PutTrafficWatchConfigurationOperation : IServerOperation
     {
         private readonly Parameters _parameters;
-        private readonly bool _persist;
 
         public PutTrafficWatchConfigurationOperation(Parameters parameters)
-            :this(parameters, false)
-        {
-        }
-        
-        public PutTrafficWatchConfigurationOperation(Parameters parameters, bool persist)
         {
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-            _persist = persist;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new SetTrafficWatchConfigurationCommand(_parameters, _persist);
+            return new SetTrafficWatchConfigurationCommand(_parameters);
         }
 
         private class SetTrafficWatchConfigurationCommand : RavenCommand
         {
             private readonly Parameters _parameters;
-            private readonly bool _persist;
 
-            public SetTrafficWatchConfigurationCommand(Parameters parameters, bool persist)
+            public SetTrafficWatchConfigurationCommand(Parameters parameters)
             {
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-                _persist = persist;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/traffic-watch/configuration?persist={_persist}";
+                url = $"{node.Url}/admin/traffic-watch/configuration";
 
                 return new HttpRequestMessage(HttpMethod.Post, url)
                 {
@@ -99,6 +90,11 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
             /// Traffic Watch certificate thumbprints by which the Traffic Watch logging entities will be filtered.
             /// </summary>
             public List<string> CertificateThumbprints { get; set; }
+            
+            /// <summary>
+            /// Indicates if the configuration should be persisted to the configuration file
+            /// </summary>
+            public bool Persist { get; set; }
         }
     }
 }
