@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -569,9 +570,15 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
+    
+    
+    private Dictionary<long, string> _pageToField;
+    private Dictionary<Slice, long> _fieldToPage;
     public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
     {
+        if (_pageToField != null) return _pageToField;
         var pageToField = new Dictionary<long, string>();
+        _fieldToPage = new(SliceComparer.Instance);
         var it = _fieldsTree.Iterate(prefetch: false);
         if (it.Seek(Slices.BeforeAllKeys))
         {
@@ -585,6 +592,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             } while (it.MoveNext());
         }
 
-        return pageToField;
+        _pageToField = pageToField;
+        return _pageToField;
     }
 }

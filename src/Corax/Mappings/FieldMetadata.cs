@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Security;
 using Corax.Analyzers;
 using Sparrow.Server;
 using Voron;
@@ -41,6 +42,12 @@ public readonly struct FieldMetadata
             throw new NotSupportedException(typeof(T).FullName);
         
         return new FieldMetadata(numericTree, default, FieldId, Mode, Analyzer);
+    }
+
+    internal Slice GetPhraseQueryContainerName(ByteStringContext alloc)
+    {
+        Slice.From(alloc, $"{FieldName}{Constants.PhraseQuerySuffixAsStr}", ByteStringType.Immutable, out var phraseQuery);
+        return phraseQuery;
     }
     
     public bool Equals(in FieldMetadata other)

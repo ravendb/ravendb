@@ -18,6 +18,9 @@ namespace Corax
         
         public const string EmptyString = "\u0003";
         public static readonly ReadOnlyMemory<char> EmptyStringCharSpan = new(Constants.EmptyString.ToCharArray());
+        public static ReadOnlySpan<byte> PhraseQuerySuffix => "_PQ"u8; 
+        public const string  PhraseQuerySuffixAsStr = "_PQ"; 
+
         
         public const string IndexMetadata = "@index_metadata";
         public const string IndexTimeFields = "@index_time_fields";

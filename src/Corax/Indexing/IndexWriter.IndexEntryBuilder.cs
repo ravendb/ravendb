@@ -138,7 +138,7 @@ public partial class IndexWriter
             if (exists == false)
             {
                 termLocation = field.Storage.Count;
-                field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, value.Length));
+                field.Storage.AddByRef(new EntriesModifications(value.Length, termLocation));
                 scope = null; // We don't want the fieldname (slice) to be returned.
             }
 
@@ -150,6 +150,19 @@ public partial class IndexWriter
             ref var term = ref field.Storage.GetAsRef(termLocation);
             term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
 
+            // Creates a mapping for PhraseQuery
+            if (field.FieldIndexingMode is FieldIndexingMode.Search)
+            {
+                ref var entryTermsAndIndex = ref CollectionsMarshal.GetValueRefOrAddDefault(field.EntryToTerms, _entryId, out exists);
+                if (exists == false)
+                {
+                    entryTermsAndIndex.StorageIndex = _termPerEntryIndex;
+                    entryTermsAndIndex.Terms.Initialize(_parent._entriesAllocator);
+                }
+                
+                entryTermsAndIndex.Terms.Add(_parent._entriesAllocator, termLocation);
+            }
+            
             if (field.HasSuggestions)
                 _parent.AddSuggestions(field, slice);
 
@@ -165,7 +178,7 @@ public partial class IndexWriter
             if (fieldDoublesExist == false)
             {
                 doublesTermsLocation = field.Storage.Count;
-                field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, sizeof(double)));
+                field.Storage.AddByRef(new EntriesModifications(sizeof(double), doublesTermsLocation));
             }
 
             // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
@@ -173,7 +186,7 @@ public partial class IndexWriter
             if (fieldLongExist == false)
             {
                 longsTermsLocation = field.Storage.Count;
-                field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, sizeof(long)));
+                field.Storage.AddByRef(new EntriesModifications(sizeof(long), longsTermsLocation));
             }
 
             ref var doublesTerm = ref field.Storage.GetAsRef(doublesTermsLocation);

@@ -94,7 +94,7 @@ namespace Corax.Indexing
             _knownFieldsTerms = new IndexedField[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
             {
-                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i)) { FieldRootPage = -1 };
+                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i)) { FieldRootPage = -1, TermsVectorFieldRootPage = - 1};
             }
 
             _entriesAlreadyAdded = new HashSet<long>();
@@ -153,6 +153,20 @@ namespace Corax.Indexing
             {
                 _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 field.FieldRootPage = _fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
+            }
+        }
+
+        private void InitializeFieldRootPageForTermsVector(IndexedField field)
+        {
+            if (field.TermsVectorFieldRootPage == -1)
+            {
+                _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                _transaction.Allocator.Allocate(field.Name.Size + Constants.PhraseQuerySuffix.Length, out var memory);
+                var memAsSpan = memory.ToSpan();
+                field.Name.CopyTo(memAsSpan);
+                Constants.PhraseQuerySuffix.CopyTo(memAsSpan.Slice(field.Name.Size));
+                var storedName = new Slice(memory);
+                field.TermsVectorFieldRootPage = _fieldsCache.GetFieldRootPage(storedName, _fieldsTree);
             }
         }
         
@@ -327,7 +341,7 @@ namespace Corax.Indexing
                 IndexFieldsMappingBuilder.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
                 IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 IndexFieldsMappingBuilder.GetFieldForTotalSum(context, clonedFieldName, out var nameSum);
-                var field = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, false, false);
+                var field = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, false, false){FieldRootPage =  -1, TermsVectorFieldRootPage = -1};
                 _dynamicFieldsTerms[clonedFieldName] = field;
                 return field;
             }
@@ -495,7 +509,7 @@ namespace Corax.Indexing
                     if (nullExists == false)
                     {
                         nullTermLocation = field.Storage.Count;
-                        field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, 1));
+                        field.Storage.AddByRef(new EntriesModifications(1, nullTermLocation));
                           // We dont want to reclaim the term name
                     }
                     ref var nullTerm = ref field.Storage.GetAsRef(nullTermLocation);
@@ -512,7 +526,7 @@ namespace Corax.Indexing
                 if (exists == false)
                 {
                     termLocation = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, decodedKey.Length));
+                    field.Storage.AddByRef(new EntriesModifications(decodedKey.Length, termLocation));
                     scope = default; // We dont want to reclaim the term name
                 }
 
@@ -527,7 +541,7 @@ namespace Corax.Indexing
                 if (exists == false)
                 {
                     termLocation = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, sizeof(long)));
+                    field.Storage.AddByRef(new EntriesModifications(sizeof(long), termLocation));
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
@@ -537,7 +551,7 @@ namespace Corax.Indexing
                 if (exists == false)
                 {
                     termLocation = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, sizeof(long)));
+                    field.Storage.AddByRef(new EntriesModifications(sizeof(long), termLocation));
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
@@ -1208,6 +1222,8 @@ namespace Corax.Indexing
                 _writer.InsertEntriesForTermBulk(_entriesToTermsTree, _indexedField.Name);
 
                 _writer._indexMetadata.Increment(_indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
+
+                ProcessTermsVector();
             }
 
             private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key,
@@ -1275,7 +1291,12 @@ namespace Corax.Indexing
                 }
                 
                 RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
-
+    
+                //Update mapping virtual<=> storage location location. Final writing will be done after inserting ALL terms for specific field.
+                if (_indexedField.FieldIndexingMode is FieldIndexingMode.Search)
+                    _indexedField.VirtualTermIdToTermContainerId[entries.StorageLocation] = termContainerId;
+                
+                
                 if (_indexedField.Spatial == null)
                 {
                     Debug.Assert(termContainerId > 0);
@@ -1283,6 +1304,56 @@ namespace Corax.Indexing
                 }
 
                 return totalLengthOfTerm;
+            }
+            
+            void ProcessTermsVector()
+            {
+                if (_indexedField.FieldIndexingMode is not FieldIndexingMode.Search)
+                    return;
+                
+                _writer.InitializeFieldRootPageForTermsVector(_indexedField); 
+                var termsPerEntrySpan = _writer._termsPerEntryId.ToSpan();
+                
+                var type = StoredFieldType.List | StoredFieldType.Term;
+                foreach (var (entry, value) in _indexedField.EntryToTerms)
+                {
+                    var (storageIndex, terms) = value;
+                    ref var entryTerms = ref termsPerEntrySpan[storageIndex];
+
+                    for (var idX = 0; idX < terms.Count; ++idX)
+                    {
+                        ref var term = ref terms[idX];
+                        //Impossible to get null ref
+                        term = CollectionsMarshal.GetValueRefOrNullRef(_indexedField.VirtualTermIdToTermContainerId, (int)term);
+                    }
+
+                    var listContainerId = Container.Allocate(
+                        _writer._transaction.LowLevelTransaction,
+                        _writer._storedFieldsContainerId,
+                        size: sizeof(long) * terms.Count, //compression
+                        pageLevelMetadata: _indexedField.TermsVectorFieldRootPage, // identifies list
+                        out var listSpace);
+                    
+                    var spaceAsLongArray = MemoryMarshal.Cast<byte, long>(listSpace);
+                    terms.CopyTo(spaceAsLongArray, 0, terms.Count);
+                    
+                    var recordedTerm = new RecordedTerm
+                    (
+                        // why: entryTerms.Count << 8 
+                        // we put entries count here because we are sorting the entries afterward
+                        // this ensure that stored values are then read using the same order we have for writing them
+                        // which is important for storing arrays
+                        termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
+                        @long: listContainerId
+                    );
+                    
+
+                    if (entryTerms.TryAdd(recordedTerm) == false)
+                    {
+                        entryTerms.Grow(_writer._entriesAllocator, 1);
+                        entryTerms.AddUnsafe(recordedTerm);
+                    }
+                }
             }
             
             private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
@@ -1580,6 +1651,7 @@ namespace Corax.Indexing
             
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
+
 
         private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
