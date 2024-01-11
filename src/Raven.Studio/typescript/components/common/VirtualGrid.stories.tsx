@@ -13,7 +13,7 @@ interface SomeData {
 }
 
 export default {
-    title: "Bits",
+    title: "Bits/Virtual Grid",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof VirtualGrid>;
 

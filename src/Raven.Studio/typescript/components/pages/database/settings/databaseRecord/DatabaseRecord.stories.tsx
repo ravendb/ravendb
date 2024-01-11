@@ -12,7 +12,7 @@ export default {
     argTypes: {
         securityClearance: securityClearanceArgType,
     },
-} satisfies Meta<typeof DatabaseRecord>;
+} satisfies Meta;
 
 interface DefaultDatabaseRecordProps {
     securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
