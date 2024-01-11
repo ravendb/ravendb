@@ -18,7 +18,7 @@ public class EntriesModificationsTests : NoDisposalNeeded
     public void EntriesModificationsWillEraseOddDuplicates()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        var entries = new EntriesModifications(bsc, 0);
+        var entries = new EntriesModifications(0, 0);
         
         entries.Addition(bsc, 2, -1, 1);
         entries.Removal(bsc, 1, -1,1);

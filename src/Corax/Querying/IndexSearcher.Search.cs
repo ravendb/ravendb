@@ -33,7 +33,10 @@ public partial class IndexSearcher
         var terms = new ContextBoundNativeList<Slice>(Allocator);
         foreach (var word in values)
         {
-            foreach (var token in GetTokens(word))
+            var tokensInWord = CountTokens(word, out var token);
+            
+            //Single word
+            if (tokensInWord == 1)
             {
                 var value = word.AsSpan(token.Offset, (int)token.Length);
                 var termType = GetTermType(value);
@@ -97,7 +100,33 @@ public partial class IndexSearcher
                     Constants.Search.Operator.And => And<IQueryMatch, MultiTermMatch>(searchQuery, query, token: cancellationToken),
                     _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
                 };
+                
+                continue;
             }
+            
+            //Phrase query
+            var startPosition = terms.Count;
+            EncodeAndApplyAnalyzerForMultipleTerms(field, word, ref terms);
+            if (terms.Count == startPosition) continue; //sentence contained only stop-words
+
+            var hs = new HashSet<Slice>(SliceComparer.Instance);
+            for (var i = startPosition; i < terms.Count; ++i)
+            {
+                hs.Add(terms[i]);
+            }
+
+            var allIn = AllInQuery(field, hs, cancellationToken: cancellationToken);
+
+            var phraseMatch = PhraseMatch(allIn, field, terms.ToSpan().Slice(startPosition, terms.Count - startPosition));
+
+            searchQuery = (searchQuery, @operator) switch
+            {
+                (null, _) => phraseMatch,
+                (_, Constants.Search.Operator.And) => And(searchQuery, phraseMatch, cancellationToken),
+                (_, Constants.Search.Operator.Or) => Or(searchQuery, phraseMatch, cancellationToken),
+            };
+            
+            terms.Shrink(startPosition);
         }
 
         if (termMatches?.Count > 0)
@@ -115,8 +144,8 @@ public partial class IndexSearcher
             {
                 searchQuery = @operator switch
                 {
-                    Constants.Search.Operator.Or => Or<IQueryMatch, IQueryMatch>(termMatchesQuery, searchQuery),
-                    Constants.Search.Operator.And => And<IQueryMatch, IQueryMatch>(termMatchesQuery, searchQuery),
+                    Constants.Search.Operator.Or => Or(termMatchesQuery, searchQuery),
+                    Constants.Search.Operator.And => And(termMatchesQuery, searchQuery),
                     _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
                 };
             }
@@ -154,6 +183,35 @@ public partial class IndexSearcher
                 return Constants.Search.SearchMatchOptions.Exists;
 
             return mode;
+        }
+
+        //In pharse query we expect to have multiple tokens, for most cases 
+        int CountTokens(in string source, out Token termToken)
+        {
+            int count = 0;
+            termToken = default;
+
+            if (string.IsNullOrEmpty(source))
+                return count;
+            
+            var i = 0;
+            while (i < source.Length)
+            {
+                while (i < source.Length && source[i] == ' ')
+                    i++;
+
+                int start = i;
+                while (i < source.Length && source[i] != ' ')
+                    i++;
+
+                if (start != i)
+                {
+                    termToken = new Token() {Length = (uint)(i - start), Offset = start, Type = TokenType.Word};
+                    count++;
+                }
+            }
+
+            return count;
         }
         
         IEnumerable<Token> GetTokens(string source)

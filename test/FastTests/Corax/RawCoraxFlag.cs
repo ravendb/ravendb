@@ -4,7 +4,9 @@ using Corax;
 using Corax.Analyzers;
 using Corax.Querying;
 using Corax.Mappings;
+using Corax.Pipeline;
 using FastTests.Voron;
+using NetTopologySuite.Utilities;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Sparrow;
@@ -12,9 +14,11 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Assert = Xunit.Assert;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -95,6 +99,45 @@ public class RawCoraxFlag : StorageTest
         
     }
 
+    [RavenFact(RavenTestCategory.Corax)]
+    public void PhraseMatchPrimitiveTest()
+    {
+        using var ctx = JsonOperationContext.ShortTermSingleUse();
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        _analyzers = CreateKnownFields(_bsc, true, shouldStore: true);
+
+        {
+            using var writer = new IndexWriter(Env, _analyzers);
+
+            using (var builder = writer.Index("us/1"u8))
+            {
+                builder.Write(IndexId, null, "us/1"u8);
+                builder.Write(ContentId, null, "First second third fourth");
+            }
+            using (var builder = writer.Index("us/2"u8))
+            {
+                builder.Write(IndexId, null, "us/2"u8);
+                builder.Write(ContentId, null, "First third fourth second");
+            }
+           
+            writer.Commit();
+        }
+
+
+        {
+            using var indexSearcher = new IndexSearcher(Env, _analyzers);
+            var bytes = "secondthird"u8;
+            var tokens = new global::Corax.Pipeline.Token[] {new Token() {Length = (uint)6, Offset = 0, Type = default}, new Token() {Length = 5, Offset = 6, Type = default}};
+
+            var search = indexSearcher.PhraseMatch(indexSearcher.AllEntries(), _analyzers.GetByFieldId(ContentId).Metadata, bytes, tokens);
+            Span<long> ids = stackalloc long[16];
+            Assert.Equal(1, search.Fill(ids));
+            Page page = default;
+            var reader = indexSearcher.GetEntryTermsReader(ids[0], ref page);
+
+        }
+    }
+    
     [Fact]
     public unsafe void CanStoreBlittableWithWriterScope()
     {
@@ -166,7 +209,7 @@ public class RawCoraxFlag : StorageTest
         using var builder = (analyzers
             ? IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice, Analyzer.CreateDefaultAnalyzer(ctx))
-                .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)), shouldStore: shouldStore)
+                .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)), shouldStore: shouldStore, fieldIndexingMode: FieldIndexingMode.Search)
             : IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice)
                 .AddBinding(ContentId, contentSlice, fieldIndexingMode: FieldIndexingMode.No,shouldStore:shouldStore));

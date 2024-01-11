@@ -386,6 +386,12 @@ public sealed partial class CompactTree : IPrepareForCommit
         return _inner.TryGetValue(new CompactKeyLookup(key), out value);
     }
 
+    public bool TryGetTermContainerId(CompactKey key, out long value)
+    {
+        key.ChangeDictionary(_inner.State.DictionaryId);
+        return _inner.TryGetTermContainerId(new CompactKeyLookup(key), out value);
+    }
+
     public bool TryGetValue(CompactKey key, out long termContainerId, out long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);

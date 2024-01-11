@@ -3,6 +3,7 @@ using Corax.Analyzers;
 using Corax.Mappings;
 using Sparrow.Collections;
 using Voron;
+using Voron.Util;
 
 namespace Corax.Indexing;
 
@@ -17,6 +18,13 @@ internal sealed class IndexedField
     public Dictionary<long, SpatialEntry> Spatial;
     public readonly FastList<EntriesModifications> Storage;
     public readonly Dictionary<Slice, int> Textual;
+    
+    //Mapping DocumentId, textual entries
+
+    //Creates a mapping Document => [_virtualTermIds] which gives order of terms from original document. 
+    public readonly Dictionary<long, (int StorageIndex, NativeList<long> Terms)> EntryToTerms;
+    public readonly Dictionary<int, long> VirtualTermIdToTermContainerId;
+    
     public readonly Dictionary<long, int> Longs;
     public readonly Dictionary<double, int> Doubles;
     public Dictionary<Slice, int> Suggestions;
@@ -32,6 +40,7 @@ internal sealed class IndexedField
     public readonly bool ShouldStore;
     public bool HasMultipleTermsPerField;
     public long FieldRootPage;
+    public long TermsVectorFieldRootPage;
 
     public override string ToString()
     {
@@ -60,6 +69,12 @@ internal sealed class IndexedField
         Doubles = new Dictionary<double, int>();
         FieldIndexingMode = fieldIndexingMode;
         NameForStatistics = nameForStatistics ?? $"Field_{Name}";
+
+        if (fieldIndexingMode is FieldIndexingMode.Search)
+        {
+            VirtualTermIdToTermContainerId = new();
+            EntryToTerms = new();
+        }
     }
 
     public void Clear()
