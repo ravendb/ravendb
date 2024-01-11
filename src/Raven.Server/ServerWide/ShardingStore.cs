@@ -176,7 +176,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            if (addDatabase.RaftCommandIndex == null)
+            if (addDatabase.IsRestore == false && addDatabase.RaftCommandIndex == null)
             {
                 FillPrefixedSharding(shardingConfiguration);
             }

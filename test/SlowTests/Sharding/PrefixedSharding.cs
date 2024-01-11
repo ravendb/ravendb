@@ -533,10 +533,10 @@ public class PrefixedSharding : RavenTestBase
             Assert.Equal(2, employeesPrefixSetting.Shards[0]);
             Assert.Equal(ShardHelper.NumberOfBuckets * 3, employeesPrefixSetting.BucketRangeStart);
 
-            Assert.Equal(6, sharding.BucketRanges.Count);
-            Assert.Equal(ShardHelper.NumberOfBuckets, sharding.BucketRanges[3].BucketRangeStart);
-            Assert.Equal(ShardHelper.NumberOfBuckets * 2, sharding.BucketRanges[4].BucketRangeStart);
-            Assert.Equal(ShardHelper.NumberOfBuckets * 3, sharding.BucketRanges[5].BucketRangeStart);
+            Assert.Equal(6, newDatabaseRecord.Sharding.BucketRanges.Count);
+            Assert.Equal(ShardHelper.NumberOfBuckets, newDatabaseRecord.Sharding.BucketRanges[3].BucketRangeStart);
+            Assert.Equal(ShardHelper.NumberOfBuckets * 2, newDatabaseRecord.Sharding.BucketRanges[4].BucketRangeStart);
+            Assert.Equal(ShardHelper.NumberOfBuckets * 3, newDatabaseRecord.Sharding.BucketRanges[5].BucketRangeStart);
 
             using (var session = store.OpenAsyncSession(database: restoredDatabaseName))
             {
