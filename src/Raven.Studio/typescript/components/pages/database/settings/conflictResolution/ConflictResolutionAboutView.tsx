@@ -15,7 +15,43 @@ export default function ConflictResolutionAboutView() {
                 description="Get additional info on this feature"
                 heading="About this view"
             >
-                <p>Text for Conflicts Resolution</p>
+                <p>
+                    Since RavenDB accepts writes on any node in the cluster,
+                    <br /> a conflict may occur when the same document is updated concurrently on two different nodes.
+                </p>
+                <p>
+                    In this view, you can <strong>define the server's behavior</strong> upon a conflict between
+                    documents.
+                    <br />
+                    When a conflict is detected, the server will attempt to resolve it via the following flow:
+                </p>
+                <ol>
+                    <li>
+                        If a resolving script (a JavaScript function) is defined per the collection,
+                        <br /> it will be used to resolve the conflict.
+                        <br /> See the available script variables and examples in the provided documentation link.
+                    </li>
+                    <li className={"margin-top-xs"}>
+                        Else, when no script is defined:
+                        <br />
+                        <ul>
+                            <li className={"margin-top-xxs"}>
+                                If the "<strong>Resolve to latest version</strong>" toggle is turned ON:
+                                <br />
+                                The server will resolve the conflict to the latest document version.
+                            </li>
+                            <li className={"margin-top-xxs"}>
+                                If the toggle is OFF:
+                                <br /> The conflict is not automatically resolved.
+                                <br /> You can resolve the conflict manually from the{" "}
+                                <a href={"TBD - replace with conflictsUrl"} target="_blank">
+                                    Conflicts view
+                                </a>{" "}
+                                in the Studio.
+                            </li>
+                        </ul>
+                    </li>
+                </ol>
                 <hr />
                 <div className="small-label mb-2">useful links</div>
                 <a href={conflictResolutionDocsLink} target="_blank">
