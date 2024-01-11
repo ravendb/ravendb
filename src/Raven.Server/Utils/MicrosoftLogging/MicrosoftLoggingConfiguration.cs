@@ -19,14 +19,14 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(MicrosoftLoggingConfiguration));
     private const string NotificationKey = "microsoft-configuration-logs-error";
     private const AlertType AlertType = NotificationCenter.Notifications.AlertType.MicrosoftLogsConfigurationLoadError;
-    
+
     private readonly string _notificationId = AlertRaised.GetKey(AlertType, NotificationKey);
 
     private readonly IEnumerable<KeyValuePair<string, SparrowLoggerWrapper>> _loggers;
     private readonly NotificationCenter.NotificationCenter _notificationCenter;
-    private  readonly ConcurrentDictionary<StringSegment, LogLevel> _configuration = new ConcurrentDictionary<StringSegment, LogLevel>();
+    private readonly ConcurrentDictionary<StringSegment, LogLevel> _configuration = new ConcurrentDictionary<StringSegment, LogLevel>();
 
-    public MicrosoftLoggingConfiguration(IEnumerable<KeyValuePair<string, SparrowLoggerWrapper>> loggers,NotificationCenter.NotificationCenter notificationCenter)
+    public MicrosoftLoggingConfiguration(IEnumerable<KeyValuePair<string, SparrowLoggerWrapper>> loggers, NotificationCenter.NotificationCenter notificationCenter)
     {
         _loggers = loggers;
         _notificationCenter = notificationCenter;
@@ -47,7 +47,7 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
 
         return LogLevel.None;
     }
-    
+
     public IEnumerator<(string Category, LogLevel LogLevel)> GetEnumerator()
     {
         foreach (var (category, logLevel) in _configuration)
@@ -57,7 +57,7 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    
+
     public void ReadConfiguration(string configurationPath, JsonOperationContext context, bool shouldThrow, bool reset = true)
     {
         FileStream stream;
@@ -90,6 +90,7 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
             ReadConfiguration(stream, context, reset);
         }
     }
+
     public void ReadConfiguration(Stream streamConfiguration, JsonOperationContext context, bool reset = true)
     {
         BlittableJsonReaderObject blitConfiguration = null;
@@ -109,7 +110,8 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
             HandleReadConfigurationFailure(blitConfiguration, e);
         }
     }
-    public void ReadConfigurationAsync(BlittableJsonReaderObject blitConfiguration, JsonOperationContext context, bool reset = true)
+
+    public void ReadConfiguration(BlittableJsonReaderObject blitConfiguration, bool reset = true)
     {
         try
         {
@@ -126,7 +128,7 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
             HandleReadConfigurationFailure(blitConfiguration, e);
         }
     }
-    
+
     private void ReadConfiguration(BlittableJsonReaderObject jConfiguration, string rootCategory)
     {
         jConfiguration.BlittableValidation();
@@ -149,7 +151,7 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
             }
         }
     }
-    
+
     private void HandleReadConfigurationFailure(BlittableJsonReaderObject blitConfiguration, Exception e)
     {
         var msg = $"Failed to read and apply Microsoft log configuration.";
