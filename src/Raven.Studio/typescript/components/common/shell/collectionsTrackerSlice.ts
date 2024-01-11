@@ -1,4 +1,4 @@
-import { EntityState, PayloadAction, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
+import { EntityState, PayloadAction, createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 
 const collectionNames = {
@@ -20,7 +20,7 @@ export interface Collection {
 }
 
 interface CollectionsTrackerState {
-    collections: EntityState<Collection, string>;
+    collections: EntityState<Collection, CollectionName>;
 }
 
 const collectionsAdapter = createEntityAdapter<Collection, string>({
@@ -45,10 +45,12 @@ export const collectionsTrackerSlice = createSlice({
 
 export const collectionsTrackerActions = collectionsTrackerSlice.actions;
 
+const selectCollectionNames = createSelector(
+    (store: RootState) => collectionsSelectors.selectIds(store.collectionsTracker.collections),
+    (collections) => collections.filter((name) => name !== collectionNames.allDocuments) satisfies CollectionName[]
+);
+
 export const collectionsTrackerSelectors = {
     collections: (store: RootState) => collectionsSelectors.selectAll(store.collectionsTracker.collections),
-    collectionNames: (store: RootState) =>
-        collectionsSelectors
-            .selectIds(store.collectionsTracker.collections)
-            .filter((name) => name !== collectionNames.allDocuments) as CollectionName[],
+    collectionNames: selectCollectionNames,
 };

@@ -14,67 +14,71 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { databasesViewSliceInternal } from "components/pages/resources/databases/store/databasesViewSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { createSelector } from "@reduxjs/toolkit";
 
-const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterByStateOption>[] => {
-    let error = 0,
-        offline = 0,
-        disabled = 0,
-        online = 0,
-        local = 0,
-        remote = 0;
+const selectFilterByStateOptions = createSelector(
+    (store: RootState) => store,
+    (store): InputItem<DatabaseFilterByStateOption>[] => {
+        let error = 0,
+            offline = 0,
+            disabled = 0,
+            online = 0,
+            local = 0,
+            remote = 0;
 
-    const localNodeTag = clusterSelectors.localNodeTag(store);
+        const localNodeTag = clusterSelectors.localNodeTag(store);
 
-    databaseSelectors.allDatabases(store).forEach((db) => {
-        const perNodeState = selectDatabaseState(db.name)(store);
-        const state = DatabaseUtils.getDatabaseState(db, perNodeState);
+        databaseSelectors.allDatabases(store).forEach((db) => {
+            const perNodeState = selectDatabaseState(db.name)(store);
+            const state = DatabaseUtils.getDatabaseState(db, perNodeState);
 
-        switch (state) {
-            case "Loading":
-                break;
-            case "Error":
-                error++;
-                break;
-            case "Offline":
-                offline++;
-                break;
-            case "Disabled":
-                disabled++;
-                break;
-            case "Online":
-                online++;
-                break;
-            case "Partially Online":
-                online++;
-                offline++;
-                break;
-            default:
-                assertUnreachable(state);
-        }
+            switch (state) {
+                case "Loading":
+                    break;
+                case "Error":
+                    error++;
+                    break;
+                case "Offline":
+                    offline++;
+                    break;
+                case "Disabled":
+                    disabled++;
+                    break;
+                case "Online":
+                    online++;
+                    break;
+                case "Partially Online":
+                    online++;
+                    offline++;
+                    break;
+                default:
+                    assertUnreachable(state);
+            }
 
-        if (perNodeState.some((x) => x.location.nodeTag === localNodeTag)) {
-            local++;
-        }
+            if (perNodeState.some((x) => x.location.nodeTag === localNodeTag)) {
+                local++;
+            }
 
-        if (perNodeState.some((x) => x.location.nodeTag !== localNodeTag)) {
-            remote++;
-        }
-    });
+            if (perNodeState.some((x) => x.location.nodeTag !== localNodeTag)) {
+                remote++;
+            }
+        });
 
-    return [
-        { value: "Online", label: "Online", count: online },
-        { value: "Offline", label: "Offline", count: offline },
-        { value: "Error", label: "Errored", count: error },
-        { value: "Disabled", label: "Disabled", count: disabled },
-        {
-            value: "Local",
-            label: `Local (Node ${localNodeTag})`,
-            count: local,
-            verticalSeparatorLine: true,
-        },
-        { value: "Remote", label: "Remote", count: remote },
-    ];
-};
+        return [
+            { value: "Online", label: "Online", count: online },
+            { value: "Offline", label: "Offline", count: offline },
+            { value: "Error", label: "Errored", count: error },
+            { value: "Disabled", label: "Disabled", count: disabled },
+            {
+                value: "Local",
+                label: `Local (Node ${localNodeTag})`,
+                count: local,
+                verticalSeparatorLine: true,
+            },
+            { value: "Remote", label: "Remote", count: remote },
+        ];
+    }
+);
 
 function isMatchingStatus(
     filterStates: DatabaseFilterByStateOption[],
@@ -248,81 +252,89 @@ function getDatabaseLocalInfo(
     }
 }
 
-export function selectDatabaseState(name: string) {
-    return (store: RootState) => {
-        const db = databaseSelectors.databaseByName(name)(store);
+export const selectDatabaseState = (name: string) =>
+    createSelector(
+        (store: RootState) => store,
+        (store): locationAwareLoadableData<DatabaseLocalInfo>[] => {
+            const db = databaseSelectors.databaseByName(name)(store);
 
-        const locations = DatabaseUtils.getLocations(db);
+            const locations = DatabaseUtils.getLocations(db);
 
-        return locations.map((location): locationAwareLoadableData<DatabaseLocalInfo> => {
-            const loadState = databasesViewSliceInternal.databaseDetailedLoadStatusSelectors.selectById(
-                store.databasesView.detailedLoadStatus,
-                location.nodeTag
-            ) || {
-                status: "idle",
-                nodeTag: location.nodeTag,
-            };
+            return locations.map((location): locationAwareLoadableData<DatabaseLocalInfo> => {
+                const loadState = databasesViewSliceInternal.databaseDetailedLoadStatusSelectors.selectById(
+                    store.databasesView.detailedLoadStatus,
+                    location.nodeTag
+                ) || {
+                    status: "idle",
+                    nodeTag: location.nodeTag,
+                };
 
-            switch (loadState.status) {
-                case "idle":
-                case "loading":
-                case "failure":
-                    return {
-                        status: loadState.status,
-                        location,
-                    };
-                case "success": {
-                    const data = databasesViewSliceInternal.databaseDetailedInfoSelectors.selectById(
-                        store.databasesView.databaseDetailedInfo,
-                        databasesViewSliceInternal.selectDatabaseInfoId(name, location)
-                    );
+                switch (loadState.status) {
+                    case "idle":
+                    case "loading":
+                    case "failure":
+                        return {
+                            status: loadState.status,
+                            location,
+                        };
+                    case "success": {
+                        const data = databasesViewSliceInternal.databaseDetailedInfoSelectors.selectById(
+                            store.databasesView.databaseDetailedInfo,
+                            databasesViewSliceInternal.selectDatabaseInfoId(name, location)
+                        );
 
-                    return getDatabaseLocalInfo(data, location);
+                        return getDatabaseLocalInfo(data, location);
+                    }
                 }
-            }
-        });
-    };
-}
+            });
+        }
+    );
 
 /*
   For sharded databases it returns orchestrators state
   For non-sharded it return state from all nodes
  */
-export function selectTopLevelState(name: string) {
-    return (store: RootState): locationAwareLoadableData<TopLevelDatabaseInfo>[] => {
-        const db = databaseSelectors.databaseByName(name)(store);
 
-        if (db.sharded) {
-            const state = selectOrchestratorState(db.name)(store);
+export const selectTopLevelState = (name: string) =>
+    createSelector(
+        (store: RootState) => store,
+        (store: RootState): locationAwareLoadableData<TopLevelDatabaseInfo>[] => {
+            const db = databaseSelectors.databaseByName(name)(store);
 
-            return state.map((orchestratorState) => {
-                const { data, location, ...rest } = orchestratorState;
+            if (db.sharded) {
+                const state = selectOrchestratorState(db.name)(store);
+
+                return state.map((orchestratorState) => {
+                    const { data, location, ...rest } = orchestratorState;
+
+                    return {
+                        data: data
+                            ? databasesViewSliceInternal.orchestratorInfoIntoTopLevelDatabaseInfo(
+                                  data,
+                                  location.nodeTag
+                              )
+                            : null,
+                        location,
+                        ...rest,
+                    };
+                });
+            }
+
+            const state = selectDatabaseState(db.name)(store);
+
+            return state.map((dbState) => {
+                const { data, location, ...rest } = dbState;
 
                 return {
                     data: data
-                        ? databasesViewSliceInternal.orchestratorInfoIntoTopLevelDatabaseInfo(data, location.nodeTag)
+                        ? databasesViewSliceInternal.databaseInfoIntoTopLevelDatabaseInfo(data, location.nodeTag)
                         : null,
                     location,
                     ...rest,
                 };
             });
         }
-
-        const state = selectDatabaseState(db.name)(store);
-
-        return state.map((dbState) => {
-            const { data, location, ...rest } = dbState;
-
-            return {
-                data: data
-                    ? databasesViewSliceInternal.databaseInfoIntoTopLevelDatabaseInfo(data, location.nodeTag)
-                    : null,
-                location,
-                ...rest,
-            };
-        });
-    };
-}
+    );
 
 export const databasesViewSelectors = {
     filterByStateOptions: selectFilterByStateOptions,
