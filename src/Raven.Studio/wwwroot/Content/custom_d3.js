@@ -1,8 +1,7 @@
 /*
 It's d3 with single change described here: https://stackoverflow.com/a/40617988/539830
 */
-
-const d3_init = function() {
+!function() {
   var d3 = {
     version: "3.5.17"
   };
@@ -9557,6 +9556,4 @@ const d3_init = function() {
     return request.responseXML;
   });
   if (typeof define === "function" && define.amd) this.d3 = d3, define(d3); else if (typeof module === "object" && module.exports) module.exports = d3; else this.d3 = d3;
-}.bind(this);
-
-d3_init();
+}();
