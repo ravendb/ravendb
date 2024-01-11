@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             if (to != null && logDateTime > to)
                                 continue;
                         }
-                        
+
                         try
                         {
                             var entry = archive.CreateEntry(fileName);
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 writer.WriteObject(json);
             }
         }
-        
+
         [RavenAction("/admin/logs/microsoft/configuration", "GET", AuthorizationStatus.Operator)]
         public async Task GetMicrosoftConfiguration()
         {
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 writer.WriteObject(json);
             }
         }
-        
+
         [RavenAction("/admin/logs/microsoft/state", "GET", AuthorizationStatus.Operator)]
         public async Task GetMicrosoftLoggersState()
         {
@@ -235,10 +235,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var parameters = await context.ReadForMemoryAsync(RequestBodyStream(), "logs/configuration");
                 if (parameters.TryGet("Configuration", out BlittableJsonReaderObject microsoftConfig) == false)
                     throw new InvalidOperationException($"The request body doesn't contain required 'Configuration' property - {parameters}");
-                
-                provider.Configuration.ReadConfigurationAsync(microsoftConfig, context, reset);
+
+                provider.Configuration.ReadConfiguration(microsoftConfig, reset);
                 provider.ApplyConfiguration();
-                
+
                 if (parameters.TryGet("Persist", out bool persist) && persist)
                 {
                     try
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             NoContentStatus();
         }
-        
+
         [RavenAction("/admin/logs/microsoft/enable", "POST", AuthorizationStatus.Operator)]
         public Task EnableMicrosoftLog()
         {
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus();
             return Task.CompletedTask;
         }
-        
+
         [RavenAction("/admin/logs/microsoft/disable", "POST", AuthorizationStatus.Operator)]
         public Task DisableMicrosoftLog()
         {
