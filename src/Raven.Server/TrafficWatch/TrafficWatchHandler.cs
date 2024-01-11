@@ -111,7 +111,7 @@ namespace Raven.Server.TrafficWatch
                         jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.HttpMethods, x => x.TrafficWatch.HttpMethods);
                         jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.ChangeTypes, x => x.TrafficWatch.ChangeTypes);
                         jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.CertificateThumbprints, x => x.TrafficWatch.CertificateThumbprints);
-                        await jsonFileModifier.AsyncExecute();
+                        await jsonFileModifier.ExecuteAsync();
                     }
                     catch (Exception e)
                     {

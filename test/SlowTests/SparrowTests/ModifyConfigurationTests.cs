@@ -41,7 +41,7 @@ public class ModifyConfigurationTests : RavenTestBase
         using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
             settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
-            await settingJsonModifier.AsyncExecute();
+            await settingJsonModifier.ExecuteAsync();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -63,7 +63,7 @@ public class ModifyConfigurationTests : RavenTestBase
         using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
             settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
-            await settingJsonModifier.AsyncExecute();
+            await settingJsonModifier.ExecuteAsync();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -91,7 +91,7 @@ public class ModifyConfigurationTests : RavenTestBase
             settingJsonModifier.SetOrRemoveIfDefault(200, x => x.Logs.RetentionTime);
             settingJsonModifier.SetOrRemoveIfDefault(600, x => x.Logs.RetentionSize);
             settingJsonModifier.SetOrRemoveIfDefault(true, x => x.Logs.Compress);
-            await settingJsonModifier.AsyncExecute();
+            await settingJsonModifier.ExecuteAsync();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -116,7 +116,7 @@ public class ModifyConfigurationTests : RavenTestBase
         using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
             settingJsonModifier.SetOrRemoveIfDefault(72, x => x.Logs.RetentionTime);
-            await settingJsonModifier.AsyncExecute();
+            await settingJsonModifier.ExecuteAsync();
         }
 
         var modifiedContent = await File.ReadAllTextAsync(settingJsonPath);
@@ -148,7 +148,7 @@ public class ModifyConfigurationTests : RavenTestBase
             settingJsonModifier.SetOrRemoveIfDefault(200, x => x.Logs.RetentionTime);
             settingJsonModifier.SetOrRemoveIfDefault(600, x => x.Logs.RetentionSize);
             settingJsonModifier.SetOrRemoveIfDefault(true, x => x.Logs.Compress);
-            await settingJsonModifier.AsyncExecute();
+            await settingJsonModifier.ExecuteAsync();
         }
         
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
@@ -202,7 +202,6 @@ public class ModifyConfigurationTests : RavenTestBase
         using (var embedded = new EmbeddedServer())
         {
             embedded.StartServer(options);
-            var a = await File.ReadAllTextAsync(settingsJsonPath);
             using var store = await embedded.GetDocumentStoreAsync("PersistLogConfiguration");
             var configurationResult = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation());
             
@@ -251,9 +250,9 @@ public class ModifyConfigurationTests : RavenTestBase
             var httpClient = requestExecutor.HttpClient;
 
             var url = await embedded.GetServerUriAsync();
-            var requestUri = $"{url.AbsoluteUri}admin/logs/microsoft/configuration?persist=true";
+            var requestUri = $"{url.AbsoluteUri}admin/logs/microsoft/configuration";
 
-            var stringContent = new StringContent("{\"\":\"Trace\"}", Encoding.UTF8, "application/json");
+            var stringContent = new StringContent("{\"Configuration\":{\"\":\"Trace\"}, \"Persist\":true}", Encoding.UTF8, "application/json");
             
             var response = await httpClient.PostAsync(requestUri, stringContent).ConfigureAwait(false);
             Assert.True(response.IsSuccessStatusCode);
