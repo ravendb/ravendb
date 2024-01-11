@@ -32,6 +32,13 @@ jest.mock('plugins/dialog', () => ({
 jest.mock('durandal/app', () => ({
 }));
 
+jest.mock("react-dnd", () => ({ 
+    DndProvider: () => null
+}));
+jest.mock("react-dnd-html5-backend", () => ({ 
+    HTML5Backend: () => null
+}));
+
 const ace = require("ace-builds/src-noconflict/ace");
 ace.config.set("basePath", "../node_modules/ace-builds/src-noconflict");
 window.ace = ace;
