@@ -132,6 +132,7 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
     $configuration = if ($debug) { 'Debug' } else { 'Release' }
     $commandArgs += @( "--configuration", $configuration )
     $commandArgs += $( "--runtime", "$($target.Runtime)" )
+    $commandArgs += $( "--self-contained", "true" )
     $commandArgs += "$srcDir"
 
     if ([string]::IsNullOrEmpty($target.Arch) -eq $false) {
