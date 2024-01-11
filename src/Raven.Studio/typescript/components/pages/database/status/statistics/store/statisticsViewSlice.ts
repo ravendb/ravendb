@@ -14,7 +14,7 @@ import {
     databaseLocationComparator,
 } from "components/utils/common";
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";
-import { WritableDraft } from "immer/dist/types/types-external";
+import { Draft } from "immer";
 import { DatabaseSharedInfo } from "components/models/databases";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
@@ -154,7 +154,7 @@ export const statisticsViewSlice = createSlice({
             action.payload.forEach((indexStat) => {
                 const existingIndex = state.indexDetails.entities[indexStat.Name];
 
-                let indexToUse: WritableDraft<IndexItem>;
+                let indexToUse: Draft<IndexItem>;
 
                 if (!existingIndex) {
                     // create entry for new index
