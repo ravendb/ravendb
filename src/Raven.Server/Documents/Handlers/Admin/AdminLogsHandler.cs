@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         jsonFileModifier.SetOrRemoveIfDefault(retentionSize, x => x.Logs.RetentionSize);
                         jsonFileModifier.SetOrRemoveIfDefault((int)LoggingSource.Instance.RetentionTime.TotalHours, x => x.Logs.RetentionTime);
                         jsonFileModifier.SetOrRemoveIfDefault(LoggingSource.Instance.Compressing, x => x.Logs.Compress);
-                        await jsonFileModifier.AsyncExecute();
+                        await jsonFileModifier.ExecuteAsync();
                     }
                     catch (Exception e)
                     {
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             if (to != null && logDateTime > to)
                                 continue;
                         }
-                        
+
                         try
                         {
                             var entry = archive.CreateEntry(fileName);
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 writer.WriteObject(json);
             }
         }
-        
+
         [RavenAction("/admin/logs/microsoft/configuration", "GET", AuthorizationStatus.Operator)]
         public async Task GetMicrosoftConfiguration()
         {
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 writer.WriteObject(json);
             }
         }
-        
+
         [RavenAction("/admin/logs/microsoft/state", "GET", AuthorizationStatus.Operator)]
         public async Task GetMicrosoftLoggersState()
         {
@@ -232,10 +232,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 bool reset = GetBoolValueQueryString("reset", required: false) ?? false;
                 var provider = Server.GetService<MicrosoftLoggingProvider>();
-                await provider.Configuration.ReadConfigurationAsync(RequestBodyStream(), context, reset);
+                var parameters = await context.ReadForMemoryAsync(RequestBodyStream(), "logs/configuration");
+                if (parameters.TryGet("Configuration", out BlittableJsonReaderObject microsoftConfig) == false)
+                    throw new InvalidOperationException($"The request body doesn't contain required 'Configuration' property - {parameters}");
+
+                provider.Configuration.ReadConfiguration(microsoftConfig, reset);
                 provider.ApplyConfiguration();
-                
-                if (GetBoolValueQueryString("persist", required: false) == true)
+
+                if (parameters.TryGet("Persist", out bool persist) && persist)
                 {
                     try
                     {
@@ -244,11 +248,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                         {
                             microsoftConfigModifier.Modifications[category] = logLevel;
                         }
-                        await microsoftConfigModifier.AsyncExecute();
+                        await microsoftConfigModifier.ExecuteAsync();
 
                         using var settingJsonConfigModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
                         settingJsonConfigModifier.SetOrRemoveIfDefault(false, x => x.Logs.DisableMicrosoftLogs);
-                        await settingJsonConfigModifier.AsyncExecute();
+                        await settingJsonConfigModifier.ExecuteAsync();
                     }
                     catch (Exception e)
                     {
@@ -259,7 +263,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             NoContentStatus();
         }
-        
+
         [RavenAction("/admin/logs/microsoft/enable", "POST", AuthorizationStatus.Operator)]
         public Task EnableMicrosoftLog()
         {
@@ -269,7 +273,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus();
             return Task.CompletedTask;
         }
-        
+
         [RavenAction("/admin/logs/microsoft/disable", "POST", AuthorizationStatus.Operator)]
         public Task DisableMicrosoftLog()
         {

@@ -118,7 +118,8 @@ class trafficWatchConfiguration {
             MinimumDurationInMs: this.minimumDuration(),
             HttpMethods: this.filterHttpMethods() ? this.httpMethods() : null,
             ChangeTypes: this.filterChangeTypes() ? this.changeTypes() : null,
-            CertificateThumbprints: this.filterCertificateThumbprints() ? this.certificateThumbprints() : null
+            CertificateThumbprints: this.filterCertificateThumbprints() ? this.certificateThumbprints() : null,
+            Persist: false
         }
     }
 }

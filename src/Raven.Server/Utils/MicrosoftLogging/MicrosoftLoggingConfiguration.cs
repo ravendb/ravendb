@@ -91,6 +91,7 @@ public sealed class MicrosoftLoggingConfiguration : IEnumerable<(string Category
             ReadConfiguration(stream, context, reset);
         }
     }
+
     public void ReadConfiguration(Stream streamConfiguration, JsonOperationContext context, bool reset = true)
     {
         BlittableJsonReaderObject blitConfiguration = null;
@@ -110,15 +111,14 @@ public sealed class MicrosoftLoggingConfiguration : IEnumerable<(string Category
             HandleReadConfigurationFailure(blitConfiguration, e);
         }
     }
-    public async Task ReadConfigurationAsync(Stream streamConfiguration, JsonOperationContext context, bool reset = true)
+
+    public void ReadConfiguration(BlittableJsonReaderObject blitConfiguration, bool reset = true)
     {
-        BlittableJsonReaderObject blitConfiguration = null;
         try
         {
             if (reset)
                 _configuration.Clear();
 
-            blitConfiguration = await context.ReadForMemoryAsync(streamConfiguration, "logs/configuration");
             ReadConfiguration(blitConfiguration, null);
 
             //If the code run on server startup the notification center is not initialized 
