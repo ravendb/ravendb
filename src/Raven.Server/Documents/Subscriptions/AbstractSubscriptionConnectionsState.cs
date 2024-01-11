@@ -230,7 +230,8 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
     public abstract Task UpdateClientConnectionTime();
     protected abstract void SetLastChangeVectorSent(TSubscriptionConnection connection);
     public abstract Task WaitForIndexNotificationAsync(long index);
-
+    public abstract void ReleaseConcurrentConnectionLock(TSubscriptionConnection connection);
+    public abstract Task TakeConcurrentConnectionLockAsync(TSubscriptionConnection connection);
     public abstract void DropSubscription(SubscriptionException e);
 
     public virtual Task InitializeAsync(TSubscriptionConnection connection, bool afterSubscribe = false)
@@ -240,49 +241,50 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
         return Task.CompletedTask;
     }
 
-    public virtual async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync(TSubscriptionConnection connection)
+    public virtual async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync(TSubscriptionConnection connection, Stopwatch registerConnectionDuration)
     {
         var random = new Random();
-        var registerConnectionDuration = Stopwatch.StartNew();
 
+        var sp = Stopwatch.StartNew();
+        while (true)
+        {
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+            try
+            {
+                var disposeOnce = RegisterSubscriptionConnection(connection);
+                registerConnectionDuration.Stop();
+                return (disposeOnce, registerConnectionDuration.ElapsedTicks);
+            }
+            catch (TimeoutException)
+            {
+                if (connection._logger.IsInfoEnabled)
+                {
+                    connection._logger.Info(
+                        $"A connection from IP {connection.ClientUri} is starting to wait until previous connection from " +
+                        $"{GetConnectionsAsString()} is released");
+                }
+
+                var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)connection.Options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
+                await Task.Delay(timeout, connection.CancellationTokenSource.Token);
+                await connection.SendHeartBeatIfNeededAsync(sp,
+               $"A connection from IP {connection.ClientUri} is waiting for Subscription Task that is serving a connection from IP " +
+                    $"{GetConnectionsAsString()} to be released");
+            }
+        }
+    }
+
+    public void TryRemovePendingConnectionInfo(SubscriptionConnectionInfo info)
+    {
+        _pendingConnections.TryRemove(info);
+    }
+
+    public SubscriptionConnectionInfo SubscriptionPendingConnectionInfo(TSubscriptionConnection connection)
+    {
         var info = connection.CreateConnectionInfo();
         _pendingConnections.Add(info);
         connection.RecordConnectionInfo();
-
-        try
-        {
-            var sp = Stopwatch.StartNew();
-            while (true)
-            {
-                CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                try
-                {
-                    var disposeOnce = RegisterSubscriptionConnection(connection);
-                    registerConnectionDuration.Stop();
-                    return (disposeOnce, registerConnectionDuration.ElapsedTicks);
-                }
-                catch (TimeoutException)
-                {
-                    if (connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info(
-                            $"A connection from IP {connection.ClientUri} is starting to wait until previous connection from " +
-                            $"{GetConnectionsAsString()} is released");
-                    }
-
-                    var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)connection.Options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
-                    await Task.Delay(timeout, connection.CancellationTokenSource.Token);
-                    await connection.SendHeartBeatIfNeededAsync(sp,
-                   $"A connection from IP {connection.ClientUri} is waiting for Subscription Task that is serving a connection from IP " +
-                        $"{GetConnectionsAsString()} to be released");
-                }
-            }
-        }
-        finally
-        {
-            _pendingConnections.TryRemove(info);
-        }
+        return info;
     }
 
     public SubscriptionConnectionsDetails GetSubscriptionConnectionsDetails()
