@@ -24,7 +24,6 @@ import {
     OngoingTaskSubscriptionSharedInfo,
 } from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
-import { produce } from "immer";
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
 import { databaseLocationComparator } from "components/utils/common";
 import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
@@ -38,7 +37,7 @@ import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.Ongoi
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlProcessProgress = Raven.Server.Documents.ETL.Stats.EtlProcessProgress;
 import TaskUtils from "../../../../utils/TaskUtils";
-import { WritableDraft } from "immer/dist/types/types-external";
+import { produce, Draft } from "immer";
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
@@ -479,7 +478,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                 draft.tasks.forEach((task) => {
                     const nodeInfo = task.nodesInfo.find((x) =>
                         databaseLocationComparator(x.location, incomingLocation)
-                    ) as WritableDraft<OngoingEtlTaskNodeInfo>;
+                    ) as Draft<OngoingEtlTaskNodeInfo>;
 
                     nodeInfo.status = "failure";
                     nodeInfo.details = {
@@ -531,7 +530,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                                 TaskUtils.studioTaskTypeToTaskType(task.shared.taskType) &&
                             x.TaskName === task.shared.taskName
                     );
-                    (perLocationDraft as WritableDraft<OngoingEtlTaskNodeInfo>).etlProgress = progressToApply
+                    (perLocationDraft as Draft<OngoingEtlTaskNodeInfo>).etlProgress = progressToApply
                         ? progressToApply.ProcessesProgress.map(mapProgress)
                         : null;
                 });
