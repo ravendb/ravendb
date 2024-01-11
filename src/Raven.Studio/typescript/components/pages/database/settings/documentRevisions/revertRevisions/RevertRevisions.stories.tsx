@@ -11,7 +11,7 @@ export default {
     argTypes: {
         databaseAccess: databaseAccessArgType,
     },
-} satisfies Meta<typeof RevertRevisions>;
+} satisfies Meta;
 
 const db = DatabasesStubs.nonShardedClusterDatabase();
 

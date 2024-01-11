@@ -17,7 +17,7 @@ export default {
     argTypes: {
         licenseType: licenseArgType,
     },
-} satisfies Meta<typeof AboutViewFloating>;
+} satisfies Meta;
 
 interface FloatingButtonProps {
     licenseType: Raven.Server.Commercial.LicenseType;

@@ -14,7 +14,7 @@ export default {
         licenseType: licenseArgType,
         databaseAccess: databaseAccessArgType,
     },
-} satisfies Meta<typeof DocumentRevisions>;
+} satisfies Meta;
 
 const db = DatabasesStubs.nonShardedClusterDatabase();
 

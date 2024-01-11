@@ -5,7 +5,7 @@ import FeatureNotAvailable from "./FeatureNotAvailable";
 import { Icon } from "./Icon";
 
 export default {
-    title: "Bits",
+    title: "Bits/Feature Not Available",
     component: FeatureNotAvailable,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof FeatureNotAvailable>;
