@@ -3,7 +3,8 @@ $fonts-url: "../../../wwwroot/Content/css/fonts/";
 @font-face {
     font-family: "Figtree";
     font-style: normal;
-    src: url(#{$fonts-url}Figtree[wght].woff2) format("woff2 supports variations"),
+    src:
+        url(#{$fonts-url}Figtree[wght].woff2) format("woff2 supports variations"),
         url(#{$fonts-url}Figtree[wght].woff2) format("woff2-variations");
     font-weight: 100 1000;
 }
@@ -11,7 +12,8 @@ $fonts-url: "../../../wwwroot/Content/css/fonts/";
 @font-face {
     font-family: "Figtree";
     font-style: italic;
-    src: url(#{$fonts-url}Figtree-Italic[wght].woff2) format("woff2 supports variations"),
+    src:
+        url(#{$fonts-url}Figtree-Italic[wght].woff2) format("woff2 supports variations"),
         url(#{$fonts-url}Figtree-Italic[wght].woff2) format("woff2-variations");
     font-weight: 100 1000;
 }

@@ -51,13 +51,13 @@ type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<T
 
 type FormRadioToggleWithIconProps<
     TFieldValues extends FieldValues,
-    TName extends FieldPath<TFieldValues>
+    TName extends FieldPath<TFieldValues>,
 > = FormElementProps<TFieldValues, TName> &
     Omit<ComponentProps<typeof RadioToggleWithIcon>, "name" | "selectedValue" | "setSelectedValue">;
 
 export function FormInput<
     TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & FormInputProps) {
     return <FormInputGeneral {...props} />;
 }
@@ -149,7 +149,7 @@ export function FormSelect<
     IsMulti extends boolean = false,
     Group extends GroupBase<Option> = GroupBase<Option>,
     TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & ComponentProps<typeof Select<Option, IsMulti, Group>>) {
     const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
 
@@ -193,7 +193,7 @@ export function FormSelectCreatable<
     IsMulti extends boolean = false,
     Group extends GroupBase<Option> = GroupBase<Option>,
     TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(
     props: FormElementProps<TFieldValues, TName> &
         ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
@@ -281,7 +281,7 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
 
 export function FormAceEditor<
     TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & AceEditorProps) {
     const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
 
@@ -301,7 +301,7 @@ export function FormAceEditor<
 
 export function FormDurationPicker<
     TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & Omit<DurationPickerProps, "onChange" | "totalSeconds">) {
     const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
 
@@ -328,7 +328,7 @@ export function FormDurationPicker<
 
 export function FormDatePicker<
     TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & Omit<ComponentProps<typeof DatePicker>, "onChange"> & AddonProps) {
     const { name, control, defaultValue, rules, shouldUnregister, addon, ...rest } = props;
 
@@ -360,7 +360,7 @@ export function FormDatePicker<
 
 function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "addon"> & AddonProps) {
     const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, passwordPreview, ...rest } =
         props;

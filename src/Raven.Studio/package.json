@@ -89,7 +89,7 @@
         "less-loader": "^11.0.0",
         "mini-css-extract-plugin": "^2.6.1",
         "postcss": "^8.4.31",
-        "prettier": "^2.8.1",
+        "prettier": "^3.1.1",
         "raw-loader": "^4.0.1",
         "resolve-url-loader": "^5.0.0",
         "sass": "^1.50.0",

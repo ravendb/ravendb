@@ -69,10 +69,14 @@
             font-size: 36px;
             line-height: 1em;
         }
-        transition: background-color 0.5s sizes.$global-easing, color 0.1s !important;
+        transition:
+            background-color 0.5s sizes.$global-easing,
+            color 0.1s !important;
 
         &:hover {
-            transition: background-color 0.05s sizes.$global-easing, color 0.05s !important;
+            transition:
+                background-color 0.05s sizes.$global-easing,
+                color 0.05s !important;
             color: colors.$white;
         }
     }
