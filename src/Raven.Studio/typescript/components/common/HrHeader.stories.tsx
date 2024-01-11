@@ -1,13 +1,13 @@
-﻿// import { Meta } from "@storybook/react";
+﻿﻿import { Meta } from "@storybook/react";
 import { HrHeader } from "./HrHeader";
 import React from "react";
-// import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 
 export default {
-    title: "Bits/HrHeaderWitam",
-    // component: HrHeader,
-    // decorators: [withStorybookContexts, withBootstrap5],
-};
+    title: "Bits/HrHeader",
+    component: HrHeader,
+    decorators: [withStorybookContexts, withBootstrap5],
+} satisfies Meta<typeof HrHeader>;
 
 export function HrHeaders() {
     return (
