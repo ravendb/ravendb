@@ -49,7 +49,7 @@ public class JsonConfigFileModifier : IDisposable
         _originJson.Modifications = new DynamicJsonValue(_originJson);
     }
     
-    public async Task AsyncExecute()
+    public async Task ExecuteAsync()
     {
         var modifiedJsonObj = _context.ReadObject(_originJson, "modified-settings-json");
         await PersistConfigurationAsync(modifiedJsonObj);

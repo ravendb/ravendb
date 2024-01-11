@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     configuration.RetentionSize?.GetValue(SizeUnit.Bytes),
                     configuration.Compress);
 
-                if (GetBoolValueQueryString("persist", false) == true)
+                if (configuration.Persist)
                 {
                     try
                     {
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         jsonFileModifier.SetOrRemoveIfDefault(retentionSize, x => x.Logs.RetentionSize);
                         jsonFileModifier.SetOrRemoveIfDefault((int)LoggingSource.Instance.RetentionTime.TotalHours, x => x.Logs.RetentionTime);
                         jsonFileModifier.SetOrRemoveIfDefault(LoggingSource.Instance.Compressing, x => x.Logs.Compress);
-                        await jsonFileModifier.AsyncExecute();
+                        await jsonFileModifier.ExecuteAsync();
                     }
                     catch (Exception e)
                     {
@@ -232,10 +232,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 bool reset = GetBoolValueQueryString("reset", required: false) ?? false;
                 var provider = Server.GetService<MicrosoftLoggingProvider>();
-                await provider.Configuration.ReadConfigurationAsync(RequestBodyStream(), context, reset);
+                var parameters = await context.ReadForMemoryAsync(RequestBodyStream(), "logs/configuration");
+                if (parameters.TryGet("Configuration", out BlittableJsonReaderObject microsoftConfig) == false)
+                    throw new InvalidOperationException($"The request body doesn't contain required 'Configuration' property - {parameters}");
+                
+                provider.Configuration.ReadConfigurationAsync(microsoftConfig, context, reset);
                 provider.ApplyConfiguration();
                 
-                if (GetBoolValueQueryString("persist", required: false) == true)
+                if (parameters.TryGet("Persist", out bool persist) && persist)
                 {
                     try
                     {
@@ -244,11 +248,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                         {
                             microsoftConfigModifier.Modifications[category] = logLevel;
                         }
-                        await microsoftConfigModifier.AsyncExecute();
+                        await microsoftConfigModifier.ExecuteAsync();
 
                         using var settingJsonConfigModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
                         settingJsonConfigModifier.SetOrRemoveIfDefault(false, x => x.Logs.DisableMicrosoftLogs);
-                        await settingJsonConfigModifier.AsyncExecute();
+                        await settingJsonConfigModifier.ExecuteAsync();
                     }
                     catch (Exception e)
                     {
