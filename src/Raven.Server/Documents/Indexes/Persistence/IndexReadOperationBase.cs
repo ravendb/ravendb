@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
     {
         protected readonly QueryBuilderFactories QueryBuilderFactories;
         private readonly MemoryInfo _memoryInfo;
-        private static readonly long ThresholdForMemoryUsageLoggingInBytes = new Size(32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+        private static readonly long ThresholdForMemoryUsageLoggingInBytes = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
 
         protected IndexReadOperationBase(Index index, Logger logger, QueryBuilderFactories queryBuilderFactories, IndexQueryServerSide query) : base(index, logger)
         {
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token);
 
         public abstract IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields);
-        
+
         public override void Dispose()
         {
             if ((_logger.IsInfoEnabled || (_logger.IsOperationsEnabled && _index.IsLowMemory)) &&
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 }
             }
         }
-        
+
         public struct QueryResult
         {
             public Document Result;
