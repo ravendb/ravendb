@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
@@ -53,6 +54,7 @@ public struct PhraseMatch<TInner> : IQueryMatch
         {
             var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p);
             var result = entryTermsReader.FindNextStored(_rootPage);
+            if (result == false) continue;
             
             Debug.Assert(result, "Document has to have stored field! This is a bug.");
             Debug.Assert(entryTermsReader.IsList, "entryTermsReader.IsList");
@@ -96,6 +98,12 @@ public struct PhraseMatch<TInner> : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return _inner.Inspect(); //todo
+        return new QueryInspectionNode(nameof(PhraseMatch<TInner>),
+            parameters: new Dictionary<string, string>()
+            {
+                { nameof(IsBoosting), IsBoosting.ToString() },
+                { nameof(Count), $"{Count} [{Confidence}]" }
+            },
+            children: [_inner.Inspect()]);
     }
 }

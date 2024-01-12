@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Corax.Querying;
 using Sparrow;
@@ -328,7 +329,7 @@ public unsafe struct EntryTermsReader
 
     public string Debug(Querying.IndexSearcher r)
     {
-        return Debug(r.GetIndexedFieldNamesByRootPage());
+        return Debug(r.GetIndexedFieldNamesByRootPage().ToDictionary(pair => pair.Key, pair => pair.Value.ToString()));
     }
     
     public string Debug(Dictionary<long, string> fields = null)

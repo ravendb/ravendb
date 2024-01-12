@@ -572,13 +572,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     
     
-    private Dictionary<long, string> _pageToField;
-    private Dictionary<Slice, long> _fieldToPage;
-    public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
+    private Dictionary<long, Slice> _pageToField;
+    public Dictionary<long, Slice> GetIndexedFieldNamesByRootPage()
     {
         if (_pageToField != null) return _pageToField;
-        var pageToField = new Dictionary<long, string>();
-        _fieldToPage = new(SliceComparer.Instance);
+        var pageToField = new Dictionary<long, Slice>();
         var it = _fieldsTree.Iterate(prefetch: false);
         if (it.Seek(Slices.BeforeAllKeys))
         {
@@ -587,7 +585,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
                 var state = (LookupState*)it.CreateReaderForCurrent().Base;
                 if (state->RootObjectType == RootObjectType.Lookup)
                 {
-                    pageToField.Add(state->RootPage, it.CurrentKey.ToString());
+                    pageToField.Add(state->RootPage, it.CurrentKey.Clone(Allocator));
                 }
             } while (it.MoveNext());
         }

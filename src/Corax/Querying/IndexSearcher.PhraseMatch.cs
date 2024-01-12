@@ -15,7 +15,7 @@ namespace Corax.Querying;
 
 public partial class IndexSearcher
 {
-    public PhraseMatch<TInner> PhraseMatch<TInner>(TInner inner, in FieldMetadata field, ReadOnlySpan<Slice> terms)
+    public IQueryMatch PhraseQuery<TInner>(TInner inner, in FieldMetadata field, ReadOnlySpan<Slice> terms)
         where TInner : IQueryMatch
     {
         var compactTree = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -26,7 +26,7 @@ public partial class IndexSearcher
         var sequencePosition = 0;
         var pagesToField = GetIndexedFieldNamesByRootPage();
         var fieldName = field.GetPhraseQueryContainerName(Allocator);
-        var rootPage = pagesToField.Where(x => x.Value == fieldName.ToString()).FirstOrDefault().Key; //todo perf
+        var rootPage = pagesToField.FirstOrDefault(x => SliceComparer.CompareInline(x.Value, fieldName) == 0).Key;
 
         for (var i = 0; i < terms.Length; ++i)
         {
@@ -34,28 +34,28 @@ public partial class IndexSearcher
             CompactKey termKey = _fieldsTree.Llt.AcquireCompactKey();
             termKey.Set(term);
 
-            var exists = compactTree.TryGetTermContainerId(termKey, out var termContainerId);
-            //if term doesn't exists we can already finish since such sequence doesn't exists. right?
+            if (compactTree.TryGetTermContainerId(termKey, out var termContainerId) == false)
+                return TermMatch.CreateEmpty(this, Allocator);
+
             sequencePosition += ZigZagEncoding.Encode(sequenceBuffer.ToSpan(), termContainerId, sequencePosition);
         }
         
         return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, sequencePosition, rootPage);
     }
 
-    public PhraseMatch<TInner> PhraseMatch<TInner>(TInner inner, in FieldMetadata field, ReadOnlySpan<byte> terms, ReadOnlySpan<Token> tokens)
+    public IQueryMatch PhraseQuery<TInner>(TInner inner, in FieldMetadata field, ReadOnlySpan<byte> terms, ReadOnlySpan<Token> tokens)
         where TInner : IQueryMatch
     {
         var compactTree = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (compactTree == null)
             return default;
 
-        var currentTermId = 0;
         Allocator.Allocate(tokens.Length * sizeof(long), out var sequenceBuffer);
+        var sequencePosition = 0;
         
-        var sequenceToFind = MemoryMarshal.Cast<byte, long>(sequenceBuffer.ToSpan());
         var pagesToField = GetIndexedFieldNamesByRootPage();
         var fieldName = field.GetPhraseQueryContainerName(Allocator);
-        var rootPage = pagesToField.Where(x => x.Value == fieldName.ToString()).FirstOrDefault().Key; //todo perf
+        var rootPage = pagesToField.FirstOrDefault(x => SliceComparer.CompareInline(x.Value, fieldName) == 0).Key;
 
         for (var tokenId = 0; tokenId < tokens.Length; ++tokenId)
         {
@@ -68,12 +68,13 @@ public partial class IndexSearcher
             CompactKey termKey = _fieldsTree.Llt.AcquireCompactKey();
             termKey.Set(term);
 
-            var exists = compactTree.TryGetTermContainerId(termKey, out var termContainerId);
-            //if term doesn't exists we can already finish since such sequence doesn't exists. right?
+            if (compactTree.TryGetTermContainerId(termKey, out var termContainerId) == false)
+                return TermMatch.CreateEmpty(this, Allocator);
 
-            sequenceToFind[currentTermId++] = termContainerId;
+            sequencePosition += ZigZagEncoding.Encode(sequenceBuffer.ToSpan(), termContainerId, sequencePosition);
         }
         
-        return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, currentTermId, rootPage);
+        return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, sequencePosition, rootPage);
     }
+    
 }
