@@ -59,6 +59,11 @@ namespace Corax
             public const int TakeAll = -1;
             public const int NonAnalyzer = -1;
         }
+
+        public static class IndexedField
+        {
+            public const long Invalid = -1L;
+        }
         
         public static class IndexWriter
         {

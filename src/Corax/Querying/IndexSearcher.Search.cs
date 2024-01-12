@@ -117,7 +117,7 @@ public partial class IndexSearcher
 
             var allIn = AllInQuery(field, hs, cancellationToken: cancellationToken);
 
-            var phraseMatch = PhraseMatch(allIn, field, terms.ToSpan().Slice(startPosition, terms.Count - startPosition));
+            var phraseMatch = PhraseQuery(allIn, field, terms.ToSpan().Slice(startPosition, terms.Count - startPosition));
 
             searchQuery = (searchQuery, @operator) switch
             {

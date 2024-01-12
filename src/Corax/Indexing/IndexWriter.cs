@@ -1114,6 +1114,12 @@ namespace Corax.Indexing
             private NativeList<TermInEntryModification> _entriesForTerm;
             private ContextBoundNativeList<long> _pagesToPrefetch;
 
+            /// <summary>
+            /// Terms are lazily initialized on disk, and we obtain the real address after processing EntriesModification.
+            /// Creates a mapping (Index: StorageIndex, Value: physical term container). If the term doesn't exist: Constants.IndexedField.Invalid.
+            /// </summary>
+            private NativeList<long> _virtualTermIdToTermContainerId;
+            
             private int _offsetAdjustment;
             private long _curPage;
 
@@ -1131,6 +1137,14 @@ namespace Corax.Indexing
                 _entriesForTerm.Initialize(_writer._entriesAllocator);
                 _pagesToPrefetch = new ContextBoundNativeList<long>(_writer._entriesAllocator);
                 _buffers = _writer._textualFieldBuffers ??= new TextualFieldBuffers(_writer);
+
+                if (_indexedField.FieldIndexingMode is FieldIndexingMode.Search)
+                {
+                    // For most cases, _indexField.Storage.Count is equal to _indexedField.Textual.Count().
+                    // However, in cases where the field has mixed values (string/numerics), it differs. Therefore, we need to ensure that we have enough space to create the mapping.
+                    _virtualTermIdToTermContainerId.EnsureCapacityFor(_writer._entriesAllocator, _indexedField.Storage.Count);
+                    _virtualTermIdToTermContainerId.Fill(Constants.IndexedField.Invalid);
+                }
             }
 
             public void Dispose()
@@ -1295,7 +1309,12 @@ namespace Corax.Indexing
     
                 //Update mapping virtual<=> storage location location. Final writing will be done after inserting ALL terms for specific field.
                 if (_indexedField.FieldIndexingMode is FieldIndexingMode.Search)
-                    _indexedField.VirtualTermIdToTermContainerId[entries.StorageLocation] = termContainerId;
+                {
+                    ref var virtualMapping = ref _virtualTermIdToTermContainerId;
+                    Debug.Assert(virtualMapping.Count == _indexedField.Textual.Count(), "virtualMapping.Count == _indexedField.Textual.Count()");
+                    Debug.Assert(virtualMapping[entries.StorageLocation] != Constants.IndexedField.Invalid, "virtualMapping[entries.StorageLocation] != Constants.IndexedField.Invalid, Term doesn't exists on disk!");
+                    virtualMapping[entries.StorageLocation] = termContainerId;
+                }
                 
                 
                 if (_indexedField.Spatial == null)
@@ -1311,27 +1330,33 @@ namespace Corax.Indexing
             {
                 if (_indexedField.FieldIndexingMode is not FieldIndexingMode.Search)
                     return;
-                
+
+                const int storedFieldType = (int)(StoredFieldType.List | StoredFieldType.Term);
                 _writer.InitializeFieldRootPageForTermsVector(_indexedField); 
                 var termsPerEntrySpan = _writer._termsPerEntryId.ToSpan();
                 
-                var type = StoredFieldType.List | StoredFieldType.Term;
-                var dispose = _writer._entriesAllocator.Allocate(512, out Span<byte> processingBuffer);
+                var processingBufferHandler = _writer._entriesAllocator.Allocate(512, out Span<byte> processingBuffer);
                 var processingBufferPosition = 0;
-                
-                foreach (var (entry, value) in _indexedField.EntryToTerms)
+                ref var virtualMapping = ref _virtualTermIdToTermContainerId;
+                for (var documentIndex = 0; documentIndex < _indexedField.EntryToTerms.Count; ++documentIndex)
                 {
-                    var (storageIndex, terms) = value;
-                    ref var entryTerms = ref termsPerEntrySpan[storageIndex];
-                    if (processingBuffer.Length / sizeof(long) < terms.Count)
-                        GrowUnlikely(_writer._entriesAllocator, ref processingBuffer, terms.Count);
+                    ref var fieldTerms = ref _indexedField.EntryToTerms[documentIndex];
+                    ref var entryTerms = ref termsPerEntrySpan[documentIndex];
                     
-                    for (var idX = 0; idX < terms.Count; ++idX)
+                    //When document has no terms we skip
+                    if (fieldTerms.Count == 0)
+                        continue;
+                    
+                    if (processingBuffer.Length / sizeof(long) < fieldTerms.Count)
+                        GrowUnlikely(_writer._entriesAllocator, ref processingBuffer, fieldTerms.Count);
+                    
+                    for (var termIndex = 0; termIndex < fieldTerms.Count; ++termIndex)
                     {
-                        ref var term = ref terms[idX];
+                        ref var virtualTermId = ref fieldTerms[termIndex];
+                        Debug.Assert(virtualMapping.Count > virtualTermId, "_indexedField.NativeVirtualTermIdToTermContainerId.Count > term");
+                        
                         //Impossible to get null ref
-                        processingBufferPosition += ZigZagEncoding.Encode(processingBuffer, CollectionsMarshal.GetValueRefOrNullRef(_indexedField.VirtualTermIdToTermContainerId, (int)term),
-                            processingBufferPosition);
+                        processingBufferPosition += ZigZagEncoding.Encode(processingBuffer, virtualMapping[virtualTermId], processingBufferPosition);
                     }
                     
                     var listContainerId = Container.Allocate(
@@ -1349,11 +1374,11 @@ namespace Corax.Indexing
                         // we put entries count here because we are sorting the entries afterward
                         // this ensure that stored values are then read using the same order we have for writing them
                         // which is important for storing arrays
-                        termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
+                        termContainerId: fieldTerms.Count << 8 | storedFieldType | 0b110, // marker for stored field
                         @long: listContainerId
                     );
                     
-                    terms.Dispose(_writer._entriesAllocator);
+                    fieldTerms.Dispose(_writer._entriesAllocator);
                     if (entryTerms.TryAdd(recordedTerm) == false)
                     {
                         entryTerms.Grow(_writer._entriesAllocator, 1);
@@ -1368,12 +1393,14 @@ namespace Corax.Indexing
                     var newDisposable = allocator.Allocate(Math.Min(Bits.PowerOf2(processingBuffer.Length + 1), requiredSize * sizeof(long)), out Span<byte> output);
                     
                     processingBuffer.CopyTo(output);
-                    dispose.Dispose();
+                    processingBufferHandler.Dispose();
                     processingBuffer = output;
-                    dispose = newDisposable;
+                    processingBufferHandler = newDisposable;
                 }
                 
-                dispose.Dispose();
+                processingBufferHandler.Dispose();
+                _virtualTermIdToTermContainerId.Dispose(_writer._entriesAllocator);
+                _virtualTermIdToTermContainerId = default;
             }
             
             private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)

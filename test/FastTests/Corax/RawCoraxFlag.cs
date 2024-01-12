@@ -123,18 +123,16 @@ public class RawCoraxFlag : StorageTest
             writer.Commit();
         }
 
-
         {
             using var indexSearcher = new IndexSearcher(Env, _analyzers);
             var bytes = "secondthird"u8;
             var tokens = new global::Corax.Pipeline.Token[] {new Token() {Length = (uint)6, Offset = 0, Type = default}, new Token() {Length = 5, Offset = 6, Type = default}};
 
-            var search = indexSearcher.PhraseMatch(indexSearcher.AllEntries(), _analyzers.GetByFieldId(ContentId).Metadata, bytes, tokens);
+            var search = indexSearcher.PhraseQuery(indexSearcher.AllEntries(), _analyzers.GetByFieldId(ContentId).Metadata, bytes, tokens);
             Span<long> ids = stackalloc long[16];
             Assert.Equal(1, search.Fill(ids));
             Page page = default;
             var reader = indexSearcher.GetEntryTermsReader(ids[0], ref page);
-
         }
     }
     

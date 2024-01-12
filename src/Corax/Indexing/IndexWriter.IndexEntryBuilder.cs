@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Analyzers;
@@ -10,6 +11,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Containers;
+using Voron.Util;
 
 namespace Corax.Indexing;
 
@@ -22,7 +24,7 @@ public partial class IndexWriter
         private int _termPerEntryIndex;
         public bool Active;
         private int _buildingList;
-
+        
         public long EntryId => _entryId;
 
         public IndexEntryBuilder(Indexing.IndexWriter parent)
@@ -153,14 +155,29 @@ public partial class IndexWriter
             // Creates a mapping for PhraseQuery
             if (field.FieldIndexingMode is FieldIndexingMode.Search)
             {
-                ref var entryTermsAndIndex = ref CollectionsMarshal.GetValueRefOrAddDefault(field.EntryToTerms, _entryId, out exists);
-                if (exists == false)
+                // Since we're relying on _termPerEntryIndex, we may be in a situation where _termPerEntryIndex - 1  in `NativeEntryToTerms` doesn't exist, especially when the field doesn't exist, and we do not index implicit null (auto-index).
+                // In such a situation, we have to insert empty NativeLists before our current ones.
+                if (field.EntryToTerms.Count <= _termPerEntryIndex)
                 {
-                    entryTermsAndIndex.StorageIndex = _termPerEntryIndex;
-                    entryTermsAndIndex.Terms.Initialize(_parent._entriesAllocator);
+                    var minimumCapacity = Math.Max(1, _termPerEntryIndex - field.EntryToTerms.Count + 1);
+                    field.EntryToTerms.EnsureCapacityFor(_parent._entriesAllocator, minimumCapacity);
+
+                    
+                    for (var currentElement = field.EntryToTerms.Count; currentElement < _termPerEntryIndex; ++currentElement)
+                        field.EntryToTerms.AddByRefUnsafe() = default;
+                    
+                    var nl = default(NativeList<int>);
+                    nl.Initialize(_parent._entriesAllocator, 1);
+                    field.EntryToTerms.AddUnsafe(nl);
                 }
                 
-                entryTermsAndIndex.Terms.Add(_parent._entriesAllocator, termLocation);
+                
+                ref var nativeEntryTerms = ref field.EntryToTerms[_termPerEntryIndex];
+                if (nativeEntryTerms.TryAdd(termLocation) == false)
+                {
+                    nativeEntryTerms.Grow(_parent._entriesAllocator, 1);
+                    nativeEntryTerms.AddUnsafe(termLocation);
+                }
             }
             
             if (field.HasSuggestions)

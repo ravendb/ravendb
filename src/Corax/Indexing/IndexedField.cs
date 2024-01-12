@@ -19,12 +19,10 @@ internal sealed class IndexedField
     public readonly FastList<EntriesModifications> Storage;
     public readonly Dictionary<Slice, int> Textual;
     
-    //Mapping DocumentId, textual entries
-
-    //Creates a mapping Document => [_virtualTermIds] which gives order of terms from original document. 
-    public readonly Dictionary<long, (int StorageIndex, NativeList<long> Terms)> EntryToTerms;
-    public readonly Dictionary<int, long> VirtualTermIdToTermContainerId;
-    
+    /// <summary>
+    /// Position matches position from _entryToTerms from IndexWriter which creates relation between entry and field
+    /// </summary>
+    public NativeList<NativeList<int>> EntryToTerms;
     public readonly Dictionary<long, int> Longs;
     public readonly Dictionary<double, int> Doubles;
     public Dictionary<Slice, int> Suggestions;
@@ -71,10 +69,7 @@ internal sealed class IndexedField
         NameForStatistics = nameForStatistics ?? $"Field_{Name}";
 
         if (fieldIndexingMode is FieldIndexingMode.Search)
-        {
-            VirtualTermIdToTermContainerId = new();
             EntryToTerms = new();
-        }
     }
 
     public void Clear()
@@ -84,5 +79,6 @@ internal sealed class IndexedField
         Spatial?.Clear();
         Longs?.Clear();
         Textual?.Clear();
+        EntryToTerms = default;
     }
 }
