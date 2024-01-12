@@ -3,7 +3,7 @@ import { DatabasePanel } from "./partials/DatabasePanel";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
+import { Button } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -13,7 +13,6 @@ import { DatabaseFilterCriteria } from "components/models/databases";
 import {
     compactDatabase,
     loadDatabasesDetails,
-    openCreateDatabaseDialog,
     openCreateDatabaseFromRestoreDialog,
     syncDatabaseDetails,
 } from "components/pages/resources/databases/store/databasesViewActions";
@@ -22,6 +21,8 @@ import { databasesViewSelectors } from "components/pages/resources/databases/sto
 import { StickyHeader } from "components/common/StickyHeader";
 import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import useBoolean from "components/hooks/useBoolean";
+import CreateDatabase from "./partials/create/CreateDatabase";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -109,26 +110,20 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 
+    const { value: isCreateDatabaseOpen, toggle: toggleIsCreateDatabaseOpen } = useBoolean(false);
+
     return (
         <>
             <StickyHeader>
                 <div className="d-flex flex-wrap gap-3 align-items-end">
                     {isOperatorOrAbove && (
-                        <UncontrolledDropdown>
-                            <ButtonGroup className="rounded-group">
-                                <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
-                                    <Icon icon="database" addon="plus" />
-                                    New database
-                                </Button>
-                                <DropdownToggle color="primary" caret></DropdownToggle>
-                            </ButtonGroup>
-
-                            <DropdownMenu>
-                                <DropdownItem onClick={() => dispatch(openCreateDatabaseFromRestoreDialog())}>
-                                    <i className="icon-restore-backup" /> New database from backup (Restore)
-                                </DropdownItem>
-                            </DropdownMenu>
-                        </UncontrolledDropdown>
+                        <>
+                            <Button color="primary" onClick={toggleIsCreateDatabaseOpen} className="rounded-pill">
+                                <Icon icon="database" addon="plus" />
+                                New database
+                            </Button>
+                            {isCreateDatabaseOpen && <CreateDatabase closeModal={toggleIsCreateDatabaseOpen} />}
+                        </>
                     )}
                     {showToggleButton && (
                         <Button color="secondary" className="rounded-pill" onClick={toggleFilterOptions}>
