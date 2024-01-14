@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -23,19 +25,10 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            PrefixedShardingSetting oldSetting = null;
+            var location = record.Sharding.Prefixed.BinarySearch(Setting, PrefixedSettingComparer.Instance);
+            Debug.Assert(location >= 0, $"Prefixed setting '{Setting.Prefix}' was not found in sharding configuration");
 
-            foreach (var value in record.Sharding.Prefixed)
-            {
-                if (value.Prefix != Setting.Prefix)
-                    continue;
-
-                oldSetting = value;
-            }
-
-            if (oldSetting == null)
-                throw new InvalidOperationException($"Prefixed setting '{Setting.Prefix}' was not found in sharding configuration");
-
+            var oldSetting = record.Sharding.Prefixed[location];
             int index = 0;
             for (; index < record.Sharding.BucketRanges.Count; index++)
             {
@@ -68,7 +61,6 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             record.Sharding.BucketRanges.InsertRange(index, newRanges);
 
             oldSetting.Shards = Setting.Shards;
-
         }
 
         public override void FillJson(DynamicJsonValue json)

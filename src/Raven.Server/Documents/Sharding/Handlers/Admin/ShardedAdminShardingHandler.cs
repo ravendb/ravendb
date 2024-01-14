@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -37,18 +36,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), GetType().Name);
                 var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
-                setting.Prefix = setting.Prefix.ToLower();
 
                 var shardingConfiguration = ServerStore.Cluster.ReadShardingConfiguration(DatabaseName);
                 ShardingStore.AssertValidPrefix(setting, shardingConfiguration);
 
-                foreach (var value in shardingConfiguration.Prefixed)
-                {
-                    if (value.Prefix == setting.Prefix)
-                        throw new InvalidOperationException(
-                            $"Prefix '{setting.Prefix}' already exists in {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. please use '{nameof(UpdatePrefixedShardingSettingOperation)} operation'");
-                }
-
+                var exists = shardingConfiguration.Prefixed.BinarySearch(setting, PrefixedSettingComparer.Instance) >= 0;
+                if (exists)
+                    throw new InvalidOperationException(
+                        $"Prefix '{setting.Prefix}' already exists in {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. please use '{nameof(UpdatePrefixedShardingSettingOperation)} operation'");
 
                 var clusterTopology = ServerStore.GetClusterTopology(context);
                 var urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
@@ -77,7 +72,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                 var prefix = GetStringQueryString("prefix");
 
                 var shardingConfiguration = ServerStore.Cluster.ReadShardingConfiguration(DatabaseName);
-                bool found = shardingConfiguration.Prefixed.Any(value => value.Prefix == prefix);
+                bool found = shardingConfiguration.Prefixed.Any(value => string.Equals(value.Prefix, prefix, StringComparison.OrdinalIgnoreCase));
                 if (found == false)
                     throw new InvalidDataException($"Prefix '{prefix}' wasn't found in sharding configuration");
 
@@ -159,6 +154,5 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                 return command.Result.Results.Length == 0;
             }
         }
-
     }
 }

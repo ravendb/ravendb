@@ -34,7 +34,6 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
             if (record.Sharding.Shards.ContainsKey(ShardNumber))
                 throw new RachisApplyException($"Cannot add new shard {ShardNumber} to the database {DatabaseName} because it already exists.");
-
             record.Sharding.Shards.Add(ShardNumber, Topology);
         }
 

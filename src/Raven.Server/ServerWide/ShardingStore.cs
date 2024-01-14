@@ -234,7 +234,6 @@ namespace Raven.Server.ServerWide
             AssertValidPrefix(setting, shardingConfiguration);
 
             setting.BucketRangeStart = rangeStart;
-            setting.Prefix = setting.Prefix.ToLower();
 
             var shards = setting.Shards;
             var step = ShardHelper.NumberOfBuckets / shards.Count;
