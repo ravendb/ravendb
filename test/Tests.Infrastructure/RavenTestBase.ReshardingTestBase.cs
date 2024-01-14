@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -40,7 +41,20 @@ public partial class RavenTestBase
             }
 
             var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
-            var moveToShard = ShardingTestBase.GetNextSortedShardNumber(shards: prefixed != null ? prefixed.Shards : record.Sharding.Shards.Keys, shardNumber);
+            var shards = prefixed != null ? prefixed.Shards : record.Sharding.Shards.Keys.ToList();
+
+            int moveToShard;
+            if (toShard.HasValue)
+            {
+                if (shards.Contains(toShard.Value) == false)
+                    throw new InvalidOperationException($"Cannot move bucket '{bucket}' from shard {shardNumber} to shard {toShard}. " +
+                                                        $"Sharding topology does not contain shard {toShard}");
+                moveToShard = toShard.Value;
+            }
+            else
+            {
+                moveToShard = ShardingTestBase.GetNextSortedShardNumber(shards, shardNumber);
+            }
 
             using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
             {

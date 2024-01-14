@@ -55,6 +55,30 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
+
+            if (Bucket >= ShardHelper.NumberOfBuckets)
+            {
+                // prefixed bucket range
+                var prefixed = record.Sharding.Prefixed;
+                List<int> shards = null;
+                for (int i = 0; i < prefixed.Count; i++)
+                {
+                    var bucketRangeStart = prefixed[i].BucketRangeStart;
+                    int nextBucketRangeStart = i == prefixed.Count - 1 
+                        ? int.MaxValue 
+                        : prefixed[i + 1].BucketRangeStart;
+
+                    if (Bucket < bucketRangeStart || Bucket >= nextBucketRangeStart) 
+                        continue;
+
+                    shards = prefixed[i].Shards;
+                    break;
+                }
+
+                if (shards == null || shards.Contains(DestinationShard) == false)
+                    throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
+            }
+
             if (record.Sharding.Shards.ContainsKey(DestinationShard) == false)
                 throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
 
