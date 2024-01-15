@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Microsoft.CodeAnalysis;
 using Raven.Client;
@@ -42,8 +41,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
 
         public override async Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, long index, ClusterTransactionOptions options, ArraySegment<BatchRequestParser.CommandData> parsedCommands, CancellationToken token)
         {
-            token.ThrowIfCancellationRequested();
-
             var database = RequestHandler.Database;
             var lastCompleted = Interlocked.Read(ref database.LastCompletedClusterTransactionIndex);
             if (lastCompleted < index)

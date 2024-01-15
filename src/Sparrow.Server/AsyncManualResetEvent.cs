@@ -93,29 +93,37 @@ namespace Sparrow.Server
                 return _tcs.Task;
             }
 
-            public IDisposable Register(CancellationToken token)
+            [Pure]
+            public async Task<bool> WaitAsync(CancellationToken token)
             {
                 var tcs = _tcs;
-                return token.Register(() => tcs.TrySetCanceled());
+                await using (token.Register(() => tcs.TrySetCanceled()))
+                {
+                    return await _tcs.Task.ConfigureAwait(false);
+                }
             }
 
             [Pure]
-            public async Task<bool> WaitAsync(TimeSpan timeout)
+            public async Task<bool> WaitAsync(TimeSpan timeout, CancellationToken token = default)
             {
-                var waitAsync = _tcs.Task;
+                var tcs = _tcs;
+                await using (token.Register(() => tcs.TrySetCanceled()))
+                {
+                    var waitAsync = _tcs.Task;
 
-                if (_parent._token.IsCancellationRequested)
-                    return false;
+                    if (_parent._token.IsCancellationRequested)
+                        return false;
 
-                var result = await Task.WhenAny(waitAsync, TimeoutManager.WaitFor(timeout, _parent._token)).ConfigureAwait(false);
+                    var result = await Task.WhenAny(waitAsync, TimeoutManager.WaitFor(timeout, _parent._token)).ConfigureAwait(false);
 
-                if (result.IsFaulted)
-                    throw result.Exception;
+                    if (result.IsFaulted)
+                        throw result.Exception;
 
-                if (_parent._token != CancellationToken.None)
-                    return result == waitAsync && !_parent._token.IsCancellationRequested;
+                    if (_parent._token != CancellationToken.None)
+                        return result == waitAsync && !_parent._token.IsCancellationRequested;
 
-                return result == waitAsync;
+                    return result == waitAsync;
+                }
             }
         }
 
