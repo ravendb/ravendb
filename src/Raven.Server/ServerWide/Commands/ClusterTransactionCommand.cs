@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
@@ -962,21 +960,40 @@ namespace Raven.Server.ServerWide.Commands
         private static DynamicJsonValue ToDynamicJsonValue(BlittableJsonReaderObject bjro)
         {
             var djv = new DynamicJsonValue();
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-            for (int i = 0; i < bjro.Count; i++)
+            if (bjro.TryGet(nameof(ICommandData.Type), out string type) == false)
+                throw new InvalidOperationException("Database cluster transaction command must have a type");
+            djv[nameof(ICommandData.Type)] = type;
+
+            var lastModifiedParsed = false;
+
+            if (bjro.TryGet(Constants.Documents.Metadata.LastModified, out string lastModified) == false)
+                throw new InvalidOperationException($"Database cluster transaction {type} command must have a LastModified property");
+            djv[Constants.Documents.Metadata.LastModified] = lastModified;
+
+            switch (type)
             {
-                bjro.GetPropertyByIndex(i, ref prop);
-                if (prop.Value is LazyStringValue lsv)
-                {
-                    djv[prop.Name] = lsv.ToString();
-                }
-                else
-                {
-                    var json = prop.Value as IDynamicJson;
-                    djv[prop.Name] = json == null ? (object)prop.Value : json.ToJson();
-                }
+                case nameof(CommandType.PUT):
+                    if (bjro.TryGet(Constants.Documents.Metadata.Flags, out string flags))
+                        djv[Constants.Documents.Metadata.Flags] = flags;
+
+                    if (bjro.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
+                        throw new InvalidOperationException("Database cluster transaction Put command must have an id");
+                    djv[Constants.Documents.Metadata.Id] = id;
+                    break;
+                case nameof(CommandType.DELETE):
+                    if (bjro.TryGet(Constants.Documents.Metadata.IdProperty, out string idProp) == false)
+                        throw new InvalidOperationException("Database cluster transaction Delete command must have an id");
+                    djv[Constants.Documents.Metadata.IdProperty] = idProp;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.DELETE} but got {type}");
             }
+
+            if (bjro.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
+                throw new InvalidOperationException($"Database cluster transaction {type} command must have a changeVector");
+            djv[Constants.Documents.Metadata.ChangeVector] = changeVector;
 
             return djv;
         }

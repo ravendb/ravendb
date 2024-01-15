@@ -104,10 +104,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
                         continue;
 
                     hadStaleIndexes = true;
-                    using (waitForIndexItem.IndexBatchAwaiter.Register(token))
-                    {
-                        await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
-                    }
+                    await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter, token);
 
                     if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
                     {

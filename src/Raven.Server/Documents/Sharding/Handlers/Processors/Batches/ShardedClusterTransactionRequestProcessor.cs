@@ -26,9 +26,7 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
 
     public override Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, long index, ClusterTransactionOptions options, ArraySegment<BatchRequestParser.CommandData> parsedCommands, CancellationToken token)
     {
-        token.ThrowIfCancellationRequested();
-
-        return Task.FromResult(Task.CompletedTask);
+        return Task.CompletedTask;
     }
 
     protected override ClusterTransactionCommand CreateClusterTransactionCommand(
