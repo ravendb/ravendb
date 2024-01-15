@@ -32,6 +32,8 @@ import {
     MultipleDatabaseLocationSelector,
 } from "../../../../../../common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
+import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface CreateDatabaseRegularProps {
     closeModal: () => void;
@@ -52,10 +54,8 @@ interface StepItem {
     active: boolean;
 }
 
-export default function CreateDatabaseRegular(props: CreateDatabaseRegularProps) {
-    const { closeModal, changeCreateModeToBackup } = props;
-
-    const isServerAuthenticationEnabled = true; // TODO get from store
+export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBackup }: CreateDatabaseRegularProps) {
+    const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
     const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
     const toggleEncryption = () => {
@@ -134,7 +134,7 @@ export default function CreateDatabaseRegular(props: CreateDatabaseRegularProps)
             <StepCreateNew
                 encryptionEnabled={encryptionEnabled}
                 toggleEncryption={toggleEncryption}
-                serverAuthentication={isServerAuthenticationEnabled}
+                serverAuthentication={isSecureServer}
                 licenseProps={null}
             />
         ),
