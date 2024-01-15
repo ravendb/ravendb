@@ -1142,8 +1142,7 @@ namespace Corax.Indexing
                 {
                     // For most cases, _indexField.Storage.Count is equal to _indexedField.Textual.Count().
                     // However, in cases where the field has mixed values (string/numerics), it differs. Therefore, we need to ensure that we have enough space to create the mapping.
-                    _virtualTermIdToTermContainerId.EnsureCapacityFor(_writer._entriesAllocator, _indexedField.Storage.Count);
-                    _virtualTermIdToTermContainerId.Fill(Constants.IndexedField.Invalid);
+                    _virtualTermIdToTermContainerId.InitializeWithValue(_writer._entriesAllocator, Constants.IndexedField.Invalid,  _indexedField.Storage.Count);
                 }
             }
 

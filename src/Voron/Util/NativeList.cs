@@ -65,12 +65,13 @@ public unsafe struct NativeList<T>
         AddUnsafe(value);
     }
 
-    public void Fill(T value)
+    public void InitializeWithValue(ByteStringContext allocator, T value, int count)
     {
+        EnsureCapacityFor(allocator, count);
         if (Capacity == 0) 
             return;
         
-        Count = Capacity;
+        Count = count;
         ToSpan().Fill(value);
     }
 

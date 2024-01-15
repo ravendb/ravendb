@@ -56,7 +56,6 @@ public struct PhraseMatch<TInner> : IQueryMatch
             var result = entryTermsReader.FindNextStored(_rootPage);
             if (result == false) continue;
             
-            Debug.Assert(result, "Document has to have stored field! This is a bug.");
             Debug.Assert(entryTermsReader.IsList, "entryTermsReader.IsList");
             
             var storedValue = entryTermsReader.StoredField.Value.ToSpan();

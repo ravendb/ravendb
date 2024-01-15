@@ -24,9 +24,8 @@ public partial class IndexSearcher
 
         Allocator.Allocate(terms.Length * sizeof(long), out var sequenceBuffer);
         var sequencePosition = 0;
-        var pagesToField = GetIndexedFieldNamesByRootPage();
         var fieldName = field.GetPhraseQueryContainerName(Allocator);
-        var rootPage = pagesToField.FirstOrDefault(x => SliceComparer.CompareInline(x.Value, fieldName) == 0).Key;
+        var rootPage = GetRootPageByFieldName(fieldName);
 
         for (var i = 0; i < terms.Length; ++i)
         {
@@ -34,6 +33,7 @@ public partial class IndexSearcher
             CompactKey termKey = _fieldsTree.Llt.AcquireCompactKey();
             termKey.Set(term);
 
+            // When the term doesn't exist, that means no document matches our query (phrase query is performing "AND" between them).
             if (compactTree.TryGetTermContainerId(termKey, out var termContainerId) == false)
                 return TermMatch.CreateEmpty(this, Allocator);
 
@@ -53,9 +53,8 @@ public partial class IndexSearcher
         Allocator.Allocate(tokens.Length * sizeof(long), out var sequenceBuffer);
         var sequencePosition = 0;
         
-        var pagesToField = GetIndexedFieldNamesByRootPage();
         var fieldName = field.GetPhraseQueryContainerName(Allocator);
-        var rootPage = pagesToField.FirstOrDefault(x => SliceComparer.CompareInline(x.Value, fieldName) == 0).Key;
+        var rootPage = GetRootPageByFieldName(fieldName);
 
         for (var tokenId = 0; tokenId < tokens.Length; ++tokenId)
         {
@@ -68,6 +67,7 @@ public partial class IndexSearcher
             CompactKey termKey = _fieldsTree.Llt.AcquireCompactKey();
             termKey.Set(term);
 
+            // When the term doesn't exist, that means no document matches our query (phrase query is performing "AND" between them).
             if (compactTree.TryGetTermContainerId(termKey, out var termContainerId) == false)
                 return TermMatch.CreateEmpty(this, Allocator);
 
