@@ -2055,8 +2055,12 @@ namespace Raven.Server.Documents
                             table.DeleteByKey(counterGroupKey);
 
                             names.GetPropertyByIndex(1, ref prop);
-                            using var newScope = context.Allocator.Allocate(CounterKeysSlice.Size + 1 /* separator */  + 1 /* replace the current name with next one in counters group */, out ByteString newCounterKey);
+                            using var newScope = context.Allocator.Allocate(documentKeyPrefix.Size /* it includes the separator already */ + prop.Name.Size /* replace the current name with next one in counters group */, out ByteString newCounterKey);
                             documentKeyPrefix.CopyTo(newCounterKey.Ptr);
+
+                            Debug.Assert(documentKeyPrefix.Size + prop.Name.Size < newCounterKey.Size,
+                                $"documentKeyPrefix.Size ({documentKeyPrefix.Size}) + prop.Name.Size ({prop.Name.Size}) < newCounterKey.Size ({newCounterKey.Size})");
+
                             Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, prop.Name.Buffer, prop.Name.Size);
                             Slice.From(context.Allocator, newCounterKey.Ptr, documentKeyPrefix.Size + prop.Name.Size, out counterGroupKey);
                         }
