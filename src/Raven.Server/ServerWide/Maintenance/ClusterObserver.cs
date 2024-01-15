@@ -538,7 +538,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         // it's the first time that we identify that the node isn't suitable for backup
                         AddToDecisionLog(databaseName, $"Node '{currentResponsibleNode}' is currently in rehab and cannot be used for backup. " +
-                                                       $"Will move the task to another node in {moveToNewResponsibleNodeGracePeriod}.");
+                                                       $"The backup task will be moved to another at: {DateTime.UtcNow + moveToNewResponsibleNodeGracePeriod} (UTC)");
                         return new ResponsibleNodeInfo
                         {
                             TaskId = configuration.TaskId,
