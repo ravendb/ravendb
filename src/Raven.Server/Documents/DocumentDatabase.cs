@@ -1429,6 +1429,7 @@ namespace Raven.Server.Documents
                         DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
                         ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
 
+                        ForTestingPurposes?.BeforeUpdateUnused?.Invoke();
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
                         IndexStore.HandleDatabaseRecordChange(record, index);
@@ -1931,6 +1932,8 @@ namespace Raven.Server.Documents
             internal Action BeforeSnapshotOfDocuments;
 
             internal Action AfterSnapshotOfDocuments;
+
+            internal Action BeforeUpdateUnused;
 
             internal bool SkipDrainAllRequests = false;
 

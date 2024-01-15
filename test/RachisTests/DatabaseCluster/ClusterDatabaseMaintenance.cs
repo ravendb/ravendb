@@ -13,6 +13,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -823,7 +824,27 @@ namespace RachisTests.DatabaseCluster
 
                 var node = Servers[1].ServerStore.Engine.Tag;
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                var res = await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
+
+                await Assert.ThrowsAsync<RavenTimeoutException>(async () =>
+                {
+                    await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
+                    // Throws because it's trying to wait for RemoveNodeFromDatabase of 'Servers[1]' in the EP but the command isn't created because the server is down.
+                });
+
+
+                // 'lastRemoveIndex' is the index of the RemoveNodeFromDatabaseCommand of Server[0] or Server[2] (the command with the larger index).
+                var lastRemoveIndex = await WaitForPredicateAsync(predicate: index => index != 0,
+                    act: () =>
+                    {
+                        using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            leader.ServerStore.Engine.LogHistory.TryGetLastRemoveNodeFromDatabaseCommand(context, databaseName, out var index);
+                            return Task.FromResult(index);
+                        }
+                    });
+                Assert.NotEqual(0, lastRemoveIndex);
+
 
                 Assert.Equal(1, await WaitForValueAsync(async () =>
                 {
@@ -837,10 +858,11 @@ namespace RachisTests.DatabaseCluster
 
                 await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(node));
 
-                await leader.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.RaftCommandIndex);
+                await leader.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastRemoveIndex);
                 record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
-                Assert.Null(record);
+                if(record != null)
+                    Assert.True(false, $"record.DeletionInProgress: {string.Join(',', record.DeletionInProgress)} {record.DatabaseState}");
             }
         }
 
@@ -1837,12 +1859,12 @@ namespace RachisTests.DatabaseCluster
             }))
             {
                 var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, "A", timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex , TimeSpan.FromSeconds(15));
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
 
                 result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: false, "B", timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex , TimeSpan.FromSeconds(15));
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
             }

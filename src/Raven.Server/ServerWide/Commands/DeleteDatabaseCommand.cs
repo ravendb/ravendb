@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
@@ -23,6 +25,11 @@ namespace Raven.Server.ServerWide.Commands
             ErrorOnDatabaseDoesNotExists = false;
         }
 
+        public static string GenerateUniqueRequestId(string dbName, IEnumerable<string> fromNodes, string guid)
+        {
+            return $"DeleteDatabase/{dbName}/{string.Join('_', fromNodes)}/{guid}";
+        }
+
         public override void Initialize(ServerStore serverStore, ClusterOperationContext context)
         {
             ClusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
@@ -30,13 +37,12 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            VerifyDeletion(record);
+
             var deletionInProgressStatus = HardDelete ? DeletionInProgressStatus.HardDelete
                 : DeletionInProgressStatus.SoftDelete;
 
-            if (record.DeletionInProgress == null)
-            {
-                record.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
-            }
+            record.DeletionInProgress ??= new Dictionary<string, DeletionInProgressStatus>();
 
             if (FromNodes != null && FromNodes.Length > 0) 
             {
@@ -79,6 +85,19 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             record.Topology.Stamp.Index = etag;
+        }
+
+        private void VerifyDeletion(DatabaseRecord record)
+        {
+            var databaseName = record.DatabaseName;
+            var topology = record.Topology;
+            foreach (var node in FromNodes)
+            {
+                if (topology.RelevantFor(node) == false)
+                {
+                    throw new RachisInvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
+                }
+            }
         }
 
         public override void FillJson(DynamicJsonValue json)

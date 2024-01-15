@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Text;
-using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
@@ -405,6 +406,14 @@ namespace Raven.Server.Rachis
             return type;
         }
 
+        private static unsafe string ReadExceptionType(Table.TableValueHolder entryHolder)
+        {
+            int size;
+            var typeString = entryHolder.Reader.Read((int)(LogHistoryColumn.ExceptionType), out size);
+            var type = Encoding.UTF8.GetString(typeString, size);
+            return type;
+        }
+
         private static unsafe long ReadTerm(Table.TableValueHolder entryHolder)
         {
             return *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Term), out _);
@@ -493,5 +502,141 @@ namespace Raven.Server.Rachis
                 return true;
             }
         }
+
+        public bool TryGetLastDeleteDatabaseCommandWithoutErrors(ClusterOperationContext context, string nodeTag, string databaseName, out long index)
+        {
+            var commandType = nameof(DeleteDatabaseCommand);
+            index = 0;
+
+            var hasExceptions = false;
+
+            //DeleteDatabaseCommand id looks like that: DeleteDatabaseCommand/EncryptedTest_1/C/sadjghsdkjfng
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+
+            foreach (var result in table.SeekBackwardFrom(LogHistoryTable.Indexes[LogHistoryIndexSlice], Slices.AfterAllKeys))
+            {
+                var entryHolder = result.Result;
+                var curIndex = ReadIndex(entryHolder);
+                var guid = ReadGuid(entryHolder);
+                var type = ReadType(entryHolder);
+                var state = ReadState(entryHolder);
+
+                if (type == commandType && state == HistoryStatus.Committed &&
+                    TryGetNodesAndDatabaseFromDatabaseDeleteCommand(guid, out var databaseFromCmd, out var nodes) &&
+                    databaseFromCmd == databaseName &&
+                    (nodes.Count == 0 || nodes.Contains(nodeTag)))
+                {
+                    var exceptionType = ReadExceptionType(entryHolder);
+                    if (string.IsNullOrEmpty(exceptionType) == false)
+                    {
+                        if(index==0)
+                            hasExceptions = true;
+                        continue; // has errors after apply
+                    }
+
+                    hasExceptions = false;
+                    index = curIndex;
+                    break;
+                }
+            }
+
+
+            return hasExceptions == false;
+        }
+
+        private static bool TryGetNodesAndDatabaseFromDatabaseDeleteCommand(string guid, out string database, out List<string> nodes)
+        {
+            /*the DeleteDatabaseCommand command id should look like that: "db1/A_B_C/a6m8me9843jt"
+                ($"DeleteDatabase/{databaseName}/{string.Join('_', nodes}")/{newGuid}
+            
+                for example:
+                    DeleteDatabase/TestDB_1/A_C_B/sadjghsdkjfng
+                    DeleteDatabase/TestDB_1/C/sadjghsdkjfng
+             */
+            nodes = null;
+            database = string.Empty;
+
+            var guidParts = guid.Split("/").ToArray();
+            if (guidParts.Length != 4 || guidParts[0] != "DeleteDatabase")
+                return false;
+
+            nodes = guidParts[2].Split('_').Where(x => x != string.Empty).ToList();
+            database = guidParts[1];
+
+            return true;
+        }
+
+        public bool TryGetLastRemoveNodeFromDatabaseCommand(ClusterOperationContext context, 
+            string database, string removedNodeTag, long deleteIndex, out long index)
+        {
+            index = 0L;
+
+            // using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            // using (context.OpenReadTransaction())
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+                using var _ = Slice.From(context.Allocator, $"RemoveNodeFromDatabase/{database}/{removedNodeTag}/", out var guidPrfixSlice);
+
+                foreach (var (_, entryHolder) in table.SeekByPrimaryKeyPrefix(guidPrfixSlice, Slices.Empty, 0))
+                {
+                    var cmdIndex = ReadIndex(entryHolder);
+                    var guidFromCmd = ReadGuid(entryHolder);
+
+                    if (TryGetDeleteIndexFromDatabaseRemoveCommand(guidFromCmd, out var deleteIndexFromCmd) &&
+                        deleteIndex <= deleteIndexFromCmd && (deleteIndexFromCmd < index || index == 0)) // try to get the remove command with deleteIndexFromCmd which is the closest to 'deleteIndex' from above
+                    {
+                        index = cmdIndex;
+                        if (index == deleteIndex)
+                            break;
+                    }
+
+                }
+            }
+
+            return index != 0L;
+        }
+
+        private static bool TryGetDeleteIndexFromDatabaseRemoveCommand(string guid, out long deleteIndex)
+        {
+            /*the RemoveNodeFromDatabase command id should look like that: "RemoveNodeFromDatabase/A/17"
+                ($"RemoveNodeFromDatabase/{databaseName}/{removedNodeTag}/{deleteCmdIndex}"
+             */
+            deleteIndex = 0;
+
+            var guidParts = guid.Split('/');
+            if (guidParts.Length != 4 || guidParts[0] != "RemoveNodeFromDatabase")
+            {
+                return false;
+            }
+
+            deleteIndex = long.Parse(guidParts[3]);
+
+            return true;
+        }
+
+        public bool TryGetLastRemoveNodeFromDatabaseCommand(ClusterOperationContext context, string database, out long index)
+        {
+            index = 0L;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            using var _ = Slice.From(context.Allocator, $"RemoveNodeFromDatabase/{database}/", out var guidPrfixSlice);
+
+            foreach (var (_, entryHolder) in table.SeekByPrimaryKeyPrefix(guidPrfixSlice, Slices.Empty, 0))
+            {
+                var cmdIndex = ReadIndex(entryHolder);
+                var guidFromCmd = ReadGuid(entryHolder);
+
+                if (TryGetDeleteIndexFromDatabaseRemoveCommand(guidFromCmd, out var deleteIndexFromCmd) &&
+                    deleteIndexFromCmd > index) // try to get the remove command with deleteIndexFromCmd which is the closest to 'deleteIndex' from above
+                {
+                    index = cmdIndex;
+                }
+
+            }
+
+            return index != 0L;
+        }
+
     }
 }

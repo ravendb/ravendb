@@ -1808,7 +1808,10 @@ namespace Raven.Server.ServerWide
         
         public Task<(long Index, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes, string raftRequestId)
         {
-            var deleteCommand = new DeleteDatabaseCommand(db, raftRequestId)
+            if (raftRequestId == RaftIdGenerator.DontCareId)
+                raftRequestId = Guid.NewGuid().ToString();
+            var deleteDatabaseCmdId = DeleteDatabaseCommand.GenerateUniqueRequestId(db, fromNodes, raftRequestId);
+            var deleteCommand = new DeleteDatabaseCommand(db, deleteDatabaseCmdId)
             {
                 HardDelete = hardDelete,
                 FromNodes = fromNodes

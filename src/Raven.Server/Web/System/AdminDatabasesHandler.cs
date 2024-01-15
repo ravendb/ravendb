@@ -690,9 +690,8 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.EnsureNotPassiveAsync();
 
-            var waitOnDeletion = new List<string>();
             var pendingDeletes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var databasesToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var requestIdFromQuery = GetRaftRequestIdFromQuery();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -709,12 +708,15 @@ namespace Raven.Server.Web.System
                     auditLog.Info($"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
                 }
 
+                var databasesToDelete = new Dictionary<string, DeleteDatabaseDetails>(StringComparer.OrdinalIgnoreCase);
+
                 using (context.OpenReadTransaction())
                 {
                     var fromNodes = parameters.FromNodes != null && parameters.FromNodes.Length > 0;
 
                     foreach (var databaseName in parameters.DatabaseNames)
                     {
+
                         DatabaseTopology topology = null;
                         using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                         {
@@ -729,41 +731,50 @@ namespace Raven.Server.Web.System
                             switch (rawRecord.LockMode)
                             {
                                 case DatabaseLockMode.Unlock:
-                                    databasesToDelete.Add(databaseName);
                                     break;
                                 case DatabaseLockMode.PreventDeletesIgnore:
                                     if (Logger.IsOperationsEnabled)
                                     {
                                         clientCertificate ??= GetCurrentCertificate();
 
-                                        Logger.Operations($"Attempt to delete '{databaseName}' database was prevented due to lock mode set to '{rawRecord.LockMode}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                                        Logger.Operations(
+                                            $"Attempt to delete '{databaseName}' database was prevented due to lock mode set to '{rawRecord.LockMode}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
                                     }
 
                                     continue;
                                 case DatabaseLockMode.PreventDeletesError:
-                                    throw new InvalidOperationException($"Database '{databaseName}' cannot be deleted because of the set lock mode ('{rawRecord.LockMode}'). Please consider changing the lock mode before deleting the database.");
+                                    throw new InvalidOperationException(
+                                        $"Database '{databaseName}' cannot be deleted because of the set lock mode ('{rawRecord.LockMode}'). Please consider changing the lock mode before deleting the database.");
                                 default:
                                     throw new ArgumentOutOfRangeException(nameof(rawRecord.LockMode));
                             }
 
-                            if (fromNodes)
-                                topology = rawRecord.Topology;
+                            topology = rawRecord.Topology;
                         }
+
+                        var details = databasesToDelete[databaseName] = new DeleteDatabaseDetails() { Topology = topology };
 
                         if (fromNodes)
                         {
+                            var tags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                             foreach (var node in parameters.FromNodes)
                             {
                                 if (topology.RelevantFor(node) == false)
                                 {
                                     throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
                                 }
+
                                 pendingDeletes.Add(node);
                                 topology.RemoveFromTopology(node);
+                                tags.Add(node);
                             }
+
+                            details.NodesToRemove = tags;
+
+                            continue;
                         }
 
-                        waitOnDeletion.Add(databaseName);
+                        details.NodesToRemove = topology.AllNodes.ToHashSet();
                     }
                 }
 
@@ -772,92 +783,23 @@ namespace Raven.Server.Web.System
                     var clientCert = GetCurrentCertificate();
 
                     var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Delete [{string.Join(", ", databasesToDelete)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                    auditLog.Info($"Delete [{string.Join(", ", databasesToDelete.Keys)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
 
-                long index = -1;
-                foreach (var databaseName in databasesToDelete)
+                long index = 0;
+                foreach (var (databaseName, details) in databasesToDelete)
                 {
-                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(databaseName, parameters.HardDelete, parameters.FromNodes, $"{GetRaftRequestIdFromQuery()}/{databaseName}");
-                    index = newIndex;
+                    (index, _) = await ServerStore.DeleteDatabaseAsync(databaseName, parameters.HardDelete, details.NodesToRemove.ToArray(), requestIdFromQuery);
+                    details.RaftIndex = index;
                 }
 
                 await ServerStore.Cluster.WaitForIndexNotification(index);
-                long actualDeletionIndex = index;
 
-                var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
+                long lastDeletionIndex = index;
 
-                var sp = Stopwatch.StartNew();
-                int databaseIndex = 0;
+                var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? Server.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
-
-                while (waitOnDeletion.Count > databaseIndex)
-                {
-                    var databaseName = waitOnDeletion[databaseIndex];
-                    using (context.OpenReadTransaction())
-                    using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                    {
-                        if (raw == null)
-                        {
-                            waitOnDeletion.RemoveAt(databaseIndex);
-                            continue;
-                        }
-
-                        if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
-                        {
-                            {
-                                var allNodesDeleted = true;
-                                foreach (var node in parameters.FromNodes)
-                                {
-                                    if (raw.DeletionInProgress.ContainsKey(node) == false)
-                                        continue;
-
-                                    allNodesDeleted = false;
-                                    break;
-                                }
-
-                                if (allNodesDeleted)
-                                {
-                                    waitOnDeletion.RemoveAt(databaseIndex);
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                    // we'll now wait for the _next_ operation in the cluster
-                    // since deletion involve multiple operations in the cluster
-                    // we'll now wait for the next command to be applied and check
-                    // whatever that removed the db in question
-                    index++;
-                    var remaining = timeToWaitForConfirmation - sp.Elapsed;
-                    try
-                    {
-                        if (remaining < TimeSpan.Zero)
-                        {
-                            databaseIndex++;
-                            continue; // we are done waiting, but still want to locally check the rest of the dbs
-                        }
-
-                        await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
-                        actualDeletionIndex = index;
-                    }
-                    catch (TimeoutException)
-                    {
-                        databaseIndex++;
-                    }
-                }
-
-                if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
-                {
-                    try
-                    {
-                        await ServerStore.WaitForExecutionOnRelevantNodesAsync(context, parameters.FromNodes.ToList(), actualDeletionIndex);
-                    }
-                    catch (RaftIndexWaitAggregateException e)
-                    {
-                        throw new InvalidDataException($"Deletion of databases {string.Join(", ", parameters.DatabaseNames)} was performed, but it could not be propagated due to errors on one or more target nodes.", e);
-                    }
-                }
+                var lastRemoveIndex = await WaitForRemovingNodesFromDatabases(databasesToDelete, lastDeletionIndex, timeToWaitForConfirmation);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -866,11 +808,95 @@ namespace Raven.Server.Web.System
                         // we only send the successful index here, we might fail to delete the index
                         // because a node is down, and we don't want to cause the client to wait on an
                         // index that doesn't exists in the Raft log
-                        [nameof(DeleteDatabaseResult.RaftCommandIndex)] = actualDeletionIndex,
+                        [nameof(DeleteDatabaseResult.RaftCommandIndex)] = lastRemoveIndex,
                         [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(pendingDeletes)
                     });
                 }
             }
+        }
+
+        private async Task<long> WaitForRemovingNodesFromDatabases(
+            Dictionary<string, DeleteDatabaseDetails> databasesToDelete,
+            long lastDeletionIndex,
+            TimeSpan timeout)
+        {
+            if (databasesToDelete.Count == 0)
+                return -1;
+
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastDeletionIndex);
+
+            long lastRemoveIndex = 0;
+
+            var reqExecutors = new Dictionary<string, ClusterRequestExecutor>();
+
+            try
+            {
+                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                {
+                    foreach (var (dbName, details) in databasesToDelete)
+                    {
+                        var deleteCmdIndex = details.RaftIndex;
+
+                        foreach (var removedNodeTag in details.NodesToRemove) // nodeTags
+                        {
+                            var removeNodeFromDbCmdRaftIndex = 0L;
+                            var sw = Stopwatch.StartNew();
+                            while (true)
+                            {
+
+                                using (context.OpenReadTransaction())
+                                {
+                                    if (ServerStore.Engine.LogHistory.TryGetLastRemoveNodeFromDatabaseCommand(context, dbName, removedNodeTag, deleteCmdIndex,
+                                            out removeNodeFromDbCmdRaftIndex))
+                                        break;
+                                }
+
+                                if (sw.Elapsed > timeout)
+                                {
+                                    throw new RavenTimeoutException(
+                                        $"RemoveNodeFromDatabase command of node {removedNodeTag} doesn't exist in the log of node {ServerStore.NodeTag}.")
+                                    {
+                                        FailImmediately = true
+                                    };
+                                }
+
+                                await Task.Delay(TimeSpan.FromMilliseconds(300));
+                            }
+
+                            lastRemoveIndex = long.Max(lastRemoveIndex, removeNodeFromDbCmdRaftIndex);
+                        }
+                    }
+
+                }
+
+                // RemoveNodeFromDatabase command is being created in the database (on the node DatabaseLandlord) after the db has been deleted from it.
+                try
+                {
+                    using (var cts = new CancellationTokenSource(timeout))
+                        await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastRemoveIndex, cts.Token);
+                }
+                catch (OperationCanceledException) // from token
+                {
+                    throw new RavenTimeoutException($"Waited {timeout} for the 'RemoveNodeFromDatabase' command (with index {lastRemoveIndex}) to bee committed.")
+                    {
+                        FailImmediately = true
+                    };
+                }
+            }
+            finally
+            {
+                foreach (var requestExecutor in reqExecutors.Values)
+                    requestExecutor.Dispose();
+            }
+
+            return lastRemoveIndex;
+        }
+
+        private class DeleteDatabaseDetails
+        {
+            public HashSet<string> NodesToRemove { get; set; }
+            public DatabaseTopology Topology { get; set; }
+            public long RaftIndex { get; set; }
         }
 
         [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.Operator)]

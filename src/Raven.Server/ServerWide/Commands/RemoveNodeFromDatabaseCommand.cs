@@ -36,9 +36,7 @@ namespace Raven.Server.ServerWide.Commands
 
             if (deletionStatus == DeletionInProgressStatus.HardDelete)
             {
-                if (record.UnusedDatabaseIds == null)
-                    record.UnusedDatabaseIds = new HashSet<string>();
-
+                record.UnusedDatabaseIds ??= new HashSet<string>();
                 record.UnusedDatabaseIds.Add(DatabaseId);
             }
 

@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
@@ -32,6 +33,7 @@ using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -52,6 +54,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {
+
         [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task Head()
         {

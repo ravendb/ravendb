@@ -940,7 +940,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     databaseTopology.Promotables.Add(node);
                     databaseTopology.DemotionReasons[node] = $"Just replaced the promotable node {promotable}";
                     databaseTopology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
-                    var deletionCmd = new DeleteDatabaseCommand(dbName, RaftIdGenerator.NewId())
+                    var cmdId = DeleteDatabaseCommand.GenerateUniqueRequestId(dbName, new List<string>() { promotable }, RaftIdGenerator.NewId());
+                    var deletionCmd = new DeleteDatabaseCommand(dbName, cmdId)
                     {
                         ErrorOnDatabaseDoesNotExists = false,
                         FromNodes = new[] { promotable },
@@ -1458,7 +1459,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
             LogMessage($"We reached the replication factor on database '{dbName}', so we try to remove redundant nodes from {string.Join(", ", nodesToDelete)}.", database: dbName);
 
-            var deletionCmd = new DeleteDatabaseCommand(dbName, RaftIdGenerator.NewId())
+            var cmdId = DeleteDatabaseCommand.GenerateUniqueRequestId(dbName, nodesToDelete, RaftIdGenerator.NewId());
+            var deletionCmd = new DeleteDatabaseCommand(dbName, cmdId)
             {
                 ErrorOnDatabaseDoesNotExists = false,
                 FromNodes = nodesToDelete.ToArray(),

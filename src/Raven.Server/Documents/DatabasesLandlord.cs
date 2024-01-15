@@ -15,6 +15,7 @@ using Raven.Server.Config;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -409,7 +410,15 @@ namespace Raven.Server.Documents
             {
                 removeLockAndReturn?.Dispose();
             }
-            NotifyLeaderAboutRemoval(dbName, databaseId);
+
+            var succeeded = false;
+            var lastDeleteIndex = 0L;
+            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+                succeeded = _serverStore.Engine.LogHistory.TryGetLastDeleteDatabaseCommandWithoutErrors(context, _serverStore.NodeTag, dbName, out lastDeleteIndex);
+
+            if (succeeded)
+                NotifyLeaderAboutRemoval(dbName, databaseId, lastDeleteIndex);
         }
 
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
@@ -417,9 +426,10 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException($"Unknown cluster database change type: {type}");
         }
 
-        private void NotifyLeaderAboutRemoval(string dbName, string databaseId)
+        private void NotifyLeaderAboutRemoval(string dbName, string databaseId, long deleteDatabaseIndex)
         {
-            var cmd = new RemoveNodeFromDatabaseCommand(dbName, databaseId, RaftIdGenerator.NewId())
+            var requestId = $"RemoveNodeFromDatabase/{dbName}/{_serverStore.NodeTag}/{deleteDatabaseIndex}";
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName, databaseId, requestId)
             {
                 NodeTag = _serverStore.NodeTag
             };
@@ -456,7 +466,7 @@ namespace Raven.Server.Documents
 
                     try
                     {
-                        NotifyLeaderAboutRemoval(dbName, databaseId);
+                        NotifyLeaderAboutRemoval(dbName, databaseId, deleteDatabaseIndex);
                     }
                     catch (Exception e)
                     {
