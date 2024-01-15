@@ -570,6 +570,23 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
+    private long GetRootPageByFieldName(in Slice fieldName)
+    {
+        var it = _fieldsTree.Iterate(false);
+        if (it.Seek(fieldName))
+        {
+            do
+            {
+                var state = (LookupState*)it.CreateReaderForCurrent().Base;
+                if (state->RootObjectType is RootObjectType.Lookup && SliceComparer.CompareInline(fieldName, it.CurrentKey) == 0)
+                {
+                    return state->RootPage;
+                }
+            } while (it.MoveNext());
+        }
+
+        return -1;
+    }
     
     
     private Dictionary<long, Slice> _pageToField;

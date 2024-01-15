@@ -34,6 +34,9 @@ public partial class IndexSearcher
         foreach (var word in values)
         {
             var tokensInWord = CountTokens(word, out var token);
+
+            if (tokensInWord == 0)
+                continue;
             
             //Single word
             if (tokensInWord == 1)
@@ -55,9 +58,9 @@ public partial class IndexSearcher
                 if (termType is Constants.Search.SearchMatchOptions.TermMatch)
                 {
                     termMatches ??= new();
-
                     terms.Clear(); // Clear the terms list.
-                    EncodeAndApplyAnalyzerForMultipleTerms(field, termReadyToAnalyze, ref terms);
+                    EncodeAndApplyAnalyzerForMultipleTerms(field, word, ref terms);
+                    
                     foreach (var term in terms.GetEnumerator())
                     {
                         if (term.Size == 0)
@@ -124,6 +127,7 @@ public partial class IndexSearcher
                 (null, _) => phraseMatch,
                 (_, Constants.Search.Operator.And) => And(searchQuery, phraseMatch, cancellationToken),
                 (_, Constants.Search.Operator.Or) => Or(searchQuery, phraseMatch, cancellationToken),
+                _ => throw new ArgumentOutOfRangeException()
             };
             
             terms.Shrink(startPosition);
@@ -213,34 +217,6 @@ public partial class IndexSearcher
 
             return count;
         }
-        
-        IEnumerable<Token> GetTokens(string source)
-        {
-            if (string.IsNullOrEmpty(source))
-            {
-                yield return new Token() {Offset = 0, Length = 0};
-                yield break;
-            }
-            
-            //TODO This code in from `WhitespaceTokenizer`. We can optimize it later but for now it should be OK.
-            int i = 0;
-
-            while (i < source.Length)
-            {
-                while (i < source.Length && source[i] == ' ')
-                    i++;
-
-                int start = i;
-                while (i < source.Length && source[i] != ' ')
-                    i++;
-
-                if (start != i)
-                {
-                    yield return new Token() {Offset = start, Length = (uint)(i - start), Type = TokenType.Word};
-                }
-            } 
-        }
-        
     }
 
     private Analyzer CreateWildcardAnalyzer(in FieldMetadata field, ref Analyzer analyzer)
