@@ -164,7 +164,7 @@ namespace Raven.Server.ServerWide
             [nameof(PutIndexHistoryCommand)] = 54_002,
             [nameof(DeleteIndexHistoryCommand)] = 54_002,
 
-            [nameof(UpdateResponsibleNodeForTaskCommand)] = UpdateResponsibleNodeForTaskCommand.CommandVersion,
+            [nameof(UpdateResponsibleNodeForTasksCommand)] = UpdateResponsibleNodeForTasksCommand.CommandVersion,
         };
 
         public static bool CanPutCommand(string command)
