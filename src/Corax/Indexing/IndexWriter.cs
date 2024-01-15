@@ -1333,30 +1333,46 @@ namespace Corax.Indexing
                 const int storedFieldType = (int)(StoredFieldType.List | StoredFieldType.Term);
                 _writer.InitializeFieldRootPageForTermsVector(_indexedField); 
                 var termsPerEntrySpan = _writer._termsPerEntryId.ToSpan();
-                
-                var processingBufferHandler = _writer._entriesAllocator.Allocate(512, out Span<byte> processingBuffer);
+
+
+                IDisposable memoryHandler = null;
                 var processingBufferPosition = 0;
-                ref var virtualMapping = ref _virtualTermIdToTermContainerId;
+                var virtualMapping = _virtualTermIdToTermContainerId.ToSpan();
+                
+                Span<byte> processingBuffer = stackalloc byte[128];
+                Span<long> termsBuffer = stackalloc long[32];
+                Span<int> indexesBuffer = stackalloc int[32];
+                
                 for (var documentIndex = 0; documentIndex < _indexedField.EntryToTerms.Count; ++documentIndex)
                 {
                     ref var fieldTerms = ref _indexedField.EntryToTerms[documentIndex];
                     ref var entryTerms = ref termsPerEntrySpan[documentIndex];
+                 
                     
-                    //When document has no terms we skip
+                    //When document has no terms we proceed
                     if (fieldTerms.Count == 0)
                         continue;
-                    
-                    if (processingBuffer.Length / sizeof(long) < fieldTerms.Count)
-                        GrowUnlikely(_writer._entriesAllocator, ref processingBuffer, fieldTerms.Count);
+
+                    if (fieldTerms.Count > termsBuffer.Length || processingBuffer.Length / sizeof(int) < fieldTerms.Count)
+                        UnlikelyGrowBuffer(_writer._entriesAllocator, fieldTerms.Count, ref termsBuffer, ref indexesBuffer, ref processingBuffer);
+
+                    var terms = termsBuffer.Slice(0, fieldTerms.Count);
+                    var indexes = indexesBuffer.Slice(0, fieldTerms.Count);
                     
                     for (var termIndex = 0; termIndex < fieldTerms.Count; ++termIndex)
                     {
                         ref var virtualTermId = ref fieldTerms[termIndex];
-                        Debug.Assert(virtualMapping.Count > virtualTermId, "_indexedField.NativeVirtualTermIdToTermContainerId.Count > term");
-                        
-                        //Impossible to get null ref
-                        processingBufferPosition += ZigZagEncoding.Encode(processingBuffer, virtualMapping[virtualTermId], processingBufferPosition);
+                        Debug.Assert(virtualMapping.Length > virtualTermId, "_indexedField.NativeVirtualTermIdToTermContainerId.Count > term");
+
+                        terms[termIndex] = virtualMapping[virtualTermId];
+                        indexes[termIndex] = termIndex;
                     }
+
+                    terms.Sort(indexes);
+                    for (var termIndex = 0; termIndex < fieldTerms.Count; ++termIndex)
+                    {
+                        processingBufferPosition += ZigZagEncoding.Encode(processingBuffer,indexes[termIndex], processingBufferPosition);
+                    }                    
                     
                     var listContainerId = Container.Allocate(
                         _writer._transaction.LowLevelTransaction,
@@ -1386,20 +1402,20 @@ namespace Corax.Indexing
 
                     processingBufferPosition = 0;
                 }
-
-                void GrowUnlikely(ByteStringContext allocator, ref Span<byte> processingBuffer, int requiredSize)
-                {
-                    var newDisposable = allocator.Allocate(Math.Min(Bits.PowerOf2(processingBuffer.Length + 1), requiredSize * sizeof(long)), out Span<byte> output);
-                    
-                    processingBuffer.CopyTo(output);
-                    processingBufferHandler.Dispose();
-                    processingBuffer = output;
-                    processingBufferHandler = newDisposable;
-                }
                 
-                processingBufferHandler.Dispose();
                 _virtualTermIdToTermContainerId.Dispose(_writer._entriesAllocator);
                 _virtualTermIdToTermContainerId = default;
+                memoryHandler?.Dispose();
+
+                void UnlikelyGrowBuffer(ByteStringContext allocator, int count, ref Span<long> termsBuffer, ref Span<int> indexesBuffer, ref Span<byte> processingBuffer)
+                {
+                    var length = Bits.PowerOf2(count + 1);
+                    memoryHandler?.Dispose();
+                    memoryHandler = allocator.Allocate(length * (sizeof(int) + sizeof(long) + 1), out var memory);
+                    termsBuffer = MemoryMarshal.Cast<byte, long>(memory.ToSpan().Slice(0, length * sizeof(long)));
+                    indexesBuffer = MemoryMarshal.Cast<byte, int>(memory.ToSpan().Slice(length * sizeof(long)));
+                    processingBuffer = memory.ToSpan().Slice(length * (sizeof(int) + sizeof(long)));
+                }
             }
             
             private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)

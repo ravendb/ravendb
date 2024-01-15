@@ -23,9 +23,11 @@ public partial class IndexSearcher
             return default;
 
         Allocator.Allocate(terms.Length * sizeof(long), out var sequenceBuffer);
-        var sequencePosition = 0;
-        var fieldName = field.GetPhraseQueryContainerName(Allocator);
-        var rootPage = GetRootPageByFieldName(fieldName);
+        Span<long> sequence = sequenceBuffer.ToSpan<long>();
+        
+        var termsVectorFieldName = field.GetPhraseQueryContainerName(Allocator);
+        var vectorRootPage = GetRootPageByFieldName(termsVectorFieldName);
+        var rootPage = GetRootPageByFieldName(field.FieldName);
 
         for (var i = 0; i < terms.Length; ++i)
         {
@@ -37,10 +39,12 @@ public partial class IndexSearcher
             if (compactTree.TryGetTermContainerId(termKey, out var termContainerId) == false)
                 return TermMatch.CreateEmpty(this, Allocator);
 
-            sequencePosition += ZigZagEncoding.Encode(sequenceBuffer.ToSpan(), termContainerId, sequencePosition);
+            sequence[i] = termContainerId;
         }
         
-        return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, sequencePosition, rootPage);
+        
+        
+        return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, vectorRootPage, rootPage: rootPage);
     }
 
     public IQueryMatch PhraseQuery<TInner>(TInner inner, in FieldMetadata field, ReadOnlySpan<byte> terms, ReadOnlySpan<Token> tokens)
