@@ -191,7 +191,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return;
 
             var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
-            var responsibleNodeCommands = new List<UpdateResponsibleNodeForTaskCommand>();
+            var responsibleNodesByDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>();
             var cleanUnusedAutoIndexesCommands = new List<(UpdateDatabaseCommand Update, string Reason)>();
             var cleanCompareExchangeTombstonesCommands = new List<CleanCompareExchangeTombstonesCommand>();
 
@@ -325,7 +325,9 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                         }
 
-                        UpdateResponsibleNodeForBackup(rawRecord, database, state, context, responsibleNodeCommands);
+                        var responsibleNodeCommands = GetResponsibleNodesForBackupTasks(rawRecord, database, state.DatabaseTopology, context);
+                        if (responsibleNodeCommands is { Count: > 0 })
+                            responsibleNodesByDatabase[database] = responsibleNodeCommands;
                     }
                 }
             }
@@ -386,11 +388,21 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            foreach (var command in responsibleNodeCommands)
+            if (responsibleNodesByDatabase.Count > 0)
             {
-                await UpdateResponsibleNodeForTask(command);
+                if (_engine.LeaderTag != _server.NodeTag)
+                {
+                    throw new NotLeadingException("This node is no longer the leader, so we abort updating the responsible node for backup tasks");
+                }
+
+                var command = new UpdateResponsibleNodeForTasksCommand(new UpdateResponsibleNodeForTasksCommand.Parameters
+                {
+                    ResponsibleNodesByDatabase = responsibleNodesByDatabase
+                }, RaftIdGenerator.NewId());
+
+                await _engine.PutAsync(command);
             }
-            
+
             if (deletions != null)
             {
                 foreach (var command in deletions)
@@ -424,37 +436,37 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private void UpdateResponsibleNodeForBackup(RawDatabaseRecord rawRecord, string databaseName, 
-            DatabaseObservationState state, TransactionOperationContext context,
-            List<UpdateResponsibleNodeForTaskCommand> responsibleNodeCommands)
+        private List<ResponsibleNodeInfo> GetResponsibleNodesForBackupTasks(RawDatabaseRecord rawRecord, string databaseName, DatabaseTopology topology, TransactionOperationContext context)
         {
             var currentLeader = _engine.CurrentLeader;
             if (currentLeader == null)
-                return;
+                return null;
 
-            // we must verify that all connected nodes are supporting the UpdateResponsibleNodeForTaskCommand command
+            // we must verify that all connected nodes are supporting the UpdateResponsibleNodeForTasksCommand command
             foreach (var version in currentLeader.PeersVersion.Values)
             {
-                if (version < UpdateResponsibleNodeForTaskCommand.CommandVersion)
+                if (version < UpdateResponsibleNodeForTasksCommand.CommandVersion)
                 {
                     // the command isn't supported
-                    return;
+                    return null;
                 }
             }
 
             var moveToNewResponsibleNodeGracePeriodConfig = (TimeSetting)RavenConfiguration.GetValue(x => x.Backup.MoveToNewResponsibleNodeGracePeriod, _server.Configuration, rawRecord.Settings);
             var moveToNewResponsibleNodeGracePeriod = moveToNewResponsibleNodeGracePeriodConfig.AsTimeSpan;
+            List<ResponsibleNodeInfo> responsibleNodeCommands = null;
 
             foreach (var configuration in rawRecord.PeriodicBackups)
             {
-                var responsibleNodeInfo = GetResponsibleNodeInfo(databaseName, configuration, state.DatabaseTopology, moveToNewResponsibleNodeGracePeriod, context);
+                var responsibleNodeInfo = GetResponsibleNodeInfo(databaseName, configuration, topology, moveToNewResponsibleNodeGracePeriod, context);
                 if (responsibleNodeInfo == null)
                     continue;
 
-                var command = new UpdateResponsibleNodeForTaskCommand(databaseName, RaftIdGenerator.NewId()) { ResponsibleNodeInfo = responsibleNodeInfo };
-
-                responsibleNodeCommands.Add(command);
+                responsibleNodeCommands ??= new List<ResponsibleNodeInfo>();
+                responsibleNodeCommands.Add(responsibleNodeInfo);
             }
+
+            return responsibleNodeCommands;
         }
 
         private ResponsibleNodeInfo GetResponsibleNodeInfo(
@@ -1830,16 +1842,6 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             return _engine.PutAsync(cmd);
-        }
-
-        private Task<(long Index, object Result)> UpdateResponsibleNodeForTask(UpdateResponsibleNodeForTaskCommand command)
-        {
-            if (_engine.LeaderTag != _server.NodeTag)
-            {
-                throw new NotLeadingException("This node is no longer the leader, so we abort updating the responsible node for task");
-            }
-
-            return _engine.PutAsync(command);
         }
 
         private Task<(long Index, object Result)> Delete(DeleteDatabaseCommand cmd)

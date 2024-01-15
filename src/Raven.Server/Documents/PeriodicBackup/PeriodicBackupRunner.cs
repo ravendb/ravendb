@@ -1073,7 +1073,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             switch (type)
             {
-                case nameof(UpdateResponsibleNodeForTaskCommand):
+                case nameof(UpdateResponsibleNodeForTasksCommand):
                     UpdateConfigurations(record);
                     break;
 
