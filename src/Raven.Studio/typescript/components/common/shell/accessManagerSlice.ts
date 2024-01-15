@@ -10,6 +10,7 @@ interface DatabaseAccessInfo {
 interface AccessManagerState {
     databaseAccess: EntityState<DatabaseAccessInfo, string>;
     securityClearance: SecurityClearance;
+    isSecureServer: boolean;
 }
 
 const databaseAccessAdapter = createEntityAdapter<DatabaseAccessInfo, string>({
@@ -21,6 +22,7 @@ const databaseAccessSelectors = databaseAccessAdapter.getSelectors();
 const initialState: AccessManagerState = {
     databaseAccess: databaseAccessAdapter.getInitialState(),
     securityClearance: "ClusterAdmin",
+    isSecureServer: true,
 };
 
 const sliceName = "accessManager";
@@ -40,6 +42,9 @@ export const accessManagerSlice = createSlice({
         },
         onSecurityClearanceSet: (state, action: PayloadAction<SecurityClearance>) => {
             state.securityClearance = action.payload;
+        },
+        onIsSecureServerSet: (state, action: PayloadAction<boolean>) => {
+            state.isSecureServer = action.payload;
         },
     },
 });
@@ -66,12 +71,10 @@ const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
     };
 };
 
-export const accessManagerActions = {
-    onDatabaseAccessLoaded: accessManagerSlice.actions.onDatabaseAccessLoaded,
-    onSecurityClearanceSet: accessManagerSlice.actions.onSecurityClearanceSet,
-};
+export const accessManagerActions = accessManagerSlice.actions;
 
 export const accessManagerSelectors = {
+    isSecureServer: (store: RootState) => store.accessManager.isSecureServer,
     databaseAccessLevel: selectDatabaseAccessLevel,
     operatorOrAbove: selectOperatorOrAbove,
     effectiveDatabaseAccessLevel: selectEffectiveDatabaseAccessLevel,

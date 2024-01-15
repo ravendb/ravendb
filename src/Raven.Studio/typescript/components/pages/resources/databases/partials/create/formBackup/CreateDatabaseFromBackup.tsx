@@ -28,6 +28,8 @@ import { Icon } from "../../../../../../common/Icon";
 import { Steps } from "../../../../../../common/Steps";
 import { LicenseRestrictions } from "../../../../../../common/LicenseRestrictions";
 import classNames from "classnames";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { useAppSelector } from "components/store";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -48,10 +50,11 @@ interface StepItem {
     active: boolean;
 }
 
-export default function CreateDatabaseFromBackup(props: CreateDatabaseFromBackupProps) {
-    const { closeModal, changeCreateModeToRegular } = props;
-
-    const isServerAuthenticationEnabled = true; // TODO get from store
+export default function CreateDatabaseFromBackup({
+    closeModal,
+    changeCreateModeToRegular,
+}: CreateDatabaseFromBackupProps) {
+    const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
     const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
     const toggleEncryption = () => {
@@ -125,7 +128,7 @@ export default function CreateDatabaseFromBackup(props: CreateDatabaseFromBackup
                 encryptionEnabled={encryptionEnabled}
                 toggleEncryption={toggleEncryption}
                 licenseProps={null}
-                serverAuthentication={isServerAuthenticationEnabled}
+                serverAuthentication={isSecureServer}
             />
         ),
         encryption: <StepEncryption />,
