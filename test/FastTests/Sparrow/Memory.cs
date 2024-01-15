@@ -218,14 +218,14 @@ namespace FastTests.Sparrow
                             s1Ptr[i] = 0x00;
                             s2Ptr[i] = 0x00;
 
-                            Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0);
-                            Assert.True(AdvMemory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0);
-                            Assert.True(AdvMemory.CompareSmallInlineNet6OorLesser(s1Ptr, s2Ptr, s1.Length) == 0);
-                            Assert.True(AdvMemory.CompareSmallInlineNet7(s1Ptr, s2Ptr, s1.Length) == 0);
+                            Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0, "Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0");
+                            Assert.True(AdvMemory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0, "AdvMemory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0");
+                            Assert.True(AdvMemory.CompareSmallInlineNet6OorLesser(s1Ptr, s2Ptr, s1.Length) == 0, "AdvMemory.CompareSmallInlineNet6OorLesser(s1Ptr, s2Ptr, s1.Length) == 0");
+                            Assert.True(AdvMemory.CompareSmallInlineNet7(s1Ptr, s2Ptr, s1.Length) == 0, "AdvMemory.CompareSmallInlineNet7(s1Ptr, s2Ptr, s1.Length) == 0");
 
                             if (Avx2.IsSupported)
                             {
-                                Assert.True(AdvMemory.CompareAvx2(s1Ptr, s2Ptr, s1.Length) == 0);
+                                Assert.True(AdvMemory.CompareAvx2(s1Ptr, s2Ptr, s1.Length) == 0, "AdvMemory.CompareAvx2(s1Ptr, s2Ptr, s1.Length) == 0");
                             }
                         }
                         catch
