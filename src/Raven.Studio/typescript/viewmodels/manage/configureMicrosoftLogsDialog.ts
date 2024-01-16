@@ -1,11 +1,14 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import licenseModel from "models/auth/licenseModel";
 
 class configureMicrosoftLogsDialog extends dialogViewModelBase {
     
     view = require("views/manage/configureMicrosoftLogsDialog.html");
 
+    canPersist = !licenseModel.cloudLicense();
+    
     code = ko.observable<string>("");
     isEnabled = ko.observable<boolean>(false);
     persist = ko.observable<boolean>(false);
