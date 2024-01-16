@@ -31,7 +31,7 @@ function getConnectionStringUsedTasks(
                 ({
                     id: x.TaskId,
                     name: x.TaskName,
-                } satisfies ConnectionStringUsedTask)
+                }) satisfies ConnectionStringUsedTask
         );
 }
 
@@ -47,7 +47,7 @@ export function mapRavenConnectionsFromDto(
                 database: connection.Database,
                 topologyDiscoveryUrls: connection.TopologyDiscoveryUrls.map((x) => ({ url: x })),
                 usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "RavenEtl", connection.Name),
-            } satisfies RavenConnection)
+            }) satisfies RavenConnection
     );
 }
 
@@ -63,7 +63,7 @@ export function mapSqlConnectionsFromDto(
                 connectionString: connection.ConnectionString,
                 factoryName: connection.FactoryName,
                 usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "SqlEtl", connection.Name),
-            } satisfies SqlConnection)
+            }) satisfies SqlConnection
     );
 }
 
@@ -78,7 +78,7 @@ export function mapOlapConnectionsFromDto(
                 name: connection.Name,
                 usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "OlapEtl", connection.Name),
                 ...mapDestinationsFromDto(_.omit(connection, "Type", "Name")),
-            } satisfies OlapConnection)
+            }) satisfies OlapConnection
     );
 }
 
@@ -125,7 +125,7 @@ export function mapElasticSearchConnectionsFromDto(
                     url: x,
                 })),
                 usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "ElasticSearchEtl", connection.Name),
-            } satisfies ElasticSearchConnection)
+            }) satisfies ElasticSearchConnection
     );
 }
 
@@ -147,7 +147,7 @@ export function mapKafkaConnectionsFromDto(
                     })),
                     isUseRavenCertificate: connection.KafkaConnectionSettings.UseRavenCertificate,
                     usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "QueueEtl", connection.Name),
-                } satisfies KafkaConnection)
+                }) satisfies KafkaConnection
         );
 }
 
@@ -164,6 +164,6 @@ export function mapRabbitMqConnectionsFromDto(
                     name: connection.Name,
                     connectionString: connection.RabbitMqConnectionSettings.ConnectionString,
                     usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "QueueEtl", connection.Name),
-                } satisfies RabbitMqConnection)
+                }) satisfies RabbitMqConnection
         );
 }
