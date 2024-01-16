@@ -17,7 +17,7 @@ export interface ConflictResolutionCollectionConfig {
 
 interface ConflictResolutionConfig {
     isResolveToLatest: boolean;
-    collectionConfigs: EntityState<ConflictResolutionCollectionConfig>;
+    collectionConfigs: EntityState<ConflictResolutionCollectionConfig, string>;
 }
 
 interface ConflictResolutionState {
@@ -26,7 +26,8 @@ interface ConflictResolutionState {
     isDirty: boolean;
 }
 
-const collectionConfigsAdapter = createEntityAdapter<ConflictResolutionCollectionConfig>({
+const collectionConfigsAdapter = createEntityAdapter<ConflictResolutionCollectionConfig, string>({
+    selectId: (collection) => collection.id,
     sortComparer: (a, b) => (moment(a.lastModifiedTime) > moment(b.lastModifiedTime) ? -1 : 1),
 });
 
