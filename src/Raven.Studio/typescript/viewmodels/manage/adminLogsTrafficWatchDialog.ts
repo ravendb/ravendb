@@ -4,6 +4,7 @@ import dialog = require("plugins/dialog");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 import databasesManager = require("common/shell/databasesManager");
 import TrafficWatchChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType;
+import licenseModel from "models/auth/licenseModel";
 
 class adminLogsTrafficWatchDialog extends dialogViewModelBase {
     
@@ -12,6 +13,8 @@ class adminLogsTrafficWatchDialog extends dialogViewModelBase {
     private readonly model: trafficWatchConfiguration;
 
     usingHttps = location.protocol === "https:";
+
+    canPersist = !licenseModel.cloudLicense();
 
     private allDatabaseNames = ko.observableArray<string>();
     private static allHttpMethods = ["GET", "POST", "PUT", "DELETE", "HEAD"];

@@ -152,7 +152,7 @@
                             </div>
                         </div>
 
-                        <div class="margin-left margin-top">
+                        <div class="margin-left margin-top" data-bind="visible: $root.canPersist">
                             <div class="toggle">
                                 <input id="persistToSettings" type="checkbox" data-bind="checked: persist">
                                 <label for="persistToSettings">Save this configuration in <code>settings.json</code></label>

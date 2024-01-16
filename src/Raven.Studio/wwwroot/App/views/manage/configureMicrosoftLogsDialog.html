@@ -24,7 +24,7 @@
                     </div>
                 </div>
 
-                <div class="margin-left margin-top">
+                <div class="margin-left margin-top" data-bind="visible: canPersist">
                     <div class="toggle">
                         <input id="persistAdminLogsMicrosoft" type="checkbox" data-bind="checked: persist">
                         <label for="persistAdminLogsMicrosoft">Save this configuration in <code>settings.json</code> and <code>settings.logs.microsoft.json</code></label>
