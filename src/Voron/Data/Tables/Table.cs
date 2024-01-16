@@ -36,8 +36,8 @@ namespace Voron.Data.Tables
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
 
-        private readonly Dictionary<Slice, Tree> _treesBySliceCache = new(SliceStructComparer.Instance);
-        private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new(SliceStructComparer.Instance);
+        private Dictionary<Slice, Tree> _treesBySliceCache;
+        private Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache;
 
         public readonly Slice Name;
         private readonly byte _tableType;
@@ -46,10 +46,28 @@ namespace Voron.Data.Tables
         public long NumberOfEntries { get; private set; }
 
         private long _overflowPageCount;
-        private readonly NewPageAllocator _tablePageAllocator;
-        private readonly NewPageAllocator _globalPageAllocator;
+        private NewPageAllocator _tablePageAllocator;
+        private NewPageAllocator _globalPageAllocator;
 
-        public NewPageAllocator TablePageAllocator => _tablePageAllocator;
+        public NewPageAllocator TablePageAllocator
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                _tablePageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
+                return _tablePageAllocator;
+            }
+        }
+
+        private NewPageAllocator GlobalPageAllocator
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                _globalPageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects);
+                return _globalPageAllocator;
+            }
+        }
 
         public FixedSizeTree InactiveSections => _inactiveSections ??= GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0, isGlobal: false, isIndexTree: true);
 
@@ -132,8 +150,6 @@ namespace Voron.Data.Tables
 
             NumberOfEntries = stats->NumberOfEntries;
             _overflowPageCount = stats->OverflowPageCount;
-            _tablePageAllocator = new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
-            _globalPageAllocator = new NewPageAllocator(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects);
 
             if (doSchemaValidation)
             {
@@ -1103,7 +1119,9 @@ namespace Voron.Data.Tables
         public FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeKeyIndexDef indexDef)
         {
             if (indexDef.IsGlobal)
-                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: _globalPageAllocator);
+            {
+                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: GlobalPageAllocator);
+            }
 
             var tableTree = _tx.ReadTree(Name);
             return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isGlobal: false, isIndexTree: true);
@@ -1111,15 +1129,17 @@ namespace Voron.Data.Tables
 
         internal FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isGlobal, bool isIndexTree = false)
         {
-            if (_fixedSizeTreeCache.TryGetValue(parent.Name, out Dictionary<Slice, FixedSizeTree> cache) == false)
+            if (_fixedSizeTreeCache == null || _fixedSizeTreeCache.TryGetValue(parent.Name, out Dictionary<Slice, FixedSizeTree> cache) == false)
             {
                 cache = new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
+                
+                _fixedSizeTreeCache ??= new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceStructComparer.Instance);
                 _fixedSizeTreeCache[parent.Name] = cache;
             }
 
             if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
             {
-                var allocator = isGlobal ? _globalPageAllocator : _tablePageAllocator;
+                NewPageAllocator allocator = isGlobal ? GlobalPageAllocator : TablePageAllocator;
                 var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree | parent.IsIndexTree, newPageAllocator: allocator);
                 return cache[fixedSizeTree.Name] = fixedSizeTree;
             }
@@ -1179,14 +1199,16 @@ namespace Voron.Data.Tables
 
         internal Tree GetTree(Slice name, bool isIndexTree)
         {
-            if (_treesBySliceCache.TryGetValue(name, out Tree tree))
+            if (_treesBySliceCache != null && _treesBySliceCache.TryGetValue(name, out Tree tree))
                 return tree;
 
             var treeHeader = _tableTree.DirectRead(name);
             if (treeHeader == null)
                 throw new VoronErrorException($"Cannot find tree {name} in table {Name}");
 
-            tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, isIndexTree: isIndexTree, newPageAllocator: _tablePageAllocator);
+            tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, isIndexTree: isIndexTree, newPageAllocator: TablePageAllocator);
+
+            _treesBySliceCache ??= new Dictionary<Slice, Tree>(SliceStructComparer.Instance);
             _treesBySliceCache[name] = tree;
 
             return tree;
@@ -1195,7 +1217,7 @@ namespace Voron.Data.Tables
         internal Tree GetTree(TableSchema.AbstractTreeIndexDef idx)
         {
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: _globalPageAllocator);
+                return _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: GlobalPageAllocator);
             return GetTree(idx.Name, true);
         }
 
@@ -2330,16 +2352,20 @@ namespace Voron.Data.Tables
 
         public void Dispose()
         {
-            foreach (var item in _treesBySliceCache)
+            if (_treesBySliceCache != null)
             {
-                item.Value.Dispose();
+                foreach (var item in _treesBySliceCache)
+                    item.Value.Dispose();
             }
 
-            foreach (var item in _fixedSizeTreeCache)
+            if (_fixedSizeTreeCache != null)
             {
-                foreach (var item2 in item.Value)
+                foreach (var item in _fixedSizeTreeCache)
                 {
-                    item2.Value.Dispose();
+                    foreach (var item2 in item.Value)
+                    {
+                        item2.Value.Dispose();
+                    }
                 }
             }
 
@@ -2409,7 +2435,7 @@ namespace Voron.Data.Tables
 
             report.AddData(ActiveDataSmallSection, includeDetails);
 
-            report.AddPreAllocatedBuffers(_tablePageAllocator, includeDetails);
+            report.AddPreAllocatedBuffers(TablePageAllocator, includeDetails);
 
             return report;
         }
