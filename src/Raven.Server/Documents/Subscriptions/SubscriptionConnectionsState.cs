@@ -75,10 +75,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         public override async Task InitializeAsync(SubscriptionConnection connection, bool afterSubscribe = false)
         {
-           await base.InitializeAsync(connection, afterSubscribe);
+            await base.InitializeAsync(connection, afterSubscribe);
 
-           if (afterSubscribe == false)
-               return;
+            if (afterSubscribe == false)
+                return;
 
             // update the subscription data only on new concurrent connection or regular connection
             if (IsConcurrent == false)
@@ -87,57 +87,70 @@ namespace Raven.Server.Documents.Subscriptions
                 return;
             }
 
-            DocumentDatabase.ForTestingPurposes?.ConcurrentSubscription_ActionToCallDuringWaitForSubscribe?.Invoke(_connections);
-
             connection.AddToStatusDescription("Starting to subscribe.");
-            var sp = Stopwatch.StartNew();
+
+            if (_subscriptionState == null)
+            {
+                // this connection is the first one, we initialize everything
+                RefreshFeatures(connection);
+                return;
+            }
+
+            if (connection.SubscriptionState.RaftCommandIndex < _subscriptionState.RaftCommandIndex)
+            {
+                // this connection was modified while waiting to subscribe, lets try to drop it
+                DropSingleConnection(connection, new SubscriptionClosedException($"The subscription '{_subscriptionName}' was modified, connection have to be restarted.", canReconnect: true));
+                return;
+            }
+
+            if (connection.SubscriptionState.RaftCommandIndex == _subscriptionState.RaftCommandIndex)
+            {
+                // no changes in the subscription task 
+                // the LastChangeVectorSent have to be refreshed since the concurrent subscription task might got processed on different node
+                if (_connections.Count == 1)
+                {
+                    SetLastChangeVectorSent(connection);
+                }
+
+                return;
+            }
+
+            if (connection.SubscriptionState.RaftCommandIndex > _subscriptionState.RaftCommandIndex)
+            {
+                // we have new connection after subscription have changed
+                // we have to wait until old connections (with smaller raft index) will get disconnected
+                // then we continue and will re-initialize 
+
+                var sp = Stopwatch.StartNew();
+                while (_connections.Any(c => c.SubscriptionState.RaftCommandIndex == _subscriptionState.RaftCommandIndex))
+                {
+                    connection.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    await Task.Delay(300);
+                    await connection.SendHeartBeatIfNeededAsync(sp, $"A connection from IP '{connection.ClientUri}' is waiting for old subscription connections to disconnect.");
+                }
+
+                RefreshFeatures(connection);
+            }
+        }
+
+        public override void ReleaseConcurrentConnectionLock(SubscriptionConnection connection)
+        {
+            if (connection.Strategy != SubscriptionOpeningStrategy.Concurrent)
+                return;
+
+            _subscriptionConnectingLock.Release();
+        }
+
+        public override async Task TakeConcurrentConnectionLockAsync(SubscriptionConnection connection)
+        {
+            if (connection.Strategy != SubscriptionOpeningStrategy.Concurrent)
+                return;
+
+            DocumentDatabase.ForTestingPurposes?.ConcurrentSubscription_ActionToCallDuringWaitForSubscribe?.Invoke(_connections);
             while (await _subscriptionConnectingLock.WaitAsync(ISubscriptionConnection.WaitForChangedDocumentsTimeoutInMs) == false)
             {
                 connection.CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 await connection.SendHeartBeatAsync($"A connection from IP '{connection.ClientUri}' is waiting for other concurrent connections to subscribe.");
-                sp.Restart();
-            }
-
-            try
-            {
-                if (_subscriptionState == null)
-                {
-                    // this connection is the first one, we initialize everything
-                    RefreshFeatures(connection);
-                    return;
-                }
-
-                if (connection.SubscriptionState.RaftCommandIndex < _subscriptionState.RaftCommandIndex)
-                {
-                    // this connection was modified while waiting to subscribe, lets try to drop it
-                    DropSingleConnection(connection, new SubscriptionClosedException($"The subscription '{_subscriptionName}' was modified, connection have to be restarted.", canReconnect: true));
-                    return;
-                }
-
-                if (connection.SubscriptionState.RaftCommandIndex == _subscriptionState.RaftCommandIndex)
-                {
-                    // no changes in the subscription
-                    return;
-                }
-
-                if (connection.SubscriptionState.RaftCommandIndex > _subscriptionState.RaftCommandIndex)
-                {
-                    // we have new connection after subscription have changed
-                    // we have to wait until old connections (with smaller raft index) will get disconnected
-                    // then we continue and will re-initialize 
-                    while (_connections.Any(c => c.SubscriptionState.RaftCommandIndex == _subscriptionState.RaftCommandIndex))
-                    {
-                        connection.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                        await Task.Delay(300);
-                        await connection.SendHeartBeatIfNeededAsync(sp, $"A connection from IP '{connection.ClientUri}' is waiting for old subscription connections to disconnect.");
-                    }
-
-                    RefreshFeatures(connection);
-                }
-            }
-            finally
-            {
-                _subscriptionConnectingLock.Release();
             }
         }
 

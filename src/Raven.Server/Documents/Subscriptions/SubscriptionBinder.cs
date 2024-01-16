@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding;
@@ -94,15 +96,19 @@ public sealed class SubscriptionBinder<TState, TConnection, TIncludeCommand> : I
 
                 try
                 {
-                    long registerConnectionDurationInTicks;
                     using (stats.PendingConnectionScope)
                     {
                         await _connection.InitAsync();
                         await _subscriptionConnectionsState.InitializeAsync(_connection);
-                        (disposeOnDisconnect, registerConnectionDurationInTicks) = await _subscriptionConnectionsState.SubscribeAsync(_connection);
+                        var registerConnectionDuration = Stopwatch.StartNew();
+                        using (await AddPendingConnectionUnderLockAsync())
+                        {
+                            (disposeOnDisconnect, long registerConnectionDurationInTicks) = await _subscriptionConnectionsState.SubscribeAsync(_connection, registerConnectionDuration);
+                            stats.PendingConnectionScope.Dispose();
+                            await NotifyClientAboutSuccessAsync(registerConnectionDurationInTicks);
+                        }
                     }
 
-                    await NotifyClientAboutSuccessAsync(registerConnectionDurationInTicks);
                     await _connection.ProcessSubscriptionAsync<TState, TConnection>(_subscriptionConnectionsState);
                 }
                 finally
@@ -122,6 +128,26 @@ public sealed class SubscriptionBinder<TState, TConnection, TIncludeCommand> : I
         }
     }
 
+    private async Task<IDisposable> AddPendingConnectionUnderLockAsync()
+    {
+        var connectionInfo = _subscriptionConnectionsState.SubscriptionPendingConnectionInfo(_connection);
+
+        try
+        {
+            await _subscriptionConnectionsState.TakeConcurrentConnectionLockAsync(_connection);
+        }
+        catch
+        {
+            _subscriptionConnectionsState.TryRemovePendingConnectionInfo(connectionInfo);
+            throw;
+        }
+
+        return new DisposableAction(() =>
+        {
+            _subscriptionConnectionsState.TryRemovePendingConnectionInfo(connectionInfo);
+            _subscriptionConnectionsState.ReleaseConcurrentConnectionLock(_connection);
+        });
+    }
     private async Task NotifyClientAboutSuccessAsync(long registerConnectionDurationInTicks)
     {
         _connection.TcpConnection.DocumentDatabase?.ForTestingPurposes?.Subscription_ActionToCallAfterRegisterSubscriptionConnection?.Invoke(registerConnectionDurationInTicks);

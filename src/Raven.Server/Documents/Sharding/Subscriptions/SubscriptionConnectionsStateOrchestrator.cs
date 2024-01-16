@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
@@ -48,9 +49,9 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         _databaseContext = databaseContext;
     }
 
-    public override async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync(OrchestratedSubscriptionConnection connection)
+    public override async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync(OrchestratedSubscriptionConnection connection, Stopwatch registerConnectionDuration)
     {
-        var result = await base.SubscribeAsync(connection);
+        var result = await base.SubscribeAsync(connection, registerConnectionDuration);
         var initializationTask = Interlocked.CompareExchange(ref _initialConnection, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously), null);
         if (initializationTask == null)
         {
@@ -125,6 +126,15 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
     }
 
     public override Task WaitForIndexNotificationAsync(long index) => _databaseContext.Cluster.WaitForExecutionOnShardsAsync(index).AsTask();
+    public override void ReleaseConcurrentConnectionLock(OrchestratedSubscriptionConnection connection)
+    {
+        // noop
+    }
+
+    public override Task TakeConcurrentConnectionLockAsync(OrchestratedSubscriptionConnection connection)
+    {
+        return Task.CompletedTask;
+    }
 
     public override void DropSubscription(SubscriptionException e)
     {
