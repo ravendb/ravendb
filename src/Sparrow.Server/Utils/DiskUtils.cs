@@ -250,9 +250,7 @@ namespace Sparrow.Server.Utils
 #pragma warning disable CA1416
             return PlatformDetails.RunningOnLinux
                 ? new LinuxDiskStatsGetter(minInterval)
-                : PlatformDetails.RunningOnWindows ?
-                        new WindowsDiskStatsGetter(minInterval)
-                        : new NotImplementedDiskStatsGetter();
+                : new NotImplementedDiskStatsGetter();
 #pragma warning restore CA1416
         }
 
