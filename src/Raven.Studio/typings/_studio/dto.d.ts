@@ -911,6 +911,12 @@ interface iconPlusText {
     title?: string;
 }
 
+interface ConfigureMicrosoftLogsDialogResult {
+    isEnabled: boolean;
+    configuration: object;
+    persist: boolean;
+}
+
 interface columnPreviewFeature {
     install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void;
     syntax(column: virtualColumn, escapedValue: any, element: any): void;

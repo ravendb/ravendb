@@ -667,7 +667,7 @@ class adminLogs extends viewModelBase {
 
     configureMicrosoftLogs() {
         app.showBootstrapDialog(new configureMicrosoftLogsDialog(this.isMicrosoftLogsEnabled(), this.microsoftLogsConfiguration()))
-            .done((result) => {
+            .done((result: ConfigureMicrosoftLogsDialogResult) => {
                 if (!result) {
                     return;
                 }
@@ -686,7 +686,7 @@ class adminLogs extends viewModelBase {
                 }
                 
                 if (result.configuration) {
-                    new saveAdminLogsMicrosoftConfigurationCommand(result.configuration)
+                    new saveAdminLogsMicrosoftConfigurationCommand(result.configuration, result.persist)
                         .execute()
                         .done(() => this.loadMicrosoftLogsConfiguration());
                 }
