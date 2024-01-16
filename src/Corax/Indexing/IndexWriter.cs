@@ -1339,9 +1339,9 @@ namespace Corax.Indexing
                 var processingBufferPosition = 0;
                 var virtualMapping = _virtualTermIdToTermContainerId.ToSpan();
                 
-                Span<byte> processingBuffer = stackalloc byte[128];
                 Span<long> termsBuffer = stackalloc long[32];
                 Span<int> indexesBuffer = stackalloc int[32];
+                Span<byte> processingBuffer = stackalloc byte[32 * ZigZagEncoding.MaxEncodedSize];
                 
                 for (var documentIndex = 0; documentIndex < _indexedField.EntryToTerms.Count; ++documentIndex)
                 {
@@ -1353,7 +1353,7 @@ namespace Corax.Indexing
                     if (fieldTerms.Count == 0)
                         continue;
 
-                    if (fieldTerms.Count > termsBuffer.Length || processingBuffer.Length / sizeof(int) < fieldTerms.Count)
+                    if (fieldTerms.Count > termsBuffer.Length)
                         UnlikelyGrowBuffer(_writer._entriesAllocator, fieldTerms.Count, ref termsBuffer, ref indexesBuffer, ref processingBuffer);
 
                     var terms = termsBuffer.Slice(0, fieldTerms.Count);
@@ -1411,9 +1411,9 @@ namespace Corax.Indexing
                 {
                     var length = Bits.PowerOf2(count + 1);
                     memoryHandler?.Dispose();
-                    memoryHandler = allocator.Allocate(length * (sizeof(int) + sizeof(long) + 1), out var memory);
+                    memoryHandler = allocator.Allocate(length * (sizeof(int) + sizeof(long) + ZigZagEncoding.MaxEncodedSize), out var memory);
                     termsBuffer = MemoryMarshal.Cast<byte, long>(memory.ToSpan().Slice(0, length * sizeof(long)));
-                    indexesBuffer = MemoryMarshal.Cast<byte, int>(memory.ToSpan().Slice(length * sizeof(long)));
+                    indexesBuffer = MemoryMarshal.Cast<byte, int>(memory.ToSpan().Slice(length * sizeof(long), length * sizeof(int)));
                     processingBuffer = memory.ToSpan().Slice(length * (sizeof(int) + sizeof(long)));
                 }
             }

@@ -573,19 +573,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private long GetRootPageByFieldName(in Slice fieldName)
     {
         var it = _fieldsTree.Iterate(false);
-        if (it.Seek(fieldName))
-        {
-            do
-            {
-                var state = (LookupState*)it.CreateReaderForCurrent().Base;
-                if (state->RootObjectType is RootObjectType.Lookup && SliceComparer.CompareInline(fieldName, it.CurrentKey) == 0)
-                {
-                    return state->RootPage;
-                }
-            } while (it.MoveNext());
-        }
-
-        return -1;
+        var result = _fieldsTree.Read(fieldName);
+        if (result is null)
+            return -1;
+        
+        var state = (LookupState*)result.Reader.Base;
+        Debug.Assert(state->RootObjectType is RootObjectType.Lookup, "state->RootObjectType is RootObjectType.Lookup");
+        return state->RootPage;
     }
     
     
