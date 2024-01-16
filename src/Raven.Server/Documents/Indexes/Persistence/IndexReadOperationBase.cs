@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
     {
         protected readonly QueryBuilderFactories QueryBuilderFactories;
         private readonly MemoryInfo _memoryInfo;
+        private static readonly long ThresholdForMemoryUsageLoggingInBytes = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
 
         protected IndexReadOperationBase(Index index, Logger logger, QueryBuilderFactories queryBuilderFactories, IndexQueryServerSide query) : base(index, logger)
         {
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token);
 
         public abstract IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields);
-        
+
         public override void Dispose()
         {
             if ((_logger.IsInfoEnabled || (_logger.IsOperationsEnabled && _index.IsLowMemory)) &&
@@ -68,6 +69,12 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
                 var mangedDiff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedManagedBefore;
                 var unmanagedDiff = Math.Max(0, NativeMemory.ThreadAllocations.Value.TotalAllocated - _memoryInfo.AllocatedUnmanagedBefore);
+
+                if (_logger.IsOperationsEnabled && mangedDiff < ThresholdForMemoryUsageLoggingInBytes && unmanagedDiff < ThresholdForMemoryUsageLoggingInBytes)
+                {
+                    // we don't want to spam the logs when we are in a low memory state and operations logs are enabled
+                    return;
+                }
 
                 var msg = $"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, " +
                           $"allocated managed: {new Size(mangedDiff, SizeUnit.Bytes)}, " +
@@ -84,7 +91,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 }
             }
         }
-        
+
         public struct QueryResult
         {
             public Document Result;

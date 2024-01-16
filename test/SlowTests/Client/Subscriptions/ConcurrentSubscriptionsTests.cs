@@ -34,7 +34,7 @@ namespace SlowTests.Client.Subscriptions
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
-        
+
         [Fact]
         public async Task ConcurrentSubscriptions()
         {
@@ -67,7 +67,7 @@ namespace SlowTests.Client.Subscriptions
 
                     var con1Docs = new List<string>();
                     var con2Docs = new List<string>();
-                    
+
                     var t = subscription.Run(x =>
                     {
                         foreach (var item in x.Items)
@@ -75,7 +75,7 @@ namespace SlowTests.Client.Subscriptions
                             con1Docs.Add(item.Id);
                         }
                     });
-                    
+
                     var _ = secondSubscription.Run(x =>
                     {
                         foreach (var item in x.Items)
@@ -84,7 +84,7 @@ namespace SlowTests.Client.Subscriptions
                         }
                     });
 
-                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6),6000);
+                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6), 6000);
                     await AssertNoLeftovers(store, id);
                 }
             }
@@ -97,7 +97,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                
+
                 var workerToDocsAmount = new Dictionary<SubscriptionWorker<User>, HashSet<string>>();
 
                 for (int i = 0; i < workersAmount; i++)
@@ -199,7 +199,7 @@ namespace SlowTests.Client.Subscriptions
                             con1Docs.Add(item.Id);
                         }
                     });
-                    
+
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 4), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
 
@@ -243,7 +243,7 @@ namespace SlowTests.Client.Subscriptions
 
                     var con1Docs = new List<(string id, string name)>();
                     var con2Docs = new List<(string id, string name)>();
-                    
+
                     var delayConn2ack = new AsyncManualResetEvent();
                     var waitUntilConn2GetsUser1 = new AsyncManualResetEvent();
                     var waitBeforeConn1FinishesSecondBatch = new AsyncManualResetEvent();
@@ -295,7 +295,7 @@ namespace SlowTests.Client.Subscriptions
 
                     waitBeforeConn1FinishesSecondBatch.Set();
                     delayConn2ack.Set(); // let connection 2 finish with old user/1
-                    
+
                     Assert.Contains(("user/1", "NotChanged"), con2Docs);
 
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Contains(("user/1", "Changed")) || con2Docs.Contains(("user/1", "Changed"))), true, 6000, 100), $"connection 1 and 2 are missing new user/1");
@@ -358,7 +358,7 @@ namespace SlowTests.Client.Subscriptions
                     using (var session = store.OpenAsyncSession())
                     {
                         session.Delete("users/1");
-                        await session.StoreAsync(new User (), "users/7");
+                        await session.StoreAsync(new User(), "users/7");
                         await session.SaveChangesAsync();
                     }
 
@@ -453,8 +453,8 @@ namespace SlowTests.Client.Subscriptions
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Name = "Changed"}, "users/1");
-                        await session.StoreAsync(new User (), "users/7");
+                        await session.StoreAsync(new User { Name = "Changed" }, "users/1");
+                        await session.StoreAsync(new User(), "users/7");
                         await session.SaveChangesAsync();
                     }
 
@@ -546,7 +546,7 @@ namespace SlowTests.Client.Subscriptions
                     });
 
                     mre.WaitOne();
-                    
+
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User { Name = "Changed" }, "users/1");
@@ -585,14 +585,14 @@ namespace SlowTests.Client.Subscriptions
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            
+
             using var store = GetDocumentStore(new Options
             {
                 ReplicationFactor = 3,
                 Server = cluster.Leader,
-                ModifyDocumentStore = s =>s.Conventions.LoadBalanceBehavior = LoadBalanceBehavior.UseSessionContext
+                ModifyDocumentStore = s => s.Conventions.LoadBalanceBehavior = LoadBalanceBehavior.UseSessionContext
             });
-            
+
             var database = store.Database;
 
             var node1 = await cluster.Nodes[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
@@ -602,25 +602,25 @@ namespace SlowTests.Client.Subscriptions
             var t1 = await BreakReplication(cluster.Nodes[0].ServerStore, database);
             var t2 = await BreakReplication(cluster.Nodes[1].ServerStore, database);
             var t3 = await BreakReplication(cluster.Nodes[2].ServerStore, database);
-            
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Advanced.SessionInfo.SetContext("foo");
-                    await session.StoreAsync(new User(), "user/1");
-                    await session.StoreAsync(new User(), "user/2");
-                    await session.StoreAsync(new User(), "user/3");
-                    await session.SaveChangesAsync();
-                }
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Advanced.SessionInfo.SetContext("bar");
-                    await session.StoreAsync(new User(), "user/4");
-                    await session.StoreAsync(new User(), "user/5");
-                    await session.StoreAsync(new User(), "user/6");
-                    await session.SaveChangesAsync();
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.SessionInfo.SetContext("foo");
+                await session.StoreAsync(new User(), "user/1");
+                await session.StoreAsync(new User(), "user/2");
+                await session.StoreAsync(new User(), "user/3");
+                await session.SaveChangesAsync();
             }
-            
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.SessionInfo.SetContext("bar");
+                await session.StoreAsync(new User(), "user/4");
+                await session.StoreAsync(new User(), "user/5");
+                await session.StoreAsync(new User(), "user/6");
+                await session.SaveChangesAsync();
+            }
+
             t1.Mend();
             t2.Mend();
             t3.Mend();
@@ -640,8 +640,8 @@ namespace SlowTests.Client.Subscriptions
             }))
             await using (var subscription2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
             {
-                Strategy = SubscriptionOpeningStrategy.Concurrent, 
-                TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5), 
+                Strategy = SubscriptionOpeningStrategy.Concurrent,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
                 MaxDocsPerBatch = 2
             }))
             {
@@ -846,7 +846,7 @@ namespace SlowTests.Client.Subscriptions
 
                 Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
                 mre1.Reset();
-                
+
                 await store.Subscriptions.DropSubscriptionWorkerAsync(subscription1);
                 await Assert.ThrowsAsync<SubscriptionClosedException>(() => t);
 
@@ -871,7 +871,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var t = subscription.Run(x =>
                     {
-                       
+
                     });
 
                     var ex = await Assert.ThrowsAsync<SubscriptionInvalidStateException>(() => t.WaitAndThrowOnTimeout(TimeSpan.FromSeconds(15)));
@@ -968,7 +968,7 @@ namespace SlowTests.Client.Subscriptions
             const int expectedNumberOfDocsToResend = 7;
 
             string databaseName = GetDatabaseName();
-            using (var store = GetDocumentStore(new Options{ModifyDatabaseName = _ => databaseName}))
+            using (var store = GetDocumentStore(new Options { ModifyDatabaseName = _ => databaseName }))
             {
                 var subscriptionId = await store.Subscriptions.CreateAsync<User>();
                 await using var subscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
@@ -1232,10 +1232,12 @@ where predicate.call(doc)"
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var testingStuff = db.ForTestingPurposesOnly();
-
+                var connectionsCount = 0L;
                 using (testingStuff.CallDuringWaitForSubscribe(connections =>
                 {
-                    while (connections.Count < 2)
+                    Interlocked.Increment(ref connectionsCount);
+
+                    while (Interlocked.Read(ref connectionsCount) < 2)
                     {
                         Thread.Sleep(111);
                     }
@@ -1289,6 +1291,130 @@ where predicate.call(doc)"
                     }
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task ProcessOnResponsibleNodeThenOnDifferentNodeThenBackOnResponsible()
+        {
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ReplicationFactor = 3,
+                Server = cluster.Leader,
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User() { Name = "EGOR" }, "user/1");
+                    session.SaveChanges();
+                }
+
+                var database = store.Database;
+                var id = await store.Subscriptions.CreateAsync<User>();
+
+                //responsible node processes doc
+                HashSet<string> docs = await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id);
+
+                var node1 = string.Empty;
+                Assert.True(await WaitForValueAsync(async () =>
+                {
+                    foreach (var node in cluster.Nodes)
+                    {
+                        var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            if (db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out var subscriptionConnectionsState))
+                            {
+                                node1 = node.ServerStore.NodeTag;
+                                return true;
+                            }
+                        }
+                    }
+
+                    return false;
+                }, true), "1st doc processed");
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User() { Name = "EGR" }, "user/2");
+                    session.SaveChanges();
+                }
+
+                // move responsible node to rehab
+                var responsibleNode = cluster.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == node1);
+                Assert.NotNull(responsibleNode);
+                responsibleNode.CpuCreditsBalance.BackgroundTasksAlertRaised.Raise();
+                var rehabs = await WaitForValueAsync(async () => await GetRehabCount(store, store.Database), 1);
+                Assert.Equal(1, rehabs);
+
+                // another node processes doc
+                docs.UnionWith(await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id));
+
+                Assert.Equal(2, await WaitForValueAsync(async () =>
+                {
+                    var i = 0;
+                    foreach (var node in cluster.Nodes)
+                    {
+                        var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            if (db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out _))
+                            {
+                                i++;
+                            }
+                        }
+                    }
+
+                    return i;
+                }, 2));
+
+                // move responsible node back from rehab
+                responsibleNode.CpuCreditsBalance.BackgroundTasksAlertRaised.Lower();
+                var members = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), 3);
+                Assert.Equal(3, members);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User() { Name = "EGOOOOOOR" }, "user/3");
+                    session.SaveChanges();
+                }
+
+                Assert.Equal(2, docs.Count);
+
+                // responsible node processes doc
+                docs.UnionWith(await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id));
+
+                Assert.Equal(3, docs.Count);
+            }
+        }
+
+        private static async Task<HashSet<string>> RunSubscriptionWorkerAndProcessOneDocumentAsync(DocumentStore store, string id)
+        {
+            var docs = new HashSet<string>();
+            await using var worker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+            {
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                Strategy = SubscriptionOpeningStrategy.Concurrent,
+                MaxDocsPerBatch = 1
+            });
+
+            worker.AfterAcknowledgment += batch =>
+            {
+                foreach (var item in batch.Items)
+                {
+                    docs.Add(item.Id);
+                }
+
+                return Task.CompletedTask;
+            };
+
+            var t = worker.Run(x => { });
+
+            Assert.Equal(1, await WaitForValueAsync(() => docs.Count, 1));
+            return docs;
         }
 
         private class GetSubscriptionResendListCommand : RavenCommand<ResendListResults>

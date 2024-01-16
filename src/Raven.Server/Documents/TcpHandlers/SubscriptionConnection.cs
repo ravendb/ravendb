@@ -24,6 +24,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -245,51 +246,60 @@ namespace Raven.Server.Documents.TcpHandlers
             });
         }
 
-        private async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync()
+        private async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync(Stopwatch registerConnectionDuration)
         {
             var random = new Random();
-            var registerConnectionDuration = Stopwatch.StartNew();
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
+                try
+                {
+                    var disposeOnce = _subscriptionConnectionsState.RegisterSubscriptionConnection(this);
+                    registerConnectionDuration.Stop();
+                    return (disposeOnce, registerConnectionDuration.ElapsedTicks);
+                }
+                catch (TimeoutException)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(
+                            $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
+                            $"{_subscriptionConnectionsState.GetConnectionsAsString()} is released");
+                    }
+
+                    var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
+                    await Task.Delay(timeout);
+                    await SendHeartBeatIfNeededAsync(sp,
+                        $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
+                        $"{_subscriptionConnectionsState.GetConnectionsAsString()} to be released");
+                }
+            }
+        }
+
+        private async Task<IDisposable> AddPendingConnectionUnderLockAsync()
+        {
+             var connectionInfo = new SubscriptionConnectionInfo(this);
             _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy, WorkerId);
-
-            var connectionInfo = new SubscriptionConnectionInfo(this);
 
             _subscriptionConnectionsState._pendingConnections.Add(connectionInfo);
 
             try
             {
-                var sp = Stopwatch.StartNew();
-                while (true)
-                {
-                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                    try
-                    {
-                        var disposeOnce = _subscriptionConnectionsState.RegisterSubscriptionConnection(this);
-                        registerConnectionDuration.Stop();
-                        return (disposeOnce, registerConnectionDuration.ElapsedTicks);
-                    }
-                    catch (TimeoutException)
-                    {
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info(
-                                $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
-                                $"{_subscriptionConnectionsState.GetConnectionsAsString()} is released");
-                        }
-
-                        var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
-                        await Task.Delay(timeout);
-                        await SendHeartBeatIfNeededAsync(sp,
-                            $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
-                            $"{_subscriptionConnectionsState.GetConnectionsAsString()} to be released");
-                    }
-                }
+                await _subscriptionConnectionsState.TakeConcurrentConnectionLockAsync(this);
             }
-            finally
+            catch
             {
                 _subscriptionConnectionsState._pendingConnections.TryRemove(connectionInfo);
+                throw;
             }
+
+            return new DisposableAction(() =>
+            {
+                _subscriptionConnectionsState._pendingConnections.TryRemove(connectionInfo);
+                _subscriptionConnectionsState.ReleaseConcurrentConnectionLock(this);
+            });
         }
 
         internal async Task SendHeartBeatIfNeededAsync(Stopwatch sp, string reason)
@@ -375,15 +385,19 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     try
                     {
-                        long registerConnectionDurationInTicks;
                         using (_pendingConnectionScope)
                         {
                             await InitAsync();
                             _subscriptionConnectionsState = await TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscriptionAsync(this);
-                            (disposeOnDisconnect, registerConnectionDurationInTicks) = await SubscribeAsync();
+                            var registerConnectionDuration = Stopwatch.StartNew();
+                            using (await AddPendingConnectionUnderLockAsync())
+                            {
+                                (disposeOnDisconnect, long registerConnectionDurationInTicks) = await SubscribeAsync(registerConnectionDuration);
+                                _pendingConnectionScope.Dispose();
+                                await NotifyClientAboutSuccess(registerConnectionDurationInTicks);
+                            }
                         }
 
-                        await NotifyClientAboutSuccess(registerConnectionDurationInTicks);
                         await ProcessSubscriptionAsync();
                     }
                     finally
