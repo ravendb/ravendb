@@ -16,10 +16,24 @@
             </div>
 
             <div data-bind="collapse: isEnabled">
-                <pre class="form-control margin-top" data-bind="aceEditor: { code: code, fullScreenNotAllowed: true }" style="height: 250px;">
-                </pre>
+                <div>
+                    <pre class="form-control margin-top" data-bind="aceEditor: { code: code, fullScreenNotAllowed: true }" style="height: 250px;">
+                    </pre>
+                    <div data-bind="validationElement: code">
+                        <div class="help-block" data-bind="validationMessage: code"></div>
+                    </div>
+                </div>
+
+                <div class="margin-left margin-top">
+                    <div class="toggle">
+                        <input id="persistAdminLogsMicrosoft" type="checkbox" data-bind="checked: persist">
+                        <label for="persistAdminLogsMicrosoft">Save this configuration in <code>settings.json</code> and <code>settings.logs.microsoft.json</code></label>
+                    </div>
+                    <div class="bg-info padding padding-xs margin-bottom" data-bind="visible: !persist()">
+                        <i class="icon-info"></i> <span>Above logs settings will reset after a server restart</span>
+                    </div>
+                </div>
             </div>
-            
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: close">
