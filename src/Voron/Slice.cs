@@ -45,7 +45,11 @@ namespace Voron
             }
         }
 
-        public SliceOptions Options => (SliceOptions) (Content.Flags & ByteStringType.UserDefinedMask);
+        public SliceOptions Options
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => (SliceOptions)(Content.Flags & ByteStringType.UserDefinedMask);
+        } 
 
         public byte this[int index]
         {
