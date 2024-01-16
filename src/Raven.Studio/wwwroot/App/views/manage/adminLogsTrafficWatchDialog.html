@@ -151,6 +151,16 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="margin-left margin-top">
+                            <div class="toggle">
+                                <input id="persistToSettings" type="checkbox" data-bind="checked: persist">
+                                <label for="persistToSettings">Save this configuration in <code>settings.json</code></label>
+                            </div>
+                            <div class="bg-info padding padding-xs margin-bottom" data-bind="visible: !persist()">
+                                <i class="icon-info"></i> <span>Above settings will reset after a server restart</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </form>

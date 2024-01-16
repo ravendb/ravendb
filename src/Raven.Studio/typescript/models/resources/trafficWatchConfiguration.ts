@@ -5,6 +5,7 @@ import TrafficWatchChangeType = Raven.Client.Documents.Changes.TrafficWatchChang
 class trafficWatchConfiguration {
     
     enabled = ko.observable<boolean>();
+    persist = ko.observable<boolean>();
 
     filterDatabases = ko.observable<boolean>();
     databases = ko.observableArray<string>();
@@ -107,19 +108,18 @@ class trafficWatchConfiguration {
         this.certificateThumbprints.remove(thumbprint);
     }
     
-    
     toDto(): Raven.Client.ServerWide.Operations.TrafficWatch.PutTrafficWatchConfigurationOperation.Parameters {
         return {
             TrafficWatchMode: this.enabled() ? "ToLogFile" : "Off",
             Databases: this.filterDatabases() ? this.databases() : null,
             StatusCodes: this.filterStatusCodes() ? this.statusCodes() : null,
             MinimumRequestSizeInBytes: this.minimumRequestSize(),
-            MinimumResponseSizeInBytes: this.minimumRequestSize(),
+            MinimumResponseSizeInBytes: this.minimumResponseSize(),
             MinimumDurationInMs: this.minimumDuration(),
             HttpMethods: this.filterHttpMethods() ? this.httpMethods() : null,
             ChangeTypes: this.filterChangeTypes() ? this.changeTypes() : null,
             CertificateThumbprints: this.filterCertificateThumbprints() ? this.certificateThumbprints() : null,
-            Persist: false
+            Persist: this.persist(),
         }
     }
 }
