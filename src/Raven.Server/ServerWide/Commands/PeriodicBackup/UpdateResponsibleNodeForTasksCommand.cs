@@ -32,13 +32,13 @@ public class UpdateResponsibleNodeForTasksCommand : UpdateValueCommand<UpdateRes
 
     public class Parameters : IDynamicJson
     {
-        public Dictionary<string, List<ResponsibleNodeInfo>> ResponsibleNodesByDatabase { get; set; }
+        public Dictionary<string, List<ResponsibleNodeInfo>> ResponsibleNodePerDatabase { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             var djv = new DynamicJsonValue();
 
-            foreach (var keyValue in ResponsibleNodesByDatabase)
+            foreach (var keyValue in ResponsibleNodePerDatabase)
             {
                 var list = new DynamicJsonArray();
                 foreach (var responsibleNodeInfo in keyValue.Value)
@@ -51,7 +51,7 @@ public class UpdateResponsibleNodeForTasksCommand : UpdateValueCommand<UpdateRes
 
             return new DynamicJsonValue
             {
-                [nameof(ResponsibleNodesByDatabase)] = djv
+                [nameof(ResponsibleNodePerDatabase)] = djv
             };
         }
     }
