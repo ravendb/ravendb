@@ -17,7 +17,13 @@ export default function ConnectionTestError({ message }: ConnectionTestErrorProp
     }
 
     return (
-        <UncontrolledAccordion id={connectionErrorAccordionId} className="bs5 accordion-inside-modal" flush stayOpen>
+        <UncontrolledAccordion
+            id={connectionErrorAccordionId}
+            toggle={null}
+            className="bs5 accordion-inside-modal"
+            flush
+            stayOpen
+        >
             <AccordionItem>
                 <AccordionHeader targetId="connectionErrorContent">
                     <Icon icon="danger" color="danger" className="tab-icon me-3" />

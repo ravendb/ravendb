@@ -57,6 +57,11 @@ import testElasticSearchNodeConnectionCommand = require("commands/database/clust
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
+import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
+import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
+import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
+import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
