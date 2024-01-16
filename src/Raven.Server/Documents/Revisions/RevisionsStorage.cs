@@ -1823,11 +1823,9 @@ namespace Raven.Server.Documents.Revisions
             // send initial progress
             parameters.OnProgress?.Invoke(result);
 
-            var hasMore = true;
-            while (hasMore)
+            var batchLimit = true;
+            while (batchLimit)
             {
-                hasMore = false;
-                ids.Clear();
                 token.Delay();
                 sw.Restart();
 
@@ -1835,36 +1833,58 @@ namespace Raven.Server.Documents.Revisions
                 {
                     using (ctx.OpenReadTransaction())
                     {
-                        var tables = GetRevisionsTables(ctx, collections, parameters.LastScannedEtag);
+                        var tables = GetRevisionsTables(ctx, collections, parameters);
 
-                        foreach (var table in tables)
+                        batchLimit = false;
+
+                        foreach (var tableHolder in tables)
                         {
-                            foreach (var tvr in table)
+                            parameters.LastCollectionScanned = tableHolder.Collection;
+
+                            foreach (var tvr in tableHolder.Table)
                             {
                                 token.ThrowIfCancellationRequested();
 
                                 var state = ShouldProcessNextRevisionId(ctx, ref tvr.Reader, parameters, result, out var id);
                                 if (state == NextRevisionIdResult.Break)
                                     break;
+
                                 if (state == NextRevisionIdResult.Continue)
                                 {
                                     if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
                                     {
-                                        hasMore = true;
+                                        batchLimit = true;
                                         break;
                                     }
-                                    else
-                                        continue;
+
+                                    continue;
                                 }
 
                                 ids.Add(id);
 
                                 if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
                                 {
-                                    hasMore = true;
+                                    batchLimit = true;
                                     break;
                                 }
                             }
+
+                            if (batchLimit == false)
+                            {
+                                /* you reached the end of the table
+                                    or you reached the barrier in this table (state == NextRevisionIdResult.Break), 
+                                    in both cases we are done with this table (collection) - no need to pass its revisions again */
+                                collections?.Remove(tableHolder.Collection);
+                            }
+                            else
+                                break; // batch reached to its limit must be enforced
+                        }
+
+                        if (ids.Count > 0)
+                        {
+                            /*  ids.Count can be 0 when we exited because 'batchLimit' (CanContinueBatch returned true),
+                                but there is no more revisions to scan.
+                            */
 
                             var moreWork = true;
                             while (moreWork)
@@ -1874,23 +1894,23 @@ namespace Raven.Server.Documents.Revisions
                                 await _database.TxMerger.Enqueue(cmd);
                                 moreWork = cmd.MoreWork;
                             }
+                            ids.Clear();
                         }
                     }
-
 
                 }
             }
         }
 
-        private List<IEnumerable<TableValueHolder>> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, long lastScannedEtag)
+        private List<(string Collection, IEnumerable<TableValueHolder> Table)> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, Parameters parameters)
         {
-            var collectionsTables = new List<IEnumerable<TableValueHolder>>();
+            var collectionsTables = new List<(string Collection, IEnumerable<TableValueHolder> Table)>();
 
             if (collections == null)
             {
                 var revisions = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-                var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
-                collectionsTables.Add(table);
+                var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], parameters.LastScannedEtag);
+                collectionsTables.Add(("All", table));
             }
             else
             {
@@ -1904,9 +1924,10 @@ namespace Raven.Server.Documents.Revisions
                         continue;
                     }
 
-                    var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
+                    var lastEtag = collection == parameters.LastCollectionScanned ? parameters.LastScannedEtag : parameters.EtagBarrier;
+                    var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastEtag);
 
-                    collectionsTables.Add(table);
+                    collectionsTables.Add((collection, table));
                 }
             }
 
@@ -2051,6 +2072,7 @@ namespace Raven.Server.Documents.Revisions
             public DateTime MinimalDate;
             public long EtagBarrier;
             public long LastScannedEtag;
+            public string LastCollectionScanned;
             public readonly HashSet<string> ScannedIds = new HashSet<string>();
             public Action<IOperationProgress> OnProgress;
         }
