@@ -16,12 +16,12 @@ class adminLogsTrafficWatchDialog extends dialogViewModelBase {
     private allDatabaseNames = ko.observableArray<string>();
     private static allHttpMethods = ["GET", "POST", "PUT", "DELETE", "HEAD"];
     private static allChangeTypes: TrafficWatchChangeType[] = ["BulkDocs", "Counters", "Documents", "Hilo", "Index", "MultiGet", "Operations", "Queries", "Streams", "Subscriptions", "TimeSeries"];
-    private static allStatusCodes: string[] = [
-        "101",
-        "200", "201", "202", "203", "204",
-        "301", "302", "304", "307", "308", 
-        "400", "401", "403", "404", "405", "408", "409", "415", "429",
-        "500", "501", "502", "503", "504", "505"
+    private static allStatusCodes: number[] = [
+        101,
+        200, 201, 202, 203, 204,
+        301, 302, 304, 307, 308, 
+        400, 401, 403, 404, 405, 408, 409, 415, 429,
+        500, 501, 502, 503, 504, 505
     ];
     
     constructor(model: trafficWatchConfiguration) {
