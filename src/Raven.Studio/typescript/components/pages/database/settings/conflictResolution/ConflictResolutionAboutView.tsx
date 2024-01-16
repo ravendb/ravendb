@@ -33,16 +33,16 @@ export default function ConflictResolutionAboutView() {
                         <br /> it will be used to resolve the conflict.
                         <br /> See the available script variables and examples in the provided documentation link.
                     </li>
-                    <li className={"margin-top-xs"}>
+                    <li className="margin-top-xs">
                         Else, when no script is defined:
                         <br />
                         <ul>
-                            <li className={"margin-top-xxs"}>
+                            <li className="margin-top-xxs">
                                 If the &quot;<strong>Resolve to latest version</strong>&quot; toggle is turned ON:
                                 <br />
                                 The server will resolve the conflict to the latest document version.
                             </li>
-                            <li className={"margin-top-xxs"}>
+                            <li className="margin-top-xxs">
                                 If the toggle is OFF:
                                 <br /> The conflict is not automatically resolved.
                                 <br /> You can resolve the conflict manually from the{" "}
