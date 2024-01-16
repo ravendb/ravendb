@@ -14,7 +14,7 @@ export default {
         licenseType: licenseArgType,
         databaseAccess: databaseAccessArgType,
     },
-} satisfies Meta<typeof ConnectionStrings>;
+} satisfies Meta;
 
 interface DefaultConnectionStringsProps {
     isEmpty: boolean;
