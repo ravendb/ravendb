@@ -109,98 +109,91 @@ namespace Voron.Data.BTrees
         {
             int numberOfEntries = NumberOfEntries;
             if (numberOfEntries == 0)
-                goto NoEntries;
-
-            int lastMatch = -1;
-            int lastSearchPosition = 0;
-
-            SliceOptions options = key.Options;
-            if (options == SliceOptions.Key)
-            {
-                if (numberOfEntries == 1)
-                    goto SingleEntryKey;
-
-                int low = IsLeaf ? 0 : 1;
-                int high = numberOfEntries - 1;
-                int position = 0;
-
-                ByteStringContext allocator = tx.Allocator;
-                ushort* offsets = KeysOffsets;
-                byte* @base = Base;
-                while (low <= high)
-                {
-                    position = (low + high) >> 1;
-
-                    var node = (TreeNodeHeader*)(@base + offsets[position]);
-
-                    Slice pageKey;
-                    using (TreeNodeHeader.ToSlicePtr(allocator, node, out pageKey))
-                    {
-                        lastMatch = SliceComparer.CompareInline(key, pageKey);
-                    }
-
-                    if (lastMatch == 0)
-                        break;
-
-                    if (lastMatch > 0)
-                        low = position + 1;
-                    else
-                        high = position - 1;
-                }
-
-                if (lastMatch > 0) // found entry less than key
-                {
-                    position++; // move to the smallest entry larger than the key
-                }
-
-                Debug.Assert(position < ushort.MaxValue);
-                lastSearchPosition = position;
-                goto MultipleEntryKey;
-            }
-            if (options == SliceOptions.BeforeAllKeys)
-            {
-                lastMatch = 1;
-                goto MultipleEntryKey;
-            }
-            if (options == SliceOptions.AfterAllKeys)
-            {
-                lastSearchPosition = numberOfEntries - 1;
-                goto MultipleEntryKey;
-            }
-
-            ThrowNotSupportedException();         
-
-            NoEntries:
             {
                 LastSearchPosition = 0;
                 LastMatch = 1;
                 return null;
             }
 
-            SingleEntryKey:
-            {
-                var node = GetNode(0);
+            int lastMatch = -1;
+            int lastSearchPosition = 0;
 
-                Slice pageKey;
-                using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out pageKey))
+            byte* keyPtr = key.Content.Ptr;
+            int keySize = key.Size;
+
+            switch (key.Options)
+            {
+                case SliceOptions.Key:
                 {
-                    LastMatch = SliceComparer.CompareInline(key, pageKey);
+                    if (numberOfEntries == 1)
+                    {
+                        TreeNodeHeader* node = GetNode(0);
+
+                        // Compare the keys we are looking for.
+                        var pageKey = TreeNodeHeader.GetKeyPtr(node, out var pageKeyLength);
+                        lastMatch = Memory.Compare(keyPtr, pageKey, Math.Min(keySize, pageKeyLength));
+                        LastMatch = lastMatch != 0 ? lastMatch : keySize - pageKeyLength;
+
+                        LastSearchPosition = LastMatch > 0 ? 1 : 0;
+                        return LastSearchPosition == 0 ? node : null;
+                    }
+
+                    int low = IsLeaf ? 0 : 1;
+                    int high = numberOfEntries - 1;
+                    int position = 0;
+
+                    ushort* offsets = KeysOffsets;
+                    byte* @base = Base;
+                    while (low <= high)
+                    {
+                        position = (low + high) >> 1;
+
+                        var node = (TreeNodeHeader*)(@base + offsets[position]);
+
+                        // Compare the keys we are looking for.
+                        var pageKey = TreeNodeHeader.GetKeyPtr(node, out var pageKeyLength);
+                        lastMatch = Memory.Compare(keyPtr, pageKey, Math.Min(keySize, pageKeyLength));
+                        lastMatch = lastMatch != 0 ? lastMatch : keySize - pageKeyLength;
+
+                        if (lastMatch == 0)
+                            break;
+
+                        if (lastMatch > 0)
+                            low = position + 1;
+                        else
+                            high = position - 1;
+                    }
+
+                    if (lastMatch > 0) // found entry less than key
+                    {
+                        position++; // move to the smallest entry larger than the key
+                    }
+
+                    Debug.Assert(position < ushort.MaxValue);
+                    lastSearchPosition = position;
+                    break;
                 }
-
-                LastSearchPosition = LastMatch > 0 ? 1 : 0;
-                return LastSearchPosition == 0 ? node : null;
+                case SliceOptions.BeforeAllKeys:
+                {
+                    lastMatch = 1;
+                    break;
+                }
+                case SliceOptions.AfterAllKeys:
+                {
+                    lastSearchPosition = numberOfEntries - 1;
+                    break;
+                }
+                default:
+                {
+                    ThrowNotSupportedException();
+                    break;
+                }
             }
 
-            MultipleEntryKey:
-            {
-                LastMatch = lastMatch;
-                LastSearchPosition = lastSearchPosition;
+            LastMatch = lastMatch;
+            LastSearchPosition = lastSearchPosition;
 
-                if (lastSearchPosition >= numberOfEntries)
-                    return null;
-
-                return GetNode(lastSearchPosition);
-            }
+            return lastSearchPosition >= numberOfEntries ? null : GetNode(lastSearchPosition);
         }
 
         [DoesNotReturn]
