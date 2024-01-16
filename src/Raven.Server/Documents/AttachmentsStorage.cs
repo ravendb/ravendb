@@ -168,7 +168,7 @@ namespace Raven.Server.Documents
         }
 
         public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
-            string hash, string expectedChangeVector, Stream stream, bool updateDocument = true, bool extractCollectionName = false)
+            string hash, string expectedChangeVector = null, Stream stream = null, bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false)
         {
             if (context.Transaction == null)
             {
@@ -181,13 +181,17 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
-                // This will validate that we cannot put an attachment on a conflicted document
-                var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out TableValueReader tvr);
-                if (hasDoc == false)
-                    throw new DocumentDoesNotExistException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
-                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
-                if (flags.HasFlag(DocumentFlags.Artificial))
-                    throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
+                TableValueReader tvr = default;
+                if (fromSmuggler == false)
+                {
+                    // This will validate that we cannot put an attachment on a conflicted document
+                    var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out tvr);
+                    if (hasDoc == false)
+                        throw new DocumentDoesNotExistException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
+                    var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+                    if (flags.HasFlag(DocumentFlags.Artificial))
+                        throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
+                }
 
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
@@ -251,16 +255,19 @@ namespace Raven.Server.Documents
                                         ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
                                 }
 
-                                var doc = _documentsStorage.TableValueToDocument(context, ref tvr);
-                                var collection = _documentsStorage.ExtractCollectionName(context, doc.Data);
-
-                                var configuration = _documentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection.Name, doc.Flags);
-                                if (configuration != null)
+                                if (fromSmuggler == false)
                                 {
-                                    var shouldVersionOldDoc = _documentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, doc.Data, doc.ChangeVector, collection);
-                                    if (shouldVersionOldDoc)
+                                    var doc = _documentsStorage.TableValueToDocument(context, ref tvr);
+                                    var collection = _documentsStorage.ExtractCollectionName(context, doc.Data);
+
+                                    var configuration = _documentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection.Name, doc.Flags);
+                                    if (configuration != null)
                                     {
-                                        _documentsStorage.RevisionsStorage.Put(context, documentId, doc.Data, flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None, doc.ChangeVector, doc.LastModified.Ticks, configuration, collection);
+                                        var shouldVersionOldDoc = _documentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, doc.Flags, doc.Data, doc.ChangeVector, collection);
+                                        if (shouldVersionOldDoc)
+                                        {
+                                            _documentsStorage.RevisionsStorage.Put(context, documentId, doc.Data, doc.Flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None, doc.ChangeVector, doc.LastModified.Ticks, configuration, collection);
+                                        }
                                     }
                                 }
 
@@ -296,7 +303,7 @@ namespace Raven.Server.Documents
                             table.Insert(tvb);
                         }
 
-                        if (putStream)
+                        if (putStream && fromSmuggler == false)
                         {
                             PutAttachmentStream(context, keySlice, base64Hash, stream);
                         }
@@ -321,95 +328,6 @@ namespace Raven.Server.Documents
                         CollectionName = collectionName
                     };
                 }
-            }
-        }
-
-        public void PutAttachmentFromSmuggler(DocumentsOperationContext context, string documentId, string name, string contentType, string hash)
-        {
-            if (context.Transaction == null)
-            {
-                DocumentPutAction.ThrowRequiresTransaction();
-                Debug.Assert(false);// never hit
-            }
-
-            // Attachment etag should be generated before updating the document
-            var attachmentEtag = _documentsStorage.GenerateNextEtag();
-
-            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
-            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
-            using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
-                       lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
-            {
-                Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
-
-                DeleteTombstoneIfNeeded(context, keySlice);
-
-                var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
-                Debug.Assert(changeVector != null);
-
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-
-                void SetTableValue(TableValueBuilder tvb, Slice cv)
-                {
-                    tvb.Add(keySlice.Content.Ptr, keySlice.Size);
-                    tvb.Add(Bits.SwapBytes(attachmentEtag));
-                    tvb.Add(namePtr);
-                    tvb.Add(contentTypePtr);
-                    tvb.Add(base64Hash.Content.Ptr, base64Hash.Size);
-                    tvb.Add(context.GetTransactionMarker());
-                    tvb.Add(cv.Content.Ptr, cv.Size);
-                }
-
-                if (table.ReadByKey(keySlice, out TableValueReader oldValue))
-                {
-                    // This is an update to the attachment with the same stream and content type
-                    // Just updating the etag and casing of the name and the content type.
-
-                    using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        SetTableValue(tvb, changeVectorSlice);
-                        table.Update(oldValue.Id, tvb);
-                    }
-                }
-                else
-                {
-                    // We already asserted that the document is not in conflict, so we might have just one partial key, not more.
-                    using (GetAttachmentPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
-                    {
-                        if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
-                        {
-                            // Delete the attachment stream only if we have a different hash
-                            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
-                            {
-                                var putStream = existingHash.Content.Match(base64Hash.Content) == false;
-                                if (putStream)
-                                {
-                                    using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
-                                               ref partialTvr, out Slice existingKey))
-                                    {
-                                        var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
-                                        var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                                        DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks);
-                                    }
-                                }
-                            }
-
-                            table.Delete(partialTvr.Id);
-                        }
-                    }
-
-                    using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        SetTableValue(tvb, changeVectorSlice);
-                        table.Insert(tvb);
-                    }
-                }
-
-                _documentDatabase.Metrics.Attachments.PutsPerSec.MarkSingleThreaded(1);
             }
         }
 

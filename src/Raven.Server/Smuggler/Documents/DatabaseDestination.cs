@@ -1717,7 +1717,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
 
-                        attachmentsStorage.PutAttachmentFromSmuggler(context, document.Id, name, contentType, hash);
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, updateDocument: false, fromSmuggler: true);
                         continue;
                     }
 
