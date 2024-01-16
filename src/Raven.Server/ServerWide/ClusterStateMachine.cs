@@ -3835,7 +3835,7 @@ namespace Raven.Server.ServerWide
             if (command.Value == null)
                 throw new RachisInvalidOperationException($"{nameof(UpdateResponsibleNodeForTasksCommand.Parameters)} is null for command type: {type}");
 
-            if (command.Value.ResponsibleNodesByDatabase == null)
+            if (command.Value.ResponsibleNodePerDatabase == null)
                 throw new RachisInvalidOperationException($"{nameof(ToggleDatabasesStateCommand.Parameters.DatabaseNames)} is null for command type: {type}");
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -3846,7 +3846,7 @@ namespace Raven.Server.ServerWide
             {
                 var actions = new List<Func<Task>>();
 
-                foreach (var keyValue in command.Value.ResponsibleNodesByDatabase)
+                foreach (var keyValue in command.Value.ResponsibleNodePerDatabase)
                 {
                     var databaseName = keyValue.Key;
 

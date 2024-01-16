@@ -864,7 +864,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (responsibleNodeTag == null)
             {
                 // the responsible node wasn't set by the cluster observer yet
-                return TaskStatus.Disabled;
+                return TaskStatus.ClusterDown;
             }
 
             if (responsibleNodeTag == _serverStore.NodeTag)
