@@ -2,9 +2,11 @@ import React from "react";
 import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 export default function ConflictResolutionAboutView() {
     const conflictResolutionDocsLink = useRavenLink({ hash: "QRCNKH" });
+    const { forCurrentDatabase } = useAppUrls();
 
     return (
         <AboutViewAnchored>
@@ -20,7 +22,7 @@ export default function ConflictResolutionAboutView() {
                     <br /> a conflict may occur when the same document is updated concurrently on two different nodes.
                 </p>
                 <p>
-                    In this view, you can <strong>define the server's behavior</strong> upon a conflict between
+                    In this view, you can <strong>define the server&apos;s behavior</strong> upon a conflict between
                     documents.
                     <br />
                     When a conflict is detected, the server will attempt to resolve it via the following flow:
@@ -36,7 +38,7 @@ export default function ConflictResolutionAboutView() {
                         <br />
                         <ul>
                             <li className={"margin-top-xxs"}>
-                                If the "<strong>Resolve to latest version</strong>" toggle is turned ON:
+                                If the &quot;<strong>Resolve to latest version</strong>&quot; toggle is turned ON:
                                 <br />
                                 The server will resolve the conflict to the latest document version.
                             </li>
@@ -44,7 +46,7 @@ export default function ConflictResolutionAboutView() {
                                 If the toggle is OFF:
                                 <br /> The conflict is not automatically resolved.
                                 <br /> You can resolve the conflict manually from the{" "}
-                                <a href={"TBD - replace with conflictsUrl"} target="_blank">
+                                <a href={forCurrentDatabase.conflicts()} target="_blank">
                                     Conflicts view
                                 </a>{" "}
                                 in the Studio.
