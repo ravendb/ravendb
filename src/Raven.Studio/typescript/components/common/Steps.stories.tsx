@@ -1,5 +1,5 @@
 ﻿import { Meta } from "@storybook/react";
-import { Steps } from "./Steps";
+import Steps from "./Steps";
 import React, { useState } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Button, Card } from "reactstrap";
