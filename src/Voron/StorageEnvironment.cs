@@ -950,8 +950,7 @@ namespace Voron
 
                     Interlocked.Add(ref Journal.Applicator.TotalCommittedSinceLastFlushPages, totalPages);
 
-                    if (tx.IsLazyTransaction == false)
-                        GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                 }
 
                 if (tx.AsyncCommit != null)
@@ -1616,55 +1615,6 @@ namespace Voron
             Hashing.Streamed.XXHash64.Process(ref ctx, ptr + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
 
             return Hashing.Streamed.XXHash64.End(ref ctx);
-        }
-
-        public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration)
-        {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-            {
-                var oldMode = Options.TransactionsMode;
-
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Setting transaction mode to {mode}. Old mode is {oldMode}");
-
-                if (oldMode == mode)
-                    return TransactionsModeResult.ModeAlreadySet;
-
-                Options.TransactionsMode = mode;
-                if (duration == TimeSpan.FromMinutes(0)) // infinite
-                    Options.NonSafeTransactionExpiration = null;
-                else
-                    Options.NonSafeTransactionExpiration = DateTime.Now + duration;
-
-                if (oldMode == TransactionsMode.Lazy)
-                {
-
-                    tx.IsLazyTransaction = false;
-                    // we only commit here, the rest of the of the options are without
-                    // commit and we use the tx lock
-                    tx.Commit();
-                }
-
-                if (oldMode == TransactionsMode.Danger)
-                {
-                    Journal.TruncateJournal();
-                    _dataPager.Sync(Journal.Applicator.TotalWrittenButUnsyncedBytes);
-                }
-
-                if (mode == TransactionsMode.Danger)
-                    Journal.TruncateJournal();
-
-                if (mode != TransactionsMode.Lazy &&
-                    mode != TransactionsMode.Safe &&
-                    mode != TransactionsMode.Danger)
-                {
-                    throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + mode);
-                }
-
-
-                return TransactionsModeResult.SetModeSuccessfully;
-            }
         }
 
         public void Cleanup(bool tryCleanupRecycledJournals = false)
