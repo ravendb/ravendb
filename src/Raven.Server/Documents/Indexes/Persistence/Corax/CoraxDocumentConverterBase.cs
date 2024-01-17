@@ -302,7 +302,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.ConvertToJson:
-                var val = TypeConverter.ToBlittableSupportedType(value);
+                var val = TypeConverter.ToBlittableSupportedType(value, supportJsStringToDateConversions: _javascriptTicksSupport);
                 if (val is not DynamicJsonValue json)
                 {
                     InsertRegularField(field, val, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);

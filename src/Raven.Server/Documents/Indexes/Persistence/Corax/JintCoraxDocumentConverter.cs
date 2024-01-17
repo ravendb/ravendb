@@ -128,7 +128,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         void ProcessAsJson(JsValue actualValue, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope, ObjectInstance documentToProcess, out bool shouldSkip)
         {
             var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                context: indexContext);
+                context: indexContext, supportJsStringToDateConversions: _javascriptTicksSupport);
             InsertRegularField(field, value, indexContext, ref entryWriter, writerScope, out shouldSkip);
         }
 
@@ -183,7 +183,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     else
                     {
                         value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                            context: indexContext);
+                            context: indexContext, supportJsStringToDateConversions: _javascriptTicksSupport);
 
                         InsertRegularField(field, value, indexContext, ref entryWriter, writerScope, out shouldSkip);
 

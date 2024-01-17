@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             else
                             {
                                 value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                                    context: indexContext);
+                                    context: indexContext, supportJsStringToDateConversions: _javascriptTicksSupport);
                                 numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
 
                                 newFields += numberOfCreatedFields;
@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             int ProcessAsJson(JsValue actualValue, IndexField field, float? propertyBoost)
             {
                 var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                    context: indexContext);
+                    context: indexContext, supportJsStringToDateConversions: _javascriptTicksSupport);
                 return GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
             }
 

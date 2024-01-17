@@ -29,7 +29,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected readonly bool _storeValue;
         protected readonly string _storeValueFieldName;
         protected readonly int _numberOfBaseFields;
-
+        protected readonly bool _javascriptTicksSupport;
+        
         protected ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
             string storeValueFieldName, ICollection<IndexField> fields = null)
         {
@@ -50,6 +51,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
             foreach (var field in fields)
                 dictionary[field.Name] = field;
             _fields = dictionary;
+
+            _javascriptTicksSupport = index.Type.IsJavaScript() && index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion;
         }
 
         protected static bool IsArrayOfTypeValueObject(BlittableJsonReaderObject val)

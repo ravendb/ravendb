@@ -466,7 +466,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.ConvertToJson)
             {
-                var val = TypeConverter.ToBlittableSupportedType(value);
+                var val = TypeConverter.ToBlittableSupportedType(value, supportJsStringToDateConversions: _javascriptTicksSupport);
                 if (!(val is DynamicJsonValue json))
                 {
                     return GetRegularFields(instance, field, val, indexContext, sourceDocument, out _, nestedArray: nestedArray);

@@ -154,10 +154,12 @@ namespace Raven.Server.Documents.Indexes
             public const long GuaranteedOrderOfPropertiesInMapReduceIndexes_Legacy = 54_001; // RavenDB-17312
 
             public const long GuaranteedOrderOfGroupByFieldsInMapReduceIndexes = 54_002; // RavenDB-17312 - version 54_001 had an issue so we had to fix it and bump version again
+
+            public const long TimeTicksSupportInJavaScriptIndexes = 54_003; // RavenDB-19625
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = GuaranteedOrderOfGroupByFieldsInMapReduceIndexes;
+            public const long CurrentVersion = TimeTicksSupportInJavaScriptIndexes;
         }
     }
 
