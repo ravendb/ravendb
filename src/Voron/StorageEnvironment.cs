@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -125,7 +126,8 @@ namespace Voron
 
         public event Action OnLogsApplied;
 
-        internal readonly long[] _validPages;
+        internal readonly long[] _validPagesAfterLoad;
+        internal readonly long _lastValidPageAfterLoad;
 
         public bool IsNew { get; }
 
@@ -142,12 +144,13 @@ namespace Voron
                 _headerAccessor = new HeaderAccessor(this);
                 TimeToSyncAfterFlushInSec = options.TimeToSyncAfterFlushInSec;
 
-                Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);
+                _lastValidPageAfterLoad = _dataPager.NumberOfAllocatedPages;
+                Debug.Assert(_lastValidPageAfterLoad != 0);
 
-                var remainingBits = _dataPager.NumberOfAllocatedPages % (8 * sizeof(long));
+                var remainingBits = _lastValidPageAfterLoad % (8 * sizeof(long));
 
-                _validPages = new long[_dataPager.NumberOfAllocatedPages / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
-                _validPages[_validPages.Length - 1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
+                _validPagesAfterLoad = new long[_lastValidPageAfterLoad / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
+                _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
 
@@ -1522,27 +1525,25 @@ namespace Voron
                 ThrowInvalidChecksum(pageNumber, current, checksum);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
         {
-            var index = pageNumber / (8 * sizeof(long));
-
             // If the page is beyond the initial size of the file we don't validate it. 
             // We assume that it is valid since we wrote it in this run.
-
-            if (index >= _validPages.Length)
+            if (pageNumber >= _lastValidPageAfterLoad)
                 return;
 
-            var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
-            var bitToSet = 1L << bitIndex;
+            var index = pageNumber / (8 * sizeof(long));
 
-            ref long pageBucket = ref _validPages[index];
-            if ((pageBucket & bitToSet) != 0)
+            long old = _validPagesAfterLoad[index];
+            var bitToSet = 1L << (int)(pageNumber % (8 * sizeof(long)));
+            if ((old & bitToSet) != 0)
                 return;
 
-            UnlikelyValidatePage(pageNumber, current, ref pageBucket, bitToSet);
+            UnlikelyValidatePage(pageNumber, current, index, old, bitToSet);
         }
 
-        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, ref long bucket, long bitToSet)
+        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet)
         {
             // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
             // which we already got using AcquirePagePointerWithOverflowHandling()
@@ -1558,9 +1559,8 @@ namespace Voron
             {
                 // PERF: This code used to have a spin-wait. While it makes sense where threads are competing on tight loops for
                 // for resources, the spin-wait here serves no purpose as the thread is going to bail out immediately after completion.
-                long old = bucket;
-                long modified = Interlocked.CompareExchange(ref bucket, old | bitToSet, old);
-                if (modified == old || (bucket & bitToSet) != 0)
+                long modified = Interlocked.CompareExchange(ref _validPagesAfterLoad[index], old | bitToSet, old);
+                if (modified == old || (modified & bitToSet) != 0)
                     break;
             }
         }
