@@ -1,13 +1,24 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class createDatabaseCommand extends commandBase {
+export type CreateDatabaseDto = Pick<
+    Raven.Client.ServerWide.DatabaseRecord,
+    "DatabaseName" | "Settings" | "Disabled" | "Encrypted"
+> & {
+    Topology?: Pick<Raven.Client.ServerWide.DatabaseTopology, "Members" | "DynamicNodesDistribution">;
+    Sharding?: {
+        Shards: Record<number, { Members?: string[] }>;
+        Orchestrator: {
+            Topology: Pick<Raven.Client.ServerWide.DatabaseTopology, "Members">
+        }
+    };
+};
 
-    private databaseDocument: Raven.Client.ServerWide.DatabaseRecord;
-
+export class createDatabaseCommand extends commandBase {
+    private databaseDocument: CreateDatabaseDto;
     private replicationFactor: number;
 
-    constructor(databaseDocument: Raven.Client.ServerWide.DatabaseRecord, replicationFactor: number) {
+    constructor(databaseDocument: CreateDatabaseDto, replicationFactor: number) {
         super();
         this.replicationFactor = replicationFactor;
         this.databaseDocument = databaseDocument;
@@ -24,5 +35,3 @@ class createDatabaseCommand extends commandBase {
             .fail((response: JQueryXHR) => this.reportError("Failed to create database", response.responseText, response.statusText));
     }
 }
-
-export = createDatabaseCommand; 

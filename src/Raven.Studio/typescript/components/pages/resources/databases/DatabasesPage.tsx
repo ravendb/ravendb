@@ -3,7 +3,7 @@ import { DatabasePanel } from "./partials/DatabasePanel";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { Button } from "reactstrap";
+import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -13,6 +13,7 @@ import { DatabaseFilterCriteria } from "components/models/databases";
 import {
     compactDatabase,
     loadDatabasesDetails,
+    openCreateDatabaseDialog,
     openCreateDatabaseFromRestoreDialog,
     syncDatabaseDetails,
 } from "components/pages/resources/databases/store/databasesViewActions";

@@ -1,12 +1,15 @@
 ﻿import { RootState } from "components/store";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databasesSliceInternal } from "components/common/shell/databasesSlice";
+import { createSelector } from "@reduxjs/toolkit";
 
 const selectActiveDatabaseName = (store: RootState) => store.databases.activeDatabaseName;
 
 const { databasesSelectors } = databasesSliceInternal;
 
 const selectAllDatabases = (store: RootState) => databasesSelectors.selectAll(store.databases.databases);
+
+const selectAllDatabaseNames = createSelector(selectAllDatabases, (databases) => databases.map((x) => x.name));
 
 const selectAllDatabasesCount = (store: RootState) => databasesSelectors.selectTotal(store.databases.databases);
 
@@ -35,6 +38,7 @@ export const databaseSelectors = {
     activeDatabaseName: selectActiveDatabaseName,
     activeDatabase: selectActiveDatabase,
     allDatabases: selectAllDatabases,
+    allDatabaseNames: selectAllDatabaseNames,
     allDatabasesCount: selectAllDatabasesCount,
     databaseByName: selectDatabaseByName,
 };

@@ -58,14 +58,9 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
-import queryCommand = require("commands/database/query/queryCommand");
-import getIntegrationsPostgreSqlSupportCommand = require("commands/database/settings/getIntegrationsPostgreSqlSupportCommand");
-import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/getIntegrationsPostgreSqlCredentialsCommand");
-import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
-import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
-import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
+import { CreateDatabaseDto, createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -295,28 +290,8 @@ export default class DatabasesService {
         return new saveDatabaseRecordCommand(databaseName, databaseRecord, etag).execute();
     }
 
-    async query(...args: ConstructorParameters<typeof queryCommand>) {
-        return new queryCommand(...args).execute();
-    }
-
-    async getIntegrationsPostgreSqlSupport(databaseName: string) {
-        return new getIntegrationsPostgreSqlSupportCommand(databaseName).execute();
-    }
-
-    async getIntegrationsPostgreSqlCredentials(databaseName: string) {
-        return new getIntegrationsPostgreSqlCredentialsCommand(databaseName).execute();
-    }
-
-    async saveIntegrationsPostgreSqlCredentials(databaseName: string, username: string, password: string) {
-        return new saveIntegrationsPostgreSqlCredentialsCommand(databaseName, username, password).execute();
-    }
-
-    async deleteIntegrationsPostgreSqlCredentials(databaseName: string, username: string) {
-        return new deleteIntegrationsPostgreSqlCredentialsCommand(databaseName, username).execute();
-    }
-
-    async generateSecret() {
-        return new generateSecretCommand().execute();
+    async createDatabase(dto: CreateDatabaseDto, replicationFactor: number) {
+        return new createDatabaseCommand(dto, replicationFactor).execute();
     }
 
     async getDatabaseStats(...args: ConstructorParameters<typeof getDatabaseStatsCommand>) {
