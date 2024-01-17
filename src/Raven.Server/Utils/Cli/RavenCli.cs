@@ -351,11 +351,7 @@ namespace Raven.Server.Utils.Cli
             Console.ResetColor();
 
             LoggingSource.Instance.DisableConsoleLogging();
-            var prevLogMode = LoggingSource.Instance.LogMode;
-            SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
             Program.WriteServerStatsAndWaitForEsc(cli._server);
-            SetupLogMode(prevLogMode, cli._server.Configuration.Logs);
-            Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
         }
 
@@ -417,11 +413,7 @@ namespace Raven.Server.Utils.Cli
             Console.ResetColor();
 
             LoggingSource.Instance.DisableConsoleLogging();
-            var prevLogMode = LoggingSource.Instance.LogMode;
-            SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
             Program.WriteThreadsInfoAndWaitForEsc(cli._server, maxTopThreads, updateIntervalInMs, cpuUsageThreshold);
-            SetupLogMode(prevLogMode, cli._server.Configuration.Logs);
-            Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
         }
 

@@ -27,7 +27,7 @@ namespace SlowTests.Monitoring
             await DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(diskStatsGetter);
         }
         
-        [NightlyBuildMultiplatformFact(RavenPlatform.Windows)]
+        [NightlyBuildMultiplatformFact(RavenPlatform.Windows, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21945")]
         public async Task WindowsDiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
         {
 #pragma warning disable CA1416
