@@ -965,8 +965,6 @@ namespace Raven.Server.ServerWide.Commands
                 throw new InvalidOperationException("Database cluster transaction command must have a type");
             djv[nameof(ICommandData.Type)] = type;
 
-            var lastModifiedParsed = false;
-
             if (bjro.TryGet(Constants.Documents.Metadata.LastModified, out string lastModified) == false)
                 throw new InvalidOperationException($"Database cluster transaction {type} command must have a LastModified property");
             djv[Constants.Documents.Metadata.LastModified] = lastModified;
