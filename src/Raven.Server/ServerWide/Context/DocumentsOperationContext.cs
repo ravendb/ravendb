@@ -100,18 +100,6 @@ namespace Raven.Server.ServerWide.Context
 
             CurrentTxMarker = (short)tx.InnerTransaction.LowLevelTransaction.Id;
 
-            var options = _documentDatabase.DocumentsStorage.Environment.Options;
-
-            if ((options.TransactionsMode == TransactionsMode.Lazy || options.TransactionsMode == TransactionsMode.Danger) &&
-                options.NonSafeTransactionExpiration != null && options.NonSafeTransactionExpiration < DateTime.Now)
-            {
-                options.TransactionsMode = TransactionsMode.Safe;
-            }
-
-            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction =
-                options.TransactionsMode == TransactionsMode.Lazy;
-            // IsLazyTransaction can be overriden later by a specific feature like bulk insert
-
             return tx;
         }
 
