@@ -25,7 +25,7 @@ import {
 import { Checkbox, Switch } from "../../../../../../common/Checkbox";
 import { FlexGrow } from "../../../../../../common/FlexGrow";
 import { Icon } from "../../../../../../common/Icon";
-import { Steps } from "../../../../../../common/Steps";
+import Steps from "../../../../../../common/Steps";
 import { LicenseRestrictions } from "../../../../../../common/LicenseRestrictions";
 import classNames from "classnames";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
@@ -49,6 +49,8 @@ interface StepItem {
     label: string;
     active: boolean;
 }
+
+// TODO google events
 
 export default function CreateDatabaseFromBackup({
     closeModal,

@@ -2,7 +2,7 @@ import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import databasesManager = require("common/shell/databasesManager");
-import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
+import {createDatabaseCommand} from "commands/resources/createDatabaseCommand";
 import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import getDatabaseLocationCommand = require("commands/resources/getDatabaseLocationCommand");

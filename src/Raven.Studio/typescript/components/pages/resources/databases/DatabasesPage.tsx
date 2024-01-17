@@ -4,7 +4,7 @@ import { useAccessManager } from "hooks/useAccessManager";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { Button } from "reactstrap";
+import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -14,6 +14,7 @@ import { DatabaseFilterCriteria } from "components/models/databases";
 import {
     compactDatabase,
     loadDatabasesDetails,
+    openCreateDatabaseDialog,
     openCreateDatabaseFromRestoreDialog,
     syncDatabaseDetails,
 } from "components/pages/resources/databases/store/databasesViewActions";
@@ -57,7 +58,6 @@ export function DatabasesPage(props: DatabasesPageProps) {
     };
 
     const { isOperatorOrAbove } = useAccessManager();
-    const canCreateNewDatabase = isOperatorOrAbove();
 
     const filteredDatabaseNames = useAppSelector(
         databasesViewSelectors.filteredDatabaseNames(filterCriteria),
@@ -120,7 +120,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
         <>
             <StickyHeader>
                 <div className="d-flex flex-wrap gap-3 align-items-end">
-                    {canCreateNewDatabase && (
+                    {isOperatorOrAbove() && (
                         <>
                             <Button color="primary" onClick={toggleIsCreateDatabaseOpen} className="rounded-pill">
                                 <Icon icon="database" addon="plus" />
@@ -128,6 +128,23 @@ export function DatabasesPage(props: DatabasesPageProps) {
                             </Button>
                             {isCreateDatabaseOpen && <CreateDatabase closeModal={toggleIsCreateDatabaseOpen} />}
                         </>
+                    )}
+                    {isOperatorOrAbove() && (
+                        <UncontrolledDropdown>
+                            <ButtonGroup className="rounded-group">
+                                <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
+                                    <Icon icon="database" addon="plus" />
+                                    New database
+                                </Button>
+                                <DropdownToggle color="primary" caret></DropdownToggle>
+                            </ButtonGroup>
+
+                            <DropdownMenu>
+                                <DropdownItem onClick={() => dispatch(openCreateDatabaseFromRestoreDialog())}>
+                                    <i className="icon-restore-backup" /> New database from backup (Restore)
+                                </DropdownItem>
+                            </DropdownMenu>
+                        </UncontrolledDropdown>
                     )}
                     {showToggleButton && (
                         <Button color="secondary" className="rounded-pill" onClick={toggleFilterOptions}>

@@ -62,6 +62,7 @@ import deleteConnectionStringCommand = require("commands/database/settings/delet
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import { CreateDatabaseDto, createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -283,5 +284,9 @@ export default class DatabasesService {
 
     async saveDatabaseRecord(db: database, databaseRecord: documentDto, etag: number) {
         return new saveDatabaseRecordCommand(db, databaseRecord, etag).execute();
+    }
+
+    async createDatabase(dto: CreateDatabaseDto, replicationFactor: number) {
+        return new createDatabaseCommand(dto, replicationFactor).execute();
     }
 }
