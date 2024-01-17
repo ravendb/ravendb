@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Jint;
 using Jint.Native;
@@ -35,11 +36,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly IndexFieldOptions _allFields;
 
+        protected readonly bool _ticksSupport;
+
         protected JintLuceneDocumentConverterBase(Index index, IndexDefinition indexDefinition, int numberOfBaseFields = 1, string keyFieldName = null,
             bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
             : base(index, index.Configuration.IndexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
         {
             indexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
+
+            Debug.Assert(index.Type.IsJavaScript());
+
+            _ticksSupport = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.TimeTicksSupportInJavaScriptIndexes;
         }
         
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
@@ -162,7 +169,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             }
                             else
                             {
-                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
+                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, canTryJsStringToDateConversion: _ticksSupport, engine: documentToProcess.Engine,
                                     context: indexContext);
                                 numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
 
@@ -229,7 +236,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             int ProcessAsJson(JsValue actualValue, IndexField field, float? propertyBoost)
             {
-                var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
+                var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, canTryJsStringToDateConversion: _ticksSupport, engine: documentToProcess.Engine,
                     context: indexContext);
                 return GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
             }
