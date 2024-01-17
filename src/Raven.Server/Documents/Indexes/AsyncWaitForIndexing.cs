@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Server;
 
@@ -23,12 +22,12 @@ namespace Raven.Server.Documents.Indexes
 
         public bool TimeoutExceeded;
 
-        public Task WaitForIndexingAsync(AsyncManualResetEvent.FrozenAwaiter indexingBatchCompleted, CancellationToken token = default)
+        public Task WaitForIndexingAsync(AsyncManualResetEvent.FrozenAwaiter indexingBatchCompleted)
         {
             _index.AssertNotDisposed();
 
             if (_isMaxTimeout)
-                return indexingBatchCompleted.WaitAsync(token);
+                return indexingBatchCompleted.WaitAsync();
 
             var remainingTime = _waitTimeout - _queryDuration.Elapsed;
 
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents.Indexes
                 return Task.CompletedTask;
             }
 
-            return indexingBatchCompleted.WaitAsync(remainingTime, token);
+            return indexingBatchCompleted.WaitAsync(remainingTime);
         }
     }
 }
