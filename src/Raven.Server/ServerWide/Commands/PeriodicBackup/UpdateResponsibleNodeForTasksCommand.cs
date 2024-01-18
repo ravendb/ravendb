@@ -67,7 +67,12 @@ public class ResponsibleNodeInfo : IDynamicJson
 
     public static string GenerateItemName(string databaseName, long taskId)
     {
-        return $"values/{databaseName}/responsible-node/{taskId}";
+        return $"{GetPrefix(databaseName)}{taskId}";
+    }
+
+    public static string GetPrefix(string databaseName)
+    {
+        return $"values/{databaseName}/responsible-node/";
     }
 
     public DynamicJsonValue ToJson()

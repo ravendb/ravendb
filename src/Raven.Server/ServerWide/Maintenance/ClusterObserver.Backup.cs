@@ -154,29 +154,41 @@ internal partial class ClusterObserver
         TransactionOperationContext context,
         string currentResponsibleNode)
     {
+        var lastResponsibleNode = currentResponsibleNode ??
+                                  // backward compatibility - will continue running the backup on the last node that ran the backup
+                                  BackupUtils.GetBackupStatusFromCluster(_server, context, databaseName, configuration.TaskId)?.NodeTag;
+
         var mentorNode = configuration.GetMentorNode();
         if (mentorNode != null)
         {
             if (topology.Members.Contains(mentorNode))
             {
+                if (string.Equals(mentorNode, lastResponsibleNode))
+                    return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
+
                 return new MentorNode(mentorNode, configuration, _lastChosenNodeReasonPerTask);
             }
 
             if (topology.AllNodes.Contains(mentorNode) && configuration.IsPinnedToMentorNode())
             {
+                if (string.Equals(mentorNode, lastResponsibleNode))
+                    return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
+
                 return new PinnedMentorNode(mentorNode, configuration, _lastChosenNodeReasonPerTask);
             }
         }
-
-        var lastResponsibleNode = currentResponsibleNode ??
-                                  // backward compatibility - will continue running the backup on the last node that ran the backup
-                                  BackupUtils.GetBackupStatusFromCluster(_server, context, databaseName, configuration.TaskId)?.NodeTag;
 
         if (lastResponsibleNode == null)
         {
             // we don't have a responsible node for the backup
             var newNode = topology.WhoseTaskIsIt(configuration);
             return new NonExistingResponsibleNode(newNode, configuration.Name);
+        }
+
+        if (topology.Members.Contains(lastResponsibleNode))
+        {
+            // this is the same node that we had before
+            return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
         }
 
         if (topology.AllNodes.Contains(lastResponsibleNode) == false)
@@ -199,14 +211,8 @@ internal partial class ClusterObserver
         if (_server.LicenseManager.HasHighlyAvailableTasks() == false)
         {
             // can't redistribute, keep it on the original node
-            BackupUtils.RaiseAlertIfNecessary(topology, configuration, lastResponsibleNode, _server, _server.NotificationCenter);
+            OngoingTasksUtils.RaiseAlertIfNecessary(topology, configuration, lastResponsibleNode, _server, _server.NotificationCenter);
             return new SameResponsibleNodeDueToMissingHighlyAvailableTasks(lastResponsibleNode, configuration, _lastChosenNodeReasonPerTask);
-        }
-
-        if (topology.Members.Contains(lastResponsibleNode))
-        {
-            // this is the same node that we had before
-            return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
         }
 
         // find a new responsible node
