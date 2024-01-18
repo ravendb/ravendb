@@ -11,6 +11,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static System.Net.WebRequestMethods;
@@ -23,7 +24,7 @@ namespace SlowTests.Tests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Test()
         {
             using var server = GetNewServer(new ServerCreationOptions
@@ -34,26 +35,18 @@ namespace SlowTests.Tests.Issues
                 }
             });
 
-            var store = new DocumentStore
+            using var store = new DocumentStore
             {
                 Urls = new[] { server.WebUrl },
                 Conventions = new DocumentConventions
                 {
                     ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin,
-                    //HttpVersion = HttpVersion.Version20,
-                    //HttpVersionPolicy = HttpVersionPolicy.RequestVersionExact,
                 }
             }.Initialize();
-
-            try
-            {
-                var cmd = new CreateDatabaseOperation(new DatabaseRecord("test1"));
-                await store.Maintenance.Server.SendAsync(cmd);
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
+            var dbName = "test";
+            var cmd = new CreateDatabaseOperation(new DatabaseRecord(dbName));
+            var result = await store.Maintenance.Server.SendAsync(cmd);
+            Assert.Equal(dbName,result.Name);
         }
     }
 }

@@ -1533,6 +1533,8 @@ namespace Raven.Client.Http
 #if NETCOREAPP
             if (Conventions.HttpVersionPolicy != null)
                 request.VersionPolicy = Conventions.HttpVersionPolicy.Value;
+            else
+                request.VersionPolicy = HttpClient.DefaultVersionPolicy;
 #endif
 
             request.RequestUri = builder.Uri;
@@ -2132,7 +2134,12 @@ namespace Raven.Client.Http
 
             var httpClient = Conventions.CreateHttpClient(httpMessageHandler);
             httpClient.Timeout = GlobalHttpClientTimeout;
-
+#if NETCOREAPP3_1_OR_GREATER
+            if (Conventions.HttpVersionPolicy != null)
+                httpClient.DefaultVersionPolicy = Conventions.HttpVersionPolicy.Value;
+            else
+                httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
+#endif
             return httpClient;
         }
 

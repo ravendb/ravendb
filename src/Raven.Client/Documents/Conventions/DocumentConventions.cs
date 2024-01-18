@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Conventions
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
 #if NETCOREAPP
-        internal static HttpVersionPolicy? DefaultHttpVersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionOrHigher;
+        internal static HttpVersionPolicy? DefaultHttpVersionPolicy;
 
         internal static TimeSpan? DefaultHttpPooledConnectionIdleTimeout;
 #endif
