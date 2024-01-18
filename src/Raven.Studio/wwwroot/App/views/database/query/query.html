@@ -194,7 +194,7 @@
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
                 </div>
                 <div class="panel-body queryPlan absolute-fill" data-bind="visible: currentTab() === 'queryPlan'">
-                    <pre data-bind="text: queryPlan" class="h-100"></pre>
+                    <div id="js-query-plan-container" class="absolute-fill" style="overflow: hidden"></div>
                 </div>
                 <div class="panel-body js-timings-container timings absolute-fill" data-bind="visible: currentTab() === 'timings'">
                     <div class="toggle toggle-right">

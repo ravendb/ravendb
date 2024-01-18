@@ -46,6 +46,7 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import killQueryCommand from "commands/database/query/killQueryCommand";
 import getEssentialDatabaseStatsCommand from "commands/resources/getEssentialDatabaseStatsCommand";
+import queryPlan from "viewmodels/database/query/queryPlan";
 
 type queryResultTab = "results" | "explanations" | "queryPlan" | "timings" | "revisions";
 
@@ -216,6 +217,8 @@ class query extends shardViewModelBase {
     effectiveFetcher = this.queryFetcher;
     includedRevisionsFetcher = ko.observable<fetcherType>();
     
+    queryPlanGraph = new queryPlan();
+    
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     fromCache = ko.observable<boolean>(false);
@@ -232,7 +235,7 @@ class query extends shardViewModelBase {
     totalExplanations = ko.observable<number>(0);
     timings = ko.observable<Raven.Client.Documents.Queries.Timings.QueryTimings>();
     
-    queryPlan = ko.observable<string>();
+    queryPlan = ko.observable<Raven.Client.Documents.Queries.Timings.QueryInspectionNode>();
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     deleteDocumentDisableReason: KnockoutComputed<string>;
@@ -1388,14 +1391,7 @@ class query extends shardViewModelBase {
     private onTimingsLoaded(queryResults: pagedResultExtended<document>): void { 
         const timings = queryResults.timings;
         this.timings(timings);
-        this.queryPlan(queryResults.queryPlan ? query.formatQueryPlan(queryResults.queryPlan) : null);
-    }
-    
-    private static formatQueryPlan(node: Raven.Client.Documents.Queries.Timings.QueryInspectionNode, indent = 0): string {
-        const indentation = "".padStart(indent * 4, " ");
-        const parameters = Object.entries(node.Parameters).map(value => value.join(": ")).join(", ");
-        const children = node.Children.map(child => query.formatQueryPlan(child, indent + 1)).join("");
-        return indentation + node.Operation + " " + parameters + "\r\n" + children;
+        this.queryPlan(queryResults.queryPlan);
     }
     
     private onIncludesLoaded(includes: dictionary<any>): void {
@@ -1641,7 +1637,13 @@ class query extends shardViewModelBase {
     }
 
     goToQueryPlanTab(): void {
+        this.resultsExpanded(true);
         this.currentTab("queryPlan");
+        this.queryPlanGraph.clearGraph();
+        
+        setTimeout(() => {
+            this.queryPlanGraph.draw(this.queryPlan());    
+        }, 200);
     }
 
     goToHighlightsTab(highlight: highlightSection): void {
