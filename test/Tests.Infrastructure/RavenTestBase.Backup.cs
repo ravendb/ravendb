@@ -16,6 +16,7 @@ using Raven.Server;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -118,7 +119,7 @@ namespace FastTests
                     using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var responsibleNode = PeriodicBackupRunner.GetResponsibleNodeTag(serverStore, databaseName, taskId);
+                        var responsibleNode = BackupUtils.GetResponsibleNodeTag(serverStore, databaseName, taskId);
                         return responsibleNode != differentThan;
                     }
                 }, true);
@@ -215,7 +216,7 @@ namespace FastTests
 
             public string GetBackupResponsibleNode(RavenServer server, long taskId, string databaseName, bool keepTaskOnOriginalMemberNode = false)
             {
-                var node = PeriodicBackupRunner.GetResponsibleNodeTag(server.ServerStore, databaseName, taskId);
+                var node = BackupUtils.GetResponsibleNodeTag(server.ServerStore, databaseName, taskId);
                 return node;
             }
 

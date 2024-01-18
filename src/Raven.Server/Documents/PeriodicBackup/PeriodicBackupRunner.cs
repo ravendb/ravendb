@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new InvalidOperationException($"All backup destinations are disabled for backup task id: {taskId}");
             }
 
-            return GetResponsibleNodeTag(_serverStore, _database.Name, periodicBackup.Configuration.TaskId);
+            return BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, periodicBackup.Configuration.TaskId);
         }
 
         public long StartBackupTask(long taskId, bool isFullBackup)
@@ -637,20 +637,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public static string GetResponsibleNodeTag(ServerStore serverStore, string databaseName, long taskId)
-        {
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var blittable = BackupUtils.GetResponsibleNodeInfoFromCluster(serverStore, context, databaseName, taskId);
-                if (blittable == null)
-                    return null;
-
-                blittable.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out string responsibleNodeTag);
-                return responsibleNodeTag;
-            }
-        }
-
         private long GetMinLastEtag()
         {
             var min = long.MaxValue;
@@ -860,7 +846,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return TaskStatus.Disabled;
             }
 
-            responsibleNodeTag = GetResponsibleNodeTag(_serverStore, _database.Name, configuration.TaskId);
+            responsibleNodeTag = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, configuration.TaskId);
             if (responsibleNodeTag == null)
             {
                 // the responsible node wasn't set by the cluster observer yet
