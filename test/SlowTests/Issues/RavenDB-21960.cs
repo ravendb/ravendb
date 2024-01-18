@@ -58,17 +58,17 @@ public class RavenDB_21960 : RavenTestBase
 
                     var firstIndex = (BlittableJsonReaderObject)indexMetadataArray[0];
 
-                    Assert.Equal("DummyIndex", firstIndex["Name"]);
-                    Assert.Equal(IndexType.JavaScriptMap.ToString(), firstIndex["Type"]);
-                    Assert.Equal(IndexState.Normal.ToString(), firstIndex["State"]);
-                    Assert.Equal(IndexLockMode.Unlock.ToString(), firstIndex["LockMode"]);
-                    Assert.Equal(IndexSourceType.Documents.ToString(), firstIndex["SourceType"]);
-                    Assert.Equal(IndexPriority.Normal.ToString(), firstIndex["Priority"]);
-                    Assert.Equal(SearchEngineType.Lucene.ToString(), firstIndex["SearchEngineType"]);
+                    Assert.Equal("DummyIndex", firstIndex["Name"].ToString());
+                    Assert.Equal(IndexType.JavaScriptMap.ToString(), firstIndex["Type"].ToString());
+                    Assert.Equal(IndexState.Normal.ToString(), firstIndex["State"].ToString());
+                    Assert.Equal(IndexLockMode.Unlock.ToString(), firstIndex["LockMode"].ToString());
+                    Assert.Equal(IndexSourceType.Documents.ToString(), firstIndex["SourceType"].ToString());
+                    Assert.Equal(IndexPriority.Normal.ToString(), firstIndex["Priority"].ToString());
+                    Assert.Equal(SearchEngineType.Lucene.ToString(), firstIndex["SearchEngineType"].ToString());
                     Assert.Equal(false, firstIndex["HasDynamicFields"]);
                     Assert.Equal(false, firstIndex["HasCompareExchange"]);
                     Assert.Equal(true, firstIndex["HasTimeFields"]);
-                    Assert.Equal("OrderedAt", ((BlittableJsonReaderArray)firstIndex["TimeFields"])[0]);
+                    Assert.Equal("OrderedAt", ((BlittableJsonReaderArray)firstIndex["TimeFields"])[0].ToString());
 
                     var db = await GetDatabase(store.Database);
                     
@@ -80,13 +80,13 @@ public class RavenDB_21960 : RavenTestBase
 
                     var secondIndex = (BlittableJsonReaderObject)indexMetadataArray[1];
 
-                    Assert.Equal("OtherDummyIndex", secondIndex["Name"]);
-                    Assert.Equal(IndexType.Map.ToString(), secondIndex["Type"]);
-                    Assert.Equal(IndexState.Normal.ToString(), secondIndex["State"]);
-                    Assert.Equal(IndexLockMode.Unlock.ToString(), secondIndex["LockMode"]);
-                    Assert.Equal(IndexSourceType.Documents.ToString(), secondIndex["SourceType"]);
-                    Assert.Equal(IndexPriority.Normal.ToString(), secondIndex["Priority"]);
-                    Assert.Equal(SearchEngineType.Corax.ToString(), secondIndex["SearchEngineType"]);
+                    Assert.Equal("OtherDummyIndex", secondIndex["Name"].ToString());
+                    Assert.Equal(IndexType.Map.ToString(), secondIndex["Type"].ToString());
+                    Assert.Equal(IndexState.Normal.ToString(), secondIndex["State"].ToString());
+                    Assert.Equal(IndexLockMode.Unlock.ToString(), secondIndex["LockMode"].ToString());
+                    Assert.Equal(IndexSourceType.Documents.ToString(), secondIndex["SourceType"].ToString());
+                    Assert.Equal(IndexPriority.Normal.ToString(), secondIndex["Priority"].ToString());
+                    Assert.Equal(SearchEngineType.Corax.ToString(), secondIndex["SearchEngineType"].ToString());
                     Assert.Equal(false, secondIndex["HasDynamicFields"]);
                     Assert.Equal(false, secondIndex["HasCompareExchange"]);
                     Assert.Equal(false, secondIndex["HasTimeFields"]);
@@ -136,13 +136,13 @@ public class RavenDB_21960 : RavenTestBase
 
                     var metadata = (BlittableJsonReaderObject)indexMetadataArray[0];
 
-                    Assert.Equal("OtherDummyIndex", metadata["Name"]);
-                    Assert.Equal(IndexType.Map.ToString(), metadata["Type"]);
-                    Assert.Equal(IndexState.Normal.ToString(), metadata["State"]);
-                    Assert.Equal(IndexLockMode.Unlock.ToString(), metadata["LockMode"]);
-                    Assert.Equal(IndexSourceType.Documents.ToString(), metadata["SourceType"]);
-                    Assert.Equal(IndexPriority.Normal.ToString(), metadata["Priority"]);
-                    Assert.Equal(SearchEngineType.Corax.ToString(), metadata["SearchEngineType"]);
+                    Assert.Equal("OtherDummyIndex", metadata["Name"].ToString());
+                    Assert.Equal(IndexType.Map.ToString(), metadata["Type"].ToString());
+                    Assert.Equal(IndexState.Normal.ToString(), metadata["State"].ToString());
+                    Assert.Equal(IndexLockMode.Unlock.ToString(), metadata["LockMode"].ToString());
+                    Assert.Equal(IndexSourceType.Documents.ToString(), metadata["SourceType"].ToString());
+                    Assert.Equal(IndexPriority.Normal.ToString(), metadata["Priority"].ToString());
+                    Assert.Equal(SearchEngineType.Corax.ToString(), metadata["SearchEngineType"].ToString());
                     Assert.Equal(false, metadata["HasDynamicFields"]);
                     Assert.Equal(false, metadata["HasCompareExchange"]);
                     Assert.Equal(false, metadata["HasTimeFields"]);
