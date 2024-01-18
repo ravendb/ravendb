@@ -55,7 +55,7 @@ namespace Raven.Server.Config.Categories
         }
 
         [DefaultValue(false)]
-        [Description("Whether the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
+        [Description("Set whether the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.RunInMemory", ConfigurationEntryScope.ServerWideOrPerDatabase, setDefaultValueIfNeeded: false)]
         public virtual bool RunInMemory
@@ -71,7 +71,7 @@ namespace Raven.Server.Config.Categories
             protected set => _runInMemory = value;
         }
 
-        [Description("Indicate if all indexes in the database are disabled")]
+        [Description("Set whether to disable all indexes in the database")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -111,7 +111,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MaxTimeForDocumentTransactionToRemainOpen { get; protected set; }
 
-        [Description("How long should we keep a superseded auto index?")]
+        [Description("How long a superseded auto index should be kept")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.None)]
@@ -125,7 +125,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdleInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; protected set; }
 
-        [Description("EXPERT ONLY")]
+        [Description("EXPERT: Disable query optimizer generated indexes (auto-indexes). Dynamic queries will not be supported.")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.DisableQueryOptimizerGeneratedIndexes", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -138,13 +138,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdleInHrs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle { get; protected set; }
 
-        [Description("EXPERT ONLY")]
+        [Description("EXPERT: Set minimum number of map attempts after which batch will be canceled if running low on memory")]
         [DefaultValue(512)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; protected set; }
 
-        [Description("EXPERT ONLY")]
+        [Description("EXPERT: Number of concurrent stopped batches if running low on memory")]
         [DefaultValue(2)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
@@ -157,32 +157,31 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MapTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MapTimeout { get; protected set; }
 
-        [Description("EXPERT: Maximum size that the query clause cache will utilize for caching partial query clasues, defaults to 10% of the system memory on 64 bits machines.")]
+        [Description("EXPERT: Maximum size that the query clause cache will utilize for caching partial query clauses, defaulting to 10% of the system memory on 64-bit machines.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit((SizeUnit.Megabytes))]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.QueryClauseCache.SizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size QueryClauseCacheSize { get; protected set; }
         
-        [Description("EXPERT: Disable the query clause cache for a server, database or a single index.")]
+        [Description("EXPERT: Disable the query clause cache for a server, database, or a single index.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.QueryClauseCache.Disabled", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool QueryClauseCacheDisabled { get; protected set; }
 
-        [Description("EXPERT: Frequency to scan the query clause cache for expired values")]
+        [Description("EXPERT: The frequency by which to scan the query clause cache for expired values.")]
         [DefaultValue(180)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.QueryClauseCache.ExpirationScanFrequencyInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting QueryClauseCacheExpirationScanFrequency { get; protected set; }
         
-        [Description("EXPERT: The number of recent queries that we'll keep to identify repeated queries (and thus, relevant for caching).")]
+        [Description("EXPERT: The number of recent queries that we will keep to identify repeated queries, relevant for caching.")]
         [DefaultValue(512)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.QueryClauseCache.RepeatedQueriesCount", ConfigurationEntryScope.ServerWideOnly)]
         public int QueryClauseCacheRepeatedQueriesCount { get; protected set; }
-
         
         [Description("EXPERT: The time frame for a query to repeat itself for us to consider it worth caching.")]
         [DefaultValue(300)]
@@ -191,14 +190,14 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.QueryClauseCache.RepeatedQueriesTimeFrameInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting QueryClauseCacheRepeatedQueriesTimeFrame { get; protected set; }
         
-        [Description("Maximum number of mapped documents. Cannot be less than 128. By default 'null' - no limit.")]
+        [Description("Maximum number of documents to be processed by the index per indexing batch. Cannot be less than 128. By default 'null' - no limit.")]
         [DefaultValue(null)]
         [MinValue(128)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MapBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int? MapBatchSize { get; protected set; }
 
-        [Description("Number of minutes after which mapping will end even if there is more to map. This will only be applied if we pass the last etag in collection that we saw when batch was started.")]
+        [Description("Number of minutes after which mapping will end even if there is more to map. This will only be applied if we pass the last etag we saw in the collection when the batch was started.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Minutes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
@@ -211,7 +210,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MaxStepsForScript", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MaxStepsForScript { get; set; }
 
-        [Description("Time (in minutes) between index cleanup")]
+        [Description("Time (in minutes) between auto-index cleanup")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Minutes)]
         [IndexUpdateType(IndexUpdateType.None)]
@@ -239,7 +238,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.ManagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
 
-        [Description("Expert: The maximum size in MB that we'll consider for segments merging")]
+        [Description("EXPERT: The maximum size in MB that we'll consider for segments merging")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
@@ -247,14 +246,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Lucene.MaximumSizePerSegmentInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size MaximumSizePerSegment { get; protected set; }
 
-        [Description("Expert: How often segment indices are merged. With smaller values, less RAM is used while indexing, and searches on unoptimized indices are faster, but indexing speed is slower")]
+        [Description("EXPERT: Set how often index segments are merged into larger ones. The merge process will start when the number of segments in an index reaches this number. " +
+                     "With smaller values, less RAM is used while indexing, and searches on unoptimized indexes are faster, but indexing speed is slower.")]
         [DefaultValue(10)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MergeFactor", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.Lucene.MergeFactor", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MergeFactor { get; protected set; }
 
-        [Description("Expert: The definition of a large segment in MB. We wont merge more than " + nameof(NumberOfLargeSegmentsToMergeInSingleBatch) + " in a single batch")]
+        [Description("EXPERT: The definition of a large segment in MB. We wont merge more than " + nameof(NumberOfLargeSegmentsToMergeInSingleBatch) + " in a single batch")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
@@ -262,14 +262,14 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Lucene.LargeSegmentSizeToMergeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size LargeSegmentSizeToMerge { get; protected set; }
 
-        [Description("Expert: Number of large segments (defined by " + nameof(LargeSegmentSizeToMerge) + ") to merge in a single batch")]
+        [Description("EXPERT: Number of large segments (defined by " + nameof(LargeSegmentSizeToMerge) + ") to merge in a single batch")]
         [DefaultValue(2)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Lucene.NumberOfLargeSegmentsToMergeInSingleBatch", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.NumberOfLargeSegmentsToMergeInSingleBatch", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int NumberOfLargeSegmentsToMergeInSingleBatch { get; protected set; }
 
-        [Description("Expert: How long will we let merges to run before we close the transaction")]
+        [Description("EXPERT: How long will we let merges to run before we close the transaction")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
@@ -313,19 +313,19 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit { get; protected set; }
 
-        [Description("Indicates if missing fields should be indexed same as 'null' values or not. Default: false")]
+        [Description("Set how the indexing process should handle fields that are missing. When set to true, missing fields will be indexed with a null value.")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.IndexMissingFieldsAsNull", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool IndexMissingFieldsAsNull { get; set; }
 
-        [Description("Indicates if empty index entries should be indexed by static indexes. Default: false")]
+        [Description("Set how the indexing process should handle documents that are missing fields. When set to true, the indexing process will index documents even if they lack the fields that are supposed to be indexed.")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.IndexEmptyEntries", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool IndexEmptyEntries { get; set; }
 
-        [Description("Indicates how error indexes should behave on database startup when they are loaded. By default they are not started.")]
+        [Description("Set how faulty indexes should behave on database startup when they are loaded. By default they are not started.")]
         [DefaultValue(ErrorIndexStartupBehaviorType.Default)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.ErrorIndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -337,7 +337,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.IndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexStartupBehaviorType IndexStartupBehavior { get; set; }
 
-        [Description("Limits the number of concurrently running and processing indexes on the server. Default: null (no limit)")]
+        [Description("Set how many indexes can run concurrently on the server. Default: null (no limit).")]
         [DefaultValue(null)]
         [MinValue(1)]
         [IndexUpdateType(IndexUpdateType.None)]
@@ -359,6 +359,7 @@ namespace Raven.Server.Config.Categories
         [Description("Allow installation of NuGet prerelease packages")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.NuGetAllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Indexing.NuGetAllowPreleasePackages", ConfigurationEntryScope.ServerWideOnly)]
         public bool NuGetAllowPreleasePackages { get; set; }
         
@@ -417,7 +418,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.SkipDatabaseIdValidationOnIndexOpening", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool SkipDatabaseIdValidationOnIndexOpening { get; set; }
 
-        [Description("Time since last query after which when cleanup is executed additional items will be released (e.g. readers).")]
+        [Description("Time since last query after which a deep cleanup can be executed and additional items will be released (e.g. readers).")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Minutes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
