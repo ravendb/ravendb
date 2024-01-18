@@ -48,7 +48,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
         Debug.Assert(index.Type.IsJavaScript());
 
-        _ticksSupport = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.TimeTicksSupportInJavaScriptIndexes;
+        _ticksSupport = IndexDefinitionBaseServerSide.IndexVersion.IsTimeTicksInJavaScriptIndexesSupported(index.Definition.Version);
     }
 
     protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,

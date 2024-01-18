@@ -78,7 +78,7 @@ public class RavenDB_19625 : RavenTestBase
             
             session.Store(new Post {Id = "posts/2", Date = new DateTime(2023, 1, 2, 12, 11, 12)});
             session.SaveChanges();
-            Indexes.WaitForIndexing(store, dbName: databaseName);
+            Indexes.WaitForIndexing(store, databaseName);
             
             results = session.Query<QueryDateTime_Index.Result, QueryDateTime_Index>()
                 .Where(x => x.Date < new DateTime(2024, 1, 1))

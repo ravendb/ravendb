@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly IndexFieldOptions _allFields;
 
-        protected readonly bool _ticksSupport;
+        private readonly bool _ticksSupport;
 
         protected JintLuceneDocumentConverterBase(Index index, IndexDefinition indexDefinition, int numberOfBaseFields = 1, string keyFieldName = null,
             bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             Debug.Assert(index.Type.IsJavaScript());
 
-            _ticksSupport = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.TimeTicksSupportInJavaScriptIndexes;
+            _ticksSupport = IndexDefinitionBaseServerSide.IndexVersion.IsTimeTicksInJavaScriptIndexesSupported(index.Definition.Version);
         }
         
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
