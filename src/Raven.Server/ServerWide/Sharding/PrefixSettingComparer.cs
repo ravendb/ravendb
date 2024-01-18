@@ -14,15 +14,8 @@ namespace Raven.Server.ServerWide.Sharding
 
         public int Compare(PrefixedShardingSetting x, PrefixedShardingSetting y)
         {
-            // compare prefixes in a descending manner 
-            if (x == null || y == null)
-            {
-                if (x == y)
-                    return 0;
-                return x == null ? -1 : 1;
-            }
-
-            return string.Compare(y.Prefix, x.Prefix, StringComparison.OrdinalIgnoreCase);
+            // compare prefixes in descending order 
+            return string.Compare(y?.Prefix, x?.Prefix, StringComparison.OrdinalIgnoreCase);
         }
     }
 

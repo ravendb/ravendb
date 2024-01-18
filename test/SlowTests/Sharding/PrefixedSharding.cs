@@ -776,8 +776,7 @@ public class PrefixedSharding : ClusterTestBase
         var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
         var bucketRanges = shardingConfiguration.BucketRanges;
         Assert.Equal(7, bucketRanges.Count);
-
-
+        
         Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.BucketRanges[3].BucketRangeStart);
         Assert.Equal(ShardHelper.NumberOfBuckets * 1.5, shardingConfiguration.BucketRanges[4].BucketRangeStart);
         Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[5].BucketRangeStart);
@@ -807,41 +806,16 @@ public class PrefixedSharding : ClusterTestBase
             Assert.Equal(oldRange.ShardNumber, newRange.ShardNumber);
         }
 
-        // attempt to remove shard #1 from 'eu/' setting should throw
-        // we cannot remove shard #1 because we have docs starting with 'eu/' on it
+        // attempt to remove shard #1 from 'us/' setting should throw
+        // we cannot remove shard #1 because there are bucket ranges mapped to shard #1 for this prefix
 
-        await Assert.ThrowsAsync<RavenException>(async () =>
+        await Assert.ThrowsAsync<RavenException>(async () => 
             await store.Maintenance.SendAsync(
-                new UpdatePrefixedShardingSettingOperation(new PrefixedShardingSetting
-                {
-                    Prefix = "eu/", 
-                    Shards = [0, 2]
-                })));
-
-        // can delete shard #1 from 'us/' prefix setting (no docs starting with)
-        await store.Maintenance.SendAsync(
             new UpdatePrefixedShardingSettingOperation(new PrefixedShardingSetting
             {
-                Prefix = "us/",
-                Shards = [2]
-            }));
+                Prefix = "us/", Shards = [2]
+            })));
 
-        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
-        Assert.Equal(2, shardingConfiguration.Prefixed.Count);
-
-        // shard #1 should be removed from 'us/' prefix setting and shouldn't get any bucket ranges for 'us/' prefix
-        // shard #2 should get the entire 'us/' prefixed bucket range (1M - 2M)
-        Assert.Equal("us/", shardingConfiguration.Prefixed[0].Prefix);
-        Assert.Equal(1, shardingConfiguration.Prefixed[0].Shards.Count);
-        Assert.Equal(2, shardingConfiguration.Prefixed[0].Shards[0]);
-
-        Assert.Equal(6, shardingConfiguration.BucketRanges.Count);
-
-        Assert.Equal(ShardHelper.NumberOfBuckets * 1, shardingConfiguration.BucketRanges[3].BucketRangeStart);
-        Assert.Equal(2, shardingConfiguration.BucketRanges[3].ShardNumber);
-
-        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[4].BucketRangeStart);
-        Assert.Equal(ShardHelper.NumberOfBuckets * 2.5, shardingConfiguration.BucketRanges[5].BucketRangeStart);
     }
 
     [RavenFact(RavenTestCategory.Sharding)]
@@ -1118,14 +1092,14 @@ public class PrefixedSharding : ClusterTestBase
         await store.Maintenance.SendAsync(new UpdatePrefixedShardingSettingOperation(new PrefixedShardingSetting
         {
             Prefix = "users/",
-            Shards = [1, 2]
+            Shards = [0, 1, 2]
         }));
 
         var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
 
         Assert.Equal(2, shardingConfiguration.Prefixed.Count);
         Assert.Equal("Users/", shardingConfiguration.Prefixed[0].Prefix);
-        Assert.Equal(new[] { 1, 2 }, shardingConfiguration.Prefixed[0].Shards);
+        Assert.Equal(new[] { 0, 1, 2 }, shardingConfiguration.Prefixed[0].Shards);
 
         await store.Maintenance.SendAsync(new DeletePrefixedShardingSettingOperation("COMPANIES/"));
 
