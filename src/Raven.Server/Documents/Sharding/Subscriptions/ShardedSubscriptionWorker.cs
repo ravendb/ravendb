@@ -114,7 +114,8 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                     return (ShouldTryToReconnect: false, NodeRedirectTo: null);
                 }
 
-                assertLastConnectionFailure.Invoke();
+                // assertLastConnectionFailure will be null in case of AggregateException
+                assertLastConnectionFailure?.Invoke();
 
                 var r = base.CheckIfShouldReconnectWorker(ex, assertLastConnectionFailure: null, onUnexpectedSubscriptionError, throwOnRedirectNodeNotFound: false);
 
