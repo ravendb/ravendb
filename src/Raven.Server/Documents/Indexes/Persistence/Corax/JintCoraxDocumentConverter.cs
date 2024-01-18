@@ -38,13 +38,17 @@ public sealed class CoraxJintDocumentConverter : CoraxJintDocumentConverterBase
 public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBase
 {
     private readonly IndexFieldOptions _allFields;
-
+    private readonly bool _ticksSupport;
 
     protected CoraxJintDocumentConverterBase(Index index, IndexDefinition definition, bool storeValue, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null, bool canContainSourceDocumentId = false) :
         base(index, storeValue, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, numberOfBaseFields, keyFieldName, storeValueFieldName, canContainSourceDocumentId, fields) //todo
     {
         definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
+
+        Debug.Assert(index.Type.IsJavaScript());
+
+        _ticksSupport = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.TimeTicksSupportInJavaScriptIndexes;
     }
 
     protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
@@ -123,8 +127,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
         void ProcessAsJson(JsValue actualValue, IndexField field, ObjectInstance documentToProcess, out bool shouldSkip)
         {
-            var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                context: indexContext);
+            var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, canTryJsStringToDateConversion: _ticksSupport,
+                engine: documentToProcess.Engine, context: indexContext);
             InsertRegularField(field, value, indexContext, builder, sourceDocument, out shouldSkip);
         }
 
@@ -177,8 +181,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     }
                     else
                     {
-                        value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                            context: indexContext);
+                        value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true,
+                            canTryJsStringToDateConversion: _ticksSupport, engine: documentToProcess.Engine, context: indexContext);
 
                         InsertRegularField(field, value, indexContext, builder, sourceDocument, out shouldSkip);
 

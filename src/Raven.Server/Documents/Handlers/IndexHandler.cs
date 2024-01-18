@@ -20,6 +20,8 @@ using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -360,5 +362,61 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private static readonly int DefaultInputSizeForTestingJavaScriptIndex = 10;
+
+        [RavenAction("/databases/*/indexes/debug/metadata", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task Metadata()
+        {
+            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context.Documents, ServerStore, ResponseBodyStream()))
+            {
+                var indexMetadata = GetIndexesToReportOn()
+                    .OrderBy(x => x.Name)
+                    .Select(x =>
+                    {
+                        var timeFields = x._indexStorage.ReadIndexTimeFields();
+                        var hasTimeFields = timeFields.Count > 0;
+
+                        return new DynamicJsonValue
+                        {
+                            [nameof(x.Name)] = x.Name,
+                            [nameof(x.Definition.Version)] = x.Definition.Version,
+                            [nameof(x.Type)] = x.Type,
+                            [nameof(x.Definition.State)] = x.Definition.State,
+                            [nameof(x.Definition.LockMode)] = x.Definition.LockMode,
+                            [nameof(x.SourceType)] = x.SourceType,
+                            [nameof(x.Definition.Priority)] = x.Definition.Priority,
+                            [nameof(x.SearchEngineType)] = x.SearchEngineType,
+                            [nameof(x.Definition.HasDynamicFields)] = x.Definition.HasDynamicFields,
+                            [nameof(x.Definition.HasCompareExchange)] = x.Definition.HasCompareExchange,
+                            ["HasTimeFields"] = hasTimeFields,
+                            ["TimeFields"] = timeFields
+                        };
+                    }).ToArray();
+                
+                writer.WriteStartObject();
+
+                writer.WriteArray(context.Documents, "Results", indexMetadata, 
+                    (w, c, metadata) => c.Write(w, metadata));
+
+                writer.WriteEndObject();
+            }
+        }
+
+        private IEnumerable<Index> GetIndexesToReportOn()
+        {
+            IEnumerable<Index> indexes;
+            var names = HttpContext.Request.Query["name"];
+
+            if (names.Count == 0)
+                indexes = Database.IndexStore
+                    .GetIndexes();
+            else
+            {
+                indexes = Database.IndexStore
+                    .GetIndexes()
+                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+            }
+            return indexes;
+        }
     }
 }

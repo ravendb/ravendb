@@ -12,13 +12,13 @@ namespace Raven.Server.Web.System
 {
     public sealed class EmptyMessageHandler : ServerRequestHandler
     {
-        [RavenAction("/test/empty-message", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/admin/test/empty-message", "GET", AuthorizationStatus.Operator)]
         public Task Get()
         {
             return Task.CompletedTask;
         }
 
-        [RavenAction("/test/delay", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/admin/test/delay", "GET", AuthorizationStatus.Operator)]
         public Task Delay()
         {
             var delay = GetIntValueQueryString("value") ?? 0;
@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
             return Task.Delay(delay);
         }
 
-        [RavenAction("/test/sized-message", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/admin/test/sized-message", "GET", AuthorizationStatus.Operator)]
         public async Task GetBuffer()
         {
             var buffer = LazyBuffer.Value;
