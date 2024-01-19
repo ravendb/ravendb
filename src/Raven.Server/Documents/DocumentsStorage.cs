@@ -1086,6 +1086,19 @@ namespace Raven.Server.Documents
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Document Get(DocumentsOperationContext context, ReadOnlyMemory<char> id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+        {
+            if (id.IsEmpty)
+                throw new ArgumentException("Argument is null", nameof(id));
+            if (context.Transaction == null)
+                throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
+
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            {
+                return Get(context, lowerId, fields, throwOnConflict);
+            }
+        }
+
         public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             return Get<Document>(context, id, fields, throwOnConflict);
