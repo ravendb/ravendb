@@ -127,7 +127,7 @@ public class RavenDB_21879 : RavenTestBase
         }
     }
 
-    public class Dto
+    private class Dto
     {
         public string Id { get; set; }
         public string Name { get; set; }
