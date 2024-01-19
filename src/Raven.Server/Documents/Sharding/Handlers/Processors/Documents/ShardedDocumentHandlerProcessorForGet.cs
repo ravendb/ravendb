@@ -36,8 +36,17 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
 
     protected override CancellationToken CancellationToken => _operationCancelToken.Token;
 
-    protected override async ValueTask<DocumentsByIdResult<BlittableJsonReaderObject>> GetDocumentsByIdImplAsync(TransactionOperationContext context, StringValues ids,
-        StringValues includePaths, RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, bool clusterWideTx, string etag)
+    protected override async ValueTask<DocumentsByIdResult<BlittableJsonReaderObject>> GetDocumentsByIdImplAsync(
+        TransactionOperationContext context,
+        List<ReadOnlyMemory<char>> ids,
+        StringValues includePaths,
+        RevisionIncludeField revisions,
+        StringValues counters,
+        HashSet<AbstractTimeSeriesRange> timeSeries,
+        StringValues compareExchangeValues,
+        bool metadataOnly,
+        bool clusterWideTx,
+        string etag)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-18754 make sure we maintain the order of returned results");
 
@@ -46,7 +55,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
         var op = new FetchDocumentsFromShardsOperation(context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext, idsByShard, includePaths, revisions, counters, timeSeries, compareExchangeValuesAsArray, etag, metadataOnly, clusterWideTx);
         var shardedReadResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op, CancellationToken);
 
-        if (ids.Count == 1 && shardedReadResult.Result?.Documents.Count == 0 
+        if (ids.Count == 1 && shardedReadResult.Result?.Documents.Count == 0
                            && (shardedReadResult.Result?.CompareExchangeValueIncludes == null || shardedReadResult.Result?.CompareExchangeValueIncludes.Count == 0))
         {
             return new DocumentsByIdResult<BlittableJsonReaderObject>

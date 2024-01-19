@@ -43,7 +43,16 @@ namespace Raven.Server.Documents
         {
             return GetSliceFromId(context.Allocator, id.AsSpan(), out idSlice, separator);
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(
+            TransactionOperationContext<TTransaction> context, ReadOnlyMemory<char> id, out Slice idSlice,
+            byte? separator = null)
+            where TTransaction : RavenTransaction
+        {
+            return GetSliceFromId(context.Allocator, id.Span, out idSlice, separator);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(
             TransactionOperationContext<TTransaction> context, LazyStringValue id, out Slice idSlice,
