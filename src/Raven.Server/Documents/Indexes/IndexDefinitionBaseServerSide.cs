@@ -166,15 +166,28 @@ namespace Raven.Server.Documents.Indexes
             
             public const long GuaranteedOrderOfGroupByFieldsInMapReduceIndexes = 54_002; // RavenDB-17312 - version 54_001 had an issue so we had to fix it and bump version again
 
-            public const long Base60Version = 60_000; 
+            private const long TimeTicksSupportInJavaScriptIndexes_54 = 54_003; // RavenDB-19625
 
-            
+            public const long Base60Version = 60_000;
+
             public const long ProperlyParseDictionaryToStoredField = 60_000; // RavenDB-19560
-            
+
+            public const long TimeTicksSupportInJavaScriptIndexes_60 = 60_001; // RavenDB-19625
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = ProperlyParseDictionaryToStoredField;
+            public const long CurrentVersion = TimeTicksSupportInJavaScriptIndexes_60;
+
+            public static bool IsTimeTicksInJavaScriptIndexesSupported(long indexVersion)
+            {
+                if (indexVersion >= Base60Version)
+                {
+                    return indexVersion >= TimeTicksSupportInJavaScriptIndexes_60;
+                }
+
+                return indexVersion >= TimeTicksSupportInJavaScriptIndexes_54;
+            }
         }
     }
 
