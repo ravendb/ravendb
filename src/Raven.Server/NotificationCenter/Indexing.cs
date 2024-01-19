@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
@@ -27,6 +28,9 @@ namespace Raven.Server.NotificationCenter
         private MismatchedReferencesLoadWarning _mismatchedReferencesLoadWarning;
 
         private readonly ConcurrentQueue<(string indexName, string fieldName)> _warningComplexFieldAutoIndexing = new();
+        
+        private readonly HashSet<string> _cpuExhaustionWarningIndexNames = new ();
+        private bool _isCpuExhaustionWarningAdded = false;
 
         private Timer _indexingTimer;
         private readonly Logger _logger;
@@ -90,6 +94,22 @@ namespace Raven.Server.NotificationCenter
             EnsureTimer();
         }
 
+        public void AddIndexNameToCpuCreditsExhaustionWarning(string indexName)
+        {
+            _cpuExhaustionWarningIndexNames.Add(indexName);
+        }
+
+        public void RemoveIndexNameFromCpuCreditsExhaustionWarning(string indexName)
+        {
+            _cpuExhaustionWarningIndexNames.Remove(indexName);
+        }
+        
+        public void ProcessCpuCreditsExhaustion()
+        {
+            if (_cpuExhaustionWarningIndexNames.Count > 0)
+                EnsureTimer();
+        }
+
         private bool CanAdd(out DateTime now)
         {
             now = SystemTime.UtcNow;
@@ -121,7 +141,22 @@ namespace Raven.Server.NotificationCenter
         {
             try
             {
-                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty && _mismatchedReferencesLoadWarning == null && _warningComplexFieldAutoIndexing.IsEmpty)
+                if (_cpuExhaustionWarningIndexNames.Count == 0)
+                {
+                    if (_isCpuExhaustionWarningAdded)
+                    {
+                        _notificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Throttling_CpuCreditsBalance, Source));
+                        _isCpuExhaustionWarningAdded = false;
+                    }
+                }
+                else
+                {
+                    var cpuCreditsExhaustionAlertMessage = new CpuCreditsExhaustionWarning(_cpuExhaustionWarningIndexNames);
+                    _notificationCenter.Add(GetCpuCreditsExhaustionAlert(cpuCreditsExhaustionAlertMessage));
+                    _isCpuExhaustionWarningAdded = true;
+                }
+                
+                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty && _mismatchedReferencesLoadWarning == null && _warningComplexFieldAutoIndexing.IsEmpty && _cpuExhaustionWarningIndexNames.Count == 0)
                     return;
 
                 PerformanceHint indexOutputPerDocumentHint = null;
@@ -212,6 +247,13 @@ namespace Raven.Server.NotificationCenter
         private AlertRaised GetComplexFieldAlert(ComplexFieldsWarning complexFieldsWarning)
         {
             return AlertRaised.Create(_notificationCenter.Database, $"Complex field in Corax auto index", $"We have detected a complex field in an auto index. To avoid higher resources usage when processing JSON objects, the values of these fields will be replaced with 'JSON_VALUE'. Please consider querying on individual fields of that object or using a static index.", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
+        }
+        
+        private AlertRaised GetCpuCreditsExhaustionAlert(CpuCreditsExhaustionWarning cpuCreditsExhaustionWarning)
+        {
+            return AlertRaised.Create(_notificationCenter.Database, "Indexing stopped because of CPU credits exhaustion",
+                "Indexing has been paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
+                AlertType.Throttling_CpuCreditsBalance, NotificationSeverity.Warning, Source, cpuCreditsExhaustionWarning);
         }
 
         public void Dispose()
