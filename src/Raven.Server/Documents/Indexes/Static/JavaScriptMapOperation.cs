@@ -242,7 +242,6 @@ namespace Raven.Server.Documents.Indexes.Static
             var functionObject = new ScriptFunction(
                 engine,
                 functionExp,
-                engine.Advanced.CreateDeclarativeEnvironment(),
                 function.Strict
             );
 

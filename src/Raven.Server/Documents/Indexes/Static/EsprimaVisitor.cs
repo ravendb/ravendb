@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Esprima.Ast;
-using Jint;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -342,7 +341,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 arrowFunctionExpression.Params,
                 statement,
                 generator: false,
-                StrictModeScope.IsStrictModeCode,
+                strict: true,
                 async: false);
             
             VisitFunctionExpression(func);
