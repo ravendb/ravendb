@@ -2,7 +2,6 @@
 using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
-using Jint.Runtime.References;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Client;
 
