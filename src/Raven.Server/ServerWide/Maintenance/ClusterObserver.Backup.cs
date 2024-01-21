@@ -161,20 +161,20 @@ internal partial class ClusterObserver
         var mentorNode = configuration.GetMentorNode();
         if (mentorNode != null)
         {
-            if (topology.Members.Contains(mentorNode))
-            {
-                if (string.Equals(mentorNode, lastResponsibleNode))
-                    return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
-
-                return new MentorNode(mentorNode, configuration, _lastChosenNodeReasonPerTask);
-            }
-
             if (topology.AllNodes.Contains(mentorNode) && configuration.IsPinnedToMentorNode())
             {
                 if (string.Equals(mentorNode, lastResponsibleNode))
                     return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
 
                 return new PinnedMentorNode(mentorNode, configuration, _lastChosenNodeReasonPerTask);
+            }
+
+            if (topology.Members.Contains(mentorNode))
+            {
+                if (string.Equals(mentorNode, lastResponsibleNode))
+                    return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
+
+                return new MentorNode(mentorNode, configuration, _lastChosenNodeReasonPerTask);
             }
         }
 
