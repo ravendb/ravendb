@@ -1017,7 +1017,7 @@ namespace Raven.Server.ServerWide
                     var clusterTransactionResult = new ClusterTransactionResult();
                     if (clusterTransaction.HasDocumentsInTransaction)
                     {
-                        clusterTransactionResult.GeneratedResult = clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
+                        clusterTransactionResult.GeneratedResult = clusterTransaction.SaveCommandsBatch(context, rawRecord, index);
                         notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
                     }
                     else

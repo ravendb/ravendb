@@ -72,7 +72,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         await using (token.Register(() => tcs.TrySetCanceled()))
         {
             (index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-            array = await GetClusterTransactionDatabaseCommandsResults(result, parsedCommands, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
+            array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
         }
 
         foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
@@ -88,7 +88,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         return (index, array);
     }
 
-    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, ArraySegment<BatchRequestParser.CommandData> parsedCommands, long databaseCommandsCount, long index, ClusterTransactionOptions options, Task onDatabaseCompletionTask, CancellationToken token)
+    private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, long databaseCommandsCount, long index, ClusterTransactionOptions options, Task<HashSet<string>> onDatabaseCompletionTask, CancellationToken token)
     {
         if (result is List<ClusterTransactionErrorInfo> errors)
             ThrowClusterTransactionConcurrencyException(errors);
@@ -100,7 +100,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         if (result is ClusterTransactionResult clusterTxResult)
         {
-            await WaitForDatabaseCompletion(onDatabaseCompletionTask, index, options, parsedCommands, token);
+            await WaitForDatabaseCompletion(onDatabaseCompletionTask, index, options, token);
             return clusterTxResult.GeneratedResult;
         }
 
@@ -108,7 +108,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
     }
 
-    public abstract Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, long index, ClusterTransactionOptions options, ArraySegment<BatchRequestParser.CommandData> parsedCommands, CancellationToken token);
+    public abstract Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token);
 
     private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionErrorInfo> errors)
     {

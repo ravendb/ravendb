@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Config.Categories;
@@ -24,7 +25,7 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
 
     protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.DatabaseContext.Configuration.Cluster;
 
-    public override Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, long index, ClusterTransactionOptions options, ArraySegment<BatchRequestParser.CommandData> parsedCommands, CancellationToken token)
+    public override Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
     {
         return Task.CompletedTask;
     }
