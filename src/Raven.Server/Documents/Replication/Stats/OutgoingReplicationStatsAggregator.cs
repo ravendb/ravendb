@@ -73,12 +73,15 @@ namespace Raven.Server.Documents.Replication.Stats
                     AttachmentOutputSizeInBytes = Stats.AttachmentOutputSize.GetValue(SizeUnit.Bytes),
                     DocumentOutputCount = Stats.DocumentOutputCount,
                     DocumentOutputSizeInBytes = Stats.DocumentOutputSize.GetValue(SizeUnit.Bytes),
+                    RevisionOutputCount = Stats.RevisionOutputCount,
+                    RevisionOutputSizeInBytes = Stats.RevisionOutputSize.GetValue(SizeUnit.Bytes),
                     AttachmentTombstoneOutputCount = Stats.AttachmentTombstoneOutputCount,
                     DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount,
                     CounterOutputCount = Stats.CounterOutputCount,
                     CounterOutputSizeInBytes = Stats.CounterOutputSize.GetValue(SizeUnit.Bytes),
                     TimeSeriesSegmentsOutputCount = Stats.TimeSeriesOutputCount,
-                    TimeSeriesSegmentsSizeInBytes =  Stats.TimeSeriesOutputSize.GetValue(SizeUnit.Bytes)
+                    TimeSeriesSegmentsSizeInBytes =  Stats.TimeSeriesOutputSize.GetValue(SizeUnit.Bytes),
+                    TimeSeriesDeletedRangeOutputCount = Stats.TimeSeriesDeletedRangeOutputCount
                 },
                 Errors = Stats.Errors
             };
@@ -142,6 +145,12 @@ namespace Raven.Server.Documents.Replication.Stats
             _stats.DocumentTombstoneOutputCount++;
         }
 
+        public void RecordRevisionOutput(long sizeInBytes)
+        {
+            _stats.RevisionOutputCount++;
+            _stats.RevisionOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
+        }
+
         public void RecordTimeSeriesOutput(long sizeInBytes)
         {
             _stats.TimeSeriesOutputCount++;
@@ -151,6 +160,11 @@ namespace Raven.Server.Documents.Replication.Stats
         public void RecordCountersOutput(int numberOfCounters)
         {
             _stats.CounterOutputCount += numberOfCounters;
+        }
+
+        public void RecordTimeSeriesDeletedRangeOutput()
+        {
+            _stats.TimeSeriesDeletedRangeOutputCount++;
         }
 
         public void RecordLastEtag(long etag)
@@ -200,10 +214,13 @@ namespace Raven.Server.Documents.Replication.Stats
         public int AttachmentTombstoneOutputCount;
         public int RevisionTombstoneOutputCount;
         public int DocumentTombstoneOutputCount;
-        public int CounterTombstoneOutputCount;
+        public int TimeSeriesDeletedRangeOutputCount;
 
         public int DocumentOutputCount;
         public Size DocumentOutputSize;
+
+        public int RevisionOutputCount;
+        public Size RevisionOutputSize;
 
         public int TimeSeriesOutputCount;
         public Size TimeSeriesOutputSize;

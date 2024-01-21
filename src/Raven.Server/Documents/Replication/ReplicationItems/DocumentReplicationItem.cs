@@ -130,8 +130,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                         tempBufferPos += sizeToCopy;
                         docReadPos += sizeToCopy;
                     }
-
-                    stats.RecordDocumentOutput(Data.Size);
+                    if (Flags.Contain(DocumentFlags.Revision))
+                        stats.RecordRevisionOutput(Data.Size);
+                    else
+                        stats.RecordDocumentOutput(Data.Size);
                 }
                 else
                 {

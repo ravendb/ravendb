@@ -35,11 +35,16 @@ namespace Raven.Client.Documents.Replication
             public int DocumentOutputCount { get; set; }
             public long DocumentOutputSizeInBytes { get; set; }
 
+            public int RevisionOutputCount { get; set; }
+            public long RevisionOutputSizeInBytes { get; set; }
+
             public int CounterOutputCount { get; set; }
             public long CounterOutputSizeInBytes { get; set; }
 
             public int TimeSeriesSegmentsOutputCount { get; set; }
             public long TimeSeriesSegmentsSizeInBytes { get; set; }
+
+            public int TimeSeriesDeletedRangeOutputCount { get; set; }
         }
 
         public sealed class StorageStats

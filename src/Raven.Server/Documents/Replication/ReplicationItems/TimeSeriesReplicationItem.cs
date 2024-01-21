@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 tempBufferPos += Collection.Size;
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
+                stats.RecordTimeSeriesDeletedRangeOutput();
             }
         }
 
