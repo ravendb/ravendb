@@ -15,6 +15,8 @@
             public const string Network = "Network/Read";
             public const string DocumentRead = "Network/DocumentRead";
             public const string AttachmentRead = "Network/AttachmentRead";
+            public const string TimeSeriesRead = "Network/TimeSeriesRead";
+            public const string TimeSeriesDeletedRangeRead = "Network/TimeSeriesDeletedRangeRead";
             public const string TombstoneRead = "Network/TombstoneRead";
 
             public const string Storage = "Storage/Write";

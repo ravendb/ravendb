@@ -79,16 +79,20 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
+            using (stats.For(ReplicationOperation.Incoming.TimeSeriesDeletedRangeRead))
+            {
+                stats.RecordTimeSeriesDeletedRangeRead();
 
-            var keySize = *(int*)Reader.ReadExactly(sizeof(int));
-            var key = Reader.ReadExactly(keySize);
-            ToDispose(Slice.From(allocator, key, keySize, ByteStringType.Immutable, out Key));
+                var keySize = *(int*)Reader.ReadExactly(sizeof(int));
+                var key = Reader.ReadExactly(keySize);
+                ToDispose(Slice.From(allocator, key, keySize, ByteStringType.Immutable, out Key));
 
-            From = new DateTime(*(long*)Reader.ReadExactly(sizeof(long)));
-            To = new DateTime(*(long*)Reader.ReadExactly(sizeof(long)));
+                From = new DateTime(*(long*)Reader.ReadExactly(sizeof(long)));
+                To = new DateTime(*(long*)Reader.ReadExactly(sizeof(long)));
 
-            SetLazyStringValueFromString(context, out Collection);
-            Debug.Assert(Collection != null);
+                SetLazyStringValueFromString(context, out Collection);
+                Debug.Assert(Collection != null);
+            }
         }
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
@@ -184,21 +188,25 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
-            // TODO: add stats
-            var keySize = *(int*)Reader.ReadExactly(sizeof(int));
-            var key = Reader.ReadExactly(keySize);
-            ToDispose(Slice.From(allocator, key, keySize, ByteStringType.Immutable, out Key));
+            using (stats.For(ReplicationOperation.Incoming.TimeSeriesRead))
+            {
+                stats.RecordTimeSeriesRead();
 
-            var segmentSize = *(int*)Reader.ReadExactly(sizeof(int));
-            var mem = Reader.AllocateMemory(segmentSize);
-            Memory.Copy(mem, Reader.ReadExactly(segmentSize), segmentSize);
-            Segment = new TimeSeriesValuesSegment(mem, segmentSize);
+                var keySize = *(int*)Reader.ReadExactly(sizeof(int));
+                var key = Reader.ReadExactly(keySize);
+                ToDispose(Slice.From(allocator, key, keySize, ByteStringType.Immutable, out Key));
 
-            SetLazyStringValueFromString(context, out Collection);
-            Debug.Assert(Collection != null);
+                var segmentSize = *(int*)Reader.ReadExactly(sizeof(int));
+                var mem = Reader.AllocateMemory(segmentSize);
+                Memory.Copy(mem, Reader.ReadExactly(segmentSize), segmentSize);
+                Segment = new TimeSeriesValuesSegment(mem, segmentSize);
 
-            SetLazyStringValueFromString(context, out Name);
-            Debug.Assert(Name != null);
+                SetLazyStringValueFromString(context, out Collection);
+                Debug.Assert(Collection != null);
+
+                SetLazyStringValueFromString(context, out Name);
+                Debug.Assert(Name != null);
+            }
         }
 
 

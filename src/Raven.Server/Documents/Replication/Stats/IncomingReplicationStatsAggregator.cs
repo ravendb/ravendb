@@ -64,9 +64,13 @@ namespace Raven.Server.Documents.Replication.Stats
                     InputCount = Stats.InputCount,
                     AttachmentReadCount = Stats.AttachmentReadCount,
                     DocumentReadCount = Stats.DocumentReadCount,
+                    RevisionReadCount = Stats.RevisionReadCount,
                     DocumentTombstoneReadCount = Stats.DocumentTombstoneReadCount,
                     AttachmentTombstoneReadCount = Stats.AttachmentTombstoneReadCount,
-                    CounterReadCount = Stats.CounterReadCount
+                    CounterReadCount = Stats.CounterReadCount,
+                    RevisionTombstoneReadCount = Stats.RevisionTombstoneReadCount,
+                    TimeSeriesDeletedRangeReadCount = Stats.TimeSeriesDeletedRangeReadCount,
+                    TimeSeriesReadCount = Stats.TimeSeriesReadCount
                 },
                 Errors = Stats.Errors
             };
@@ -125,14 +129,29 @@ namespace Raven.Server.Documents.Replication.Stats
             _stats.RevisionTombstoneReadCount++;
         }
 
+        public void RecordRevisionRead()
+        {
+            _stats.RevisionReadCount++;
+        }
+
         public void RecordAttachmentRead()
         {
             _stats.AttachmentReadCount++;
         }
-        
+
         public void RecordCountersRead(int numberOfCounters)
         {
             _stats.CounterReadCount += numberOfCounters;
+        }
+
+        public void RecordTimeSeriesRead()
+        {
+            _stats.TimeSeriesReadCount++;
+        }
+
+        public void RecordTimeSeriesDeletedRangeRead()
+        {
+            _stats.TimeSeriesDeletedRangeReadCount++;
         }
 
         public void RecordInputAttempt()
@@ -162,6 +181,9 @@ namespace Raven.Server.Documents.Replication.Stats
         public int AttachmentTombstoneReadCount;
         public int AttachmentReadCount;
         public int RevisionTombstoneReadCount;
+        public int RevisionReadCount;
         public int CounterReadCount;
+        public int TimeSeriesReadCount;
+        public int TimeSeriesDeletedRangeReadCount;
     }
 }

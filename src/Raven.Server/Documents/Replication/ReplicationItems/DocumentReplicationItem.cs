@@ -167,7 +167,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             if (Type == ReplicationItemType.Document)
             {
                 scope = stats.For(ReplicationOperation.Incoming.DocumentRead, start: false);
-                stats.RecordDocumentRead();
             }
             else
             {
@@ -186,6 +185,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var documentSize = *(int*)Reader.ReadExactly(sizeof(int));
                 if (documentSize != -1) //if -1, then this is a tombstone
                 {
+                    if (Flags.Contain(DocumentFlags.Revision))
+                        stats.RecordRevisionRead();
+                    else
+                        stats.RecordDocumentRead();
+
                     var mem = Reader.AllocateMemory(documentSize);
                     Reader.ReadExactly(mem, documentSize);
 
