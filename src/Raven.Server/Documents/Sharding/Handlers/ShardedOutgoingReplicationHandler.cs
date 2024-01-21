@@ -107,6 +107,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             WriteToServer(headerJson);
 
             stats.RecordLastEtag(_lastEtag);
+            stats.RecordLastAcceptedChangeVector(LastAcceptedChangeVector);
 
             foreach (var item in batch.Items)
             {
@@ -127,8 +128,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         var attachment = kvp.Value;
                         try
                         {
-                            attachment.WriteStream(_stream, _tempBuffer);
-                            stats.RecordAttachmentOutput(attachment.Stream.Length);
+                            attachment.WriteStream(_stream, _tempBuffer, stats);
                         }
                         catch
                         {

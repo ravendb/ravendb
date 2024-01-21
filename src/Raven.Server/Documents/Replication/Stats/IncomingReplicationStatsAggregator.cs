@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Utils.Stats;
+using Sparrow;
 
 namespace Raven.Server.Documents.Replication.Stats
 {
@@ -59,18 +60,31 @@ namespace Raven.Server.Documents.Replication.Stats
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 Details = Scope.ToReplicationPerformanceOperation("Replication"),
                 ReceivedLastEtag = Stats.LastEtag,
+                DatabaseChangeVector = Stats.DatabaseChangeVector,
+                BatchSizeInBytes = completed ? Stats.ReceivedLastBatchSize.GetValue(SizeUnit.Bytes) : null,
                 Network = new IncomingReplicationPerformanceStats.NetworkStats
                 {
                     InputCount = Stats.InputCount,
-                    AttachmentReadCount = Stats.AttachmentReadCount,
                     DocumentReadCount = Stats.DocumentReadCount,
+                    DocumentReadSizeInBytes = Stats.DocumentReadSize.GetValue(SizeUnit.Bytes),
+                    AttachmentReadCount = Stats.AttachmentReadCount,
+                    AttachmentReadSizeInBytes = Stats.AttachmentReadSize.GetValue(SizeUnit.Bytes),
+                    AttachmentStreamReadCount = Stats.AttachmentStreamReadCount,
+                    AttachmentStreamReadSizeInBytes = Stats.AttachmentStreamReadSize.GetValue(SizeUnit.Bytes),
                     RevisionReadCount = Stats.RevisionReadCount,
+                    RevisionReadSizeInBytes = Stats.RevisionReadSize.GetValue(SizeUnit.Bytes),
                     DocumentTombstoneReadCount = Stats.DocumentTombstoneReadCount,
+                    DocumentTombstoneReadSizeInBytes = Stats.DocumentTombstoneReadSize.GetValue(SizeUnit.Bytes),
                     AttachmentTombstoneReadCount = Stats.AttachmentTombstoneReadCount,
+                    AttachmentTombstoneReadSizeInBytes = Stats.AttachmentTombstoneReadSize.GetValue(SizeUnit.Bytes),
                     CounterReadCount = Stats.CounterReadCount,
+                    CounterReadSizeInBytes = Stats.CounterReadSize.GetValue(SizeUnit.Bytes),
                     RevisionTombstoneReadCount = Stats.RevisionTombstoneReadCount,
+                    RevisionTombstoneReadSizeInBytes = Stats.RevisionTombstoneReadSize.GetValue(SizeUnit.Bytes),
+                    TimeSeriesReadCount = Stats.TimeSeriesReadCount,
+                    TimeSeriesReadSizeInBytes = Stats.TimeSeriesReadSize.GetValue(SizeUnit.Bytes),
                     TimeSeriesDeletedRangeReadCount = Stats.TimeSeriesDeletedRangeReadCount,
-                    TimeSeriesReadCount = Stats.TimeSeriesReadCount
+                    TimeSeriesDeletedRangeReadSizeInBytes = Stats.TimeSeriesDeletedRangeReadSize.GetValue(SizeUnit.Bytes)
                 },
                 Errors = Stats.Errors
             };
@@ -109,49 +123,74 @@ namespace Raven.Server.Documents.Replication.Stats
             return operation;
         }
 
-        public void RecordDocumentRead()
+        public void RecordDocumentRead(long sizeInBytes)
         {
             _stats.DocumentReadCount++;
+            _stats.DocumentReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordDocumentTombstoneRead()
+        public void RecordDocumentTombstoneRead(long sizeInBytes)
         {
             _stats.DocumentTombstoneReadCount++;
+            _stats.DocumentTombstoneReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordAttachmentTombstoneRead()
+        public void RecordAttachmentTombstoneRead(long sizeInBytes)
         {
             _stats.AttachmentTombstoneReadCount++;
+            _stats.AttachmentTombstoneReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordRevisionTombstoneRead()
+        public void RecordRevisionTombstoneRead(long sizeInBytes)
         {
             _stats.RevisionTombstoneReadCount++;
+            _stats.RevisionTombstoneReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordRevisionRead()
+        public void RecordRevisionRead(long sizeInBytes)
         {
             _stats.RevisionReadCount++;
+            _stats.RevisionReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordAttachmentRead()
+        public void RecordAttachmentRead(long sizeInBytes)
         {
             _stats.AttachmentReadCount++;
+            _stats.AttachmentReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordCountersRead(int numberOfCounters)
+        public void RecordAttachmentStreamRead(long sizeInBytes)
+        {
+            _stats.AttachmentStreamReadCount++;
+            _stats.AttachmentStreamReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
+        }
+
+        public void RecordCountersRead(int numberOfCounters, long sizeInBytes)
         {
             _stats.CounterReadCount += numberOfCounters;
+            _stats.CounterReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordTimeSeriesRead()
+        public void RecordTimeSeriesRead(long sizeInBytes)
         {
             _stats.TimeSeriesReadCount++;
+            _stats.TimeSeriesReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordTimeSeriesDeletedRangeRead()
+        public void RecordTimeSeriesDeletedRangeRead(long sizeInBytes)
         {
             _stats.TimeSeriesDeletedRangeReadCount++;
+            _stats.TimeSeriesDeletedRangeReadSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.ReceivedLastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
         public void RecordInputAttempt()
@@ -162,6 +201,11 @@ namespace Raven.Server.Documents.Replication.Stats
         public void RecordLastEtag(long etag)
         {
             _stats.LastEtag = etag;
+        }
+
+        public void RecordDatabaseChangeVector(string changeVector)
+        {
+            _stats.DatabaseChangeVector = changeVector;
         }
 
         public void AddError(Exception exception)
@@ -175,15 +219,37 @@ namespace Raven.Server.Documents.Replication.Stats
         public int InputCount;
 
         public long LastEtag;
+        public string DatabaseChangeVector;
+        public Size ReceivedLastBatchSize;
 
         public int DocumentReadCount;
+        public Size DocumentReadSize;
+
         public int DocumentTombstoneReadCount;
+        public Size DocumentTombstoneReadSize;
+
         public int AttachmentTombstoneReadCount;
+        public Size AttachmentTombstoneReadSize;
+
         public int AttachmentReadCount;
+        public Size AttachmentReadSize;
+
+        public int AttachmentStreamReadCount;
+        public Size AttachmentStreamReadSize;
+
         public int RevisionTombstoneReadCount;
+        public Size RevisionTombstoneReadSize;
+
         public int RevisionReadCount;
+        public Size RevisionReadSize;
+
         public int CounterReadCount;
+        public Size CounterReadSize;
+
         public int TimeSeriesReadCount;
+        public Size TimeSeriesReadSize;
+
         public int TimeSeriesDeletedRangeReadCount;
+        public Size TimeSeriesDeletedRangeReadSize;
     }
 }

@@ -18,6 +18,17 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public BlittableJsonReaderObject Values;
 
+        public override long Size => base.Size + // common 
+
+                                     sizeof(int) + // size of doc id
+                                     Id.Size +
+
+                                     sizeof(int) + // size of doc collection
+                                     Collection.Size + // doc collection
+
+                                     sizeof(int) // size of data
+                                     + Values.Size; // data
+
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
@@ -26,21 +37,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return djv;
         }
 
-        public override long AssertChangeVectorSize()
-        {
-            return sizeof(byte) + // type
-                   sizeof(int) + // change vector size
-                   Encodings.Utf8.GetByteCount(ChangeVector) + // change vector
-                   sizeof(short) + // transaction marker
-                   sizeof(int) + // size of doc id
-                   Id.Size +
-                   sizeof(int) + // size of doc collection
-                   Collection.Size + // doc collection
-                   sizeof(int) // size of data
-                   + Values.Size; // data
-        }
-
-        public override long Size => Values?.Size ?? 0;
+        public override long AssertChangeVectorSize() => Size;
 
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
@@ -70,27 +67,29 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 stream.Write(tempBuffer, 0, tempBufferPos);
 
                 Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
-                stats.RecordCountersOutput(counters?.Count ?? 0);
+                stats.RecordCountersOutput(counters?.Count ?? 0, Size);
             }
         }
 
         public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
-            // TODO: add stats RavenDB-13470
-            SetLazyStringValueFromString(context, out Id);
-            SetLazyStringValueFromString(context, out Collection);
-            Debug.Assert(Collection != null);
+            using (stats.For(ReplicationOperation.Incoming.CounterRead))
+            {
+                SetLazyStringValueFromString(context, out Id);
+                SetLazyStringValueFromString(context, out Collection);
+                Debug.Assert(Collection != null);
 
-            var sizeOfData = *(int*)Reader.ReadExactly(sizeof(int));
+                var sizeOfData = *(int*)Reader.ReadExactly(sizeof(int));
 
-            var mem = Reader.AllocateMemory(sizeOfData);
-            Reader.ReadExactly(mem, sizeOfData);
+                var mem = Reader.AllocateMemory(sizeOfData);
+                Reader.ReadExactly(mem, sizeOfData);
 
-            Values = new BlittableJsonReaderObject(mem, sizeOfData, context);
-            Values.BlittableValidation();
+                Values = new BlittableJsonReaderObject(mem, sizeOfData, context);
+                Values.BlittableValidation();
 
-            if (Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) && counters != null)
-                stats.RecordCountersRead(counters.Count);
+                if (Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) && counters != null)
+                    stats.RecordCountersRead(counters.Count, Size);
+            }
         }
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
