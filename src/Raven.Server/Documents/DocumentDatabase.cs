@@ -698,7 +698,7 @@ namespace Raven.Server.Documents
                         if (command.Processed)
                             continue;
 
-                        OnClusterTransactionCompletion(command, mergedCommands, exception);
+                        OnClusterTransactionCompletion(command, exception);
                     }
 
                     return (0, 0);
@@ -738,7 +738,7 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
-                    OnClusterTransactionCompletion(command, mergedCommand, exception: e);
+                    OnClusterTransactionCompletion(command, e);
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
                         "Cluster transaction failed to execute",
@@ -766,7 +766,7 @@ namespace Raven.Server.Documents
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
 
-                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId);
+                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, mergedCommands.ModifiedCollections);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
@@ -784,8 +784,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
-            ClusterTransactionMergedCommand mergedCommands, Exception exception)
+        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command, Exception exception)
         {
             try
             {

@@ -48,8 +48,9 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Cluster)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ClusterTransaction_WithMultipleCommands_Should_Work_After_Commit_And_Failover(Options options, bool waitForIndexes)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
 
@@ -61,20 +62,25 @@ namespace SlowTests.Issues
 
             var user1 = new User() { Id = "Users/1-A", Name = "Alice" };
             var user2 = new User() { Id = "Users/2-A", Name = "Bob" };
-            var user3 = new User() { Id = "Users/3-A", Name = "Alice" };
+            var company3 = new Company() { Id = "Companies/3-A", Name = "Alice" };
+            var post4 = new Post() { Id = "Posts/4-A", Title = "Alice" };
 
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(user1);
-                await session.StoreAsync(user3);
+                await session.StoreAsync(company3);
+                await session.StoreAsync(post4);
                 await session.SaveChangesAsync();
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
+                if(waitForIndexes)
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
+
                 (await session.LoadAsync<User>(user1.Id)).Name = "Bob";
                 await session.StoreAsync(user2);
-                session.Delete(user3.Id);
+                session.Delete(company3.Id);
                 await session.SaveChangesAsync();
             }
 
@@ -86,7 +92,7 @@ namespace SlowTests.Issues
                 var users2onSession = await session.LoadAsync<User>(user2.Id);
                 Assert.Equal(users2onSession.Name, "Bob");
 
-                var users3onSession = await session.LoadAsync<User>(user3.Id);
+                var users3onSession = await session.LoadAsync<User>(company3.Id);
                 Assert.Null(users3onSession);
             }
         }

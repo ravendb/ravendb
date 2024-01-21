@@ -50,7 +50,6 @@ internal sealed class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHan
     {
         // no-op
         // this is passed as a parameter when we execute transaction on each shard
-        token.ThrowIfCancellationRequested();
         return ValueTask.CompletedTask;
     }
 

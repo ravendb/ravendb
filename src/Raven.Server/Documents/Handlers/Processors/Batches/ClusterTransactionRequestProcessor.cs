@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -39,66 +40,30 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
 
         protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.Database.Configuration.Cluster;
 
-        public override async Task WaitForDatabaseCompletion(Task onDatabaseCompletionTask, long index, ClusterTransactionOptions options, ArraySegment<BatchRequestParser.CommandData> parsedCommands, CancellationToken token)
+        public override async Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
         {
             var database = RequestHandler.Database;
             var lastCompleted = Interlocked.Read(ref database.LastCompletedClusterTransactionIndex);
+            HashSet<string> modifiedCollections = null;
             if (lastCompleted < index)
-                await onDatabaseCompletionTask; // already registered to the token
+                modifiedCollections = await onDatabaseCompletionTask; // already registered to the token
 
             if (options.WaitForIndexesTimeout.HasValue)
             {
                 long lastDocumentEtag, lastTombstoneEtag;
-                HashSet<string> modifiedCollections;
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
                     lastDocumentEtag = DocumentsStorage.ReadLastDocumentEtag(tx.InnerTransaction);
                     lastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
-                    modifiedCollections = GetModifiedCollections(context, database, parsedCommands);
+                    modifiedCollections ??= database.DocumentsStorage.GetCollections(context).Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
                 }
 
                 await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(database, options.WaitForIndexesTimeout.Value,
                     options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                     lastDocumentEtag, lastTombstoneEtag, modifiedCollections, token);
             }
-        }
-
-        private static HashSet<string> GetModifiedCollections(DocumentsOperationContext context, DocumentDatabase database, ArraySegment<BatchRequestParser.CommandData> parsedCommands)
-        {
-            var modifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (BatchRequestParser.CommandData cmd in parsedCommands)
-            {
-                string collectionName;
-
-                switch (cmd.Type)
-                {
-                    case CommandType.PUT:
-                        collectionName = CollectionName.GetCollectionName(cmd.Document);
-                        break;
-                    case CommandType.DELETE:
-                        using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
-                        {
-                            var local = database.DocumentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
-                            if (local.Tombstone == null)
-                                continue;
-                            collectionName = local.Tombstone.Collection.ToString();
-                        }
-
-                        break;
-                    case CommandType.CompareExchangePUT:
-                    case CommandType.CompareExchangeDELETE:
-                        continue;
-                    default:
-                        throw new InvalidOperationException(
-                            $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.DELETE} but got {cmd.Type}");
-                }
-                modifiedCollections.Add(collectionName);
-            }
-
-            return modifiedCollections;
         }
 
         protected override ClusterTransactionCommand CreateClusterTransactionCommand(

@@ -641,8 +641,7 @@ namespace Raven.Server.ServerWide.Commands
             return result;
         }
 
-        public DynamicJsonArray SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index,
-            ClusterTransactionWaiter clusterTransactionWaiter)
+        public DynamicJsonArray SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index)
         {
             var result = new DynamicJsonArray();
 
