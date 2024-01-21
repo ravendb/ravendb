@@ -14,6 +14,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public Slice Key;
         public DocumentFlags Flags;
 
+        public override long Size => base.Size + // common 
+                                     sizeof(long) + // Last modified ticks
+                                     sizeof(int) + // size of key
+                                     Key.Size;
+
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
@@ -21,19 +26,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return djv;
         }
 
-        public override long AssertChangeVectorSize()
-        {
-            return sizeof(byte) + // type
-                   sizeof(int) + // # of change vectors
-                   Encodings.Utf8.GetByteCount(ChangeVector) +
-                   sizeof(short) + // transaction marker
-                   sizeof(long) + // last modified
-                   sizeof(int) + // size of key
-                   Key.Size;
-        }
-
-        public override long Size => 0;
-
+        public override long AssertChangeVectorSize() => Size;
+        
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
             fixed (byte* pTemp = tempBuffer)
@@ -54,7 +48,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
 
-                stats.RecordAttachmentTombstoneOutput();
+                stats.RecordAttachmentTombstoneOutput(Size);
             }
         }
 
@@ -62,11 +56,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             using (stats.For(ReplicationOperation.Incoming.TombstoneRead))
             {
-                stats.RecordAttachmentTombstoneRead();
                 LastModifiedTicks = *(long*)Reader.ReadExactly(sizeof(long));
 
                 var size = *(int*)Reader.ReadExactly(sizeof(int));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out Key));
+
+                stats.RecordAttachmentTombstoneRead(Size);
             }
         }
 

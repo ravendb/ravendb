@@ -6,7 +6,6 @@ using System.Text;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -38,9 +37,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return $"{Type} {ChangeVector}";
         }
 
-        public abstract long AssertChangeVectorSize();
+        public virtual long Size => sizeof(byte) + // type
+                                    sizeof(int) + //  size of change vector
+                                    Encodings.Utf8.GetByteCount(ChangeVector) +
+                                    sizeof(short); // transaction marker
 
-        public abstract long Size { get; }
+        public abstract long AssertChangeVectorSize();
 
         public abstract void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats);
 

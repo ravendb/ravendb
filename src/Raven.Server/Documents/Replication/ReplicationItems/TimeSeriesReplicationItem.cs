@@ -21,6 +21,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public DateTime From;
         public DateTime To;
 
+        public override long Size => base.Size + // common
+                                     sizeof(long) + // from time
+                                     sizeof(long) + // to time
+                                     sizeof(int) + // size of doc collection
+                                     Collection.Size; // doc collection;
+
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
@@ -30,24 +36,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(To)] = To.ToString("O");
             return djv;
         }
-        public override long AssertChangeVectorSize()
-        {
-            return sizeof(byte) + // type
 
-                   sizeof(int) + // change vector size
-                   Encodings.Utf8.GetByteCount(ChangeVector) + // change vector
+        public override long AssertChangeVectorSize() => Size;
 
-                   sizeof(short) + // transaction marker
-
-                   sizeof(long) + // from time
-                   
-                   sizeof(long) + // to time
-
-                   sizeof(int) + // size of doc collection
-                   Collection.Size; // doc collection;
-        }
-
-        public override long Size => sizeof(long) * 2;
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
             fixed (byte* pTemp = tempBuffer)
@@ -74,7 +65,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 tempBufferPos += Collection.Size;
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
-                stats.RecordTimeSeriesDeletedRangeOutput();
+                stats.RecordTimeSeriesDeletedRangeOutput(Size);
             }
         }
 
@@ -82,8 +73,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             using (stats.For(ReplicationOperation.Incoming.TimeSeriesDeletedRangeRead))
             {
-                stats.RecordTimeSeriesDeletedRangeRead();
-
                 var keySize = *(int*)Reader.ReadExactly(sizeof(int));
                 var key = Reader.ReadExactly(keySize);
                 ToDispose(Slice.From(allocator, key, keySize, ByteStringType.Immutable, out Key));
@@ -93,6 +82,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 SetLazyStringValueFromString(context, out Collection);
                 Debug.Assert(Collection != null);
+
+                stats.RecordTimeSeriesDeletedRangeRead(Size);
             }
         }
 
@@ -118,7 +109,21 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Name; // original casing
         public LazyStringValue Collection;
         public TimeSeriesValuesSegment Segment;
-        
+
+        public override long Size => base.Size + // common
+
+                                     sizeof(int) + // segment key size
+                                     Key.Size + // segment key
+
+                                     sizeof(int) + // size of the segment
+                                     Segment.NumberOfBytes + // data
+
+                                     sizeof(int) + // size of doc collection
+                                     Collection.Size + // doc collection
+
+                                     sizeof(int) + // size of name
+                                     Name.Size; // name;
+
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
@@ -128,29 +133,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return djv;
         }
 
-        public override long AssertChangeVectorSize()
-        {
-            return sizeof(byte) + // type
-
-                   sizeof(int) + // change vector size
-                   Encodings.Utf8.GetByteCount(ChangeVector) + // change vector
-
-                   sizeof(short) + // transaction marker
-
-                   sizeof(int) + // segment key size
-                   Key.Size + // segment key
-
-                   sizeof(int) + // size of the segment
-                   Segment.NumberOfBytes + // data
-
-                   sizeof(int) + // size of doc collection
-                   Collection.Size + // doc collection
-
-                   sizeof(int) + // size of name
-                   Name.Size; // name;
-        }
-
-        public override long Size => Segment.NumberOfBytes;
+        public override long AssertChangeVectorSize() => Size;
 
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
@@ -182,8 +165,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 tempBufferPos += Name.Size;
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
-
-                stats.RecordTimeSeriesOutput(Segment.NumberOfBytes);
+                stats.RecordTimeSeriesOutput(Size);
             }
         }
 
@@ -191,8 +173,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             using (stats.For(ReplicationOperation.Incoming.TimeSeriesRead))
             {
-                stats.RecordTimeSeriesRead();
-
                 var keySize = *(int*)Reader.ReadExactly(sizeof(int));
                 var key = Reader.ReadExactly(keySize);
                 ToDispose(Slice.From(allocator, key, keySize, ByteStringType.Immutable, out Key));
@@ -207,6 +187,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 SetLazyStringValueFromString(context, out Name);
                 Debug.Assert(Name != null);
+
+                stats.RecordTimeSeriesRead(Size);
             }
         }
 

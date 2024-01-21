@@ -243,6 +243,14 @@ namespace Raven.Server.Documents.Replication.Incoming
                 : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
+        protected override void RecordDatabaseChangeVector(DocumentsOperationContext context, IncomingReplicationStatsScope stats)
+        {
+            using (context.OpenReadTransaction())
+            {
+                stats.RecordDatabaseChangeVector(DocumentsStorage.GetDatabaseChangeVector(context)?.AsString());
+            }
+        }
+
         protected override Task HandleBatchAsync(DocumentsOperationContext context, DataForReplicationCommand batch, long lastEtag)
         {
             var replicationCommand = GetMergeDocumentsCommand(context, batch, lastEtag);

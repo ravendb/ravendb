@@ -19,6 +19,16 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Id;
         public DocumentFlags Flags;
 
+        public override long Size => base.Size + // common
+
+                                     sizeof(long) + // last modified
+
+                                     sizeof(int) + // size of key
+                                     Id.Size +
+
+                                     sizeof(int) + // size of collection
+                                     Collection.Size;
+
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
@@ -27,20 +37,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return djv;
         }
 
-        public override long AssertChangeVectorSize()
-        {
-            return sizeof(byte) + // type
-                   sizeof(int) + // # of change vectors
-                   Encodings.Utf8.GetByteCount(ChangeVector) +
-                   sizeof(short) + // transaction marker
-                   sizeof(long) + // last modified
-                   sizeof(int) + // size of key
-                   Id.Size +
-                   sizeof(int) + // size of collection
-                   Collection.Size;
-        }
-
-        public override long Size => 0;
+        public override long AssertChangeVectorSize() => Size;
 
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
@@ -66,7 +63,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
 
-                stats.RecordRevisionTombstoneOutput();
+                stats.RecordRevisionTombstoneOutput(Size);
             }
         }
 
@@ -74,12 +71,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             using (stats.For(ReplicationOperation.Incoming.TombstoneRead))
             {
-                stats.RecordRevisionTombstoneRead();
                 LastModifiedTicks = *(long*)Reader.ReadExactly(sizeof(long));
-                
+
                 SetLazyStringValue(context, ref Id);
                 SetLazyStringValueFromString(context, out Collection);
                 Debug.Assert(Collection != null);
+
+                stats.RecordRevisionTombstoneRead(Size);
             }
         }
 

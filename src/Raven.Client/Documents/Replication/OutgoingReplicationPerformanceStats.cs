@@ -10,21 +10,25 @@ namespace Raven.Client.Documents.Replication
             // for deserialization
         }
 
-        public OutgoingReplicationPerformanceStats(TimeSpan duration) 
+        public OutgoingReplicationPerformanceStats(TimeSpan duration)
             : base(duration)
         {
         }
 
         public long SendLastEtag { get; set; }
+        public string LastAcceptedChangeVector { get; set; }
 
         public StorageStats Storage { get; set; }
 
         public NetworkStats Network { get; set; }
-        
+
         public sealed class NetworkStats
         {
             public int AttachmentOutputCount { get; set; }
             public long AttachmentOutputSizeInBytes { get; set; }
+
+            public int AttachmentStreamOutputCount { get; set; }
+            public long AttachmentStreamOutputSizeInBytes { get; set; }
 
             public int AttachmentTombstoneOutputCount { get; set; }
             public long AttachmentTombstoneOutputSizeInBytes { get; set; }
@@ -45,12 +49,12 @@ namespace Raven.Client.Documents.Replication
             public long TimeSeriesSegmentsSizeInBytes { get; set; }
 
             public int TimeSeriesDeletedRangeOutputCount { get; set; }
+            public long TimeSeriesDeletedRangeOutputSizeInBytes { get; set; }
         }
 
         public sealed class StorageStats
         {
             public int InputCount { get; set; }
-
             public int ArtificialDocumentSkipCount { get; set; }
             public int SystemDocumentSkipCount { get; set; }
             public int ChangeVectorSkipCount { get; set; }
@@ -76,6 +80,8 @@ namespace Raven.Client.Documents.Replication
         public double DurationInMs { get; set; }
 
         public DateTime? Completed { get; set; }
+
+        public long? BatchSizeInBytes { get; set; }
 
         public ReplicationPerformanceOperation Details { get; set; }
 
