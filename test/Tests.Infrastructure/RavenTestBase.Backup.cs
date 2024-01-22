@@ -96,7 +96,7 @@ namespace FastTests
             public async Task<long> UpdateConfigAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store)
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-
+                
                 WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
 
                 return result.TaskId;
