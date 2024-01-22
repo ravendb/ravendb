@@ -159,12 +159,26 @@ namespace Corax.Querying.Matches.TermProviders
 
         public QueryInspectionNode Inspect()
         {
+            string lowValue;
+            if ((typeof(TVal) == typeof(Int64LookupKey) && ((Int64LookupKey)(object)_low).Value == long.MinValue) ||
+                (typeof(TVal) == typeof(DoubleLookupKey) && ((DoubleLookupKey)(object)_low).Value.AlmostEquals(double.MinValue)))
+                lowValue = null;
+            else
+                lowValue = _low.ToString();
+            
+            string highValue;
+            if ((typeof(TVal) == typeof(Int64LookupKey) && ((Int64LookupKey)(object)_high).Value == long.MaxValue) ||
+                (typeof(TVal) == typeof(DoubleLookupKey) && ((DoubleLookupKey)(object)_high).Value.AlmostEquals(double.MaxValue)))
+                highValue = null;
+            else
+                highValue = _high.ToString();
+            
             return new QueryInspectionNode(nameof(TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal>),
                             parameters: new Dictionary<string, string>()
                             {
                                 { Constants.QueryInspectionNode.FieldName, _field.ToString() },
-                                { Constants.QueryInspectionNode.LowValue, _low.ToString()},
-                                { Constants.QueryInspectionNode.HighValue, _high.ToString()},
+                                { Constants.QueryInspectionNode.LowValue, lowValue},
+                                { Constants.QueryInspectionNode.HighValue, highValue},
                                 { Constants.QueryInspectionNode.LowOption, typeof(TLow).Name},
                                 { Constants.QueryInspectionNode.HighOption, typeof(THigh).Name},
                                 { Constants.QueryInspectionNode.IteratorDirection, Constants.QueryInspectionNode.IterationDirectionName(_iterator)}
