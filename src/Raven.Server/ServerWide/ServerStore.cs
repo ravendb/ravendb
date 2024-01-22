@@ -3640,6 +3640,7 @@ namespace Raven.Server.ServerWide
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
             internal Action RestoreDatabaseAfterSavingDatabaseRecord;
+            internal Action AfterCommitInClusterTransaction;
         }
         
         public readonly MemoryCache QueryClauseCache;

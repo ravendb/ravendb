@@ -52,8 +52,13 @@ namespace RachisTests.DatabaseCluster
                 await session.SaveChangesAsync();
             }
 
-            var result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>(""));
-            Assert.Single(result);
+            Dictionary<string, CompareExchangeValue<TestObj>> result = null;
+            await AssertWaitForValueAsync(async () =>
+            {
+                result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>(""));
+                return result.Count;
+            }, 1);
+
             Assert.EndsWith(entity.Id, result.Single().Key, StringComparison.OrdinalIgnoreCase);
         }
 

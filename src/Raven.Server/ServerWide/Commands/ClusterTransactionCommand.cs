@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Json;
@@ -18,8 +19,10 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException;
+using static Sparrow.Server.Utils.ThreadNames.ThreadDetails;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -221,10 +224,10 @@ namespace Raven.Server.ServerWide.Commands
                 throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '{identityPartsSeparator}' as part of cluster transaction");
         }
 
-        public List<ClusterTransactionErrorInfo> ExecuteCompareExchangeCommands(DatabaseTopology dbTopology, ClusterOperationContext context, long index, Table items)
+        public List<ClusterTransactionErrorInfo> ExecuteCompareExchangeCommands(string clusterTransactionId, ClusterOperationContext context, long index, Table items)
         {
             if (Options?.DisableAtomicDocumentWrites == false)
-                EnsureAtomicDocumentWrites(dbTopology, context, items, index);
+                EnsureAtomicDocumentWrites(clusterTransactionId, context, items, index);
 
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
@@ -301,7 +304,7 @@ namespace Raven.Server.ServerWide.Commands
             };
         }
 
-        private void EnsureAtomicDocumentWrites(DatabaseTopology dbTopology, ClusterOperationContext context, Table items, long index)
+        private void EnsureAtomicDocumentWrites(string clusterTransactionId, ClusterOperationContext context, Table items, long index)
         {
             if (SerializedDatabaseCommands == null)
                 return;
@@ -319,7 +322,7 @@ namespace Raven.Server.ServerWide.Commands
                 long changeVectorIndex = 0;
 
                 if (changeVector != null)
-                    changeVectorIndex = ChangeVectorUtils.GetEtagById(changeVector, dbTopology.ClusterTransactionIdBase64);
+                    changeVectorIndex = ChangeVectorUtils.GetEtagById(changeVector, clusterTransactionId);
 
                 if (FromBackup)
                     changeVectorIndex = GetCurrentIndex(context, items, atomicGuardKey) ?? 0;
@@ -397,29 +400,110 @@ namespace Raven.Server.ServerWide.Commands
             return Constants.CompareExchange.RvnAtomicPrefix + docId;
         }
 
-        public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)
+        public DynamicJsonArray SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index)
         {
-            if (HasDocumentsInTransaction == false)
-                return;
+            var result = new DynamicJsonArray();
 
+            if (HasDocumentsInTransaction == false)
+                return result;
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
-            var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
 
-            using (GetPrefix(context, DatabaseName, out var databaseSlice))
+            if (SerializedDatabaseCommands == null)
+                return result;
+
+            if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
+                throw new InvalidOperationException($"Cluster {nameof(SerializedDatabaseCommands)} don't include the actual commands : {SerializedDatabaseCommands}");
+
+            var prevCount = GetPrevCount(context, commandsCountPerDatabase, rawRecord.DatabaseName);
+
+            var clusterTransactionCommand = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
+            foreach (BlittableJsonReaderObject command in commands)
             {
-                var count = commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
-                using (GetPrefix(context, DatabaseName, out var prefixSlice, count))
+                if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
+                    throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
+
+                var dataCmdRes = GetCommandResult(command, id, ref prevCount, Options.DisableAtomicDocumentWrites, index, rawRecord.Topology.DatabaseTopologyIdBase64,
+                    rawRecord.GetClusterTransactionId());
+                result.Add(dataCmdRes);
+            }
+
+            SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, clusterTransactionCommand, DatabaseCommandsCount);
+
+            return result;
+        }
+
+        private static long GetPrevCount(ClusterOperationContext context, Tree commandsCountPerDatabase, string databaseName)
+        {
+            using (GetPrefix(context, databaseName, out var databaseSlice))
+            {
+                return commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
+            }
+        }
+
+        private unsafe void SaveCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
+            BlittableJsonReaderObject commands, long commandsCount)
+        {
+            using (GetPrefix(context, databaseName, out var databaseSlice))
+            {
+                var prevCount = commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
+                using (GetPrefix(context, databaseName, out var prefixSlice, prevCount))
                 using (items.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(prefixSlice.Content.Ptr, prefixSlice.Size);
                     tvb.Add(commands.BasePointer, commands.Size);
                     tvb.Add(index);
                     items.Insert(tvb);
-                    using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
-                        *(long*)ptr = count + DatabaseCommandsCount;
                 }
+                using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
+                    *(long*)ptr = prevCount + commandsCount;
             }
+        }
+
+        private static DynamicJsonValue GetCommandResult(
+            BlittableJsonReaderObject command,
+            string id,
+            ref long initialCount,
+            bool? disableAtomicDocumentWrites,
+            long index,
+            string databaseTopologyIdBase64,
+            string clusterTransactionId)
+        {
+            if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
+                throw new InvalidOperationException($"Got command with no type defined: {command}");
+
+            var result = new DynamicJsonValue
+            {
+                [nameof(ICommandData.Type)] = type,
+                [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow,
+            };
+
+            switch (type)
+            {
+                case nameof(CommandType.PUT):
+                    if (command.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
+                        && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
+                        && metadata.TryGet(Constants.Documents.Metadata.Flags, out DocumentFlags flags))
+                    {
+                        result[Constants.Documents.Metadata.Flags] = flags | DocumentFlags.FromClusterTransaction;
+                    }
+
+                    result[Constants.Documents.Metadata.Id] = id;
+                    break;
+                case nameof(CommandType.DELETE):
+                    result[Constants.Documents.Metadata.IdProperty] = id;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.DELETE} but got {type}");
+            }
+
+
+            var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(databaseTopologyIdBase64, ++initialCount, disableAtomicDocumentWrites == false, index,
+                clusterTransactionId);
+
+            result[Constants.Documents.Metadata.ChangeVector] = changeVector;
+            return result;
         }
 
         public bool HasDocumentsInTransaction => SerializedDatabaseCommands != null && DatabaseCommandsCount != 0;
@@ -610,21 +694,95 @@ namespace Raven.Server.ServerWide.Commands
 
         public override object FromRemote(object remoteResult)
         {
-            var errors = new List<ClusterTransactionErrorInfo>();
-            if (remoteResult is BlittableJsonReaderArray array)
+            if (remoteResult is BlittableJsonReaderObject bjro)
             {
-                foreach (var o in array)
-                {
-                    if (o is not BlittableJsonReaderObject blittable)
-                        continue;
-
-                    errors.Add(ToClusterTransactionErrorInfo(blittable));
-                }
-
-                return errors;
+                return GetResults(bjro);
             }
+
+            if (remoteResult is BlittableJsonReaderArray bjra)
+            {
+                return GetErrors(bjra);
+            }
+
             return base.FromRemote(remoteResult);
         }
+
+        internal static ClusterTransactionResult GetResults(BlittableJsonReaderObject bjro)
+        {
+            var results = new ClusterTransactionResult();
+            if (bjro.TryGet(nameof(ClusterTransactionResult.GeneratedResult), out BlittableJsonReaderArray bjra))
+                results.GeneratedResult = GetGeneratedResults(bjra);
+
+            return results;
+        }
+
+        private static DynamicJsonArray GetGeneratedResults(BlittableJsonReaderArray bjra)
+        {
+            var array = new DynamicJsonArray();
+
+            if (bjra != null)
+            {
+                foreach (BlittableJsonReaderObject item in bjra)
+                {
+                    array.Add(ToDynamicJsonValue(item));
+                }
+            }
+
+            return array;
+        }
+
+        private static DynamicJsonValue ToDynamicJsonValue(BlittableJsonReaderObject bjro)
+        {
+            var djv = new DynamicJsonValue();
+
+            if (bjro.TryGet(nameof(ICommandData.Type), out string type) == false)
+                throw new InvalidOperationException("Database cluster transaction command must have a type");
+            djv[nameof(ICommandData.Type)] = type;
+
+            if (bjro.TryGet(Constants.Documents.Metadata.LastModified, out string lastModified) == false)
+                throw new InvalidOperationException($"Database cluster transaction {type} command must have a LastModified property");
+            djv[Constants.Documents.Metadata.LastModified] = lastModified;
+
+            switch (type)
+            {
+                case nameof(CommandType.PUT):
+                    if (bjro.TryGet(Constants.Documents.Metadata.Flags, out string flags))
+                        djv[Constants.Documents.Metadata.Flags] = flags;
+
+                    if (bjro.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
+                        throw new InvalidOperationException("Database cluster transaction Put command must have an id");
+                    djv[Constants.Documents.Metadata.Id] = id;
+                    break;
+                case nameof(CommandType.DELETE):
+                    if (bjro.TryGet(Constants.Documents.Metadata.IdProperty, out string idProp) == false)
+                        throw new InvalidOperationException("Database cluster transaction Delete command must have an id");
+                    djv[Constants.Documents.Metadata.IdProperty] = idProp;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.DELETE} but got {type}");
+            }
+
+            if (bjro.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
+                throw new InvalidOperationException($"Database cluster transaction {type} command must have a changeVector");
+            djv[Constants.Documents.Metadata.ChangeVector] = changeVector;
+
+            return djv;
+        }
+
+        private static List<ClusterTransactionErrorInfo> GetErrors(BlittableJsonReaderArray array)
+        {
+            var errors = new List<ClusterTransactionErrorInfo>();
+            foreach (var o in array)
+            {
+                if (o is not BlittableJsonReaderObject blittable)
+                    continue;
+
+                errors.Add(ToClusterTransactionErrorInfo(blittable));
+            }
+            return errors;
+        }
+
 
         private static ClusterTransactionErrorInfo ToClusterTransactionErrorInfo(BlittableJsonReaderObject bjro)
         {
