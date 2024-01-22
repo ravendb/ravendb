@@ -1905,25 +1905,23 @@ namespace Raven.Server.Documents.Revisions
 
         private IEnumerable<TableValueHolder> GetRevisionsTable(DocumentsOperationContext context, string collection, long lastScannedEtag)
         {
-            IEnumerable<TableValueHolder> table = null;
-
             if (collection == null)
             {
                 var revisions = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-                table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
+                return revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
             }
             else
             {
                 var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
                 var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
                 var revisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
-                if (revisions != null) // there is no revisions for that collection
+                if (revisions != null) // there are existing revisions for that collection
                 {
-                    table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
+                    return revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
                 }
             }
 
-            return table;
+            return null;
         }
 
 

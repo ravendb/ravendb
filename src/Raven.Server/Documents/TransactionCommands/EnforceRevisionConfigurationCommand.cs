@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.TransactionCommands
                 _token.ThrowIfCancellationRequested();
                 _result.RemovedRevisions += (int)_revisionsStorage.EnforceConfigurationFor(context, id, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration == false, out var moreWork);
 
-                if(moreWork == false)
+                if (moreWork == false)
                     idsToRemove.Add(id);
             }
 
