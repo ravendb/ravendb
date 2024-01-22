@@ -675,7 +675,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionData;
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
+        public void HandleDatabaseRecordChange(string databaseName, DatabaseTopology topology)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -687,7 +687,7 @@ namespace Raven.Server.Documents.Subscriptions
                     if (subscriptionName == null)
                         continue;
 
-                    var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseRecord.DatabaseName, subscriptionName));
+                    var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, subscriptionName));
                     if (subscriptionBlittable == null)
                     {
                         DeleteAndSetException(subscriptionStateKvp.Key, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
@@ -720,7 +720,7 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, databaseRecord.Topology, subscriptionState, subscriptionState, _db.NotificationCenter);
+                    var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, topology, subscriptionState, subscriptionState, _db.NotificationCenter);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
                         DropSubscriptionConnections(subscriptionStateKvp.Key,

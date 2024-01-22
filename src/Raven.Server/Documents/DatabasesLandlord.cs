@@ -113,6 +113,7 @@ namespace Raven.Server.Documents
                     // response to changed database.
                     // if disabled, unload
                     DatabaseTopology topology;
+                    List <PeriodicBackupConfiguration> backupConfigurations = null;
                     using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
@@ -137,6 +138,9 @@ namespace Raven.Server.Documents
                             UnloadDatabase(databaseName);
                             return;
                         }
+
+                        if (changeType == ClusterDatabaseChangeType.ValueChanged)
+                            backupConfigurations = rawRecord.PeriodicBackups;
                     }
 
                     if (changeType == ClusterDatabaseChangeType.RecordRestored)
@@ -171,7 +175,9 @@ namespace Raven.Server.Documents
                             break;
 
                         case ClusterDatabaseChangeType.ValueChanged:
-                            database.ValueChanged(index, type, changeState);
+                            Debug.Assert(backupConfigurations != null && topology != null);
+
+                            database.ValueChanged(index, type, topology, backupConfigurations, changeState);
                             break;
 
                         case ClusterDatabaseChangeType.PendingClusterTransactions:
