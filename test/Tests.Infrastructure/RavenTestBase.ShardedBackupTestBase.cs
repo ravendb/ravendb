@@ -358,6 +358,15 @@ public partial class RavenTestBase
             return result.TaskId;
         }
 
+        public async Task<long> UpdateConfigAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store)
+        {
+            var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+            WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
+
+            return result.TaskId;
+        }
+
         public void WaitForResponsibleNodeUpdate(ServerStore serverStore, string databaseName, long taskId, string differentThan = null)
         {
             using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))

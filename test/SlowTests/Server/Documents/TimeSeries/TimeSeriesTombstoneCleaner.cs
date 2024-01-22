@@ -208,7 +208,9 @@ namespace SlowTests.Server.Documents.TimeSeries
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
-                var taskId = await Backup.UpdateConfigAsync(Server, config, store);
+                var taskId = options.DatabaseMode == RavenDatabaseMode.Single 
+                    ? await Backup.UpdateConfigAsync(Server, config, store)
+                    : await Sharding.Backup.UpdateConfigAsync(Server, config, store);
 
                 using (var session = store.OpenSession())
                 {

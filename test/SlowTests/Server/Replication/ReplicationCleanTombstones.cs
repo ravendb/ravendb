@@ -99,7 +99,14 @@ namespace SlowTests.Server.Replication
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                Backup.WaitForResponsibleNodeUpdateInCluster(store, cluster.Nodes, result.TaskId);
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                {
+                    Backup.WaitForResponsibleNodeUpdateInCluster(store, cluster.Nodes, result.TaskId);
+                }
+                else
+                {
+                    Sharding.Backup.WaitForResponsibleNodeUpdateInCluster(store, cluster.Nodes, result.TaskId);
+                }
 
                 using (var session = store.OpenSession())
                 {
