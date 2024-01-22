@@ -8,7 +8,7 @@ using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Voron.Sets
+namespace FastTests.Voron.PostingLists
 {
     public class PostingListTests : StorageTest
     {
