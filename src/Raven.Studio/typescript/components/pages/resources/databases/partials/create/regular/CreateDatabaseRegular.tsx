@@ -4,10 +4,9 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import Steps from "components/common/Steps";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
 import {
     CreateDatabaseRegularFormData as FormData,
-    useCreateDatabaseRegularSchema,
+    createDatabaseRegularSchema,
 } from "./createDatabaseRegularValidation";
 import StepBasicInfo from "./steps/CreateDatabaseRegularStepBasicInfo";
 import StepEncryption from "./steps/CreateDatabaseRegularStepEncryption";
@@ -25,6 +24,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { tryHandleSubmit } from "components/utils/common";
 import QuickCreateButton from "components/pages/resources/databases/partials/create/regular/QuickCreateButton";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useDatabaseNameValidation } from "components/pages/resources/databases/partials/create/shared/useDatabaseNameValidation";
 
 interface CreateDatabaseRegularProps {
     closeModal: () => void;
@@ -43,18 +44,17 @@ interface StepItem {
 
 export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBackup }: CreateDatabaseRegularProps) {
     const usedDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((db) => db.name);
-    const createNewDatabaseSchema = useCreateDatabaseRegularSchema();
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
 
     const form = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(allNodeTags.length),
-        resolver: yupResolver(createNewDatabaseSchema),
+        resolver: yupResolver(createDatabaseRegularSchema),
         context: {
             usedDatabaseNames,
         },
     });
-    const { control, handleSubmit, formState } = form;
+    const { control, handleSubmit, formState, setError, clearErrors } = form;
 
     if (formState.errors) {
         console.log("kalczur errors", formState.errors);
@@ -62,6 +62,8 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     const formValues = useWatch({
         control,
     });
+
+    useDatabaseNameValidation(formValues.databaseName, setError, clearErrors);
 
     const { databasesService } = useServices();
 
