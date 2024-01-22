@@ -1,40 +1,17 @@
-import { useServices } from "components/hooks/useServices";
+// import { useServices } from "components/hooks/useServices";
 import { pathsConfigurationsSchema } from "../shared/createDatabaseSharedValidation";
 import * as yup from "yup";
 
-const useBasicInfoSchema = () => {
-    const { resourcesService } = useServices();
+const basicInfoSchema = yup.object({
+    databaseName: yup
+        .string()
+        .required()
+        .when("$usedDatabaseNames", ([usedDatabaseNames], schema) =>
+            schema.notOneOf(usedDatabaseNames, "Database already exists")
+        ),
 
-    return yup.object({
-        databaseName: yup
-            .string()
-            .required()
-            .when("$usedDatabaseNames", ([usedDatabaseNames], schema) =>
-                schema.notOneOf(usedDatabaseNames, "Database already exists")
-            )
-            .test({
-                test: async function (value, ctx) {
-                    if (value == null || value === "") {
-                        return true;
-                    }
-
-                    try {
-                        const result = await resourcesService.validateName("Database", value);
-                        return (
-                            result.IsValid ||
-                            ctx.createError({
-                                message: result.ErrorMessage,
-                            })
-                        );
-                    } catch (_) {
-                        return true;
-                    }
-                },
-            }),
-
-        isEncrypted: yup.boolean(),
-    });
-};
+    isEncrypted: yup.boolean(),
+});
 
 const encryptionSchema = yup.object({
     isEncryptionKeySaved: yup.boolean().when("isEncrypted", {
@@ -68,16 +45,12 @@ const manualNodeSelectionSchema = yup.object({
     manualShard: yup.array().nullable().of(yup.array().of(yup.string())),
 });
 
-export const useCreateDatabaseRegularSchema = () => {
-    const basicInfoSchema = useBasicInfoSchema();
+export const createDatabaseRegularSchema = yup
+    .object()
+    .concat(basicInfoSchema)
+    .concat(encryptionSchema)
+    .concat(replicationAndShardingSchema)
+    .concat(manualNodeSelectionSchema)
+    .concat(pathsConfigurationsSchema);
 
-    return yup
-        .object()
-        .concat(basicInfoSchema)
-        .concat(encryptionSchema)
-        .concat(replicationAndShardingSchema)
-        .concat(manualNodeSelectionSchema)
-        .concat(pathsConfigurationsSchema);
-};
-
-export type CreateDatabaseRegularFormData = yup.InferType<ReturnType<typeof useCreateDatabaseRegularSchema>>;
+export type CreateDatabaseRegularFormData = yup.InferType<typeof createDatabaseRegularSchema>;
