@@ -5,7 +5,7 @@ using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace StressTests.Voron.Issues
 {
     public class RavenDB_20675 : StorageTest
     {
