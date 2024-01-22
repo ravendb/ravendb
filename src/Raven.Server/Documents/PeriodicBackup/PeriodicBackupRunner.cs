@@ -555,7 +555,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return false;
             }
 
-            DatabaseTopology topology;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name))
@@ -567,19 +566,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     return false;
                 }
-
-                topology = rawRecord.Topology;
             }
 
             var taskStatus = GetTaskStatus(periodicBackup.Configuration, out _);
             if (_forTestingPurposes != null)
             {
-                if (_forTestingPurposes.SimulateClusterDownStatus)
-                {
-                    taskStatus = TaskStatus.ClusterDown;
-                    _forTestingPurposes.ClusterDownStatusSimulated = true;
-                }
-                else if (_forTestingPurposes.SimulateActiveByOtherNodeStatus_Reschedule)
+                if (_forTestingPurposes.SimulateActiveByOtherNodeStatus_Reschedule)
                 {
                     taskStatus = TaskStatus.ActiveByOtherNode;
                 }
@@ -592,10 +584,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be executed on current node.";
                     break;
 
-                case TaskStatus.ClusterDown:
-                    msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be rescheduled on current node.";
-                    var status = GetBackupStatus(backupInfo.TaskId, periodicBackup.BackupStatus);
-                    periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, status, _serverStore.NodeTag), lockTaken: false);
+                case TaskStatus.MissingResponsibleNode:
+                    msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the responsible node wasn't determined yet.";
                     break;
 
                 default:
@@ -775,11 +765,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     return;
 
-                case TaskStatus.ClusterDown:
-                    // this node cannot connect to cluster, the task will continue on this node
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will continue to execute by the current node '{_database.ServerStore.NodeTag}'.");
-
+                case TaskStatus.MissingResponsibleNode:
+                    // the responsible node wasn't determined yet
                     return;
 
                 case TaskStatus.ActiveByCurrentNode:
@@ -818,7 +805,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             Disabled,
             ActiveByCurrentNode,
             ActiveByOtherNode,
-            ClusterDown
+            MissingResponsibleNode
         }
 
         private TaskStatus GetTaskStatus(PeriodicBackupConfiguration configuration, out string responsibleNodeTag, bool disableLog = false)
@@ -850,7 +837,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (responsibleNodeTag == null)
             {
                 // the responsible node wasn't set by the cluster observer yet
-                return TaskStatus.ClusterDown;
+                _forTestingPurposes?.OnMissingResponsibleNode?.Invoke();
+
+                return TaskStatus.MissingResponsibleNode;
             }
 
             if (responsibleNodeTag == _serverStore.NodeTag)
@@ -1087,8 +1076,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public class TestingStuff
         {
-            internal bool SimulateClusterDownStatus;
-            internal bool ClusterDownStatusSimulated;
+            internal Action OnMissingResponsibleNode;
             internal bool SimulateActiveByOtherNodeStatus_Reschedule;
             internal bool SimulateActiveByOtherNodeStatus_UpdateConfigurations;
             internal bool SimulateActiveByCurrentNode_UpdateConfigurations;
