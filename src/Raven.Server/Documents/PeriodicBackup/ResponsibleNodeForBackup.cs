@@ -63,26 +63,30 @@ public abstract class ResponsibleNodeForBackupWithLimitedLogging : ResponsibleNo
     }
 }
 
-public class MentorNode : ResponsibleNodeForBackupWithLimitedLogging
+public class MentorNode : ResponsibleNodeForBackup
 {
-    public MentorNode(string nodeTag, PeriodicBackupConfiguration configuration, Dictionary<long, ChosenNodeReason> lastChosenNodeReasonPerTask) : base(nodeTag, configuration, lastChosenNodeReasonPerTask)
+    public MentorNode(string nodeTag, string taskName) : base(nodeTag, taskName)
     {
     }
 
     public override ChosenNodeReason Reason => ChosenNodeReason.MentorNode;
 
     public override string ReasonForDecisionLog => $"Node '{NodeTag}' was selected because it's the mentor node for the backup task '{TaskName}'";
+
+    public override bool ShouldLog => true;
 }
 
-public class PinnedMentorNode : ResponsibleNodeForBackupWithLimitedLogging
+public class PinnedMentorNode : ResponsibleNodeForBackup
 {
-    public PinnedMentorNode(string nodeTag, PeriodicBackupConfiguration configuration, Dictionary<long, ChosenNodeReason> lastChosenNodeReasonPerTask) : base(nodeTag, configuration, lastChosenNodeReasonPerTask)
+    public PinnedMentorNode(string nodeTag, string taskName) : base(nodeTag, taskName)
     {
     }
 
     public override ChosenNodeReason Reason => ChosenNodeReason.PinnedMentorNode;
 
     public override string ReasonForDecisionLog => $"Node '{NodeTag}' was selected because it's the pinned mentor node for the backup task '{TaskName}'";
+
+    public override bool ShouldLog => true;
 }
 
 public class NonExistingResponsibleNode : ResponsibleNodeForBackup
