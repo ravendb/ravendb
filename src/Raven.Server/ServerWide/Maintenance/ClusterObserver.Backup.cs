@@ -166,7 +166,7 @@ internal partial class ClusterObserver
                 if (string.Equals(mentorNode, lastResponsibleNode))
                     return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
 
-                return new PinnedMentorNode(mentorNode, configuration, _lastChosenNodeReasonPerTask);
+                return new PinnedMentorNode(mentorNode, configuration.Name);
             }
 
             if (topology.Members.Contains(mentorNode))
@@ -174,7 +174,7 @@ internal partial class ClusterObserver
                 if (string.Equals(mentorNode, lastResponsibleNode))
                     return new SameResponsibleNode(lastResponsibleNode, configuration.Name);
 
-                return new MentorNode(mentorNode, configuration, _lastChosenNodeReasonPerTask);
+                return new MentorNode(mentorNode, configuration.Name);
             }
         }
 
