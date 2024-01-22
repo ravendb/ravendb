@@ -13,6 +13,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json.Linq;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -34,9 +35,10 @@ namespace SlowTests.Authentication
         public async Task CanGetPebbleCertificate()
         {
             var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
-
             Assert.NotEmpty(acmeUrl);
             
+            await RemoveAcmeCache(acmeUrl);
+
             SetupLocalServer();
             SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
 
@@ -59,6 +61,23 @@ namespace SlowTests.Authentication
 
             UseNewLocalServer();
             await RenewCertificate(serverCert, firstServerCertThumbprint);
+        }
+
+        private static async Task RemoveAcmeCache(string acmeUrl)
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                Environment.SpecialFolderOption.Create);
+            var caches = Directory.GetFiles(home, "*.lets-encrypt.cache.json");
+            foreach (string cache in caches)
+            {
+                var json = JObject.Parse(await File.ReadAllTextAsync(cache));
+                var cacheBaseUrl = new Uri(json["Location"].Value<string>()).GetLeftPart(UriPartial.Authority);
+                var acmeBaseUrl = new Uri(acmeUrl).GetLeftPart(UriPartial.Authority);
+                if (string.CompareOrdinal(cacheBaseUrl, acmeBaseUrl) != 0)
+                    continue;
+                File.Delete(cache);
+                break;
+            }
         }
 
         private void SetupLocalServer()
