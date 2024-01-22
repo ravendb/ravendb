@@ -375,9 +375,10 @@ namespace Raven.Server.Documents.TimeSeries
 
                         if (canDeleteEntireSegment && readOnlySegment.NumberOfLiveEntries > 1)
                         {
-                            deleted = readOnlySegment.NumberOfLiveEntries;
-                            holder.AddNewValue(baseline, new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                            holder.AddNewValue(readOnlySegment.GetLastTimestamp(baseline), new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
+                            deleted += readOnlySegment.NumberOfLiveEntries;
+                            Span<double> emptyValues = stackalloc double[numberOfValues];
+                            holder.AddNewValue(baseline, emptyValues, Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
+                            holder.AddNewValue(end, emptyValues, Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
                             holder.AppendDeadSegment(newSegment);
                             if (updateMetadata)
                             {
@@ -386,6 +387,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
                             }
 
+                            changeVector = holder.ChangeVector;
                             return true;
                         }
 

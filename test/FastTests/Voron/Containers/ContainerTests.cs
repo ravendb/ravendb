@@ -8,7 +8,7 @@ using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Voron
+namespace FastTests.Voron.Containers
 {
     public class ContainerTests : StorageTest
     {
