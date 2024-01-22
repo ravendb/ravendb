@@ -6,10 +6,13 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,7 +26,6 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
-        [InlineData(BackupType.Backup)]
         public async Task ResponsibleNodeForBackup_MentorNode()
         {
             DoNotReuseServer();
@@ -79,7 +81,6 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
-        [InlineData(BackupType.Backup)]
         public async Task ResponsibleNodeForBackup_CurrentResponsibleNodeNotResponding()
         {
             DoNotReuseServer();
@@ -158,7 +159,6 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
-        [InlineData(BackupType.Backup)]
         public async Task ResponsibleNodeForBackup_PinnedMentorNode()
         {
             DoNotReuseServer();
@@ -234,7 +234,6 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
-        [InlineData(BackupType.Backup)]
         public async Task ResponsibleNodeForBackup_CurrentResponsibleNodeRemovedFromTopology()
         {
             DoNotReuseServer();
@@ -292,7 +291,6 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
-        [InlineData(BackupType.Backup)]
         public async Task ResponsibleNodeForBackup_NonExistingResponsibleNode()
         {
             DoNotReuseServer();
@@ -327,6 +325,35 @@ namespace SlowTests.Issues
                 var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
 
                 CheckDecisionLog(leaderServer, new NonExistingResponsibleNode(tag1, config.Name).ReasonForDecisionLog);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Delete_Backup_Task_Values_After_Task_Deletion()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                store.Maintenance.Send(new DeleteOngoingTaskOperation(backupTaskId, OngoingTaskType.Backup));
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var responsibleNodeInfo = Raven.Server.Utils.BackupUtils.GetResponsibleNodeInfoFromCluster(Server.ServerStore, context, store.Database, backupTaskId);
+                    Assert.Null(responsibleNodeInfo);
+
+                    var backupStatus = Raven.Server.Utils.BackupUtils.GetBackupStatusFromCluster(Server.ServerStore, context, store.Database, backupTaskId);
+                    Assert.Null(backupStatus);
+                }
             }
         }
 
