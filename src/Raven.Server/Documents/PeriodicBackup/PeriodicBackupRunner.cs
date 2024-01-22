@@ -657,12 +657,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void UpdateConfigurations(DatabaseRecord databaseRecord)
+        public void UpdateConfigurations(List<PeriodicBackupConfiguration> configurations)
         {
             if (_disposed)
                 return;
 
-            if (databaseRecord.PeriodicBackups == null)
+            if (configurations == null)
             {
                 foreach (var periodicBackup in _periodicBackups)
                 {
@@ -673,7 +673,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var allBackupTaskIds = new List<long>();
-            foreach (var periodicBackupConfiguration in databaseRecord.PeriodicBackups)
+            foreach (var periodicBackupConfiguration in configurations)
             {
                 var newBackupTaskId = periodicBackupConfiguration.TaskId;
                 allBackupTaskIds.Add(newBackupTaskId);
@@ -1044,12 +1044,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             return dict;
         }
 
-        public void HandleDatabaseValueChanged(string type, DatabaseRecord record, object changeState)
+        public void HandleDatabaseValueChanged(string type, List<PeriodicBackupConfiguration> configurations, object changeState)
         {
             switch (type)
             {
                 case nameof(UpdateResponsibleNodeForTasksCommand):
-                    UpdateConfigurations(record);
+                    UpdateConfigurations(configurations);
                     break;
 
                 case nameof(DelayBackupCommand):

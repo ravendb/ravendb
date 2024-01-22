@@ -796,14 +796,14 @@ namespace Raven.Server.Documents.ETL
             return reason;
         }
 
-        public void HandleDatabaseValueChanged(DatabaseRecord record)
+        public void HandleDatabaseValueChanged(string databaseName)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var process in _processes)
                 {
-                    var state = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(record.DatabaseName, process.ConfigurationName, process.TransformationName));
+                    var state = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(databaseName, process.ConfigurationName, process.TransformationName));
 
                     if (state == null)
                     {
