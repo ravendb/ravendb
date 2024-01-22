@@ -241,7 +241,7 @@ namespace SlowTests.Server.Documents.Counters
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
-                var taskId = await Backup.UpdateConfigAsync(Server, config, store);
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                 using (var session = store.OpenSession())
                 {
@@ -288,7 +288,7 @@ namespace SlowTests.Server.Documents.Counters
                 }
                 Assert.True(c > 0);
 
-                await Backup.RunBackupInClusterAsync(store, taskId, isFullBackup: true);
+                await Backup.RunBackupInClusterAsync(store, result.TaskId, isFullBackup: true);
                 await cleaner.ExecuteCleanup();
 
                 c = 0;

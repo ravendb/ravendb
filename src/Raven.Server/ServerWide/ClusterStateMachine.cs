@@ -555,10 +555,6 @@ namespace Raven.Server.ServerWide
                         ToggleDatabasesState(cmd, context, type, index);
                         break;
 
-                    case nameof(UpdateResponsibleNodeForTasksCommand):
-                        UpdateResponsibleNodeForTasks(cmd, context, type, index);
-                        break;
-
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
@@ -3827,57 +3823,6 @@ namespace Raven.Server.ServerWide
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
-        }
-
-        private void UpdateResponsibleNodeForTasks(BlittableJsonReaderObject cmd, ClusterOperationContext context, string type, long index)
-        {
-            var command = (UpdateResponsibleNodeForTasksCommand)JsonDeserializationCluster.Commands[type](cmd);
-            if (command.Value == null)
-                throw new RachisInvalidOperationException($"{nameof(UpdateResponsibleNodeForTasksCommand.Parameters)} is null for command type: {type}");
-
-            if (command.Value.ResponsibleNodePerDatabase == null)
-                throw new RachisInvalidOperationException($"{nameof(ToggleDatabasesStateCommand.Parameters.DatabaseNames)} is null for command type: {type}");
-
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            Exception exception = null;
-
-
-            try
-            {
-                var actions = new List<Func<Task>>();
-
-                foreach (var keyValue in command.Value.ResponsibleNodePerDatabase)
-                {
-                    var databaseName = keyValue.Key;
-
-                    foreach (var responsibleNodeInfo in keyValue.Value)
-                    {
-                        var itemKey = ResponsibleNodeInfo.GenerateItemName(databaseName, responsibleNodeInfo.TaskId);
-
-                        using (Slice.From(context.Allocator, itemKey, out Slice valueName))
-                        using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
-                        using (var value = context.ReadObject(responsibleNodeInfo.ToJson(), itemKey))
-                        {
-                            UpdateValue(index, items, valueNameLowered, valueName, value);
-                        }
-                    }
-
-                    actions.Add(() =>
-                        Changes.OnDatabaseChanges(databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null));
-                }
-
-                ExecuteManyOnDispose(context, index, type, actions);
-
-            }
-            catch (Exception e)
-            {
-                exception = e;
-                throw;
-            }
-            finally
-            {
-                LogCommand(type, index, exception, command);
-            }
         }
 
         private void UpdateDatabasesWithServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)

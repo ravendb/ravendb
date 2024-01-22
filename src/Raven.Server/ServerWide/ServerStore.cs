@@ -1256,10 +1256,12 @@ namespace Raven.Server.ServerWide
             }
             
             PeriodicBackupConfiguration backupConfig;
+            DatabaseTopology topology;
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, db))
             {
+                topology = rawRecord.Topology;
                 backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
 
                 if (backupConfig == null)
@@ -1271,10 +1273,10 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            var tag = BackupUtils.GetResponsibleNodeTag(Server.ServerStore, db, backupConfig.TaskId);
+            var tag = topology.WhoseTaskIsIt(Engine.CurrentState, backupConfig, null);
             if (Engine.Tag != tag)
             {
-                if (Logger.IsOperationsEnabled && tag != null)
+                if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
                 return;
             }
@@ -1298,9 +1300,9 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            wakeup = DateTime.SpecifyKind(wakeup, DateTimeKind.Utc);
-            var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
-            DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
+                wakeup = DateTime.SpecifyKind(wakeup, DateTimeKind.Utc);
+                var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
+                DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
 
             if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{nextIdleDatabaseActivity.DateTime}', with dueTime: {nextIdleDatabaseActivity.DueTime} ms.");

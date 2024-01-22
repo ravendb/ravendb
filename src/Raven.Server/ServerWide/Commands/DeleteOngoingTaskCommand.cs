@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
-using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -30,30 +28,20 @@ namespace Raven.Server.ServerWide.Commands
             TaskType = taskType;
         }
 
-        private long? _backupTaskIdToDelete;
-        private string _hubNameToDelete;
+        private string _taskIdToDelete, _hubNameToDelete;
 
         public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
         {
             switch (TaskType)
             {
                 case OngoingTaskType.Backup:
-                    if (_backupTaskIdToDelete == null)
+                    if (_taskIdToDelete == null)
                         return;
-
-                    var responsibleNodeKey = ResponsibleNodeInfo.GenerateItemName(DatabaseName, _backupTaskIdToDelete.Value);
-                    Delete(responsibleNodeKey);
-
-                    var backupStatusKey = PeriodicBackupStatus.GenerateItemName(DatabaseName, _backupTaskIdToDelete.Value);
-                    Delete(backupStatusKey);
-
-                    void Delete(string key)
+                    var itemKey = _taskIdToDelete;
+                    using (Slice.From(ctx.Allocator, itemKey, out Slice _))
+                    using (Slice.From(ctx.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameToDeleteLowered))
                     {
-                        using (Slice.From(ctx.Allocator, key, out Slice _))
-                        using (Slice.From(ctx.Allocator, key.ToLowerInvariant(), out Slice valueNameToDeleteLowered))
-                        {
-                            items.DeleteByKey(valueNameToDeleteLowered);
-                        }
+                        items.DeleteByKey(valueNameToDeleteLowered);
                     }
 
                     break;
@@ -108,7 +96,7 @@ namespace Raven.Server.ServerWide.Commands
                     break;
                 case OngoingTaskType.Backup:
                     record.DeletePeriodicBackupConfiguration(TaskId);
-                    _backupTaskIdToDelete = TaskId;
+                    _taskIdToDelete = TaskId.ToString();
                     break;
 
                 case OngoingTaskType.SqlEtl:

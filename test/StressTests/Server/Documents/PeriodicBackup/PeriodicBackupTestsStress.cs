@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
-using Raven.Client.Util;
 using Raven.Server;
-using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -22,15 +25,13 @@ namespace StressTests.Server.Documents.PeriodicBackup
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task WillRunBackupAfterGettingMissingResponsibleNode()
+        public async Task FirstBackupWithClusterDownStatusShouldRearrangeTheTimer()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-
             using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
             {
-                var gotMissingResponsibleNode = false;
                 var documentDatabase = await GetDatabase(store.Database);
-                documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnMissingResponsibleNode = () => gotMissingResponsibleNode = true;
+                documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateClusterDownStatus = true;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -41,10 +42,9 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
-
-                var val = WaitForValue(() => gotMissingResponsibleNode, true, timeout: 66666, interval: 333);
-                Assert.True(val, "Didn't get a missing responsible node status");
-
+                var val = WaitForValue(() => documentDatabase.PeriodicBackupRunner._forTestingPurposes.ClusterDownStatusSimulated, true, timeout: 66666, interval: 333);
+                Assert.True(val, "Failed to simulate ClusterDown Status");
+                documentDatabase.PeriodicBackupRunner._forTestingPurposes = null;
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 333);
                 Assert.True(val, "Failed to complete the backup in time");
@@ -83,8 +83,6 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 var taskId = backups1.First().TaskId;
                 var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 Assert.NotNull(responsibleDatabase);
-                Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, taskId);
-
                 var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                 Assert.Equal(server.ServerStore.NodeTag, tag);
 

@@ -294,7 +294,7 @@ namespace Raven.Server.Documents.ETL
                     continue;
 
                 var processState = GetProcessState(config.Transforms, _database, config.Name);
-                var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
+                var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                     continue;
 
@@ -460,7 +460,7 @@ namespace Raven.Server.Documents.ETL
             where T : EtlConfiguration<TConnectionString>
         {
             var processState = GetProcessState(etlTask.Transforms, _database, etlTask.Name);
-            var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, record.Topology, etlTask, processState, _database.NotificationCenter);
+            var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, record.Topology, etlTask, processState, _database.NotificationCenter);
 
             responsibleNodes[etlTask.Name] = whoseTaskIsIt;
 

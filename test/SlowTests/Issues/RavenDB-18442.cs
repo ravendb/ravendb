@@ -48,7 +48,6 @@ namespace SlowTests.Issues
             // Backup Config
             var config = Backup.CreateBackupConfiguration(backupPath, mentorNode: firstServer.ServerStore.NodeTag);
             var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-            Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, result.TaskId);
 
             // Turn Database offline in second server.
             Assert.Equal(1, WaitForValue(() => secondServer.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000)); //wait for db to be idle

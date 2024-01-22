@@ -319,7 +319,10 @@ namespace Raven.Server.Dashboard
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.RabbitMq);
             
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
-            long periodicBackupCountOnNode = BackupUtils.GetTasksCountOnNode(serverStore, database.Name, context);
+            long periodicBackupCountOnNode = GetTaskCountOnNode<PeriodicBackupConfiguration>(database, dbRecord, serverStore,
+                database.PeriodicBackupRunner.PeriodicBackups.Select(x => x.Configuration),
+                task => database.PeriodicBackupRunner.GetBackupStatus(task.TaskId),
+                task => task.Name.StartsWith("Server Wide") == false);
             
             var subscriptionCount = database.SubscriptionStorage.GetAllSubscriptionsCount();
             long subscriptionCountOnNode = GetSubscriptionCountOnNode(database, dbRecord, serverStore, context);
@@ -356,7 +359,7 @@ namespace Raven.Server.Dashboard
                     continue;
 
                 var state = getTaskStatus((T)task);
-                var taskTag = OngoingTasksUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, task, state, database.NotificationCenter);
+                var taskTag = BackupUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, task, state, database.NotificationCenter);
                 if (serverStore.NodeTag == taskTag)
                 {
                     taskCountOnNode++;
@@ -371,7 +374,7 @@ namespace Raven.Server.Dashboard
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database.Name)))
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var taskTag = OngoingTasksUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, subscriptionState, subscriptionState, database.NotificationCenter);
+                var taskTag = BackupUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, subscriptionState, subscriptionState, database.NotificationCenter);
                 if (serverStore.NodeTag == taskTag)
                 {
                     taskCountOnNode++;
