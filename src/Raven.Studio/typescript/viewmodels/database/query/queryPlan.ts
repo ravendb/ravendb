@@ -1,13 +1,37 @@
 ﻿import d3 = require("d3");
+import genUtils from "common/generalUtils";
+import { parseInt } from "lodash";
+import icomoonHelpers from "common/helpers/view/icomoonHelpers";
 
-type stackFrame = {
-    short: string;
-    full: string;
+type parameterFrame = {
+    label: string;
+    leftPadding?: number;
+}
+
+type IconWithFixedCodePoint = keyof typeof icomoonHelpers.fixedCodepoints;
+
+const WellKnownParams = {
+    IsBoosting: "IsBoosting",
+    Count: "Count",
+    CountConfidence: "CountConfidence",
+    FieldName: "FieldName",
+    Ascending: "Ascending",
+    BoostFactor: "BoostFactor",
+    LowValue: "LowValue",
+    HighValue: "HighValue",
+    LowOption: "LowOption",
+    HighOption: "HighOption",
+    IteratorDirection: "IteratorDirection"
+} as const;
+
+interface Param {
+    label: string;
+    leftPadding?: number;
 }
 
 class executionInfo {
     static boxPadding = 15;
-    static lineHeight = 20;
+    static lineHeight = 24;
     static headerSize = 50;
     static headerPadding = 3;
     
@@ -19,11 +43,208 @@ class executionInfo {
     depth: number;
     
     operationName: string;
-    parameters: string[];
+    parameters: Param[] = [];
+    direction: Extract<IconWithFixedCodePoint, "corax-forward" | "corax-backward"> = null;
+    order: Extract<IconWithFixedCodePoint, "corax-sort-az" | "corax-sort-za"> = null;
+    icon: IconWithFixedCodePoint = null;
 
-    constructor(operationName: string, parameters: string[]) {
+    constructor(operationName: string, parameters: Record<string, string>) {
         this.operationName = operationName;
-        this.parameters = parameters;
+        this.icon = executionInfo.iconForOperation(operationName);
+        this.processParameters(parameters);
+    }
+    
+    private static iconForOperation(operationName: string): IconWithFixedCodePoint {
+        if (operationName === "SortingMatch") {
+            return "corax-sorting-match";
+        } else if (operationName === "SortingMultiMatch") {
+            return "corax-sorting-match";
+        } else if (operationName === "SpatialMatch") {
+            return "corax-spatial-match";
+        } else if (operationName === "AllEntriesMatch") {
+            return "corax-all-entries-match";
+        } else if (operationName === "BinaryMatch [And]") {
+            return "corax-operator-and";
+        } else if (operationName === "BinaryMatch [Or]") {
+            return "corax-operator-or";
+        } else if (operationName === "BinaryMatch [AndNot]") {
+            return "corax-operator-andnot";
+        } else if (operationName === "MemoizationMatch [Memoization]") {
+            return "corax-memoization-match";
+        } else if (operationName === "BoostingMatch") {
+            return "corax-boosting-match";
+        } else if (operationName.startsWith("IncludeNullMatch")) {
+            return "corax-include-null-match";
+        } else if (operationName.startsWith("TermMatch ")) {
+            return "corax-term-match";
+        } else if (operationName.startsWith("MultiTermMatch")) {
+            return "corax-multi-term-match";
+        } else if (operationName.startsWith("UnaryMatch ")) {
+            return "corax-unary-match";
+        } else if (operationName.startsWith("MultiUnaryMatch")) {
+            return "corax-unary-match";
+        } else if (operationName.startsWith("PhraseMatch")) {
+            return "corax-phrase-query";
+        } else {
+            return "corax-fallback"; 
+        }
+    }
+    
+    private static maybeFormatNumber(input: string) {
+        if (!input) { 
+            return null;
+        }
+        
+        // input might be string when matching via terms, ex. Name > "foo"
+        if (isNaN(input as any)) {
+            return "'" + input + "'";
+        }
+        
+        if (Number.isInteger(parseFloat(input))) {
+            return genUtils.formatNumberToStringFixed(parseInt(input, 10), 0);
+        } 
+        
+        return genUtils.formatNumberToStringFixed(parseFloat(input), 4);
+    }
+    
+    private processParameters(parameters: Record<string, string>): void {
+        const remainingParams = { ...parameters  };
+
+        if (WellKnownParams.LowValue in remainingParams && WellKnownParams.HighValue in remainingParams) {
+            let lowParenthesis = "(";
+            let highParenthesis = ")";
+            
+            const lowValue = remainingParams[WellKnownParams.LowValue];
+            const highValue = remainingParams[WellKnownParams.HighValue];
+            
+            const lowFormatted = lowValue ? executionInfo.maybeFormatNumber(lowValue) : "-∞";
+            const highFormatted = highValue ? executionInfo.maybeFormatNumber(highValue) : "+∞";
+
+            if (WellKnownParams.LowOption in remainingParams) {
+                if (remainingParams[WellKnownParams.LowOption] === "Inclusive") {
+                    lowParenthesis = "⟨";
+                }
+                delete remainingParams[WellKnownParams.LowOption];
+            }
+
+            if (WellKnownParams.HighOption in remainingParams) {
+                if (remainingParams[WellKnownParams.HighOption] === "Inclusive") {
+                    highParenthesis = "⟩";
+                }
+                delete remainingParams[WellKnownParams.HighOption];
+            }
+            
+            delete remainingParams[WellKnownParams.LowValue];
+            delete remainingParams[WellKnownParams.HighValue];
+            
+            this.parameters.push({ label: "Range: " + lowParenthesis + lowFormatted + " ; " + highFormatted + highParenthesis });
+        }
+        
+        if (WellKnownParams.Ascending in remainingParams) {
+            const asc = remainingParams[WellKnownParams.Ascending];
+            delete remainingParams[WellKnownParams.Ascending];
+            
+            this.order = asc === "true" ? "corax-sort-az" : "corax-sort-za";
+        }
+        
+        if (WellKnownParams.IsBoosting in remainingParams) {
+            const boost = remainingParams[WellKnownParams.IsBoosting];
+            delete remainingParams[WellKnownParams.IsBoosting];
+            
+            let factorPart = "";
+
+            if (WellKnownParams.BoostFactor in remainingParams) {
+                const boostFactor = remainingParams[WellKnownParams.BoostFactor];
+                delete remainingParams[WellKnownParams.BoostFactor];
+                
+                factorPart = " (factor: " + boostFactor + ")";
+            }
+            
+            this.parameters.push({ label: "Boosting: " + (boost ? "✅" : "❌") + factorPart });
+        }
+
+        if (WellKnownParams.Count in remainingParams && WellKnownParams.CountConfidence in remainingParams) {
+            const count = remainingParams[WellKnownParams.Count];
+            const confidence = remainingParams[WellKnownParams.CountConfidence];
+
+            const countFormatted = parseInt(count, 10).toLocaleString(); 
+            
+            switch (confidence) {
+                case "High":
+                    this.parameters.push({ label: "Count: " + countFormatted });
+                    break;
+                case "Normal":
+                    this.parameters.push({ label: "Count: ~" + countFormatted });
+                    break;
+                case "Low":
+                    this.parameters.push({ label: "Count: <unknown>" });
+                    break;
+            }
+
+            delete remainingParams[WellKnownParams.CountConfidence];
+            delete remainingParams[WellKnownParams.Count];
+        }
+
+        if (WellKnownParams.FieldName in remainingParams) {
+            const field = remainingParams[WellKnownParams.FieldName];
+            if (field) {
+                const fieldTokens = field.split("|").map(x => x.trim());
+                if (fieldTokens.length > 0) {
+                    this.parameters.push({label: "Field:"});
+                    this.parameters.push(...fieldTokens.map(x => ({label: x, leftPadding: 15})));
+                }
+            }
+            
+            delete remainingParams[WellKnownParams.FieldName];
+        }
+
+        if (WellKnownParams.IteratorDirection in remainingParams) {
+            const direction = remainingParams[WellKnownParams.IteratorDirection];
+            if (direction) {
+                this.direction = executionInfo.mapDirection(direction);
+
+                delete remainingParams[WellKnownParams.IteratorDirection];
+            }
+        }
+
+        this.parameters.push(...Object.entries(remainingParams).map(x => ({ label: x[0] + ": " + x[1] })));
+    }
+    
+    private static mapDirection(source: string): "corax-forward" | "corax-backward" {
+        if (!source) {
+            return null;
+        }
+        
+        switch (source) {
+            case "Forward":
+                return "corax-forward";
+            case "Backward":
+                return "corax-backward";
+            default:
+                return null;
+        }
+    }
+    
+    labelForDirection() {
+        switch (this.direction) {
+            case "corax-backward": 
+                return "Iterator Direction: backward";
+            case "corax-forward":
+                return "Iterator Direction: forward";
+            default: 
+                return null;
+        }
+    }
+
+    labelForOrder() {
+        switch (this.order) {
+            case "corax-sort-az":
+                return "Order: ascending";
+            case "corax-sort-za":
+                return "Order: descending";
+            default:
+                return null;
+        }
     }
 
     boxHeight() {
@@ -33,9 +254,9 @@ class executionInfo {
     paramsWithShortcuts() {
         return this.parameters.map(v => {
             return {
-                short: v, //TODO:
-                full: v
-            } as stackFrame;
+                label: v.label,
+                leftPadding: v.leftPadding,
+            } as parameterFrame;
         });
     }
     
@@ -43,7 +264,7 @@ class executionInfo {
 
 class queryPlan {
 
-    static maxBoxWidth = 280;
+    static maxBoxWidth = 380;
     static boxVerticalPadding = 100;
     static containerSelector = "#js-query-plan-container";
     static numberOfDefinedLevels = 8;
@@ -65,8 +286,7 @@ class queryPlan {
     }
     
     private static toGraph(node: Raven.Client.Documents.Queries.Timings.QueryInspectionNode): executionInfo {
-        const params = Object.entries(node.Parameters).map(x => x[0] + ": " + x[1]); //tODO:
-        const info = new executionInfo(node.Operation, params);
+        const info = new executionInfo(node.Operation, node.Parameters);
         info.children = node.Children ? node.Children.map(queryPlan.toGraph) : [];
         return info;
     }
@@ -108,13 +328,13 @@ class queryPlan {
 
         const maxBoxHeightOnDepth = d3.nest<executionInfo>()
             .key(d => d.depth.toString())
-            .sortKeys(d3.ascending)
+            .sortKeys((a, b) => parseInt(a, 10) - parseInt(b, 10))
             .rollup((leaves: any[]) => d3.max(leaves, l => l.boxHeight()))
             .entries(nodes)
             .map(v => v.values);
         
         const cumulativeHeight = queryPlan.cumulativeSumWithPadding(maxBoxHeightOnDepth, queryPlan.boxVerticalPadding);
-
+        
         const totalHeight = cumulativeHeight[cumulativeHeight.length - 1];
         const xExtent = d3.extent(nodes, (node: any) => node.x);
         xExtent[1] += queryPlan.maxBoxWidth;
@@ -231,20 +451,49 @@ class queryPlan {
                 .attr('class', 'parameters') 
                 .style('clip-path', () => 'url(#params-clip-path-' + index + ')'); 
 
-            const stack = parametersContainer
+            const parameters = parametersContainer
                 .selectAll('.parameter')
                 .data(d.paramsWithShortcuts());
 
-            stack
+            parameters
                 .enter()
                 .append('text')
                 .attr("class", "parameter")
-                .attr('x', -queryPlan.maxBoxWidth / 2 + executionInfo.boxPadding)
+                .attr('x', d => -queryPlan.maxBoxWidth / 2 + executionInfo.boxPadding + (d.leftPadding ?? 0))
                 .attr('y', (d, i) => -offsetTop + executionInfo.lineHeight * i)
-                .text(d => d.short)
+                .text(d => d.label)
                 .append("title")
-                .text(d => d.full);
+                .text(d => d.label);
         });
+
+        enteringNodes
+            .filter(x => !!x.icon)
+            .append("text")
+            .attr('x', -queryPlan.maxBoxWidth / 2 + 10)
+            .attr("y", executionInfo.headerSize / 2)
+            .attr("class", "icon-style execution-type-icon")
+            .attr("title", x => "Operation Type: " + x.operationName)
+            .html(x => icomoonHelpers.getCodePointForCanvas(x.icon));
+
+        enteringNodes
+            .filter(x => !!x.direction)
+            .append("text")
+            .attr('x', queryPlan.maxBoxWidth / 2 - 10)
+            .attr("y", executionInfo.headerSize / 2)
+            .attr("text-anchor", "end")
+            .attr("class", "icon-style direction-type-icon")
+            .attr("title", x => x.labelForDirection())
+            .html(x => icomoonHelpers.getCodePointForCanvas(x.direction));
+
+        enteringNodes
+            .filter(x => !!x.order)
+            .append("text")
+            .attr('x', queryPlan.maxBoxWidth / 2 - 10)
+            .attr("y", executionInfo.headerSize / 2)
+            .attr("text-anchor", "end")
+            .attr("class", "icon-style order-type-icon")
+            .attr("title", x => x.labelForOrder())
+            .html(x => icomoonHelpers.getCodePointForCanvas(x.order));
         
         const lineFunction = d3.svg.line()
             .x(x => xScale(x[0]))
@@ -257,8 +506,8 @@ class queryPlan {
             .attr("class", d => "link level-" + (d.source.depth % queryPlan.numberOfDefinedLevels))
             .attr("d", d => lineFunction([
                 [d.source.x, d.source.y], 
-                [d.source.x, (d.source.y + d.target.y) / 2], 
-                [d.target.x, (d.source.y + d.target.y) / 2], 
+                [d.source.x, d.target.y - 25], 
+                [d.target.x, d.target.y - 25], 
                 [d.target.x, d.target.y]
             ]))
             .style("opacity", 0)
