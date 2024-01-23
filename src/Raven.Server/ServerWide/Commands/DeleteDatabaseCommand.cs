@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
@@ -59,10 +60,14 @@ namespace Raven.Server.ServerWide.Commands
                             if (record.Sharding.Shards.TryGetValue(ShardNumber.Value, out var topology) == false)
                                 throw new RachisApplyException($"The requested shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
 
-                            if (topology.ReplicationFactor == 1 && record.Sharding.DoesShardHaveBuckets(ShardNumber.Value))
+                            if (topology.ReplicationFactor == 1)
                             {
-                                throw new RachisApplyException(
-                                    $"Database {DatabaseName} cannot be deleted because it is the last copy of shard {ShardNumber.Value} and it still contains buckets.");
+                                if (record.Sharding.DoesShardHaveBuckets(ShardNumber.Value))
+                                    throw new RachisApplyException(
+                                        $"Database {DatabaseName} cannot be deleted because it is the last copy of shard {ShardNumber.Value} and it still contains buckets.");
+                                if (record.Sharding.DoesShardHavePrefixes(ShardNumber.Value))
+                                    throw new InvalidOperationException(
+                                        $"Database {DatabaseName} cannot be deleted because it is the last copy of shard {ShardNumber.Value} and there are prefixes settings for this shard.");
                             }
 
                             RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[ShardNumber.Value], node, shardNumber: ShardNumber, deletionInProgressStatus, etag);

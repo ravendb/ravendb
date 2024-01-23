@@ -1512,6 +1512,199 @@ public class PrefixedSharding : ClusterTestBase
             await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, toShard : 2));
     }
 
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task ShardByDocumentsPrefixWithManyDocs_CanMoveBigBucketToNewShard()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/",
+                        Shards = [0 , 1]
+                    }
+                ];
+            }
+        });
+
+        const string bigBucketId = "users/123";
+        using (var bulk = store.BulkInsert())
+        {
+            for (int i = 0; i < 100_000; i++)
+            {
+                var id = $"users/{i}";
+                bulk.Store(new User(), id);
+                bulk.Store(new User(), $"{id}${bigBucketId}");
+            }
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 0)))
+        {
+            var numberOfDocs = (await session.Advanced.LoadStartingWithAsync<User>("users/", pageSize: int.MaxValue)).Count();
+            Assert.Equal(149724, numberOfDocs);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 1)))
+        {
+            var numberOfDocs = (await session.Advanced.LoadStartingWithAsync<User>("users/", pageSize: int.MaxValue)).Count();
+            Assert.Equal(50276, numberOfDocs);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 2)))
+        {
+            var numberOfDocs = (await session.Advanced.LoadStartingWithAsync<User>("users/", pageSize: int.MaxValue)).Count();
+            Assert.Equal(0, numberOfDocs);
+        }
+
+        int bucket, shardNumber;
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+            (shardNumber, bucket) =  ShardHelper.GetShardNumberAndBucketFor(record.Sharding, allocator, bigBucketId);
+
+        var shard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shardNumber));
+
+        using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+        using (ctx.OpenReadTransaction())
+        {
+            var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+            Assert.Equal(30303958, stats.Size);
+            Assert.Equal(100_001, stats.NumberOfDocuments);
+        }
+
+        // add shard #2 to prefix setting
+        await store.Maintenance.SendAsync(new UpdatePrefixedShardingSettingOperation(new PrefixedShardingSetting
+        {
+            Prefix = "users/", 
+            Shards = [0, 1, 2]
+        }));
+
+        // move big bucket to the newly added shard
+        await Sharding.Resharding.MoveShardForId(store, $"users/0${bigBucketId}", toShard: 2);
+
+        // assert stats 
+        using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+        using (ctx.OpenReadTransaction())
+        {
+            var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+            Assert.Equal(0, stats.NumberOfDocuments);
+            Assert.Equal(9988978, stats.Size);
+
+            var tombsCount = shard.DocumentsStorage.GetNumberOfTombstones(ctx);
+            Assert.Equal(100_001, tombsCount);
+
+            await shard.TombstoneCleaner.ExecuteCleanup();
+        }
+
+        using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+        using (ctx.OpenReadTransaction())
+        {
+            var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+            Assert.Null(stats);
+
+            var tombsCount = shard.DocumentsStorage.GetNumberOfTombstones(ctx);
+            Assert.Equal(0, tombsCount);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 0)))
+        {
+            var numberOfDocs = (await session.Advanced.LoadStartingWithAsync<User>("users/", pageSize: int.MaxValue)).Count();
+            Assert.Equal(49723, numberOfDocs);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 1)))
+        {
+            var numberOfDocs = (await session.Advanced.LoadStartingWithAsync<User>("users/", pageSize: int.MaxValue)).Count();
+            Assert.Equal(50276, numberOfDocs);
+        }
+
+        using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 2)))
+        {
+            var numberOfDocs = (await session.Advanced.LoadStartingWithAsync<User>("users/", pageSize: int.MaxValue)).Count();
+            Assert.Equal(100_001, numberOfDocs);
+        }
+
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task ShouldNotAllowToRemoveShardFromDbIfItHasPrefixesSettings()
+    {
+        var cluster = await CreateRaftCluster(numberOfNodes: 3, watcherCluster: true);
+        var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+        options.ModifyDatabaseRecord += record =>
+        {
+            record.Sharding ??= new ShardingConfiguration();
+            record.Sharding.Prefixed =
+            [
+                new PrefixedShardingSetting
+                {
+                    Prefix = "users/", 
+                    Shards = [0, 1]
+                }
+            ];
+        };
+
+        using var store = Sharding.GetDocumentStore(options);
+
+        using var session = store.OpenAsyncSession();
+        for (int i = 0; i < 1000; i++)
+        {
+            var id = $"users/{i}";
+            await session.StoreAsync(new User(), id);
+        }
+        await session.SaveChangesAsync();
+
+        // add shard #2 to database
+        var sharding = await Sharding.GetShardingConfigurationAsync(store);
+        var shardNodes = sharding.Shards.Select(kvp => kvp.Value.Members[0]);
+        var nodeNotInDbGroup = cluster.Nodes.SingleOrDefault(n => shardNodes.Contains(n.ServerStore.NodeTag) == false)?.ServerStore.NodeTag;
+        Assert.NotNull(nodeNotInDbGroup);
+
+        var addShardRes = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, [nodeNotInDbGroup]));
+        Assert.Equal(2, addShardRes.ShardNumber);
+        await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addShardRes.RaftCommandIndex);
+
+        await AssertWaitForValueAsync(async () =>
+        {
+            sharding = await Sharding.GetShardingConfigurationAsync(store);
+            sharding.Shards.TryGetValue(2, out var topology);
+            return topology?.Members.Count;
+        }, expectedVal: 1);
+
+
+        // add shard #2 to 'users/' prefix setting
+        await store.Maintenance.SendAsync(new UpdatePrefixedShardingSettingOperation(new PrefixedShardingSetting
+        {
+            Prefix = "users/", 
+            Shards = [0, 1, 2]
+        }));
+
+        // should not allow to delete shard #2 because it's part of 'users/' prefix setting
+        var deleteShardTask = store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, shardNumber: 2, hardDelete: true, fromNode: nodeNotInDbGroup));
+        await Assert.ThrowsAsync<RavenException>(async () => await deleteShardTask);
+
+        // remove shard #2 from 'users/' prefix setting
+        // can be removed because shard #2 has no bucket ranges for this prefix
+        await store.Maintenance.SendAsync(new UpdatePrefixedShardingSettingOperation(new PrefixedShardingSetting
+        {
+            Prefix = "users/",
+            Shards = [0, 1]
+        }));
+
+        // now we should be able to delete shard #2 from database
+        var res = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, shardNumber: 2, hardDelete: true, fromNode: nodeNotInDbGroup));
+        await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
+
+        await AssertWaitForValueAsync(async () =>
+        {
+            sharding = await Sharding.GetShardingConfigurationAsync(store);
+            return sharding.Shards.TryGetValue(2, out _);
+        }, expectedVal: false);
+    }
+
     private class Item
     {
 #pragma warning disable CS0649
