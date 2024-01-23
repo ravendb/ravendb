@@ -49,7 +49,25 @@ class icomoonHelpers {
         "rabbitmq-etl": 0xf130,
         "kafka-sink": 0xf131,
         "rabbitmq-sink": 0xf132,
-        "preview": 0xf133
+        "preview": 0xf133,
+        "corax-include-null-match": 0xf140,
+        "corax-fallback": 0xf141,
+        "corax-all-entries-match": 0xf142,
+        "corax-boosting-match": 0xf143,
+        "corax-forward": 0xf144,
+        "corax-memoization-match": 0xf145,
+        "corax-multi-term-match": 0xf146,
+        "corax-operator-and": 0xf147,
+        "corax-operator-andnot": 0xf148,
+        "corax-operator-or": 0xf149,
+        "corax-phrase-query": 0xf14A,
+        "corax-sorting-match": 0xf14B,
+        "corax-spatial-match": 0xf14C,
+        "corax-term-match": 0xf14D,
+        "corax-unary-match": 0xf14E,
+        "corax-backward": 0xf14F,
+        "corax-sort-az": 0xf150,
+        "corax-sort-za": 0xf151,
     } as const;
     
     static getCodePointForCanvas(iconName: keyof typeof icomoonHelpers.fixedCodepoints): string {
