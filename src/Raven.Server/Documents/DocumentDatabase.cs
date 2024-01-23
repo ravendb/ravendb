@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Commercial;
@@ -1318,14 +1317,14 @@ namespace Raven.Server.Documents
         /// </summary>
         public event Action<DatabaseRecord> DatabaseRecordChanged;
 
-        public void ValueChanged(long index, string type, DatabaseTopology topology, List<PeriodicBackupConfiguration> backupConfigurations, object changeState)
+        public void ValueChanged(long index, string type, RawDatabaseRecord record, object changeState)
         {
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                NotifyFeaturesAboutValueChange(index, type, topology, backupConfigurations, changeState);
+                NotifyFeaturesAboutValueChange(index, type, record, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1428,7 +1427,7 @@ namespace Raven.Server.Documents
                         IndexStore.HandleDatabaseRecordChange(record, index);
                         ReplicationLoader?.HandleDatabaseRecordChange(record, index);
                         EtlLoader?.HandleDatabaseRecordChange(record);
-                        SubscriptionStorage?.HandleDatabaseRecordChange(Name, record.Topology);
+                        SubscriptionStorage?.HandleDatabaseRecordChange(record.Topology);
 
                         OnDatabaseRecordChanged(record);
 
@@ -1525,7 +1524,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private void NotifyFeaturesAboutValueChange(long index, string type, DatabaseTopology topology, List<PeriodicBackupConfiguration> backupConfigurations, object changeState)
+        private void NotifyFeaturesAboutValueChange(long index, string type, RawDatabaseRecord record, object changeState)
         {
             if (CanSkipValueChange(index))
                 return;
@@ -1547,9 +1546,9 @@ namespace Raven.Server.Documents
                         continue;
 
                     DatabaseShutdown.ThrowIfCancellationRequested();
-                    SubscriptionStorage?.HandleDatabaseRecordChange(Name, topology);
-                    EtlLoader?.HandleDatabaseValueChanged(Name);
-                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, backupConfigurations, changeState);
+                    SubscriptionStorage?.HandleDatabaseRecordChange(record.Topology);
+                    EtlLoader?.HandleDatabaseValueChanged();
+                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, record, changeState);
 
                     LastValueChangeIndex = index;
                 }

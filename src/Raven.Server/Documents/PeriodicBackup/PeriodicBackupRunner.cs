@@ -1044,12 +1044,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             return dict;
         }
 
-        public void HandleDatabaseValueChanged(string type, List<PeriodicBackupConfiguration> configurations, object changeState)
+        public void HandleDatabaseValueChanged(string type, RawDatabaseRecord record, object changeState)
         {
             switch (type)
             {
                 case nameof(UpdateResponsibleNodeForTasksCommand):
-                    UpdateConfigurations(configurations);
+                    UpdateConfigurations(record.PeriodicBackups);
                     break;
 
                 case nameof(DelayBackupCommand):
