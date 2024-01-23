@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Storage;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging;
 
@@ -37,4 +41,55 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
     }
 
     protected bool GetDetails() => RequestHandler.GetBoolValueQueryString("details", required: false) ?? false;
+
+    protected virtual DynamicJsonValue GetJsonReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx, bool de)
+    {
+        throw new NotSupportedException();
+    }
+
+    public void WriteReport(AsyncBlittableJsonTextWriter writer, string name, IEnumerable<StorageEnvironmentWithType> envs,
+        DocumentsOperationContext context, bool detailed = false)
+    {
+        bool first = true;
+
+        writer.WriteStartObject();
+
+        writer.WritePropertyName("DatabaseName");
+        writer.WriteString(name);
+        writer.WriteComma();
+
+        writer.WritePropertyName("Environments");
+        writer.WriteStartArray();
+        foreach (var env in envs)
+        {
+            if (env == null)
+                continue;
+
+            if (!first)
+                writer.WriteComma();
+            first = false;
+
+            writer.WriteStartObject();
+
+            writer.WritePropertyName("Name");
+            writer.WriteString(env.Name);
+            writer.WriteComma();
+
+            writer.WritePropertyName("Type");
+            writer.WriteString(env.Type.ToString());
+            writer.WriteComma();
+
+            using (var tx = env.Environment.ReadTransaction())
+            using (context.OpenWriteTransaction())
+            {
+                var djv = GetJsonReport(env, tx.LowLevelTransaction, detailed);
+                writer.WritePropertyName("Report");
+                writer.WriteObject(context.ReadObject(djv, env.Name));
+            }
+            writer.WriteEndObject();
+        }
+        writer.WriteEndArray();
+
+        writer.WriteEndObject();
+    }
 }

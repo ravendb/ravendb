@@ -273,7 +273,6 @@ namespace Voron.Debugging
                 Tables = tables,
                 Journals = journals,
                 PreAllocatedBuffers = preAllocatedBuffers,
-                ScratchBufferPoolInfo = input.ScratchBufferPoolInfo,
                 TempBuffers = tempBuffers,
                 TotalEncryptionBufferSize = input.TotalEncryptionBufferSize.ToString()
             };
