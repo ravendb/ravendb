@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task BulkDocs()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var token = CreateHttpRequestBoundOperationToken())
+            using (var token = new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted))
             using (var command = new MergedBatchCommand(Database))
             {
                 var contentType = HttpContext.Request.ContentType;
