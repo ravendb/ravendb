@@ -63,7 +63,6 @@ namespace Voron.Debugging
         public List<PersistentDictionaryRootHeader> PersistentDictionaries;
         public List<Lookup<Int64LookupKey>> NumericLookups;
         public List<Lookup<CompactTree.CompactKeyLookup>> TextualLookups;
-        public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool IncludeDetails { get; set; }
         public VoronPathSetting TempPath { get; set; }
         public VoronPathSetting JournalPath { get; set; }
@@ -273,7 +272,6 @@ namespace Voron.Debugging
                 Tables = tables,
                 Journals = journals,
                 PreAllocatedBuffers = preAllocatedBuffers,
-                ScratchBufferPoolInfo = input.ScratchBufferPoolInfo,
                 TempBuffers = tempBuffers,
                 TotalEncryptionBufferSize = input.TotalEncryptionBufferSize.ToString()
             };

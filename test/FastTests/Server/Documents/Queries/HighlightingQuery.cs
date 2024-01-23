@@ -5,7 +5,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Corax
+namespace FastTests.Server.Documents.Queries
 {
     public class HighlightingQuery : RavenTestBase
     {

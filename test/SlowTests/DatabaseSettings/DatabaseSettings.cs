@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Server.Config;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
-using System.Linq;
 
-namespace SlowTests.DataBaseSettings
+namespace SlowTests.DatabaseSettings
 {
     public class DatabaseSettings : RavenTestBase
     {
