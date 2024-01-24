@@ -54,9 +54,9 @@ public partial class ShardedDatabaseContext
             return false;
         }
 
-        public void Update(RawDatabaseRecord databaseRecord)
+        public void Update()
         {
-            HandleDatabaseRecordChange(databaseRecord);
+            HandleDatabaseRecordChange();
         }
 
         public override bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex)
