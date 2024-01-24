@@ -1511,8 +1511,14 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private bool CanSkipValueChange(long index)
+        private bool CanSkipValueChange(long index, object changeState)
         {
+            if (changeState != null)
+            {
+                // must set a specific state
+                return false;
+            }
+
             if (LastValueChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
@@ -1526,7 +1532,7 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutValueChange(long index, string type, object changeState)
         {
-            if (CanSkipValueChange(index))
+            if (CanSkipValueChange(index, changeState))
                 return;
 
             var taken = false;
@@ -1536,7 +1542,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    if (CanSkipValueChange(index))
+                    if (CanSkipValueChange(index, changeState))
                         return;
 
                     if (DatabaseShutdown.IsCancellationRequested)
