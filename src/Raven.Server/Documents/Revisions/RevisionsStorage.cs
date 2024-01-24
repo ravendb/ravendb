@@ -1910,15 +1910,13 @@ namespace Raven.Server.Documents.Revisions
                 var revisions = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
                 return revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
             }
-            else
+
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
+            var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+            var collectionRevisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+            if (collectionRevisions != null) // there are existing revisions for that collection
             {
-                var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
-                var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
-                var revisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
-                if (revisions != null) // there are existing revisions for that collection
-                {
-                    return revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
-                }
+                return collectionRevisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
             }
 
             return null;
