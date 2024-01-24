@@ -104,9 +104,6 @@ namespace Raven.Server.Documents
                 return;
 
             using (await _disposing.ReaderLockAsync(_serverStore.ServerShutdown))
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
             {
                 try
                 {
@@ -115,25 +112,31 @@ namespace Raven.Server.Documents
 
                     // response to changed database.
                     // if disabled, unload
-                    if (rawRecord == null)
+                    DatabaseTopology topology;
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                     {
-                        // was removed, need to make sure that it isn't loaded
-                        UnloadDatabase(databaseName, dbRecordIsNull: true);
-                        return;
-                    }
+                        if (rawRecord == null)
+                        {
+                            // was removed, need to make sure that it isn't loaded
+                            UnloadDatabase(databaseName, dbRecordIsNull: true);
+                            return;
+                        }
 
-                    ForTestingPurposes?.InsideHandleClusterDatabaseChanged?.Invoke(type);
-                    if (ShouldDeleteDatabase(context, databaseName, rawRecord))
-                        return;
+                        ForTestingPurposes?.InsideHandleClusterDatabaseChanged?.Invoke(type);
+                        if (ShouldDeleteDatabase(context, databaseName, rawRecord))
+                            return;
 
-                    var topology = rawRecord.Topology;
-                    if (topology.RelevantFor(_serverStore.NodeTag) == false)
-                        return;
+                        topology = rawRecord.Topology;
+                        if (topology.RelevantFor(_serverStore.NodeTag) == false)
+                            return;
 
-                    if (rawRecord.IsDisabled || rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
-                    {
-                        UnloadDatabase(databaseName);
-                        return;
+                        if (rawRecord.IsDisabled || rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
+                        {
+                            UnloadDatabase(databaseName);
+                            return;
+                        }
                     }
 
                     if (changeType == ClusterDatabaseChangeType.RecordRestored)
@@ -168,7 +171,7 @@ namespace Raven.Server.Documents
                             break;
 
                         case ClusterDatabaseChangeType.ValueChanged:
-                            database.ValueChanged(index, type, rawRecord, changeState);
+                            database.ValueChanged(index, type, changeState);
                             break;
 
                         case ClusterDatabaseChangeType.PendingClusterTransactions:
