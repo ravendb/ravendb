@@ -484,14 +484,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         TSelf Distinct();
 
-        /// <summary>
-        ///     Adds explanations of scores calculated for queried documents to the query result
-        /// </summary>
+        /// <inheritdoc cref="AbstractDocumentQuery{T,TSelf}.IncludeExplanations"/>
         TSelf IncludeExplanations(out Explanations explanations);
 
-        /// <summary>
-        ///     Adds explanations of scores calculated for queried documents to the query result
-        /// </summary>
+        /// <inheritdoc cref="AbstractDocumentQuery{T,TSelf}.IncludeExplanations"/>
         TSelf IncludeExplanations(ExplanationOptions options, out Explanations explanations);
 
         /// <summary>
