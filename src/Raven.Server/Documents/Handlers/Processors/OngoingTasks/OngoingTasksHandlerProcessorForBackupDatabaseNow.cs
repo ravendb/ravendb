@@ -27,7 +27,24 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             var nodeTag = RequestHandler.Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
             if (nodeTag == null)
-                throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
+            {
+                // this can happen for a new task that was just created
+                // we'll wait for the cluster observer to determine the responsible node for the backup
+
+                var task = Task.Delay(RequestHandler.Database.Configuration.Cluster.StabilizationTime.AsTimeSpan);
+
+                while (true)
+                {
+                    if (Task.WaitAny(new[] { task }, millisecondsTimeout: 100) == 0)
+                    {
+                        throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
+                    }
+
+                    nodeTag = RequestHandler.Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    if (nodeTag != null)
+                        break;
+                }
+            }
 
             if (nodeTag == ServerStore.NodeTag)
             {
