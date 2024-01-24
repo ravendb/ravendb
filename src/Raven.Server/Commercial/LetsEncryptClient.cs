@@ -81,12 +81,7 @@ namespace Raven.Server.Commercial
             if(string.IsNullOrEmpty(_directoryPath))
                 throw new ArgumentNullException(nameof(_directoryPath), "Url does not contain directory path");
 
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
-                Environment.SpecialFolderOption.Create);
-
-            var hash = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(url));
-            var file = Jws.Base64UrlEncoded(hash) + ".lets-encrypt.cache.json";
-            _path = Path.Combine(home, file);
+            _path = GetCachePath(_url);
         }
 
         public async Task Init(string email, CancellationToken token = default(CancellationToken))
@@ -477,6 +472,15 @@ namespace Raven.Server.Commercial
             {
                 _cache.CachedCerts.Remove(host);
             }
+        }
+        
+        internal static string GetCachePath(string acmeUrl)
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                Environment.SpecialFolderOption.Create);
+            var hash = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(acmeUrl));
+            var file = Jws.Base64UrlEncoded(hash) + ".lets-encrypt.cache.json";
+            return Path.Combine(home, file);
         }
 
         private class RegistrationCache
