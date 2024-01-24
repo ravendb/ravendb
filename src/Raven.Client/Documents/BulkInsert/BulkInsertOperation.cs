@@ -435,7 +435,6 @@ namespace Raven.Client.Documents.BulkInsert
         {
             using (await ConcurrencyCheckAsync().ConfigureAwait(false))
             {
-                _lastWriteToStream = DateTime.UtcNow;
                 VerifyValidId(id);
 
                 await ExecuteBeforeStore().ConfigureAwait(false);
@@ -554,6 +553,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _backgroundWriter = tmp;
                 _currentWriter.BaseStream.SetLength(0);
                 ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
+                _lastWriteToStream = DateTime.UtcNow;
                 _asyncWrite = WriteToRequestBodyStreamAsync(buffer);
             }
         }
@@ -856,7 +856,6 @@ namespace Raven.Client.Documents.BulkInsert
                         if (_operation._inProgressCommand == CommandType.TimeSeries)
                             TimeSeriesBulkInsertBase.ThrowAlreadyRunningTimeSeries();
 
-                        _operation._lastWriteToStream = DateTime.UtcNow;
                         var isFirst = _id == null;
                         if (isFirst || _id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
                         {
@@ -956,7 +955,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     try
                     {
-                        _operation._lastWriteToStream = DateTime.UtcNow;
                         await _operation.ExecuteBeforeStore().ConfigureAwait(false);
 
                         if (_first)
@@ -1151,7 +1149,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     try
                     {
-                        _operation._lastWriteToStream = DateTime.UtcNow;
                         _operation.EndPreviousCommandIfNeeded();
 
                         await _operation.ExecuteBeforeStore().ConfigureAwait(false);
