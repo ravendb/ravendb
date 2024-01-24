@@ -232,7 +232,7 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
         return count;
     }
 
-    public virtual void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
+    public virtual void HandleDatabaseRecordChange()
     {
         using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())

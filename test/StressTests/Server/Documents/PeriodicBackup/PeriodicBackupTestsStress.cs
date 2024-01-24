@@ -97,7 +97,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                                   "so when the task status is back to be ActiveByCurrentNode, UpdateConfigurations will be able to reassign the backup timer");
 
                 responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
 
                 val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 444);
