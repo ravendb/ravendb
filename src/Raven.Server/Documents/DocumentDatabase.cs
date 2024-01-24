@@ -1317,14 +1317,14 @@ namespace Raven.Server.Documents
         /// </summary>
         public event Action<DatabaseRecord> DatabaseRecordChanged;
 
-        public void ValueChanged(long index, string type, RawDatabaseRecord record, object changeState)
+        public void ValueChanged(long index, string type, object changeState)
         {
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                NotifyFeaturesAboutValueChange(index, type, record, changeState);
+                NotifyFeaturesAboutValueChange(index, type, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1524,7 +1524,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private void NotifyFeaturesAboutValueChange(long index, string type, RawDatabaseRecord record, object changeState)
+        private void NotifyFeaturesAboutValueChange(long index, string type, object changeState)
         {
             if (CanSkipValueChange(index))
                 return;
@@ -1546,9 +1546,15 @@ namespace Raven.Server.Documents
                         continue;
 
                     DatabaseShutdown.ThrowIfCancellationRequested();
-                    SubscriptionStorage?.HandleDatabaseRecordChange(record.Topology);
-                    EtlLoader?.HandleDatabaseValueChanged();
-                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, record, changeState);
+
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name))
+                    {
+                        SubscriptionStorage?.HandleDatabaseRecordChange(rawRecord.Topology);
+                        EtlLoader?.HandleDatabaseValueChanged();
+                        PeriodicBackupRunner?.HandleDatabaseValueChanged(type, rawRecord, changeState);
+                    }
 
                     LastValueChangeIndex = index;
                 }
