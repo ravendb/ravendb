@@ -2865,7 +2865,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = true;
-                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
                     tcs.SetResult(null);
 
                     responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
@@ -2933,7 +2933,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateDisableNodeStatus_UpdateConfigurations = true;
-                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
                     tcs.SetResult(null);
 
                     responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
@@ -3556,10 +3556,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = true;
-                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = false;
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByCurrentNode_UpdateConfigurations = true;
-                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
                     tcs.SetResult(null);
 
                     responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;

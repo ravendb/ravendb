@@ -229,7 +229,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void SetIds(RawDatabaseRecord record) => SetIds(record.Topology, record.Sharding?.ShardedDatabaseId);
         public void SetIds(DatabaseRecord record) => SetIds(record.Topology, record.Sharding?.DatabaseId);
 
         internal virtual void SetIds(DatabaseTopology topology, string shardedDatabaseId)
@@ -1491,14 +1490,7 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                DatabaseRecord record;
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    record = _serverStore.Cluster.ReadDatabase(context, Name);
-                }
-
-                NotifyFeaturesAboutValueChange(record, index, type, changeState);
+                NotifyFeaturesAboutValueChange(index, type, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1589,7 +1581,7 @@ namespace Raven.Server.Documents
             IndexStore.HandleDatabaseRecordChange(record, index);
             ReplicationLoader?.HandleDatabaseRecordChange(record, index);
             EtlLoader?.HandleDatabaseRecordChange(record);
-            SubscriptionStorage?.HandleDatabaseRecordChange(record);
+            SubscriptionStorage?.HandleDatabaseRecordChange();
             QueueSinkLoader?.HandleDatabaseRecordChange(record);
 
             OnDatabaseRecordChanged(record);
@@ -1612,22 +1604,28 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool CanSkipValueChange(string database, long index)
+        private bool CanSkipValueChange(long index, object changeState)
         {
+            if (changeState != null)
+            {
+                // must set a specific state
+                return false;
+            }
+
             if (LastValueChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {database} because it was already precessed.");
+                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {Name} because it was already precessed.");
                 return true;
             }
 
             return false;
         }
 
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index, string type, object changeState)
+        private void NotifyFeaturesAboutValueChange(long index, string type, object changeState)
         {
-            if (CanSkipValueChange(record.DatabaseName, index))
+            if (CanSkipValueChange(index, changeState))
                 return;
 
             var taken = false;
@@ -1637,7 +1635,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    if (CanSkipValueChange(record.DatabaseName, index))
+                    if (CanSkipValueChange(index, changeState))
                         return;
 
                     if (DatabaseShutdown.IsCancellationRequested)
@@ -1647,9 +1645,10 @@ namespace Raven.Server.Documents
                         continue;
 
                     DatabaseShutdown.ThrowIfCancellationRequested();
-                    SubscriptionStorage?.HandleDatabaseRecordChange(record);
-                    EtlLoader?.HandleDatabaseValueChanged(record);
-                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, record, changeState);
+
+                    SubscriptionStorage?.HandleDatabaseRecordChange();
+                    EtlLoader?.HandleDatabaseValueChanged();
+                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, changeState);
 
                     LastValueChangeIndex = index;
                 }
@@ -1689,7 +1688,7 @@ namespace Raven.Server.Documents
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             DataArchivist = DataArchivist.LoadConfiguration(this, record, DataArchivist);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
-            PeriodicBackupRunner.UpdateConfigurations(record);
+            PeriodicBackupRunner.UpdateConfigurations(record.PeriodicBackups);
             UpdateCompressionConfigurationFromDatabaseRecord(record);
         }
 

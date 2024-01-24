@@ -123,6 +123,9 @@ namespace Raven.Server.Documents
 
                     // response to changed database.
                     // if disabled, unload
+
+                    var updateList = new List<HandleSpecificClusterDatabaseChangedParameters>();
+
                     using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
@@ -134,12 +137,17 @@ namespace Raven.Server.Documents
                             return;
                         }
 
-                        if (rawRecord.IsSharded)
+                        if (rawRecord.IsSharded == false)
+                        {
+                            if (ShouldHandleSpecificClusterDatabaseChanged(databaseName, type, changeType, context, rawRecord))
+                                updateList.Add(new HandleSpecificClusterDatabaseChangedParameters(databaseName, rawRecord.Topology));
+                        }
+                        else
                         {
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
-                                await HandleSpecificClusterDatabaseChanged(
-                                    shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord, changeState);
+                                if (ShouldHandleSpecificClusterDatabaseChanged(shardRawRecord.DatabaseName, type, changeType, context, shardRawRecord))
+                                    updateList.Add(new HandleSpecificClusterDatabaseChangedParameters(shardRawRecord.DatabaseName, shardRawRecord.Topology, shardRawRecord.Sharding?.ShardedDatabaseId));
                             }
 
                             var topology = rawRecord.Sharding.Orchestrator.Topology;
@@ -168,13 +176,12 @@ namespace Raven.Server.Documents
                                 _serverStore.NotificationCenter.Storage.DeleteStorageFor(databaseName);
                             }
                         }
-                        else
-                        {
-                            await HandleSpecificClusterDatabaseChanged(databaseName, index, type, changeType, context, rawRecord, changeState);
-                        }
                     }
 
-                    // if deleted, unload / deleted and then notify leader that we removed it
+                    foreach (var toUpdate in updateList)
+                    {
+                        await HandleSpecificClusterDatabaseChanged(toUpdate, index, type, changeType, changeState);
+                    }
                 }
                 catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
                 {
@@ -226,23 +233,36 @@ namespace Raven.Server.Documents
             }
         }
 
-        private async Task HandleSpecificClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType,
-            TransactionOperationContext context,
-            RawDatabaseRecord rawRecord, object changeState)
+        private class HandleSpecificClusterDatabaseChangedParameters
+        {
+            public HandleSpecificClusterDatabaseChangedParameters(string databaseName, DatabaseTopology topology, string shardedDatabaseId = null)
+            {
+                DatabaseName = databaseName;
+                Topology = topology;
+                ShardedDatabaseId = shardedDatabaseId;
+            }
+            public string DatabaseName { get; }
+
+            public DatabaseTopology Topology { get; }
+
+            public string ShardedDatabaseId { get; }
+        }
+
+        private bool ShouldHandleSpecificClusterDatabaseChanged(string databaseName, string type, ClusterDatabaseChangeType changeType, TransactionOperationContext context, RawDatabaseRecord rawRecord)
         {
             ForTestingPurposes?.InsideHandleClusterDatabaseChanged?.Invoke(type);
 
             if (ShouldDeleteDatabase(context, databaseName, rawRecord))
-                return;
+                return false;
 
             var topology = rawRecord.Topology;
             if (topology.RelevantFor(_serverStore.NodeTag) == false)
-                return;
+                return false;
 
             if (rawRecord.IsDisabled || rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
             {
                 UnloadDatabase(databaseName);
-                return;
+                return false;
             }
 
             if (changeType == ClusterDatabaseChangeType.RecordRestored)
@@ -252,16 +272,21 @@ namespace Raven.Server.Documents
                 // - this is the first time that the database was loaded so there is no need to call
                 // StateChanged after the database was restored
                 // - the database will be started on demand
-                return;
+                return false;
             }
 
-            if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
+            return true;
+        }
+
+        private async Task HandleSpecificClusterDatabaseChanged(HandleSpecificClusterDatabaseChangedParameters parameters, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
+        {
+            if (DatabasesCache.TryGetValue(parameters.DatabaseName, out var task) == false)
             {
                 // if the database isn't loaded, but it is relevant for this node, we need to create
                 // it. This is important so things like replication will start pumping, and that 
                 // configuration changes such as running periodic backup will get a chance to run, which
                 // they wouldn't unless the database is loaded / will have a request on it.          
-                task = TryGetOrCreateResourceStore(databaseName, ignoreBeenDeleted: true, caller: type);
+                task = TryGetOrCreateResourceStore(parameters.DatabaseName, ignoreBeenDeleted: true, caller: type);
             }
 
             var database = await task;
@@ -286,13 +311,15 @@ namespace Raven.Server.Documents
                     if (ForTestingPurposes?.BeforeHandleClusterTransactionOnDatabaseChanged != null)
                         await ForTestingPurposes.BeforeHandleClusterTransactionOnDatabaseChanged.Invoke(_serverStore);
 
-                    database.SetIds(rawRecord);
+                    database.SetIds(parameters.Topology, parameters.ShardedDatabaseId);
                     database.NotifyOnPendingClusterTransaction(index, changeType);
                     break;
                 default:
                     ThrowUnknownClusterDatabaseChangeType(changeType);
                     break;
             }
+
+            // if deleted, unload / deleted and then notify leader that we removed it
         }
 
         private bool PreventWakeUpIdleDatabase(string databaseName, string type)

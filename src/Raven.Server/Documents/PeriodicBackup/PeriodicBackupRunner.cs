@@ -11,7 +11,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -657,12 +656,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void UpdateConfigurations(DatabaseRecord databaseRecord)
+        public void UpdateConfigurations(List<PeriodicBackupConfiguration> configurations)
         {
             if (_disposed)
                 return;
 
-            if (databaseRecord.PeriodicBackups == null)
+            if (configurations == null)
             {
                 foreach (var periodicBackup in _periodicBackups)
                 {
@@ -673,7 +672,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var allBackupTaskIds = new List<long>();
-            foreach (var periodicBackupConfiguration in databaseRecord.PeriodicBackups)
+            foreach (var periodicBackupConfiguration in configurations)
             {
                 var newBackupTaskId = periodicBackupConfiguration.TaskId;
                 allBackupTaskIds.Add(newBackupTaskId);
@@ -1048,12 +1047,17 @@ namespace Raven.Server.Documents.PeriodicBackup
             return dict;
         }
 
-        public void HandleDatabaseValueChanged(string type, DatabaseRecord record, object changeState)
+        public void HandleDatabaseValueChanged(string type, object changeState)
         {
             switch (type)
             {
                 case nameof(UpdateResponsibleNodeForTasksCommand):
-                    UpdateConfigurations(record);
+                    using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name))
+                    {
+                        UpdateConfigurations(rawRecord.PeriodicBackups);
+                    }
                     break;
 
                 case nameof(DelayBackupCommand):
