@@ -110,7 +110,8 @@ public partial class IndexSearcher
             //Phrase query
             var startPosition = terms.Count;
             EncodeAndApplyAnalyzerForMultipleTerms(field, word, ref terms);
-            if (terms.Count == startPosition) continue; //sentence contained only stop-words
+            if (terms.Count == startPosition) 
+                continue; //sentence contained only stop-words
 
             var hs = new HashSet<Slice>(SliceComparer.Instance);
             for (var i = startPosition; i < terms.Count; ++i)

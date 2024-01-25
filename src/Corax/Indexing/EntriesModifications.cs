@@ -12,7 +12,6 @@ namespace Corax.Indexing;
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct EntriesModifications
 {
-    public readonly int StorageLocation;
     private const int ControlBits = 4;
     private const int ControlMask = 0b1111;
 
@@ -128,9 +127,8 @@ internal unsafe struct EntriesModifications
 
     public bool HasChanges => Additions.Count + Removals.Count > 0;
 
-    public EntriesModifications(int size, int storageLocation)
+    public EntriesModifications(int size)
     {
-        StorageLocation = storageLocation;
         TermSize = size;
         //do not initialize native list by default since some of them never will be allocated.
         Additions = new();
