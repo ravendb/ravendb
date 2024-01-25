@@ -1,8 +1,11 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,6 +16,90 @@ public class CoraxPhraseQueries : RavenTestBase
 {
     public CoraxPhraseQueries(ITestOutputHelper output) : base(output)
     {
+    }
+    
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = new object[]{"dog puppy cat puppy horse", "cat puppy"})]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = new object[]{"afirst cthird bsecond afirst", "cthird bsecond"})]
+    public void TermVectorWithRepetition(Options options, string documentData, string phraseQuery)
+    {
+        using var store = GetDocumentStore(options);
+        using var session = store.OpenSession();
+        session.Store(new Item() {FtsField = documentData});
+        session.SaveChanges();
+
+        var count = session.Query<Item>().Search(x=>x.FtsField, $"\"{phraseQuery}\"").Count();
+        Assert.Equal(1, count);
+    }
+    
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanPerformPhraseQueryWhenDocumentHasListOfSentences(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using var session = store.OpenSession();
+        var random = new Random(1337);
+        var source = Enumerable.Range(0, 4 * 4).Select(x => $"unique{x}").ToArray().AsSpan();
+        random.Shuffle(source);
+
+        var insertArray = new string[4];
+
+        for (int pos = 0, i = 0; pos < source.Length; pos += 4, i++)
+        {
+            var str = string.Join(" ", source.Slice(pos, 4).ToArray());
+            insertArray[i] = str;
+        }
+
+        session.Store(new ListItem() {FtsField = insertArray});
+        session.SaveChanges();
+        new ListIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        var querySentence = insertArray[0].Split(" ")[1..2];
+
+        var count = session.Query<ListItem, ListIndex>().Search(x => x.FtsField, $"\"{string.Join(" ", querySentence)}\"").Count();
+        Assert.Equal(1, count);
+    }
+
+
+    private class ListItem
+    {
+        public string Id { get; set; }
+        public string[] FtsField { get; set; }
+    }
+
+    private class ListIndex : AbstractIndexCreationTask<ListItem>
+    {
+        public ListIndex()
+        {
+            Map = indices => from doc in indices select new {FtsField = doc.FtsField};
+            Index(nameof(ListItem.FtsField), FieldIndexing.Search);
+        }
+    }
+
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanIndexWithMoreThan128TermsWhereTermsAreNotSorted(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using var session = store.OpenSession();
+        var random = new Random(1337);
+        var source = Enumerable.Range(0, 256).Select(x => $"unique{x}").ToArray();
+        random.Shuffle(source);
+        var item1 = source.ToArray();
+        random.Shuffle(source);
+        var item2 = source.ToArray();
+        var indexToQuery = 50;
+        //Item2 doesn't have searched sequence;
+        Assert.True(item2.AsSpan().IndexOf(item1.AsSpan().Slice(indexToQuery, 2)) < 0);
+        session.Store(new Item() {FtsField = string.Join(" ", item1)});
+        session.Store(new Item() {FtsField = string.Join(" ", item2)});
+        session.SaveChanges();
+
+        var queriesPhrase = $"{item1[indexToQuery]} {item1[indexToQuery + 1]}";
+        var results = session.Query<Item>().Customize(x => x.WaitForNonStaleResults()).Search(x => x.FtsField, $"\"{queriesPhrase}\"").ToList();
+        Assert.Equal(1, results.Count);
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
@@ -30,11 +117,11 @@ public class CoraxPhraseQueries : RavenTestBase
     }
 
 
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void StaticFieldPhraseQuery(Options options) => StaticPhraseQuery<Index>(options);
 
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void DynamicFieldPhraseQuery(Options options) => StaticPhraseQuery<DynamicIndex>(options);
 
@@ -61,7 +148,7 @@ public class CoraxPhraseQueries : RavenTestBase
         Assert.Equal(1, count);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     public void CoraxAutoIndexWillPutCorrectTermsForDocumentWhenFieldIsNotPresent()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
