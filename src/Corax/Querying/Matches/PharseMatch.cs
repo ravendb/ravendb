@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Sparrow.Binary;
@@ -16,7 +17,7 @@ public struct PhraseMatch<TInner> : IQueryMatch
 {
     private IDisposable _memoryHandler;
     private ByteString _memory;
-    private int MemorySize => _memory.Length / (sizeof(int) + sizeof(long));
+    private int MemorySize => _memory.Length / ( sizeof(int) + sizeof(long));
     
     
     private TInner _inner;
@@ -72,43 +73,50 @@ public struct PhraseMatch<TInner> : IQueryMatch
         Span<long> buffer = _memoryHandler is null 
             ? stackalloc long[128] 
             :  MemoryMarshal.Cast<byte, long>(_memory.ToSpan().Slice(0, sizeof(long) * MemorySize));
-        
+
         Span<int> indexes = _memoryHandler is null 
-            ? stackalloc int[128]
-            : MemoryMarshal.Cast<byte, int>(_memory.ToSpan().Slice(MemorySize * sizeof(long)));
+          ? stackalloc int[128]
+          : MemoryMarshal.Cast<byte, int>(_memory.ToSpan().Slice(MemorySize * sizeof(long)));
         
         for (var processingId = 0; processingId < matches.Length; ++processingId)
         {
             var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p);
             if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
                 continue;
-
+            
             //This is value from storage, is not changed since we're seeking to non-stored-value
             var storedValue = entryTermsReader.StoredField.Value.ToSpan();
+            entryTermsReader.Reset();
 
             int position = 0;
-            entryTermsReader.Reset();
-            var currentTerm = 0;
-            while (entryTermsReader.FindNext(_rootPage))
+            int currentTerm = 0;
+            long termId = -1;
+            while (position < entryTermsReader.StoredField.Value.Length)
             {
-                if (currentTerm >= buffer.Length)
+                if (currentTerm >= indexes.Length)
                     UnlikelyGrowBuffer(ref buffer, ref indexes);
                 
-                
-                buffer[currentTerm] = entryTermsReader.TermId;
-                indexes[currentTerm] = ZigZagEncoding.Decode<int>(storedValue, out var len, position);
+                var documentPosition = ZigZagEncoding.Decode<int>(storedValue, out var len, position);
                 position += len;
-                currentTerm += 1;
-            }
+                var isRepetition = (documentPosition & 0b1) == 0b1;
+                var originalIndex = documentPosition;
+                if (isRepetition == false)
+                {
+                    var found = entryTermsReader.FindNext(_rootPage);
+                    Debug.Assert(found, "We expected next term stored for document, this is a bug");
+                    termId = entryTermsReader.TermId;
+                }
 
+                indexes[currentTerm] = originalIndex;
+                buffer[currentTerm++] = termId;
+            }
+            
             if (currentTerm == 0 || sequenceToFind.Length > currentTerm) 
                 continue;
 
-            var currentIndexes = indexes.Slice(0, currentTerm);
             var currentTerms = buffer.Slice(0, currentTerm);
-            currentIndexes.Sort(currentTerms);
-            
-            Debug.Assert(entryTermsReader.IsList, "entryTermsReader.IsList");
+            indexes.Slice(0, currentTerm).Sort(currentTerms);
+
             
             var isMatch = currentTerms.IndexOf(sequenceToFind);
             if (isMatch >= 0)
@@ -132,6 +140,47 @@ public struct PhraseMatch<TInner> : IQueryMatch
         _memoryHandler?.Dispose();
         _memoryHandler = newDisposable;
         _memory = memory;
+    }
+    
+    internal string RenderOriginalSentence(long documentId)
+    {
+        var p = default(Page);
+        var entryTermsReader = _indexSearcher.GetEntryTermsReader(documentId, ref p);
+        
+        if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
+            return "NO PHRASE QUERY";
+        
+        var storedValue = entryTermsReader.StoredField.Value.ToSpan();
+        List<int> indexes = new();
+        List<string> terms = new();
+        
+        int position = 0;
+        string termId = string.Empty;
+        while (position < entryTermsReader.StoredField.Value.Length)
+        {
+            var documentPosition = ZigZagEncoding.Decode<int>(storedValue, out var len, position);
+            position += len;
+            var isRepetition = (documentPosition & 0b1) == 0b1;
+            var originalIndex = documentPosition;
+            if (isRepetition == false)
+            {
+                var found = entryTermsReader.FindNext(_rootPage);
+                Debug.Assert(found, "We expected next term stored for document, this is a bug");
+                termId = Encoding.UTF8.GetString(entryTermsReader.Current.Decoded());
+            }
+
+            indexes.Add(originalIndex);
+            terms.Add(termId);
+        }
+
+        var indexesAsSpan = CollectionsMarshal.AsSpan(indexes);
+        var termsAsSpan = CollectionsMarshal.AsSpan(terms);
+        
+        Debug.Assert(indexesAsSpan.Length == termsAsSpan.Length, "indexes.Length == terms.Length");
+        
+        indexesAsSpan.Sort(termsAsSpan);
+        
+        return string.Join(" ", termsAsSpan.ToArray());
     }
     
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)

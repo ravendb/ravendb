@@ -81,6 +81,10 @@ namespace Corax
 
             public const string SuggestionsTreePrefix = "__Suggestion_";
 
+            public const int TermFrequencyShift = 8;
+
+            public const int FrequencyTermFreeSpace = 0b1111_1111;
+            
             static IndexWriter()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))
