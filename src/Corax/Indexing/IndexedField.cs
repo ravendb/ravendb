@@ -51,7 +51,7 @@ internal sealed class IndexedField
     }
 
     public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
-        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, string nameForStatistics = null)
+        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore,  string nameForStatistics = null, long fieldRootPage = -1, long termsVectorFieldRootPage = -1)
     {
         Name = name;
         NameLong = nameLong;
@@ -61,6 +61,8 @@ internal sealed class IndexedField
         Analyzer = analyzer;
         HasSuggestions = hasSuggestions;
         ShouldStore = shouldStore;
+        FieldRootPage = fieldRootPage;
+        TermsVectorFieldRootPage = termsVectorFieldRootPage;
         Storage = new FastList<EntriesModifications>();
         Textual = new Dictionary<Slice, int>(SliceComparer.Instance);
         Longs = new Dictionary<long, int>();

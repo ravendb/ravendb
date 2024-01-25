@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Utils;
+using Voron.Util;
 
 namespace Corax.Indexing;
 
@@ -47,5 +49,20 @@ public struct RecordedTerm : IComparable<RecordedTerm>
         TermContainerId = termContainerId;
         Lat = lat;
         Lng = lng;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static RecordedTerm CreateForStored<T>(in NativeList<T> fieldTerms, in StoredFieldType storedFieldType, in long listContainerId)
+        where T : unmanaged
+    {
+        return new RecordedTerm
+        (
+            // why: entryTerms.Count << 8 
+            // we put entries count here because we are sorting the entries afterward
+            // this ensure that stored values are then read using the same order we have for writing them
+            // which is important for storing arrays
+            termContainerId: fieldTerms.Count << Constants.IndexWriter.TermFrequencyShift | (int)storedFieldType | 0b110, // marker for stored field
+            @long: listContainerId
+        );
     }
 }
