@@ -125,66 +125,73 @@ namespace Raven.Server.Documents
                     // if disabled, unload
 
                     var updateList = new List<HandleSpecificClusterDatabaseChangedParameters>();
+                    HandleShardedDatabaseParameters shardedParameters = null;
 
-                    try
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                     {
-                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
-                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                        if (rawRecord == null)
                         {
-                            if (rawRecord == null)
+                            // was removed, need to make sure that it isn't loaded
+                            UnloadDatabase(databaseName, dbRecordIsNull: true);
+                            return;
+                        }
+
+                        if (rawRecord.IsSharded == false)
+                        {
+                            if (ShouldHandleSpecificClusterDatabaseChanged(databaseName, type, changeType, context, rawRecord))
+                                updateList.Add(new HandleSpecificClusterDatabaseChangedParameters(databaseName, rawRecord.Topology));
+                        }
+                        else
+                        {
+                            foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
-                                // was removed, need to make sure that it isn't loaded
-                                UnloadDatabase(databaseName, dbRecordIsNull: true);
+                                if (ShouldHandleSpecificClusterDatabaseChanged(shardRawRecord.DatabaseName, type, changeType, context, shardRawRecord))
+                                    updateList.Add(new HandleSpecificClusterDatabaseChangedParameters(shardRawRecord.DatabaseName, shardRawRecord.Topology, shardRawRecord.Sharding?.ShardedDatabaseId));
+                            }
+
+                            var topology = rawRecord.Sharding.Orchestrator.Topology;
+                            var isRelevantForCurrentNode = topology.RelevantFor(_serverStore.NodeTag);
+                            var isDisabled = rawRecord.IsDisabled;
+                            DatabaseRecord record = isRelevantForCurrentNode && isDisabled == false ? (DatabaseRecord)rawRecord : null;
+                            // UpdateDatabaseRecord requires a materialized database record
+                            shardedParameters = new HandleShardedDatabaseParameters(isRelevantForCurrentNode, isDisabled, record);
+                        }
+                    }
+
+                    foreach (var toUpdate in updateList)
+                    {
+                        await HandleSpecificClusterDatabaseChanged(toUpdate, index, type, changeType, changeState);
+                    }
+
+                    if (shardedParameters != null)
+                    {
+                        if (shardedParameters.IsRelevantForCurrentNode)
+                        {
+                            if (shardedParameters.IsDisabled)
+                            {
+                                if (ShardedDatabasesCache.TryGetValue(databaseName, out var shardedDatabaseTask) == false)
+                                    return; // sharded database was already unloaded
+
+                                UnloadDatabaseInternal(databaseName, shardedDatabaseTask);
                                 return;
                             }
 
-                            if (rawRecord.IsSharded == false)
-                            {
-                                if (ShouldHandleSpecificClusterDatabaseChanged(databaseName, type, changeType, context, rawRecord))
-                                    updateList.Add(new HandleSpecificClusterDatabaseChangedParameters(databaseName, rawRecord.Topology));
-                            }
-                            else
-                            {
-                                foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
-                                {
-                                    if (ShouldHandleSpecificClusterDatabaseChanged(shardRawRecord.DatabaseName, type, changeType, context, shardRawRecord))
-                                        updateList.Add(new HandleSpecificClusterDatabaseChangedParameters(shardRawRecord.DatabaseName, shardRawRecord.Topology, shardRawRecord.Sharding?.ShardedDatabaseId));
-                                }
+                            Debug.Assert(shardedParameters.DatabaseRecord != null);
 
-                                var topology = rawRecord.Sharding.Orchestrator.Topology;
-                                if (topology.RelevantFor(_serverStore.NodeTag))
-                                {
-                                    if (rawRecord.IsDisabled)
-                                    {
-                                        if (ShardedDatabasesCache.TryGetValue(databaseName, out var shardedDatabaseTask) == false)
-                                            return; // sharded database was already unloaded
-
-                                        UnloadDatabaseInternal(databaseName, shardedDatabaseTask);
-                                        return;
-                                    }
-
-                                    // we need to update this upon any shard topology change
-                                    // and upon migration completion
-                                    var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
-                                    databaseContext.UpdateDatabaseRecord(rawRecord, index);
-                                }
-                                else
-                                {
-                                    using (ShardedDatabasesCache.RemoveLockAndReturn(databaseName, (databaseContext) => databaseContext.Dispose(), out _))
-                                    {
-                                    }
-
-                                    _serverStore.NotificationCenter.Storage.DeleteStorageFor(databaseName);
-                                }
-                            }
+                            // we need to update this upon any shard topology change
+                            // and upon migration completion
+                            var databaseContext = GetOrAddShardedDatabaseContext(databaseName, shardedParameters.DatabaseRecord);
+                            databaseContext.UpdateDatabaseRecord(shardedParameters.DatabaseRecord, index);
                         }
-                    }
-                    finally
-                    {
-                        foreach (var toUpdate in updateList)
+                        else
                         {
-                            await HandleSpecificClusterDatabaseChanged(toUpdate, index, type, changeType, changeState);
+                            using (ShardedDatabasesCache.RemoveLockAndReturn(databaseName, (databaseContext) => databaseContext.Dispose(), out _))
+                            {
+                            }
+
+                            _serverStore.NotificationCenter.Storage.DeleteStorageFor(databaseName);
                         }
                     }
                 }
@@ -238,20 +245,32 @@ namespace Raven.Server.Documents
             }
         }
 
+        private class HandleShardedDatabaseParameters
+        {
+            public readonly bool IsRelevantForCurrentNode;
+            public readonly bool IsDisabled;
+            public readonly DatabaseRecord DatabaseRecord;
+
+            public HandleShardedDatabaseParameters(bool isRelevantForCurrentNode, bool isDisabled, DatabaseRecord record)
+            {
+                IsRelevantForCurrentNode = isRelevantForCurrentNode;
+                IsDisabled = isDisabled;
+                DatabaseRecord = record;
+            }
+        }
+
         private class HandleSpecificClusterDatabaseChangedParameters
         {
+            public readonly string DatabaseName;
+            public readonly DatabaseTopology Topology;
+            public readonly string ShardedDatabaseId;
+
             public HandleSpecificClusterDatabaseChangedParameters(string databaseName, DatabaseTopology topology, string shardedDatabaseId = null)
             {
                 DatabaseName = databaseName;
                 Topology = topology;
                 ShardedDatabaseId = shardedDatabaseId;
             }
-
-            public readonly string DatabaseName;
-
-            public readonly DatabaseTopology Topology;
-
-            public readonly string ShardedDatabaseId;
         }
 
         private bool ShouldHandleSpecificClusterDatabaseChanged(string databaseName, string type, ClusterDatabaseChangeType changeType, TransactionOperationContext context, RawDatabaseRecord rawRecord)
