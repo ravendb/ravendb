@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
+using Raven.Server.Commercial;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Analysis;
@@ -36,6 +36,23 @@ namespace Raven.Server.Config.Categories
         public IndexingConfiguration(RavenConfiguration root)
         {
             _root = root;
+
+            SearchEngineType engineType;
+            switch (root.LicenseType)
+            {
+                case LicenseType.None:
+                case LicenseType.Community:
+                case LicenseType.Developer:
+                    engineType = SearchEngineType.Corax;
+                    break;
+
+                default:
+                    engineType = SearchEngineType.Lucene;
+                    break;
+            }
+
+            AutoIndexingEngineType = engineType;
+            StaticIndexingEngineType = engineType;
 
             QueryClauseCacheDisabled = root.Core.FeaturesAvailability != FeaturesAvailability.Experimental;
             QueryClauseCacheSize = PlatformDetails.Is32Bits ? new Size(32, SizeUnit.Megabytes) : (MemoryInformation.TotalPhysicalMemory / 10);
@@ -78,7 +95,7 @@ namespace Raven.Server.Config.Categories
         
         private static HashSet<string> GetValidIndexingConfigurationKeys()
         {
-            return RavenConfiguration.AllConfigurationEntries.Value.Where(configurationEntry => configurationEntry.Category == ConfigurationCategoryType.Indexing.GetDescription()).SelectMany(configurationEntry => configurationEntry.Keys).ToHashSet();
+            return RavenConfiguration.AllConfigurationEntriesForConfigurationNamesAndDebug.Value.Where(configurationEntry => configurationEntry.Category == ConfigurationCategoryType.Indexing.GetDescription()).SelectMany(configurationEntry => configurationEntry.Keys).ToHashSet();
         }
 
         [DefaultValue(false)]
@@ -437,13 +454,13 @@ namespace Raven.Server.Config.Categories
         public TimeSetting? ThrottlingTimeInterval { get; protected set; }
 
         [Description("Search engine for auto indexes")]
-        [DefaultValue(SearchEngineType.Lucene)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Auto.SearchEngineType", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public SearchEngineType AutoIndexingEngineType { get; protected set; }
 
         [Description("Search engine for static indexes")]
-        [DefaultValue(SearchEngineType.Lucene)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry(Constants.Configuration.Indexes.IndexingStaticSearchEngineType, ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public SearchEngineType StaticIndexingEngineType { get; protected set; }

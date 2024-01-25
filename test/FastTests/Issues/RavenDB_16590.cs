@@ -23,7 +23,7 @@ namespace FastTests.Issues
         public void StudioListsOfIndexScopedSettings()
         {
             var perIndexSettings =
-                RavenConfiguration.AllConfigurationEntries.Value
+                RavenConfiguration.AllConfigurationEntriesForConfigurationNamesAndDebug.Value
                     .Where(x => x.Scope == ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)
                     .SelectMany(x => x.Keys)
                     .OrderBy(x => x)
