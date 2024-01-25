@@ -18,7 +18,7 @@ namespace FastTests.Issues
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var configurationEntries = RavenConfiguration.AllConfigurationEntries.Value;
+                var configurationEntries = RavenConfiguration.AllConfigurationEntriesForConfigurationNamesAndDebug.Value;
 
                 var djv = new DynamicJsonValue
                 {

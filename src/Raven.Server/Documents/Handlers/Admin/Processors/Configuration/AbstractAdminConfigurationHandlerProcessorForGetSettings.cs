@@ -61,7 +61,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
 
         var settingsResult = new SettingsResult();
 
-        foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
+        foreach (var configurationEntryMetadata in ServerStore.Configuration._allConfigurationEntries.Value)
         {
             if (scope.HasValue && scope != configurationEntryMetadata.Scope)
                 continue;

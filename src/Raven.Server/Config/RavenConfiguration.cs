@@ -15,7 +15,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
 #endif
 using Raven.Client.Extensions;
 using Raven.Server.Commercial;
@@ -113,12 +112,13 @@ namespace Raven.Server.Config
         internal CommandLineConfigurationSource CommandLineSettings =>
             _configBuilder.Sources.OfType<CommandLineConfigurationSource>().FirstOrDefault();
 
-        private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null, bool skipEnvironmentVariables = false)
+        private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null, bool skipEnvironmentVariables = false, LicenseType licenseType = LicenseType.None)
         {
             _logger = LoggingSource.Instance.GetLogger<RavenConfiguration>(resourceName);
 
             ResourceName = resourceName;
             ResourceType = resourceType;
+            LicenseType = licenseType;
             _customConfigPath = customConfigPath;
             PathSettingBase<string>.ValidatePath(_customConfigPath);
             _configBuilder = new ConfigurationBuilder();
@@ -188,6 +188,8 @@ namespace Raven.Server.Config
 
         public ResourceType ResourceType { get; }
 
+        public LicenseType LicenseType { get; private set; }
+
         public RavenConfiguration Initialize()
         {
             var settingsNames = Settings.AsEnumerable().Select(pair => pair.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -251,6 +253,26 @@ namespace Raven.Server.Config
             }
         }
 
+        internal void UpdateLicenseType(LicenseType licenseType)
+        {
+            if (licenseType == LicenseType)
+                return;
+
+            LicenseType = licenseType;
+
+            var settingsNames = Settings.AsEnumerable().Select(pair => pair.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var serverWideSettingsNames = ServerWideSettings?.AsEnumerable().Select(pair => pair.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // refresh indexing configuration
+            var indexing = new IndexingConfiguration(this);
+            indexing.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+
+            Indexing = indexing;
+
+            // refresh configuration entries
+            _allConfigurationEntries = new Lazy<HashSet<ConfigurationEntryMetadata>>(() => GetAllConfigurationEntries(this));
+        }
+
         public void SetSetting(string key, string value)
         {
             if (Initialized)
@@ -269,7 +291,7 @@ namespace Raven.Server.Config
             return ServerWideSettings?[key];
         }
 
-        internal static readonly Lazy<HashSet<ConfigurationEntryMetadata>> AllConfigurationEntries = new Lazy<HashSet<ConfigurationEntryMetadata>>(() =>
+        internal static HashSet<ConfigurationEntryMetadata> GetAllConfigurationEntries(RavenConfiguration configuration)
         {
             var results = new HashSet<ConfigurationEntryMetadata>();
 
@@ -285,7 +307,7 @@ namespace Raven.Server.Config
 
             return results;
 
-            static IEnumerable<ConfigurationEntryMetadata> GetConfigurationEntryMetadataFor(PropertyInfo configurationCategoryProperty, Type propertyType)
+            IEnumerable<ConfigurationEntryMetadata> GetConfigurationEntryMetadataFor(PropertyInfo configurationCategoryProperty, Type propertyType)
             {
                 foreach (var configurationProperty in propertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {
@@ -301,14 +323,18 @@ namespace Raven.Server.Config
                     if (configurationProperty.GetCustomAttributes<ConfigurationEntryAttribute>(inherit: true).Any() == false)
                         continue;
 
-                    yield return new ConfigurationEntryMetadata(configurationCategoryProperty, configurationProperty);
+                    yield return new ConfigurationEntryMetadata(configurationCategoryProperty, configurationProperty, configuration);
                 }
             }
-        });
+        }
+
+        internal Lazy<HashSet<ConfigurationEntryMetadata>> _allConfigurationEntries = new(() => GetAllConfigurationEntries(Default));
+
+        internal static readonly Lazy<HashSet<ConfigurationEntryMetadata>> AllConfigurationEntriesForConfigurationNamesAndDebug = new(() => GetAllConfigurationEntries(Default));
 
         public static bool ContainsKey(string key)
         {
-            return AllConfigurationEntries.Value.Any(x => x.IsMatch(key));
+            return AllConfigurationEntriesForConfigurationNamesAndDebug.Value.Any(x => x.IsMatch(key));
         }
 #endif
 
@@ -389,7 +415,7 @@ namespace Raven.Server.Config
         {
             var dataDirectoryPath = GetDataDirectoryPath(parent.Core, name, ResourceType.Database);
 
-            var result = new RavenConfiguration(name, ResourceType.Database)
+            var result = new RavenConfiguration(name, ResourceType.Database, licenseType: parent.LicenseType)
             {
                 ServerWideSettings = parent.Settings,
                 Settings = new ConfigurationRoot(new List<IConfigurationProvider> { new MemoryConfigurationProvider(new MemoryConfigurationSource()) })
