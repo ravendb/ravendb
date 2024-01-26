@@ -4,34 +4,34 @@
         pointer-events: all;
     }
     .execution-type-icon {
-        fill: white;
-        font-size: 38px;
+        fill: var(--text-emphasis);
+        font-size: 32px;
         alignment-baseline: central;
     }
     
     .direction-type-icon {
-        fill: @color-green-success; 
+        fill: @color-3;
         font-size: 24px;
         alignment-baseline: central;
     }
     
     .order-type-icon {
-        fill: @color-green-success; 
+        fill: @color-3;
         font-size: 24px;
         alignment-baseline: central;
     }
 
     .nodeContainer {
-        fill: #1e1f2b; // TODO: replace with variables
+        fill: var(--panel-bg-1);
     }
 
     .header {
-        fill: #353742; // TODO: replace with variables 
+        fill: var(--panel-bg-3);
     }
 
     .link {
-        fill:none;
-        stroke-width:2;
+        fill: none;
+        stroke-width: 2;
         stroke-miterlimit: 10;
         vector-effect: non-scaling-stroke;
 
@@ -73,14 +73,14 @@
         fill-opacity: 1;
         transition: fill-opacity .2s ease;
         
-        fill: @text-color;
+        fill: var(--text-color);
         font-size: 16px;
         alignment-baseline: middle;
     }
     
     .title {
         cursor: default;
-        font-size: 20px;
-        fill: @text-color;
+        font-size: 21px;
+        fill: var(--text-emphasis);
     }
 }
