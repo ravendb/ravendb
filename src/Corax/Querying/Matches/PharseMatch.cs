@@ -91,7 +91,7 @@ public struct PhraseMatch<TInner> : IQueryMatch
             int position = 0;
             int currentTerm = 0;
             long termId = -1;
-            while (position < entryTermsReader.StoredField.Value.Length)
+            while (position < storedValue.Length)
             {
                 if (currentTerm >= indexes.Length)
                     UnlikelyGrowBuffer(ref buffer, ref indexes);
@@ -114,9 +114,13 @@ public struct PhraseMatch<TInner> : IQueryMatch
             if (currentTerm == 0 || sequenceToFind.Length > currentTerm) 
                 continue;
 
+            //In our reader, we have two "arrays". The first is a term list that contains terms present in documents, sorted by term IDs.
+            //We also have our TermVector list, which represents the order of terms inside a document.
+            //The position of an element in the term vector is linked with the term at the same position. (However, the term list is a unique list, so we are using the lowest bit in TermsVector that indicates this is a repetition of the previous term, allowing us to reproduce currentTerms to have EXACTLY the same length as the TermVector list).
+            //The value inside the term vector is the initial position in the document.
+            //When we sort the dictionary indexes using indexes.Sort(terms), we retrieve the initial sentences (analyzed, without stop-words).
             var currentTerms = buffer.Slice(0, currentTerm);
             indexes.Slice(0, currentTerm).Sort(currentTerms);
-
             
             var isMatch = currentTerms.IndexOf(sequenceToFind);
             if (isMatch >= 0)
@@ -156,7 +160,7 @@ public struct PhraseMatch<TInner> : IQueryMatch
         
         int position = 0;
         string termId = string.Empty;
-        while (position < entryTermsReader.StoredField.Value.Length)
+        while (position < storedValue.Length)
         {
             var documentPosition = ZigZagEncoding.Decode<int>(storedValue, out var len, position);
             position += len;

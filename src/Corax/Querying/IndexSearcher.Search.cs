@@ -108,20 +108,20 @@ public partial class IndexSearcher
             }
             
             //Phrase query
-            var startPosition = terms.Count;
+            terms.Clear();
             EncodeAndApplyAnalyzerForMultipleTerms(field, word, ref terms);
-            if (terms.Count == startPosition) 
+            if (terms.Count == 0) 
                 continue; //sentence contained only stop-words
 
             var hs = new HashSet<Slice>(SliceComparer.Instance);
-            for (var i = startPosition; i < terms.Count; ++i)
+            for (var i = 0; i < terms.Count; ++i)
             {
                 hs.Add(terms[i]);
             }
 
             var allIn = AllInQuery(field, hs, cancellationToken: cancellationToken);
 
-            var phraseMatch = PhraseQuery(allIn, field, terms.ToSpan().Slice(startPosition, terms.Count - startPosition));
+            var phraseMatch = PhraseQuery(allIn, field, terms.ToSpan());
 
             searchQuery = (searchQuery, @operator) switch
             {
@@ -130,8 +130,6 @@ public partial class IndexSearcher
                 (_, Constants.Search.Operator.Or) => Or(searchQuery, phraseMatch, cancellationToken),
                 _ => throw new ArgumentOutOfRangeException()
             };
-            
-            terms.Shrink(startPosition);
         }
 
         if (termMatches?.Count > 0)
