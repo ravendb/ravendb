@@ -13,7 +13,10 @@ class saveAdminLogsMicrosoftConfigurationCommand extends commandBase {
     }
     
     execute(): JQueryPromise<void> {
-        const url = endpoints.global.adminLogs.adminLogsMicrosoftConfiguration;
+        const args = {
+            reset: true
+        }
+        const url = endpoints.global.adminLogs.adminLogsMicrosoftConfiguration + this.urlEncodeArgs(args);
 
         const payload = {
             Configuration: this.configuration,
