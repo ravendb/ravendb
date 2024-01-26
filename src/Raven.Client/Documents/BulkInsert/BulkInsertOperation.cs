@@ -263,7 +263,8 @@ namespace Raven.Client.Documents.BulkInsert
                 _inProgressCommand = CommandType.None;
                 _writer.Write("{\"Type\":\"HeartBeat\"}");
 
-                await _writer.FlushIfNeeded(true).ConfigureAwait(false);
+                
+                await FlushIfNeeded(force: true).ConfigureAwait(false);
                 await _writer._requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
             }
             catch (Exception)
@@ -355,7 +356,6 @@ namespace Raven.Client.Documents.BulkInsert
         {
             using (await ConcurrencyCheckAsync().ConfigureAwait(false))
             {
-                _lastWriteToStream = DateTime.UtcNow;
                 VerifyValidId(id);
 
                 await ExecuteBeforeStore().ConfigureAwait(false);
@@ -411,7 +411,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                 _writer.Write('}');
 
-                await _writer.FlushIfNeeded().ConfigureAwait(false);
+                await FlushIfNeeded().ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -660,7 +660,14 @@ namespace Raven.Client.Documents.BulkInsert
                 throw new ArgumentException($"Time Series name cannot start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix,", nameof(name));
         }
 
-        public struct CountersBulkInsert
+        private async Task FlushIfNeeded(bool force = false)
+        {
+            var flushed = await _writer.FlushIfNeeded(force).ConfigureAwait(false);
+            if (flushed)
+                _lastWriteToStream = DateTime.UtcNow;
+        }
+
+        public readonly struct CountersBulkInsert
         {
             private readonly BulkInsertOperation _operation;
             private readonly string _id;
@@ -706,8 +713,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     try
                     {
-                        _operation._lastWriteToStream = DateTime.UtcNow;
-
                         await _operation.ExecuteBeforeStore().ConfigureAwait(false);
 
                         if (_operation._inProgressCommand == CommandType.TimeSeries)
@@ -756,7 +761,7 @@ namespace Raven.Client.Documents.BulkInsert
                         _operation._writer.Write(delta);
                         _operation._writer.Write('}');
 
-                        await _operation._writer.FlushIfNeeded().ConfigureAwait(false);
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -812,7 +817,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     try
                     {
-                        _operation._lastWriteToStream = DateTime.UtcNow;
                         await _operation.ExecuteBeforeStore().ConfigureAwait(false);
                         if (_first)
                         {
@@ -864,7 +868,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                         _operation._writer.Write(']');
 
-                        await _operation._writer.FlushIfNeeded().ConfigureAwait(false);
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -959,7 +963,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public struct AttachmentsBulkInsert
+        public readonly struct AttachmentsBulkInsert
         {
             private readonly BulkInsertOperation _operation;
             private readonly string _id;
@@ -1006,7 +1010,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     try
                     {
-                        _operation._lastWriteToStream = DateTime.UtcNow;
                         _operation.EndPreviousCommandIfNeeded();
 
                         await _operation.ExecuteBeforeStore().ConfigureAwait(false);
@@ -1028,13 +1031,13 @@ namespace Raven.Client.Documents.BulkInsert
                         _operation._writer.Write("\",\"ContentLength\":");
                         _operation._writer.Write(stream.Length);
                         _operation._writer.Write('}');
-                        await _operation._writer.FlushIfNeeded().ConfigureAwait(false);
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
 
                         PutAttachmentCommandHelper.PrepareStream(stream);
                         // pass the default value for bufferSize to make it compile on netstandard2.0
                         await stream.CopyToAsync(_operation._writer.StreamWriter.BaseStream, bufferSize: 16 * 1024, cancellationToken: linkedCts.Token).ConfigureAwait(false);
 
-                        await _operation._writer.FlushIfNeeded().ConfigureAwait(false);
+                        await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
