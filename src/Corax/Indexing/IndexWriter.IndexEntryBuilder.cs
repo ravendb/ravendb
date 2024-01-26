@@ -183,6 +183,9 @@ public partial class IndexWriter
                     nativeEntryTerms.Grow(_parent._entriesAllocator, 1);
                     nativeEntryTerms.AddUnsafe(termLocation);
                 }
+                
+                if (nativeEntryTerms.Count >= Constants.IndexWriter.MaxSizeOfTermVectorList)
+                    ThrowDocumentExceedsPossibleTermAmount(field);
             }
             
             if (field.HasSuggestions)
@@ -393,6 +396,11 @@ public partial class IndexWriter
         public void RestoreList(int old)
         {
             _buildingList = old;
+        }
+
+        private static void ThrowDocumentExceedsPossibleTermAmount(IndexedField field)
+        {
+            throw new NotSupportedException($"Field '{field.Name} exceeds the limit of terms. Search field can have up to {Constants.IndexWriter.MaxSizeOfTermVectorList} elements.");
         }
     }
 }
