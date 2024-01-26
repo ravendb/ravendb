@@ -435,7 +435,7 @@ class queryPlan {
 
         const headerGroup = enteringNodes
             .append("g")
-            .attr("transform", "translate(0,35)");
+            .attr("transform", "translate(0,32)");
 
         headerGroup
             .append("text")
