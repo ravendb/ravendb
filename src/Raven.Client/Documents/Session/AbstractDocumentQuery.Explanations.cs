@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="options" cref="ExplanationOptions">Additional explanation configuration.</param>
         /// <param name="explanations">Out parameter where explanations will be returned.</param>
         /// <exception cref="InvalidOperationException">Explanations should be included only once in the query.</exception>
-        /// <inheritdoc cref="DocumentationUrls.ExplanationDocumentation"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.IncludeExplanations"/>
         public void IncludeExplanations(ExplanationOptions options, out Explanations explanations)
         {
             if (ExplanationToken != null)

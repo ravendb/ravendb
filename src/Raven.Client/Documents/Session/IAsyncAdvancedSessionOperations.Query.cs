@@ -15,22 +15,15 @@ namespace Raven.Client.Documents.Session
     {
     }
 
+    /// <summary>
+    /// It gives the ability to construct queries with the usage of <see cref="IAsyncDocumentQuery{T}"/> interface
+    /// </summary>
     public interface IAsyncDocumentQueryBuilder
     {
-        /// <summary>
-        ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <inheritdoc cref="IDocumentQueryBuilder.DocumentQuery{T,TIndexCreator}"/>
         IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new();
 
-        /// <summary>
-        ///     Query the specified index using Lucene syntax
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <param name="indexName">Name of the index (mutually exclusive with collectionName)</param>
-        /// <param name="collectionName">Name of the collection (mutually exclusive with indexName)</param>
-        /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
+        /// <inheritdoc cref="IDocumentQueryBuilder.DocumentQuery{T}"/>
         IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string indexName = null, string collectionName = null, bool isMapReduce = false);
     }
 }
