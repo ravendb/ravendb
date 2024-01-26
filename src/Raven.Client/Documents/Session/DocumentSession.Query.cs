@@ -16,14 +16,9 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        
-        
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
+
+
+        /// <inheritdoc cref="IDocumentQueryBuilder.DocumentQuery{T,TIndexCreator}"/>
         public IDocumentQuery<T> DocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
             var index = IndexMetadataCache.GetIndexMetadataCacheItem<TIndexCreator>();
@@ -31,13 +26,7 @@ namespace Raven.Client.Documents.Session
             return DocumentQuery<T>(index.IndexName, null, index.IsMapReduce);
         }
 
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="indexName">Name of the index (mutually exclusive with collectionName)</param>
-        /// <param name="collectionName">Name of the collection (mutually exclusive with indexName)</param>
-        /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
+        /// <inheritdoc cref="IDocumentQueryBuilder.DocumentQuery{T}"/>
         public IDocumentQuery<T> DocumentQuery<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
             (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);

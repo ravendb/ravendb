@@ -45,12 +45,7 @@ namespace Raven.Client.Documents.Session
             return ravenQueryInspector;
         }
 
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
+        /// <inheritdoc />
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
             var index = IndexMetadataCache.GetIndexMetadataCacheItem<TIndexCreator>();
@@ -58,9 +53,7 @@ namespace Raven.Client.Documents.Session
             return AsyncDocumentQuery<T>(index.IndexName, null, index.IsMapReduce);
         }
 
-        /// <summary>
-        ///     Query the specified index using Lucene syntax
-        /// </summary>
+        /// <inheritdoc />
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
             (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);
