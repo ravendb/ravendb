@@ -389,7 +389,7 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
+                        if (_logger.IsOperationsEnabled)
                         {
                             _logger.Info("An unhandled exception closed the cluster transaction task", e);
                         }

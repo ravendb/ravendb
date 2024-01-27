@@ -17,7 +17,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
@@ -675,51 +674,6 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public class RachisMergedCommand : IDisposable
-        {
-            private readonly ClusterContextPool _pool;
-            private IDisposable _ctxReturn;
-
-            public CommandBase Command;
-            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs = new TaskCompletionSource<Task<(long Index, object Result)>>(TaskCreationOptions.RunContinuationsAsynchronously);
-            public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
-            public BlittableResultWriter BlittableResultWriter { get; private set; }
-
-            public RachisMergedCommand(ClusterContextPool pool, CommandBase command)
-            {
-                _pool = pool;
-                Command = command;
-            }
-
-            public void Initialize()
-            {
-                BlittableResultWriter = Command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
-
-                // we prepare the command _not_ under the write lock
-                if (Command.Raw == null)
-                {
-                    _ctxReturn = _pool.AllocateOperationContext(out JsonOperationContext context);
-                    var djv = Command.ToJson(context);
-                    Command.Raw = context.ReadObject(djv, "prepare-raw-command");
-                }
-            }
-
-            public async Task<(long Index, object Result)> Result()
-            {
-                var inner = await Tcs.Task;
-                var r = await inner;
-                return BlittableResultWriter == null ? r : (r.Index, BlittableResultWriter.Result);
-            } 
-
-            public void Dispose()
-            {
-                Command.Raw?.Dispose();
-                Command.Raw = null;
-                BlittableResultWriter?.Dispose();
-                _ctxReturn?.Dispose();
-            }
-        }
-
         private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
 
         private readonly AsyncManualResetEvent _waitForCommit = new AsyncManualResetEvent();
@@ -838,7 +792,7 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
-                                index = _engine.InsertToLeaderLog(context, Term, cmd.Command.Raw, RachisEntryFlags.StateMachineCommand);
+                                index = _engine.InsertToLeaderLog(context, Term, cmd.Raw, RachisEntryFlags.StateMachineCommand);
                             }
 
                             if (_entries.TryGetValue(index, out var state) == false)

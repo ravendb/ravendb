@@ -3014,6 +3014,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        // TODO: We need always to link the token with the request abort token
         public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd, CancellationToken? token = null)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))

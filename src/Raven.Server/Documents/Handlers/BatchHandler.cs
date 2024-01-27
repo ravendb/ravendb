@@ -666,7 +666,6 @@ namespace Raven.Server.Documents.Handlers
                                             }
                                         }
 
-                                        //var document = cmd.Document.Clone(context);
                                         var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, changeVector: changeVector,
                                             flags: DocumentFlags.FromClusterTransaction);
                                         context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);

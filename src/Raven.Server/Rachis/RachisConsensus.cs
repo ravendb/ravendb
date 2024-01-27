@@ -313,7 +313,7 @@ namespace Raven.Server.Rachis
 
         public Action<ClusterOperationContext> SwitchToSingleLeaderAction;
 
-        public Action<ClusterOperationContext, Leader.RachisMergedCommand> BeforeAppendToRaftLog;
+        public Action<ClusterOperationContext, RachisMergedCommand> BeforeAppendToRaftLog;
 
         private string _tag;
         private string _clusterId;
@@ -1846,7 +1846,7 @@ namespace Raven.Server.Rachis
 
         public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value, TimeSpan? timeout = null, CancellationToken token = default)
         {
-            var timeoutTask = TimeoutManager.WaitFor(timeout ?? OperationTimeout, token);
+            var timeoutTask = TimeoutManager.WaitFor(timeout ?? OperationTimeout);
             while (timeoutTask.IsCompleted == false)
             {
                 token.ThrowIfCancellationRequested();
@@ -2313,7 +2313,7 @@ namespace Raven.Server.Rachis
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
 
-        public void InvokeBeforeAppendToRaftLog(ClusterOperationContext context, Leader.RachisMergedCommand cmd)
+        public void InvokeBeforeAppendToRaftLog(ClusterOperationContext context, RachisMergedCommand cmd)
         {
             BeforeAppendToRaftLog?.Invoke(context, cmd);
         }

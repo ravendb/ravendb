@@ -112,23 +112,15 @@ namespace Sparrow.Utils
             return value;
         }
 
-        public static async Task<Task> WaitFor(this Task outer, TimeSpan duration, CancellationToken token = default)
+        internal static async Task<Task> WaitFor(this Task outer, TimeSpan duration, CancellationToken token = default)
         {
-            if (duration == TimeSpan.Zero)
-                return Task.CompletedTask;
+            // if you await like this Task.WhenAny(t, WaitFor(time, token)),
+            // consider using this method to gracefully release the token registration
 
-            if (token.IsCancellationRequested)
-            {
-                return Task.CompletedTask;
-            }
+            var task = GetTask(duration, token);
+            if (task.IsCompleted)
+                return task;
 
-            Task task;
-            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-            if (duration != Timeout.InfiniteTimeSpan)
-                task = WaitForInternal(duration, token);
-            else
-                task = InfiniteTask;
-            
             if (token == CancellationToken.None || token.CanBeCanceled == false)
             {
                 return await Task.WhenAny(outer, task).ConfigureAwait(false);
@@ -143,12 +135,36 @@ namespace Sparrow.Utils
 
         public static async Task WaitFor(TimeSpan duration, CancellationToken token = default)
         {
-            if (duration == TimeSpan.Zero)
+            var task = GetTask(duration, token);
+            if (task.IsCompleted)
                 return;
+
+            if (token == CancellationToken.None || token.CanBeCanceled == false)
+            {
+                await task.ConfigureAwait(false);
+                return;
+            }
+
+            if (task == InfiniteTask)
+                throw new InvalidOperationException(
+                    "The cancellation token might never fire (server/database shutdown) and we will end up leaking the registration callback." +
+                    $"{Environment.NewLine}Consider not passing a token here, but check if it was canceled in the caller.");
+
+            var onCancel = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
+            {
+                await Task.WhenAny(task, onCancel.Task).ConfigureAwait(false);
+            }
+        }
+
+        private static Task GetTask(TimeSpan duration, CancellationToken token)
+        {
+            if (duration == TimeSpan.Zero)
+                return Task.CompletedTask;
 
             if (token.IsCancellationRequested)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             Task task;
@@ -157,24 +173,7 @@ namespace Sparrow.Utils
                 task = WaitForInternal(duration, token);
             else
                 task = InfiniteTask;
-            
-            if (token == CancellationToken.None || token.CanBeCanceled == false)
-            {
-                await task.ConfigureAwait(false);
-                return;
-            }
-
-            var onCancel = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            if (task == InfiniteTask)
-            {
-                await onCancel.Task.ConfigureAwait(false);
-                return;
-            }
-
-            using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
-            {
-                await Task.WhenAny(task, onCancel.Task).ConfigureAwait(false);
-            }
+            return task;
         }
     }
 }

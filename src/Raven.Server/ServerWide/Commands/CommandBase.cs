@@ -32,8 +32,6 @@ namespace Raven.Server.ServerWide.Commands
         // if (null) value is passed, it will be treated as a bug. (will throw an exception only in Debug builds to support old clients)
         public string UniqueRequestId;
 
-        public BlittableJsonReaderObject Raw;
-
         protected CommandBase() { }
 
         protected CommandBase(string uniqueRequestId)
@@ -48,25 +46,10 @@ namespace Raven.Server.ServerWide.Commands
                 throw new RachisApplyException("Command must contain 'Type' field.");
             }
 
-            if (type == nameof(ClusterTransactionCommand))
-            {
-                // we optimize here the case of cluster wide tx
-                // since we do not use anything other from the inner properties of the command in this code path
-                
-                var command = new ClusterTransactionCommand { Raw = json };
-                
-                json.TryGet(nameof(UniqueRequestId), out command.UniqueRequestId);
-                json.TryGet(nameof(Timeout), out command.Timeout);
-
-                return command;
-            }
-
             if (JsonDeserializationCluster.Commands.TryGetValue(type, out Func<BlittableJsonReaderObject, CommandBase> deserializer) == false)
                 throw new InvalidOperationException($"There is not deserializer for '{type}' command.");
 
-            var r = deserializer(json);
-            r.Raw = json;
-            return r;
+            return deserializer(json);
         }
 
         public virtual void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
