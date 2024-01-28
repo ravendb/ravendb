@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (parameters.TryGet("Configuration", out BlittableJsonReaderObject microsoftConfig) == false)
                     throw new InvalidOperationException($"The request body doesn't contain required 'Configuration' property - {parameters}");
 
-                provider.Configuration.ReadConfiguration(microsoftConfig, reset);
+                provider.Configuration.ReadConfigurationOrThrow(microsoftConfig, reset);
                 provider.ApplyConfiguration();
 
                 if (parameters.TryGet("Persist", out bool persist) && persist)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -255,6 +256,24 @@ public class MicrosoftLogTests : RavenTestBase
         finally
         {
             loggingSource.EndLogging();
+        }
+    }
+
+    [Fact]
+    public async Task ConfigureMicrosoftLogs_WhenLogLevelIsInvalid_ShouldThrow()
+    {
+        using var store = GetDocumentStore();
+        var httpClient = store.GetRequestExecutor().HttpClient;
+        var content = new StringContent("{ \"Configuration\" :  { \"Microsoft\" : \"InvalidLogLevel\" }}");
+        var responseMessage =  await httpClient.PostAsync($"{store.Urls[0]}/admin/logs/microsoft/configuration", content);
+        Assert.False(responseMessage.IsSuccessStatusCode);
+        var strMessage = await responseMessage.Content.ReadAsStringAsync();
+
+        using (JsonOperationContext context = JsonOperationContext.ShortTermSingleUse())
+        {
+            var response = await context.ReadForMemoryAsync(await responseMessage.Content.ReadAsStreamAsync(), "response");
+            Assert.True(response.TryGet("Message", out string errorMessage));
+            Assert.Equal("Invalid value in microsoft configuration. Path Microsoft, Value InvalidLogLevel", errorMessage);
         }
     }
     
