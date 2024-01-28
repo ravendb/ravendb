@@ -6,6 +6,8 @@ import icomoonHelpers from "common/helpers/view/icomoonHelpers";
 type parameterFrame = {
     label: string;
     leftPadding?: number;
+    html: boolean;
+    title: string;
 }
 
 type IconWithFixedCodePoint = keyof typeof icomoonHelpers.fixedCodepoints;
@@ -26,6 +28,8 @@ const WellKnownParams = {
 
 interface Param {
     label: string;
+    html?: boolean;
+    customTitle?: string;
     leftPadding?: number;
 }
 
@@ -160,7 +164,15 @@ class executionInfo {
                 factorPart = " (factor: " + boostFactor + ")";
             }
             
-            this.parameters.push({ label: "Boosting: " + (boost ? "✅" : "❌") + factorPart });
+            const icon = icomoonHelpers.getCodePointForCanvas(boost ? "check" : "cancel"); 
+            const iconColor = boost ? "boost-true" : "boost-false";
+            
+            this.parameters.push(
+                { 
+                    label: `<tspan>Boosting: </tspan><tspan class="icon-style ${iconColor}">${icon}</tspan><tspan>${factorPart}</tspan>`, 
+                    html: true, 
+                    customTitle: "Boosting: " + (boost ? "true" : "false") + factorPart 
+                });
         }
 
         if (WellKnownParams.Count in remainingParams && WellKnownParams.CountConfidence in remainingParams) {
@@ -252,11 +264,13 @@ class executionInfo {
     }
 
     paramsWithShortcuts() {
-        return this.parameters.map(v => {
+        return this.parameters.map((v): parameterFrame  => {
             return {
                 label: v.label,
                 leftPadding: v.leftPadding,
-            } as parameterFrame;
+                title: v.customTitle ?? v.label,
+                html: v.html ?? false
+            };
         });
     }
     
@@ -455,15 +469,24 @@ class queryPlan {
                 .selectAll('.parameter')
                 .data(d.paramsWithShortcuts());
 
-            parameters
+            const enteringParameters= parameters
                 .enter()
-                .append('text')
+                .append("text")
                 .attr("class", "parameter")
                 .attr('x', d => -queryPlan.maxBoxWidth / 2 + executionInfo.boxPadding + (d.leftPadding ?? 0))
-                .attr('y', (d, i) => -offsetTop + executionInfo.lineHeight * i)
-                .text(d => d.label)
+                .attr('y', (d, i) => -offsetTop + executionInfo.lineHeight * i);
+
+            enteringParameters
+                .filter(x => x.html)
+                .html(x => x.label);
+
+            enteringParameters
+                .filter(x => !x.html)
+                .text(x => x.label);
+            
+            enteringParameters
                 .append("title")
-                .text(d => d.label);
+                .text(d => d.title);
         });
 
         enteringNodes
