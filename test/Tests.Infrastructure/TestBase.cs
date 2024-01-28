@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Text;
@@ -15,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Debug.StackTrace;
@@ -37,7 +36,6 @@ using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Debugging;
-using Sparrow.Server.Extensions;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -514,6 +512,8 @@ namespace FastTests
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter), "3");
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout), "3");
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout), "10");
+                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType), nameof(SearchEngineType.Lucene));
+                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType), nameof(SearchEngineType.Lucene));
 
                 if (options.CustomSettings != null)
                 {

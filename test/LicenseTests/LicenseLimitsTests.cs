@@ -4,11 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal.Transform;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
@@ -231,11 +228,18 @@ namespace LicenseTests
             DoNotReuseServer();
 
             var customSettings = new Dictionary<string, string>();
-            if (serverIndexingEngineType != SearchEngineType.None)
+            
+            if (serverIndexingEngineType == SearchEngineType.None)
+            {
+                customSettings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = null;
+                customSettings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = null;
+            }
+            else
             {
                 customSettings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = serverIndexingEngineType.ToString();
                 customSettings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = serverIndexingEngineType.ToString();
             }
+
             var server = GetNewServer(new ServerCreationOptions
             {
                 CustomSettings = customSettings
