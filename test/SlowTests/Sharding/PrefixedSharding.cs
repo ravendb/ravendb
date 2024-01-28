@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
@@ -1703,6 +1704,91 @@ public class PrefixedSharding : ClusterTestBase
             sharding = await Sharding.GetShardingConfigurationAsync(store);
             return sharding.Shards.TryGetValue(2, out _);
         }, expectedVal: false);
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task WhenAddingNewPrefixShouldFillBucketRangeGaps()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/a/",
+                        Shards = [0]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/b/",
+                        Shards = [1]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/c/",
+                        Shards = [0, 1]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/d/",
+                        Shards = [0, 1, 2]
+                    },
+                ];
+            }
+        });
+
+        var sharding = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(4, sharding.Prefixed.Count);
+        Assert.Equal("users/d/", sharding.Prefixed[0].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets, sharding.Prefixed[0].BucketRangeStart);
+
+        Assert.Equal("users/c/", sharding.Prefixed[1].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, sharding.Prefixed[1].BucketRangeStart);
+
+        Assert.Equal("users/b/", sharding.Prefixed[2].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 3, sharding.Prefixed[2].BucketRangeStart);
+
+        Assert.Equal("users/a/", sharding.Prefixed[3].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 4, sharding.Prefixed[3].BucketRangeStart);
+
+        // deleting 'users/c/' will create a gap in prefixes bucket range start (range 1M - 2M range is missing)
+        await store.Maintenance.SendAsync(new DeletePrefixedShardingSettingOperation("users/c/"));
+        sharding = await Sharding.GetShardingConfigurationAsync(store);
+
+        Assert.Equal(3, sharding.Prefixed.Count);
+        Assert.Equal("users/d/", sharding.Prefixed[0].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets, sharding.Prefixed[0].BucketRangeStart);
+
+        Assert.Equal("users/b/", sharding.Prefixed[1].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 3, sharding.Prefixed[1].BucketRangeStart);
+
+        Assert.Equal("users/a/", sharding.Prefixed[2].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 4, sharding.Prefixed[2].BucketRangeStart);
+
+        // add a new prefix, 1M - 2M range should be assigned to it
+        await store.Maintenance.SendAsync(new AddPrefixedShardingSettingOperation(new PrefixedShardingSetting
+        {
+            Prefix = "users/z/",
+            Shards = [1, 2]
+        }));
+
+        sharding = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(4, sharding.Prefixed.Count);
+        Assert.Equal("users/z/", sharding.Prefixed[0].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, sharding.Prefixed[0].BucketRangeStart);
+
+        Assert.Equal("users/d/", sharding.Prefixed[1].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets, sharding.Prefixed[1].BucketRangeStart);
+
+        Assert.Equal("users/b/", sharding.Prefixed[2].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 3, sharding.Prefixed[2].BucketRangeStart);
+
+        Assert.Equal("users/a/", sharding.Prefixed[3].Prefix);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 4, sharding.Prefixed[3].BucketRangeStart);
+
     }
 
     private class Item

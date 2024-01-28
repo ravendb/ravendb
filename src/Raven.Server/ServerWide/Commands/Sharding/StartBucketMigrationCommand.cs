@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
@@ -59,7 +60,8 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             if (Bucket >= ShardHelper.NumberOfBuckets)
             {
                 // prefixed bucket range
-                var prefixed = record.Sharding.Prefixed;
+                // todo
+                var prefixed = record.Sharding.Prefixed.OrderBy(x => x.BucketRangeStart).ToList();
                 List<int> shards = null;
                 for (int i = 0; i < prefixed.Count; i++)
                 {

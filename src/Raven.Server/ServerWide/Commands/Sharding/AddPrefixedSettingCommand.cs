@@ -23,16 +23,8 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            var maxBucketRangeStart = 0;
             record.Sharding.Prefixed ??= new List<PrefixedShardingSetting>();
-
-            foreach (var value in record.Sharding.Prefixed)
-            {
-                if (maxBucketRangeStart < value.BucketRangeStart)
-                    maxBucketRangeStart = value.BucketRangeStart;
-            }
-
-            Setting.BucketRangeStart = maxBucketRangeStart + ShardHelper.NumberOfBuckets;
+            Setting.BucketRangeStart = GetNextPrefixedBucketRangeStart(record.Sharding.Prefixed);
 
             var rangeStart = Setting.BucketRangeStart;
             var shards = Setting.Shards;
@@ -50,6 +42,27 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
             var index = record.Sharding.Prefixed.BinarySearch(Setting, PrefixedSettingComparer.Instance);
             record.Sharding.Prefixed.Insert(~index, Setting);
+        }
+
+        private static int GetNextPrefixedBucketRangeStart(IEnumerable<PrefixedShardingSetting> prefixes)
+        {
+            var prefixesByRangeStart = prefixes.OrderBy(x => x.BucketRangeStart).ToList();
+            for (int i = 0; i < prefixesByRangeStart.Count; i++)
+            {
+                var currentRangeStart = prefixesByRangeStart[i].BucketRangeStart;
+                var nextRangeStart = i + 1 < prefixesByRangeStart.Count 
+                    ? prefixesByRangeStart[i + 1].BucketRangeStart 
+                    : int.MaxValue;
+
+                var expectedNext = currentRangeStart + ShardHelper.NumberOfBuckets;
+                if (expectedNext < nextRangeStart)
+                {
+                    // found gap
+                    return expectedNext;
+                }
+            }
+
+            return prefixesByRangeStart[^1].BucketRangeStart + ShardHelper.NumberOfBuckets;
         }
 
         public override void FillJson(DynamicJsonValue json)

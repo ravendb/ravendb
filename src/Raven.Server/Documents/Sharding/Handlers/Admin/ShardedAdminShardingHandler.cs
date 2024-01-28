@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             using (var requestExecutor = RequestExecutor.CreateForServer(urls, database ?? DatabaseName, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
             {
                 var command = new GetDocumentsCommand(requestExecutor.Conventions, startWith: prefix,
-                    startAfter: null, matches: null, exclude: null, start: 0, pageSize: int.MaxValue, metadataOnly: false);
+                    startAfter: null, matches: null, exclude: null, start: 0, pageSize: 1, metadataOnly: false);
 
                 await requestExecutor.ExecuteAsync(command, context, sessionInfo: null);
                 return command.Result.Results.Length == 0;
