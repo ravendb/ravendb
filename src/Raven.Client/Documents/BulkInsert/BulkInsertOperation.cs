@@ -320,7 +320,6 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_first == false)
                 {
-
                     WriteComma();
                 }
 
@@ -553,8 +552,14 @@ namespace Raven.Client.Documents.BulkInsert
                 _backgroundWriter = tmp;
                 _currentWriter.BaseStream.SetLength(0);
                 ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                _lastWriteToStream = DateTime.UtcNow;
                 _asyncWrite = WriteToRequestBodyStreamAsync(buffer);
+
+                if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
+                {
+                    await _asyncWrite.ConfigureAwait(false);
+                    await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
+                    _lastWriteToStream = DateTime.UtcNow;
+                }
             }
         }
 
