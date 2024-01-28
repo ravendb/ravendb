@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
@@ -21,6 +22,30 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
+
+        [RavenAction("/databases/*/admin/sharding/prefixes/add", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task AddPrefixConfiguration()
+        {
+            throw new NotSupportedInShardingException($"Database '{DatabaseName}' is a sharded database and does not support documents migration operation. " +
+                                                      "This operation is available only from a specific shard");
+        }
+
+        [RavenAction("/databases/*/admin/sharding/prefixes/delete", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        public Task DeletePrefixConfiguration()
+        {
+            throw new NotSupportedInShardingException($"Database '{DatabaseName}' is a sharded database and does not support documents migration operation. " +
+                                                      "This operation is available only from a specific shard");
+        }
+
+        [RavenAction("/databases/*/admin/sharding/prefixes/update", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task UpdatePrefixConfiguration()
+        {
+            throw new NotSupportedInShardingException($"Database '{DatabaseName}' is a sharded database and does not support documents migration operation. " +
+                                                      "This operation is available only from a specific shard");
+
+
+        }
+
 
         private void ValidateShardDatabaseName()
         {

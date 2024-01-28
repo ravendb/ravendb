@@ -76,6 +76,9 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, ServerWideBackupConfiguration> ServerWideBackupConfiguration = GenerateJsonDeserializationRoutine<ServerWideBackupConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, PrefixedShardingSetting> PrefixedShardingSetting = GenerateJsonDeserializationRoutine<PrefixedShardingSetting>();
+
+
         public static readonly Func<BlittableJsonReaderObject, ServerWideExternalReplication> ServerWideExternalReplication = GenerateJsonDeserializationRoutine<ServerWideExternalReplication>();
 
         public static readonly Func<BlittableJsonReaderObject, ExternalReplicationState> ExternalReplicationState = GenerateJsonDeserializationRoutine<ExternalReplicationState>();
@@ -286,6 +289,10 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkProcessStateCommand>(),
             [nameof(RemoveQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveQueueSinkProcessStateCommand>(),
             [nameof(UpdateResponsibleNodeForTasksCommand)] = GenerateJsonDeserializationRoutine<UpdateResponsibleNodeForTasksCommand>()
+
+            [nameof(AddPrefixedSettingCommand)] = GenerateJsonDeserializationRoutine<AddPrefixedSettingCommand>(),
+            [nameof(DeletePrefixedSettingCommand)] = GenerateJsonDeserializationRoutine<DeletePrefixedSettingCommand>(),
+            [nameof(UpdatePrefixedSettingCommand)] = GenerateJsonDeserializationRoutine<UpdatePrefixedSettingCommand>()
         };
     }
 }

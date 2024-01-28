@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide
 {
     public sealed class ShardingStore
     {
-        public bool BlockPrefixedSharding = true;
+        public bool BlockPrefixedSharding = false;
 
         private readonly ServerStore _serverStore;
         public bool ManualMigration = false;
@@ -266,6 +266,7 @@ namespace Raven.Server.ServerWide
                 rangeStart += step;
             }
         }
+
 
 
 

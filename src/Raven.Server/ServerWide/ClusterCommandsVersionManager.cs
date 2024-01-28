@@ -184,6 +184,10 @@ namespace Raven.Server.ServerWide
             
             [nameof(EditDataArchivalCommand)] = 60_000,
             [nameof(UpdateResponsibleNodeForTasksCommand)] = UpdateResponsibleNodeForTasksCommand.CommandVersion,
+            [nameof(AddPrefixedSettingCommand)] = 60_001,
+            [nameof(DeletePrefixedSettingCommand)] = 60_001,
+            [nameof(UpdatePrefixedSettingCommand)] = 60_001,
+
         };
 
         public bool CanPutCommand(string command)

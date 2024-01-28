@@ -40,9 +40,7 @@ public partial class RavenTestBase
             }
 
             var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
-            var moveToShard = toShard ?? (prefixed != null 
-                ? ShardingTestBase.GetNextSortedShardNumber(prefixed, shardNumber)
-                : ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber));
+            var moveToShard = ShardingTestBase.GetNextSortedShardNumber(shards: prefixed != null ? prefixed.Shards : record.Sharding.Shards.Keys, shardNumber);
 
             using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
             {
