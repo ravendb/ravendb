@@ -380,14 +380,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             bool first = true;
 
-            writer.WriteStartObject();
+            if (envs.Count() > 1)
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("DatabaseName");
+                writer.WriteString(name);
+                writer.WriteComma();
 
-            writer.WritePropertyName("DatabaseName");
-            writer.WriteString(name);
-            writer.WriteComma();
+                writer.WritePropertyName("Environments");
+                writer.WriteStartArray();
+            }
 
-            writer.WritePropertyName("Environments");
-            writer.WriteStartArray();
             foreach (var env in envs)
             {
                 if (env == null)
@@ -407,8 +410,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 writer.WriteString(env.Type.ToString());
                 writer.WriteComma();
 
-                using (var tx = env.Environment.ReadTransaction())
-                using (context.OpenWriteTransaction())
+                using (var tx = context.OpenWriteTransaction())
                 {
                     var djv = new DynamicJsonValue();
                     switch (storageReportType)
@@ -420,7 +422,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             djv = GetJsonDetailedReport(env, false);
                             break;
                         case StorageReportType.ScratchReport:
-                            djv = GetJsonScratchBufferReport(env, tx.LowLevelTransaction);
+                            djv = GetJsonScratchBufferReport(env, tx.InnerTransaction.LowLevelTransaction);
                             break;
                     }
                     writer.WritePropertyName("Report");
@@ -428,9 +430,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 writer.WriteEndObject();
             }
-            writer.WriteEndArray();
-
-            writer.WriteEndObject();
+            if (envs.Count() > 1)
+            {
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
         }
 
         private DynamicJsonValue GetJsonScratchBufferReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx)
