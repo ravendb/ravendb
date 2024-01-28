@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -222,6 +223,9 @@ namespace Tests.Infrastructure
 
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : (int)Interlocked.Read(ref _count);
             var configuration = RavenConfiguration.CreateForServer(caller);
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType), nameof(SearchEngineType.Lucene));
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType), nameof(SearchEngineType.Lucene));
+
             configuration.Initialize();
             configuration.Core.PublicServerUrl = new UriSetting($"http://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}");
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
