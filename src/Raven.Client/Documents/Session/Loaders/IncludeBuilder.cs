@@ -31,10 +31,22 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeAllCounters();
     }
 
+    /// <summary>
+    /// The server is instructed to pre-load referenced documents concurrently with retrieving the time series data.<br/>
+    /// The documents are added to the session unit of work, and subsequent requests to load them are served directly from the session cache,
+    /// without requiring any additional queries to the server.<br/>
+    /// </summary>
+    /// <remarks> Note: <br/>
+    /// If a document Id appears in the results multiple times, the document data will be fetched only once and cached. <br/>
+    /// In order to allow for cache usage make sure NoTracking is set to 'false'. <br/>
+    /// <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/how-to/handle-document-relationships#includes"/>
+    /// </remarks>
     public interface ITimeSeriesIncludeBuilder
     {
+        /// <inheritdoc cref="ITimeSeriesIncludeBuilder"/>
         ITimeSeriesIncludeBuilder IncludeTags();
 
+        /// <inheritdoc cref="ITimeSeriesIncludeBuilder"/>
         ITimeSeriesIncludeBuilder IncludeDocument();
     }
 
