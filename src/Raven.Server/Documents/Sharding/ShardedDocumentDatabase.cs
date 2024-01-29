@@ -169,7 +169,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         foreach (var command in readCommands)
         {
             batchCollector.MaxIndex = command.Index;
-            batchCollector.MaxCommandCount = command.PreviousCount + command.Commands.Length;
+            batchCollector.MaxCommandCount = command.PreviousCount + command.Commands.Count;
             if (command.ShardNumber == ShardNumber)
                 batchCollector.Add(command);
         }

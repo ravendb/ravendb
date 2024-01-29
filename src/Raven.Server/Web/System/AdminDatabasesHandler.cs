@@ -415,6 +415,17 @@ namespace Raven.Server.Web.System
                 await ServerStore.Sharding.UpdatePrefixedShardingIfNeeded(context, databaseRecord, clusterTopology);
             }
 
+            if (databaseRecord.IsSharded)
+            {
+                Server.ServerStore.Sharding.FillShardingConfiguration(clusterTopology, databaseRecord.Sharding, databaseRecord.DatabaseName, databaseRecord.Encrypted);
+            }
+            else
+            {
+                databaseRecord.Topology ??= new DatabaseTopology();
+                databaseRecord.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
+                Server.ServerStore.AssignNodesToDatabase(clusterTopology, databaseRecord.DatabaseName, databaseRecord.Encrypted, databaseRecord.Topology);
+            }
+
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 

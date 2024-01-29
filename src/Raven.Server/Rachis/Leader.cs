@@ -665,24 +665,13 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
+            using var rachisMergedCommand = new RachisMergedCommand(leader: this, engine: _engine, command);
 
-            var rachisMergedCommand = new RachisMergedCommand(leader: this, engine: _engine)
-            {
-                Command = command,
-                BlittableResultWriter = blittableResultWriter
-            };
-
+            rachisMergedCommand.Initialize();
+            
             await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed (until 'rachisMergedCommand.TaskResult' wont be null).
 
-            var t = rachisMergedCommand.TaskResult;
-            if (await t.WaitWithTimeout(timeout) == false)
-            {
-                throw new TimeoutException($"Waited for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
-            }
-
-            var result = await t;
-            return blittableResultWriter == null ? result : (result.Index, blittableResultWriter.Result);
+            return await rachisMergedCommand.Result();
         }
 
         public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new ConcurrentQueue<(string, AlertRaised)>();

@@ -5,26 +5,31 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Json;
 using Voron.Impl;
 
 namespace Raven.Server.Rachis
 {
     public partial class Leader
     {
-        internal sealed class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+        public sealed class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>, IDisposable
         {
-            public CommandBase Command;
+            private CommandBase _command;
             public Task<(long Index, object Result)> TaskResult { get; private set; }
-            public BlittableResultWriter BlittableResultWriter { get; init; }
+            public BlittableResultWriter BlittableResultWriter { get; private set; }
+
+            public BlittableJsonReaderObject Raw { get; set; }
 
             private readonly Leader _leader;
             private readonly RachisConsensus _engine;
+            private IDisposable _ctxReturn;
             private const string _leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
 
-            public RachisMergedCommand([NotNull] Leader leader, [NotNull] RachisConsensus engine)
+            public RachisMergedCommand([NotNull] Leader leader, [NotNull] RachisConsensus engine, CommandBase command)
             {
                 _leader = leader ?? throw new ArgumentNullException(nameof(leader));
                 _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+                _command = command ?? throw new ArgumentNullException(nameof(command));
             }
 
             protected override long ExecuteCmd(ClusterOperationContext context)
@@ -49,6 +54,31 @@ namespace Raven.Server.Rachis
                 return 1;
             }
 
+            public void Initialize()
+            {
+                BlittableResultWriter = _command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
+
+                // prepare the command outside the write lock.
+                _ctxReturn = _engine.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+                var djv = _command.ToJson(context);
+                Raw = context.ReadObject(djv, "prepare-raw-command");
+            }
+
+
+            public async Task<(long Index, object Result)> Result()
+            {
+                var r = await TaskResult;
+                return BlittableResultWriter == null ? r : (r.Index, BlittableResultWriter.Result);
+            } 
+
+            public void Dispose()
+            {
+                Raw?.Dispose();
+                Raw = null;
+                BlittableResultWriter?.Dispose();
+                _ctxReturn?.Dispose();
+            }
+
             private void InsertCommandToLeaderLog(ClusterOperationContext context)
             {
                 _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
@@ -59,7 +89,7 @@ namespace Raven.Server.Rachis
                     return;
                 }
 
-                if (_engine.LogHistory.HasHistoryLog(context, Command.UniqueRequestId, out var index, out var result, out var exception))
+                if (_engine.LogHistory.HasHistoryLog(context, _command.UniqueRequestId, out var index, out var result, out var exception))
                 {
                     // if this command is already committed, we can skip it and notify the caller about it
                     if (lastCommitted >= index)
@@ -81,7 +111,7 @@ namespace Raven.Server.Rachis
                                 }
                                 else
                                 {
-                                    result = Command.FromRemote(result);
+                                    result = _command.FromRemote(result);
                                 }
                             }
 
@@ -92,12 +122,8 @@ namespace Raven.Server.Rachis
                 }
                 else
                 {
-                    _engine.InvokeBeforeAppendToRaftLog(context, Command);
-
-                    var djv = Command.ToJson(context);
-                    var commandJson = context.ReadObject(djv, "raft/command");
-
-                    index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
+                    _engine.InvokeBeforeAppendToRaftLog(context, this);
+                    index = _engine.InsertToLeaderLog(context, _leader.Term, Raw, RachisEntryFlags.StateMachineCommand);
                 }
                
                 if (_leader._entries.TryGetValue(index, out var state) == false)

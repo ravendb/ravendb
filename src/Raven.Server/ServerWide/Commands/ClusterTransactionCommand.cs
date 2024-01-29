@@ -783,7 +783,7 @@ namespace Raven.Server.ServerWide.Commands
         public sealed class SingleClusterDatabaseCommand : IDynamicJson
         {
             public ClusterTransactionOptions Options;
-            public BlittableJsonReaderArray Commands;
+            public List<ClusterTransactionDataCommand> Commands;
             public long Index;
             public long PreviousCount;
             public string Database;
@@ -863,7 +863,7 @@ namespace Raven.Server.ServerWide.Commands
             if (ptr == null)
                 return null;
 
-            var blittable = new BlittableJsonReaderObject(ptr, size, context);
+            using var blittable = new BlittableJsonReaderObject(ptr, size, context);
             blittable.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray array);
 
             ClusterTransactionOptions options = null;
@@ -878,10 +878,18 @@ namespace Raven.Server.ServerWide.Commands
 
             blittable.TryGet(nameof(SingleClusterDatabaseCommand.ShardNumber), out int? shardNumber);
 
+            var databaseCommands = new List<ClusterTransactionDataCommand>();
+            foreach (BlittableJsonReaderObject blittableCommand in array)
+            {
+                var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
+                cmd.Document = cmd.Document?.CloneOnTheSameContext(); // we need to get it out of the array outside the write tx
+                databaseCommands.Add(cmd);
+            }
+
             return new SingleClusterDatabaseCommand
             {
                 Options = options,
-                Commands = array,
+                Commands = databaseCommands,
                 Index = index,
                 PreviousCount = Bits.SwapBytes(*(long*)(keyPtr + size - sizeof(long))),
                 Database = database,

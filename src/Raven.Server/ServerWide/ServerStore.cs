@@ -857,7 +857,6 @@ namespace Raven.Server.ServerWide
 
             _sharding = new ShardingStore(this);
             _engine = new RachisConsensus<ClusterStateMachine>(this);
-            _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, Server.Time, out _lastClusterTopologyIndex, ServerShutdown);
@@ -958,32 +957,6 @@ namespace Raven.Server.ServerWide
                         "Your system has no PageFile. It is recommended to have a PageFile in order for Server to work properly",
                         AlertType.LowSwapSize,
                         NotificationSeverity.Warning));
-            }
-        }
-
-        private void BeforeAppendToRaftLog(ClusterOperationContext ctx, CommandBase cmd)
-        {
-            switch (cmd)
-            {
-                case AddDatabaseCommand addDatabase:
-                    var clusterTopology = GetClusterTopology(ctx);
-                    if (addDatabase.Record.IsSharded == false)
-                    {
-                        if (addDatabase.Record.Topology.Count == 0)
-                        {
-                            AssignNodesToDatabase(clusterTopology,
-                                addDatabase.Record.DatabaseName,
-                                addDatabase.Encrypted,
-                                addDatabase.Record.Topology);
-                        }
-                        Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
-
-                    }
-                    else
-                    {
-                        Sharding.FillShardingConfiguration(addDatabase, clusterTopology);
-                    }
-                    break;
             }
         }
 
@@ -2922,6 +2895,9 @@ namespace Raven.Server.ServerWide
         {
             Debug.Assert(databaseTopology != null);
 
+            if (databaseTopology.Count > 0)
+                return;
+
             if (clusterTopology.AllNodes.Count == 0)
                 throw new InvalidOperationException($"Database {name} cannot be created, because the cluster topology is empty (shouldn't happen)!");
 
@@ -3242,20 +3218,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
+        // TODO: We need always to link the token with the request abort token
+        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd, CancellationToken? token = null)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                return await SendToLeaderAsyncInternal(context, cmd);
+                return await SendToLeaderAsyncInternal(context, cmd, token ?? _shutdownNotification.Token);
         }
 
-        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(TransactionOperationContext context, CommandBase cmd)
+        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(TransactionOperationContext context, CommandBase cmd, CancellationToken token)
         {
             //I think it is reasonable to expect timeout twice of error retry
-            var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, _shutdownNotification.Token);
+            var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, token);
             Exception requestException = null;
             while (true)
             {
-                ServerShutdown.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
 
                 if (_engine.CurrentState == RachisState.Leader && _engine.CurrentLeader?.Running == true)
                 {
@@ -3283,13 +3260,15 @@ namespace Raven.Server.ServerWide
                     if (cachedLeaderTag == null)
                     {
                         await Task.WhenAny(logChange, timeoutTask);
-                        if (logChange.IsCompleted == false)
+                        token.ThrowIfCancellationRequested();
+
+                        if (timeoutTask.IsCompleted)
                             ThrowTimeoutException(cmd, requestException);
 
                         continue;
                     }
 
-                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader);
+                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
                     return (response.Index, cmd.FromRemote(response.Result));
                 }
                 catch (Exception ex)
@@ -3304,7 +3283,9 @@ namespace Raven.Server.ServerWide
                 }
 
                 await Task.WhenAny(logChange, timeoutTask);
-                if (logChange.IsCompleted == false)
+                token.ThrowIfCancellationRequested();
+
+                if (timeoutTask.IsCompleted)
                 {
                     ThrowTimeoutException(cmd, requestException);
                 }
@@ -3326,7 +3307,8 @@ namespace Raven.Server.ServerWide
                                        $"and we timed out waiting for one after {Engine.OperationTimeout}", requestException);
         }
 
-        private async Task<(long Index, object Result)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
+        private async Task<(long Index, object Result)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, CommandBase cmd,
+            Reference<bool> reachedLeader, CancellationToken token)
         {
             var djv = cmd.ToJson(context);
             var cmdJson = context.ReadObject(djv, "raft/command");
@@ -3350,11 +3332,14 @@ namespace Raven.Server.ServerWide
                 Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
             }
 
-            var command = new PutRaftCommand(_leaderRequestExecutor.Conventions, cmdJson, _engine.Url, commandType);
+            var command = new PutRaftCommand(_leaderRequestExecutor.Conventions, cmdJson, _engine.Url, commandType)
+            {
+                Timeout = cmd.Timeout
+            };
 
             try
             {
-                await _leaderRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
+                await _leaderRequestExecutor.ExecuteAsync(command, context, token: token);
             }
             catch
             {
@@ -3564,9 +3549,14 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, CancellationToken token = default)
+        public Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, TimeSpan timeout, CancellationToken token = default)
         {
-            await _engine.WaitForCommitIndexChange(modification, value, token);
+            return _engine.WaitForCommitIndexChange(modification, value, timeout, token);
+        }
+
+        public Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, CancellationToken token = default)
+        {
+            return _engine.WaitForCommitIndexChange(modification, value, timeout: null, token);
         }
 
         public string LastStateChangeReason()

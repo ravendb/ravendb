@@ -36,7 +36,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
     protected abstract ClusterConfiguration GetClusterConfiguration();
 
-    public async ValueTask<(long Index, DynamicJsonArray Results)> ProcessAsync(JsonOperationContext context, TBatchCommand command)
+    public async ValueTask<(long Index, DynamicJsonArray Results)> ProcessAsync(JsonOperationContext context, TBatchCommand command, OperationCancelToken token)
     {
         ArraySegment<BatchRequestParser.CommandData> parsedCommands = GetParsedCommands(command);
 
@@ -60,8 +60,9 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
             var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
             ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
+            clusterTransactionCommand.Timeout = Timeout.InfiniteTimeSpan; // we rely on the http token to cancel the command
 
-            var clusterTransactionCommandResult = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+            var clusterTransactionCommandResult = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand, token.Token);
             if (clusterTransactionCommandResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
             {
                 RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
@@ -70,13 +71,15 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
                     ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
                 };
             }
-            await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, clusterTransactionCommandResult.Index);
+
+            // wait for the command to be applied on this node,
+            // canceling will be done through the cts and not with a timeout
+            await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, clusterTransactionCommandResult.Index, Timeout.InfiniteTimeSpan, token.Token);
 
             DynamicJsonArray result;
             if (clusterTransactionCommand.DatabaseCommands.Count > 0)
             {
-                using var cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken(RequestHandler.ServerStore.Engine.OperationTimeout);
-                var databaseResult = await RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.WaitForResults(taskId, cts.Token);
+                var databaseResult = await RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.WaitForResults(taskId, token.Token);
 
                 if (databaseResult.IndexTask != null)
                 {

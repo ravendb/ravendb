@@ -156,9 +156,8 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void FillShardingConfiguration(AddDatabaseCommand addDatabase, ClusterTopology clusterTopology)
+        public void FillShardingConfiguration(ClusterTopology clusterTopology, ShardingConfiguration shardingConfiguration, string name, bool encrypted)
         {
-            var shardingConfiguration = addDatabase.Record.Sharding;
             if (shardingConfiguration.BucketRanges == null ||
                 shardingConfiguration.BucketRanges.Count == 0)
             {
@@ -176,15 +175,15 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            if (addDatabase.RaftCommandIndex == null)
+            /*if (addDatabase.RaftCommandIndex == null)
             {
                 FillPrefixedSharding(shardingConfiguration);
-            }
+            }*/
 
             var orchestratorTopology = shardingConfiguration.Orchestrator.Topology;
             if (orchestratorTopology.Count == 0)
             {
-                _serverStore.AssignNodesToDatabase(clusterTopology, addDatabase.Record.DatabaseName, addDatabase.Encrypted, orchestratorTopology);
+                _serverStore.AssignNodesToDatabase(clusterTopology, name, encrypted, orchestratorTopology);
             }
 
             Debug.Assert(orchestratorTopology.Count != 0, "Empty orchestrator topology after AssignNodesToDatabase");
