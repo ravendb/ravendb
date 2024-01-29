@@ -43,7 +43,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentReport : AbstractS
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                WriteReport(writer, name, new List<StorageEnvironmentWithType>() { env }, context, details);
+                WriteReport(writer, env, context, details);
             }
         }
     }

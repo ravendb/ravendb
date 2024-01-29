@@ -28,32 +28,34 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
             var name = GetName();
             var typeAsString = RequestHandler.GetStringQueryString("type", false);
 
-            IEnumerable<StorageEnvironmentWithType> envs;
-
             if (typeAsString != null)
             {
                 if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
                     throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
-                var db = RequestHandler.Database.GetAllStoragesEnvironment()
+                var env = RequestHandler.Database.GetAllStoragesEnvironment()
                     .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
-                envs = db == null ? null : new List<StorageEnvironmentWithType>() { db };
+                if (env == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                    {
+                        WriteReport(writer, env, context);
+                    }
+                }
             }
             else
             {
-                envs = RequestHandler.Database.GetAllStoragesEnvironment();
-            }
-
-            if (envs == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    WriteReport(writer, name, envs, context);
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                    {
+                        WriteEnvironmentsReport(writer, name, RequestHandler.Database.GetAllStoragesEnvironment(), context);
+                    }
                 }
             }
         }

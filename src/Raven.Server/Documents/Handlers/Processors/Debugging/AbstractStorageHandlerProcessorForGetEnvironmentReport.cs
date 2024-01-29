@@ -47,7 +47,7 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
         throw new NotSupportedException();
     }
 
-    public void WriteReport(AsyncBlittableJsonTextWriter writer, string name, IEnumerable<StorageEnvironmentWithType> envs,
+    public void WriteEnvironmentsReport(AsyncBlittableJsonTextWriter writer, string name, IEnumerable<StorageEnvironmentWithType> envs,
         DocumentsOperationContext context, bool detailed = false)
     {
         bool first = true;
@@ -69,26 +69,35 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
                 writer.WriteComma();
             first = false;
 
-            writer.WriteStartObject();
-
-            writer.WritePropertyName("Name");
-            writer.WriteString(env.Name);
-            writer.WriteComma();
-
-            writer.WritePropertyName("Type");
-            writer.WriteString(env.Type.ToString());
-            writer.WriteComma();
-
-            using (var tx = env.Environment.ReadTransaction())
-            using (context.OpenWriteTransaction())
-            {
-                var djv = GetJsonReport(env, tx.LowLevelTransaction, detailed);
-                writer.WritePropertyName("Report");
-                writer.WriteObject(context.ReadObject(djv, env.Name));
-            }
-            writer.WriteEndObject();
+            WriteReport(writer, env, context, detailed);
         }
+
         writer.WriteEndArray();
+
+        writer.WriteEndObject();
+    }
+
+    public void WriteReport(AsyncBlittableJsonTextWriter writer, StorageEnvironmentWithType env, DocumentsOperationContext context, bool detailed = false)
+    {
+        if (env == null)
+            return;
+
+        writer.WriteStartObject();
+
+        writer.WritePropertyName("Name");
+        writer.WriteString(env.Name);
+        writer.WriteComma();
+
+        writer.WritePropertyName("Type");
+        writer.WriteString(env.Type.ToString());
+        writer.WriteComma();
+
+        using (var tx = context.OpenWriteTransaction())
+        {
+            var djv = GetJsonReport(env, tx.InnerTransaction.LowLevelTransaction, detailed);
+            writer.WritePropertyName("Report");
+            writer.WriteObject(context.ReadObject(djv, env.Name));
+        }
 
         writer.WriteEndObject();
     }
