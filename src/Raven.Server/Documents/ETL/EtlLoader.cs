@@ -672,6 +672,9 @@ namespace Raven.Server.Documents.ETL
 
             LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, toRemove.SelectMany(x => x.Value).ToList());
 
+            if (toRemove.Count == 0)
+                return;
+
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 Parallel.ForEach(toRemove, x =>
