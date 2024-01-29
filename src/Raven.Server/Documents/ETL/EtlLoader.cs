@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -478,7 +479,6 @@ namespace Raven.Server.Documents.ETL
             var myElasticSearchEtl = new List<ElasticSearchEtlConfiguration>();
             var myQueueEtl = new List<QueueEtlConfiguration>();
 
-
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var config in record.RavenEtls)
@@ -670,44 +670,34 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            Parallel.ForEach(toRemove, x =>
-            {
-                foreach (var process in x.Value)
-                {
-                    _database.DatabaseShutdown.ThrowIfCancellationRequested();
-
-                    try
-                    {
-                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
-
-                        process.Stop(reason);
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failed to stop ETL process {process.Name} on the database record change", e);
-                    }
-                }
-            });
-
             LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, toRemove.SelectMany(x => x.Value).ToList());
 
-            Parallel.ForEach(toRemove, x =>
+            ThreadPool.QueueUserWorkItem(_ =>
             {
-                foreach (var process in x.Value)
+                Parallel.ForEach(toRemove, x =>
                 {
-                    _database.DatabaseShutdown.ThrowIfCancellationRequested();
+                    foreach (var process in x.Value)
+                    {
+                        try
+                        {
+                            if (_database.DatabaseShutdown.IsCancellationRequested)
+                                return;
 
-                    try
-                    {
-                        process.Dispose();
+                            string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
+                            process.Stop(reason);
+
+                            process.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Failed to dispose ETL process {process.Name} on the database record change", e);
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failed to dispose ETL process {process.Name} on the database record change", e);
-                    }
-                }
+                });
             });
         }
 
