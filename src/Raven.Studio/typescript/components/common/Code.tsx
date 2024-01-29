@@ -1,14 +1,10 @@
 import React, { useMemo } from "react";
 import Prism from "prismjs";
 import "./Code.scss";
-import copyToClipboard from "common/copyToClipboard";
 import { Icon } from "components/common/Icon";
-import { Button } from "reactstrap";
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
-import { Icon } from "components/common/Icon";
 import { Button } from "reactstrap";
-import classNames from "classnames";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -29,7 +25,7 @@ type Language =
     | "clike"
     | "javascript"
     | "csharp"
-    | "json";
+    | "json"
     | "csharp"
     | "json";
 

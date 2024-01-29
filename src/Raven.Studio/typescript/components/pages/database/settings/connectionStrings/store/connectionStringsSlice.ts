@@ -163,10 +163,8 @@ export const connectionStringsActions = {
 };
 
 export const connectionStringSelectors = {
-    state: (store: RootState) => ({
-        loadStatus: store.connectionStrings.loadStatus,
-        connections: store.connectionStrings.connections,
-        initialEditConnection: store.connectionStrings.initialEditConnection,
-        isEmpty: _.isEqual(store.connectionStrings.connections, initialState.connections),
-    }),
+    loadStatus: (store: RootState) => store.connectionStrings.loadStatus,
+    connections: (store: RootState) => store.connectionStrings.connections,
+    initialEditConnection: (store: RootState) => store.connectionStrings.initialEditConnection,
+    isEmpty: (store: RootState) => _.isEqual(store.connectionStrings.connections, initialState.connections),
 };
