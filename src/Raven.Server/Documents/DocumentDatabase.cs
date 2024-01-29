@@ -372,7 +372,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        NotifyFeaturesAboutStateChange(record, index).GetAwaiter().GetResult();
+                        NotifyFeaturesAboutStateChangeAsync(record, index).GetAwaiter().GetResult();
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
@@ -1330,14 +1330,14 @@ namespace Raven.Server.Documents
         /// </summary>
         public event Action<DatabaseRecord> DatabaseRecordChanged;
 
-        public async Task ValueChanged(long index, string type, object changeState)
+        public async ValueTask ValueChangedAsync(long index, string type, object changeState)
         {
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                await NotifyFeaturesAboutValueChange(index, type, changeState);
+                await NotifyFeaturesAboutValueChangeAsync(index, type, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1351,7 +1351,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async Task StateChanged(long index)
+        public async ValueTask StateChangedAsync(long index)
         {
             try
             {
@@ -1374,7 +1374,7 @@ namespace Raven.Server.Documents
                     : Constants.Identities.DefaultSeparator;
                 StudioConfiguration = record.Studio;
 
-                await NotifyFeaturesAboutStateChange(record, index);
+                await NotifyFeaturesAboutStateChangeAsync(record, index);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
@@ -1397,7 +1397,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private async Task NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        private async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index)
         {
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                 return;
@@ -1545,7 +1545,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private async Task NotifyFeaturesAboutValueChange(long index, string type, object changeState)
+        private async ValueTask NotifyFeaturesAboutValueChangeAsync(long index, string type, object changeState)
         {
             if (CanSkipValueChange(index, type))
                 return;
@@ -1587,7 +1587,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async Task RefreshFeatures()
+        public ValueTask RefreshFeaturesAsync()
         {
             if (_databaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown();
@@ -1599,7 +1599,8 @@ namespace Raven.Server.Documents
             {
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
-            await NotifyFeaturesAboutStateChange(record, index);
+
+            return NotifyFeaturesAboutStateChangeAsync(record, index);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
