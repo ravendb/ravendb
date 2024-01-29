@@ -43,12 +43,12 @@ public partial class IndexSearcher
                     Constants.Search.SearchMatchOptions.EndsWith => (1, 0, CreateWildcardAnalyzer(field, ref wildcardAnalyzer)),
                     Constants.Search.SearchMatchOptions.Contains => (1, -1, CreateWildcardAnalyzer(field, ref wildcardAnalyzer)),
                     Constants.Search.SearchMatchOptions.TermMatch => (0, 0, searchAnalyzer),
+                    Constants.Search.SearchMatchOptions.Exists => (0, 0, searchAnalyzer),
                     _ => throw new InvalidExpressionException("Unknown flag inside Search match.")
                 };
 
                 var termReadyToAnalyze = value.Slice(startIncrement, value.Length - startIncrement + lengthIncrement);
 
-              
                 if (termType is Constants.Search.SearchMatchOptions.TermMatch)
                 {
                     termMatches ??= new();
@@ -65,13 +65,20 @@ public partial class IndexSearcher
                     continue;
                 }
 
-                Slice analyzedTerm = EncodeAndApplyAnalyzer(field, analyzer, termReadyToAnalyze);
-                if (analyzedTerm.Size == 0)
-                    continue; //skip empty results
+                Slice analyzedTerm = default;
+                
+                if (termType is not Constants.Search.SearchMatchOptions.Exists)
+                {
+                    analyzedTerm = EncodeAndApplyAnalyzer(field, analyzer, termReadyToAnalyze);
+                    if (analyzedTerm.Size == 0)
+                        continue; //skip empty results
+                }
+                
                 var query = termType switch
                 {
                     Constants.Search.SearchMatchOptions.TermMatch => throw new InvalidDataException(
                         $"{nameof(TermMatch)} is handled in different part of evaluator. This is a bug."),
+                    Constants.Search.SearchMatchOptions.Exists => ExistsQuery(field, token: cancellationToken),
                     Constants.Search.SearchMatchOptions.StartsWith => StartWithQuery(field, analyzedTerm, token: cancellationToken),
                     Constants.Search.SearchMatchOptions.EndsWith => EndsWithQuery(field, analyzedTerm, token: cancellationToken),
                     Constants.Search.SearchMatchOptions.Contains => ContainsQuery(field, analyzedTerm, token: cancellationToken),
@@ -131,15 +138,20 @@ public partial class IndexSearcher
         {
             if (termValue.IsEmpty)
                 return Constants.Search.SearchMatchOptions.TermMatch;
+            
             Constants.Search.SearchMatchOptions mode = default;
+            
             if (termValue[0] == '*')
                 mode |= Constants.Search.SearchMatchOptions.EndsWith;
 
             if (termValue[^1] == '*')
             {
-                if (termValue[^2] != '\\')
+                if (termValue.Length <= 2 || termValue[^2] != '\\')
                     mode |= Constants.Search.SearchMatchOptions.StartsWith;
             }
+            
+            if (mode == Constants.Search.SearchMatchOptions.Contains && termValue.Count('*') == termValue.Length)
+                return Constants.Search.SearchMatchOptions.Exists;
 
             return mode;
         }
