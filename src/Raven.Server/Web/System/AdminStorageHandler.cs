@@ -57,11 +57,10 @@ namespace Raven.Server.Web.System
                 writer.WriteComma();
 
                 using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-                using (var tx = env.ReadTransaction())
-                using (ctx.OpenWriteTransaction())
+                using (var tx = ctx.OpenWriteTransaction())
                 {
                     //Opening a write transaction to avoid concurrency problems (Issue #21088)
-                    var sc = env.ScratchBufferPool.InfoForDebug(env.PossibleOldestReadTransaction(tx.LowLevelTransaction));
+                    var sc = env.ScratchBufferPool.InfoForDebug(env.PossibleOldestReadTransaction(tx.InnerTransaction.LowLevelTransaction));
                     var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(sc);
                     writer.WritePropertyName("Report");
                     writer.WriteObject(context.ReadObject(djv, "System"));
