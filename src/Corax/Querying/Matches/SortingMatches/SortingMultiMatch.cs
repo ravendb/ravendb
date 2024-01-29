@@ -229,8 +229,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         var parameters = new Dictionary<string, string>()
         {
             {Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString()},
-            {Constants.QueryInspectionNode.Count, Count.ToString()},
-            {Constants.QueryInspectionNode.CountConfidence, Confidence.ToString()},
+            {Constants.QueryInspectionNode.Count, "0"},
+            {Constants.QueryInspectionNode.CountConfidence, QueryCountConfidence.Low.ToString()},
         };
 
         for (int cmpId = 0; cmpId < _orderMetadata.Length; ++cmpId)
@@ -255,7 +255,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
         }
         
-        return new QueryInspectionNode($"{nameof(SortingMultiMatch)} [{_orderMetadata}]",
+        return new QueryInspectionNode($"{nameof(SortingMultiMatch)}",
             children: new List<QueryInspectionNode> { _inner.Inspect()},
             parameters: parameters);
     }
