@@ -116,7 +116,7 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
         if (reset)
             _configuration.Clear();
 
-        ReadConfiguration(blitConfiguration, null);
+        ReadConfiguration(blitConfiguration, rootCategory: null);
     }
 
     private void ReadConfiguration(BlittableJsonReaderObject jConfiguration, string rootCategory)
