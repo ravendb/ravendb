@@ -27,6 +27,7 @@ class columnPreviewPlugin<T extends object> {
     private grid: virtualGrid<T>;
     private previewTimeoutHandle: number;
     private enterTooltipTimeoutHandle: number;
+    private exitTooltipTimeoutHandle: number;
     private previewVisible = false;
     private $tooltip: JQuery;
     private currentValue: any;
@@ -37,7 +38,8 @@ class columnPreviewPlugin<T extends object> {
     static localDateFormat = "YYYY-MM-DD HH:mm:ss.SSS";
 
     private static readonly delay = 500;
-    private static readonly enterTooltipDelay = 100;
+    private static readonly enterTooltipDelay = 300;
+    private static readonly exitTooltipDelay = 200;
     
     constructor() {
         _.bindAll(this, "defaultMarkupProvider");
@@ -129,12 +131,18 @@ class columnPreviewPlugin<T extends object> {
                 clearTimeout(this.enterTooltipTimeoutHandle);
                 this.enterTooltipTimeoutHandle = undefined;
             }
+            if (this.exitTooltipTimeoutHandle) {
+                clearTimeout(this.exitTooltipTimeoutHandle);
+                this.exitTooltipTimeoutHandle = undefined;
+            }
         });
 
         $(tooltipSelector).on("mouseleave", () => {
             if (this.previewVisible) {
-                this.hide();
-                this.previewVisible = false;
+                this.exitTooltipTimeoutHandle = setTimeout(() => {
+                    this.hide();
+                    this.previewVisible = false;
+                }, columnPreviewPlugin.exitTooltipDelay);
             }
         });
     }
