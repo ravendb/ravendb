@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -19,6 +19,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         public int? SourceShard;
         public int DestinationShard;
         public int Bucket;
+        public string Prefix;
 
         private ShardBucketMigration _migration;
 
@@ -26,13 +27,14 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         {
         }
 
-        public StartBucketMigrationCommand(int bucket, int destShard, string database, string raftId) : base(database, raftId)
+        public StartBucketMigrationCommand(int bucket, int destShard, string database, string prefix, string raftId) : base(database, raftId)
         {
             Bucket = bucket;
             DestinationShard = destShard;
+            Prefix = prefix;
         }
 
-        public StartBucketMigrationCommand(int bucket, int sourceShard, int destShard, string database, string raftId) : this(bucket, destShard, database, raftId)
+        public StartBucketMigrationCommand(int bucket, int sourceShard, int destShard, string database, string raftId) : this(bucket, destShard, database, prefix: null, raftId)
         {
             SourceShard = sourceShard;
         }
@@ -56,27 +58,14 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-
-            if (Bucket >= ShardHelper.NumberOfBuckets)
+            if (string.IsNullOrEmpty(Prefix) == false)
             {
                 // prefixed bucket range
-                // todo
-                var prefixed = record.Sharding.Prefixed.OrderBy(x => x.BucketRangeStart).ToList();
-                List<int> shards = null;
-                for (int i = 0; i < prefixed.Count; i++)
-                {
-                    var bucketRangeStart = prefixed[i].BucketRangeStart;
-                    int nextBucketRangeStart = i == prefixed.Count - 1 
-                        ? int.MaxValue 
-                        : prefixed[i + 1].BucketRangeStart;
+                var index = record.Sharding.Prefixed.BinarySearch(new PrefixedShardingSetting(Prefix), PrefixedSettingComparer.Instance);
+                if (index < 0)
+                    throw new RachisApplyException($"Prefix {Prefix} doesn't exists");
 
-                    if (Bucket < bucketRangeStart || Bucket >= nextBucketRangeStart) 
-                        continue;
-
-                    shards = prefixed[i].Shards;
-                    break;
-                }
-
+                var shards = record.Sharding.Prefixed[index].Shards;
                 if (shards == null || shards.Contains(DestinationShard) == false)
                     throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
             }
@@ -145,6 +134,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             json[nameof(SourceShard)] = SourceShard;
             json[nameof(DestinationShard)] = DestinationShard;
             json[nameof(Bucket)] = Bucket;
+            json[nameof(Prefix)] = Prefix;
         }
     }
 }

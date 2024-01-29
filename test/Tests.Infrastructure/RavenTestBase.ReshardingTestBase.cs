@@ -30,18 +30,18 @@ public partial class RavenTestBase
 
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             var bucket = _parent.Sharding.GetBucket(record.Sharding, id);
-            PrefixedShardingSetting prefixed = null;
+            PrefixedShardingSetting prefixedSetting = null;
             foreach (var setting in record.Sharding.Prefixed)
             {
                 if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    prefixed = setting;
+                    prefixedSetting = setting;
                     break;
                 }
             }
 
             var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
-            var shards = prefixed != null ? prefixed.Shards : record.Sharding.Shards.Keys.ToList();
+            var shards = prefixedSetting != null ? prefixedSetting.Shards : record.Sharding.Shards.Keys.ToList();
 
             int moveToShard;
             if (toShard.HasValue)
@@ -65,7 +65,7 @@ public partial class RavenTestBase
             {
                 try
                 {
-                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, moveToShard);
+                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, moveToShard, prefixedSetting?.Prefix);
                     break;
                 }
                 catch
@@ -86,6 +86,19 @@ public partial class RavenTestBase
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
                 while (record.Sharding.BucketMigrations.ContainsKey(bucket))
+                {
+                    await Task.Delay(250, cts.Token);
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
+                }
+            }
+        }
+
+        public async Task WaitForNoActiveMigrations(IDocumentStore store, int timeout = 60_000)
+        {
+            using (var cts = new CancellationTokenSource(timeout))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
+                while (record.Sharding.BucketMigrations.Count > 0)
                 {
                     await Task.Delay(250, cts.Token);
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);

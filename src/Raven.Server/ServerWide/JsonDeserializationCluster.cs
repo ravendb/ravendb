@@ -288,8 +288,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateQueueSinkCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkCommand>(),
             [nameof(UpdateQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkProcessStateCommand>(),
             [nameof(RemoveQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveQueueSinkProcessStateCommand>(),
-            [nameof(UpdateResponsibleNodeForTasksCommand)] = GenerateJsonDeserializationRoutine<UpdateResponsibleNodeForTasksCommand>()
-
+            [nameof(UpdateResponsibleNodeForTasksCommand)] = GenerateJsonDeserializationRoutine<UpdateResponsibleNodeForTasksCommand>(),
             [nameof(AddPrefixedSettingCommand)] = GenerateJsonDeserializationRoutine<AddPrefixedSettingCommand>(),
             [nameof(DeletePrefixedSettingCommand)] = GenerateJsonDeserializationRoutine<DeletePrefixedSettingCommand>(),
             [nameof(UpdatePrefixedSettingCommand)] = GenerateJsonDeserializationRoutine<UpdatePrefixedSettingCommand>()
