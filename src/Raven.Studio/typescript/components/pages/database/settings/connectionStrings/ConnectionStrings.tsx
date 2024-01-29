@@ -43,7 +43,10 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
         };
     }, [db, dispatch, nameFromUrl, typeFromUrl]);
 
-    const { loadStatus, connections, isEmpty, initialEditConnection } = useAppSelector(connectionStringSelectors.state);
+    const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
+    const connections = useAppSelector(connectionStringSelectors.connections);
+    const isEmpty = useAppSelector(connectionStringSelectors.isEmpty);
+    const initialEditConnection = useAppSelector(connectionStringSelectors.initialEditConnection);
 
     if (loadStatus === "failure") {
         return (
