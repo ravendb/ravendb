@@ -1218,7 +1218,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public (int ActualSize, int AllocatedSize)? GetDocumentMetrics(DocumentsOperationContext context, string id)
+        public (int ActualSize, int AllocatedSize, bool IsCompressed)? GetDocumentMetrics(DocumentsOperationContext context, string id)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
@@ -1228,9 +1228,10 @@ namespace Raven.Server.Documents
                 {
                     return null;
                 }
-                var allocated = table.GetAllocatedSize(tvr.Id);
 
-                return (tvr.Size, allocated);
+                var info = table.GetInfoFor(tvr.Id);
+
+                return (tvr.Size, info.AllocatedSize, info.IsCompressed);
             }
         }
 
