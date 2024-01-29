@@ -1019,7 +1019,7 @@ namespace Raven.Server.ServerWide
                 try
                 {
                     var database = await completedTask;
-                    await database.RefreshFeatures();
+                    await database.RefreshFeaturesAsync();
                 }
                 catch (Exception e)
                 {
