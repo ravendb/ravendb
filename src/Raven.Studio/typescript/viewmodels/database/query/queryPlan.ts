@@ -23,7 +23,8 @@ const WellKnownParams = {
     HighValue: "HighValue",
     LowOption: "LowOption",
     HighOption: "HighOption",
-    IteratorDirection: "IteratorDirection"
+    IteratorDirection: "IteratorDirection",
+    ComparerPrefix: "Comparer"
 } as const;
 
 interface Param {
@@ -38,6 +39,7 @@ class executionInfo {
     static lineHeight = 24;
     static headerSize = 50;
     static headerPadding = 3;
+    static parametersIndent = 15;
     
     x: number;
     y: number;
@@ -55,7 +57,7 @@ class executionInfo {
     constructor(operationName: string, parameters: Record<string, string>) {
         this.operationName = operationName;
         this.icon = executionInfo.iconForOperation(operationName);
-        this.processParameters(parameters);
+        this.processParameters(operationName, parameters);
     }
     
     private static iconForOperation(operationName: string): IconWithFixedCodePoint {
@@ -111,7 +113,7 @@ class executionInfo {
         return genUtils.formatNumberToStringFixed(parseFloat(input), 4);
     }
     
-    private processParameters(parameters: Record<string, string>): void {
+    private processParameters(operationName: string, parameters: Record<string, string>): void {
         const remainingParams = { ...parameters  };
 
         if (WellKnownParams.LowValue in remainingParams && WellKnownParams.HighValue in remainingParams) {
@@ -148,11 +150,11 @@ class executionInfo {
             const asc = remainingParams[WellKnownParams.Ascending];
             delete remainingParams[WellKnownParams.Ascending];
             
-            this.order = asc === "true" ? "corax-sort-az" : "corax-sort-za";
+            this.order = asc === "True" ? "corax-sort-az" : "corax-sort-za";
         }
         
         if (WellKnownParams.IsBoosting in remainingParams) {
-            const boost = remainingParams[WellKnownParams.IsBoosting];
+            const boost = remainingParams[WellKnownParams.IsBoosting] === "True";
             delete remainingParams[WellKnownParams.IsBoosting];
             
             let factorPart = "";
@@ -169,7 +171,9 @@ class executionInfo {
             
             this.parameters.push(
                 { 
-                    label: `<tspan>Boosting: </tspan><tspan class="icon-style ${iconColor}">${icon}</tspan><tspan>${factorPart}</tspan>`, 
+                    label: `<tspan dy="4">Boosting: </tspan>
+                            <tspan dy="4" class="icon-style ${iconColor}">${icon}</tspan>
+                            <tspan dy="-4">${factorPart}</tspan>`, 
                     html: true, 
                     customTitle: "Boosting: " + (boost ? "true" : "false") + factorPart 
                 });
@@ -202,8 +206,8 @@ class executionInfo {
             if (field) {
                 const fieldTokens = field.split("|").map(x => x.trim());
                 if (fieldTokens.length > 0) {
-                    this.parameters.push({label: "Field:"});
-                    this.parameters.push(...fieldTokens.map(x => ({label: x, leftPadding: 15})));
+                    this.parameters.push({ label: "Field:" });
+                    this.parameters.push(...fieldTokens.map(x => ({ label: x, leftPadding: executionInfo.parametersIndent })));
                 }
             }
             
@@ -216,6 +220,67 @@ class executionInfo {
                 this.direction = executionInfo.mapDirection(direction);
 
                 delete remainingParams[WellKnownParams.IteratorDirection];
+            }
+        }
+        
+        if (operationName === "SortingMultiMatch") {
+            // try to extract keys which starts with Comparer and create rich component
+            const keysToExtract = Object.keys(remainingParams).filter(x => x.startsWith(WellKnownParams.ComparerPrefix));
+            const parsed: Array<{ ascending: boolean; fieldName: string; fieldType: string; }> = [];
+            
+            keysToExtract.forEach(key => {
+                const value = remainingParams[key];
+                const keyWoPrefix = key.substring(WellKnownParams.ComparerPrefix.length);
+                const [indexStr, keySuffix] = keyWoPrefix.split("_", 2);
+                const index = parseInt(indexStr, 10);
+                
+                parsed[index] ??= {
+                    ascending: null,
+                    fieldName: null,
+                    fieldType: null,
+                };
+                
+                const targetObject = parsed[index];
+
+                switch (keySuffix) {
+                    case "FieldName":
+                        targetObject.fieldName = value;
+                        break;
+                    case "Ascending":
+                        targetObject.ascending = value === "True";
+                        break;
+                    case "FieldType":
+                        targetObject.fieldType = value;
+                        break;
+                    default:
+                        console.error("Unrecognized field: " + key + " (value = " + value + ")");
+                        return;
+                }
+                
+                delete remainingParams[key];
+            });
+
+            if (parsed.length > 0) {
+                parsed.map((order, idx) => {
+                    const icon = icomoonHelpers.getCodePointForCanvas(order.ascending ? "corax-sort-az" : "corax-sort-za");
+                    this.parameters.push({
+                        label: `<tspan dy="4">Comparer #${idx}: </tspan><tspan dy="4" class="icon-style order-icon"> ${icon}</tspan>`,
+                        html: true,
+                        customTitle: order.ascending ? "Order: Ascending" : "Order: Descending"
+                    });
+                    this.parameters.push({
+                        label: "Field: ",
+                        leftPadding: executionInfo.parametersIndent
+                    });
+                    this.parameters.push({
+                        label: order.fieldName,
+                        leftPadding: executionInfo.parametersIndent * 2,
+                    });
+                    this.parameters.push({
+                        label: "Field Type: " + order.fieldType,
+                        leftPadding: executionInfo.parametersIndent
+                    });
+                })
             }
         }
 
