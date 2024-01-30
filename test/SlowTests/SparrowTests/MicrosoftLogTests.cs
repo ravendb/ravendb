@@ -15,6 +15,7 @@ using Raven.Server.Utils.MicrosoftLogging;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -50,7 +51,7 @@ public class MicrosoftLogTests : RavenTestBase
         await Test(Predicate);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task EnableMicrosoftLogs_WhenEnabledAndConfigurationFileDoesNotExist_ShouldNotLogMicrosoftLogs()
     {
         _serverFactory = () =>
@@ -72,7 +73,7 @@ public class MicrosoftLogTests : RavenTestBase
         await Test(Predicate);
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task EnableMicrosoftLogs_WhenEnabledAndConfigureDefaultToInformation_ShouldLogMinimumInformationLevel()
     {
         var configurationFile = await CreateConfigurationFileAsync($@"
@@ -143,7 +144,7 @@ public class MicrosoftLogTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task MicrosoftLoggerProvider_WhenDefineNestedCategory_ShouldHandleAsRootProp()
     {
         var loggingSource = new LoggingSource(LogMode.None, "", "", TimeSpan.Zero, 0);
@@ -169,7 +170,7 @@ public class MicrosoftLogTests : RavenTestBase
         Assert.Contains(configuration, x => x is { Category: "Key1.Key2", LogLevel: LogLevel.Error });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task MicrosoftLoggerProvider_WhenErrorConfiguration_ShouldNotThrow()
     {
         var loggingSource = new LoggingSource(LogMode.None, "", "", TimeSpan.Zero, 0);
@@ -223,7 +224,7 @@ public class MicrosoftLogTests : RavenTestBase
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task MicrosoftLoggerProvider_WhenDisable_AllLogsLogLevelShouldBeNone()
     {
         var path = NewDataPath(forceCreateDir: true);
@@ -259,7 +260,7 @@ public class MicrosoftLogTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task ConfigureMicrosoftLogs_WhenLogLevelIsInvalid_ShouldThrow()
     {
         using var store = GetDocumentStore();
