@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Badge, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { Badge, Button, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -11,12 +11,21 @@ import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { mapGoogleCloudToDto } from "./utils/formDestinationsMapsToDto";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
+import useBoolean from "components/hooks/useBoolean";
+import classNames from "classnames";
 
-export default function GoogleCloud() {
+interface GoogleCloudProps {
+    isForNewConnection: boolean;
+}
+export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
     const { control, trigger } = useFormContext<FormDestinations>();
     const {
         destinations: { googleCloud: formValues },
     } = useWatch({ control });
+
+    const { value: isCredentialsJsonVisible, toggle: toggleCredentialsJsonVisible } = useBoolean(
+        isForNewConnection || !formValues.isEnabled
+    );
 
     const { manageServerService } = useServices();
 
@@ -109,8 +118,28 @@ export default function GoogleCloud() {
                                     type="textarea"
                                     autoComplete="off"
                                     rows={15}
+                                    className={classNames({ "d-none": !isCredentialsJsonVisible })}
                                 />
                             </div>
+                            <Button
+                                type="button"
+                                color="secondary"
+                                className="w-fit-content mb-2"
+                                onClick={toggleCredentialsJsonVisible}
+                            >
+                                {isCredentialsJsonVisible ? (
+                                    <>
+                                        <Icon icon="preview-off" />
+                                        Hide
+                                    </>
+                                ) : (
+                                    <>
+                                        <Icon icon="preview" />
+                                        Show
+                                    </>
+                                )}{" "}
+                                credentials
+                            </Button>
                             <div className="d-flex justify-content-end">
                                 <FlexGrow />
                                 <ButtonWithSpinner
