@@ -26,6 +26,18 @@
         }
     }
 
+    .tab-content {
+        display: flex;
+        flex-direction: column;
+        & > .active {
+            display: flex;
+            flex-direction: column;
+        }
+        & > .tab-pane {
+            flex-grow: 1;
+        }
+    }
+
     .about-page-tabs {
         a {
             color: colors.$text-muted-var;
@@ -113,6 +125,49 @@
             // .commercial i {
             //     color: colors.$success;
             // }
+        }
+    }
+
+    .license-feature-availability-table {
+        flex-basis: 10px;
+        flex-grow: 1;
+
+        .bg-current {
+            background: colors.$panel-bg-2-var;
+        }
+
+        table {
+            margin-bottom: 0;
+
+            thead {
+                position: sticky;
+                top: 0;
+                background-color: colors.$panel-bg-1-var;
+                z-index: 1;
+                box-shadow: 0px sizes.$border-width 0 colors.$border-color-light;
+
+                th {
+                    padding: sizes.$gutter-sm 0;
+                    vertical-align: top;
+                }
+            }
+
+            tbody {
+                th {
+                    color: colors.$text-muted-var;
+                    font-weight: normal;
+                    text-align: right;
+                    width: 16em;
+                    padding-right: sizes.$gutter;
+                    vertical-align: middle;
+                }
+                td {
+                    font-size: 16px;
+                    font-weight: 800;
+                    color: colors.$text-emphasis-var;
+                    padding: sizes.$gutter-sm 0;
+                }
+            }
         }
     }
 }
