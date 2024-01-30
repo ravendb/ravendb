@@ -136,7 +136,7 @@ namespace Raven.Server.Documents
             _databaseShutdown = CancellationTokenSource.CreateLinkedTokenSource(serverStore.ServerShutdown);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
-            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token);
+            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token, _clusterLocker);
 
             try
             {

@@ -1666,7 +1666,7 @@ namespace Raven.Server.Documents
 
         public sealed class StateChange
         {
-            public readonly object Locker = new object();
+            public readonly object Locker;
             public readonly ServerStore ServerStore;
             public readonly string Name;
             public readonly CancellationToken Token;
@@ -1675,7 +1675,7 @@ namespace Raven.Server.Documents
 
             public long LastIndexChange;
 
-            public StateChange(ServerStore serverStore, string name, Logger logger, Action<DatabaseRecord, long> onChange, long lastIndexChange, CancellationToken token)
+            public StateChange(ServerStore serverStore, string name, Logger logger, Action<DatabaseRecord, long> onChange, long lastIndexChange, CancellationToken token, object locker = null)
             {
                 ServerStore = serverStore;
                 Name = name;
@@ -1683,6 +1683,7 @@ namespace Raven.Server.Documents
                 OnChange = onChange;
                 LastIndexChange = lastIndexChange;
                 Token = token;
+                Locker = locker ?? new object();
             }
         }
     }
