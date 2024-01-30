@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Http;
@@ -99,11 +100,11 @@ namespace Raven.Server.Documents.Sharding
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
 
-        public void UpdateDatabaseRecord(DatabaseRecord record, long index)
+        public async ValueTask UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             try
             {
-                DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _orchestratorStateChange);
+                await DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _orchestratorStateChange);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
@@ -183,7 +184,7 @@ namespace Raven.Server.Documents.Sharding
             AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
         }
 
-        public void UpdateUrls(long index) => DatabasesLandlord.NotifyFeaturesAboutStateChange(_record, index, _urlUpdateStateChange);
+        public async ValueTask UpdateUrls(long index) => await DatabasesLandlord.NotifyFeaturesAboutStateChange(_record, index, _urlUpdateStateChange);
 
         public string DatabaseName => _record.DatabaseName;
 

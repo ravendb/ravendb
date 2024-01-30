@@ -157,7 +157,7 @@ namespace Raven.Server.Documents
                                 // we need to update this upon any shard topology change
                                 // and upon migration completion
                                 var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
-                                databaseContext.UpdateDatabaseRecord(rawRecord, index);
+                                await databaseContext.UpdateDatabaseRecord(rawRecord, index);
                             }
                             else
                             {
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents
             switch (changeType)
             {
                 case ClusterDatabaseChangeType.RecordChanged:
-                    database.StateChanged(index);
+                    await database.StateChanged(index);
                     if (type == ClusterStateMachine.SnapshotInstalled)
                     {
                         database.NotifyOnPendingClusterTransaction(index, changeType);
@@ -1519,7 +1519,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index, StateChange state)
+        public static async ValueTask NotifyFeaturesAboutStateChange(DatabaseRecord record, long index, StateChange state)
         {
             if (CanSkipDatabaseRecordChange())
                 return;
@@ -1529,7 +1529,7 @@ namespace Raven.Server.Documents
 
             while (taken == false)
             {
-                Monitor.TryEnter(state.Locker, TimeSpan.FromSeconds(5), ref taken);
+                taken = await state.Locker.WaitAsync(TimeSpan.FromSeconds(5));
 
                 try
                 {
@@ -1569,7 +1569,7 @@ namespace Raven.Server.Documents
                 {
                     if (taken)
                     {
-                        Monitor.Exit(state.Locker);
+                        state.Locker.Release();
 
                         sp?.Stop();
 
@@ -1618,7 +1618,7 @@ namespace Raven.Server.Documents
 
         public sealed class StateChange
         {
-            public readonly object Locker = new object();
+            public readonly SemaphoreSlim Locker;
             public readonly ServerStore ServerStore;
             public readonly string Name;
             public readonly CancellationToken Token;
@@ -1627,7 +1627,7 @@ namespace Raven.Server.Documents
 
             public long LastIndexChange;
 
-            public StateChange(ServerStore serverStore, string name, Logger logger, Action<DatabaseRecord, long> onChange, long lastIndexChange, CancellationToken token)
+            public StateChange(ServerStore serverStore, string name, Logger logger, Action<DatabaseRecord, long> onChange, long lastIndexChange, CancellationToken token, SemaphoreSlim locker = null)
             {
                 ServerStore = serverStore;
                 Name = name;
@@ -1635,6 +1635,7 @@ namespace Raven.Server.Documents
                 OnChange = onChange;
                 LastIndexChange = lastIndexChange;
                 Token = token;
+                Locker = locker ?? new SemaphoreSlim(1, 1);
             }
         }
     }

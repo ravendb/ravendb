@@ -138,7 +138,7 @@ namespace Raven.Server.Documents
             _databaseShutdown = CancellationTokenSource.CreateLinkedTokenSource(serverStore.ServerShutdown);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
-            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token);
+            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token, _clusterLocker);
 
             try
             {
@@ -446,18 +446,18 @@ namespace Raven.Server.Documents
                     Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
                 }
 
-                ThreadPool.QueueUserWorkItem(_ =>
+                _ = Task.Run(async () =>
                 {
                     try
                     {
-                        DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
+                        await DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
                     {
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
-                }, null);
+                });
                 var clusterTransactionThreadName = ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread {Name}", Name));
                 _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
@@ -1507,7 +1507,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void StateChanged(long index)
+        public async ValueTask StateChanged(long index)
         {
             try
             {
@@ -1553,7 +1553,7 @@ namespace Raven.Server.Documents
 
                 ServerStore.DatabasesLandlord.ForTestingPurposes?.DelayNotifyFeaturesAboutStateChange?.Invoke();
 
-                DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
+                await DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
@@ -1665,7 +1665,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void RefreshFeatures()
+        public ValueTask RefreshFeatures()
         {
             if (_databaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown();
@@ -1678,7 +1678,7 @@ namespace Raven.Server.Documents
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
 
-            DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
+            return DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
