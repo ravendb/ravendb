@@ -12,6 +12,7 @@ import { documentRevisionsSlice } from "./pages/database/settings/documentRevisi
 import { collectionsTrackerSlice } from "./common/shell/collectionsTrackerSlice";
 import { conflictResolutionSlice } from "./pages/database/settings/conflictResolution/store/conflictResolutionSlice";
 import { connectionStringsSlice } from "./pages/database/settings/connectionStrings/store/connectionStringsSlice";
+import { connectionStringsUpdateUrlMiddleware } from "./pages/database/settings/connectionStrings/store/connectionStringsMiddleware";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -36,7 +37,9 @@ export function createStoreConfiguration() {
                 thunk: {
                     extraArgument: () => services,
                 },
-            }).prepend(listenerMiddleware.middleware),
+            })
+                .prepend(listenerMiddleware.middleware)
+                .prepend(connectionStringsUpdateUrlMiddleware.middleware),
     });
 }
 
