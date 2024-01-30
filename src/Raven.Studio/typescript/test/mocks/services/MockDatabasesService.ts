@@ -10,7 +10,6 @@ import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import DataArchival = Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration;
-import { SharedStubs } from "test/stubs/SharedStubs";
 import document from "models/database/documents/document";
 
 interface WithGetDatabasesStateOptions {
@@ -123,50 +122,6 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             this.mocks.getConflictSolverConfiguration,
             dto,
             DatabasesStubs.conflictSolverConfiguration()
-        );
-    }
-
-    withConnectionStrings(dto?: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) {
-        return this.mockResolvedValue(this.mocks.getConnectionStrings, dto, DatabasesStubs.connectionStrings());
-    }
-
-    withTestClusterNodeConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
-        return this.mockResolvedValue(
-            this.mocks.testClusterNodeConnection,
-            dto,
-            SharedStubs.nodeConnectionTestSuccessResult()
-        );
-    }
-
-    withTestSqlConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
-        return this.mockResolvedValue(
-            this.mocks.testSqlConnectionString,
-            dto,
-            SharedStubs.nodeConnectionTestSuccessResult()
-        );
-    }
-
-    withTestKafkaServerConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
-        return this.mockResolvedValue(
-            this.mocks.testKafkaServerConnection,
-            dto,
-            SharedStubs.nodeConnectionTestSuccessResult()
-        );
-    }
-
-    withTestRabbitMqServerConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
-        return this.mockResolvedValue(
-            this.mocks.testRabbitMqServerConnection,
-            dto,
-            SharedStubs.nodeConnectionTestSuccessResult()
-        );
-    }
-
-    withTestElasticSearchNodeConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
-        return this.mockResolvedValue(
-            this.mocks.testElasticSearchNodeConnection,
-            dto,
-            SharedStubs.nodeConnectionTestSuccessResult()
         );
     }
 

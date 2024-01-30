@@ -21,7 +21,6 @@ export interface RavenConnectionStringProps extends EditConnectionStringFormProp
 }
 
 export default function RavenConnectionString({
-    db,
     initialConnection,
     isForNewConnection,
     onSave,
@@ -79,7 +78,6 @@ export default function RavenConnectionString({
                         <DiscoveryUrl
                             key={urlField.id}
                             idx={idx}
-                            dbName={db.name}
                             control={control}
                             isDeleteButtonVisible={urlFieldArray.fields.length > 1}
                             onDelete={() => urlFieldArray.remove(idx)}
@@ -103,7 +101,6 @@ export default function RavenConnectionString({
 
 interface DiscoveryUrlsProps {
     idx: number;
-    dbName: string;
     control: Control<FormData>;
     isDeleteButtonVisible: boolean;
     onDelete: () => void;
@@ -111,17 +108,18 @@ interface DiscoveryUrlsProps {
     watch: UseFormWatch<FormData>;
 }
 
-function DiscoveryUrl({ idx, dbName, control, isDeleteButtonVisible, trigger, watch, onDelete }: DiscoveryUrlsProps) {
+function DiscoveryUrl({ idx, control, isDeleteButtonVisible, trigger, watch, onDelete }: DiscoveryUrlsProps) {
     const { tasksService } = useServices();
 
     const asyncTest = useAsyncCallback(async () => {
-        const isValid = await trigger(`topologyDiscoveryUrls.${idx}`);
+        const isValid = await trigger([`topologyDiscoveryUrls.${idx}`, "database"]);
         if (!isValid) {
             return;
         }
 
         const url = watch(`topologyDiscoveryUrls.${idx}.url`);
-        return tasksService.testClusterNodeConnection(url, dbName, false);
+        const databaseName = watch("database");
+        return tasksService.testClusterNodeConnection(url, databaseName, false);
     });
 
     return (
