@@ -40,7 +40,7 @@ public class MicrosoftLogTests : RavenTestBase
             : base.GetNewServer(options, caller);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task EnableMicrosoftLogs_WhenDisabled_ShouldNotLogMicrosoftLogs()
     {
         bool Predicate(string m)
