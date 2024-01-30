@@ -174,7 +174,7 @@ export default function AmazonS3() {
                                         <FormSelectCreatable
                                             name={getName("awsRegionName")}
                                             control={control}
-                                            placeholder="Select an AWS region"
+                                            placeholder="Select an AWS region (or enter new one)"
                                             options={availableS3Regions}
                                         />
                                     )}
