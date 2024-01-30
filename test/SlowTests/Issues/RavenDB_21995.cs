@@ -15,10 +15,11 @@ public class RavenDB_21995 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    public async Task TestWildcardAsSearchTerm()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task TestWildcardAsSearchTerm(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenAsyncSession())
             {
