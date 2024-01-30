@@ -31,46 +31,29 @@ public class RavenDB_21995 : RavenTestBase
 
                 await session.SaveChangesAsync();
 
-                var luceneIndex = new LuceneIndex();
-                var coraxIndex = new CoraxIndex();
+                var dummyIndex = new DummyIndex();
                 
-                await luceneIndex.ExecuteAsync(store);
-                await coraxIndex.ExecuteAsync(store);
+                await dummyIndex.ExecuteAsync(store);
 
                 await Indexes.WaitForIndexingAsync(store);
 
-                var userListLucene = await session.Query<Customer>(luceneIndex.IndexName)
+                var userList = await session.Query<Customer>(dummyIndex.IndexName)
                     .Search(x => x.Name, "*")
                     .ToListAsync();
                 
-                var userListCorax = await session.Query<Customer>(coraxIndex.IndexName)
-                    .Search(x => x.Name, "*")
-                    .ToListAsync();
+                Assert.Equal(2, userList.Count);
                 
-                Assert.Equal(2, userListLucene.Count);
-                Assert.Equal(2, userListCorax.Count);
-                
-                var userListLuceneDoubleWildcard = await session.Query<Customer>(luceneIndex.IndexName)
+                var userListDoubleWildcard = await session.Query<Customer>(dummyIndex.IndexName)
                     .Search(x => x.Name, "**")
                     .ToListAsync();
                 
-                var userListCoraxDoubleWildcard = await session.Query<Customer>(coraxIndex.IndexName)
-                    .Search(x => x.Name, "**")
-                    .ToListAsync();
+                Assert.Equal(2, userListDoubleWildcard.Count);
                 
-                Assert.Equal(2, userListLuceneDoubleWildcard.Count);
-                Assert.Equal(2, userListCoraxDoubleWildcard.Count);
-                
-                var userListLuceneTripleWildcard = await session.Query<Customer>(luceneIndex.IndexName)
+                var userListTripleWildcard = await session.Query<Customer>(dummyIndex.IndexName)
                     .Search(x => x.Name, "***")
                     .ToListAsync();
                 
-                var userListCoraxTripleWildcard = await session.Query<Customer>(coraxIndex.IndexName)
-                    .Search(x => x.Name, "***")
-                    .ToListAsync();
-                
-                Assert.Equal(2, userListLuceneTripleWildcard.Count);
-                Assert.Equal(2, userListCoraxTripleWildcard.Count);
+                Assert.Equal(2, userListTripleWildcard.Count);
             }
         }
     }
@@ -80,9 +63,9 @@ public class RavenDB_21995 : RavenTestBase
         public string Name { get; set; }
     }
 
-    private class LuceneIndex : AbstractIndexCreationTask<Customer>
+    private class DummyIndex : AbstractIndexCreationTask<Customer>
     {
-        public LuceneIndex()
+        public DummyIndex()
         {
             Map = customers => from customer in customers
                 select new
@@ -91,22 +74,6 @@ public class RavenDB_21995 : RavenTestBase
                 };
             
             Index(x => x.Name, FieldIndexing.Search);
-            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Lucene;
-        }
-    }
-    
-    private class CoraxIndex : AbstractIndexCreationTask<Customer>
-    {
-        public CoraxIndex()
-        {
-            Map = customers => from customer in customers
-                select new
-                {
-                    customer.Name
-                };
-            
-            Index(x => x.Name, FieldIndexing.Search);
-            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
 }
