@@ -144,10 +144,10 @@ export default function SqlConnectionString({
 
 const sqlFactoryOptions: SelectOptionWithWarning<SqlConnectionStringFactoryName>[] = [
     { value: "System.Data.SqlClient", label: "Microsoft SQL Server (System.Data.SqlClient)" },
-    { value: "MySql.Data.MySqlClient", label: "DEPRECATED: MySQL Server (MySql.Data.MySqlClient)", isWarning: true },
     { value: "MySqlConnector.MySqlConnectorFactory", label: "MySQL Server (MySqlConnector.MySqlConnectorFactory)" },
     { value: "Npgsql", label: "PostgreSQL (Npgsql)" },
     { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database (Oracle.ManagedDataAccess.Client)" },
+    { value: "MySql.Data.MySqlClient", label: "DEPRECATED: MySQL Server (MySql.Data.MySqlClient)", isWarning: true },
 ];
 
 function getSyntaxHelp(factory: SqlConnectionStringFactoryName) {
