@@ -23,8 +23,8 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return;
         }
-            
-        var licenseId = ServerStore.LoadLicense()?.Id.ToString();
+
+        var licenseId = ServerStore.LicenseManager.LicenseStatus.Id.ToString();
         
         var request = new UpgradeInfoRequest() { CurrentFullVersion = ServerVersion.FullVersion, LicenseId = licenseId };
 
@@ -44,7 +44,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
 
             var upgradeInfoContentStream = await upgradeInfoResponse.Content.ReadAsStreamAsync();
             
-            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var json = await context.ReadForMemoryAsync(upgradeInfoContentStream, "about-view/data");
@@ -55,7 +55,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
         }
         catch (Exception e)
         {
-            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var response = new UpgradeInfoResponse() { ErrorMessage = e.Message };

@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
