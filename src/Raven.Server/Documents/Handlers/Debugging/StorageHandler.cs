@@ -349,14 +349,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
                     throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
-                var db = Database.GetAllStoragesEnvironment()
+                var env = Database.GetAllStoragesEnvironment()
                     .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
+
+                if (env == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
 
                 using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        WriteReport(writer, db, context, StorageReportType.ScratchReport);
+                        WriteReport(writer, env, context, StorageReportType.ScratchReport);
                     }
                 }
             }
