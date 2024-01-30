@@ -281,7 +281,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case ClusterDatabaseChangeType.ValueChanged:
-                    database.ValueChanged(index, type, changeState);
+                    await database.ValueChanged(index, type, changeState);
                     break;
 
                 case ClusterDatabaseChangeType.PendingClusterTransactions:
