@@ -112,22 +112,12 @@ public sealed class MicrosoftLoggingConfiguration : IEnumerable<(string Category
         }
     }
 
-    public void ReadConfiguration(BlittableJsonReaderObject blitConfiguration, bool reset = true)
+    public void ReadConfigurationOrThrow(BlittableJsonReaderObject blitConfiguration, bool reset = true)
     {
-        try
-        {
-            if (reset)
-                _configuration.Clear();
+        if (reset)
+            _configuration.Clear();
 
-            ReadConfiguration(blitConfiguration, null);
-
-            //If the code run on server startup the notification center is not initialized 
-            _ = _notificationCenter.InitializeTask.ContinueWith(task => task.Result.Dismiss(_notificationId));
-        }
-        catch (Exception e)
-        {
-            HandleReadConfigurationFailure(blitConfiguration, e);
-        }
+        ReadConfiguration(blitConfiguration, rootCategory: null);
     }
     
     private void ReadConfiguration(BlittableJsonReaderObject jConfiguration, string rootCategory)
