@@ -356,18 +356,19 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
-                ThreadPool.QueueUserWorkItem(_ =>
+                _ = Task.Run(async () =>
                 {
                     try
                     {
-                        NotifyFeaturesAboutStateChangeAsync(record, index).GetAwaiter().GetResult();
+                        await NotifyFeaturesAboutStateChangeAsync(record, index);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
                     {
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
-                }, null);
+                });
+
                 var clusterTransactionThreadName = ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread {Name}", Name));
                 _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
