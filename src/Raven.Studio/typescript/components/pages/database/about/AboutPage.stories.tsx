@@ -36,6 +36,7 @@ interface DefaultAboutPageProps {
     licenseServerConnection: boolean;
     newVersionAvailable?: string;
     databaseAccess: databaseAccessLevel;
+    canUpgrade: boolean;
 }
 
 export const AboutTemplate: StoryObj<DefaultAboutPageProps> = {
@@ -48,6 +49,7 @@ export const AboutTemplate: StoryObj<DefaultAboutPageProps> = {
         status,
         licenseServerConnection,
         newVersionAvailable,
+        canUpgrade,
         databaseAccess,
     }: DefaultAboutPageProps) => {
         return (
@@ -60,6 +62,8 @@ export const AboutTemplate: StoryObj<DefaultAboutPageProps> = {
                 licenseExpiration={Date()}
                 licenseServerConnection={licenseServerConnection}
                 newVersionAvailable={newVersionAvailable}
+                currentVersion="6.0.2 (60002) - 12.11.2023"
+                canUpgrade={canUpgrade}
             />
         );
     },

@@ -18,6 +18,7 @@ import {
     Row,
     TabContent,
     TabPane,
+    Table,
     UncontrolledPopover,
 } from "reactstrap";
 import { Icon } from "components/common/Icon";
@@ -29,6 +30,7 @@ import genUtils from "common/generalUtils";
 import useBoolean from "components/hooks/useBoolean";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Checkbox, Switch } from "components/common/Checkbox";
+import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 
 interface AboutPageProps {
     licenseType: Raven.Server.Commercial.LicenseType;
@@ -38,11 +40,23 @@ interface AboutPageProps {
     status: Raven.Server.Commercial.Status;
     licenseExpiration?: string;
     licenseServerConnection: boolean;
+
+    canUpgrade: boolean;
+    currentVersion?: string;
     newVersionAvailable?: string;
 }
 
 export function AboutPage(props: AboutPageProps) {
-    const { licenseType, isCloud, isEnabled, status, licenseExpiration, licenseServerConnection } = props;
+    const {
+        licenseType,
+        isCloud,
+        isEnabled,
+        status,
+        licenseExpiration,
+        licenseServerConnection,
+        currentVersion,
+        canUpgrade,
+    } = props;
 
     //External Links
     const ravendbHomeUrl = "https://ravendb.net";
@@ -83,10 +97,10 @@ export function AboutPage(props: AboutPageProps) {
 
     const PaidSupportAvailable = supportType !== "Community";
 
-    const [newVersionAvailable, setNewVersionAvailable] = useState(null);
+    const [latestVersion, setLatestVersion] = useState(currentVersion);
 
     const checkForUpdates = () => {
-        setNewVersionAvailable("6.0.2 (60002) - 12.11.2023");
+        setLatestVersion("6.0.2 (60002) - 12.11.2023");
     };
 
     const handleTabClick = (tab: string) => {
@@ -106,42 +120,12 @@ export function AboutPage(props: AboutPageProps) {
         }
     };
 
-    const [searchText, setSearchText] = useState("");
-
-    const onSearchTextChange = (searchText: string) => {
-        setSearchText(searchText);
-    };
-
-    const featureAvailabilityData: FeatureAvailabilityData[] = [
-        {
-            featureName: "Default Policy",
-
-            community: { value: false },
-            professional: { value: true },
-            enterprise: { value: true },
-        },
-        {
-            featureName: "Max revisions",
-
-            community: { value: 2 },
-            professional: { value: Infinity },
-            enterprise: { value: Infinity },
-        },
-        // {
-        //     featureName: "Max revision days",
-
-        //     community: { value: isCloud ? 38 : 45 },
-        //     professional: { value: Infinity },
-        //     enterprise: { value: Infinity },
-        // },
-    ];
-
     return (
         <>
             <div className="hstack flex-wrap gap-5 flex-grow-1 align-items-stretch justify-content-evenly about-page">
-                <div className="vstack gap-4 align-items-center" style={{ maxWidth: "800px" }}>
+                <div className="vstack gap-4 align-items-center justify-content-around" style={{ maxWidth: "800px" }}>
                     <img src={LogoImg} width="200" />
-                    <div className="vstack gap-3">
+                    <div className="vstack gap-3 flex-grow-0">
                         {!isEnabled && (
                             <Card color="faded-primary">
                                 <CardBody className="text-body">
@@ -226,22 +210,22 @@ export function AboutPage(props: AboutPageProps) {
                                         6.0.1-nightly-20231011-1134
                                     </OverallInfoItem>
                                     <OverallInfoItem icon="global" label="Updates">
-                                        {newVersionAvailable ? (
+                                        {latestVersion === currentVersion ? (
+                                            <span className="text-success">
+                                                <Icon icon="check" />
+                                                You are using the latest version
+                                            </span>
+                                        ) : (
                                             <>
                                                 <span className="text-warning">
                                                     <Icon icon="star-filled" />
                                                     Update Available
                                                 </span>
-                                                <div className="small lh-sm text-muted">{newVersionAvailable}</div>
+                                                <div className="small text-muted fw-light">{latestVersion}</div>
                                                 <a href={updateInstructionsUrl} className="small" target="_blank">
                                                     Update istructions <Icon icon="newtab" margin="ms-1" />
                                                 </a>
                                             </>
-                                        ) : (
-                                            <span className="text-success">
-                                                <Icon icon="check" />
-                                                You are using the latest version
-                                            </span>
                                         )}
                                     </OverallInfoItem>
                                     <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
@@ -326,95 +310,77 @@ export function AboutPage(props: AboutPageProps) {
                     </div>
                 </div>
                 <Card className="flex-grow" style={{ maxWidth: "1100px" }}>
-                    <CardHeader>
-                        <Row className="about-page-tabs">
-                            <Col>
-                                <a
-                                    className={classNames({ active: activeTab === "license" })}
-                                    onClick={() => handleTabClick("license")}
-                                >
-                                    <Icon
-                                        icon="license"
-                                        className="circle-border fs-2"
-                                        color={licenseServerConnection === true ? "success" : "warning"}
-                                        margin="me-2"
-                                    />
-                                    <span className="fs-3">License details</span>
+                    <Row className="about-page-tabs g-xxs">
+                        <Col>
+                            <a
+                                className={classNames("p-3", {
+                                    "active bg-faded-primary": activeTab === "license",
+                                })}
+                                onClick={() => handleTabClick("license")}
+                            >
+                                <Icon
+                                    icon="license"
+                                    className="circle-border fs-2"
+                                    color={licenseServerConnection === true ? "success" : "warning"}
+                                    margin="me-2"
+                                />
+                                <span className="fs-3">License details</span>
+                                <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
+                                    1
+                                </Badge>
+                            </a>
+                        </Col>
+                        <Col>
+                            <a
+                                className={classNames("p-3", { "active bg-faded-info": activeTab === "support" })}
+                                onClick={() => handleTabClick("support")}
+                            >
+                                <Icon icon="support" className="circle-border" margin="fs-2 me-2" />
+                                <span className="fs-3">Support plan</span>
+                                {!PaidSupportAvailable && (
                                     <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
                                         1
                                     </Badge>
-                                </a>
-                            </Col>
-                            <Col>
-                                <a
-                                    className={classNames({ active: activeTab === "support" })}
-                                    onClick={() => handleTabClick("support")}
-                                >
-                                    <Icon icon="support" className="circle-border" margin="fs-2 me-2" />
-                                    <span className="fs-3">Support plan</span>
-                                    {!PaidSupportAvailable && (
-                                        <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
-                                            1
-                                        </Badge>
-                                    )}
-                                </a>
-                            </Col>
-                        </Row>
-                    </CardHeader>
-                    <TabContent activeTab={activeTab}>
-                        <TabPane tabId="license">
-                            {licenseType !== "None" ? (
-                                <Row className="text-center pt-4">
-                                    <Col>
-                                        <div className="small text-muted">license ID</div>
-                                        <h4 className="fw-bolder text-emphasis m-0">{licenseId}</h4>
-                                    </Col>
-                                    <Col>
-                                        <div className="small text-muted">license To</div>
-                                        <h4 className="fw-bolder text-emphasis m-0">{licenseTo}</h4>
-                                    </Col>
-                                </Row>
-                            ) : (
-                                <div className="text-center pt-4 px-4">
-                                    <h3 className="fw-bolder text-warning d-flex align-items-center justify-content-center">
-                                        <Icon icon="empty-set" className="fs-1" margin="me-3" /> No license - AGPLv3
-                                        Restrictions Applied
-                                    </h3>
-                                    <Button
-                                        color="success"
-                                        className="px-4 rounded-pill"
-                                        size="lg"
-                                        href={getLicenseUrl}
-                                        target="_blank"
-                                    >
-                                        <strong>Get free license</strong>
-                                        <Icon icon="newtab" margin="ms-2" />
-                                    </Button>
-                                </div>
-                            )}
+                                )}
+                            </a>
+                        </Col>
+                    </Row>
 
-                            <hr />
-                            <div className="px-4">
-                                <div className="clearable-input">
-                                    <Input
-                                        type="text"
-                                        accessKey="/"
-                                        placeholder="Filter: e.g. ETL"
-                                        title="Filter indexes"
-                                        className="filtering-input"
-                                        value={searchText}
-                                        onChange={(e) => onSearchTextChange(e.target.value)}
-                                    />
-                                    {searchText && (
-                                        <div className="clear-button">
-                                            <Button color="secondary" size="sm" onClick={() => onSearchTextChange("")}>
-                                                <Icon icon="clear" margin="m-0" />
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
+                    <TabContent activeTab={activeTab} className="flex-grow-1">
+                        <TabPane tabId="license">
+                            <div className="bg-faded-primary mb-4">
+                                {licenseType !== "None" ? (
+                                    <Row className="text-center py-4">
+                                        <Col>
+                                            <div className="small text-muted">license ID</div>
+                                            <h4 className="fw-bolder text-emphasis m-0">{licenseId}</h4>
+                                        </Col>
+                                        <Col>
+                                            <div className="small text-muted">license To</div>
+                                            <h4 className="fw-bolder text-emphasis m-0">{licenseTo}</h4>
+                                        </Col>
+                                    </Row>
+                                ) : (
+                                    <div className="text-center py-4">
+                                        <h3 className="fw-bolder text-warning d-flex align-items-center justify-content-center">
+                                            <Icon icon="empty-set" className="fs-1" margin="me-3" /> No license - AGPLv3
+                                            Restrictions Applied
+                                        </h3>
+                                        <Button
+                                            color="success"
+                                            className="px-4 rounded-pill"
+                                            size="lg"
+                                            href={getLicenseUrl}
+                                            target="_blank"
+                                        >
+                                            <strong>Get free license</strong>
+                                            <Icon icon="newtab" margin="ms-2" />
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
-                            <Row></Row>
+
+                            <LicenseTable licenseType={licenseType} />
                         </TabPane>
                         <TabPane tabId="support">
                             <div className="bg-faded-info hstack justify-content-center">
@@ -479,7 +445,7 @@ export function AboutPage(props: AboutPageProps) {
                             )}
                             {supportType !== "Community" && (
                                 <>
-                                    <RichPanelHeader className="px-4 py-5 vstack gap-4">
+                                    <RichPanelHeader className="px-4 py-4 vstack gap-4 justify-content-center">
                                         <Row className="g-md">
                                             <Col xs={12} sm={6} className="text-end">
                                                 <div className="d-flex align-items-center">
@@ -597,6 +563,7 @@ export function AboutPage(props: AboutPageProps) {
                 toggleShowChangelogModal={toggleShowChangelogModal}
                 changelogDocsUrl={changelogDocsUrl}
                 updateInstructionsUrl={updateInstructionsUrl}
+                canUpgrade={canUpgrade}
             />
 
             <RequestSupportModal
@@ -691,15 +658,329 @@ function ReplaceLicenseModal(props: ReplaceLicenseModalProps) {
         </Modal>
     );
 }
+interface LicenseTableProps {
+    licenseType: Raven.Server.Commercial.LicenseType;
+}
+
+function LicenseTable(props: LicenseTableProps) {
+    const { licenseType } = props;
+
+    const [searchText, setSearchText] = useState("");
+
+    const onSearchTextChange = (searchText: string) => {
+        setSearchText(searchText);
+    };
+
+    const tableColCount = getColCount(licenseType);
+
+    const featureAvailabilityData: FeatureAvailabilityData[] = [
+        {
+            featureName: "License limit",
+
+            community: { value: "60 cores" },
+            professional: { value: Infinity },
+            enterprise: { value: Infinity },
+        },
+        {
+            featureName: "Clustering",
+            sectionTitle: true,
+        },
+        {
+            featureName: "Max cluster size",
+
+            community: { value: "1 node" },
+            professional: { value: "5 nodes" },
+            enterprise: { value: Infinity },
+        },
+        {
+            featureName: "Max cores in cluster",
+
+            community: { value: 2 },
+            professional: { value: 40 },
+            enterprise: { value: Infinity },
+        },
+        {
+            featureName: "Max cluster memory usage",
+
+            community: { value: "6 GB RAM" },
+            professional: { value: "240 GB RAM" },
+            enterprise: { value: "240 GB RAM" },
+        },
+        {
+            featureName: "Highly available tasks",
+
+            community: { value: false },
+            professional: { value: false },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Indexes",
+            sectionTitle: true,
+        },
+        {
+            featureName: "Static & Auto",
+
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Corax",
+
+            community: { value: true },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Max cluster memory usage",
+
+            community: { value: "6 GB RAM" },
+            professional: { value: "240 GB RAM" },
+            enterprise: { value: "240 GB RAM" },
+        },
+        {
+            featureName: "Highly available tasks",
+
+            community: { value: false },
+            professional: { value: false },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Indexes",
+            sectionTitle: true,
+        },
+        {
+            featureName: "Static & Auto",
+
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Corax",
+
+            community: { value: true },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Max cluster memory usage",
+
+            community: { value: "6 GB RAM" },
+            professional: { value: "240 GB RAM" },
+            enterprise: { value: "240 GB RAM" },
+        },
+        {
+            featureName: "Highly available tasks",
+
+            community: { value: false },
+            professional: { value: false },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Indexes",
+            sectionTitle: true,
+        },
+        {
+            featureName: "Static & Auto",
+
+            community: { value: false },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+        {
+            featureName: "Corax",
+
+            community: { value: true },
+            professional: { value: true },
+            enterprise: { value: true },
+        },
+    ];
+
+    function getColCount(license: Raven.Server.Commercial.LicenseType) {
+        switch (license) {
+            case "Developer":
+                return 4;
+            case "None":
+                return 3;
+            case "Essential":
+                return 3;
+            case "Community":
+                return 3;
+            case "Professional":
+                return 2;
+            case "Enterprise":
+                return 1;
+        }
+    }
+
+    function parseFeatureValue(value: AvailabilityValue) {
+        switch (value) {
+            case true:
+                return <Icon icon="check" color="success" />;
+            case false:
+                return <Icon icon="close" color="muted" />;
+            case Infinity:
+                return <Icon icon="infinity" />;
+            default:
+                return value;
+        }
+    }
+
+    const leftRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: "Show differences",
+        value: "showdiff",
+        iconName: "diff",
+    };
+
+    const rightRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: "Show all license properties",
+        value: "showall",
+        iconName: "license",
+    };
+
+    const [radioToggleSelectedValue, setRadioToggleSelectedValue] = useState(leftRadioToggleItem.value);
+
+    return (
+        <>
+            <div className="px-4 pb-4">
+                <div className="clearable-input">
+                    <Input
+                        type="text"
+                        accessKey="/"
+                        placeholder="Filter: e.g. ETL"
+                        title="Filter indexes"
+                        className="filtering-input"
+                        value={searchText}
+                        onChange={(e) => onSearchTextChange(e.target.value)}
+                    />
+                    {searchText && (
+                        <div className="clear-button">
+                            <Button color="secondary" size="sm" onClick={() => onSearchTextChange("")}>
+                                <Icon icon="clear" margin="m-0" />
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <div className="table-responsive license-feature-availability-table">
+                <Table borderless hover striped className="text-center feature-availability-table">
+                    <thead>
+                        <tr>
+                            <th>License type</th>
+                            {tableColCount >= 3 && (
+                                <th className={classNames({ "bg-current": tableColCount === 3 })}>
+                                    <h4 className="fw-bolder text-uppercase m-0">
+                                        {licenseType === "Essential" ? <>Essential</> : <>Community</>}
+                                    </h4>
+                                    {tableColCount === 3 && <div className="text-primary">Current</div>}
+                                </th>
+                            )}
+                            {tableColCount >= 2 && (
+                                <th
+                                    className={classNames({
+                                        "bg-current": tableColCount === 2,
+                                    })}
+                                >
+                                    <h4 className="fw-bolder text-uppercase text-professional m-0">PROFESSIONAL</h4>
+                                    {tableColCount === 2 && <div className="text-primary">Current</div>}
+                                </th>
+                            )}
+
+                            <th>
+                                <h4 className="fw-bolder text-uppercase text-enterprise m-0">ENTERPRISE</h4>
+                            </th>
+                            {tableColCount >= 4 && (
+                                <th className="bg-current">
+                                    <h4 className="fw-bolder text-uppercase text-developer m-0">DEVELOPER</h4>
+                                    <div className="text-primary">Current</div>
+                                </th>
+                            )}
+                        </tr>
+                        {tableColCount >= 2 && (
+                            <tr>
+                                <th></th>
+                                <th className={classNames({ "bg-current": tableColCount !== 4 })}></th>
+                                <th colSpan={tableColCount < 4 ? tableColCount - 1 : 2} className="px-3">
+                                    <Button color="primary" className="w-100 rounded-pill">
+                                        <Icon icon="upgrade-arrow" />
+                                        Upgrade license
+                                    </Button>
+                                </th>
+                                {tableColCount >= 4 && <th className="bg-current"></th>}
+                            </tr>
+                        )}
+                    </thead>
+                    <tbody>
+                        {featureAvailabilityData.map((feature, index) => (
+                            <tr key={index}>
+                                {feature.sectionTitle ? (
+                                    <>
+                                        <th scope="row">
+                                            <a href="#">
+                                                {feature.featureName} <Icon icon="newtab" />
+                                            </a>
+                                        </th>
+
+                                        <td
+                                            className={classNames({
+                                                "bg-current": tableColCount !== 4 && tableColCount !== 1,
+                                            })}
+                                        ></td>
+                                        {tableColCount > 1 && <td></td>}
+                                        {tableColCount > 2 && <td></td>}
+                                        {tableColCount > 3 && <td className="bg-current"></td>}
+                                    </>
+                                ) : (
+                                    <>
+                                        <th scope="row">{feature.featureName}</th>
+                                        {tableColCount >= 3 && (
+                                            <td className={classNames({ "bg-current": tableColCount === 3 })}>
+                                                {parseFeatureValue(feature.community.value)}
+                                            </td>
+                                        )}
+                                        {tableColCount >= 2 && (
+                                            <td className={classNames({ "bg-current": tableColCount === 2 })}>
+                                                {parseFeatureValue(feature.professional.value)}
+                                            </td>
+                                        )}
+                                        <td>{parseFeatureValue(feature.enterprise.value)}</td>
+                                        {tableColCount >= 4 && (
+                                            <td className="bg-current">
+                                                {parseFeatureValue(feature.enterprise.value)}
+                                            </td>
+                                        )}
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </Table>
+            </div>
+            <div className="p-2">
+                <div className="well rounded-pill text-center p-1">
+                    <RadioToggleWithIcon
+                        name="some-name"
+                        leftItem={leftRadioToggleItem}
+                        rightItem={rightRadioToggleItem}
+                        selectedValue={radioToggleSelectedValue}
+                        setSelectedValue={(x) => setRadioToggleSelectedValue(x)}
+                    />
+                </div>
+            </div>
+        </>
+    );
+}
 interface ChangelogModalProps {
     showChangelogModal: boolean;
     toggleShowChangelogModal: () => void;
     changelogDocsUrl: string;
     updateInstructionsUrl: string;
+    canUpgrade: boolean;
 }
 
 function ChangelogModal(props: ChangelogModalProps) {
-    const { showChangelogModal, toggleShowChangelogModal, changelogDocsUrl, updateInstructionsUrl } = props;
+    const { showChangelogModal, toggleShowChangelogModal, changelogDocsUrl, updateInstructionsUrl, canUpgrade } = props;
 
     return (
         <Modal
@@ -740,10 +1021,27 @@ function ChangelogModal(props: ChangelogModalProps) {
                             <div className="px-2 py-1">This update is safe to revert to previous version</div>
                         </UncontrolledPopover>
                         <div className="well px-3 py-1 small rounded-pill" id="updateLicenseInfo">
-                            <Icon icon="check" color="success" /> License compatible
+                            {canUpgrade ? (
+                                <>
+                                    <Icon icon="check" color="success" /> License compatible{" "}
+                                </>
+                            ) : (
+                                <>
+                                    <Icon icon="license" color="warning" /> Requires License Upgrade{" "}
+                                </>
+                            )}
                         </div>
                         <UncontrolledPopover trigger="hover" className="bs5" placement="top" target="updateLicenseInfo">
-                            <div className="px-2 py-1">This update is compatible with your licesne</div>
+                            <div className="px-2 py-1">
+                                {canUpgrade ? (
+                                    <>
+                                        This update is compatible with your licesne In order to upgrade to the latest
+                                        version
+                                    </>
+                                ) : (
+                                    <>LatestVersion your license must be updated</>
+                                )}
+                            </div>
                         </UncontrolledPopover>
                     </div>
                     <div className="mt-4 vstack gap-2">
@@ -1010,7 +1308,8 @@ interface ValueData {
 export interface FeatureAvailabilityData {
     featureName?: string;
 
-    community: ValueData;
+    community?: ValueData;
     professional?: ValueData;
-    enterprise: ValueData;
+    enterprise?: ValueData;
+    sectionTitle?: boolean;
 }
