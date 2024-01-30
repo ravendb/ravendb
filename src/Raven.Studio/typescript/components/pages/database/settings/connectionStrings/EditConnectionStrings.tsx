@@ -1,7 +1,12 @@
 ﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import { Button, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
-import Select, { SelectOption } from "components/common/select/Select";
+import Select, {
+    OptionWithIcon,
+    SelectOption,
+    SelectOptionWithIcon,
+    SingleValueWithIcon,
+} from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
 import RavenConnectionString from "./editForms/RavenConnectionString";
 import database from "models/resources/database";
@@ -12,8 +17,7 @@ import KafkaConnectionString from "./editForms/KafkaConnectionString";
 import OlapConnectionString from "./editForms/OlapConnectionString";
 import RabbitMqConnectionString from "./editForms/RabbitMqConnectionString";
 import SqlConnectionString from "./editForms/SqlConnectionString";
-import { getTypeLabel } from "./ConnectionStringsPanels";
-import { exhaustiveStringTuple, tryHandleSubmit } from "components/utils/common";
+import { tryHandleSubmit } from "components/utils/common";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
@@ -80,10 +84,14 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         <Select
                             options={availableConnectionStringsOptions}
                             value={connectionStringsOptions.find((x) => x.value === connectionStringType)}
-                            onChange={(x) => setConnectionStringType(x.value)}
+                            onChange={(x: SelectOptionWithIcon<StudioEtlType>) => setConnectionStringType(x.value)}
                             placeholder="Select a connection string type"
                             isSearchable={false}
                             isDisabled={!isForNewConnection}
+                            components={{
+                                Option: OptionWithIcon,
+                                SingleValue: SingleValueWithIcon,
+                            }}
                         />
                     </InputGroup>
                 </div>
@@ -124,17 +132,14 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     );
 }
 
-const connectionStringsOptions: SelectOption<StudioEtlType>[] = exhaustiveStringTuple<StudioEtlType>()(
-    "Raven",
-    "Sql",
-    "Olap",
-    "ElasticSearch",
-    "Kafka",
-    "RabbitMQ"
-).map((type) => ({
-    value: type,
-    label: getTypeLabel(type),
-}));
+const connectionStringsOptions: SelectOptionWithIcon<StudioEtlType>[] = [
+    { value: "Raven", label: "RavenDB", icon: "raven" },
+    { value: "Sql", label: "SQL", icon: "table" },
+    { value: "Olap", label: "OLAP", icon: "olap" },
+    { value: "ElasticSearch", label: "ElasticSearch", icon: "elasticsearch" },
+    { value: "Kafka", label: "Kafka", icon: "kafka" },
+    { value: "RabbitMQ", label: "RabbitMQ", icon: "rabbitmq" },
+];
 
 function getAvailableConnectionStringsOptions(
     features: ConnectionStringsLicenseFeatures
