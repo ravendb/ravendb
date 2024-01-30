@@ -56,7 +56,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType, 
     );
 }
 
-export function getTypeLabel(type: StudioEtlType): string {
+function getTypeLabel(type: StudioEtlType): string {
     switch (type) {
         case "Raven":
             return "RavenDB";
@@ -67,7 +67,7 @@ export function getTypeLabel(type: StudioEtlType): string {
     }
 }
 
-export function getIcon(type: StudioEtlType): IconName {
+function getIcon(type: StudioEtlType): IconName {
     switch (type) {
         case "Raven":
             return "raven";
