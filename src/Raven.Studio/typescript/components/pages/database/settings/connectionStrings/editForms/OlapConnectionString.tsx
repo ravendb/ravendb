@@ -61,7 +61,7 @@ export default function OlapConnectionString({
                         autoComplete="off"
                     />
                 </div>
-                <FormDestinationList />
+                <FormDestinationList isForNewConnection={isForNewConnection} />
             </Form>
 
             <ConnectionStringUsedByTasks

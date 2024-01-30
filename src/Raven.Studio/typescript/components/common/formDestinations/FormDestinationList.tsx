@@ -9,7 +9,11 @@ import Ftp from "./Ftp";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { useFormContext } from "react-hook-form";
 
-export default function FormDestinationList() {
+interface FormDestinationListProps {
+    isForNewConnection: boolean;
+}
+
+export default function FormDestinationList({ isForNewConnection }: FormDestinationListProps) {
     const { formState } = useFormContext<FormDestinations>();
 
     return (
@@ -19,7 +23,7 @@ export default function FormDestinationList() {
                 <Local />
                 <AmazonS3 />
                 <Azure />
-                <GoogleCloud />
+                <GoogleCloud isForNewConnection={isForNewConnection} />
                 <AmazonGlacier />
                 <Ftp />
             </div>
