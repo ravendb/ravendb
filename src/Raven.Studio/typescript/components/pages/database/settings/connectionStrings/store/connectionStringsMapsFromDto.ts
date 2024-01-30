@@ -8,75 +8,111 @@ import {
     RavenConnection,
     SqlConnection,
 } from "../connectionStringsTypes";
-import OngoingTaskRavenEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
-import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
 import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import { mapDestinationsFromDto } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
+import assertUnreachable from "components/utils/assertUnreachable";
+
 type SqlConnectionStringDto = SqlConnectionString;
 
+type OngoingTaskForConnection = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {
+    ConnectionStringName?: string;
+    BrokerType?: Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType;
+};
+
 function getConnectionStringUsedTasks(
-    tasks: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask[],
-    taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
+    tasks: OngoingTaskForConnection[],
+    connectionType: StudioEtlType,
     connectionName: string
 ): ConnectionStringUsedTask[] {
-    return tasks
-        .filter(
-            (task: OngoingTaskRavenEtl) => task.TaskType === taskType && task.ConnectionStringName === connectionName
-        )
-        .map(
-            (x) =>
-                ({
-                    id: x.TaskId,
-                    name: x.TaskName,
-                }) satisfies ConnectionStringUsedTask
-        );
+    let filteredTasks: OngoingTaskForConnection[] = [];
+
+    switch (connectionType) {
+        case "Raven":
+            filteredTasks = tasks.filter((task) =>
+                ["RavenEtl", "Replication", "PullReplicationAsSink"].includes(task.TaskType)
+            );
+            break;
+        case "Sql":
+            filteredTasks = tasks.filter((task) => task.TaskType === "SqlEtl");
+            break;
+        case "Olap":
+            filteredTasks = tasks.filter((task) => task.TaskType === "OlapEtl");
+            break;
+        case "ElasticSearch":
+            filteredTasks = tasks.filter((task) => task.TaskType === "ElasticSearchEtl");
+            break;
+        case "RabbitMQ":
+            filteredTasks = tasks.filter((task) => task.BrokerType === "RabbitMq");
+            break;
+        case "Kafka":
+            filteredTasks = tasks.filter((task) => task.BrokerType === "Kafka");
+            break;
+        default:
+            assertUnreachable(connectionType);
+    }
+
+    filteredTasks = filteredTasks.filter((task) => task.ConnectionStringName === connectionName);
+
+    return filteredTasks.map(
+        (x) =>
+            ({
+                id: x.TaskId,
+                name: x.TaskName,
+            }) satisfies ConnectionStringUsedTask
+    );
 }
 
 export function mapRavenConnectionsFromDto(
     connections: Record<string, RavenConnectionStringDto>,
-    ongoingTasks: OngoingTask[]
+    ongoingTasks: OngoingTaskForConnection[]
 ): RavenConnection[] {
+    const type: RavenConnection["type"] = "Raven";
+
     return Object.values(connections).map(
         (connection) =>
             ({
-                type: "Raven",
+                type,
                 name: connection.Name,
                 database: connection.Database,
                 topologyDiscoveryUrls: connection.TopologyDiscoveryUrls.map((x) => ({ url: x })),
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "RavenEtl", connection.Name),
+                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
             }) satisfies RavenConnection
     );
 }
 
 export function mapSqlConnectionsFromDto(
     connections: Record<string, SqlConnectionStringDto>,
-    ongoingTasks: OngoingTask[]
+    ongoingTasks: OngoingTaskForConnection[]
 ): SqlConnection[] {
+    const type: SqlConnection["type"] = "Sql";
+
     return Object.values(connections).map(
         (connection) =>
             ({
-                type: "Sql",
+                type,
                 name: connection.Name,
                 connectionString: connection.ConnectionString,
                 factoryName: connection.FactoryName,
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "SqlEtl", connection.Name),
+                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
             }) satisfies SqlConnection
     );
 }
 
 export function mapOlapConnectionsFromDto(
     connections: Record<string, OlapConnectionStringDto>,
-    ongoingTasks: OngoingTask[]
+    ongoingTasks: OngoingTaskForConnection[]
 ): OlapConnection[] {
+    const type: OlapConnection["type"] = "Olap";
+
     return Object.values(connections).map(
         (connection) =>
             ({
-                type: "Olap",
+                type,
                 name: connection.Name,
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "OlapEtl", connection.Name),
+                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
                 ...mapDestinationsFromDto(_.omit(connection, "Type", "Name")),
             }) satisfies OlapConnection
     );
@@ -108,12 +144,14 @@ function getElasticSearchAuthenticationMethod(
 
 export function mapElasticSearchConnectionsFromDto(
     connections: Record<string, ElasticSearchConnectionStringDto>,
-    ongoingTasks: OngoingTask[]
+    ongoingTasks: OngoingTaskForConnection[]
 ): ElasticSearchConnection[] {
+    const type: ElasticSearchConnection["type"] = "ElasticSearch";
+
     return Object.values(connections).map(
         (connection) =>
             ({
-                type: "ElasticSearch",
+                type,
                 name: connection.Name,
                 authMethodUsed: getElasticSearchAuthenticationMethod(connection),
                 apiKey: connection.Authentication?.ApiKey?.ApiKey,
@@ -124,21 +162,23 @@ export function mapElasticSearchConnectionsFromDto(
                 nodes: connection.Nodes.map((x) => ({
                     url: x,
                 })),
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "ElasticSearchEtl", connection.Name),
+                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
             }) satisfies ElasticSearchConnection
     );
 }
 
 export function mapKafkaConnectionsFromDto(
     connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTask[]
+    ongoingTasks: OngoingTaskForConnection[]
 ): KafkaConnection[] {
+    const type: KafkaConnection["type"] = "Kafka";
+
     return Object.values(connections)
         .filter((x) => x.BrokerType === "Kafka")
         .map(
             (connection) =>
                 ({
-                    type: "Kafka",
+                    type,
                     name: connection.Name,
                     bootstrapServers: connection.KafkaConnectionSettings.BootstrapServers,
                     connectionOptions: Object.keys(connection.KafkaConnectionSettings.ConnectionOptions).map((key) => ({
@@ -146,24 +186,26 @@ export function mapKafkaConnectionsFromDto(
                         value: connection.KafkaConnectionSettings.ConnectionOptions[key],
                     })),
                     isUseRavenCertificate: connection.KafkaConnectionSettings.UseRavenCertificate,
-                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "QueueEtl", connection.Name),
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
                 }) satisfies KafkaConnection
         );
 }
 
 export function mapRabbitMqConnectionsFromDto(
     connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTask[]
+    ongoingTasks: OngoingTaskForConnection[]
 ): RabbitMqConnection[] {
+    const type: RabbitMqConnection["type"] = "RabbitMQ";
+
     return Object.values(connections)
         .filter((x) => x.BrokerType === "RabbitMq")
         .map(
             (connection) =>
                 ({
-                    type: "RabbitMQ",
+                    type,
                     name: connection.Name,
                     connectionString: connection.RabbitMqConnectionSettings.ConnectionString,
-                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "QueueEtl", connection.Name),
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
                 }) satisfies RabbitMqConnection
         );
 }
