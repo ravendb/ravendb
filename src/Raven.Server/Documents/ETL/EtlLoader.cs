@@ -681,27 +681,59 @@ namespace Raven.Server.Documents.ETL
                 {
                     foreach (var process in x.Value)
                     {
+                        var sp = Stopwatch.StartNew();
+
                         try
                         {
                             if (_database.DatabaseShutdown.IsCancellationRequested)
                                 return;
 
-                            string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
-                            process.Stop(reason);
-
-                            process.Dispose();
+                            using (process)
+                            {
+                                string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
+                                process.Stop(reason);
+                            }
                         }
                         catch (ObjectDisposedException)
                         {
                         }
                         catch (Exception e)
                         {
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Failed to dispose ETL process {process.Name} on the database record change", e);
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Failed to dispose ETL process {process.Name} on the database record change", e);
+                        }
+                        finally
+                        {
+                            LogLongRunningDisposeIfNeeded(sp, process.Name);
                         }
                     }
                 });
             });
+        }
+
+        private void LogLongRunningDisposeIfNeeded(Stopwatch sp, string processName)
+        {
+            try
+            {
+                if (sp == null || Logger.IsOperationsEnabled == false)
+                    return;
+
+                sp.Stop();
+
+                if (sp.Elapsed <= TimeSpan.FromSeconds(15))
+                    return;
+
+                var msg = $"Dispose of ETL process {processName} on the database record change was running for a very long time {sp.Elapsed}";
+                Logger.Operations(msg);
+
+#if !RELEASE
+                Console.WriteLine(msg);
+#endif
+            }
+            catch
+            {
+                // nothing that we can do
+            }
         }
 
         private static string GetStopReason(
