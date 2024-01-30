@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
 
-        private readonly object _clusterLocker = new object();
+        private readonly SemaphoreSlim _clusterLocker = new(1, 1);
 
         public Action<string> AddToInitLog => _addToInitLog;
 
@@ -897,9 +897,8 @@ namespace Raven.Server.Documents
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
 
-            var lockTaken = false;
-            Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref lockTaken);
-
+            var lockTaken = _clusterLocker.Wait(TimeSpan.FromSeconds(5));
+            
             ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired cluster lock. Taken: {lockTaken}");
 
             if (lockTaken == false && _logger.IsOperationsEnabled)
@@ -935,7 +934,7 @@ namespace Raven.Server.Documents
             if (lockTaken == false)
             {
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
-                Monitor.Enter(_clusterLocker);
+                _clusterLocker.Wait();
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired cluster lock");
             }
 
@@ -1486,14 +1485,15 @@ namespace Raven.Server.Documents
         /// </summary>
         public event Action<DatabaseRecord> DatabaseRecordChanged;
 
-        public void ValueChanged(long index, string type, object changeState)
+        public async ValueTask ValueChanged(long index, string type, object changeState)
         {
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                NotifyFeaturesAboutValueChange(index, type, changeState);
+                NotifyFeaturesAboutValueChange(record, index, type, changeState);
+                await NotifyFeaturesAboutValueChange(index, type, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1628,7 +1628,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private void NotifyFeaturesAboutValueChange(long index, string type, object changeState)
+        private async ValueTask NotifyFeaturesAboutValueChange(long index, string type, object changeState)
         {
             if (CanSkipValueChange(index, type))
                 return;
@@ -1636,7 +1636,7 @@ namespace Raven.Server.Documents
             var taken = false;
             while (taken == false)
             {
-                Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
+                taken = await _clusterLocker.WaitAsync(TimeSpan.FromSeconds(5));
 
                 try
                 {
@@ -1660,7 +1660,7 @@ namespace Raven.Server.Documents
                 finally
                 {
                     if (taken)
-                        Monitor.Exit(_clusterLocker);
+                        _clusterLocker.Release();
                 }
             }
         }
