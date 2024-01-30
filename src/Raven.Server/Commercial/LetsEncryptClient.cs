@@ -312,12 +312,9 @@ namespace Raven.Server.Commercial
                     // Then, all subsequent requests of AuthorizationChallenge (to get the status of the challenge) are POST-AS_GET with an empty body.
                     (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, "{}", token);
 
-                    while (result.Status == "pending")
+                    if (result.Status == "pending" || result.Status == "processing")
                     {
-                        // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
-                        (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
-
-                        await Task.Delay(500, token);
+                        await WaitForStatusAsync(challenge.Url, new List<string> { "valid" }, token);
                     }
                 }
                 catch (Exception e)
@@ -357,17 +354,33 @@ namespace Raven.Server.Commercial
 
             csr.CertificateExtensions.Add(san.Build());
 
-            var (response, responseText) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Finalize, new FinalizeRequest
+            Order response;
+            string responseText;
+            // https://community.letsencrypt.org/t/acme-client-finalized-order-stuck-on-ready-state/165196/6
+            foreach (var authorization in _currentOrder.Authorizations)
             {
-                CSR = Jws.Base64UrlEncoded(csr.CreateSigningRequest())
-            }, token);
+                await WaitForStatusAsync(authorization, new List<string> { "valid" }, token);
+            }
+            
+            await WaitForStatusAsync(_currentOrder.Location, new List<string> { "ready" }, token);
 
-            var finalizeLocation = response.Location;
+            try
+            {
+                (response, _) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Finalize,
+                    new FinalizeRequest { CSR = Jws.Base64UrlEncoded(csr.CreateSigningRequest()) }, token);
+            }
+            catch (Exception)
+            {
+                (response, _) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Location, string.Empty, token);
+                if (response.Status != "processing" && response.Status != "valid")
+                    throw;
+            }
+
 
             while (true)
             {
                 // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
-                (response, responseText) = await SendAsync<Order>(HttpMethod.Post, finalizeLocation, string.Empty, token);
+                (response, responseText) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Location, string.Empty, token);
 
                 if (response.Status == "valid")
                 {
@@ -431,6 +444,19 @@ namespace Raven.Server.Commercial
         {
             public RSA PrivateKey;
             public X509Certificate2 Certificate;
+        }
+
+        private async Task WaitForStatusAsync(Uri uri, List<string> statusesToWaitFor, CancellationToken token = default)
+        {
+            while (true)
+            {
+                // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                var (response, _) = await SendAsync<Order>(HttpMethod.Post, uri, string.Empty, token);
+                if (statusesToWaitFor.Contains(response.Status))
+                    break;
+
+                await Task.Delay(500, token);
+            }
         }
 
         public bool TryGetCachedCertificate(string host, out CachedCertificateResult value)
