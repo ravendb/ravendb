@@ -102,7 +102,7 @@ export default function AmazonGlacier() {
                                 <FormSelectCreatable
                                     name={getName("awsRegionName")}
                                     control={control}
-                                    placeholder="Select an AWS region"
+                                    placeholder="Select an AWS region (or enter new one)"
                                     options={availableGlacierRegions}
                                 />
                             </div>
