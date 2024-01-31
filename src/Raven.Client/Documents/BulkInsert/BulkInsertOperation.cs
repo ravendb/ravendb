@@ -662,9 +662,12 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task FlushIfNeeded(bool force = false)
         {
-            var flushed = await _writer.FlushIfNeeded(force).ConfigureAwait(false);
-            if (flushed)
+            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
+            {
                 _lastWriteToStream = DateTime.UtcNow;
+                force = true;
+            }
+            await _writer.FlushIfNeeded(force).ConfigureAwait(false);
         }
 
         public readonly struct CountersBulkInsert
