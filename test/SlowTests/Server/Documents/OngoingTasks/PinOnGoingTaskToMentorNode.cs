@@ -262,7 +262,8 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 return ongoingTask.ResponsibleNode.NodeTag != responsibleNodeNodeTag;
             }, true);
 
-            Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2"));
+            Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", timeout: 30_000), 
+                userMessage: await Etl.GetEtlDebugInfo(src.Database, server: srcRaft.Nodes.Single(s => s.ServerStore.NodeTag == ongoingTask.ResponsibleNode.NodeTag)));
         }
     }
 
