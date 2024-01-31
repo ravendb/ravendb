@@ -17,10 +17,22 @@ public class CoraxPhraseQueries : RavenTestBase
     public CoraxPhraseQueries(ITestOutputHelper output) : base(output)
     {
     }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void BackwardCompatibilityForIndexesBeforePhraseQuery()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var session = store.OpenSession();
+        session.Store(new Item(){FtsField = "dog puppy cat puppy horse"});
+        session.SaveChanges();
+        new Index().Execute(store);
+        WaitForUserToContinueTheTest(store);
+        
+    }
     
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = new object[]{"dog puppy cat puppy horse", "cat puppy"})]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = new object[]{"afirst cthird bsecond afirst", "cthird bsecond"})]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[]{"dog puppy cat puppy horse", "cat puppy"})]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[]{"afirst cthird bsecond afirst", "cthird bsecond"})]
     public void TermVectorWithRepetition(Options options, string documentData, string phraseQuery)
     {
         using var store = GetDocumentStore(options);

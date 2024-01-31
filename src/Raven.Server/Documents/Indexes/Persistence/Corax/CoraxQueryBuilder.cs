@@ -1063,7 +1063,7 @@ public static class CoraxQueryBuilder
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, queryParameters, fieldExpression);
         }
         
-        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, builderParameters.Token);
+        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes, builderParameters.Token);
         
         /*
          * Here we need to deal with value that comes from the user, which means that we

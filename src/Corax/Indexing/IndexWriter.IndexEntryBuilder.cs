@@ -153,7 +153,7 @@ public partial class IndexWriter
             term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
 
             // Creates a mapping for PhraseQuery
-            if (field.FieldIndexingMode is FieldIndexingMode.Search)
+            if (_parent.FieldSupportsPhraseQuery(field))
             {
                 // We're aligning our EntryToTerms list to have exactly _termPerEntryIndex items.
                 // For most use cases, we will append only one element for each document, but we may be in a situation when the difference between sizes is bigger than 1.
