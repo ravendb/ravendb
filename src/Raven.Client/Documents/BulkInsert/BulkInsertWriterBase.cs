@@ -98,9 +98,9 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
             _memoryBuffer = _backgroundMemoryBuffer;
             _backgroundMemoryBuffer = tmpBuffer;
 
-            _asyncWrite = WriteToStreamAsync(tmp, _requestBodyStream, tmpBuffer, _isInitialWrite);
+            _asyncWrite = WriteToStreamAsync(tmp, _requestBodyStream, tmpBuffer, _isInitialWrite || force);
             _isInitialWrite = false;
-            return true;
+            return _isInitialWrite || force;
         }
 
         return false;
