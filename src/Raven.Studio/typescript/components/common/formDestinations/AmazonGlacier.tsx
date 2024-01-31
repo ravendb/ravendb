@@ -8,7 +8,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
-import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
+import { mapGlacierToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { availableGlacierRegions } from "./utils/amazonRegions";
@@ -27,7 +27,7 @@ export default function AmazonGlacier() {
             return;
         }
 
-        return manageServerService.testPeriodicBackupCredentials("Glacier", mapFtpToDto(formValues));
+        return manageServerService.testPeriodicBackupCredentials("Glacier", mapGlacierToDto(formValues));
     });
 
     return (
@@ -122,7 +122,8 @@ export default function AmazonGlacier() {
                                     name={getName("awsSecretKey")}
                                     control={control}
                                     placeholder="Enter a secret key"
-                                    type="text"
+                                    type="password"
+                                    passwordPreview
                                     autoComplete="off"
                                 />
                             </div>

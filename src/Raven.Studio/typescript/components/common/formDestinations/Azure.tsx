@@ -112,7 +112,8 @@ export default function Azure() {
                                     name={getName("accountKey")}
                                     control={control}
                                     placeholder="Enter an account key"
-                                    type="text"
+                                    type="password"
+                                    passwordPreview
                                     autoComplete="off"
                                 />
                             </div>
