@@ -73,15 +73,16 @@ namespace Raven.Client.Documents.Session
         Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null);
     }
 
+    /// <inheritdoc cref="IRawDocumentQuery{T}" />
     public interface IAsyncRawDocumentQuery<T> :
         IPagingDocumentQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {
+        /// <inheritdoc cref="IRawDocumentQuery{T}.Projection" />
         IAsyncRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
-        /// <summary>
-        ///    Execute raw query aggregated by facet
-        /// </summary>
+        
+        /// <inheritdoc cref="IRawDocumentQuery{T}.ExecuteAggregation" />
         Task<Dictionary<string, FacetResult>> ExecuteAggregationAsync(CancellationToken token = default);
     }
 

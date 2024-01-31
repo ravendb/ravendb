@@ -78,15 +78,28 @@ namespace Raven.Client.Documents.Session
         Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval = null);
     }
 
+    /// <summary>
+    ///     Allows to express a query directly in RQL using string containing query syntax.
+    /// </summary>
+    /// <typeparam name="T">Query result type</typeparam>
+    /// <remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-query#session.advanced.rawquery"/></remarks>
     public interface IRawDocumentQuery<T> :
         IPagingDocumentQueryBase<T, IRawDocumentQuery<T>>,
         IQueryBase<T, IRawDocumentQuery<T>>,
         IDocumentQueryBase<T>
     {
-        IRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
         /// <summary>
-        ///    Execute raw query aggregated by facet
+        ///     Allows to change the projection behavior of a query. The projection behavior allows to control where RavenDB will try to retrieve the fields values from.
         /// </summary>
+        /// <param name="projectionBehavior">Desired projection behavior type</param>
+        /// <remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/projections#projection-behavior-with-a-static-index"/></remarks>
+        IRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
+        
+        /// <summary>
+        ///     Execute raw query aggregated by facet.
+        /// </summary>
+        /// <returns>Dictionary with declared facet names keys and corresponding facet aggregation values</returns>
+        /// <remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/faceted-search"/></remarks>
         Dictionary<string, FacetResult> ExecuteAggregation();
     }
 

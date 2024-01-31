@@ -6,6 +6,7 @@ namespace Raven.Client.Documents.Session
     {
         protected QueryTimings QueryTimings = new QueryTimings();
 
+        /// <inheritdoc cref="IDocumentQueryCustomization.Timings" />
         public void IncludeTimings(out QueryTimings timings)
         {
             QueryTimings.ShouldBeIncluded = true;
