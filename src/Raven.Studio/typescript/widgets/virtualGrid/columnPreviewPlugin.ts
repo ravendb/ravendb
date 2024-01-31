@@ -27,7 +27,7 @@ class columnPreviewPlugin<T extends object> {
     private grid: virtualGrid<T>;
     private previewTimeoutHandle: ReturnType<typeof setTimeout>;
     private enterTooltipTimeoutHandle: ReturnType<typeof setTimeout>;
-    private exitTooltipTimeoutHandle: number;
+    private exitTooltipTimeoutHandle: ReturnType<typeof setTimeout>;
     private previewVisible = false;
     private $tooltip: JQuery;
     private currentValue: any;
