@@ -47,6 +47,9 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         private static int GetNextPrefixedBucketRangeStart(IEnumerable<PrefixedShardingSetting> prefixes)
         {
             var prefixesByRangeStart = prefixes.OrderBy(x => x.BucketRangeStart).ToList();
+            if (prefixesByRangeStart.Count == 0)
+                return ShardHelper.NumberOfBuckets;
+
             for (int i = 0; i < prefixesByRangeStart.Count; i++)
             {
                 var currentRangeStart = prefixesByRangeStart[i].BucketRangeStart;

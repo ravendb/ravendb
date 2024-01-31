@@ -28,7 +28,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                 await processor.ExecuteAsync();
         }
 
-
         [RavenShardedAction("/databases/*/admin/sharding/prefixes/add", "POST")]
         public async Task AddPrefixConfiguration()
         {
@@ -103,7 +102,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), GetType().Name);
                 var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
-                setting.Prefix = setting.Prefix.ToLower();
 
                 var shardingConfiguration = ServerStore.Cluster.ReadShardingConfiguration(DatabaseName);
 

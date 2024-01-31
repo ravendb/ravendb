@@ -256,6 +256,11 @@ namespace Raven.Server.ServerWide
                     $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
                     "In order to define sharding by prefix, the prefix string must end with '/' or '-' characters.");
 
+            if (setting.Shards.Count == 0)
+                throw new InvalidOperationException(
+                    $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
+                    $"{nameof(PrefixedShardingSetting)}.{nameof(PrefixedShardingSetting.Shards)} cannot be empty.");
+
             foreach (var shardNumber in setting.Shards)
             {
                 if (shardingConfiguration.Shards.ContainsKey(shardNumber) == false)
