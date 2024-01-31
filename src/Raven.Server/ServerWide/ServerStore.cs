@@ -1126,7 +1126,7 @@ namespace Raven.Server.ServerWide
                 try
                 {
                     var database = await completedTask;
-                    await database.RefreshFeatures();
+                    await database.RefreshFeaturesAsync();
                 }
                 catch (Exception e)
                 {
@@ -1336,7 +1336,7 @@ namespace Raven.Server.ServerWide
                         if (orchestrator.IsCompletedSuccessfully == false)
                             continue;
 
-                        await orchestrator.Result.UpdateUrls(index);
+                        await orchestrator.Result.UpdateUrlsAsync(index);
                     }
 
                     break;

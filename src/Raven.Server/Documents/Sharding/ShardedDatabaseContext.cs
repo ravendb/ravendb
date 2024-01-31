@@ -100,11 +100,11 @@ namespace Raven.Server.Documents.Sharding
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
 
-        public async ValueTask UpdateDatabaseRecord(DatabaseRecord record, long index)
+        public async ValueTask UpdateDatabaseRecordAsync(DatabaseRecord record, long index)
         {
             try
             {
-                await DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _orchestratorStateChange);
+                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _orchestratorStateChange);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Sharding
             AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
         }
 
-        public async ValueTask UpdateUrls(long index) => await DatabasesLandlord.NotifyFeaturesAboutStateChange(_record, index, _urlUpdateStateChange);
+        public async ValueTask UpdateUrlsAsync(long index) => await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(_record, index, _urlUpdateStateChange);
 
         public string DatabaseName => _record.DatabaseName;
 

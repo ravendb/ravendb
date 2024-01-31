@@ -157,7 +157,7 @@ namespace Raven.Server.Documents
                                 // we need to update this upon any shard topology change
                                 // and upon migration completion
                                 var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
-                                await databaseContext.UpdateDatabaseRecord(rawRecord, index);
+                                await databaseContext.UpdateDatabaseRecordAsync(rawRecord, index);
                             }
                             else
                             {
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents
             switch (changeType)
             {
                 case ClusterDatabaseChangeType.RecordChanged:
-                    await database.StateChanged(index);
+                    await database.StateChangedAsync(index);
                     if (type == ClusterStateMachine.SnapshotInstalled)
                     {
                         database.NotifyOnPendingClusterTransaction(index, changeType);
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case ClusterDatabaseChangeType.ValueChanged:
-                    await database.ValueChanged(index, type, changeState);
+                    await database.ValueChangedAsync(index, type, changeState);
                     break;
 
                 case ClusterDatabaseChangeType.PendingClusterTransactions:
@@ -1519,7 +1519,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static async ValueTask NotifyFeaturesAboutStateChange(DatabaseRecord record, long index, StateChange state)
+        public static async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, StateChange state)
         {
             if (CanSkipDatabaseRecordChange())
                 return;

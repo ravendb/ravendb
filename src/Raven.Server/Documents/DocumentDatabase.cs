@@ -450,7 +450,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        await DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
+                        await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
@@ -1485,15 +1485,14 @@ namespace Raven.Server.Documents
         /// </summary>
         public event Action<DatabaseRecord> DatabaseRecordChanged;
 
-        public async ValueTask ValueChanged(long index, string type, object changeState)
+        public async ValueTask ValueChangedAsync(long index, string type, object changeState)
         {
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                NotifyFeaturesAboutValueChange(record, index, type, changeState);
-                await NotifyFeaturesAboutValueChange(index, type, changeState);
+                await NotifyFeaturesAboutValueChangeAsync(index, type, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1507,7 +1506,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async ValueTask StateChanged(long index)
+        public async ValueTask StateChangedAsync(long index)
         {
             try
             {
@@ -1553,7 +1552,7 @@ namespace Raven.Server.Documents
 
                 ServerStore.DatabasesLandlord.ForTestingPurposes?.DelayNotifyFeaturesAboutStateChange?.Invoke();
 
-                await DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
+                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
@@ -1628,7 +1627,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private async ValueTask NotifyFeaturesAboutValueChange(long index, string type, object changeState)
+        private async ValueTask NotifyFeaturesAboutValueChangeAsync(long index, string type, object changeState)
         {
             if (CanSkipValueChange(index, type))
                 return;
@@ -1665,7 +1664,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public ValueTask RefreshFeatures()
+        public ValueTask RefreshFeaturesAsync()
         {
             if (_databaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown();
@@ -1678,7 +1677,7 @@ namespace Raven.Server.Documents
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
 
-            return DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
+            return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
