@@ -7,7 +7,7 @@ import { FormSwitch, FormInput, FormSelectCreatable } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
-import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
+import { mapS3ToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { availableS3Regions } from "./utils/amazonRegions";
@@ -27,7 +27,7 @@ export default function AmazonS3() {
             return;
         }
 
-        return manageServerService.testPeriodicBackupCredentials("S3", mapFtpToDto(formValues));
+        return manageServerService.testPeriodicBackupCredentials("S3", mapS3ToDto(formValues));
     });
 
     return (
@@ -195,7 +195,8 @@ export default function AmazonS3() {
                                         name={getName("awsSecretKey")}
                                         control={control}
                                         placeholder="Enter a secret key"
-                                        type="text"
+                                        type="password"
+                                        passwordPreview
                                         autoComplete="off"
                                     />
                                 </div>
