@@ -28,12 +28,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
             var name = GetName();
             var typeAsString = RequestHandler.GetStringQueryString("type", false);
 
+            var envs = RequestHandler.Database.GetAllStoragesEnvironment();
+
             if (typeAsString != null)
             {
                 if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
                     throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
-                var env = RequestHandler.Database.GetAllStoragesEnvironment()
-                    .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
+                var env = envs.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
                 if (env == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
                 {
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
-                        WriteEnvironmentsReport(writer, name, RequestHandler.Database.GetAllStoragesEnvironment(), context);
+                        WriteEnvironmentsReport(writer, name, envs, context);
                     }
                 }
             }
