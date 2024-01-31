@@ -72,10 +72,7 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
 #endif
 
-        /// <summary>
-        ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
-        ///     results). Default: false
-        /// </summary>
+        /// <inheritdoc cref="IQueryBase{T,TSelf}.Timings" />
         IDocumentQueryCustomization Timings(out QueryTimings timings);
         
         /// <summary>

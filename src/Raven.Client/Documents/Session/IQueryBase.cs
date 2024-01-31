@@ -52,9 +52,11 @@ public interface IQueryBase<T, out TSelf>
     TSelf NoTracking();
 
     /// <summary>
-    ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
-    ///     results). Default: false
+    ///     Enables calculation of query execution time. Returns both total time of query and time spent on each query part.
+    ///     Timings are not enabled by default.
     /// </summary>
+    /// <param name="timings">An out param that will be filled with the timings results.</param>
+    /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/debugging/query-timings"/>
     TSelf Timings(out QueryTimings timings);
 
     /// <summary>

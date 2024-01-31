@@ -5,10 +5,19 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Queries.Timings
 {
+    /// <summary>
+    ///     Representation of query timings.
+    /// </summary>
     public sealed class QueryTimings : IFillFromBlittableJson, IDynamicJson
     {
+        /// <summary>
+        ///     Total time spent on query execution in milliseconds.
+        /// </summary>
         public long DurationInMs { get; set; }
 
+        /// <summary>
+        ///     Query timings for each part of query.
+        /// </summary>
         public IDictionary<string, QueryTimings> Timings { get; set; }
         
         public IDynamicJson QueryPlan { get; set; }
