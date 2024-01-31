@@ -44,6 +44,7 @@ namespace Corax.Indexing
         private readonly HashSet<Slice> _indexedEntries = new(SliceComparer.Instance);
         private List<(long EntryId, float Boost)> _boostedDocs;
         private readonly IndexFieldsMapping _fieldsMapping;
+        private readonly bool _phraseQuerySupport;
         private FixedSizeTree _documentBoost;
         private Tree _indexMetadata;
         private Tree _persistedDynamicFieldsAnalyzers;
@@ -83,11 +84,12 @@ namespace Corax.Indexing
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
 
-        private IndexWriter(IndexFieldsMapping fieldsMapping)
+        private IndexWriter(IndexFieldsMapping fieldsMapping, bool phraseQuerySupport)
         {
             _indexDebugDumper = new IndexOperationsDumper(fieldsMapping);
             _builder = new IndexEntryBuilder(this);
             _fieldsMapping = fieldsMapping;
+            _phraseQuerySupport = phraseQuerySupport;
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
@@ -104,12 +106,20 @@ namespace Corax.Indexing
             _removalsForTerm = new List<long>();
         }
 
-        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
+        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping, bool phraseQuerySupport = true) : this(fieldsMapping, phraseQuerySupport)
         {
             TransactionPersistentContext transactionPersistentContext = new(true);
             _transaction = environment.WriteTransaction(transactionPersistentContext);
 
             _ownsTransaction = true;
+            Init();
+        }
+        
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, bool phraseQuerySupport = true) : this(fieldsMapping, phraseQuerySupport)
+        {
+            _transaction = tx;
+
+            _ownsTransaction = false;
             Init();
         }
 
@@ -141,14 +151,6 @@ namespace Corax.Indexing
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
         
-        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
-        {
-            _transaction = tx;
-
-            _ownsTransaction = false;
-            Init();
-        }
-        
         private void InitializeFieldRootPage(IndexedField field)
         {
             if (field.FieldRootPage == -1)
@@ -161,6 +163,7 @@ namespace Corax.Indexing
         private void InitializeFieldRootPageForTermsVector(IndexedField field)
         {
             Debug.Assert(field.FieldIndexingMode is FieldIndexingMode.Search, "field.FieldIndexingMode is FieldIndexingMode.Search");
+            Debug.Assert(_phraseQuerySupport, "_phraseQuerySupport");
             
             if (field.TermsVectorFieldRootPage == -1)
             {
@@ -1142,7 +1145,7 @@ namespace Corax.Indexing
                 _pagesToPrefetch = new ContextBoundNativeList<long>(_writer._entriesAllocator);
                 _buffers = _writer._textualFieldBuffers ??= new TextualFieldBuffers(_writer);
 
-                if (_indexedField.FieldIndexingMode is FieldIndexingMode.Search)
+                if (_writer.FieldSupportsPhraseQuery(indexedField))
                 {
                     // For most cases, _indexField.Storage.Count is equal to _indexedField.Textual.Count().
                     // However, in cases where the field has mixed values (string/numerics), it differs. Therefore, we need to ensure that we have enough space to create the mapping.
@@ -1312,7 +1315,7 @@ namespace Corax.Indexing
                 RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
     
                 //Update mapping virtual<=> storage location location. Final writing will be done after inserting ALL terms for specific field.
-                if (_indexedField.FieldIndexingMode is FieldIndexingMode.Search)
+                if (_writer.FieldSupportsPhraseQuery(_indexedField))
                 {
                     Debug.Assert(_virtualTermIdToTermContainerId.Count == _indexedField.Textual.Count(), "virtualMapping.Count == _indexedField.Textual.Count()");
                     Debug.Assert(_virtualTermIdToTermContainerId[storageLocation] == Constants.IndexedField.Invalid, "virtualMapping[entries.StorageLocation] == Constants.IndexedField.Invalid, Term was already set! Persisted: {_virtualTermIdToTermContainerId[storageLocation]}, new: {termContainerId}");
@@ -1331,7 +1334,7 @@ namespace Corax.Indexing
             
             void ProcessTermsVector()
             {
-                if (_indexedField.FieldIndexingMode is not FieldIndexingMode.Search)
+                if (_writer.FieldSupportsPhraseQuery(_indexedField) == false)
                     return;
 
                 const StoredFieldType storedFieldType = (StoredFieldType.List | StoredFieldType.Term);
@@ -2057,6 +2060,8 @@ namespace Corax.Indexing
                 _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
             }
         }
+
+        private bool FieldSupportsPhraseQuery(in IndexedField field) => _phraseQuerySupport && field.FieldIndexingMode is FieldIndexingMode.Search;
         
         public void Dispose()
         {

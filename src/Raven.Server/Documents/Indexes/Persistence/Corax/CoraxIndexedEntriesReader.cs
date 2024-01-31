@@ -64,7 +64,7 @@ public sealed unsafe class CoraxIndexedEntriesReader : IDisposable
         entryReader.Reset();
         while (entryReader.MoveNextStoredField())
         {
-            if(_indexSearcher.FieldCache.TryGetField(entryReader.FieldRootPage, out var fieldName)==false)
+            if(_indexSearcher.FieldCache.TryGetField(entryReader.FieldRootPage, out var fieldName) == false || fieldName.AsSpan().EndsWith(Constants.PhraseQuerySuffixAsStr))
                 continue;
 
             if (entryReader.StoredField == null)
