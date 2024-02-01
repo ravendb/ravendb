@@ -302,7 +302,7 @@ namespace Raven.Server.Documents
 
                 _addToInitLog("Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
-               
+
                 _addToInitLog("Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
 
@@ -651,17 +651,17 @@ namespace Raven.Server.Documents
                 _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
             }
             catch (Exception e)
-                {
+            {
                 // nothing we can do
                 if (_logger.IsInfoEnabled)
-                    {
+                {
                     _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
-                    }
+                }
             }
         }
 
         private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command, Exception exception)
-                    {
+        {
             try
             {
                 var index = command.Index;
@@ -809,6 +809,9 @@ namespace Raven.Server.Documents
                 _clusterLocker.Wait();
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired cluster lock");
             }
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the cluster locker");
+            exceptionAggregator.Execute(() => _clusterLocker.Dispose());
 
             var indexStoreTask = _indexStoreTask;
             if (indexStoreTask != null)
@@ -1532,7 +1535,7 @@ namespace Raven.Server.Documents
                 case nameof(UpdateResponsibleNodeForTasksCommand):
                 case nameof(DelayBackupCommand):
                     // both commands cannot be skipped and must be executed
-                return false;
+                    return false;
             }
 
             if (LastValueChangeIndex > index)
