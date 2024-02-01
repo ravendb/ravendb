@@ -12,7 +12,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_19538 : RavenTestBase
     {
-        private int _reasonableWaitTime = 3000;
+        private readonly int _reasonableWaitTimeInMs = 15_000;
 
         public RavenDB_19538(ITestOutputHelper output) : base(output)
         {
@@ -24,10 +24,10 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                var sub = store.Subscriptions.Create(new SubscriptionCreationOptions<User> { Filter = user => user.Count > 0 });
+                var sub = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User> { Filter = user => user.Count > 0 });
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(
-                    new SubscriptionWorkerOptions(sub) { TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5), MaxDocsPerBatch = 2 });
+                    new SubscriptionWorkerOptions(sub) { TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1), MaxDocsPerBatch = 2 });
 
                 using (var session = store.OpenSession())
                 {
@@ -48,19 +48,26 @@ namespace SlowTests.Issues
                 {
                     using (var session = x.OpenSession())
                     {
+                        var c = 0;
                         foreach (var item in x.Items)
                         {
                             var meta = session.Advanced.GetMetadataFor(item.Result);
-                            meta["Test1"] = date1;
-                            item.Metadata["Test2"] = date2;
+                            if (meta.Count == 5)
+                            {
+                                // update only if we didn't update it before
+                                meta.Add("Test1", date1);
+                                item.Metadata["Test2"] = date2;
+                                c++;
+                            }
                         }
 
                         session.SaveChanges();
-                        docs.Signal(x.NumberOfItemsInBatch);
+                        if (c > 0)
+                            docs.Signal(x.NumberOfItemsInBatch);
                     }
                 });
 
-                docs.Wait(_reasonableWaitTime);
+                Assert.True(docs.Wait(_reasonableWaitTimeInMs));
                 for (int i = 0; i < 2; i++)
                 {
                     using (var session = store.OpenAsyncSession())
