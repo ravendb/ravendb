@@ -2809,6 +2809,12 @@ namespace Raven.Server.ServerWide
             if (string.IsNullOrEmpty(record.Topology.ClusterTransactionIdBase64))
                 record.Topology.ClusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 
+            foreach (var node in record.Topology.AllNodes)
+            {
+                if (string.IsNullOrEmpty(node))
+                    throw new InvalidOperationException($"Attempting to save the database record of '{databaseName}' but one of its specified topology nodes is null.");
+            }
+
             record.Topology.Stamp ??= new LeaderStamp();
             record.Topology.Stamp.Term = _engine.CurrentTerm;
             record.Topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
