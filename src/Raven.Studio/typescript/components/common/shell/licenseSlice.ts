@@ -40,19 +40,11 @@ function statusValue<T extends keyof LicenseStatus>(key: T) {
 const isEnterpriseOrDeveloper = (store: RootState): boolean => {
     const type = licenseSelectors.licenseType(store);
 
-    if (type === "Enterprise" || type === "Developer") {
-        return true;
-    }
-
-    return false;
+    return type === "Enterprise" || type === "Developer";
 };
 
 const isProfessionalOrAbove = (store: RootState): boolean => {
-    if (isEnterpriseOrDeveloper(store) || licenseSelectors.licenseType(store) === "Professional") {
-        return true;
-    }
-
-    return false;
+    return isEnterpriseOrDeveloper(store) || licenseSelectors.licenseType(store) === "Professional";
 };
 
 export const licenseSelectors = {

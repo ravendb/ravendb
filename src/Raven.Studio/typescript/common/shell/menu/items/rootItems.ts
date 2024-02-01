@@ -2,11 +2,12 @@
 import appUrl = require("common/appUrl");
 import { bridgeToReact } from "common/reactUtils";
 import { BootstrapPlaygroundPage } from "components/pages/BootstrapPlaygroundPage";
+import { AboutWrapper } from "components/pages/resources/about/AboutPage";
 
 function aboutItem() {
     return new leafMenuItem({
         route: 'about',
-        moduleId: require('viewmodels/shell/about'),
+        moduleId: bridgeToReact(AboutWrapper, "nonShardedView"),
         title: 'About',
         tooltip: "About",
         nav: true,
