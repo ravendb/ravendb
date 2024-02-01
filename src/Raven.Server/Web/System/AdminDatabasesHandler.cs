@@ -577,6 +577,25 @@ namespace Raven.Server.Web.System
                 var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
                 var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource);
 
+                if (restoreConfiguration.ShardRestoreSettings != null)
+                {
+                    if (restoreConfiguration.ShardRestoreSettings.Shards == null ||
+                        restoreConfiguration.ShardRestoreSettings.Shards.Count == 0)
+                        throw new InvalidOperationException(
+                            $"Attempting to restore database {restoreConfiguration.DatabaseName} but configuration for field '{nameof(restoreConfiguration.ShardRestoreSettings.Shards)}' is not set.'");
+
+                    foreach (var (shardNumber, shardRestoreSetting) in restoreConfiguration.ShardRestoreSettings.Shards)
+                    {
+                        if (string.IsNullOrEmpty(shardRestoreSetting.NodeTag))
+                            throw new InvalidOperationException(
+                                $"Attempting to restore database {restoreConfiguration.DatabaseName} but shard {shardNumber} was not provided a node tag.");
+
+                        if (shardRestoreSetting.ShardNumber != shardNumber)
+                            throw new InvalidOperationException(
+                                $"Attempting to restore database {restoreConfiguration.DatabaseName} but there is a shard mismatch in the provided restore configuration: Shards[{shardNumber}].ShardNumber = {shardRestoreSetting.ShardNumber}");
+                    }
+                }
+
                 await ServerStore.EnsureNotPassiveAsync();
 
                 var cancelToken = CreateBackgroundOperationToken();

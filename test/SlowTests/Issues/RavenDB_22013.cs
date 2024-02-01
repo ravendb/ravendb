@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -16,24 +17,63 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Cluster)]
+        [RavenFact(RavenTestCategory.None)]
         public async Task ValidateNodesNotNullInDatabaseRecordBeforeSavingRecordClusterWide()
         {
             var databaseName = GetDatabaseName();
-            
-            var databaseRecord = new DatabaseRecord(databaseName);
-            databaseRecord.Topology = new DatabaseTopology()
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                Members = new List<string>() { null }
-            };
-            await Server.ServerStore.EnsureNotPassiveAsync();
+                context.OpenReadTransaction();
 
-            var error = await Assert.ThrowsAnyAsync<InvalidOperationException>(async () =>
+                var databaseRecord = new DatabaseRecord(databaseName);
+                databaseRecord.Topology = new DatabaseTopology()
+                {
+                    Members = new List<string>() { null }
+                };
+                await Server.ServerStore.EnsureNotPassiveAsync();
+
+                var error = await Assert.ThrowsAnyAsync<InvalidOperationException>(async () =>
+                {
+                    var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
+                    await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
+                });
+                Assert.Contains("but one of its specified topology nodes is null", error.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task ValidateNodesNotNullInDatabaseRecordBeforeSavingRecordClusterWide_Sharded()
+        {
+            var databaseName = GetDatabaseName();
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
-                await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
-            });
-            Assert.Contains("but one of its specified topology nodes is null", error.Message);
+                context.OpenReadTransaction();
+
+                var databaseRecord = new DatabaseRecord(databaseName);
+                databaseRecord.Sharding = new ShardingConfiguration()
+                {
+                    Orchestrator = new OrchestratorConfiguration()
+                    {
+                        Topology = new OrchestratorTopology()
+                        {
+                            Members = new List<string>() {"A"}
+                        }
+                    },
+                    Shards = new Dictionary<int, DatabaseTopology>()
+                    {
+                        { 0, new DatabaseTopology() { Members = new List<string>() { null } } }
+                    }
+                };
+
+                await Server.ServerStore.EnsureNotPassiveAsync();
+
+                var error = await Assert.ThrowsAnyAsync<InvalidOperationException>(async () =>
+                {
+                    var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
+                    await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
+                });
+                Assert.Contains("but one of its specified topology nodes is null", error.Message);
+            }
         }
     }
 }
